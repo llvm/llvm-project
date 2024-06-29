@@ -36,8 +36,16 @@ void RTDECL(Assign)(Descriptor &to, const Descriptor &from,
 // reallocation.
 void RTDECL(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
-void RTDECL(CopyOutAssign)(Descriptor &to, const Descriptor &from,
-    bool skipToInit, const char *sourceFile = nullptr, int sourceLine = 0);
+
+// Establish "temp" descriptor as an allocatable descriptor with the same type,
+// rank, and length parameters as "var" and copy "var" to it using
+// AssignTemporary.
+void RTDECL(CopyInAssign)(Descriptor &temp, const Descriptor &var,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+// When "var" is provided, copy "temp" to it assuming "var" is already
+// initialized. Destroy and deallocate "temp" in all cases.
+void RTDECL(CopyOutAssign)(Descriptor *var, Descriptor &temp,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant is for assignments to explicit-length CHARACTER left-hand
 // sides that might need to handle truncation or blank-fill, and
 // must maintain the character length even if an allocatable array

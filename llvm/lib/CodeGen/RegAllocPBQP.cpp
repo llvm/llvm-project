@@ -557,8 +557,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addPreserved<MachineBlockFrequencyInfo>();
   au.addRequired<MachineLoopInfo>();
   au.addPreserved<MachineLoopInfo>();
-  au.addRequired<MachineDominatorTree>();
-  au.addPreserved<MachineDominatorTree>();
+  au.addRequired<MachineDominatorTreeWrapperPass>();
+  au.addPreserved<MachineDominatorTreeWrapperPass>();
   au.addRequired<VirtRegMap>();
   au.addPreserved<VirtRegMap>();
   MachineFunctionPass::getAnalysisUsage(au);

@@ -221,3 +221,13 @@ void f( ) {
 
 
 }
+
+namespace std {
+struct type_info {
+  const char *name;
+};
+} // namespace std
+
+namespace GH93650 {
+auto func(auto... inputArgs) { return typeid(inputArgs...[0]); }
+} // namespace GH93650

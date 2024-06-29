@@ -74,6 +74,9 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
              std::back_inserter(Order));
 
+  const FunctionLayout Layout = BF.getLayout();
+  Layout.updateLayoutIndices(Order);
+
   for (const BinaryBasicBlock *BB : Order) {
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
     YamlBB.Index = BB->getLayoutIndex();

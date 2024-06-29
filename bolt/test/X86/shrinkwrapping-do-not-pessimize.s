@@ -1,10 +1,10 @@
-# This checks that shrink wrapping does not pessimize a CFG pattern where two
-# blocks can be proved to have the same execution count but, because of profile
-# inaccuricies, we could move saves into the second block. We can prove two
-# blocks have the same frequency when B post-dominate A and A dominates B and
-# are at the same loop nesting level. This would be a pessimization because
-# shrink wrapping is unlikely to be able to cleanly move PUSH instructions,
-# inserting additional store instructions.
+## This checks that shrink wrapping does not pessimize a CFG pattern where two
+## blocks can be proved to have the same execution count but, because of profile
+## inaccuricies, we could move saves into the second block. We can prove two
+## blocks have the same frequency when B post-dominate A and A dominates B and
+## are at the same loop nesting level. This would be a pessimization because
+## shrink wrapping is unlikely to be able to cleanly move PUSH instructions,
+## inserting additional store instructions.
 
 # REQUIRES: system-linux
 
@@ -16,15 +16,15 @@
 # RUN: llvm-bolt -relocs %t.exe -o %t.out -data %t.fdata \
 # RUN:     -frame-opt=all -equalize-bb-counts | FileCheck %s
 
-# Here we create a CFG pattern with two blocks A and B belonging to the same
-# equivalency class as defined by dominance relations and having in theory
-# the same frequency. But we tweak edge counts from profile to make block A
-# hotter than block B.
+## Here we create a CFG pattern with two blocks A and B belonging to the same
+## equivalency class as defined by dominance relations and having in theory
+## the same frequency. But we tweak edge counts from profile to make block A
+## hotter than block B.
   .globl _start
   .type _start, %function
 _start:
   .cfi_startproc
-# Hot prologue
+## Hot prologue
 # FDATA: 0 [unknown] 0 1 _start 0 0 10
   push  %rbp
   mov   %rsp, %rbp
@@ -36,7 +36,7 @@ b:  je  end_if_1
 if_false:
   movq rel(%rip), %rdi  # Add this to create a relocation and run bolt w/ relocs
 c:  jmp end_if_1
-# Reduce frequency from 9 to 1 to simulate an inaccurate profile
+## Reduce frequency from 9 to 1 to simulate an inaccurate profile
 # FDATA: 1 _start #c# 1 _start #end_if_1# 0 1
 end_if_1:
   # first uses of R14 and RBX appear at this point, possible move point for SW

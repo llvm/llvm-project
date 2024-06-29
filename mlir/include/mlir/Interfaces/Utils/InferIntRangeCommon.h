@@ -25,7 +25,11 @@ namespace intrange {
 /// abstracted away here to permit writing the function that handles both
 /// 64- and 32-bit index types.
 using InferRangeFn =
-    function_ref<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>;
+    std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>;
+
+/// Function that performs inferrence on an array of `IntegerValueRange`.
+using InferIntegerValueRangeFn =
+    std::function<IntegerValueRange(ArrayRef<IntegerValueRange>)>;
 
 static constexpr unsigned indexMinWidth = 32;
 static constexpr unsigned indexMaxWidth = 64;
@@ -52,7 +56,7 @@ using InferRangeWithOvfFlagsFn =
 ///
 /// The `mode` argument specifies if the unsigned, signed, or both results of
 /// the inference computation should be used when comparing the results.
-ConstantIntRanges inferIndexOp(InferRangeFn inferFn,
+ConstantIntRanges inferIndexOp(const InferRangeFn &inferFn,
                                ArrayRef<ConstantIntRanges> argRanges,
                                CmpMode mode);
 

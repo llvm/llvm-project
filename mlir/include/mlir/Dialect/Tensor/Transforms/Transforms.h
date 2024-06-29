@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
 
@@ -22,13 +23,20 @@ namespace tensor {
 // Patterns
 //===----------------------------------------------------------------------===//
 
-/// Pattern to swap an `tensor.extract_slice` with its producer when the
+/// Method to swap an `tensor.extract_slice` with its producer when the
 /// producer implements the `TilingInterface`. The pattern itself does not
 /// provide a mechanism to control where the application happens. With use of
 /// transform dialect that control is done within the transform dialect. Other
 /// use cases can inherit from this pattern and add necessary controls.
 FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
     OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp);
+
+/// Method to swap an `tensor.insert_slice` with its consumer when the
+/// consumer implements the `TilingInterface`.
+FailureOr<TilingResult>
+replaceInsertSliceWithTiledConsumer(OpBuilder &builder,
+                                    OffsetSizeAndStrideOpInterface sliceOp,
+                                    OpOperand &consumerOp);
 
 //===----------------------------------------------------------------------===//
 // Populate functions.
@@ -83,9 +91,12 @@ void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns);
 /// respectively.
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
 
+using ControlFoldFn = std::function<bool(OpOperand *)>;
+
 /// Populates `patterns` with patterns that replace tensor ops (such as
 /// tensor.generate) with constants when possible.
-void populateRewriteAsConstantPatterns(RewritePatternSet &patterns);
+void populateRewriteAsConstantPatterns(RewritePatternSet &patterns,
+                                       const ControlFoldFn &controlFn);
 
 //===----------------------------------------------------------------------===//
 // Transform helpers

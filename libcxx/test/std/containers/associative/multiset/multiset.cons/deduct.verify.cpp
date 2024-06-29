@@ -40,29 +40,29 @@ int main(int, char **) {
   {
     // cannot deduce Key from nothing
     std::multiset s;
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'multiset'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}multiset'}}
   }
   {
     // cannot deduce Key from just (Compare)
     std::multiset s(std::less<int>{});
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'multiset'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}multiset'}}
   }
   {
     // cannot deduce Key from just (Compare, Allocator)
     std::multiset s(std::less<int>{}, std::allocator<int>{});
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'multiset'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}multiset'}}
   }
   {
     // cannot deduce Key from multiset(Allocator)
     std::multiset s(std::allocator<int>{});
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'multiset'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}multiset'}}
   }
   {
     // since we have parens, not braces, this deliberately does not find the
     // initializer_list constructor
     NotAnAllocator a;
     std::multiset s(a);
-    // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'multiset'}}
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}multiset'}}
   }
 
   return 0;

@@ -56,8 +56,8 @@ def testAttrEq():
         print("a1 == a2:", a1 == a2)
         # CHECK: a1 == a3: True
         print("a1 == a3:", a1 == a3)
-        # CHECK: a1 == None: False
-        print("a1 == None:", a1 == None)
+        # CHECK: a1 is None: False
+        print("a1 is None:", a1 is None)
 
 
 # CHECK-LABEL: TEST: testAttrHash
@@ -109,9 +109,9 @@ def testAttrEqDoesNotRaise():
         # CHECK: False
         print(a1 == not_an_attr)
         # CHECK: False
-        print(a1 == None)
+        print(a1 is None)
         # CHECK: True
-        print(a1 != None)
+        print(a1 is not None)
 
 
 # CHECK-LABEL: TEST: testAttrCapsule
@@ -514,7 +514,7 @@ def testDictAttr():
 
         a = DictAttr.get(dict_attr)
 
-        # CHECK attr: {integerattr = 42 : i32, stringattr = "string"}
+        # CHECK: attr: {integerattr = 42 : i32, stringattr = "string"}
         print("attr:", a)
 
         assert len(a) == 2
@@ -546,7 +546,7 @@ def testDictAttr():
         else:
             assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
-        # CHECK "empty: {}"
+        # CHECK: empty: {}
         print("empty: ", DictAttr.get())
 
 

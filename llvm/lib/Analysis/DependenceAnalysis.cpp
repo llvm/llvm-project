@@ -3607,7 +3607,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
 
-  switch (underlyingObjectsAlias(AA, F->getParent()->getDataLayout(),
+  switch (underlyingObjectsAlias(AA, F->getDataLayout(),
                                  MemoryLocation::get(Dst),
                                  MemoryLocation::get(Src))) {
   case AliasResult::MayAlias:
@@ -4034,7 +4034,7 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
   assert(underlyingObjectsAlias(
-             AA, F->getParent()->getDataLayout(), MemoryLocation::get(Dst),
+             AA, F->getDataLayout(), MemoryLocation::get(Dst),
              MemoryLocation::get(Src)) == AliasResult::MustAlias);
 
   // establish loop nesting levels

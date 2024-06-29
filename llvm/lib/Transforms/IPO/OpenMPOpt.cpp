@@ -880,7 +880,7 @@ private:
     if (BB != Before.getParent())
       return false;
 
-    const DataLayout &DL = Array.getModule()->getDataLayout();
+    const DataLayout &DL = Array.getDataLayout();
     const unsigned int PointerSize = DL.getPointerSize();
 
     for (Instruction &I : *BB) {

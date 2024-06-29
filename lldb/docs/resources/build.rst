@@ -477,7 +477,6 @@ further by passing the appropriate cmake options, such as:
   -DLLDB_ENABLE_PYTHON=0
   -DLLDB_ENABLE_LIBEDIT=0
   -DLLDB_ENABLE_CURSES=0
-  -DLLVM_ENABLE_TERMINFO=0
 
 (see :ref:`Optional Dependencies` for more)
 

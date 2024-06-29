@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/StokeInfo.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/Support/CommandLine.h"
 

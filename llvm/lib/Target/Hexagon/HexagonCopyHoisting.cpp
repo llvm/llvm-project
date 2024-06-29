@@ -50,8 +50,8 @@ public:
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

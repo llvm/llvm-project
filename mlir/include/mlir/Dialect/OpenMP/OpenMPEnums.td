@@ -164,6 +164,21 @@ def DeclareTargetDeviceTypeAttr : OpenMP_EnumAttr<DeclareTargetDeviceType,
 }
 
 //===----------------------------------------------------------------------===//
+// order_modifer enum.
+//===----------------------------------------------------------------------===//
+
+def OMP_OrderModReproducible       : I32EnumAttrCase<"reproducible", 0>;
+def OMP_OrderModUnconstrained      : I32EnumAttrCase<"unconstrained", 1>;
+def OrderModifier
+    : I32EnumAttr<"OrderModifier", "OpenMP Order Modifier",
+                  [OMP_OrderModReproducible, OMP_OrderModUnconstrained]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
+                                    "order_mod">;
+
+//===----------------------------------------------------------------------===//
 // sched_mod enum.
 //===----------------------------------------------------------------------===//
 

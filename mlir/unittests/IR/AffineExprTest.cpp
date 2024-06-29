@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdint>
+#include <limits>
+
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "gtest/gtest.h"
@@ -29,4 +32,47 @@ TEST(AffineExprTest, constructFromBinaryOperators) {
   ASSERT_EQ(difference.getKind(), AffineExprKind::Add);
   ASSERT_EQ(product.getKind(), AffineExprKind::Mul);
   ASSERT_EQ(remainder.getKind(), AffineExprKind::Mod);
+}
+
+TEST(AffineExprTest, constantFolding) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto cn1 = b.getAffineConstantExpr(-1);
+  auto c0 = b.getAffineConstantExpr(0);
+  auto c1 = b.getAffineConstantExpr(1);
+  auto c2 = b.getAffineConstantExpr(2);
+  auto c3 = b.getAffineConstantExpr(3);
+  auto c6 = b.getAffineConstantExpr(6);
+  auto cmax = b.getAffineConstantExpr(std::numeric_limits<int64_t>::max());
+  auto cmin = b.getAffineConstantExpr(std::numeric_limits<int64_t>::min());
+
+  ASSERT_EQ(getAffineBinaryOpExpr(AffineExprKind::Add, c1, c2), c3);
+  ASSERT_EQ(getAffineBinaryOpExpr(AffineExprKind::Mul, c2, c3), c6);
+  ASSERT_EQ(getAffineBinaryOpExpr(AffineExprKind::FloorDiv, c3, c2), c1);
+  ASSERT_EQ(getAffineBinaryOpExpr(AffineExprKind::CeilDiv, c3, c2), c2);
+
+  // Test division by zero:
+  auto c3ceildivc0 = getAffineBinaryOpExpr(AffineExprKind::CeilDiv, c3, c0);
+  ASSERT_EQ(c3ceildivc0.getKind(), AffineExprKind::CeilDiv);
+
+  auto c3floordivc0 = getAffineBinaryOpExpr(AffineExprKind::FloorDiv, c3, c0);
+  ASSERT_EQ(c3floordivc0.getKind(), AffineExprKind::FloorDiv);
+
+  auto c3modc0 = getAffineBinaryOpExpr(AffineExprKind::Mod, c3, c0);
+  ASSERT_EQ(c3modc0.getKind(), AffineExprKind::Mod);
+
+  // Test overflow:
+  auto cmaxplusc1 = getAffineBinaryOpExpr(AffineExprKind::Add, cmax, c1);
+  ASSERT_EQ(cmaxplusc1.getKind(), AffineExprKind::Add);
+
+  auto cmaxtimesc2 = getAffineBinaryOpExpr(AffineExprKind::Mul, cmax, c2);
+  ASSERT_EQ(cmaxtimesc2.getKind(), AffineExprKind::Mul);
+
+  auto cminceildivcn1 =
+      getAffineBinaryOpExpr(AffineExprKind::CeilDiv, cmin, cn1);
+  ASSERT_EQ(cminceildivcn1.getKind(), AffineExprKind::CeilDiv);
+
+  auto cminfloordivcn1 =
+      getAffineBinaryOpExpr(AffineExprKind::FloorDiv, cmin, cn1);
+  ASSERT_EQ(cminfloordivcn1.getKind(), AffineExprKind::FloorDiv);
 }

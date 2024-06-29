@@ -55,26 +55,27 @@ private:
                                      FI.getCallingConvention());
   }
 
-  Address EmitDarwinVAArg(Address VAListAddr, QualType Ty,
-                          CodeGenFunction &CGF) const;
+  RValue EmitDarwinVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
+                         AggValueSlot Slot) const;
 
-  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
-                         AArch64ABIKind Kind) const;
+  RValue EmitAAPCSVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
+                        AArch64ABIKind Kind, AggValueSlot Slot) const;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override {
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override {
     llvm::Type *BaseTy = CGF.ConvertType(Ty);
     if (isa<llvm::ScalableVectorType>(BaseTy))
       llvm::report_fatal_error("Passing SVE types to variadic functions is "
                                "currently not supported");
 
-    return Kind == AArch64ABIKind::Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
-           : isDarwinPCS()               ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
-                           : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind);
+    return Kind == AArch64ABIKind::Win64
+               ? EmitMSVAArg(CGF, VAListAddr, Ty, Slot)
+           : isDarwinPCS() ? EmitDarwinVAArg(VAListAddr, Ty, CGF, Slot)
+                           : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind, Slot);
   }
 
-  Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                      QualType Ty) const override;
+  RValue EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                     AggValueSlot Slot) const override;
 
   bool allowBFloatArgsAndRet() const override {
     return getTarget().hasBFloat16Type();
@@ -549,19 +550,14 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
-Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
-                                       CodeGenFunction &CGF,
-                                       AArch64ABIKind Kind) const {
+RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
+                                      CodeGenFunction &CGF, AArch64ABIKind Kind,
+                                      AggValueSlot Slot) const {
   ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
                                        CGF.CurFnInfo->getCallingConvention());
   // Empty records are ignored for parameter passing purposes.
-  if (AI.isIgnore()) {
-    uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
-    CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
-    VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
-    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    return Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-  }
+  if (AI.isIgnore())
+    return Slot.asRValue();
 
   bool IsIndirect = AI.isIndirect();
 
@@ -789,27 +785,34 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
                                  OnStackBlock, "vaargs.addr");
 
   if (IsIndirect)
-    return Address(CGF.Builder.CreateLoad(ResAddr, "vaarg.addr"), ElementTy,
-                   TyAlign);
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(
+            Address(CGF.Builder.CreateLoad(ResAddr, "vaarg.addr"), ElementTy,
+                    TyAlign),
+            Ty),
+        Slot);
 
-  return ResAddr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(ResAddr, Ty), Slot);
 }
 
-Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
-                                        CodeGenFunction &CGF) const {
+RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
+                                       CodeGenFunction &CGF,
+                                       AggValueSlot Slot) const {
   // The backend's lowering doesn't support va_arg for aggregates or
   // illegal vector types.  Lower VAArg here for these cases and use
   // the LLVM va_arg instruction for everything else.
   if (!isAggregateTypeForABI(Ty) && !isIllegalVectorType(Ty))
-    return EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect());
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(
+            EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect()), Ty),
+        Slot);
 
   uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
   CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true))
-    return Address(CGF.Builder.CreateLoad(VAListAddr, "ap.cur"),
-                   CGF.ConvertTypeForMem(Ty), SlotSize);
+    return Slot.asRValue();
 
   // The size of the actual thing passed, which might end up just
   // being a pointer for indirect types.
@@ -824,12 +827,12 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
     IsIndirect = !isHomogeneousAggregate(Ty, Base, Members);
   }
 
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
-                          TyInfo, SlotSize, /*AllowHigherAlign*/ true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo, SlotSize,
+                          /*AllowHigherAlign*/ true, Slot);
 }
 
-Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty) const {
+RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                   QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = false;
 
   // Composites larger than 16 bytes are passed by reference.
@@ -839,7 +842,7 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false);
+                          /*allowHigherAlign*/ false, Slot);
 }
 
 static bool isStreamingCompatible(const FunctionDecl *F) {
@@ -962,7 +965,7 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 
   llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
-    if (auto Ext = llvm::AArch64::parseArchExtension(Feat))
+    if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
       if (UniqueFeats.insert(Ext->Name).second)
         Out << 'M' << Ext->Name;
 }

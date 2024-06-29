@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;

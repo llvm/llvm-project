@@ -1114,26 +1114,26 @@ void fCXX11MemberInitTest1() {
   CXX11MemberInitTest1();
 }
 
-#ifdef PEDANTIC
 struct CXX11MemberInitTest2 {
   struct RecordType {
-    int a; // expected-note {{uninitialized field 'this->a'}}
-    int b; // expected-note {{uninitialized field 'this->b'}}
+    // TODO: we'd expect the note: {{uninitialized field 'this->rec.a'}}
+    int a; // no-note
+    // TODO: we'd expect the note: {{uninitialized field 'this->rec.b'}}
+    int b; // no-note
 
     RecordType(int) {}
   };
 
-  RecordType rec = RecordType(int()); // expected-warning {{2 uninitialized fields}}
+  RecordType rec = RecordType(int());
   int dontGetFilteredByNonPedanticMode = 0;
 
   CXX11MemberInitTest2() {}
 };
 
 void fCXX11MemberInitTest2() {
+  // TODO: we'd expect the warning: {{2 uninitializeds field}}
   CXX11MemberInitTest2(); // no-warning
 }
-
-#endif // PEDANTIC
 
 //===----------------------------------------------------------------------===//
 // "Esoteric" primitive type tests.

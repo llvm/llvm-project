@@ -33,7 +33,8 @@ class BreakpointSetRestart(TestBase):
         bp = target.BreakpointCreateBySourceRegex(
             self.BREAKPOINT_TEXT, lldb.SBFileSpec("main.cpp")
         )
-        self.assertTrue(bp.IsValid() and bp.GetNumLocations() == 1, VALID_BREAKPOINT)
+        self.assertTrue(bp.IsValid(), VALID_BREAKPOINT)
+        self.assertEqual(bp.GetNumLocations(), 1, VALID_BREAKPOINT)
 
         while self.dbg.GetListener().WaitForEvent(2, event):
             if lldb.SBProcess.GetStateFromEvent(

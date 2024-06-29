@@ -34,7 +34,7 @@ class BPFTTIImpl : public BasicTTIImplBase<BPFTTIImpl> {
 
 public:
   explicit BPFTTIImpl(const BPFTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   int getIntImmCost(const APInt &Imm, Type *Ty, TTI::TargetCostKind CostKind) {

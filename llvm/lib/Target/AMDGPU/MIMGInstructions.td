@@ -494,7 +494,7 @@ class MIMG_NoSampler_nsa_gfx11<mimgopc op, string opcode,
 class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
                              RegisterClass DataRC, int num_addrs,
                              string dns="">
-  : VIMAGE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns> {
+  : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdata), num_addrs, dns> {
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
                                 CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe),
@@ -1101,6 +1101,10 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
       defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP, renamed>;
       let VDataDwords = !if(isCmpSwap, 4, 2) in
       defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP, renamed>;
+      let VDataDwords = !if(isCmpSwap, 2, 2) in
+      defm _V3 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_96, 0, isFP, renamed>;
+      let VDataDwords = !if(isCmpSwap, 4, 4) in
+      defm _V4 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_160, 0, isFP, renamed>;
     }
   } // End IsAtomicRet = 1
 }

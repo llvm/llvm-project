@@ -12,23 +12,27 @@ define void @masked_scatters(<vscale x 4 x i1> %nxv4i1mask, <vscale x 8 x i1> %n
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatters'
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-VSCALE-1-LABEL: 'masked_scatters'
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i1.nxv4p0(<vscale x 4 x i1> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
   call void @llvm.masked.scatter.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x ptr> undef, i32 0, <vscale x 8 x i1> %nxv8i1mask)
   call void @llvm.masked.scatter.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x ptr> undef, i32 0, <vscale x 1 x i1> %nxv1i1mask)
+  call void @llvm.masked.scatter.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x ptr> undef, i32 0, <vscale x 4 x i1> %nxv4i1mask)
   ret void
 }
 
@@ -112,6 +116,7 @@ attributes #2 = { "target-features"="+sve" }
 declare void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x ptr>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x ptr>, i32, <vscale x 8 x i1>)
 declare void @llvm.masked.scatter.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x ptr>, i32, <vscale x 1 x i1>)
+declare void @llvm.masked.scatter.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x ptr>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv4f64(<vscale x 4 x double>, <vscale x 4 x ptr>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv2f64(<vscale x 2 x double>, <vscale x 2 x ptr>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv8f32(<vscale x 8 x float>, <vscale x 8 x ptr>, i32, <vscale x 8 x i1>)

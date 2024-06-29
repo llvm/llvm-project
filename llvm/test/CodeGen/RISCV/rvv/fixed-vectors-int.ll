@@ -3459,6 +3459,8 @@ define void @mulhu_v4i64(ptr %x) {
 ; RV64-NEXT:    lui a1, %hi(.LCPI184_0)
 ; RV64-NEXT:    addi a1, a1, %lo(.LCPI184_0)
 ; RV64-NEXT:    vle64.v v10, (a1)
+; RV64-NEXT:    vmulhu.vv v10, v8, v10
+; RV64-NEXT:    vsub.vv v8, v8, v10
 ; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    slli a1, a1, 63
 ; RV64-NEXT:    vmv.s.x v12, a1
@@ -3466,8 +3468,6 @@ define void @mulhu_v4i64(ptr %x) {
 ; RV64-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
 ; RV64-NEXT:    vslideup.vi v14, v12, 2
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmulhu.vv v10, v8, v10
-; RV64-NEXT:    vsub.vv v8, v8, v10
 ; RV64-NEXT:    vmulhu.vv v8, v8, v14
 ; RV64-NEXT:    vadd.vv v8, v8, v10
 ; RV64-NEXT:    lui a1, 12320

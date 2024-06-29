@@ -4,9 +4,9 @@
 ; The comparison uses the pre-inc value, which could lead LSR to
 ; try to compute -INT64_MIN.
 
-; CHECK: movabsq $-9223372036854775808, %rax
-; CHECK: cmpq  %rax,
-; CHECK: sete  %al
+; CHECK-NOT: movabsq $-9223372036854775808, %rax
+; CHECK: negq  %r
+; CHECK-NEXT: seto  %al
 
 declare i64 @bar()
 

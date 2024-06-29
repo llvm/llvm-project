@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -97,13 +98,15 @@ mlir::LogicalResult cuf::DataTransferOp::verify() {
   mlir::Type srcTy = getSrc().getType();
   mlir::Type dstTy = getDst().getType();
   if ((fir::isa_ref_type(srcTy) && fir::isa_ref_type(dstTy)) ||
-      (fir::isa_box_type(srcTy) && fir::isa_box_type(dstTy)))
+      (fir::isa_box_type(srcTy) && fir::isa_box_type(dstTy)) ||
+      (fir::isa_ref_type(srcTy) && fir::isa_box_type(dstTy)) ||
+      (fir::isa_box_type(srcTy) && fir::isa_ref_type(dstTy)))
     return mlir::success();
   if (fir::isa_trivial(srcTy) &&
       matchPattern(getSrc().getDefiningOp(), mlir::m_Constant()))
     return mlir::success();
   return emitOpError()
-         << "expect src and dst to be both references or descriptors or src to "
+         << "expect src and dst to be references or descriptors or src to "
             "be a constant";
 }
 
@@ -227,7 +230,17 @@ mlir::LogicalResult cuf::KernelOp::verify() {
       getLowerbound().size() != getStep().size())
     return emitOpError(
         "expect same number of values in lowerbound, upperbound and step");
-
+  auto reduceAttrs = getReduceAttrs();
+  std::size_t reduceAttrsSize = reduceAttrs ? reduceAttrs->size() : 0;
+  if (getReduceOperands().size() != reduceAttrsSize)
+    return emitOpError("expect same number of values in reduce operands and "
+                       "reduce attributes");
+  if (reduceAttrs) {
+    for (const auto &attr : reduceAttrs.value()) {
+      if (!mlir::isa<fir::ReduceAttr>(attr))
+        return emitOpError("expect reduce attributes to be ReduceAttr");
+    }
+  }
   return mlir::success();
 }
 

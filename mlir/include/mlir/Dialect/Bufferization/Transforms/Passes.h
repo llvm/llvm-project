@@ -221,9 +221,6 @@ createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
 /// insert_slice ops.
 std::unique_ptr<Pass> createEmptyTensorEliminationPass();
 
-/// Create a pass that bufferizes ops from the bufferization dialect.
-std::unique_ptr<Pass> createBufferizationBufferizePass();
-
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

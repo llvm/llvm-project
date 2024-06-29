@@ -808,6 +808,9 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
       size = (layout == StringLayout::DSC) ? size_mode_value
                                            : ((size_mode_value >> 1) % 256);
 
+    if (!location_sp)
+      return {};
+
     // When the small-string optimization takes place, the data must fit in the
     // inline string buffer (23 bytes on x86_64/Darwin). If it doesn't, it's
     // likely that the string isn't initialized and we're reading garbage.
@@ -815,7 +818,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     const std::optional<uint64_t> max_bytes =
         location_sp->GetCompilerType().GetByteSize(
             exe_ctx.GetBestExecutionContextScope());
-    if (!max_bytes || size > *max_bytes || !location_sp)
+    if (!max_bytes || size > *max_bytes)
       return {};
 
     return std::make_pair(size, location_sp);

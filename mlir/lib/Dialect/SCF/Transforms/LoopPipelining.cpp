@@ -17,10 +17,10 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "scf-loop-pipelining"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -119,7 +119,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     int64_t ubImm = upperBoundCst.value();
     int64_t lbImm = lowerBoundCst.value();
     int64_t stepImm = stepCst.value();
-    int64_t numIteration = ceilDiv(ubImm - lbImm, stepImm);
+    int64_t numIteration = llvm::divideCeilSigned(ubImm - lbImm, stepImm);
     if (numIteration > maxStage) {
       dynamicLoop = false;
     } else if (!options.supportDynamicLoops) {

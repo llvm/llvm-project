@@ -37,7 +37,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
   -DCMAKE_INSTALL_PREFIX="$LLVM_SYSROOT" \
   -DLLVM_ENABLE_PROJECTS="bolt;clang;lld;clang-tools-extra" \
-  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format" \
+  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build" \
   -DCLANG_DEFAULT_LINKER="lld" \
   -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/llvm-project-llvmorg-$LLVM_VERSION/llvm
 

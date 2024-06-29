@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Do not try to forward %i.trunc, it is not synthesizable in %body.
 ;

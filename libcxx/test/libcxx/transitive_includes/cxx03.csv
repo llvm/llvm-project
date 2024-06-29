@@ -187,9 +187,6 @@ condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
 coroutine compare
-coroutine cstddef
-coroutine cstdint
-coroutine cstring
 coroutine iosfwd
 coroutine limits
 coroutine type_traits
@@ -906,6 +903,7 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple exception
 tuple iosfwd
 tuple new

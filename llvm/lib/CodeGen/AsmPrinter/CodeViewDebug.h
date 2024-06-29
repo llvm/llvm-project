@@ -220,7 +220,7 @@ private:
   // DIGlobalVariableExpression referencing the DIGlobalVariable.
   DenseMap<const DIGlobalVariable *, uint64_t> CVGlobalVariableOffsets;
 
-  // Map used to seperate variables according to the lexical scope they belong
+  // Map used to separate variables according to the lexical scope they belong
   // in.  This is populated by recordLocalVariable() before
   // collectLexicalBlocks() separates the variables between the FunctionInfo
   // and LexicalBlocks.

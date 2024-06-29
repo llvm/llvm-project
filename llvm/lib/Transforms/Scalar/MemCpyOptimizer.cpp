@@ -357,7 +357,7 @@ static void combineAAMetadata(Instruction *ReplInst, Instruction *I) {
 Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
                                                  Value *StartPtr,
                                                  Value *ByteVal) {
-  const DataLayout &DL = StartInst->getModule()->getDataLayout();
+  const DataLayout &DL = StartInst->getDataLayout();
 
   // We can't track scalable types
   if (auto *SI = dyn_cast<StoreInst>(StartInst))
@@ -769,7 +769,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   if (SI->getMetadata(LLVMContext::MD_nontemporal))
     return false;
 
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
 
   Value *StoredVal = SI->getValueOperand();
 
@@ -882,7 +882,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!srcArraySize)
     return false;
 
-  const DataLayout &DL = cpyLoad->getModule()->getDataLayout();
+  const DataLayout &DL = cpyLoad->getDataLayout();
   TypeSize SrcAllocaSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType());
   // We can't optimize scalable types.
   if (SrcAllocaSize.isScalable())
@@ -1342,7 +1342,7 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
       // The size also doesn't matter, as an out-of-bounds access would be UB.
       if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
         if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
-          const DataLayout &DL = Alloca->getModule()->getDataLayout();
+          const DataLayout &DL = Alloca->getDataLayout();
           if (std::optional<TypeSize> AllocaSize =
                   Alloca->getAllocationSize(DL))
             if (*AllocaSize == LTSize->getValue())
@@ -1449,7 +1449,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   }
 
   // Check that copy is full with static size.
-  const DataLayout &DL = DestAlloca->getModule()->getDataLayout();
+  const DataLayout &DL = DestAlloca->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
   if (!SrcSize || Size != *SrcSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
@@ -1644,7 +1644,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
 static bool isZeroSize(Value *Size) {
   if (auto *I = dyn_cast<Instruction>(Size))
-    if (auto *Res = simplifyInstruction(I, I->getModule()->getDataLayout()))
+    if (auto *Res = simplifyInstruction(I, I->getDataLayout()))
       Size = Res;
   // Treat undef/poison size like zero.
   if (auto *C = dyn_cast<Constant>(Size))
@@ -1686,7 +1686,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (auto *GV = dyn_cast<GlobalVariable>(M->getSource()))
     if (GV->isConstant() && GV->hasDefinitiveInitializer())
       if (Value *ByteVal = isBytewiseValue(GV->getInitializer(),
-                                           M->getModule()->getDataLayout())) {
+                                           M->getDataLayout())) {
         IRBuilder<> Builder(M);
         Instruction *NewM = Builder.CreateMemSet(
             M->getRawDest(), ByteVal, M->getLength(), M->getDestAlign(), false);
@@ -1815,7 +1815,7 @@ bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
 
 /// This is called on every byval argument in call sites.
 bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
-  const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
+  const DataLayout &DL = CB.getDataLayout();
   // Find out what feeds this byval argument.
   Value *ByValArg = CB.getArgOperand(ArgNo);
   Type *ByValTy = CB.getParamByValType(ArgNo);
@@ -1902,7 +1902,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   if (!(CB.paramHasAttr(ArgNo, Attribute::NoAlias) &&
         CB.paramHasAttr(ArgNo, Attribute::NoCapture)))
     return false;
-  const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
+  const DataLayout &DL = CB.getDataLayout();
   Value *ImmutArg = CB.getArgOperand(ArgNo);
 
   // 2. Check that arg is alloca

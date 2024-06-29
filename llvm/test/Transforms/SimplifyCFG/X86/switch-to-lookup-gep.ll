@@ -45,9 +45,9 @@ define { ptr, i64 } @switch_to_lookup_gep_oob(i8 %0) unnamed_addr {
 ; CHECK-LABEL: @switch_to_lookup_gep_oob(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 0, label [[END:%.*]]
-; CHECK-NEXT:    i8 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i8 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 0, label [[END:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END]]
@@ -91,9 +91,9 @@ define { ptr, i64 } @switch_to_lookup_gep_ptrtoint(i8 %0) unnamed_addr {
 ; CHECK-LABEL: @switch_to_lookup_gep_ptrtoint(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 0, label [[END:%.*]]
-; CHECK-NEXT:    i8 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i8 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 0, label [[END:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END]]

@@ -64,7 +64,7 @@ macro(add_memprof_tests_for_arch arch)
   add_library(${MEMPROF_TEST_RUNTIME} STATIC ${MEMPROF_TEST_RUNTIME_OBJECTS})
   set_target_properties(${MEMPROF_TEST_RUNTIME} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
+    FOLDER "Compiler-RT/Tests/Runtime")
   set(MEMPROF_TEST_OBJECTS)
   generate_compiler_rt_tests(MEMPROF_TEST_OBJECTS
     MemProfUnitTests "MemProf-${arch}-UnitTest" ${arch}
@@ -78,7 +78,7 @@ endmacro()
 
 # MemProf unit tests testsuite.
 add_custom_target(MemProfUnitTests)
-set_target_properties(MemProfUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(MemProfUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST MEMPROF_SUPPORTED_ARCH)
   # MemProf unit tests are only run on the host machine.
   foreach(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})

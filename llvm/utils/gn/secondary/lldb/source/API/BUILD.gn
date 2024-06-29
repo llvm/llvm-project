@@ -40,6 +40,8 @@ target(liblldb_type, "liblldb") {
   include_dirs = [ ".." ]
   sources = [
     "SBAddress.cpp",
+    "SBAddressRange.cpp",
+    "SBAddressRangeList.cpp",
     "SBAttachInfo.cpp",
     "SBBlock.cpp",
     "SBBreakpoint.cpp",

@@ -30,11 +30,12 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -1220,7 +1221,6 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       SmallPtrSet<const Value *, 4> ObjSet;
       SmallVector<Metadata *, 4> Scopes, NoAliases;
 
-      SmallSetVector<const Argument *, 4> NAPtrArgs;
       for (const Value *V : PtrArgs) {
         SmallVector<const Value *, 4> Objects;
         getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
@@ -1363,8 +1363,6 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
       ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
     if (CB.paramHasAttr(I, Attribute::ReadOnly))
       ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
-    if (CB.paramHasAttr(I, Attribute::WriteOnly))
-      ValidParamAttrs.back().addAttribute(Attribute::WriteOnly);
     HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
   }
 
@@ -1387,6 +1385,12 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
             getUnderlyingObject(InnerCB->getArgOperand(I));
         const Argument *Arg = dyn_cast<Argument>(UnderlyingV);
         if (!Arg)
+          continue;
+
+        if (AL.hasParamAttr(I, Attribute::ByVal))
+          // It's unsound to propagate memory attributes to byval arguments.
+          // Even if CalledFunction doesn't e.g. write to the argument,
+          // the call to NewInnerCB may write to its by-value copy.
           continue;
 
         unsigned ArgNo = Arg->getArgNo();
@@ -1444,6 +1448,8 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
     Valid.addAttribute(Attribute::NonNull);
   if (CB.hasRetAttr(Attribute::Alignment))
     Valid.addAlignmentAttr(CB.getRetAlign());
+  if (std::optional<ConstantRange> Range = CB.getRange())
+    Valid.addRangeAttr(*Range);
   return Valid;
 }
 
@@ -1535,6 +1541,14 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     if (ValidPG.getAlignment().valueOrOne() < AL.getRetAlignment().valueOrOne())
       ValidPG.removeAttribute(Attribute::Alignment);
     if (ValidPG.hasAttributes()) {
+      Attribute CBRange = ValidPG.getAttribute(Attribute::Range);
+      if (CBRange.isValid()) {
+        Attribute NewRange = AL.getRetAttr(Attribute::Range);
+        if (NewRange.isValid()) {
+          ValidPG.addRangeAttr(
+              CBRange.getRange().intersectWith(NewRange.getRange()));
+        }
+      }
       // Three checks.
       // If the callsite has `noundef`, then a poison due to violating the
       // return attribute will create UB anyways so we can always propagate.
@@ -1561,7 +1575,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
     return;
 
   AssumptionCache *AC = &IFI.GetAssumptionCache(*CB.getCaller());
-  auto &DL = CB.getCaller()->getParent()->getDataLayout();
+  auto &DL = CB.getDataLayout();
 
   // To avoid inserting redundant assumptions, we should check for assumptions
   // already in the caller. To do this, we might need a DT of the caller.
@@ -1624,7 +1638,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
                                   InlineFunctionInfo &IFI,
                                   MaybeAlign ByValAlignment) {
   Function *Caller = TheCall->getFunction();
-  const DataLayout &DL = Caller->getParent()->getDataLayout();
+  const DataLayout &DL = Caller->getDataLayout();
 
   // If the called function is readonly, then it could not mutate the caller's
   // copy of the byval'd memory.  In this case, it is safe to elide the copy and
@@ -2279,7 +2293,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // callee.
     ScopedAliasMetadataDeepCloner SAMetadataCloner(CB.getCalledFunction());
 
-    auto &DL = Caller->getParent()->getDataLayout();
+    auto &DL = Caller->getDataLayout();
 
     // Calculate the vector of arguments to pass into the function cloner, which
     // matches up the formal to the actual argument values.
@@ -2613,7 +2627,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       ConstantInt *AllocaSize = nullptr;
       if (ConstantInt *AIArraySize =
           dyn_cast<ConstantInt>(AI->getArraySize())) {
-        auto &DL = Caller->getParent()->getDataLayout();
+        auto &DL = Caller->getDataLayout();
         Type *AllocaType = AI->getAllocatedType();
         TypeSize AllocaTypeSize = DL.getTypeAllocSize(AllocaType);
         uint64_t AllocaArraySize = AIArraySize->getLimitedValue();
@@ -3019,7 +3033,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   if (PHI) {
     AssumptionCache *AC =
         IFI.GetAssumptionCache ? &IFI.GetAssumptionCache(*Caller) : nullptr;
-    auto &DL = Caller->getParent()->getDataLayout();
+    auto &DL = Caller->getDataLayout();
     if (Value *V = simplifyInstruction(PHI, {DL, nullptr, nullptr, AC})) {
       PHI->replaceAllUsesWith(V);
       PHI->eraseFromParent();

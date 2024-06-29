@@ -102,9 +102,10 @@ public:
                                    mlir::Location loc, mlir::Type symTy,
                                    llvm::StringRef globalName,
                                    mlir::StringAttr linkage, bool isConst,
-                                   const Fortran::lower::SomeExpr &initExpr) {
+                                   const Fortran::lower::SomeExpr &initExpr,
+                                   cuf::DataAttributeAttr dataAttr) {
     DenseGlobalBuilder globalBuilder;
-    std::visit(
+    Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeLogical> &
                     x) { globalBuilder.tryConvertingToAttributes(builder, x); },
@@ -119,7 +120,7 @@ public:
         },
         initExpr.u);
     return globalBuilder.tryCreatingGlobal(builder, loc, symTy, globalName,
-                                           linkage, isConst);
+                                           linkage, isConst, dataAttr);
   }
 
   template <Fortran::common::TypeCategory TC, int KIND>
@@ -127,11 +128,12 @@ public:
       fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
       llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
       const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
-          &constant) {
+          &constant,
+      cuf::DataAttributeAttr dataAttr) {
     DenseGlobalBuilder globalBuilder;
     globalBuilder.tryConvertingToAttributes(builder, constant);
     return globalBuilder.tryCreatingGlobal(builder, loc, symTy, globalName,
-                                           linkage, isConst);
+                                           linkage, isConst, dataAttr);
   }
 
 private:
@@ -162,7 +164,7 @@ private:
   template <typename SomeCat>
   void tryConvertingToAttributes(fir::FirOpBuilder &builder,
                                  const Fortran::evaluate::Expr<SomeCat> &expr) {
-    std::visit(
+    Fortran::common::visit(
         [&](const auto &x) {
           using TR = Fortran::evaluate::ResultType<decltype(x)>;
           if (const auto *constant =
@@ -178,8 +180,8 @@ private:
   fir::GlobalOp tryCreatingGlobal(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Type symTy,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage,
-                                  bool isConst) const {
+                                  mlir::StringAttr linkage, bool isConst,
+                                  cuf::DataAttributeAttr dataAttr) const {
     // Not a "trivial" intrinsic constant array, or empty array.
     if (!attributeElementType || attributes.empty())
       return {};
@@ -191,7 +193,8 @@ private:
     auto tensorTy =
         mlir::RankedTensorType::get(tensorShape, attributeElementType);
     auto init = mlir::DenseElementsAttr::get(tensorTy, attributes);
-    return builder.createGlobal(loc, symTy, globalName, linkage, init, isConst);
+    return builder.createGlobal(loc, symTy, globalName, linkage, init, isConst,
+                                /*isTarget=*/false, dataAttr);
   }
 
   llvm::SmallVector<mlir::Attribute> attributes;
@@ -202,9 +205,9 @@ private:
 fir::GlobalOp Fortran::lower::tryCreatingDenseGlobal(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
     llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
-    const Fortran::lower::SomeExpr &initExpr) {
+    const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr) {
   return DenseGlobalBuilder::tryCreating(builder, loc, symTy, globalName,
-                                         linkage, isConst, initExpr);
+                                         linkage, isConst, initExpr, dataAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -661,7 +664,7 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
                   T::category == Fortran::common::TypeCategory::Complex) {
       global = DenseGlobalBuilder::tryCreating(
           builder, loc, arrayTy, globalName, builder.createInternalLinkage(),
-          true, constant);
+          true, constant, {});
     }
     if (!global)
       // If the number of elements of the array is huge, the compilation may
@@ -793,7 +796,7 @@ static fir::ExtendedValue
 genConstantValue(Fortran::lower::AbstractConverter &converter,
                  mlir::Location loc,
                  const Fortran::lower::SomeExpr &constantExpr) {
-  return std::visit(
+  return Fortran::common::visit(
       [&](const auto &x) -> fir::ExtendedValue {
         using T = std::decay_t<decltype(x)>;
         if constexpr (Fortran::common::HasMember<
@@ -802,7 +805,7 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
                         Fortran::common::TypeCategory::Derived) {
             return genConstantValue(converter, loc, x);
           } else {
-            return std::visit(
+            return Fortran::common::visit(
                 [&](const auto &preciseKind) {
                   return genConstantValue(converter, loc, preciseKind);
                 },

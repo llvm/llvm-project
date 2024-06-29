@@ -32,9 +32,9 @@
 ; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalInvocationId]] Constant
 ; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalSize]] Constant
 ; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalOffset]] Constant
-; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalOffset]] LinkageAttributes "__spirv_BuiltInGlobalOffset" Import 
-; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalSize]] LinkageAttributes "__spirv_BuiltInGlobalSize" Import 
-; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalInvocationId]] LinkageAttributes "__spirv_BuiltInGlobalInvocationId" Import 
+; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalOffset]] LinkageAttributes "__spirv_BuiltInGlobalOffset" Import
+; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalSize]] LinkageAttributes "__spirv_BuiltInGlobalSize" Import
+; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalInvocationId]] LinkageAttributes "__spirv_BuiltInGlobalInvocationId" Import
 
 %"class._ZTSN2cl4sycl5rangeILi2EEE.cl::sycl::range" = type { %"class._ZTSN2cl4sycl6detail5arrayILi2EEE.cl::sycl::detail::array" }
 %"class._ZTSN2cl4sycl6detail5arrayILi2EEE.cl::sycl::detail::array" = type { [2 x i64] }

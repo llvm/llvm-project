@@ -33,7 +33,6 @@ add_tablegen(mlir-tblgen MLIR
   SPIRVUtilsGen.cpp
   )
 
-set_target_properties(mlir-tblgen PROPERTIES FOLDER "Tablegenning")
 target_link_libraries(mlir-tblgen
   PRIVATE
   MLIRTblgenLib)

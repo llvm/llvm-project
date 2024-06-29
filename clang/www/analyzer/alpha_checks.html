@@ -239,22 +239,6 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><a id="alpha.core.SizeofPtr"><div class="namedescr expandable"><span class="name">
-alpha.core.SizeofPtr</span><span class="lang">
-(C)</span><div class="descr">
-Warn about unintended use of <code>sizeof()</code> on pointer
-expressions.</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-struct s {};
-
-int test(struct s *p) {
-  return sizeof(p);
-    // warn: sizeof(ptr) can produce an unexpected result
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.core.StackAddressAsyncEscape"><div class="namedescr expandable"><span class="name">
 alpha.core.StackAddressAsyncEscape</span><span class="lang">
 (C)</span><div class="descr">
@@ -778,39 +762,6 @@ void test() {
 <colgroup><col class="namedescr"><col class="example"></colgroup>
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 <tbody>
-
-
-<tr><td><a id="alpha.unix.BlockInCriticalSection"><div class="namedescr expandable"><span class="name">
-alpha.unix.BlockInCriticalSection</span><span class="lang">
-(C)</span><div class="descr">
-Check for calls to blocking functions inside a critical section. Applies to:
-<div class=functions>
-lock<br>
-unlock<br>
-sleep<br>
-getc<br>
-fgets<br>
-read<br>
-revc<br>
-pthread_mutex_lock<br>
-pthread_mutex_unlock<br>
-mtx_lock<br>
-mtx_timedlock<br>
-mtx_trylock<br>
-mtx_unlock<br>
-lock_guard<br>
-unique_lock</div>
-</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test() {
-  std::mutex m;
-  m.lock();
-  sleep(3); // warn: a blocking function sleep is called inside a critical
-            //       section
-  m.unlock();
-}
-</pre></div></div></td></tr>
 
 
 <tr><td><a id="alpha.unix.Chroot"><div class="namedescr expandable"><span class="name">

@@ -444,7 +444,7 @@ define i32 @and_add_lsr(i32 %x, i32 %y) {
 ;
 ; LA64-LABEL: and_add_lsr:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $a0, -1
+; LA64-NEXT:    addi.w $a0, $a0, -1
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 20
 ; LA64-NEXT:    and $a0, $a1, $a0
 ; LA64-NEXT:    ret

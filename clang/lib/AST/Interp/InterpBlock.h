@@ -125,13 +125,15 @@ public:
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 
-protected:
+private:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
 
   Block(const Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
-      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
+      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {
+    assert(Desc);
+  }
 
   /// Deletes a dead block at the end of its lifetime.
   void cleanup();

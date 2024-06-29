@@ -64,7 +64,7 @@ executable("llvm-tblgen") {
     "SearchableTableEmitter.cpp",
     "SubtargetEmitter.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
-    "X86CompressEVEXTablesEmitter.cpp",
+    "X86InstrMappingEmitter.cpp",
     "X86DisassemblerTables.cpp",
     "X86FoldTablesEmitter.cpp",
     "X86MnemonicTables.cpp",

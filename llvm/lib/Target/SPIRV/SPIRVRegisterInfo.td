@@ -29,7 +29,9 @@ let Namespace = "SPIRV" in {
 
   // Class for non-type registers
   def ID0 : Register<"ID0">;
+  def ID640 : Register<"ID640">;
   def fID0 : Register<"fID0">;
+  def fID640 : Register<"fID640">;
   def pID320 : Register<"pID320">;
   def pID640 : Register<"pID640">;
   def vID0 : Register<"vID0">;
@@ -38,7 +40,9 @@ let Namespace = "SPIRV" in {
   def vpID640 : Register<"vpID640">;
 
   def ID : RegisterClass<"SPIRV", [i32], 32, (add ID0)>;
+  def ID64 : RegisterClass<"SPIRV", [i64], 32, (add ID640)>;
   def fID : RegisterClass<"SPIRV", [f32], 32, (add fID0)>;
+  def fID64 : RegisterClass<"SPIRV", [f64], 32, (add fID640)>;
   def pID32 : RegisterClass<"SPIRV", [p32], 32, (add pID320)>;
   def pID64 : RegisterClass<"SPIRV", [p64], 32, (add pID640)>;
   def vID : RegisterClass<"SPIRV", [v2i32], 32, (add vID0)>;
@@ -48,9 +52,9 @@ let Namespace = "SPIRV" in {
 
   def ANYID : RegisterClass<
       "SPIRV",
-      [i32, f32, p32, p64, v2i32, v2f32, v2p32, v2p64],
+      [i32, i64, f32, f64, p32, p64, v2i32, v2f32, v2p32, v2p64],
       32,
-      (add ID0, fID0, pID320, pID640, vID0, vfID0, vpID320, vpID640)>;
+      (add ID0, ID640, fID0, fID640, pID320, pID640, vID0, vfID0, vpID320, vpID640)>;
 
   // A few instructions like OpName can take ids from both type and non-type
   // instructions, so we need a super-class to allow for both to count as valid

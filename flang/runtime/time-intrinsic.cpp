@@ -400,7 +400,7 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
   }
 #else
   struct tms tms;
-  if (times(&tms) != -1) {
+  if (times(&tms) != (clock_t)-1) {
     usrTime = ((double)(tms.tms_utime)) / sysconf(_SC_CLK_TCK);
     sysTime = ((double)(tms.tms_stime)) / sysconf(_SC_CLK_TCK);
     realTime = usrTime + sysTime;

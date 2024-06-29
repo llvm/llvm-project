@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -analyzer-output=text -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2,optin.taint.TaintedAlloc -analyzer-output=text -verify %s
 
 // This file is for testing enhanced diagnostics produced by the GenericTaintChecker
 
@@ -114,4 +114,13 @@ void multipleTaintedArgs(void) {
   strcat(buf, file);// expected-note {{Taint propagated to the 1st argument}}
   system(buf); // expected-warning {{Untrusted data is passed to a system call}}
                // expected-note@-1{{Untrusted data is passed to a system call}}
+}
+
+void testTaintedMalloc(){
+  size_t size = 0;
+  scanf("%zu", &size); // expected-note {{Taint originated here}}
+                       // expected-note@-1 {{Taint propagated to the 2nd argument}}
+  int *p = malloc(size);// expected-warning{{malloc is called with a tainted (potentially attacker controlled) value}}
+                    // expected-note@-1{{malloc is called with a tainted (potentially attacker controlled) value}}
+  free(p);
 }

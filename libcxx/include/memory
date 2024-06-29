@@ -830,34 +830,34 @@ public:
 };
 
 template<class T>
-    bool atomic_is_lock_free(const shared_ptr<T>* p);                                     // Deprecated in C++20, removed in C++26
+    bool atomic_is_lock_free(const shared_ptr<T>* p);
 template<class T>
-    shared_ptr<T> atomic_load(const shared_ptr<T>* p);                                    // Deprecated in C++20, removed in C++26
+    shared_ptr<T> atomic_load(const shared_ptr<T>* p);
 template<class T>
-    shared_ptr<T> atomic_load_explicit(const shared_ptr<T>* p, memory_order mo);          // Deprecated in C++20, removed in C++26
+    shared_ptr<T> atomic_load_explicit(const shared_ptr<T>* p, memory_order mo);
 template<class T>
-    void atomic_store(shared_ptr<T>* p, shared_ptr<T> r);                                 // Deprecated in C++20, removed in C++26
+    void atomic_store(shared_ptr<T>* p, shared_ptr<T> r);
 template<class T>
-    void atomic_store_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);       // Deprecated in C++20, removed in C++26
+    void atomic_store_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);
 template<class T>
-    shared_ptr<T> atomic_exchange(shared_ptr<T>* p, shared_ptr<T> r);                     // Deprecated in C++20, removed in C++26
+    shared_ptr<T> atomic_exchange(shared_ptr<T>* p, shared_ptr<T> r);
 template<class T>
     shared_ptr<T>
-    atomic_exchange_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);         // Deprecated in C++20, removed in C++26
+    atomic_exchange_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);
 template<class T>
     bool
-    atomic_compare_exchange_weak(shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w);    // Deprecated in C++20, removed in C++26
+    atomic_compare_exchange_weak(shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w);
 template<class T>
     bool
-    atomic_compare_exchange_strong( shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w); // Deprecated in C++20, removed in C++26
+    atomic_compare_exchange_strong( shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w);
 template<class T>
     bool
-    atomic_compare_exchange_weak_explicit(shared_ptr<T>* p, shared_ptr<T>* v,             // Deprecated in C++20, removed in C++26
+    atomic_compare_exchange_weak_explicit(shared_ptr<T>* p, shared_ptr<T>* v,
                                           shared_ptr<T> w, memory_order success,
                                           memory_order failure);
 template<class T>
     bool
-    atomic_compare_exchange_strong_explicit(shared_ptr<T>* p, shared_ptr<T>* v,           // Deprecated in C++20, removed in C++26
+    atomic_compare_exchange_strong_explicit(shared_ptr<T>* p, shared_ptr<T>* v,
                                             shared_ptr<T> w, memory_order success,
                                             memory_order failure);
 // Hash support

@@ -10,12 +10,12 @@
 // OBJDUMP-NEXT: 0000 2b000000 2c000000 00000000 00000000
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0030 00f0afe4 801f007f 000c0000 00000000
+// OBJDUMP-NEXT: 0030 05f0afe4 801f007f 000c0000 00000000
 // expr_defined
 // OBJDUMP-NEXT: 0040 2a000000 2b000000 00000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0070 00f0afe4 801f007f 000c0000 00000000
+// OBJDUMP-NEXT: 0070 05f0afe4 801f007f 000c0000 00000000
 
 .text
 // ASM: .text
@@ -61,8 +61,10 @@ expr_defined:
   .amdhsa_exception_fp_ieee_inexact defined_boolean
   .amdhsa_exception_int_div_zero defined_boolean
   .amdhsa_uses_dynamic_stack defined_boolean
-  .amdhsa_next_free_vgpr 0
-  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr defined_value+4
+  .amdhsa_next_free_sgpr defined_value+5
+  .amdhsa_reserve_vcc defined_boolean
+  .amdhsa_reserve_flat_scratch defined_boolean
 .end_amdhsa_kernel
 
 .set defined_value, 41
@@ -94,8 +96,10 @@ expr_defined:
   .amdhsa_exception_fp_ieee_inexact defined_boolean
   .amdhsa_exception_int_div_zero defined_boolean
   .amdhsa_uses_dynamic_stack defined_boolean
-  .amdhsa_next_free_vgpr 0
-  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr defined_value+3
+  .amdhsa_next_free_sgpr defined_value+4
+  .amdhsa_reserve_vcc defined_boolean
+  .amdhsa_reserve_flat_scratch defined_boolean
 .end_amdhsa_kernel
 
 // ASM: .amdhsa_kernel expr_defined_later
@@ -117,19 +121,21 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_z (((((((((((((((((((((((((((((0&(~128))|(1<<7))&(~6144))|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~62))|(0<<1))&512)>>9
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info (((((((((((((((((((((((((((((0&(~128))|(1<<7))&(~6144))|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~62))|(0<<1))&1024)>>10
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id (((((((((((((((((((((((((((((0&(~128))|(1<<7))&(~6144))|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~62))|(0<<1))&6144)>>11
-// ASM-NEXT: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM-NEXT: .amdhsa_next_free_vgpr defined_value+4
+// ASM-NEXT: .amdhsa_next_free_sgpr defined_value+5
+// ASM-NEXT: .amdhsa_reserve_vcc defined_boolean
+// ASM-NEXT: .amdhsa_reserve_flat_scratch defined_boolean
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
-// ASM-NEXT: .amdhsa_float_round_mode_32 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&12288)>>12
-// ASM-NEXT: .amdhsa_float_round_mode_16_64 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&49152)>>14
-// ASM-NEXT: .amdhsa_float_denorm_mode_32 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&196608)>>16
-// ASM-NEXT: .amdhsa_float_denorm_mode_16_64 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&786432)>>18
-// ASM-NEXT: .amdhsa_dx10_clamp (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&2097152)>>21
-// ASM-NEXT: .amdhsa_ieee_mode (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&8388608)>>23
-// ASM-NEXT: .amdhsa_fp16_overflow (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&67108864)>>26
-// ASM-NEXT: .amdhsa_workgroup_processor_mode (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&536870912)>>29
-// ASM-NEXT: .amdhsa_memory_ordered (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&1073741824)>>30
-// ASM-NEXT: .amdhsa_forward_progress (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(0<<0))&(~960))|(0<<6))&2147483648)>>31
+// ASM-NEXT: .amdhsa_float_round_mode_32 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&12288)>>12
+// ASM-NEXT: .amdhsa_float_round_mode_16_64 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&49152)>>14
+// ASM-NEXT: .amdhsa_float_denorm_mode_32 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&196608)>>16
+// ASM-NEXT: .amdhsa_float_denorm_mode_16_64 (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&786432)>>18
+// ASM-NEXT: .amdhsa_dx10_clamp (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&2097152)>>21
+// ASM-NEXT: .amdhsa_ieee_mode (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&8388608)>>23
+// ASM-NEXT: .amdhsa_fp16_overflow (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&67108864)>>26
+// ASM-NEXT: .amdhsa_workgroup_processor_mode (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&536870912)>>29
+// ASM-NEXT: .amdhsa_memory_ordered (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&1073741824)>>30
+// ASM-NEXT: .amdhsa_forward_progress (((((((((((((((((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~536870912))|(1<<29))&(~1073741824))|(1<<30))&(~12288))|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|((((alignto(max(defined_value+4, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max(0, 1), 8))/8)-1)<<6))&2147483648)>>31
 // ASM-NEXT: .amdhsa_shared_vgpr_count 0
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op (((((((((((((((((((((((((((((0&(~128))|(1<<7))&(~6144))|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~62))|(0<<1))&16777216)>>24
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src (((((((((((((((((((((((((((((0&(~128))|(1<<7))&(~6144))|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~62))|(0<<1))&33554432)>>25
@@ -166,8 +172,10 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_z 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info 1
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id 3
-// ASM-NEXT: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM-NEXT: .amdhsa_next_free_vgpr 44
+// ASM-NEXT: .amdhsa_next_free_sgpr 45
+// ASM-NEXT: .amdhsa_reserve_vcc 1
+// ASM-NEXT: .amdhsa_reserve_flat_scratch 1
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 3
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 3

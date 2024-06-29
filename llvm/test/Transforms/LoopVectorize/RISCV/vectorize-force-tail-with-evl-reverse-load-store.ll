@@ -16,9 +16,7 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -121,9 +119,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

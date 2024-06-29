@@ -55,4 +55,3 @@ add_lit_testsuite(check-msan "Running the MemorySanitizer tests"
   ${MSAN_TESTSUITES}
   DEPENDS ${MSAN_TEST_DEPS}
   )
-set_target_properties(check-msan PROPERTIES FOLDER "Compiler-RT Misc")

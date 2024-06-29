@@ -1269,7 +1269,7 @@ private:
     if (WalkingPhi && Location.Ptr) {
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
-          OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
+          OriginalAccess->getBlock()->getDataLayout(), nullptr);
 
       if (Value *Addr =
               Translator.translateValue(OriginalAccess->getBlock(),

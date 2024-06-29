@@ -20,6 +20,7 @@
 #define HWCAP2_BTI (1ULL << 17)
 #define HWCAP2_MTE (1ULL << 18)
 #define HWCAP2_AFP (1ULL << 20)
+#define HWCAP2_SME (1ULL << 23)
 #define HWCAP2_EBF16 (1ULL << 32)
 
 using namespace lldb_private;
@@ -27,7 +28,10 @@ using namespace lldb_private;
 LinuxArm64RegisterFlags::Fields
 LinuxArm64RegisterFlags::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2) {
   (void)hwcap;
-  (void)hwcap2;
+
+  if (!(hwcap2 & HWCAP2_SME))
+    return {};
+
   // Represents the pseudo register that lldb-server builds, which itself
   // matches the architectural register SCVR. The fields match SVCR in the Arm
   // manual.
@@ -40,7 +44,10 @@ LinuxArm64RegisterFlags::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2) {
 LinuxArm64RegisterFlags::Fields
 LinuxArm64RegisterFlags::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2) {
   (void)hwcap;
-  (void)hwcap2;
+
+  if (!(hwcap2 & HWCAP2_MTE))
+    return {};
+
   // Represents the contents of NT_ARM_TAGGED_ADDR_CTRL and the value passed
   // to prctl(PR_TAGGED_ADDR_CTRL...). Fields are derived from the defines
   // used to build the value.

@@ -65,12 +65,16 @@ private:
                                   uint32_t TotalNumVGPR, uint32_t NumSGPR,
                                   uint64_t ScratchSize, uint64_t CodeSize,
                                   const AMDGPUMachineFunction *MFI);
+  void emitCommonFunctionComments(const MCExpr *NumVGPR, const MCExpr *NumAGPR,
+                                  const MCExpr *TotalNumVGPR,
+                                  const MCExpr *NumSGPR,
+                                  const MCExpr *ScratchSize, uint64_t CodeSize,
+                                  const AMDGPUMachineFunction *MFI);
   void emitResourceUsageRemarks(const MachineFunction &MF,
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);
 
-  uint16_t getAmdhsaKernelCodeProperties(
-      const MachineFunction &MF) const;
+  const MCExpr *getAmdhsaKernelCodeProperties(const MachineFunction &MF) const;
 
   AMDGPU::MCKernelDescriptor
   getAmdhsaKernelDescriptor(const MachineFunction &MF,
@@ -78,7 +82,7 @@ private:
 
   void initTargetStreamer(Module &M);
 
-  static uint64_t getMCExprValue(const MCExpr *Value, MCContext &Ctx);
+  SmallString<128> getMCExprStr(const MCExpr *Value);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,

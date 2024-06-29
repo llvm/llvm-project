@@ -1257,7 +1257,7 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   if (!ST->hasMVEIntegerOps())
     return false;
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
 

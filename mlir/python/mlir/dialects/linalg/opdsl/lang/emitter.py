@@ -31,14 +31,6 @@ __all__ = [
 ValueList = Union[Sequence[Value], OpResultList]
 
 
-def isa(cls: Type, ty: Type):
-    try:
-        cls(ty)
-        return True
-    except ValueError:
-        return False
-
-
 def prepare_common_structured_op(
     op_config: LinalgStructuredOpConfig,
     *ins: Value,
@@ -127,7 +119,7 @@ def prepare_common_structured_op(
         op_config, in_arg_defs, ins, out_arg_defs, outs
     )
 
-    result_types = [t for t in out_types if isa(RankedTensorType, t)]
+    result_types = [t for t in out_types if isinstance(t, RankedTensorType)]
 
     # Initialize the type dictionary with the predefined types.
     type_mapping = dict()  # type: Dict[str, Type]

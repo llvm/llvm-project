@@ -49,6 +49,7 @@ static constexpr unsigned GFX9 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
+static constexpr unsigned GFX12 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -358,6 +359,10 @@ struct EncodingField {
   constexpr uint64_t encode() const { return Value; }
   static ValueType decode(uint64_t Encoded) { return Encoded; }
 };
+
+// Represents a single bit in an encoded value.
+template <unsigned Bit, unsigned D = 0>
+using EncodingBit = EncodingField<Bit, Bit, D>;
 
 // A helper for encoding and decoding multiple fields.
 template <typename... Fields> struct EncodingFields {
@@ -856,6 +861,12 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isInvalidSingleUseConsumerInst(unsigned Opc);
+
+LLVM_READONLY
+bool isInvalidSingleUseProducerInst(unsigned Opc);
+
+LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
 LLVM_READONLY
@@ -1296,6 +1307,7 @@ bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
+bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
@@ -1468,7 +1480,8 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
 /// S_LOAD instructions have a signed offset, on other subtargets it is
 /// unsigned. S_BUFFER has an unsigned offset for all subtargets.
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer);
+                                            int64_t ByteOffset, bool IsBuffer,
+                                            bool HasSOffset = false);
 
 /// \return The encoding that can be used for a 32-bit literal offset in an SMRD
 /// instruction. This is only useful on CI.s

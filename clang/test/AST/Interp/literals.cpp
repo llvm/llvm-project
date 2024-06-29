@@ -45,6 +45,8 @@ constexpr int Failed2 = Failed1 + 1; // both-error {{must be initialized by a co
 static_assert(Failed2 == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{initializer of 'Failed2' is not a constant expression}}
 
+const int x = *(volatile int*)0x1234;
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");
@@ -66,7 +68,12 @@ namespace ScalarTypes {
     First = 0,
   };
   static_assert(getScalar<E>() == First, "");
-  /// FIXME: Member pointers.
+
+  struct S {
+    int v;
+  };
+  constexpr int S::* MemberPtr = &S::v;
+  static_assert(getScalar<decltype(MemberPtr)>() == nullptr, "");
 
 #if __cplusplus >= 201402L
   constexpr void Void(int n) {
@@ -1204,7 +1211,7 @@ namespace incdecbool {
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
   extern char arr[]; // ref-note {{declared here}}
    return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
-                  // expected-note {{array-to-pointer decay of array member without known bound is not supported}}
+                  // expected-note {{indexing of array without known bound}}
 }
 #endif
 

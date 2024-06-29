@@ -575,7 +575,6 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__functional/binary_function.h>
 #include <__functional/is_transparent.h>
@@ -642,7 +641,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
     return static_cast<const _Compare&>(*this)(__x, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(static_cast<_Compare&>(*this), static_cast<_Compare&>(__y));
   }
@@ -680,7 +679,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
     return __comp_(__x, __y.__get_value().first);
   }
-  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value) {
+  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(__comp_, __y.__comp_);
   }
@@ -716,8 +715,6 @@ public:
 private:
   allocator_type& __na_;
 
-  __map_node_destructor& operator=(const __map_node_destructor&);
-
 public:
   bool __first_constructed;
   bool __second_constructed;
@@ -735,6 +732,8 @@ public:
     __x.__value_constructed = false;
   }
 #endif // _LIBCPP_CXX03_LANG
+
+  __map_node_destructor& operator=(const __map_node_destructor&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT {
     if (__second_constructed)
@@ -809,7 +808,6 @@ public:
     return *this;
   }
 
-private:
   __value_type()                    = delete;
   ~__value_type()                   = delete;
   __value_type(const __value_type&) = delete;
@@ -831,11 +829,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI value_type& __get_value() { return __cc_; }
   _LIBCPP_HIDE_FROM_ABI const value_type& __get_value() const { return __cc_; }
 
-private:
-  __value_type();
-  __value_type(__value_type const&);
-  __value_type& operator=(__value_type const&);
-  ~__value_type();
+  __value_type()                               = delete;
+  __value_type(__value_type const&)            = delete;
+  __value_type& operator=(__value_type const&) = delete;
+  ~__value_type()                              = delete;
 };
 
 #endif // _LIBCPP_CXX03_LANG
@@ -975,7 +972,7 @@ public:
   typedef value_type& reference;
   typedef const value_type& const_reference;
 
-  static_assert((is_same<typename allocator_type::value_type, value_type>::value),
+  static_assert(is_same<typename allocator_type::value_type, value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
   class _LIBCPP_TEMPLATE_VIS value_compare : public __binary_function<value_type, value_type, bool> {
@@ -1000,9 +997,7 @@ private:
   typedef typename __base::__node_traits __node_traits;
   typedef allocator_traits<allocator_type> __alloc_traits;
 
-  static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
+  static_assert(__check_valid_allocator<allocator_type>::value, "");
 
   __base __tree_;
 
@@ -1093,12 +1088,12 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI map(map&& __m) _NOEXCEPT_(is_nothrow_move_constructible<__base>::value)
+  _LIBCPP_HIDE_FROM_ABI map(map&& __m) noexcept(is_nothrow_move_constructible<__base>::value)
       : __tree_(std::move(__m.__tree_)) {}
 
   _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) _NOEXCEPT_(is_nothrow_move_assignable<__base>::value) {
+  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) {
     __tree_ = std::move(__m.__tree_);
     return *this;
   }
@@ -1360,9 +1355,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable<__base>::value) {
-    __tree_.swap(__m.__tree_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) { __tree_.swap(__m.__tree_); }
 
   _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
@@ -1478,8 +1471,9 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
-    -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>,
+    _Compare   = _Compare(),
+    _Allocator = _Allocator()) -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -1498,8 +1492,8 @@ map(from_range_t, _Range&&, _Allocator)
 #  endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>, _Allocator)
-    -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>,
+    _Allocator) -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -1660,7 +1654,8 @@ public:
   typedef value_type& reference;
   typedef const value_type& const_reference;
 
-  static_assert((is_same<typename allocator_type::value_type, value_type>::value),
+  static_assert(__check_valid_allocator<allocator_type>::value, "");
+  static_assert(is_same<typename allocator_type::value_type, value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
   class _LIBCPP_TEMPLATE_VIS value_compare : public __binary_function<value_type, value_type, bool> {
@@ -1684,10 +1679,6 @@ private:
   typedef __tree<__value_type, __vc, __allocator_type> __base;
   typedef typename __base::__node_traits __node_traits;
   typedef allocator_traits<allocator_type> __alloc_traits;
-
-  static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
 
   __base __tree_;
 
@@ -1781,12 +1772,12 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) _NOEXCEPT_(is_nothrow_move_constructible<__base>::value)
+  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) noexcept(is_nothrow_move_constructible<__base>::value)
       : __tree_(std::move(__m.__tree_)) {}
 
   _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI multimap& operator=(multimap&& __m) _NOEXCEPT_(is_nothrow_move_assignable<__base>::value) {
+  _LIBCPP_HIDE_FROM_ABI multimap& operator=(multimap&& __m) noexcept(is_nothrow_move_assignable<__base>::value) {
     __tree_ = std::move(__m.__tree_);
     return *this;
   }
@@ -1952,7 +1943,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(multimap& __m) _NOEXCEPT_(__is_nothrow_swappable<__base>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(multimap& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) {
     __tree_.swap(__m.__tree_);
   }
 
@@ -2064,8 +2055,9 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
-    -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>,
+         _Compare   = _Compare(),
+         _Allocator = _Allocator()) -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -2084,8 +2076,8 @@ multimap(from_range_t, _Range&&, _Allocator)
 #  endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
-    -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>,
+         _Allocator) -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG

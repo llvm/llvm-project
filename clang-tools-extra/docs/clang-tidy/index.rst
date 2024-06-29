@@ -240,6 +240,9 @@ An overview of all the command-line options:
                                        This option's value is appended to the value of
                                        the 'WarningsAsErrors' option in .clang-tidy
                                        file, if any.
+    --allow-no-checks                - Allow empty enabled checks. This suppresses
+                                       the "no checks enabled" error when disabling
+                                       all of the checks.
 
   -p <build-path> is used to read a compile command database.
 

@@ -17,8 +17,12 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+#include "llvm/ADT/bit.h"
 
 //===----------------------------------------------------------------------===//
 //
@@ -52,6 +56,42 @@ struct COOSegment {
   bool inSegment(Level l) const {
     return l >= lvlRange.first && l < lvlRange.second;
   }
+};
+
+/// A simple wrapper to encode a bitset of (at most 64) levels, currently used
+/// by `sparse_tensor.iterate` operation for the set of levels on which the
+/// coordinates should be loaded.
+class LevelSet {
+  uint64_t bits = 0;
+
+public:
+  LevelSet() = default;
+  explicit LevelSet(uint64_t bits) : bits(bits) {}
+  operator uint64_t() const { return bits; }
+
+  LevelSet &set(unsigned i) {
+    assert(i < 64);
+    bits |= static_cast<uint64_t>(0x01u) << i;
+    return *this;
+  }
+
+  LevelSet &operator|=(LevelSet lhs) {
+    bits |= static_cast<uint64_t>(lhs);
+    return *this;
+  }
+
+  LevelSet &lshift(unsigned offset) {
+    bits = bits << offset;
+    return *this;
+  }
+
+  bool operator[](unsigned i) const {
+    assert(i < 64);
+    return (bits & (1 << i)) != 0;
+  }
+  unsigned max() const { return 64 - llvm::countl_zero(bits); }
+  unsigned count() const { return llvm::popcount(bits); }
+  bool empty() const { return bits == 0; }
 };
 
 } // namespace sparse_tensor

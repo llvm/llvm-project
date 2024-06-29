@@ -71,6 +71,8 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let mayStore           = ps.mayStore;
   let IsAtomicRet        = ps.IsAtomicRet;
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
 
   let Constraints = ps.Constraints;
   let DisableEncoding = ps.DisableEncoding;
@@ -963,16 +965,16 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 
 multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt.Size)>;
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt.Size)>;
+                         !cast<PatFrag>(frag#"_local_"#vt)>;
   }
 
   let OtherPredicates = [HasGDS] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
                          /* complexity */ 0, /* gds */ 1>;
   }
 }
@@ -981,24 +983,24 @@ multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
                                   ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
     def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_"#vt.Size)>;
+                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
     def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size), /* complexity */ 1>;
+                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt.Size)>;
+                         !cast<PatFrag>(frag#"_local_"#vt)>;
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_noret_"#vt.Size), /* complexity */ 1>;
+                         !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
   }
 
   let OtherPredicates = [HasGDS] in {
     def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+                         !cast<PatFrag>(frag#"_region_m0_"#vt),
                          /* complexity */ 0, /* gds */ 1>;
     def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size),
+                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
                          /* complexity */ 1, /* gds */ 1>;
   }
 }
@@ -1017,23 +1019,23 @@ class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag,
 multiclass DSAtomicCmpXChgSwapped_mc<DS_Pseudo inst, DS_Pseudo noRetInst, ValueType vt,
                                      string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt.Size)>;
-    def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size),
+    def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+    def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_local_m0_noret_"#vt),
                                  /* complexity */ 1>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicCmpXChgSwapped<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                                 !cast<PatFrag>(frag#"_local_"#vt.Size)>;
+                                 !cast<PatFrag>(frag#"_local_"#vt)>;
     def : DSAtomicCmpXChgSwapped<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                                 !cast<PatFrag>(frag#"_local_noret_"#vt.Size),
+                                 !cast<PatFrag>(frag#"_local_noret_"#vt),
                                  /* complexity */ 1>;
   }
 
   let OtherPredicates = [HasGDS] in {
-    def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+    def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
                                  /* complexity */ 0, /* gds */ 1>;
-    def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size),
+    def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
                                  /* complexity */ 1, /* gds */ 1>;
   }
 }
@@ -1051,14 +1053,14 @@ class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag,
 multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, DS_Pseudo noRetInst, ValueType vt, string frag> {
 
   def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                        !cast<PatFrag>(frag#"_local_"#vt.Size)>;
+                        !cast<PatFrag>(frag#"_local_"#vt)>;
   def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                        !cast<PatFrag>(frag#"_local_noret_"#vt.Size), /* complexity */ 1>;
+                        !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
 
   let OtherPredicates = [HasGDS] in {
-    def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+    def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
                           /* complexity */ 0, /* gds */ 1>;
-    def : DSAtomicCmpXChg<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size),
+    def : DSAtomicCmpXChg<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
                           /* complexity */ 1, /* gds */ 1>;
   }
 }
@@ -1079,6 +1081,12 @@ defm : DSAtomicRetNoRetPat_mc<DS_MIN_RTN_U32, DS_MIN_U32, i32, "atomic_load_umin
 defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_U32, DS_MAX_U32, i32, "atomic_load_umax">;
 defm : DSAtomicRetNoRetPat_mc<DS_MIN_RTN_F32, DS_MIN_F32, f32, "atomic_load_fmin">;
 defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_F32, DS_MAX_F32, f32, "atomic_load_fmax">;
+
+
+let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
+defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
+}
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;
@@ -1117,9 +1125,9 @@ defm : DSAtomicCmpXChg_mc<DS_CMPSTORE_RTN_B64, DS_CMPSTORE_B64, i64, "atomic_cmp
 } // End SubtargetPredicate = isGFX11Plus
 
 let SubtargetPredicate = HasLdsAtomicAddF64 in {
-def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_64>;
+def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_f64>;
 let AddedComplexity = 1 in
-def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_64>;
+def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_f64>;
 
 class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
   bit gds=0> : GCNPat <
@@ -1133,18 +1141,7 @@ def : DSAtomicRetPatIntrinsic<DS_ADD_F64, f64, int_amdgcn_flat_atomic_fadd_noret
 }
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-def : DSAtomicRetPat<DS_PK_ADD_RTN_F16, v2f16, atomic_load_fadd_v2f16_local_32>;
-let AddedComplexity = 1 in
-def : DSAtomicRetPat<DS_PK_ADD_F16, v2f16, atomic_load_fadd_v2f16_local_noret_32>;
-def : GCNPat <
-  (v2i16 (int_amdgcn_ds_fadd_v2bf16 i32:$ptr, v2i16:$src)),
-  (DS_PK_ADD_RTN_BF16 VGPR_32:$ptr, VGPR_32:$src, 0, 0)
->;
-let AddedComplexity = 1 in
-def : GCNPat <
-  (v2i16 (int_amdgcn_ds_fadd_v2bf16_noret i32:$ptr, v2i16:$src)),
-  (DS_PK_ADD_BF16 VGPR_32:$ptr, VGPR_32:$src, 0, 0)
->;
+defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 let OtherPredicates = [HasGDS] in

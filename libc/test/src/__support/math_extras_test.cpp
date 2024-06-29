@@ -102,7 +102,7 @@ TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
 }
 
 using UnsignedTypes = testing::TypeList<
-#if defined(__SIZEOF_INT128__)
+#if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
 #endif
     unsigned char, unsigned short, unsigned int, unsigned long,

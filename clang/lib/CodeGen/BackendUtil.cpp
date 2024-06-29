@@ -85,7 +85,6 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Utils/Debugify.h"
-#include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <optional>
@@ -983,22 +982,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                                            /*DropTypeTests=*/true));
           });
 
-    if (CodeGenOpts.InstrumentFunctions ||
-        CodeGenOpts.InstrumentFunctionEntryBare ||
-        CodeGenOpts.InstrumentFunctionsAfterInlining ||
-        CodeGenOpts.InstrumentForProfiling) {
-      PB.registerPipelineStartEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(createModuleToFunctionPassAdaptor(
-                EntryExitInstrumenterPass(/*PostInlining=*/false)));
-          });
-      PB.registerOptimizerLastEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(createModuleToFunctionPassAdaptor(
-                EntryExitInstrumenterPass(/*PostInlining=*/true)));
-          });
-    }
-
     // Register callbacks to schedule sanitizer passes at the appropriate part
     // of the pipeline.
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
@@ -1052,7 +1035,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
   if (CodeGenOpts.LinkBitcodePostopt)
-    MPM.addPass(LinkInModulesPass(BC, false));
+    MPM.addPass(LinkInModulesPass(BC));
 
   // Add a verifier pass if requested. We don't have to do this if the action
   // requires code generation because there will already be a verifier pass in

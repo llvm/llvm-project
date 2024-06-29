@@ -7,7 +7,6 @@ algorithm cstdint
 algorithm cstdlib
 algorithm cstring
 algorithm cwchar
-algorithm execution
 algorithm initializer_list
 algorithm iosfwd
 algorithm iterator
@@ -16,6 +15,7 @@ algorithm memory
 algorithm new
 algorithm optional
 algorithm stdexcept
+algorithm tuple
 algorithm type_traits
 algorithm utility
 algorithm version
@@ -189,9 +189,6 @@ condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
 coroutine compare
-coroutine cstddef
-coroutine cstdint
-coroutine cstring
 coroutine iosfwd
 coroutine limits
 coroutine type_traits
@@ -583,6 +580,7 @@ numeric iterator
 numeric limits
 numeric new
 numeric optional
+numeric tuple
 numeric type_traits
 numeric version
 optional atomic
@@ -916,6 +914,7 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple exception
 tuple iosfwd
 tuple new

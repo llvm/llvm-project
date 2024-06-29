@@ -26,7 +26,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_extension(datasizeof)
+#if __has_keyword(__datasizeof) || __has_extension(datasizeof)
 template <class _Tp>
 inline const size_t __datasizeof_v = __datasizeof(_Tp);
 #else

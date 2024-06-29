@@ -16,12 +16,12 @@
 //   CHECK-DAG:  %[[TMP_c3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:  %[[TMP_c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:  %[[TMP_c1:.*]] = arith.constant 1 : index
-//       CHECK:  %[[TMP_0:.*]] = tensor.empty()
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index}
-//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index}
-//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index}
-//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index}
-//       CHECK:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]]
+//   CHECK-DAG:  %[[TMP_0:.*]] = tensor.empty()
+//   CHECK-DAG:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index}
+//   CHECK-DAG:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index}
+//   CHECK-DAG:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index}
+//   CHECK-DAG:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index}
+//   CHECK-DAG:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]]
 //       CHECK:  %[[TMP_6:.*]] = memref.load %[[TMP_1]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_7:.*]] = memref.load %[[TMP_1]][%[[TMP_c1]]] : memref<?xindex>
 //       CHECK:  %[[T:.*]] = scf.for %[[TMP_arg1:.*]] = %[[TMP_6]] to %[[TMP_7]] step %[[TMP_c1]] {{.*}} {

@@ -43,14 +43,14 @@ define void @test(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; VECTOR_DBG-NEXT:    call void @unknown()
 ; VECTOR_DBG-NEXT:    call void @unknown()
 ; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
 ; VECTOR_DBG-NEXT:    store <4 x float> [[TMP0]], ptr [[B:%.*]], align 4
 ; VECTOR_DBG-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
 ; VECTOR_DBG-NEXT:    store <4 x float> [[TMP1]], ptr [[D:%.*]], align 4

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output \
-; RUN:     < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output \
+; RUN:     < %s 2>&1 | FileCheck %s
 
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_loop__TO__backedge

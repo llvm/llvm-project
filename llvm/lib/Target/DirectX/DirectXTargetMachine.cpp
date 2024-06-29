@@ -102,8 +102,7 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
 
 DirectXTargetMachine::~DirectXTargetMachine() {}
 
-void DirectXTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "DirectXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }

@@ -10,7 +10,6 @@
 #define _LIBCPP___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H
 
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__fwd/pair.h>
 #include <__memory_resource/memory_resource.h>

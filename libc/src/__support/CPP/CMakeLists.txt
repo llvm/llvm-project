@@ -111,6 +111,7 @@ add_header_library(
     type_traits/add_lvalue_reference.h
     type_traits/add_pointer.h
     type_traits/add_rvalue_reference.h
+    type_traits/aligned_storage.h
     type_traits/always_false.h
     type_traits/bool_constant.h
     type_traits/conditional.h

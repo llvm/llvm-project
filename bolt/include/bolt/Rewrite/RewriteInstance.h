@@ -21,6 +21,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Regex.h"
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -77,15 +78,6 @@ public:
     assert(InputFile && "cannot have an instance without a file");
     return InputFile->getFileName();
   }
-
-  /// Set the build-id string if we did not fail to parse the contents of the
-  /// ELF note section containing build-id information.
-  void parseBuildID();
-
-  /// The build-id is typically a stream of 20 bytes. Return these bytes in
-  /// printable hexadecimal form if they are available, or std::nullopt
-  /// otherwise.
-  std::optional<std::string> getPrintableBuildID() const;
 
   /// If this instance uses a profile, return appropriate profile reader.
   const ProfileReaderBase *getProfileReader() const {
@@ -182,6 +174,9 @@ private:
 
   /// Link additional runtime code to support instrumentation.
   void linkRuntime();
+
+  /// Process metadata in sections before functions are discovered.
+  void processSectionMetadata();
 
   /// Process metadata in special sections before CFG is built for functions.
   void processMetadataPreCFG();
@@ -366,11 +361,6 @@ private:
 
   /// Loop over now emitted functions to write translation maps
   void encodeBATSection();
-
-  /// Update the ELF note section containing the binary build-id to reflect
-  /// a new build-id, so tools can differentiate between the old and the
-  /// rewritten binary.
-  void patchBuildID();
 
   /// Return file offset corresponding to a virtual \p Address.
   /// Return 0 if the address has no mapping in the file, including being
@@ -561,17 +551,11 @@ private:
   /// Exception handling and stack unwinding information in this binary.
   ErrorOr<BinarySection &> EHFrameSection{std::errc::bad_address};
 
-  /// .note.gnu.build-id section.
-  ErrorOr<BinarySection &> BuildIDSection{std::errc::bad_address};
-
   /// Helper for accessing sections by name.
   BinarySection *getSection(const Twine &Name) {
     ErrorOr<BinarySection &> ErrOrSection = BC->getUniqueSectionByName(Name);
     return ErrOrSection ? &ErrOrSection.get() : nullptr;
   }
-
-  /// A reference to the build-id bytes in the original binary
-  StringRef BuildID;
 
   /// Keep track of functions we fail to write in the binary. We need to avoid
   /// rewriting CFI info for these functions.
@@ -595,6 +579,9 @@ private:
   uint64_t NumFailedRelocations{0};
 
   NameResolver NR;
+
+  // Regex object matching split function names.
+  const Regex FunctionFragmentTemplate{"(.*)\\.(cold|warm)(\\.[0-9]+)?"};
 
   friend class RewriteInstanceDiff;
 };

@@ -8,6 +8,7 @@
 
 #include "llvm-dwarfdump.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
@@ -187,6 +188,16 @@ struct LocationStats {
   SaturatingUINT64 NumParam = 0;
   /// Total number of local variables processed.
   SaturatingUINT64 NumVar = 0;
+};
+
+/// Holds accumulated debug line statistics across all CUs.
+struct LineStats {
+  SaturatingUINT64 NumBytes = 0;
+  SaturatingUINT64 NumLineZeroBytes = 0;
+  SaturatingUINT64 NumEntries = 0;
+  SaturatingUINT64 NumIsStmtEntries = 0;
+  SaturatingUINT64 NumUniqueEntries = 0;
+  SaturatingUINT64 NumUniqueNonZeroEntries = 0;
 };
 } // namespace
 
@@ -848,6 +859,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   StringRef FormatName = Obj.getFileFormatName();
   GlobalStats GlobalStats;
   LocationStats LocStats;
+  LineStats LnStats;
   StringMap<PerFunctionStats> Statistics;
   // This variable holds variable information for functions with
   // abstract_origin globally, across all CUs.
@@ -856,6 +868,14 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   // abstract_origin.
   FunctionDIECUTyMap AbstractOriginFnCUs;
   CrossCUReferencingDIELocationTy CrossCUReferencesToBeResolved;
+  // Tuple representing a single source code position in the line table. Fields
+  // are respectively: Line, Col, File, where 'File' is an index into the Files
+  // vector below.
+  using LineTuple = std::tuple<uint32_t, uint16_t, uint16_t>;
+  SmallVector<std::string> Files;
+  DenseSet<LineTuple> UniqueLines;
+  DenseSet<LineTuple> UniqueNonZeroLines;
+
   for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units()) {
     if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false)) {
       // This variable holds variable information for functions with
@@ -882,7 +902,57 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
         CrossCUReferencesToBeResolved.push_back(
             DIELocation(CUDie.getDwarfUnit(), CrossCUReferencingDIEOffset));
     }
+    const auto *LineTable = DICtx.getLineTableForUnit(CU.get());
+    std::optional<uint64_t> LastFileIdxOpt;
+    if (LineTable)
+      LastFileIdxOpt = LineTable->getLastValidFileIndex();
+    if (LastFileIdxOpt) {
+      // Each CU has its own file index; in order to track unique line entries
+      // across CUs, we therefore need to map each CU file index to a global
+      // file index, which we store here.
+      DenseMap<uint64_t, uint16_t> CUFileMapping;
+      for (uint64_t FileIdx = 0; FileIdx <= *LastFileIdxOpt; ++FileIdx) {
+        std::string File;
+        if (LineTable->getFileNameByIndex(
+                FileIdx, CU->getCompilationDir(),
+                DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                File)) {
+          auto ExistingFile = llvm::find(Files, File);
+          if (ExistingFile != Files.end()) {
+            CUFileMapping[FileIdx] = std::distance(Files.begin(), ExistingFile);
+          } else {
+            CUFileMapping[FileIdx] = Files.size();
+            Files.push_back(File);
+          }
+        }
+      }
+      for (const auto &Seq : LineTable->Sequences) {
+        LnStats.NumBytes += Seq.HighPC - Seq.LowPC;
+        // Ignore the `end_sequence` entry, since it's not interesting for us.
+        LnStats.NumEntries += Seq.LastRowIndex - Seq.FirstRowIndex - 1;
+        for (size_t RowIdx = Seq.FirstRowIndex; RowIdx < Seq.LastRowIndex - 1;
+             ++RowIdx) {
+          auto Entry = LineTable->Rows[RowIdx];
+          if (Entry.IsStmt)
+            LnStats.NumIsStmtEntries += 1;
+          assert(CUFileMapping.contains(Entry.File) &&
+                 "Should have been collected earlier!");
+          uint16_t MappedFile = CUFileMapping[Entry.File];
+          UniqueLines.insert({Entry.Line, Entry.Column, MappedFile});
+          if (Entry.Line != 0) {
+            UniqueNonZeroLines.insert({Entry.Line, Entry.Column, MappedFile});
+          } else {
+            auto EntryStartAddress = Entry.Address.Address;
+            auto EntryEndAddress = LineTable->Rows[RowIdx + 1].Address.Address;
+            LnStats.NumLineZeroBytes += EntryEndAddress - EntryStartAddress;
+          }
+        }
+      }
+    }
   }
+
+  LnStats.NumUniqueEntries = UniqueLines.size();
+  LnStats.NumUniqueNonZeroEntries = UniqueNonZeroLines.size();
 
   /// Resolve CrossCU references.
   collectZeroLocCovForVarsWithCrossCUReferencingAbstractOrigin(
@@ -1043,6 +1113,16 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   printLocationStats(J, "#local vars", LocStats.LocalVarLocStats);
   printLocationStats(J, "#local vars - entry values",
                      LocStats.LocalVarNonEntryValLocStats);
+
+  // Print line statistics for the object file.
+  printDatum(J, "#bytes with line information", LnStats.NumBytes.Value);
+  printDatum(J, "#bytes with line-0 locations", LnStats.NumLineZeroBytes.Value);
+  printDatum(J, "#line entries", LnStats.NumEntries.Value);
+  printDatum(J, "#line entries (is_stmt)", LnStats.NumIsStmtEntries.Value);
+  printDatum(J, "#line entries (unique)", LnStats.NumUniqueEntries.Value);
+  printDatum(J, "#line entries (unique non-0)",
+             LnStats.NumUniqueNonZeroEntries.Value);
+
   J.objectEnd();
   OS << '\n';
   LLVM_DEBUG(

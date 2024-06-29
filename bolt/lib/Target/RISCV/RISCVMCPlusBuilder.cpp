@@ -151,14 +151,14 @@ public:
     }
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
     Inst.setOpcode(Opcode);
-    return replaceBranchTarget(Inst, TBB, Ctx);
+    replaceBranchTarget(Inst, TBB, Ctx);
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
@@ -170,7 +170,6 @@ public:
 
     Inst.getOperand(SymOpIndex) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   IndirectBranchType analyzeIndirectBranch(

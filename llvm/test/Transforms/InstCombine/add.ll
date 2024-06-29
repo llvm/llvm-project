@@ -1435,15 +1435,28 @@ define i32 @and31_add_sexts(i1 %x, i1 %y) {
   ret i32 %r
 }
 
-; Negative test - extra use
-
 define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts(
+; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xs = sext i1 %x to i32
+  %ys = sext i1 %y to i32
+  store i32 %ys, ptr %p
+  %sub = add i32 %xs, %ys
+  %r = lshr i32 %sub, 31
+  ret i32 %r
+}
+
+define i32 @lshr_add_use_sexts_2(i1 %x, i1 %y, ptr %p) {
+; CHECK-LABEL: @lshr_add_use_sexts_2(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[XS]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
@@ -1456,18 +1469,20 @@ define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, ptr %p) {
-; CHECK-LABEL: @lshr_add_use2_sexts(
+declare void @use_sexts(i32, i32)
+
+define i32 @lshr_add_use_sexts_both(i1 %x, i1 %y) {
+; CHECK-LABEL: @lshr_add_use_sexts_both(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    call void @use_sexts(i32 [[XS]], i32 [[YS]])
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, ptr %p
+  call void @use_sexts(i32 %xs, i32 %ys)
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r
@@ -1509,6 +1524,46 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
   call void @use(i8 %i1) ; extra use
   %r = add i8 %i1, 42
   ret i8 %r
+}
+define i8 @fold_add_constant_preserve_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, 8
+  ret i8 %add
+}
+define i8 @fold_add_constant_no_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_no_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, -8
+  ret i8 %add
+}
+define i8 @fold_add_constant_preserve_nuw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], -116
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, 128
+  %add = add nuw i8 %or, 12
+  ret i8 %add
+}
+define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @sdiv_to_udiv(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242049
+; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[T2]], 192
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = shl nuw nsw i32 %arg0, 8
+  %t1 = or disjoint i32 %t0, 1
+  %t2 = add nuw nsw i32 %t1, 6242048
+  %t3 = sdiv i32 %t2, 192
+  ret i32 %t3
 }
 
 define i8 @add_like_or_disjoint(i8 %x) {

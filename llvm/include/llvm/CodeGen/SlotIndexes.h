@@ -22,7 +22,7 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -59,10 +59,6 @@ class raw_ostream;
       this->index = index;
     }
   };
-
-  template <>
-  struct ilist_alloc_traits<IndexListEntry>
-      : public ilist_noalloc_traits<IndexListEntry> {};
 
   /// SlotIndex - An opaque wrapper around machine indexes.
   class SlotIndex {
@@ -302,7 +298,7 @@ class raw_ostream;
     // IndexListEntry allocator.
     BumpPtrAllocator ileAllocator;
 
-    using IndexList = ilist<IndexListEntry>;
+    using IndexList = simple_ilist<IndexListEntry>;
     IndexList indexList;
 
     MachineFunction *mf = nullptr;
@@ -549,7 +545,7 @@ class raw_ostream;
 
       // Insert a new list entry for MI.
       IndexList::iterator newItr =
-          indexList.insert(nextItr, createEntry(&MI, newNumber));
+          indexList.insert(nextItr, *createEntry(&MI, newNumber));
 
       // Renumber locally if we need to.
       if (dist == 0)
@@ -608,7 +604,7 @@ class raw_ostream;
           mbb->empty() ? endEntry
                        : getInstructionIndex(mbb->front()).listEntry();
       IndexList::iterator newItr =
-          indexList.insert(insEntry->getIterator(), startEntry);
+          indexList.insert(insEntry->getIterator(), *startEntry);
 
       SlotIndex startIdx(startEntry, SlotIndex::Slot_Block);
       SlotIndex endIdx(endEntry, SlotIndex::Slot_Block);

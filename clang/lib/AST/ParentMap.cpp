@@ -97,22 +97,6 @@ static void BuildParentMap(MapTy& M, Stmt* S,
       BuildParentMap(M, SubStmt, OVMode);
     }
     break;
-  case Stmt::CXXDefaultArgExprClass:
-    if (auto *Arg = dyn_cast<CXXDefaultArgExpr>(S)) {
-      if (Arg->hasRewrittenInit()) {
-        M[Arg->getExpr()] = S;
-        BuildParentMap(M, Arg->getExpr(), OVMode);
-      }
-    }
-    break;
-  case Stmt::CXXDefaultInitExprClass:
-    if (auto *Init = dyn_cast<CXXDefaultInitExpr>(S)) {
-      if (Init->hasRewrittenInit()) {
-        M[Init->getExpr()] = S;
-        BuildParentMap(M, Init->getExpr(), OVMode);
-      }
-    }
-    break;
   default:
     for (Stmt *SubStmt : S->children()) {
       if (SubStmt) {
@@ -155,7 +139,9 @@ Stmt* ParentMap::getParent(Stmt* S) const {
 }
 
 Stmt *ParentMap::getParentIgnoreParens(Stmt *S) const {
-  do { S = getParent(S); } while (S && isa<ParenExpr>(S));
+  do {
+    S = getParent(S);
+  } while (isa_and_nonnull<ParenExpr>(S));
   return S;
 }
 
@@ -171,7 +157,8 @@ Stmt *ParentMap::getParentIgnoreParenCasts(Stmt *S) const {
 Stmt *ParentMap::getParentIgnoreParenImpCasts(Stmt *S) const {
   do {
     S = getParent(S);
-  } while (S && isa<Expr>(S) && cast<Expr>(S)->IgnoreParenImpCasts() != S);
+  } while (isa_and_nonnull<Expr>(S) &&
+           cast<Expr>(S)->IgnoreParenImpCasts() != S);
 
   return S;
 }

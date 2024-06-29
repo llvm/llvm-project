@@ -23,10 +23,10 @@ void func() {
   // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
 #pragma acc enter data finalize invalid invalid finalize
 
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-warning@+3{{OpenACC clause 'wait' not yet implemented, clause ignored}}
   // expected-warning@+2{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
-#pragma acc enter data seq finalize
+#pragma acc enter data wait finalize
 
   // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'host_data' not yet implemented, pragma ignored}}
@@ -37,23 +37,26 @@ void func() {
   // expected-warning@+1{{OpenACC construct 'host_data' not yet implemented, pragma ignored}}
 #pragma acc host_data if_present, if_present
 
-  // expected-warning@+4{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+3{{OpenACC clause 'independent' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'auto' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+3{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq independent auto
+  for(;;){}
 
-  // expected-warning@+4{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+3{{OpenACC clause 'independent' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'auto' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+3{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq, independent auto
+  for(;;){}
 
-  // expected-warning@+4{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+3{{OpenACC clause 'independent' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'auto' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+3{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq independent, auto
+  for(;;){}
 
   // expected-warning@+4{{OpenACC clause 'seq' not yet implemented, clause ignored}}
   // expected-warning@+3{{OpenACC clause 'independent' not yet implemented, clause ignored}}
@@ -67,65 +70,56 @@ void func() {
   // expected-warning@+2{{OpenACC clause 'auto' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
 #pragma acc serial loop seq, independent auto
-  {}
+  for(;;){}
 
   // expected-warning@+4{{OpenACC clause 'seq' not yet implemented, clause ignored}}
   // expected-warning@+3{{OpenACC clause 'independent' not yet implemented, clause ignored}}
   // expected-warning@+2{{OpenACC clause 'auto' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'parallel loop' not yet implemented, pragma ignored}}
 #pragma acc parallel loop seq independent, auto
-  {}
+  for(;;){}
 
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc loop , seq
+  for(;;){}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc loop seq,
+  for(;;){}
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected '('}}
 #pragma acc loop collapse
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop collapse()
   for(;;){}
 
-  // expected-error@+3{{invalid tag 'unknown' on 'collapse' clause}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{invalid tag 'unknown' on 'collapse' clause}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop collapse(unknown:)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop collapse(force:)
   for(;;){}
 
-  // expected-error@+3{{invalid tag 'unknown' on 'collapse' clause}}
-  // expected-warning@+2{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{invalid tag 'unknown' on 'collapse' clause}}
+  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
 #pragma acc loop collapse(unknown:5)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
 #pragma acc loop collapse(force:5)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
 #pragma acc loop collapse(5)
   for(;;){}
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop collapse(5, 6)
   for(;;){}
 }
@@ -137,12 +131,11 @@ void DefaultClause() {
   for(;;){}
 
   // expected-error@+1{{expected '('}}
-#pragma acc serial default seq
+#pragma acc serial default self
   for(;;){}
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial default, seq
+  // expected-error@+1{{expected '('}}
+#pragma acc serial default, self
   for(;;){}
 
   // expected-error@+3{{expected identifier}}
@@ -154,13 +147,13 @@ void DefaultClause() {
   // expected-error@+3{{invalid value for 'default' clause; expected 'present' or 'none'}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
-#pragma acc serial default( seq
+#pragma acc serial default( self
   for(;;){}
 
   // expected-error@+3{{expected identifier}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
-#pragma acc serial default(, seq
+#pragma acc serial default(, self
   for(;;){}
 
   // expected-error@+2{{expected '('}}
@@ -170,58 +163,53 @@ void DefaultClause() {
 
   // expected-error@+2{{expected '('}}
   // expected-error@+1{{expected identifier}}
-#pragma acc serial default), seq
+#pragma acc serial default), self
   for(;;){}
 
   // expected-error@+1{{expected identifier}}
 #pragma acc serial default()
   for(;;){}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial default() seq
+  // expected-error@+1{{expected identifier}}
+#pragma acc serial default() self
   for(;;){}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial default(), seq
+  // expected-error@+1{{expected identifier}}
+#pragma acc serial default(), self
   for(;;){}
 
   // expected-error@+1{{invalid value for 'default' clause; expected 'present' or 'none'}}
 #pragma acc serial default(invalid)
   for(;;){}
 
-  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial default(auto) seq
+  // expected-error@+1{{invalid value for 'default' clause; expected 'present' or 'none'}}
+#pragma acc serial default(auto) self
   for(;;){}
 
-  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial default(invalid), seq
+  // expected-error@+1{{invalid value for 'default' clause; expected 'present' or 'none'}}
+#pragma acc serial default(invalid), self
   for(;;){}
 
 #pragma acc serial default(none)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial default(present), seq
+#pragma acc serial default(present), self
   for(;;){}
 }
 
 void IfClause() {
+  int i, j;
   // expected-error@+2{{expected '('}}
   // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
 #pragma acc serial loop if
   for(;;){}
 
   // expected-error@+1{{expected '('}}
-#pragma acc serial if seq
+#pragma acc serial if private(i)
   for(;;){}
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial if, seq
+  // expected-error@+1{{expected '('}}
+#pragma acc serial if, private(i)
   for(;;){}
 
   // expected-error@+3{{expected expression}}
@@ -230,17 +218,17 @@ void IfClause() {
 #pragma acc serial if(
   for(;;){}
 
-  // expected-error@+3{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{use of undeclared identifier 'self'}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
-#pragma acc serial if( seq
+#pragma acc serial if( self
   for(;;){}
 
   // expected-error@+4{{expected expression}}
-  // expected-error@+3{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{use of undeclared identifier 'self'}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
-#pragma acc serial if(, seq
+#pragma acc serial if(, self
   for(;;){}
 
   // expected-error@+2{{expected '('}}
@@ -250,44 +238,38 @@ void IfClause() {
 
   // expected-error@+2{{expected '('}}
   // expected-error@+1{{expected identifier}}
-#pragma acc serial if) seq
+#pragma acc serial if) private(i)
   for(;;){}
 
   // expected-error@+2{{expected '('}}
   // expected-error@+1{{expected identifier}}
-#pragma acc serial if), seq
+#pragma acc serial if), private(i)
   for(;;){}
 
   // expected-error@+1{{expected expression}}
 #pragma acc serial if()
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial if() seq
+  // expected-error@+1{{expected expression}}
+#pragma acc serial if() private(i)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial if(), seq
+  // expected-error@+1{{expected expression}}
+#pragma acc serial if(), private(i)
   for(;;){}
 
   // expected-error@+1{{use of undeclared identifier 'invalid_expr'}}
 #pragma acc serial if(invalid_expr)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial if() seq
+  // expected-error@+1{{expected expression}}
+#pragma acc serial if() private(i)
   for(;;){}
-
-  int i, j;
 
 #pragma acc serial if(i > j)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial if(1+5>3), seq
+#pragma acc serial if(1+5>3), private(i)
   for(;;){}
 }
 
@@ -298,8 +280,8 @@ void SelfClause() {
   for(;;){}
 
   // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+2{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop self, seq
   for(;;){}
 
@@ -345,21 +327,21 @@ void SelfClause() {
 
 
   // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+2{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop self(), seq
   for(;;){}
 
   // expected-error@+4{{expected expression}}
   // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+2{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop self(,), seq
   for(;;){}
 
   // expected-error@+3{{use of undeclared identifier 'invalid_expr'}}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+2{{OpenACC construct 'serial loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop self(invalid_expr), seq
   for(;;){}
 
@@ -383,8 +365,7 @@ void SelfClause() {
 #pragma acc serial self(i > j)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial self(1+5>3), seq
+#pragma acc serial self(1+5>3), private(i)
   for(;;){}
 }
 
@@ -409,15 +390,15 @@ void SelfUpdate() {
   // expected-error@+5{{expected ','}}
   // expected-error@+4{{expected expression}}
   // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
-#pragma acc update self(zero : s.array[s.value : 5], s.value), seq
+#pragma acc update self(zero : s.array[s.value : 5], s.value), if_present
   for(;;){}
 
   // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
-#pragma acc update self(s.array[s.value : 5], s.value), seq
+#pragma acc update self(s.array[s.value : 5], s.value), if_present
   for(;;){}
 }
 
@@ -426,9 +407,8 @@ void VarListClauses() {
 #pragma acc serial copy
   for(;;){}
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy, seq
+  // expected-error@+1{{expected '('}}
+#pragma acc serial copy, self
   for(;;){}
 
   // expected-error@+2{{expected '('}}
@@ -438,7 +418,7 @@ void VarListClauses() {
 
   // expected-error@+2{{expected '('}}
   // expected-error@+1{{expected identifier}}
-#pragma acc serial copy), seq
+#pragma acc serial copy), self
   for(;;){}
 
   // expected-error@+3{{expected expression}}
@@ -450,65 +430,54 @@ void VarListClauses() {
   // expected-error@+3{{expected expression}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
-#pragma acc serial copy(, seq
+#pragma acc serial copy(, self
   for(;;){}
 
   // expected-error@+1{{expected expression}}
 #pragma acc serial copy()
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(), seq
+  // expected-error@+1{{expected expression}}
+#pragma acc serial copy(), self
   for(;;){}
 
   struct Members s;
   struct HasMembersArray HasMem;
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(s.array[s.value]), seq
+#pragma acc serial copy(s.array[s.value]), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(s.array[s.value], s.array[s.value :5] ), seq
+#pragma acc serial copy(s.array[s.value], s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[3].array[1]), seq
+#pragma acc serial copy(HasMem.MemArr[3].array[1]), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[3].array[1:4]), seq
+#pragma acc serial copy(HasMem.MemArr[3].array[1:4]), self
   for(;;){}
 
-  // expected-error@+2{{OpenACC sub-array is not allowed here}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[1:3].array[1]), seq
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc serial copy(HasMem.MemArr[1:3].array[1]), self
   for(;;){}
 
-  // expected-error@+2{{OpenACC sub-array is not allowed here}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[1:3].array[1:2]), seq
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc serial copy(HasMem.MemArr[1:3].array[1:2]), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[:]), seq
+#pragma acc serial copy(HasMem.MemArr[:]), self
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[::]), seq
+  // expected-error@+1{{expected expression}}
+#pragma acc serial copy(HasMem.MemArr[::]), self
   for(;;){}
 
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ']'}}
-  // expected-note@+2{{to match this '['}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[: :]), seq
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ']'}}
+  // expected-note@+1{{to match this '['}}
+#pragma acc serial copy(HasMem.MemArr[: :]), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copy(HasMem.MemArr[3:]), seq
+#pragma acc serial copy(HasMem.MemArr[3:]), self
   for(;;){}
 
   // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
@@ -519,167 +488,136 @@ void VarListClauses() {
 #pragma acc serial present_or_copy(HasMem.MemArr[3:])
   for(;;){}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), seq
-  for(;;){}
-
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value : 5]), seq
-  for(;;){}
-
   // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial no_create(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
+#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial no_create(s.array[s.value : 5], s.value), seq
+  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
+#pragma acc serial use_device(s.array[s.value : 5]), self
   for(;;){}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial present(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-error@+1{{expected ','}}
+#pragma acc serial no_create(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial present(s.array[s.value : 5], s.value), seq
+#pragma acc serial no_create(s.array[s.value : 5], s.value), self
+  for(;;){}
+
+  // expected-error@+1{{expected ','}}
+#pragma acc serial present(s.array[s.value] s.array[s.value :5] ), self
+  for(;;){}
+
+#pragma acc serial present(s.array[s.value : 5], s.value), self
   for(;;){}
 
 
   void *IsPointer;
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected pointer in 'deviceptr' clause, type is 'char'}}
-  // expected-error@+3{{OpenACC sub-array is not allowed here}}
-  // expected-note@+2{{expected variable of pointer type}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial deviceptr(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected pointer in 'deviceptr' clause, type is 'char'}}
+  // expected-error@+2{{OpenACC sub-array is not allowed here}}
+  // expected-note@+1{{expected variable of pointer type}}
+#pragma acc serial deviceptr(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial deviceptr(IsPointer), seq
+#pragma acc serial deviceptr(IsPointer), self
   for(;;){}
 
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected pointer in 'attach' clause, type is 'char'}}
-  // expected-error@+3{{OpenACC sub-array is not allowed here}}
-  // expected-note@+2{{expected variable of pointer type}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial attach(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected pointer in 'attach' clause, type is 'char'}}
+  // expected-error@+2{{OpenACC sub-array is not allowed here}}
+  // expected-note@+1{{expected variable of pointer type}}
+#pragma acc serial attach(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial attach(IsPointer), seq
-  for(;;){}
-
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'detach' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial detach(s.array[s.value] s.array[s.value :5] ), seq
-  for(;;){}
-
-  // expected-warning@+2{{OpenACC clause 'detach' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial detach(s.array[s.value : 5], s.value), seq
+#pragma acc serial attach(IsPointer), self
   for(;;){}
 
   // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial private(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented, clause ignored}}
+#pragma acc serial detach(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial private(s.array[s.value : 5], s.value), seq
+  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented, clause ignored}}
+#pragma acc serial detach(s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial firstprivate(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-error@+1{{expected ','}}
+#pragma acc serial private(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial firstprivate(s.array[s.value : 5], s.value), seq
+#pragma acc serial private(s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'delete' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial delete(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-error@+1{{expected ','}}
+#pragma acc serial firstprivate(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'delete' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial delete(s.array[s.value : 5], s.value), seq
-  for(;;){}
-
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), seq
-  for(;;){}
-
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value : 5], s.value), seq
-  for(;;){}
-
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial device_resident(s.array[s.value] s.array[s.value :5] ), seq
-  for(;;){}
-
-  // expected-warning@+2{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial device_resident(s.array[s.value : 5], s.value), seq
-  for(;;){}
-
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'link' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial link(s.array[s.value] s.array[s.value :5] ), seq
-  for(;;){}
-
-  // expected-warning@+2{{OpenACC clause 'link' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial link(s.array[s.value : 5], s.value), seq
-  for(;;){}
-
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'host' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value] s.array[s.value :5] ), seq
-  for(;;){}
-
-  // expected-warning@+2{{OpenACC clause 'host' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value : 5], s.value), seq
-  for(;;){}
-
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value] s.array[s.value :5] ), seq
-  for(;;){}
-
-  // expected-warning@+2{{OpenACC clause 'device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value : 5], s.value), seq
+#pragma acc serial firstprivate(s.array[s.value : 5], s.value), self
   for(;;){}
 
   // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
+#pragma acc serial delete(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(s.array[s.value : 5], s.value), seq
+  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
+#pragma acc serial delete(s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(zero:s.array[s.value : 5], s.value), seq
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
+#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), self
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
+#pragma acc serial use_device(s.array[s.value : 5], s.value), self
+  for(;;){}
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
+#pragma acc serial device_resident(s.array[s.value] s.array[s.value :5] ), self
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
+#pragma acc serial device_resident(s.array[s.value : 5], s.value), self
+  for(;;){}
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC clause 'link' not yet implemented, clause ignored}}
+#pragma acc serial link(s.array[s.value] s.array[s.value :5] ), self
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC clause 'link' not yet implemented, clause ignored}}
+#pragma acc serial link(s.array[s.value : 5], s.value), self
+  for(;;){}
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
+#pragma acc serial host(s.array[s.value] s.array[s.value :5] ), self
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
+#pragma acc serial host(s.array[s.value : 5], s.value), self
+  for(;;){}
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
+#pragma acc serial device(s.array[s.value] s.array[s.value :5] ), self
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
+#pragma acc serial device(s.array[s.value : 5], s.value), self
+  for(;;){}
+
+  // expected-error@+1{{expected ','}}
+#pragma acc serial copyout(s.array[s.value] s.array[s.value :5] ), self
+  for(;;){}
+
+#pragma acc serial copyout(s.array[s.value : 5], s.value), self
+  for(;;){}
+
+#pragma acc serial copyout(zero:s.array[s.value : 5], s.value), self
   for(;;){}
 
   // expected-warning@+1{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
@@ -690,48 +628,39 @@ void VarListClauses() {
 #pragma acc serial present_or_copyout(zero:s.array[s.value : 5], s.value)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(zero : s.array[s.value : 5], s.value), seq
+#pragma acc serial copyout(zero : s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+3{{use of undeclared identifier 'zero'}}
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(zero s.array[s.value : 5], s.value), seq
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
+  // expected-error@+1{{expected ','}}
+#pragma acc serial copyout(zero s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'readonly' on 'copyout' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(readonly:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'readonly' on 'copyout' clause}}
+#pragma acc serial copyout(readonly:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'invalid' on 'copyout' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'invalid' on 'copyout' clause}}
+#pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'invalid' on 'copyout' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'invalid' on 'copyout' clause}}
+#pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyout(invalid s.array[s.value : 5], s.value), seq
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-error@+1{{expected ','}}
+#pragma acc serial copyout(invalid s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-error@+1{{expected ','}}
+#pragma acc serial create(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(s.array[s.value : 5], s.value), seq
+#pragma acc serial create(s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(zero:s.array[s.value : 5], s.value), seq
+#pragma acc serial create(zero:s.array[s.value : 5], s.value), self
   for(;;){}
 
   // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
@@ -742,48 +671,39 @@ void VarListClauses() {
 #pragma acc serial present_or_create(zero:s.array[s.value : 5], s.value)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(zero : s.array[s.value : 5], s.value), seq
+#pragma acc serial create(zero : s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+3{{use of undeclared identifier 'zero'}}
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(zero s.array[s.value : 5], s.value), seq
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
+  // expected-error@+1{{expected ','}}
+#pragma acc serial create(zero s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'readonly' on 'create' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(readonly:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'readonly' on 'create' clause}}
+#pragma acc serial create(readonly:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'invalid' on 'create' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(invalid:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'invalid' on 'create' clause}}
+#pragma acc serial create(invalid:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'invalid' on 'create' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(invalid:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'invalid' on 'create' clause}}
+#pragma acc serial create(invalid:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial create(invalid s.array[s.value : 5], s.value), seq
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-error@+1{{expected ','}}
+#pragma acc serial create(invalid s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(s.array[s.value] s.array[s.value :5] ), seq
+  // expected-error@+1{{expected ','}}
+#pragma acc serial copyin(s.array[s.value] s.array[s.value :5] ), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(s.array[s.value : 5], s.value), seq
+#pragma acc serial copyin(s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(readonly:s.array[s.value : 5], s.value), seq
+#pragma acc serial copyin(readonly:s.array[s.value : 5], s.value), self
   for(;;){}
 
   // expected-warning@+1{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
@@ -794,35 +714,29 @@ void VarListClauses() {
 #pragma acc serial present_or_copyin(readonly:s.array[s.value : 5], s.value)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(readonly : s.array[s.value : 5], s.value), seq
+#pragma acc serial copyin(readonly : s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+3{{use of undeclared identifier 'readonly'}}
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(readonly s.array[s.value : 5], s.value), seq
+  // expected-error@+2{{use of undeclared identifier 'readonly'}}
+  // expected-error@+1{{expected ','}}
+#pragma acc serial copyin(readonly s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'zero' on 'copyin' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(zero :s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'zero' on 'copyin' clause}}
+#pragma acc serial copyin(zero :s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'invalid' on 'copyin' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'invalid' on 'copyin' clause}}
+#pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'invalid' on 'copyin' clause}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), seq
+  // expected-error@+1{{invalid tag 'invalid' on 'copyin' clause}}
+#pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), self
   for(;;){}
 
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial copyin(invalid s.array[s.value : 5], s.value), seq
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-error@+1{{expected ','}}
+#pragma acc serial copyin(invalid s.array[s.value : 5], s.value), self
   for(;;){}
 }
 
@@ -860,11 +774,9 @@ void ReductionClauseParsing() {
   for(;;){}
 #pragma acc serial reduction(^: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial seq, reduction(&&: Begin, End)
+#pragma acc serial self, reduction(&&: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial reduction(||: Begin, End), seq
+#pragma acc serial reduction(||: Begin, End), self
   for(;;){}
 }
 
@@ -989,108 +901,108 @@ void IntExprParsing() {
 #pragma acc set default_async(returns_int())
 
 
-  // expected-warning@+2{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+1{{expected expression}}
 #pragma acc loop vector()
-  // expected-error@+3{{invalid tag 'invalid' on 'vector' clause}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'invalid' on 'vector' clause}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop vector(invalid:)
-  // expected-error@+3{{invalid tag 'invalid' on 'vector' clause}}
-  // expected-warning@+2{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'invalid' on 'vector' clause}}
+  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(invalid:5)
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+1{{expected expression}}
 #pragma acc loop vector(length:)
-  // expected-error@+3{{invalid tag 'num' on 'vector' clause}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'num' on 'vector' clause}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop vector(num:)
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop vector(5, 4)
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop vector(length:6,4)
-  // expected-error@+4{{invalid tag 'num' on 'vector' clause}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
-#pragma acc loop vector(num:6,4)
-  // expected-warning@+2{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
-#pragma acc loop vector(5)
+  for(;;);
   // expected-error@+3{{invalid tag 'num' on 'vector' clause}}
-  // expected-warning@+2{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
+#pragma acc loop vector(num:6,4)
+  for(;;);
+  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
+#pragma acc loop vector(5)
+  for(;;);
+  // expected-error@+2{{invalid tag 'num' on 'vector' clause}}
+  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(num:5)
-  // expected-warning@+2{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(length:5)
-  // expected-warning@+2{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(returns_int())
-  // expected-warning@+2{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(length:returns_int())
+  for(;;);
 
-  // expected-warning@+2{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+1{{expected expression}}
 #pragma acc loop worker()
-  // expected-error@+3{{invalid tag 'invalid' on 'worker' clause}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'invalid' on 'worker' clause}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop worker(invalid:)
-  // expected-error@+3{{invalid tag 'invalid' on 'worker' clause}}
-  // expected-warning@+2{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'invalid' on 'worker' clause}}
+  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker(invalid:5)
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+1{{expected expression}}
 #pragma acc loop worker(num:)
-  // expected-error@+3{{invalid tag 'length' on 'worker' clause}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop worker(length:)
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop worker(5, 4)
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop worker(num:6,4)
-  // expected-error@+4{{invalid tag 'length' on 'worker' clause}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+3{{invalid tag 'length' on 'worker' clause}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop worker(length:6,4)
-  // expected-warning@+2{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker(5)
-  // expected-error@+3{{invalid tag 'length' on 'worker' clause}}
-  // expected-warning@+2{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
+  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker(length:5)
-  // expected-warning@+2{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker(num:5)
-  // expected-warning@+2{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker(returns_int())
-  // expected-error@+3{{invalid tag 'length' on 'worker' clause}}
-  // expected-warning@+2{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  for(;;);
+  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
+  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker(length:returns_int())
+  for(;;);
 }
 
 void device_type() {
@@ -1236,238 +1148,196 @@ void AsyncArgument() {
 void Tile() {
 
   int* Foo;
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected '('}}
 #pragma acc loop tile
   for(;;){}
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop tile(
   for(;;){}
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile()
   for(;;){}
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop tile(,
   for(;;){}
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(,)
   for(;;){}
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(returns_int(), *, invalid, *)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(returns_int() *, Foo, *)
   for(;;){}
 
-  // expected-error@+3{{indirection requires pointer operand ('int' invalid)}}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{indirection requires pointer operand ('int' invalid)}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(* returns_int() , *)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(*)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(*Foo, *Foo)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(5)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(*, 5)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(5, *)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(5, *, 3, *)
   for(;;){}
 }
 
 void Gang() {
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang
   for(;;){}
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(
   for(;;){}
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang()
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(5, *)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(*)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(5, num:*)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(num:5, *)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(num:5, num:*)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(num:*)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(dim:5)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(dim:5, dim:*)
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(dim:*)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(static:*)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(static:*, static:5)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(static:*, 5)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(static:45, 5)
   for(;;){}
 
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(static:45,
   for(;;){}
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(static:45
   for(;;){}
 
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(static:*,
   for(;;){}
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(static:*
   for(;;){}
 
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(45,
   for(;;){}
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(45
   for(;;){}
 
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(num:45,
   for(;;){}
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(num:45
   for(;;){}
 
-  // expected-error@+4{{expected expression}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(dim:45,
   for(;;){}
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(dim:45
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(static:*, dim:returns_int(), 5)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(num: 32, static:*, dim:returns_int(), 5)
   for(;;){}
 

@@ -56,7 +56,6 @@ def SiFiveP600Model : SchedMachineModel {
   let MicroOpBufferSize = 160; // Max micro-ops that can be buffered.
   let LoadLatency = 4;        // Cycles for loads to access the cache.
   let MispredictPenalty = 9;  // Extra cycles for a mispredicted branch.
-  let PostRAScheduler = true;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZknd, HasStdExtZkne, HasStdExtZknh,
                              HasStdExtZksed, HasStdExtZksh, HasStdExtZkr,
@@ -191,7 +190,7 @@ def : WriteRes<WriteLDW, [SiFiveP600LDST]>;
 def : WriteRes<WriteLDD, [SiFiveP600LDST]>;
 }
 
-let Latency = 6 in {
+let Latency = 5 in {
 def : WriteRes<WriteFLD16, [SiFiveP600LDST]>;
 def : WriteRes<WriteFLD32, [SiFiveP600LDST]>;
 def : WriteRes<WriteFLD64, [SiFiveP600LDST]>;

@@ -1523,6 +1523,19 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
                                 ExprArg.get(), Loc);
 }
 
+void Parser::ExpandEmbedIntoTemplateArgList(TemplateArgList &TemplateArgs) {
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ASTContext &Context = Actions.getASTContext();
+  for (auto Byte : Data->BinaryData) {
+    Expr *E = IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
+                                     Context.UnsignedCharTy, StartLoc);
+    TemplateArgs.push_back(
+        ParsedTemplateArgument(ParsedTemplateArgument::NonType, E, StartLoc));
+  }
+}
+
 /// ParseTemplateArgumentList - Parse a C++ template-argument-list
 /// (C++ [temp.names]). Returns true if there was an error.
 ///
@@ -1547,19 +1560,23 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
 
   do {
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
-    ParsedTemplateArgument Arg = ParseTemplateArgument();
-    SourceLocation EllipsisLoc;
-    if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
-      Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
+    if (Tok.is(tok::annot_embed)) {
+      ExpandEmbedIntoTemplateArgList(TemplateArgs);
+    } else {
+      ParsedTemplateArgument Arg = ParseTemplateArgument();
+      SourceLocation EllipsisLoc;
+      if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
+        Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
 
-    if (Arg.isInvalid()) {
-      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
-        RunSignatureHelp();
-      return true;
+      if (Arg.isInvalid()) {
+        if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+          RunSignatureHelp();
+        return true;
+      }
+
+      // Save this template argument.
+      TemplateArgs.push_back(Arg);
     }
-
-    // Save this template argument.
-    TemplateArgs.push_back(Arg);
 
     // If the next token is a comma, consume it and keep reading
     // arguments.

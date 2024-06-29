@@ -192,9 +192,9 @@ std::string ExecutionEngine::getMangledName(const GlobalValue *GV) {
   SmallString<128> FullName;
 
   const DataLayout &DL =
-    GV->getParent()->getDataLayout().isDefault()
+    GV->getDataLayout().isDefault()
       ? getDataLayout()
-      : GV->getParent()->getDataLayout();
+      : GV->getDataLayout();
 
   Mangler::getNameWithPrefix(FullName, GV->getName(), DL);
   return std::string(FullName);

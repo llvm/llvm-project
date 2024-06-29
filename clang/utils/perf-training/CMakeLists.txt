@@ -15,7 +15,7 @@ if(LLVM_BUILD_INSTRUMENTED)
   add_lit_testsuite(generate-profraw "Generating clang PGO data"
     ${CMAKE_CURRENT_BINARY_DIR}/pgo-data/
     EXCLUDE_FROM_CHECK_ALL
-    DEPENDS clang clear-profraw ${CLANG_PGO_TRAINING_DEPS}
+    DEPENDS clear-profraw
     )
 
   add_custom_target(clear-profraw
@@ -29,10 +29,21 @@ if(LLVM_BUILD_INSTRUMENTED)
   if(NOT LLVM_PROFDATA)
     message(STATUS "To enable merging PGO data LLVM_PROFDATA has to point to llvm-profdata")
   else()
-    add_custom_target(generate-profdata
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata
+      # generate-profraw is a custom_target which are always considered stale.
+      # If we add it here to 'DEPENDS', then it will always execute and running
+      # ninja install && ninja check-all will result in the profile data being
+      # generated twice, and cause the ninja check-all build to fail with errors like:
+      # `ld.lld: error: Function Import: link error: linking module flags 'ProfileSummary': IDs have conflicting values in`
+      # Therefor we call the generate-profraw target manually as part of this custom
+      # command, which will only run if clang or ${CLANG_PGO_TRAINING_DEPS} are updated.
+      COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target generate-profraw
       COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/
       COMMENT "Merging profdata"
-      DEPENDS generate-profraw)
+      DEPENDS clang ${CLANG_PGO_TRAINING_DEPS}
+    )
+    add_custom_target(generate-profdata DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata)
     if (CLANG_PGO_TRAINING_DATA_SOURCE_DIR)
       llvm_ExternalProject_Add(generate-profraw-external ${CLANG_PGO_TRAINING_DATA_SOURCE_DIR}
               USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL DEPENDS generate-profraw)

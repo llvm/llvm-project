@@ -431,11 +431,13 @@ define i1 @not_false_not_use3(i1 %x, i1 %y) {
 define i1 @demorgan_select_infloop1(i1 %L) {
 ; CHECK-LABEL: @demorgan_select_infloop1(
 ; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
-; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 xor (i1 icmp eq (ptr getelementptr inbounds (i8, ptr @g2, i64 2), ptr @g1), i1 icmp eq (ptr getelementptr inbounds (i8, ptr @g2, i64 2), ptr @g1)), i1 false
-; CHECK-NEXT:    ret i1 [[C15]]
+; CHECK-NEXT:    ret i1 [[NOT_L]]
 ;
   %not.L = xor i1 %L, true
-  %C15 = select i1 %not.L, i1 xor (i1 add (i1 icmp eq (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1), i1 icmp ne (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1)), i1 true), i1 false
+  %cmp = icmp eq ptr getelementptr inbounds (i16, ptr @g2, i64 1), @g1
+  %add = add i1 %cmp, %cmp
+  %xor = xor i1 %add, true
+  %C15 = select i1 %not.L, i1 %xor, i1 false
   ret i1 %C15
 }
 
@@ -443,11 +445,16 @@ define i1 @demorgan_select_infloop1(i1 %L) {
 define i1 @demorgan_select_infloop2(i1 %L) {
 ; CHECK-LABEL: @demorgan_select_infloop2(
 ; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
-; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 true, i1 xor (i1 icmp eq (ptr getelementptr inbounds (i8, ptr @g2, i64 2), ptr @g1), i1 icmp eq (ptr getelementptr inbounds (i8, ptr @g2, i64 2), ptr @g1))
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @g2, i64 2), @g1
+; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[C15]]
 ;
   %not.L = xor i1 %L, true
-  %C15 = select i1 %not.L, i1 true, i1 xor (i1 add (i1 icmp eq (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1), i1 icmp ne (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1)), i1 true)
+  %cmp1 = icmp eq ptr getelementptr inbounds (i16, ptr @g1, i64 1), @g1
+  %cmp2 = icmp eq ptr getelementptr inbounds (i16, ptr @g2, i64 1), @g1
+  %add = add i1 %cmp1, %cmp2
+  %xor = xor i1 %add, true
+  %C15 = select i1 %not.L, i1 %xor, i1 false
   ret i1 %C15
 }
 

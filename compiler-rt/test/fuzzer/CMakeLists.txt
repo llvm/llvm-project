@@ -89,7 +89,6 @@ if(LIBFUZZER_TESTSUITES)
   add_lit_testsuite(check-fuzzer "Running libFuzzer tests"
     ${LIBFUZZER_TESTSUITES}
     DEPENDS ${LIBFUZZER_TEST_DEPS})
-  set_target_properties(check-fuzzer PROPERTIES FOLDER "Compiler-RT Tests")
 endif()
 
 if (APPLE)

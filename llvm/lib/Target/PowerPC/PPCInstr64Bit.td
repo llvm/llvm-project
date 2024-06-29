@@ -292,42 +292,42 @@ def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
 let Defs = [CR0] in {
   def ATOMIC_LOAD_ADD_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_ADD_I64",
-    [(set i64:$dst, (atomic_load_add_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_add_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_SUB_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_SUB_I64",
-    [(set i64:$dst, (atomic_load_sub_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_sub_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_OR_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_OR_I64",
-    [(set i64:$dst, (atomic_load_or_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_or_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_XOR_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_XOR_I64",
-    [(set i64:$dst, (atomic_load_xor_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_xor_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_AND_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_AND_i64",
-    [(set i64:$dst, (atomic_load_and_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_and_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_NAND_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_NAND_I64",
-    [(set i64:$dst, (atomic_load_nand_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_nand_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_MIN_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MIN_I64",
-    [(set i64:$dst, (atomic_load_min_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_min_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_MAX_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MAX_I64",
-    [(set i64:$dst, (atomic_load_max_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_max_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_UMIN_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMIN_I64",
-    [(set i64:$dst, (atomic_load_umin_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_umin_i64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_UMAX_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMAX_I64",
-    [(set i64:$dst, (atomic_load_umax_64 ForceXForm:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_umax_i64 ForceXForm:$ptr, i64:$incr))]>;
 
   def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new), "#ATOMIC_CMP_SWAP_I64",
-    [(set i64:$dst, (atomic_cmp_swap_64 ForceXForm:$ptr, i64:$old, i64:$new))]>;
+    [(set i64:$dst, (atomic_cmp_swap_i64 ForceXForm:$ptr, i64:$old, i64:$new))]>;
 
   def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$new), "#ATOMIC_SWAP_I64",
-    [(set i64:$dst, (atomic_swap_64 ForceXForm:$ptr, i64:$new))]>;
+    [(set i64:$dst, (atomic_swap_i64 ForceXForm:$ptr, i64:$new))]>;
 }
 
 // Instructions to support atomic operations
@@ -1036,7 +1036,7 @@ defm DIVDE : XOForm_1rcr<31, 425, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
 let Predicates = [IsISA3_0] in {
 def MADDHD : VAForm_1a<48, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),
                        "maddhd $RT, $RA, $RB, $RC", IIC_IntMulHD, []>, isPPC64;
-def MADDHDU : VAForm_1a<49, 
+def MADDHDU : VAForm_1a<49,
                        (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),
                        "maddhdu $RT, $RA, $RB, $RC", IIC_IntMulHD, []>, isPPC64;
 def MADDLD : VAForm_1a<51, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB, gprc:$RC),
@@ -1044,7 +1044,7 @@ def MADDLD : VAForm_1a<51, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB, gprc:$RC),
                        [(set i32:$RT, (add_without_simm16 (mul_without_simm16 i32:$RA, i32:$RB), i32:$RC))]>,
                        isPPC64;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-  def MADDLD8 : VAForm_1a<51, 
+  def MADDLD8 : VAForm_1a<51,
                        (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),
                        "maddld $RT, $RA, $RB, $RC", IIC_IntMulHD,
                        [(set i64:$RT, (add_without_simm16 (mul_without_simm16 i64:$RA, i64:$RB), i64:$RC))]>,
@@ -1349,8 +1349,8 @@ def LWZX8 : XForm_1_memOp<31,  23, (outs g8rc:$RST), (ins (memrr $RA, $RB):$addr
                           "lwzx $RST, $addr", IIC_LdStLoad,
                           [(set i64:$RST, (zextloadi32 XForm:$addr))]>,
                           ZExt32To64;
-                   
-                   
+
+
 // Update forms.
 let mayLoad = 1, hasSideEffects = 0 in {
 def LBZU8 : DForm_1<35, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
@@ -1485,11 +1485,9 @@ def ADDItocL8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:
 }
 
 // Local Data Transform
-def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
+def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
                    "#ADDItoc8",
-                   [(set i64:$rD,
-                     (PPCtoc_entry tglobaladdr:$disp, i64:$reg))]>, isPPC64;
-
+                   []>, isPPC64;
 let mayLoad = 1 in
 def LDtocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
                    "#LDtocL", []>, isPPC64;
@@ -1637,7 +1635,7 @@ def PADDIdtprel : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm
 
 let PPC970_Unit = 2 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-// Truncating stores.                       
+// Truncating stores.
 def STB8 : DForm_1<38, (outs), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stb $RST, $addr", IIC_LdStStore,
                    [(truncstorei8 i64:$RST, DForm:$addr)]>;

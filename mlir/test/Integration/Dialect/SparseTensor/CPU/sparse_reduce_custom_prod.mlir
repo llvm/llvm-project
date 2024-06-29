@@ -27,7 +27,7 @@
 // REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 
-// Product reductions - kept in a seperate file as these are not supported by
+// Product reductions - kept in a separate file as these are not supported by
 // the AArch64 SVE backend (so the set-up is a bit different to
 // sparse_reducitons.mlir)
 

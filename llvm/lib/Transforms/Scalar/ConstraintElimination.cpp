@@ -1640,7 +1640,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   SmallVector<Value *> FunctionArgs;
   for (Value &Arg : F.args())
     FunctionArgs.push_back(&Arg);
-  ConstraintInfo Info(F.getParent()->getDataLayout(), FunctionArgs);
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);

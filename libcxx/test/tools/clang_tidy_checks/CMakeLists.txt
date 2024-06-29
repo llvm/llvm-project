@@ -110,3 +110,5 @@ set_target_properties(cxx-tidy PROPERTIES
 
 set_target_properties(cxx-tidy PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SHARED_MODULE_SUFFIX_CXX .plugin) # Use a portable suffix to simplify how we can find it from Lit
+
+add_dependencies(cxx-test-depends cxx-tidy)

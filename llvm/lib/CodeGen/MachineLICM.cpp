@@ -155,7 +155,7 @@ namespace {
     }
 
     // Track 'estimated' register pressure.
-    SmallSet<Register, 32> RegSeen;
+    SmallDenseSet<Register> RegSeen;
     SmallVector<unsigned, 8> RegPressure;
 
     // Register pressure "limit" per register pressure set. If the pressure
@@ -191,7 +191,7 @@ namespace {
       AU.addRequired<MachineLoopInfo>();
       if (DisableHoistingToHotterBlocks != UseBFI::None)
         AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfo>();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -223,8 +223,8 @@ namespace {
     void HoistPostRA(MachineInstr *MI, unsigned Def, MachineLoop *CurLoop,
                      MachineBasicBlock *CurPreheader);
 
-    void ProcessMI(MachineInstr *MI, BitVector &PhysRegDefs,
-                   BitVector &PhysRegClobbers, SmallSet<int, 32> &StoredFIs,
+    void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
+                   SmallDenseSet<int> &StoredFIs,
                    SmallVectorImpl<CandidateInfo> &Candidates,
                    MachineLoop *CurLoop);
 
@@ -325,7 +325,7 @@ INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
                     "Machine Loop Invariant Code Motion", false, false)
@@ -334,7 +334,7 @@ INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
                     "Early Machine Loop Invariant Code Motion", false, false)
@@ -375,7 +375,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   if (DisableHoistingToHotterBlocks != UseBFI::None)
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
-  DT  = &getAnalysis<MachineDominatorTree>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   if (HoistConstLoads)
@@ -423,11 +423,64 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
   return false;
 }
 
+static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
+                                                BitVector &RUs,
+                                                const uint32_t *Mask) {
+  // FIXME: This intentionally works in reverse due to some issues with the
+  // Register Units infrastructure.
+  //
+  // This is used to apply callee-saved-register masks to the clobbered regunits
+  // mask.
+  //
+  // The right way to approach this is to start with a BitVector full of ones,
+  // then reset all the bits of the regunits of each register that is set in the
+  // mask (registers preserved), then OR the resulting bits with the Clobbers
+  // mask. This correctly prioritizes the saved registers, so if a RU is shared
+  // between a register that is preserved, and one that is NOT preserved, that
+  // RU will not be set in the output vector (the clobbers).
+  //
+  // What we have to do for now is the opposite: we have to assume that the
+  // regunits of all registers that are NOT preserved are clobbered, even if
+  // those regunits are preserved by another register. So if a RU is shared
+  // like described previously, that RU will be set.
+  //
+  // This is to work around an issue which appears in AArch64, but isn't
+  // exclusive to that target: AArch64's Qn registers (128 bits) have Dn
+  // register (lower 64 bits). A few Dn registers are preserved by some calling
+  // conventions, but Qn and Dn share exactly the same reg units.
+  //
+  // If we do this the right way, Qn will be marked as NOT clobbered even though
+  // its upper 64 bits are NOT preserved. The conservative approach handles this
+  // correctly at the cost of some missed optimizations on other targets.
+  //
+  // This is caused by how RegUnits are handled within TableGen. Ideally, Qn
+  // should have an extra RegUnit to model the "unknown" bits not covered by the
+  // subregs.
+  BitVector RUsFromRegsNotInMask(TRI.getNumRegUnits());
+  const unsigned NumRegs = TRI.getNumRegs();
+  const unsigned MaskWords = (NumRegs + 31) / 32;
+  for (unsigned K = 0; K < MaskWords; ++K) {
+    const uint32_t Word = Mask[K];
+    for (unsigned Bit = 0; Bit < 32; ++Bit) {
+      const unsigned PhysReg = (K * 32) + Bit;
+      if (PhysReg == NumRegs)
+        break;
+
+      if (PhysReg && !((Word >> Bit) & 1)) {
+        for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
+          RUsFromRegsNotInMask.set(*RUI);
+      }
+    }
+  }
+
+  RUs |= RUsFromRegsNotInMask;
+}
+
 /// Examine the instruction for potentai LICM candidate. Also
 /// gather register def and frame object update information.
-void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &PhysRegDefs,
-                                BitVector &PhysRegClobbers,
-                                SmallSet<int, 32> &StoredFIs,
+void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
+                                BitVector &RUClobbers,
+                                SmallDenseSet<int> &StoredFIs,
                                 SmallVectorImpl<CandidateInfo> &Candidates,
                                 MachineLoop *CurLoop) {
   bool RuledOut = false;
@@ -448,7 +501,7 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &PhysRegDefs,
     // We can't hoist an instruction defining a physreg that is clobbered in
     // the loop.
     if (MO.isRegMask()) {
-      PhysRegClobbers.setBitsNotInMask(MO.getRegMask());
+      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, MO.getRegMask());
       continue;
     }
 
@@ -460,16 +513,22 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &PhysRegDefs,
     assert(Reg.isPhysical() && "Not expecting virtual register!");
 
     if (!MO.isDef()) {
-      if (Reg && (PhysRegDefs.test(Reg) || PhysRegClobbers.test(Reg)))
-        // If it's using a non-loop-invariant register, then it's obviously not
-        // safe to hoist.
-        HasNonInvariantUse = true;
+      if (!HasNonInvariantUse) {
+        for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
+          // If it's using a non-loop-invariant register, then it's obviously
+          // not safe to hoist.
+          if (RUDefs.test(*RUI) || RUClobbers.test(*RUI)) {
+            HasNonInvariantUse = true;
+            break;
+          }
+        }
+      }
       continue;
     }
 
     if (MO.isImplicit()) {
-      for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-        PhysRegClobbers.set(*AI);
+      for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
+        RUClobbers.set(*RUI);
       if (!MO.isDead())
         // Non-dead implicit def? This cannot be hoisted.
         RuledOut = true;
@@ -488,19 +547,18 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &PhysRegDefs,
     // If we have already seen another instruction that defines the same
     // register, then this is not safe.  Two defs is indicated by setting a
     // PhysRegClobbers bit.
-    for (MCRegAliasIterator AS(Reg, TRI, true); AS.isValid(); ++AS) {
-      if (PhysRegDefs.test(*AS))
-        PhysRegClobbers.set(*AS);
-    }
-    // Need a second loop because MCRegAliasIterator can visit the same
-    // register twice.
-    for (MCRegAliasIterator AS(Reg, TRI, true); AS.isValid(); ++AS)
-      PhysRegDefs.set(*AS);
+    for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
+      if (RUDefs.test(*RUI)) {
+        RUClobbers.set(*RUI);
+        RuledOut = true;
+      } else if (RUClobbers.test(*RUI)) {
+        // MI defined register is seen defined by another instruction in
+        // the loop, it cannot be a LICM candidate.
+        RuledOut = true;
+      }
 
-    if (PhysRegClobbers.test(Reg))
-      // MI defined register is seen defined by another instruction in
-      // the loop, it cannot be a LICM candidate.
-      RuledOut = true;
+      RUDefs.set(*RUI);
+    }
   }
 
   // Only consider reloads for now and remats which do not have register
@@ -521,12 +579,12 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
   if (!Preheader)
     return;
 
-  unsigned NumRegs = TRI->getNumRegs();
-  BitVector PhysRegDefs(NumRegs); // Regs defined once in the loop.
-  BitVector PhysRegClobbers(NumRegs); // Regs defined more than once.
+  unsigned NumRegUnits = TRI->getNumRegUnits();
+  BitVector RUDefs(NumRegUnits);     // RUs defined once in the loop.
+  BitVector RUClobbers(NumRegUnits); // RUs defined more than once.
 
   SmallVector<CandidateInfo, 32> Candidates;
-  SmallSet<int, 32> StoredFIs;
+  SmallDenseSet<int> StoredFIs;
 
   // Walk the entire region, count number of defs for each register, and
   // collect potential LICM candidates.
@@ -540,22 +598,21 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
     // FIXME: That means a reload that're reused in successor block(s) will not
     // be LICM'ed.
     for (const auto &LI : BB->liveins()) {
-      for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI)
-        PhysRegDefs.set(*AI);
+      for (MCRegUnitIterator RUI(LI.PhysReg, TRI); RUI.isValid(); ++RUI)
+        RUDefs.set(*RUI);
     }
 
     // Funclet entry blocks will clobber all registers
     if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
-      PhysRegClobbers.setBitsNotInMask(Mask);
+      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, Mask);
 
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : *BB)
-      ProcessMI(&MI, PhysRegDefs, PhysRegClobbers, StoredFIs, Candidates,
-                CurLoop);
+      ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates, CurLoop);
   }
 
   // Gather the registers read / clobbered by the terminator.
-  BitVector TermRegs(NumRegs);
+  BitVector TermRUs(NumRegUnits);
   MachineBasicBlock::iterator TI = Preheader->getFirstTerminator();
   if (TI != Preheader->end()) {
     for (const MachineOperand &MO : TI->operands()) {
@@ -564,8 +621,8 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
       Register Reg = MO.getReg();
       if (!Reg)
         continue;
-      for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-        TermRegs.set(*AI);
+      for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
+        TermRUs.set(*RUI);
     }
   }
 
@@ -583,24 +640,36 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
       continue;
 
     unsigned Def = Candidate.Def;
-    if (!PhysRegClobbers.test(Def) && !TermRegs.test(Def)) {
-      bool Safe = true;
-      MachineInstr *MI = Candidate.MI;
-      for (const MachineOperand &MO : MI->all_uses()) {
-        if (!MO.getReg())
-          continue;
-        Register Reg = MO.getReg();
-        if (PhysRegDefs.test(Reg) ||
-            PhysRegClobbers.test(Reg)) {
+    bool Safe = true;
+    for (MCRegUnitIterator RUI(Def, TRI); RUI.isValid(); ++RUI) {
+      if (RUClobbers.test(*RUI) || TermRUs.test(*RUI)) {
+        Safe = false;
+        break;
+      }
+    }
+
+    if (!Safe)
+      continue;
+
+    MachineInstr *MI = Candidate.MI;
+    for (const MachineOperand &MO : MI->all_uses()) {
+      if (!MO.getReg())
+        continue;
+      for (MCRegUnitIterator RUI(MO.getReg(), TRI); RUI.isValid(); ++RUI) {
+        if (RUDefs.test(*RUI) || RUClobbers.test(*RUI)) {
           // If it's using a non-loop-invariant register, then it's obviously
           // not safe to hoist.
           Safe = false;
           break;
         }
       }
-      if (Safe)
-        HoistPostRA(MI, Candidate.Def, CurLoop, CurPreheader);
+
+      if (!Safe)
+        break;
     }
+
+    if (Safe)
+      HoistPostRA(MI, Candidate.Def, CurLoop, CurPreheader);
   }
 }
 
@@ -1269,8 +1338,9 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI,
     Register DefReg = MI.getOperand(0).getReg();
     if (DefReg.isVirtual() &&
         all_of(MI.uses(),
-               [](const MachineOperand &UseOp) {
-                 return !UseOp.isReg() || UseOp.getReg().isVirtual();
+               [this](const MachineOperand &UseOp) {
+                 return !UseOp.isReg() || UseOp.getReg().isVirtual() ||
+                        MRI->isConstantPhysReg(UseOp.getReg());
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),

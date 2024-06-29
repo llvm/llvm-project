@@ -759,6 +759,7 @@ declare half @llvm.sqrt.f16(half %a) #0
 declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
+declare half @llvm.tan.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
 declare half @llvm.exp.f16(half %a) #0
 declare half @llvm.exp2.f16(half %a) #0
@@ -867,6 +868,31 @@ define half @test_sin(half %a) #0 {
 ; GISEL-NEXT: ret
 define half @test_cos(half %a) #0 {
   %r = call half @llvm.cos.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_tan
+; FALLBACK-FP16-NOT: remark:{{.*}}test_tan
+
+; CHECK-COMMON-LABEL: test_tan:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}tanf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_tan:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}tanf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_tan(half %a) #0 {
+  %r = call half @llvm.tan.f16(half %a)
   ret half %r
 }
 

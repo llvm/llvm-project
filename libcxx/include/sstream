@@ -312,7 +312,6 @@ typedef basic_stringstream<wchar_t> wstringstream;
 
 // clang-format on
 
-#include <__availability>
 #include <__config>
 #include <__fwd/sstream.h>
 #include <__ostream/basic_ostream.h>

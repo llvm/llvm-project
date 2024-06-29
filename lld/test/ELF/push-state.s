@@ -24,7 +24,7 @@
 
 // RUN: ld.lld -o %t.exe -push-state -as-needed -pop-state %t.so %t1.o
 // RUN: llvm-readobj --dynamic-table %t.exe | FileCheck -check-prefix=NO-AS-NEEDED %s
-// NO-AS-NEEDED: NEEDED Shared library: [libfoo]
+// NO-AS-NEEDED: NEEDED Shared library: libfoo
 
 
 // RUN: mkdir -p %t.dir

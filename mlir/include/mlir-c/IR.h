@@ -450,6 +450,10 @@ mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
 
+/// Skip printing regions.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags);
+
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
 //===----------------------------------------------------------------------===//
@@ -857,6 +861,9 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumArguments(MlirBlock block);
 MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
                                                   MlirType type,
                                                   MlirLocation loc);
+
+/// Erase the argument at 'index' and remove it from the argument list.
+MLIR_CAPI_EXPORTED void mlirBlockEraseArgument(MlirBlock block, unsigned index);
 
 /// Inserts an argument of the specified type at a specified index to the block.
 /// Returns the newly added argument.

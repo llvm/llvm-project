@@ -40,7 +40,9 @@ public:
   SemanticsContext &context() { return context_; }
   void Check() { Check(context_.globalScope()); }
   void Check(const ParamValue &, bool canBeAssumed);
-  void Check(const Bound &bound) { CheckSpecExpr(bound.GetExplicit()); }
+  void Check(const Bound &bound) {
+    CheckSpecExpr(bound.GetExplicit(), /*forElementalFunctionResult=*/false);
+  }
   void Check(const ShapeSpec &spec) {
     Check(spec.lbound());
     Check(spec.ubound());
@@ -53,8 +55,10 @@ public:
   const Procedure *Characterize(const Symbol &);
 
 private:
-  template <typename A> void CheckSpecExpr(const A &x) {
-    evaluate::CheckSpecificationExpr(x, DEREF(scope_), foldingContext_);
+  template <typename A>
+  void CheckSpecExpr(const A &x, bool forElementalFunctionResult) {
+    evaluate::CheckSpecificationExpr(
+        x, DEREF(scope_), foldingContext_, forElementalFunctionResult);
   }
   void CheckValue(const Symbol &, const DerivedTypeSpec *);
   void CheckVolatile(const Symbol &, const DerivedTypeSpec *);
@@ -138,8 +142,8 @@ private:
   void CheckGlobalName(const Symbol &);
   void CheckProcedureAssemblyName(const Symbol &symbol);
   void CheckExplicitSave(const Symbol &);
-  parser::Messages WhyNotInteroperableDerivedType(const Symbol &, bool isError);
-  parser::Messages WhyNotInteroperableObject(const Symbol &, bool isError);
+  parser::Messages WhyNotInteroperableDerivedType(const Symbol &);
+  parser::Messages WhyNotInteroperableObject(const Symbol &);
   parser::Messages WhyNotInteroperableFunctionResult(const Symbol &);
   parser::Messages WhyNotInteroperableProcedure(const Symbol &, bool isError);
   void CheckBindC(const Symbol &);
@@ -222,7 +226,7 @@ void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
           "An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result"_err_en_US);
     }
   } else {
-    CheckSpecExpr(value.GetExplicit());
+    CheckSpecExpr(value.GetExplicit(), /*forElementalFunctionResult=*/false);
   }
 }
 
@@ -248,8 +252,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       &symbol == &symbol.GetUltimate()) {
     if (context_.ShouldWarn(common::LanguageFeature::LongNames)) {
       WarnIfNotInModuleFile(symbol.name(),
-          "%s has length %d, which is greater than the maximum name length "
-          "%d"_port_en_US,
+          "%s has length %d, which is greater than the maximum name length %d"_port_en_US,
           symbol.name(), symbol.name().size(), common::maxNameLen);
     }
   }
@@ -350,7 +353,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A pure subprogram may not have a variable with the VOLATILE attribute"_err_en_US);
     }
-    if (IsProcedure(symbol) && !IsPureProcedure(symbol) && IsDummy(symbol)) {
+    if (innermostSymbol_ && innermostSymbol_->name() == "__builtin_c_funloc") {
+      // The intrinsic procedure C_FUNLOC() gets a pass on this check.
+    } else if (IsProcedure(symbol) && !IsPureProcedure(symbol) &&
+        IsDummy(symbol)) {
       messages_.Say(
           "A dummy procedure of a pure subprogram must be pure"_err_en_US);
     }
@@ -378,23 +384,30 @@ void CheckHelper::Check(const Symbol &symbol) {
     } else {
       Check(*type, canHaveAssumedParameter);
     }
-    if (InPure() && InFunction() && IsFunctionResult(symbol)) {
-      if (type->IsPolymorphic() && IsAllocatable(symbol)) { // C1585
-        messages_.Say(
-            "Result of pure function may not be both polymorphic and ALLOCATABLE"_err_en_US);
-      }
-      if (derived) {
-        // These cases would be caught be the general validation of local
-        // variables in a pure context, but these messages are more specific.
-        if (HasImpureFinal(symbol)) { // C1584
+    if (InFunction() && IsFunctionResult(symbol)) {
+      if (InPure()) {
+        if (type->IsPolymorphic() && IsAllocatable(symbol)) { // C1585
           messages_.Say(
-              "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
+              "Result of pure function may not be both polymorphic and ALLOCATABLE"_err_en_US);
         }
-        if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
-          SayWithDeclaration(*bad,
-              "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
-              bad.BuildResultDesignatorName());
+        if (derived) {
+          // These cases would be caught be the general validation of local
+          // variables in a pure context, but these messages are more specific.
+          if (HasImpureFinal(symbol)) { // C1584
+            messages_.Say(
+                "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
+          }
+          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+            SayWithDeclaration(*bad,
+                "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
+                bad.BuildResultDesignatorName());
+          }
         }
+      }
+      if (InElemental() && isChar) { // F'2023 C15121
+        CheckSpecExpr(type->characterTypeSpec().length().GetExplicit(),
+            /*forElementalFunctionResult=*/true);
+        // TODO: check PDT LEN parameters
       }
     }
   }
@@ -452,12 +465,12 @@ void CheckHelper::Check(const Symbol &symbol) {
           symbol.name());
     }
   }
-  if (IsProcedure(symbol) && !symbol.HasExplicitInterface()) {
+  if (IsProcedure(symbol)) {
     if (IsAllocatable(symbol)) {
       messages_.Say(
-          "Procedure '%s' may not be ALLOCATABLE without an explicit interface"_err_en_US,
-          symbol.name());
-    } else if (symbol.Rank() > 0) {
+          "Procedure '%s' may not be ALLOCATABLE"_err_en_US, symbol.name());
+    }
+    if (!symbol.HasExplicitInterface() && symbol.Rank() > 0) {
       messages_.Say(
           "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
           symbol.name());
@@ -704,29 +717,47 @@ void CheckHelper::CheckObjectEntity(
     if (InPure() && !IsStmtFunction(DEREF(innermostSymbol_)) &&
         !IsPointer(symbol) && !IsIntentIn(symbol) &&
         !symbol.attrs().test(Attr::VALUE)) {
-      if (InFunction()) { // C1583
-        messages_.Say(
-            "non-POINTER dummy argument of pure function must be INTENT(IN) or VALUE"_err_en_US);
-      } else if (IsIntentOut(symbol)) {
+      const char *what{InFunction() ? "function" : "subroutine"};
+      bool ok{true};
+      if (IsIntentOut(symbol)) {
         if (type && type->IsPolymorphic()) { // C1588
           messages_.Say(
-              "An INTENT(OUT) dummy argument of a pure subroutine may not be polymorphic"_err_en_US);
+              "An INTENT(OUT) dummy argument of a pure %s may not be polymorphic"_err_en_US,
+              what);
+          ok = false;
         } else if (derived) {
           if (FindUltimateComponent(*derived, [](const Symbol &x) {
                 const DeclTypeSpec *type{x.GetType()};
                 return type && type->IsPolymorphic();
               })) { // C1588
             messages_.Say(
-                "An INTENT(OUT) dummy argument of a pure subroutine may not have a polymorphic ultimate component"_err_en_US);
+                "An INTENT(OUT) dummy argument of a pure %s may not have a polymorphic ultimate component"_err_en_US,
+                what);
+            ok = false;
           }
           if (HasImpureFinal(symbol)) { // C1587
             messages_.Say(
-                "An INTENT(OUT) dummy argument of a pure subroutine may not have an impure FINAL subroutine"_err_en_US);
+                "An INTENT(OUT) dummy argument of a pure %s may not have an impure FINAL subroutine"_err_en_US,
+                what);
+            ok = false;
           }
         }
       } else if (!IsIntentInOut(symbol)) { // C1586
         messages_.Say(
-            "non-POINTER dummy argument of pure subroutine must have INTENT() or VALUE attribute"_err_en_US);
+            "non-POINTER dummy argument of pure %s must have INTENT() or VALUE attribute"_err_en_US,
+            what);
+        ok = false;
+      }
+      if (ok && InFunction() && !InModuleFile() && !InElemental()) {
+        if (context_.IsEnabled(common::LanguageFeature::RelaxedPureDummy)) {
+          if (context_.ShouldWarn(common::LanguageFeature::RelaxedPureDummy)) {
+            messages_.Say(
+                "non-POINTER dummy argument of pure function should be INTENT(IN) or VALUE"_warn_en_US);
+          }
+        } else {
+          messages_.Say(
+              "non-POINTER dummy argument of pure function must be INTENT(IN) or VALUE"_err_en_US);
+        }
       }
     }
     if (auto ignoreTKR{GetIgnoreTKR(symbol)}; !ignoreTKR.empty()) {
@@ -798,7 +829,7 @@ void CheckHelper::CheckObjectEntity(
             "A dummy argument of an ELEMENTAL procedure may not be a POINTER"_err_en_US);
       }
       if (!symbol.attrs().HasAny(Attrs{Attr::VALUE, Attr::INTENT_IN,
-              Attr::INTENT_INOUT, Attr::INTENT_OUT})) { // C15102
+              Attr::INTENT_INOUT, Attr::INTENT_OUT})) { // F'2023 C15120
         messages_.Say(
             "A dummy argument of an ELEMENTAL procedure must have an INTENT() or VALUE attribute"_err_en_US);
       }
@@ -1296,6 +1327,13 @@ private:
   bool CheckSameAttrs(const Symbol &, const Symbol &, ATTRS, ATTRS);
   bool ShapesAreCompatible(const DummyDataObject &, const DummyDataObject &);
   evaluate::Shape FoldShape(const evaluate::Shape &);
+  std::optional<evaluate::Shape> FoldShape(
+      const std::optional<evaluate::Shape> &shape) {
+    if (shape) {
+      return FoldShape(*shape);
+    }
+    return std::nullopt;
+  }
   std::string AsFortran(DummyDataObject::Attr attr) {
     return parser::ToUpperCaseLetters(DummyDataObject::EnumToString(attr));
   }
@@ -1868,11 +1906,34 @@ void CheckHelper::CheckSpecifics(
   helper.Check(generic.owner());
 }
 
+static bool CUDAHostDeviceDiffer(
+    const Procedure &proc, const DummyDataObject &arg) {
+  auto procCUDA{
+      proc.cudaSubprogramAttrs.value_or(common::CUDASubprogramAttrs::Host)};
+  bool procIsHostOnly{procCUDA == common::CUDASubprogramAttrs::Host};
+  bool procIsDeviceOnly{
+      !procIsHostOnly && procCUDA != common::CUDASubprogramAttrs::HostDevice};
+  const auto &argCUDA{arg.cudaDataAttr};
+  bool argIsHostOnly{!argCUDA || *argCUDA == common::CUDADataAttr::Pinned};
+  bool argIsDeviceOnly{(!argCUDA && procIsDeviceOnly) ||
+      (argCUDA &&
+          (*argCUDA != common::CUDADataAttr::Managed &&
+              *argCUDA != common::CUDADataAttr::Pinned &&
+              *argCUDA != common::CUDADataAttr::Unified))};
+  return (procIsHostOnly && argIsDeviceOnly) ||
+      (procIsDeviceOnly && argIsHostOnly);
+}
+
 static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
-  auto lhs{std::get<DummyDataObject>(proc.dummyArguments[0].u).type};
-  auto rhs{std::get<DummyDataObject>(proc.dummyArguments[1].u).type};
-  return Tristate::No ==
-      IsDefinedAssignment(lhs.type(), lhs.Rank(), rhs.type(), rhs.Rank());
+  const auto &lhsData{std::get<DummyDataObject>(proc.dummyArguments[0].u)};
+  const auto &lhsTnS{lhsData.type};
+  const auto &rhsData{std::get<DummyDataObject>(proc.dummyArguments[1].u)};
+  const auto &rhsTnS{rhsData.type};
+  return !CUDAHostDeviceDiffer(proc, lhsData) &&
+      !CUDAHostDeviceDiffer(proc, rhsData) &&
+      Tristate::No ==
+      IsDefinedAssignment(
+          lhsTnS.type(), lhsTnS.Rank(), rhsTnS.type(), rhsTnS.Rank());
 }
 
 static bool ConflictsWithIntrinsicOperator(
@@ -1880,8 +1941,12 @@ static bool ConflictsWithIntrinsicOperator(
   if (!kind.IsIntrinsicOperator()) {
     return false;
   }
-  auto arg0{std::get<DummyDataObject>(proc.dummyArguments[0].u).type};
-  auto type0{arg0.type()};
+  const auto &arg0Data{std::get<DummyDataObject>(proc.dummyArguments[0].u)};
+  if (CUDAHostDeviceDiffer(proc, arg0Data)) {
+    return false;
+  }
+  const auto &arg0TnS{arg0Data.type};
+  auto type0{arg0TnS.type()};
   if (proc.dummyArguments.size() == 1) { // unary
     return common::visit(
         common::visitors{
@@ -1891,10 +1956,14 @@ static bool ConflictsWithIntrinsicOperator(
         },
         kind.u);
   } else { // binary
-    int rank0{arg0.Rank()};
-    auto arg1{std::get<DummyDataObject>(proc.dummyArguments[1].u).type};
-    auto type1{arg1.type()};
-    int rank1{arg1.Rank()};
+    int rank0{arg0TnS.Rank()};
+    const auto &arg1Data{std::get<DummyDataObject>(proc.dummyArguments[1].u)};
+    if (CUDAHostDeviceDiffer(proc, arg1Data)) {
+      return false;
+    }
+    const auto &arg1TnS{arg1Data.type};
+    auto type1{arg1TnS.type()};
+    int rank1{arg1TnS.Rank()};
     return common::visit(
         common::visitors{
             [&](common::NumericOperator) {
@@ -2068,8 +2137,8 @@ bool CheckHelper::CheckDefinedAssignment(
     if (!(ok0 && ok1)) {
       return false; // error was reported
     } else if (ConflictsWithIntrinsicAssignment(proc)) {
-      msg = "Defined assignment subroutine '%s' conflicts with"
-            " intrinsic assignment"_err_en_US;
+      msg =
+          "Defined assignment subroutine '%s' conflicts with intrinsic assignment"_err_en_US;
     } else {
       return true; // OK
     }
@@ -2842,13 +2911,12 @@ void CheckHelper::CheckProcedureAssemblyName(const Symbol &symbol) {
 }
 
 parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
-    const Symbol &symbol, bool isError) {
+    const Symbol &symbol) {
   parser::Messages msgs;
   if (examinedByWhyNotInteroperable_.find(symbol) !=
       examinedByWhyNotInteroperable_.end()) {
     return msgs;
   }
-  isError |= symbol.attrs().test(Attr::BIND_C);
   examinedByWhyNotInteroperable_.insert(symbol);
   if (const auto *derived{symbol.detailsIf<DerivedTypeDetails>()}) {
     if (derived->sequence()) { // C1801
@@ -2859,14 +2927,13 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
           "An interoperable derived type cannot have a type parameter"_err_en_US);
     } else if (const auto *parent{
                    symbol.scope()->GetDerivedTypeParent()}) { // C1803
-      if (isError) {
+      if (symbol.attrs().test(Attr::BIND_C)) {
         msgs.Say(symbol.name(),
             "A derived type with the BIND attribute cannot be an extended derived type"_err_en_US);
       } else {
         bool interoperableParent{true};
         if (parent->symbol()) {
-          auto bad{WhyNotInteroperableDerivedType(
-              *parent->symbol(), /*isError=*/false)};
+          auto bad{WhyNotInteroperableDerivedType(*parent->symbol())};
           if (bad.AnyFatalError()) {
             auto &msg{msgs.Say(symbol.name(),
                 "The parent of an interoperable type is not interoperable"_err_en_US)};
@@ -2896,8 +2963,7 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
             "An interoperable derived type cannot have a pointer or allocatable component"_err_en_US);
       } else if (const auto *type{component.GetType()}) {
         if (const auto *derived{type->AsDerived()}) {
-          auto bad{
-              WhyNotInteroperableDerivedType(derived->typeSymbol(), isError)};
+          auto bad{WhyNotInteroperableDerivedType(derived->typeSymbol())};
           if (bad.AnyFatalError()) {
             auto &msg{msgs.Say(component.name(),
                 "Component '%s' of an interoperable derived type must have an interoperable type but does not"_err_en_US,
@@ -2949,28 +3015,19 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
       }
     }
   }
-  if (isError) {
-    for (auto &m : msgs.messages()) {
-      if (!m.IsFatal()) {
-        m.set_severity(parser::Severity::Error);
-      }
-    }
-  }
   if (msgs.AnyFatalError()) {
     examinedByWhyNotInteroperable_.erase(symbol);
   }
   return msgs;
 }
 
-parser::Messages CheckHelper::WhyNotInteroperableObject(
-    const Symbol &symbol, bool isError) {
+parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
   parser::Messages msgs;
   if (examinedByWhyNotInteroperable_.find(symbol) !=
       examinedByWhyNotInteroperable_.end()) {
     return msgs;
   }
   bool isExplicitBindC{symbol.attrs().test(Attr::BIND_C)};
-  isError |= isExplicitBindC;
   examinedByWhyNotInteroperable_.insert(symbol);
   CHECK(symbol.has<ObjectEntityDetails>());
   if (isExplicitBindC && !symbol.owner().IsModule()) {
@@ -2999,14 +3056,14 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
   }
   if (const auto *type{symbol.GetType()}) {
     const auto *derived{type->AsDerived()};
-    if (derived) {
-      if (derived->typeSymbol().attrs().test(Attr::BIND_C)) {
-      } else if (isError) {
+    if (derived && !derived->typeSymbol().attrs().test(Attr::BIND_C)) {
+      if (!context_.IsEnabled(
+              common::LanguageFeature::NonBindCInteroperability)) {
         msgs.Say(symbol.name(),
-                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)
+                "The derived type of an interoperable object must be BIND(C)"_err_en_US)
             .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
-      } else if (auto bad{WhyNotInteroperableDerivedType(
-                     derived->typeSymbol(), /*isError=*/false)};
+      } else if (auto bad{
+                     WhyNotInteroperableDerivedType(derived->typeSymbol())};
                  bad.AnyFatalError()) {
         bad.AttachTo(
             msgs.Say(symbol.name(),
@@ -3136,7 +3193,7 @@ parser::Messages CheckHelper::WhyNotInteroperableProcedure(
                 "A dummy procedure of an interoperable procedure should be BIND(C)"_warn_en_US);
           }
         } else if (dummy->has<ObjectEntityDetails>()) {
-          dummyMsgs = WhyNotInteroperableObject(*dummy, /*isError=*/false);
+          dummyMsgs = WhyNotInteroperableObject(*dummy);
         } else {
           CheckBindC(*dummy);
         }
@@ -3206,13 +3263,12 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     }
   }
   if (symbol.has<ObjectEntityDetails>()) {
-    whyNot = WhyNotInteroperableObject(symbol, /*isError=*/isExplicitBindC);
+    whyNot = WhyNotInteroperableObject(symbol);
   } else if (symbol.has<ProcEntityDetails>() ||
       symbol.has<SubprogramDetails>()) {
     whyNot = WhyNotInteroperableProcedure(symbol, /*isError=*/isExplicitBindC);
   } else if (symbol.has<DerivedTypeDetails>()) {
-    whyNot =
-        WhyNotInteroperableDerivedType(symbol, /*isError=*/isExplicitBindC);
+    whyNot = WhyNotInteroperableDerivedType(symbol);
   }
   if (!whyNot.empty()) {
     bool anyFatal{whyNot.AnyFatalError()};

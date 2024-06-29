@@ -166,6 +166,53 @@ QualType CXXTypeidExpr::getTypeOperand(ASTContext &Context) const {
       Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
 }
 
+static bool isGLValueFromPointerDeref(const Expr *E) {
+  E = E->IgnoreParens();
+
+  if (const auto *CE = dyn_cast<CastExpr>(E)) {
+    if (!CE->getSubExpr()->isGLValue())
+      return false;
+    return isGLValueFromPointerDeref(CE->getSubExpr());
+  }
+
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    return isGLValueFromPointerDeref(OVE->getSourceExpr());
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
+    if (BO->getOpcode() == BO_Comma)
+      return isGLValueFromPointerDeref(BO->getRHS());
+
+  if (const auto *ACO = dyn_cast<AbstractConditionalOperator>(E))
+    return isGLValueFromPointerDeref(ACO->getTrueExpr()) ||
+           isGLValueFromPointerDeref(ACO->getFalseExpr());
+
+  // C++11 [expr.sub]p1:
+  //   The expression E1[E2] is identical (by definition) to *((E1)+(E2))
+  if (isa<ArraySubscriptExpr>(E))
+    return true;
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
+      return true;
+
+  return false;
+}
+
+bool CXXTypeidExpr::hasNullCheck() const {
+  if (!isPotentiallyEvaluated())
+    return false;
+
+  // C++ [expr.typeid]p2:
+  //   If the glvalue expression is obtained by applying the unary * operator to
+  //   a pointer and the pointer is a null pointer value, the typeid expression
+  //   throws the std::bad_typeid exception.
+  //
+  // However, this paragraph's intent is not clear.  We choose a very generous
+  // interpretation which implores us to consider comma operators, conditional
+  // operators, parentheses and other such constructs.
+  return isGLValueFromPointerDeref(getExprOperand());
+}
+
 QualType CXXUuidofExpr::getTypeOperand(ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
   Qualifiers Quals;

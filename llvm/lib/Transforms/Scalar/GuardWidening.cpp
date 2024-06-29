@@ -816,7 +816,7 @@ bool GuardWideningImpl::parseRangeChecks(
   if (IC->getPredicate() == ICmpInst::ICMP_UGT)
     std::swap(CmpLHS, CmpRHS);
 
-  auto &DL = IC->getModule()->getDataLayout();
+  auto &DL = IC->getDataLayout();
 
   GuardWideningImpl::RangeCheck Check(
       CmpLHS, cast<ConstantInt>(ConstantInt::getNullValue(CmpRHS->getType())),

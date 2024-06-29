@@ -152,7 +152,7 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   // because it is significantly more efficient then using the general purpose
   // regular expression library.
   size_t idx = 0;
-  if (basename.size() > 0 && basename[0] == '~')
+  if (basename.starts_with('~'))
     idx = 1;
 
   if (basename.size() <= idx)

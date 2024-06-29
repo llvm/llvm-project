@@ -1790,7 +1790,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
     IRBuilder<> Builder(Id);
 
     // Determine the size of the frame.
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     auto Size = DL.getTypeAllocSize(Shape.FrameTy);
 
     // Allocate.  We don't need to update the call graph node because we're

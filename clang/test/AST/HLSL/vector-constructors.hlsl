@@ -11,9 +11,9 @@ void entry() {
 
 // For the float2 vector, we just expect a conversion from constructor
 // parameters to an initialization list
-// CHECK-LABEL: VarDecl 0x{{[0-9a-fA-F]+}} {{.*}} used Vec2 'float2':'float __attribute__((ext_vector_type(2)))' cinit
-// CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'float __attribute__((ext_vector_type(2)))' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'float __attribute__((ext_vector_type(2)))'
+// CHECK-LABEL: VarDecl 0x{{[0-9a-fA-F]+}} {{.*}} used Vec2 'float2':'vector<float, 2>' cinit
+// CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'vector<float, 2>'
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} {{.*}} 'float' 1.000000e+00
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} {{.*}} 'float' 2.000000e+00
 
@@ -21,22 +21,22 @@ void entry() {
 // For the float 3 things get fun...
 // Here we expect accesses to the vec2 to provide the first and second
 // components using ArraySubscriptExpr
-// CHECK-LABEL: VarDecl 0x{{[0-9a-fA-F]+}} {{.*}} col:10 Vec3 'float3':'float __attribute__((ext_vector_type(3)))' cinit
-// CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))' functional cast to float3 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))'
+// CHECK-LABEL: VarDecl 0x{{[0-9a-fA-F]+}} {{.*}} col:10 Vec3 'float3':'vector<float, 3>' cinit
+// CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'vector<float, 3>' functional cast to float3 <NoOp>
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'vector<float, 3>'
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:24, <invalid sloc>> 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:24, <invalid sloc>> 'float' lvalue
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'float __attribute__((ext_vector_type(2)))' lvalue Var 0x{{[0-9a-fA-F]+}} 'Vec2' 'float2':'float __attribute__((ext_vector_type(2)))'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'vector<float, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'Vec2' 'float2':'vector<float, 2>'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <<invalid sloc>> 'int' 0
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:24, <invalid sloc>> 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:24, <invalid sloc>> 'float' lvalue
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'float __attribute__((ext_vector_type(2)))' lvalue Var 0x{{[0-9a-fA-F]+}} 'Vec2' 'float2':'float __attribute__((ext_vector_type(2)))'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float2':'vector<float, 2>' lvalue Var 0x{{[0-9a-fA-F]+}} 'Vec2' 'float2':'vector<float, 2>'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} {{.*}} 'float' 3.000000e+00
 
-// CHECK: VarDecl 0x{{[0-9a-fA-F]+}} {{.*}} col:10 Vec3b 'float3':'float __attribute__((ext_vector_type(3)))' cinit
-// CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))' functional cast to float3 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))'
+// CHECK: VarDecl 0x{{[0-9a-fA-F]+}} {{.*}} col:10 Vec3b 'float3':'vector<float, 3>' cinit
+// CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'vector<float, 3>' functional cast to float3 <NoOp>
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} {{.*}} 'float3':'vector<float, 3>'
 
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} {{.*}} 'float' 1.000000e+00
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} {{.*}} 'float' 2.000000e+00

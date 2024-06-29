@@ -315,14 +315,9 @@ public:
 
   // Provide value semantics.
   TargetLibraryInfo(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo(TargetLibraryInfo &&TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+  TargetLibraryInfo(TargetLibraryInfo &&TLI) = default;
   TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
-    Impl = TLI.Impl;
-    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
-    return *this;
-  }
+  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) = default;
 
   /// Determine whether a callee with the given TLI can be inlined into
   /// caller with this TLI, based on 'nobuiltin' attributes. When requested,
@@ -415,10 +410,12 @@ public:
       return false;
     switch (F) {
     default: break;
+      // clang-format off
     case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
     case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
+    case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:
@@ -437,6 +434,7 @@ public:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
+      // clang-format on
       return true;
     }
     return false;

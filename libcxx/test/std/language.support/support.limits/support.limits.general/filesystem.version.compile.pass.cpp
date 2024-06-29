@@ -20,7 +20,7 @@
 /*  Constant                 Value
     __cpp_lib_char8_t        201907L [C++20]
     __cpp_lib_filesystem     201703L [C++17]
-    __cpp_lib_format_path    202403L [C++23]
+    __cpp_lib_format_path    202403L [C++26]
 */
 
 #include <filesystem>
@@ -37,7 +37,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 14
@@ -51,7 +51,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -74,7 +74,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -106,7 +106,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -137,17 +137,8 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format_path
-#     error "__cpp_lib_format_path should be defined in c++23"
-#   endif
-#   if __cpp_lib_format_path != 202403L
-#     error "__cpp_lib_format_path should have the value 202403L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format_path
-#     error "__cpp_lib_format_path should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifdef __cpp_lib_format_path
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER > 23

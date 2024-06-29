@@ -1,6 +1,3 @@
-// REQUIRES: nvptx-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --sysroot=./ \
 // RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa --offload-arch=gfx908  \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS

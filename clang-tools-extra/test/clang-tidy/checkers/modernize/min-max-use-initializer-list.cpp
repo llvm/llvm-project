@@ -11,6 +11,7 @@ T max(T a, T b) {
 namespace std {
 template< class T >
 struct initializer_list {
+  const T *a, *b;
   initializer_list()=default;
   initializer_list(T*,int){}
   const T* begin() const {return nullptr;}

@@ -202,8 +202,7 @@ static_assert(__builtin_align_down(&align32array[7], 4) == &align32array[4], "")
 static_assert(__builtin_align_down(&align32array[8], 4) == &align32array[8], "");
 
 // Achieving the same thing using casts to uintptr_t is not allowed:
-static_assert((char *)((__UINTPTR_TYPE__)&align32array[7] & ~3) == &align32array[4], ""); // both-error{{not an integral constant expression}} \
-                                                                                          // expected-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+static_assert((char *)((__UINTPTR_TYPE__)&align32array[7] & ~3) == &align32array[4], ""); // both-error{{not an integral constant expression}}
 
 static_assert(__builtin_align_down(&align32array[1], 4) == &align32array[0], "");
 static_assert(__builtin_align_down(&align32array[1], 64) == &align32array[0], ""); // both-error{{not an integral constant expression}}

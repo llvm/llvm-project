@@ -58,7 +58,7 @@ define i32 @func_c() local_unnamed_addr #0 !dbg !14 {
 ; CHECK-NEXT:    [[DOTUNR1_PH:%.*]] = phi i32 [ [[ADD_PROL]], [[FOR_BODY_PROL]] ], [ [[ADD_PROL_1]], [[FOR_BODY_PROL_1]] ], [ [[ADD_PROL_2]], [[FOR_BODY_PROL_2]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_PROL_LOOPEXIT]], !dbg [[DBG24]]
 ; CHECK:       for.body.prol.loopexit:
-; CHECK-NEXT:    [[DOTLCSSA_UNR:%.*]] = phi ptr [ undef, [[FOR_BODY_LR_PH]] ], [ [[DOTLCSSA_UNR_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[DOTLCSSA_UNR:%.*]] = phi ptr [ poison, [[FOR_BODY_LR_PH]] ], [ [[DOTLCSSA_UNR_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[DOTUNR:%.*]] = phi ptr [ [[A_PROMOTED]], [[FOR_BODY_LR_PH]] ], [ [[DOTUNR_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[DOTUNR1:%.*]] = phi i32 [ [[DOTPR]], [[FOR_BODY_LR_PH]] ], [ [[DOTUNR1_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i32 [[TMP3]], 3, !dbg [[DBG24]]

@@ -347,6 +347,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -mlink-builtin-bitcode
+  for (auto *a :
+       args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
+    opts.BuiltinBCLibs.push_back(a->getValue());
+
   // -mrelocation-model option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
@@ -905,6 +910,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args, clang::driver::options::OPT_fopenmp_version_EQ,
             res.getLangOpts().OpenMPVersion, diags)) {
       res.getLangOpts().OpenMPVersion = Version;
+    }
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
+      res.getLangOpts().OpenMPForceUSM = 1;
     }
     if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
       res.getLangOpts().OpenMPIsTargetDevice = 1;

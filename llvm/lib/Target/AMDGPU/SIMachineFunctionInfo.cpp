@@ -83,7 +83,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (CC != CallingConv::AMDGPU_Gfx)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
-    // TODO: Pick a high register, and shift down, similar to a kernel.
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
@@ -231,6 +230,12 @@ Register SIMachineFunctionInfo::addFlatScratchInit(const SIRegisterInfo &TRI) {
     getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass));
   NumUserSGPRs += 2;
   return ArgInfo.FlatScratchInit.getRegister();
+}
+
+Register SIMachineFunctionInfo::addPrivateSegmentSize(const SIRegisterInfo &TRI) {
+  ArgInfo.PrivateSegmentSize = ArgDescriptor::createRegister(getNextUserSGPR());
+  NumUserSGPRs += 1;
+  return ArgInfo.PrivateSegmentSize.getRegister();
 }
 
 Register SIMachineFunctionInfo::addImplicitBufferPtr(const SIRegisterInfo &TRI) {

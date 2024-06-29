@@ -2072,7 +2072,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Ensure loops are in simplifed form which is a pre-requisite for loop fusion
   // pass. Added only for new PM since the legacy PM has already added

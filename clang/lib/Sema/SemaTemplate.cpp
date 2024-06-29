@@ -292,7 +292,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
     Template =
         FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
     assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
-    if (SS.isSet() && !SS.isInvalid()) {
+    if (!SS.isInvalid()) {
       NestedNameSpecifier *Qualifier = SS.getScopeRep();
       Template = Context.getQualifiedTemplateName(Qualifier, hasTemplateKeyword,
                                                   Template);
@@ -342,8 +342,11 @@ bool Sema::isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
   if (!TD || !getAsTypeTemplateDecl(TD))
     return false;
 
-  if (Template)
-    *Template = TemplateTy::make(TemplateName(TD));
+  if (Template) {
+    TemplateName Name = Context.getQualifiedTemplateName(
+        SS.getScopeRep(), /*TemplateKeyword=*/false, TemplateName(TD));
+    *Template = TemplateTy::make(Name);
+  }
   return true;
 }
 
@@ -983,10 +986,6 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
 
     if (auto DTST = TL.getAs<DeducedTemplateSpecializationTypeLoc>()) {
       TemplateName Name = DTST.getTypePtr()->getTemplateName();
-      if (SS.isSet())
-        Name = Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                                /*HasTemplateKeyword=*/false,
-                                                Name);
       ParsedTemplateArgument Result(SS, TemplateTy::make(Name),
                                     DTST.getTemplateNameLoc());
       if (EllipsisLoc.isValid())
@@ -1937,7 +1936,7 @@ DeclResult Sema::CheckClassTemplate(
   // We may have found the injected-class-name of a class template,
   // class template partial specialization, or class template specialization.
   // In these cases, grab the template that is being defined or specialized.
-  if (!PrevClassTemplate && PrevDecl && isa<CXXRecordDecl>(PrevDecl) &&
+  if (!PrevClassTemplate && isa_and_nonnull<CXXRecordDecl>(PrevDecl) &&
       cast<CXXRecordDecl>(PrevDecl)->isInjectedClassName()) {
     PrevDecl = cast<CXXRecordDecl>(PrevDecl->getDeclContext());
     PrevClassTemplate
@@ -3171,10 +3170,6 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     Expr *RequiresClause = buildAssociatedConstraints(
         SemaRef, F, AliasTemplate, DeduceResults, IsDeducible);
 
-    // FIXME: implement the is_deducible constraint per C++
-    // [over.match.class.deduct]p3.3:
-    //    ... and a constraint that is satisfied if and only if the arguments
-    //    of A are deducible (see below) from the return type.
     auto *FPrimeTemplateParamList = TemplateParameterList::Create(
         Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
         AliasTemplate->getTemplateParameters()->getLAngleLoc(),
@@ -5621,6 +5616,15 @@ void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
   }
 }
 
+void Sema::diagnoseMissingTemplateArguments(const CXXScopeSpec &SS,
+                                            bool TemplateKeyword,
+                                            TemplateDecl *TD,
+                                            SourceLocation Loc) {
+  TemplateName Name = Context.getQualifiedTemplateName(
+      SS.getScopeRep(), TemplateKeyword, TemplateName(TD));
+  diagnoseMissingTemplateArguments(Name, Loc);
+}
+
 ExprResult
 Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
                              SourceLocation TemplateKWLoc,
@@ -5652,7 +5656,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   LocalInstantiationScope Scope(*this);
 
   EnterExpressionEvaluationContext EECtx{
-      *this, ExpressionEvaluationContext::ConstantEvaluated, CSD};
+      *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
@@ -5691,7 +5695,8 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   // Non-function templates require a template argument list.
   if (auto *TD = R.getAsSingle<TemplateDecl>()) {
     if (!TemplateArgs && !isa<FunctionTemplateDecl>(TD)) {
-      diagnoseMissingTemplateArguments(TemplateName(TD), R.getNameLoc());
+      diagnoseMissingTemplateArguments(
+          SS, /*TemplateKeyword=*/TemplateKWLoc.isValid(), TD, R.getNameLoc());
       return ExprError();
     }
   }

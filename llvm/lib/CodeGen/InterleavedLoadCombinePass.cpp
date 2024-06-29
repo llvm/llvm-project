@@ -1256,7 +1256,7 @@ bool InterleavedLoadCombineImpl::run() {
   bool changed = false;
   unsigned MaxFactor = TLI.getMaxSupportedInterleaveFactor();
 
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   // Start with the highest factor to avoid combining and recombining.
   for (unsigned Factor = MaxFactor; Factor >= 2; Factor--) {

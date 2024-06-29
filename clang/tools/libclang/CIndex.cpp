@@ -1643,6 +1643,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -2170,6 +2172,7 @@ public:
   void VisitRequiresExpr(const RequiresExpr *E);
   void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   void VisitOpenACCComputeConstruct(const OpenACCComputeConstruct *D);
+  void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -2859,6 +2862,10 @@ void OpenACCClauseEnqueue::VisitReductionClause(
     const OpenACCReductionClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
+void OpenACCClauseEnqueue::VisitIndependentClause(
+    const OpenACCIndependentClause &C) {}
+void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
@@ -3491,6 +3498,12 @@ void EnqueueVisitor::VisitOMPTargetTeamsDistributeSimdDirective(
 
 void EnqueueVisitor::VisitOpenACCComputeConstruct(
     const OpenACCComputeConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
@@ -6234,6 +6247,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("ConceptDecl");
   case CXCursor_OpenACCComputeConstruct:
     return cxstring::createRef("OpenACCComputeConstruct");
+  case CXCursor_OpenACCLoopConstruct:
+    return cxstring::createRef("OpenACCLoopConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

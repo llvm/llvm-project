@@ -31,7 +31,6 @@
 using namespace clang;
 using namespace clang::extractapi;
 using namespace llvm;
-using namespace llvm::json;
 
 namespace {
 
@@ -1036,9 +1035,9 @@ void SymbolGraphSerializer::serializeGraphToStream(
     ExtendedModule &&EM) {
   Object Root = serializeGraph(ModuleName, std::move(EM));
   if (Options.Compact)
-    OS << formatv("{0}", Value(std::move(Root))) << "\n";
+    OS << formatv("{0}", json::Value(std::move(Root))) << "\n";
   else
-    OS << formatv("{0:2}", Value(std::move(Root))) << "\n";
+    OS << formatv("{0:2}", json::Value(std::move(Root))) << "\n";
 }
 
 void SymbolGraphSerializer::serializeMainSymbolGraph(

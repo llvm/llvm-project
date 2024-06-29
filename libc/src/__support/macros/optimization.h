@@ -33,4 +33,18 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #error "Unhandled compiler"
 #endif
 
+// Defining optimization options for math functions.
+// TODO: Exporting this to public generated headers?
+#define LIBC_MATH_SKIP_ACCURATE_PASS 0x01
+#define LIBC_MATH_SMALL_TABLES 0x02
+#define LIBC_MATH_NO_ERRNO 0x04
+#define LIBC_MATH_NO_EXCEPT 0x08
+#define LIBC_MATH_FAST                                                         \
+  (LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES |                     \
+   LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
+
+#ifndef LIBC_MATH
+#define LIBC_MATH 0
+#endif // LIBC_MATH
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

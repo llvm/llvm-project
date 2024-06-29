@@ -59,12 +59,10 @@ class ARMDAGToDAGISel : public SelectionDAGISel {
   const ARMSubtarget *Subtarget;
 
 public:
-  static char ID;
-
   ARMDAGToDAGISel() = delete;
 
   explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, tm, OptLevel) {}
+      : SelectionDAGISel(tm, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -362,11 +360,19 @@ private:
   /// selected when N would have been selected.
   void replaceDAGValue(const SDValue &N, SDValue M);
 };
+
+class ARMDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  ARMDAGToDAGISelLegacy(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<ARMDAGToDAGISel>(tm, OptLevel)) {}
+};
 }
 
-char ARMDAGToDAGISel::ID = 0;
+char ARMDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(ARMDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(ARMDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -5886,5 +5892,5 @@ bool ARMDAGToDAGISel::SelectInlineAsmMemoryOperand(
 ///
 FunctionPass *llvm::createARMISelDag(ARMBaseTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new ARMDAGToDAGISel(TM, OptLevel);
+  return new ARMDAGToDAGISelLegacy(TM, OptLevel);
 }

@@ -1099,6 +1099,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case BuiltinType::Id:                                                        \
+    return Importer.getToContext().SingletonId;
+#include "clang/Basic/AMDGPUTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
@@ -1505,7 +1509,7 @@ ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
   // The InjectedClassNameType is created in VisitRecordDecl when the
   // T->getDecl() is imported. Here we can return the existing type.
   const Type *Ty = (*ToDeclOrErr)->getTypeForDecl();
-  assert(Ty && isa<InjectedClassNameType>(Ty));
+  assert(isa_and_nonnull<InjectedClassNameType>(Ty));
   return QualType(Ty, 0);
 }
 
@@ -2929,7 +2933,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
   // We may already have an enum of the same name; try to find and match it.
   EnumDecl *PrevDecl = nullptr;
-  if (!DC->isFunctionOrMethod() && SearchName) {
+  if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls =
         Importer.findDeclsInToCtx(DC, SearchName);
@@ -6561,6 +6565,11 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return D2;
   }
 
+  // Update InsertPos, because preceding import calls may have invalidated
+  // it by adding new specializations.
+  if (!VarTemplate->findSpecialization(TemplateArgs, InsertPos))
+    VarTemplate->AddSpecialization(D2, InsertPos);
+
   QualType T;
   if (Error Err = importInto(T, D->getType()))
     return std::move(Err);
@@ -6598,8 +6607,6 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
 
   if (FoundSpecialization)
     D2->setPreviousDecl(FoundSpecialization->getMostRecentDecl());
-
-  VarTemplate->AddSpecialization(D2, InsertPos);
 
   addDeclToContexts(D, D2);
 

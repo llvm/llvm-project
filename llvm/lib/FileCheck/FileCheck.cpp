@@ -624,7 +624,7 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
   ExpressionFormat ExplicitFormat = ExpressionFormat();
   unsigned Precision = 0;
 
-  // Parse format specifier (NOTE: ',' is also an argument seperator).
+  // Parse format specifier (NOTE: ',' is also an argument separator).
   size_t FormatSpecEnd = Expr.find(',');
   size_t FunctionStart = Expr.find('(');
   if (FormatSpecEnd != StringRef::npos && FormatSpecEnd < FunctionStart) {

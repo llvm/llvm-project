@@ -57,7 +57,8 @@ static void addParantheses(const BinaryOperator *BinOp,
   int Precedence1 = getPrecedence(BinOp);
   int Precedence2 = getPrecedence(ParentBinOp);
 
-  if (ParentBinOp != nullptr && Precedence1 != Precedence2) {
+  if (ParentBinOp != nullptr && Precedence1 != Precedence2 && Precedence1 > 0 &&
+      Precedence2 > 0) {
     const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
     const clang::SourceLocation EndLoc =
         clang::Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);

@@ -74,15 +74,15 @@
 
 #--- b.s
 .rept 2
-  .print "r\+"
+  .print "r\+ \+"
 .endr
 .irpc foo,12
-  .print "\+i"
+  .print "\+\+i"
 .endr
-# CHECK2:      r0
-# CHECK2-NEXT: r1
-# CHECK2-NEXT: 0i
-# CHECK2-NEXT: 1i
+# CHECK2:      r0 0
+# CHECK2-NEXT: r1 1
+# CHECK2-NEXT: 00i
+# CHECK2-NEXT: 11i
 
 .rept 2
   .rept 2

@@ -3,7 +3,7 @@
 // REQUIRES: system-linux
 
 // Test for included functions that have a different debug location than the current file
-module attributes {} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QPsinc() {
     return loc(#loc2)
   } loc(#loc1)
@@ -19,7 +19,7 @@ module attributes {} {
 #loc4 = loc("/home/user01/llvm-project/build_release/simple.f90":4:3)
 #loc5 = loc("/home/user01/llvm-project/build_release/simple.f90":5:1)
 
-// CHECK: module {
+// CHECK: module
 // CHECK:   func.func @_QPsinc() {
 // CHECK:   } loc(#[[FUSED_LOC_INC_FILE:.*]])
 // CHECK:   func.func @_QQmain() {

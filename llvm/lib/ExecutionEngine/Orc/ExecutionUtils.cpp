@@ -117,7 +117,7 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
 
   MangleAndInterner Mangle(
       JD.getExecutionSession(),
-      (*CtorDtors.begin()).Func->getParent()->getDataLayout());
+      (*CtorDtors.begin()).Func->getDataLayout());
 
   for (auto CtorDtor : CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&

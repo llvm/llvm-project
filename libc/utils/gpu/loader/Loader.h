@@ -11,8 +11,8 @@
 
 #include "utils/gpu/server/llvmlibc_rpc_server.h"
 
-#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "include/llvm-libc-types/test_rpc_opcodes_t.h"
+#include "llvm-libc-types/rpc_opcodes_t.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -98,14 +98,17 @@ void *copy_environment(char **envp, Allocator alloc) {
   return copy_argument_vector(envc, envp, alloc);
 }
 
-inline void handle_error(const char *msg) {
-  fprintf(stderr, "%s\n", msg);
+inline void handle_error_impl(const char *file, int32_t line, const char *msg) {
+  fprintf(stderr, "%s:%d:0: Error: %s\n", file, line, msg);
   exit(EXIT_FAILURE);
 }
 
-inline void handle_error(rpc_status_t) {
-  handle_error("Failure in the RPC server\n");
+inline void handle_error_impl(const char *file, int32_t line,
+                              rpc_status_t err) {
+  fprintf(stderr, "%s:%d:0: Error: %d\n", file, line, err);
+  exit(EXIT_FAILURE);
 }
+#define handle_error(X) handle_error_impl(__FILE__, __LINE__, X)
 
 template <uint32_t lane_size>
 inline void register_rpc_callbacks(rpc_device_t device) {

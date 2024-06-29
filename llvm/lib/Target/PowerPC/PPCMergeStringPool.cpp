@@ -302,13 +302,6 @@ bool PPCMergeStringPool::mergeModuleStringPool(Module &M) {
   return true;
 }
 
-static bool userHasOperand(User *TheUser, GlobalVariable *GVOperand) {
-  for (Value *Op : TheUser->operands())
-    if (Op == GVOperand)
-      return true;
-  return false;
-}
-
 // For pooled strings we need to add the offset into the pool for each string.
 // This is done by adding a Get Element Pointer (GEP) before each user. This
 // function adds the GEP.
@@ -319,29 +312,13 @@ void PPCMergeStringPool::replaceUsesWithGEP(GlobalVariable *GlobalToReplace,
   Indices.push_back(ConstantInt::get(Type::getInt32Ty(*Context), 0));
   Indices.push_back(ConstantInt::get(Type::getInt32Ty(*Context), ElementIndex));
 
-  // Need to save a temporary copy of each user list because we remove uses
-  // as we replace them.
-  SmallVector<User *> Users;
-  for (User *CurrentUser : GlobalToReplace->users())
-    Users.push_back(CurrentUser);
-
-  for (User *CurrentUser : Users) {
-    // The user was not found so it must have been replaced earlier.
-    if (!userHasOperand(CurrentUser, GlobalToReplace))
-      continue;
-
-    // We cannot replace operands in globals so we ignore those.
-    if (isa<GlobalValue>(CurrentUser))
-      continue;
-
-    Constant *ConstGEP = ConstantExpr::getInBoundsGetElementPtr(
-        PooledStructType, GPool, Indices);
-    LLVM_DEBUG(dbgs() << "Replacing this global:\n");
-    LLVM_DEBUG(GlobalToReplace->dump());
-    LLVM_DEBUG(dbgs() << "with this:\n");
-    LLVM_DEBUG(ConstGEP->dump());
-    GlobalToReplace->replaceAllUsesWith(ConstGEP);
-  }
+  Constant *ConstGEP =
+      ConstantExpr::getInBoundsGetElementPtr(PooledStructType, GPool, Indices);
+  LLVM_DEBUG(dbgs() << "Replacing this global:\n");
+  LLVM_DEBUG(GlobalToReplace->dump());
+  LLVM_DEBUG(dbgs() << "with this:\n");
+  LLVM_DEBUG(ConstGEP->dump());
+  GlobalToReplace->replaceAllUsesWith(ConstGEP);
 }
 
 } // namespace

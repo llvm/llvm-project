@@ -15,6 +15,9 @@
 namespace mlir {
 namespace sparse_tensor {
 
+// Forward declaration.
+class SparseIterator;
+
 /// The base class for all types of sparse tensor levels. It provides interfaces
 /// to query the loop range (see `peekRangeAt`) and look up the coordinates (see
 /// `peekCrdAt`).
@@ -50,6 +53,12 @@ public:
   peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
               ValueRange parentPos, Value inPadZone = nullptr) const = 0;
 
+  virtual std::pair<Value, Value>
+  collapseRangeBetween(OpBuilder &b, Location l, ValueRange batchPrefix,
+                       std::pair<Value, Value> parentRange) const {
+    llvm_unreachable("Not Implemented");
+  };
+
   Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
   Value getSize() const { return lvlSize; }
@@ -62,7 +71,7 @@ public:
 
 protected:
   SparseTensorLevel(unsigned tid, unsigned lvl, LevelType lt, Value lvlSize)
-      : tid(tid), lvl(lvl), lt(lt), lvlSize(lvlSize){};
+      : tid(tid), lvl(lvl), lt(lt), lvlSize(lvlSize) {};
 
 public:
   const unsigned tid, lvl;
@@ -79,6 +88,59 @@ enum class IterKind : uint8_t {
   kPad,
 };
 
+/// A `SparseIterationSpace` represents a sparse set of coordinates defined by
+/// (possibly multiple) levels of a specific sparse tensor.
+/// TODO: remove `SparseTensorLevel` and switch to SparseIterationSpace when
+/// feature complete.
+class SparseIterationSpace {
+public:
+  SparseIterationSpace() = default;
+
+  // Constructs a N-D iteration space.
+  SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
+                       std::pair<Level, Level> lvlRange, ValueRange parentPos);
+
+  // Constructs a 1-D iteration space.
+  SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
+                       Level lvl, ValueRange parentPos)
+      : SparseIterationSpace(loc, b, t, tid, {lvl, lvl + 1}, parentPos) {};
+
+  bool isUnique() const { return lvls.back()->isUnique(); }
+
+  unsigned getSpaceDim() const { return lvls.size(); }
+
+  // Reconstructs a iteration space directly from the provided ValueRange.
+  static SparseIterationSpace fromValues(IterSpaceType dstTp, ValueRange values,
+                                         unsigned tid);
+
+  // The inverse operation of `fromValues`.
+  SmallVector<Value> toValues() const {
+    SmallVector<Value> vals;
+    for (auto &stl : lvls) {
+      llvm::append_range(vals, stl->getLvlBuffers());
+      vals.push_back(stl->getSize());
+    }
+    vals.append({bound.first, bound.second});
+    return vals;
+  }
+
+  const SparseTensorLevel &getLastLvl() const { return *lvls.back(); }
+  ArrayRef<std::unique_ptr<SparseTensorLevel>> getLvlRef() const {
+    return lvls;
+  }
+
+  Value getBoundLo() const { return bound.first; }
+  Value getBoundHi() const { return bound.second; }
+
+  // Extract an iterator to iterate over the sparse iteration space.
+  std::unique_ptr<SparseIterator> extractIterator(OpBuilder &b,
+                                                  Location l) const;
+
+private:
+  SmallVector<std::unique_ptr<SparseTensorLevel>> lvls;
+  std::pair<Value, Value> bound;
+};
+
 /// Helper class that generates loop conditions, etc, to traverse a
 /// sparse tensor level.
 class SparseIterator {
@@ -92,13 +154,13 @@ protected:
                  unsigned cursorValsCnt,
                  SmallVectorImpl<Value> &cursorValStorage)
       : batchCrds(0), kind(kind), tid(tid), lvl(lvl), crd(nullptr),
-        cursorValsCnt(cursorValsCnt), cursorValsStorageRef(cursorValStorage){};
+        cursorValsCnt(cursorValsCnt), cursorValsStorageRef(cursorValStorage) {};
 
   SparseIterator(IterKind kind, unsigned cursorValsCnt,
                  SmallVectorImpl<Value> &cursorValStorage,
                  const SparseIterator &delegate)
       : SparseIterator(kind, delegate.tid, delegate.lvl, cursorValsCnt,
-                       cursorValStorage){};
+                       cursorValStorage) {};
 
   SparseIterator(IterKind kind, const SparseIterator &wrap,
                  unsigned extraCursorCnt = 0)
@@ -133,6 +195,13 @@ public:
     // Now that the iterator is re-positioned, the coordinate becomes invalid.
     crd = nullptr;
   }
+
+  // Reconstructs a iteration space directly from the provided ValueRange.
+  static std::unique_ptr<SparseIterator>
+  fromValues(IteratorType dstTp, ValueRange values, unsigned tid);
+
+  // The inverse operation of `fromValues`.
+  SmallVector<Value> toValues() const { llvm_unreachable("Not implemented"); }
 
   //
   // Iterator properties.
@@ -287,10 +356,24 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &b,
                                                          unsigned tid,
                                                          Level lvl);
 
-/// Helper function to create a simple SparseIterator object that iterate over
-/// the SparseTensorLevel.
-std::unique_ptr<SparseIterator> makeSimpleIterator(const SparseTensorLevel &stl,
-                                                   SparseEmitStrategy strategy);
+/// Helper function to create a TensorLevel object from given ValueRange.
+std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(LevelType lt, Value sz,
+                                                         ValueRange buffers,
+                                                         unsigned tid, Level l);
+
+/// Helper function to create a simple SparseIterator object that iterate
+/// over the entire iteration space.
+std::unique_ptr<SparseIterator>
+makeSimpleIterator(OpBuilder &b, Location l,
+                   const SparseIterationSpace &iterSpace);
+
+/// Helper function to create a simple SparseIterator object that iterate
+/// over the sparse tensor level.
+/// TODO: switch to `SparseIterationSpace` (which support N-D iterator) when
+/// feature complete.
+std::unique_ptr<SparseIterator> makeSimpleIterator(
+    const SparseTensorLevel &stl,
+    SparseEmitStrategy strategy = SparseEmitStrategy::kFunctional);
 
 /// Helper function to create a synthetic SparseIterator object that iterates
 /// over a dense space specified by [0,`sz`).

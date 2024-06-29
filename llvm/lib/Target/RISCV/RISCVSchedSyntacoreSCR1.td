@@ -76,58 +76,6 @@ def : WriteRes<WriteLDW, [SCR1_LSU]>;
 def : WriteRes<WriteLDD, [SCR1_LSU]>;
 }
 
-let Unsupported = true in {
-// Atomic memory
-def : WriteRes<WriteAtomicW, [SCR1_LSU]>;
-def : WriteRes<WriteAtomicD, [SCR1_LSU]>;
-def : WriteRes<WriteAtomicLDW, [SCR1_LSU]>;
-def : WriteRes<WriteAtomicLDD, [SCR1_LSU]>;
-def : WriteRes<WriteAtomicSTW, [SCR1_LSU]>;
-def : WriteRes<WriteAtomicSTD, [SCR1_LSU]>;
-
-// FP load/store
-def : WriteRes<WriteFST32, [SCR1_LSU]>;
-def : WriteRes<WriteFST64, [SCR1_LSU]>;
-def : WriteRes<WriteFLD32, [SCR1_LSU]>;
-def : WriteRes<WriteFLD64, [SCR1_LSU]>;
-
-// FP instructions
-def : WriteRes<WriteFAdd32, []>;
-def : WriteRes<WriteFSGNJ32, []>;
-def : WriteRes<WriteFMinMax32, []>;
-def : WriteRes<WriteFAdd64, []>;
-def : WriteRes<WriteFSGNJ64, []>;
-def : WriteRes<WriteFMinMax64, []>;
-def : WriteRes<WriteFCvtI32ToF32, []>;
-def : WriteRes<WriteFCvtI32ToF64, []>;
-def : WriteRes<WriteFCvtI64ToF32, []>;
-def : WriteRes<WriteFCvtI64ToF64, []>;
-def : WriteRes<WriteFCvtF32ToI32, []>;
-def : WriteRes<WriteFCvtF32ToI64, []>;
-def : WriteRes<WriteFCvtF64ToI32, []>;
-def : WriteRes<WriteFCvtF64ToI64, []>;
-def : WriteRes<WriteFCvtF32ToF64, []>;
-def : WriteRes<WriteFCvtF64ToF32, []>;
-def : WriteRes<WriteFClass32, []>;
-def : WriteRes<WriteFClass64, []>;
-def : WriteRes<WriteFCmp32, []>;
-def : WriteRes<WriteFCmp64, []>;
-def : WriteRes<WriteFMovF32ToI32, []>;
-def : WriteRes<WriteFMovI32ToF32, []>;
-def : WriteRes<WriteFMovF64ToI64, []>;
-def : WriteRes<WriteFMovI64ToF64, []>;
-def : WriteRes<WriteFMul32, []>;
-def : WriteRes<WriteFMA32, []>;
-def : WriteRes<WriteFMul64, []>;
-def : WriteRes<WriteFMA64, []>;
-def : WriteRes<WriteFDiv32, []>;
-def : WriteRes<WriteFDiv64, []>;
-def : WriteRes<WriteFSqrt32, []>;
-def : WriteRes<WriteFSqrt64, []>;
-
-def : WriteRes<WriteSFB, []>;
-}
-
 // Others
 def : WriteRes<WriteCSR, []>;
 def : WriteRes<WriteNop, []>;
@@ -153,55 +101,13 @@ def : ReadAdvance<ReadIRem, 0>;
 def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
-def : ReadAdvance<ReadAtomicWA, 0>;
-def : ReadAdvance<ReadAtomicWD, 0>;
-def : ReadAdvance<ReadAtomicDA, 0>;
-def : ReadAdvance<ReadAtomicDD, 0>;
-def : ReadAdvance<ReadAtomicLDW, 0>;
-def : ReadAdvance<ReadAtomicLDD, 0>;
-def : ReadAdvance<ReadAtomicSTW, 0>;
-def : ReadAdvance<ReadAtomicSTD, 0>;
-def : ReadAdvance<ReadFStoreData, 0>;
-def : ReadAdvance<ReadFMemBase, 0>;
-def : ReadAdvance<ReadFAdd32, 0>;
-def : ReadAdvance<ReadFAdd64, 0>;
-def : ReadAdvance<ReadFMul32, 0>;
-def : ReadAdvance<ReadFMul64, 0>;
-def : ReadAdvance<ReadFMA32, 0>;
-def : ReadAdvance<ReadFMA32Addend, 0>;
-def : ReadAdvance<ReadFMA64, 0>;
-def : ReadAdvance<ReadFMA64Addend, 0>;
-def : ReadAdvance<ReadFDiv32, 0>;
-def : ReadAdvance<ReadFDiv64, 0>;
-def : ReadAdvance<ReadFSqrt32, 0>;
-def : ReadAdvance<ReadFSqrt64, 0>;
-def : ReadAdvance<ReadFCmp32, 0>;
-def : ReadAdvance<ReadFCmp64, 0>;
-def : ReadAdvance<ReadFSGNJ32, 0>;
-def : ReadAdvance<ReadFSGNJ64, 0>;
-def : ReadAdvance<ReadFMinMax32, 0>;
-def : ReadAdvance<ReadFMinMax64, 0>;
-def : ReadAdvance<ReadFCvtF32ToI32, 0>;
-def : ReadAdvance<ReadFCvtF32ToI64, 0>;
-def : ReadAdvance<ReadFCvtF64ToI32, 0>;
-def : ReadAdvance<ReadFCvtF64ToI64, 0>;
-def : ReadAdvance<ReadFCvtI32ToF32, 0>;
-def : ReadAdvance<ReadFCvtI32ToF64, 0>;
-def : ReadAdvance<ReadFCvtI64ToF32, 0>;
-def : ReadAdvance<ReadFCvtI64ToF64, 0>;
-def : ReadAdvance<ReadFCvtF32ToF64, 0>;
-def : ReadAdvance<ReadFCvtF64ToF32, 0>;
-def : ReadAdvance<ReadFMovF32ToI32, 0>;
-def : ReadAdvance<ReadFMovI32ToF32, 0>;
-def : ReadAdvance<ReadFMovF64ToI64, 0>;
-def : ReadAdvance<ReadFMovI64ToF64, 0>;
-def : ReadAdvance<ReadFClass32, 0>;
-def : ReadAdvance<ReadFClass64, 0>;
-def : ReadAdvance<ReadSFBJmp, 0>;
-def : ReadAdvance<ReadSFBALU, 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
+defm : UnsupportedSchedA;
+defm : UnsupportedSchedD;
+defm : UnsupportedSchedF;
+defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZba;

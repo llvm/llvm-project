@@ -723,7 +723,7 @@ def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
 def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
 
 // AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">, 
+def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
                  AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
 def IsAIX : Predicate<"Subtarget->isAIXABI()">;
 def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
@@ -1747,114 +1747,114 @@ def : Pat<(int_ppc_dcbtst_with_hint xoaddr:$dst, i32:$TH),
 let Defs = [CR0] in {
   def ATOMIC_LOAD_ADD_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_ADD_I8",
-    [(set i32:$dst, (atomic_load_add_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_add_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_SUB_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_SUB_I8",
-    [(set i32:$dst, (atomic_load_sub_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_sub_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_AND_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_AND_I8",
-    [(set i32:$dst, (atomic_load_and_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_and_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_OR_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_OR_I8",
-    [(set i32:$dst, (atomic_load_or_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_or_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_XOR_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "ATOMIC_LOAD_XOR_I8",
-    [(set i32:$dst, (atomic_load_xor_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_xor_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_NAND_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_NAND_I8",
-    [(set i32:$dst, (atomic_load_nand_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_nand_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MIN_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MIN_I8",
-    [(set i32:$dst, (atomic_load_min_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_min_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MAX_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MAX_I8",
-    [(set i32:$dst, (atomic_load_max_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_max_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMIN_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMIN_I8",
-    [(set i32:$dst, (atomic_load_umin_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umin_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMAX_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMAX_I8",
-    [(set i32:$dst, (atomic_load_umax_8 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umax_i8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_ADD_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_ADD_I16",
-    [(set i32:$dst, (atomic_load_add_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_add_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_SUB_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_SUB_I16",
-    [(set i32:$dst, (atomic_load_sub_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_sub_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_AND_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_AND_I16",
-    [(set i32:$dst, (atomic_load_and_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_and_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_OR_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_OR_I16",
-    [(set i32:$dst, (atomic_load_or_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_or_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_XOR_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_XOR_I16",
-    [(set i32:$dst, (atomic_load_xor_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_xor_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_NAND_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_NAND_I16",
-    [(set i32:$dst, (atomic_load_nand_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_nand_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MIN_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MIN_I16",
-    [(set i32:$dst, (atomic_load_min_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_min_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MAX_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MAX_I16",
-    [(set i32:$dst, (atomic_load_max_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_max_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMIN_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMIN_I16",
-    [(set i32:$dst, (atomic_load_umin_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umin_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMAX_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMAX_I16",
-    [(set i32:$dst, (atomic_load_umax_16 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umax_i16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_ADD_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_ADD_I32",
-    [(set i32:$dst, (atomic_load_add_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_add_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_SUB_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_SUB_I32",
-    [(set i32:$dst, (atomic_load_sub_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_sub_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_AND_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_AND_I32",
-    [(set i32:$dst, (atomic_load_and_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_and_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_OR_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_OR_I32",
-    [(set i32:$dst, (atomic_load_or_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_or_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_XOR_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_XOR_I32",
-    [(set i32:$dst, (atomic_load_xor_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_xor_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_NAND_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_NAND_I32",
-    [(set i32:$dst, (atomic_load_nand_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_nand_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MIN_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MIN_I32",
-    [(set i32:$dst, (atomic_load_min_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_min_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MAX_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MAX_I32",
-    [(set i32:$dst, (atomic_load_max_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_max_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMIN_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMIN_I32",
-    [(set i32:$dst, (atomic_load_umin_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umin_i32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMAX_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMAX_I32",
-    [(set i32:$dst, (atomic_load_umax_32 ForceXForm:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umax_i32 ForceXForm:$ptr, i32:$incr))]>;
 
   def ATOMIC_CMP_SWAP_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new), "#ATOMIC_CMP_SWAP_I8",
-    [(set i32:$dst, (atomic_cmp_swap_8 ForceXForm:$ptr, i32:$old, i32:$new))]>;
+    [(set i32:$dst, (atomic_cmp_swap_i8 ForceXForm:$ptr, i32:$old, i32:$new))]>;
   def ATOMIC_CMP_SWAP_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new), "#ATOMIC_CMP_SWAP_I16 $dst $ptr $old $new",
-    [(set i32:$dst, (atomic_cmp_swap_16 ForceXForm:$ptr, i32:$old, i32:$new))]>;
+    [(set i32:$dst, (atomic_cmp_swap_i16 ForceXForm:$ptr, i32:$old, i32:$new))]>;
   def ATOMIC_CMP_SWAP_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new), "#ATOMIC_CMP_SWAP_I32 $dst $ptr $old $new",
-    [(set i32:$dst, (atomic_cmp_swap_32 ForceXForm:$ptr, i32:$old, i32:$new))]>;
+    [(set i32:$dst, (atomic_cmp_swap_i32 ForceXForm:$ptr, i32:$old, i32:$new))]>;
 
   def ATOMIC_SWAP_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$new), "#ATOMIC_SWAP_i8",
-    [(set i32:$dst, (atomic_swap_8 ForceXForm:$ptr, i32:$new))]>;
+    [(set i32:$dst, (atomic_swap_i8 ForceXForm:$ptr, i32:$new))]>;
   def ATOMIC_SWAP_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$new), "#ATOMIC_SWAP_I16",
-    [(set i32:$dst, (atomic_swap_16 ForceXForm:$ptr, i32:$new))]>;
+    [(set i32:$dst, (atomic_swap_i16 ForceXForm:$ptr, i32:$new))]>;
   def ATOMIC_SWAP_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$new), "#ATOMIC_SWAP_I32",
-    [(set i32:$dst, (atomic_swap_32 ForceXForm:$ptr, i32:$new))]>;
+    [(set i32:$dst, (atomic_swap_i32 ForceXForm:$ptr, i32:$new))]>;
 }
 
 def : Pat<(PPCatomicCmpSwap_8 ForceXForm:$ptr, i32:$old, i32:$new),
@@ -3343,14 +3343,10 @@ def LWZtocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc_nor
                     [(set i32:$rD,
                       (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
 def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp),
-                       "#ADDIStocHA",
-                       [(set i32:$rD,
-                         (PPCtoc_entry i32:$reg, tglobaladdr:$disp))]>;
+                       "#ADDIStocHA", []>;
 // TOC Data Transform on AIX
-def ADDItoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc:$reg),
-                   "#ADDItoc",
-                   [(set i32:$rD,
-                     (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
+def ADDItoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tocentry32:$disp),
+                   "#ADDItoc", []>;
 def ADDItocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp),
                    "#ADDItocL", []>;
 

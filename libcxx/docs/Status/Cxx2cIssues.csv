@@ -29,7 +29,7 @@
 "`3947 <https://wg21.link/LWG3947>`__","Unexpected constraints on ``adjacent_transform_view::base()``","Kona November 2023","","","|ranges|"
 "`3948 <https://wg21.link/LWG3948>`__","``possibly-const-range and as-const-pointer`` should be ``noexcept``","Kona November 2023","","","|ranges|"
 "`3949 <https://wg21.link/LWG3949>`__","``std::atomic<bool>``'s trivial destructor dropped in C++17 spec wording","Kona November 2023","","",""
-"`3951 <https://wg21.link/LWG3951>`__","[expected.object.swap]: Using ``value()`` instead of ``has_value()``","Kona November 2023","","",""
+"`3951 <https://wg21.link/LWG3951>`__","[expected.object.swap]: Using ``value()`` instead of ``has_value()``","Kona November 2023","|Complete|","16.0",""
 "`3953 <https://wg21.link/LWG3953>`__","``iter_move`` for ``common_iterator`` and ``counted_iterator`` should return ``decltype(auto)``","Kona November 2023","","","|ranges|"
 "`3957 <https://wg21.link/LWG3957>`__","[container.alloc.reqmts] The value category of v should be claimed","Kona November 2023","","",""
 "`3965 <https://wg21.link/LWG3965>`__","Incorrect example in [format.string.escaped] p3 for formatting of combining characters","Kona November 2023","|Complete|","19.0","|format|"

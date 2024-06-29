@@ -433,7 +433,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ExtendedValue &);
 /// substituted.
 ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
-/// Is the extended value `exv` an array?
+/// Is the extended value `exv` an array? Note that this returns true for
+/// assumed-ranks that could actually be scalars at runtime.
 bool isArray(const ExtendedValue &exv);
 
 /// Get the type parameters for `exv`.
@@ -525,6 +526,15 @@ public:
                    return box.getSourceBox() ? true : false;
                  },
                  [](const auto &box) -> bool { return false; });
+  }
+
+  bool hasAssumedRank() const {
+    return match(
+        [](const fir::BoxValue &box) -> bool { return box.hasAssumedRank(); },
+        [](const fir::MutableBoxValue &box) -> bool {
+          return box.hasAssumedRank();
+        },
+        [](const auto &box) -> bool { return false; });
   }
 
   /// LLVM style debugging of extended values

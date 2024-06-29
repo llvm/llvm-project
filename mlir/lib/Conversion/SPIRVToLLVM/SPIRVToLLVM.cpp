@@ -1425,15 +1425,18 @@ public:
     // Convert SPIR-V Function Control to equivalent LLVM function attribute
     MLIRContext *context = funcOp.getContext();
     switch (funcOp.getFunctionControl()) {
+    case spirv::FunctionControl::Inline:
+      newFuncOp.setAlwaysInline(true);
+      break;
+    case spirv::FunctionControl::DontInline:
+      newFuncOp.setNoInline(true);
+      break;
+
 #define DISPATCH(functionControl, llvmAttr)                                    \
   case functionControl:                                                        \
     newFuncOp->setAttr("passthrough", ArrayAttr::get(context, {llvmAttr}));    \
     break;
 
-      DISPATCH(spirv::FunctionControl::Inline,
-               StringAttr::get(context, "alwaysinline"));
-      DISPATCH(spirv::FunctionControl::DontInline,
-               StringAttr::get(context, "noinline"));
       DISPATCH(spirv::FunctionControl::Pure,
                StringAttr::get(context, "readonly"));
       DISPATCH(spirv::FunctionControl::Const,

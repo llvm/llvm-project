@@ -42,6 +42,7 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 2),
     CUDA_ENTRY(12, 3),
     CUDA_ENTRY(12, 4),
+    CUDA_ENTRY(12, 5),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -111,6 +112,7 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(803),  // gfx803
     GFX(805),  // gfx805
     GFX(810),  // gfx810
+    {CudaArch::GFX9_GENERIC, "gfx9-generic", "compute_amdgcn"},
     GFX(900),  // gfx900
     GFX(902),  // gfx902
     GFX(904),  // gfx903
@@ -122,10 +124,12 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(940),  // gfx940
     GFX(941),  // gfx941
     GFX(942),  // gfx942
+    {CudaArch::GFX10_1_GENERIC, "gfx10-1-generic", "compute_amdgcn"},
     GFX(1010), // gfx1010
     GFX(1011), // gfx1011
     GFX(1012), // gfx1012
     GFX(1013), // gfx1013
+    {CudaArch::GFX10_3_GENERIC, "gfx10-3-generic", "compute_amdgcn"},
     GFX(1030), // gfx1030
     GFX(1031), // gfx1031
     GFX(1032), // gfx1032
@@ -133,14 +137,18 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(1034), // gfx1034
     GFX(1035), // gfx1035
     GFX(1036), // gfx1036
+    {CudaArch::GFX11_GENERIC, "gfx11-generic", "compute_amdgcn"},
     GFX(1100), // gfx1100
     GFX(1101), // gfx1101
     GFX(1102), // gfx1102
     GFX(1103), // gfx1103
     GFX(1150), // gfx1150
     GFX(1151), // gfx1151
+    GFX(1152), // gfx1152
+    {CudaArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
+    {CudaArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
     {CudaArch::Generic, "generic", ""},
     // clang-format on
 };

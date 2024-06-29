@@ -179,3 +179,46 @@ end subroutine
 ! CHECK: cuf.data_transfer %[[A]]#0 to %[[B]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: cuf.data_transfer %[[B]]#0 to %[[A]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: cuf.data_transfer %[[A]]#0 to %[[C]]#0 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+subroutine sub8(a, b, n)
+  integer :: n
+  integer, device :: a(n)
+  integer :: b(10)
+  b = a
+  a = b
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub8(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "b"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"})
+! CHECK: %[[B:.*]]:2 = hlfir.declare %[[ARG1]](%{{.*}}) dummy_scope %{{.*}} {uniq_name = "_QFsub8Eb"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub8Ea"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+! CHECK: cuf.data_transfer %[[A]]#0 to %[[B]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<10xi32>>
+! CHECK: cuf.data_transfer %[[B]]#0 to %[[A]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<10xi32>>, !fir.box<!fir.array<?xi32>>
+
+subroutine sub9(a)
+  integer, pinned, allocatable :: a(:)
+  do concurrent (i = 1 : 10)
+    a(i) = 10 + a(i)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub9
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub10(a, b)
+  integer, device :: a
+  integer, allocatable, pinned :: b
+  integer :: res
+
+  res = a + b
+end subroutine
+
+
+
+! CHECK-LABEL: func.func @_QPsub10(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}
+
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub10Ea"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: cuf.data_transfer %[[A]]#1 to %{{.*}}#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<i32>
+! CHECK-NOT: cuf.data_transfer
+

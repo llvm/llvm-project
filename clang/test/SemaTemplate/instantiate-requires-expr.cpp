@@ -72,8 +72,8 @@ namespace type_requirement {
 
   template<typename T> requires
   false_v<requires { typename T::template temp<T>; }>
-  // expected-note@-1 {{because 'false_v<requires { typename contains_template<int>::temp<contains_template<int> >; }>' evaluated to false}}
-  // expected-note@-2 {{because 'false_v<requires { typename contains_template<short>::temp<contains_template<short> >; }>' evaluated to false}}
+  // expected-note@-1 {{because 'false_v<requires { typename contains_template<int>::template temp<contains_template<int> >; }>' evaluated to false}}
+  // expected-note@-2 {{because 'false_v<requires { typename contains_template<short>::template temp<contains_template<short> >; }>' evaluated to false}}
   struct r2 {};
 
   using r2i1 = r2<contains_template<int>>; // expected-error{{constraints not satisfied for class template 'r2' [with T = type_requirement::contains_template<int>]}}

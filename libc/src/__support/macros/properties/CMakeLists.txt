@@ -33,6 +33,7 @@ add_header_library(
     .compiler
     .cpu_features
     .os
-    libc.include.llvm-libc-macros.float_macros
+    libc.hdr.float_macros
+    libc.include.llvm-libc-macros.float16_macros
     libc.include.llvm-libc-types.float128
 )

@@ -99,6 +99,50 @@ transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// ForallToForOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ForallToParallelOp::apply(transform::TransformRewriter &rewriter,
+                                     transform::TransformResults &results,
+                                     transform::TransformState &state) {
+  auto payload = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(payload))
+    return emitSilenceableError() << "expected a single payload op";
+
+  auto target = dyn_cast<scf::ForallOp>(*payload.begin());
+  if (!target) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "expected the payload to be scf.forall";
+    diag.attachNote((*payload.begin())->getLoc()) << "payload op";
+    return diag;
+  }
+
+  if (!target.getOutputs().empty()) {
+    return emitSilenceableError()
+           << "unsupported shared outputs (didn't bufferize?)";
+  }
+
+  if (getNumResults() != 1) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "op expects one result, given "
+                                       << getNumResults();
+    diag.attachNote(target.getLoc()) << "payload op";
+    return diag;
+  }
+
+  scf::ParallelOp opResult;
+  if (failed(scf::forallToParallelLoop(rewriter, target, &opResult))) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "failed to convert forall into parallel";
+    return diag;
+  }
+
+  results.set(cast<OpResult>(getTransformed()[0]), {opResult});
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOutlineOp
 //===----------------------------------------------------------------------===//
 
@@ -217,6 +261,8 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
+  std::optional<int64_t> ubConstant = getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant = getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -227,7 +273,14 @@ loopScheduling(scf::ForOp forOp,
       Operation *def = operand.getDefiningOp();
       if (!def)
         continue;
-      earlyCycle = std::max(earlyCycle, opCycles[def] + getLatency(def));
+      if (ubConstant && lbConstant) {
+        unsigned ubInt = ubConstant.value();
+        unsigned lbInt = lbConstant.value();
+        auto minLatency = std::min(ubInt - lbInt - 1, getLatency(def));
+        earlyCycle = std::max(earlyCycle, opCycles[def] + minLatency);
+      } else {
+        earlyCycle = std::max(earlyCycle, opCycles[def] + getLatency(def));
+      }
     }
     opCycles[&op] = earlyCycle;
     wrappedSchedule[earlyCycle % iterationInterval].push_back(&op);
@@ -277,7 +330,7 @@ DiagnosedSilenceableFailure transform::LoopPromoteIfOneIterationOp::applyToOne(
 
 void transform::LoopPromoteIfOneIterationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  consumesHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -295,12 +348,36 @@ transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
     result = loopUnrollByFactor(scfFor, getFactor());
   else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
     result = loopUnrollByFactor(affineFor, getFactor());
+  else
+    return emitSilenceableError()
+           << "failed to unroll, incorrect type of payload";
 
-  if (failed(result)) {
-    DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                       << "failed to unroll";
-    return diag;
-  }
+  if (failed(result))
+    return emitSilenceableError() << "failed to unroll";
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopUnrollAndJamOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LoopUnrollAndJamOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  LogicalResult result(failure());
+  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
+    result = loopUnrollJamByFactor(scfFor, getFactor());
+  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
+    result = loopUnrollJamByFactor(affineFor, getFactor());
+  else
+    return emitSilenceableError()
+           << "failed to unroll and jam, incorrect type of payload";
+
+  if (failed(result))
+    return emitSilenceableError() << "failed to unroll and jam";
+
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -362,7 +439,7 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
 
 void transform::TakeAssumedBranchOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 

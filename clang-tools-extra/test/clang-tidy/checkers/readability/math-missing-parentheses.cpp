@@ -140,3 +140,20 @@ void f(){
     //CHECK-MESSAGES: :[[@LINE+1]]:13: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     int v = FUN5(0 + 1);
 }
+
+namespace PR92516 {
+  void f(int i) {
+    int j, k;
+    for (j = i + 1, k = 0; j < 1; ++j) {}
+  }
+
+  void f2(int i) {
+    int j;
+    for (j = i + 1; j < 1; ++j) {}
+  }
+
+  void f3(int i) {
+    int j;
+    for (j = i + 1, 2; j < 1; ++j) {}
+  }
+}

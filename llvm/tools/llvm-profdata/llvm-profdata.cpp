@@ -291,6 +291,11 @@ cl::opt<bool> DropProfileSymbolList(
     cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
              "(only meaningful for -sample)"));
 
+cl::opt<bool> KeepVTableSymbols(
+    "keep-vtable-symbols", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("If true, keep the vtable symbols in indexed profiles"));
+
 // Temporary support for writing the previous version of the format, to enable
 // some forward compatibility.
 // TODO: Consider enabling this with future version changes as well, to ease
@@ -306,7 +311,8 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::init(memprof::Version0),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
                clEnumValN(memprof::Version1, "1", "version 1"),
-               clEnumValN(memprof::Version2, "2", "version 2")));
+               clEnumValN(memprof::Version2, "2", "version 2"),
+               clEnumValN(memprof::Version3, "3", "version 3")));
 
 cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
@@ -766,11 +772,12 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     });
   }
 
-  const InstrProfSymtab &symtab = Reader->getSymtab();
-  const auto &VTableNames = symtab.getVTableNames();
+  if (KeepVTableSymbols) {
+    const InstrProfSymtab &symtab = Reader->getSymtab();
+    const auto &VTableNames = symtab.getVTableNames();
 
-  for (const auto &kv : VTableNames) {
-    WC->Writer.addVTableName(kv.getKey());
+    for (const auto &kv : VTableNames)
+      WC->Writer.addVTableName(kv.getKey());
   }
 
   if (Reader->hasTemporalProfile()) {
@@ -2694,30 +2701,30 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
   uint32_t NS = Func.getNumValueSites(VK);
   Stats.TotalNumValueSites += NS;
   for (size_t I = 0; I < NS; ++I) {
-    uint32_t NV = Func.getNumValueDataForSite(VK, I);
-    std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, I);
+    auto VD = Func.getValueArrayForSite(VK, I);
+    uint32_t NV = VD.size();
+    if (NV == 0)
+      continue;
     Stats.TotalNumValues += NV;
-    if (NV) {
-      Stats.TotalNumValueSitesWithValueProfile++;
-      if (NV > Stats.ValueSitesHistogram.size())
-        Stats.ValueSitesHistogram.resize(NV, 0);
-      Stats.ValueSitesHistogram[NV - 1]++;
-    }
+    Stats.TotalNumValueSitesWithValueProfile++;
+    if (NV > Stats.ValueSitesHistogram.size())
+      Stats.ValueSitesHistogram.resize(NV, 0);
+    Stats.ValueSitesHistogram[NV - 1]++;
 
     uint64_t SiteSum = 0;
-    for (uint32_t V = 0; V < NV; V++)
-      SiteSum += VD[V].Count;
+    for (const auto &V : VD)
+      SiteSum += V.Count;
     if (SiteSum == 0)
       SiteSum = 1;
 
-    for (uint32_t V = 0; V < NV; V++) {
+    for (const auto &V : VD) {
       OS << "\t[ " << format("%2u", I) << ", ";
       if (Symtab == nullptr)
-        OS << format("%4" PRIu64, VD[V].Value);
+        OS << format("%4" PRIu64, V.Value);
       else
-        OS << Symtab->getFuncOrVarName(VD[V].Value);
-      OS << ", " << format("%10" PRId64, VD[V].Count) << " ] ("
-         << format("%.2f%%", (VD[V].Count * 100.0 / SiteSum)) << ")\n";
+        OS << Symtab->getFuncOrVarName(V.Value);
+      OS << ", " << format("%10" PRId64, V.Count) << " ] ("
+         << format("%.2f%%", (V.Count * 100.0 / SiteSum)) << ")\n";
     }
   }
 }

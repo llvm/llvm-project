@@ -48,8 +48,13 @@ void test() {
 
   {
     std::chrono::sys_seconds s{};
+    std::chrono::local_seconds l{};
+    std::chrono::choose z = std::chrono::choose::earliest;
     tz.name();           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     tz.get_info(s);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    tz.get_info(l);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    tz.to_sys(l);        // not nodiscard
+    tz.to_sys(l, z);     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     operator==(tz, tz);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     operator<=>(tz, tz); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
@@ -66,5 +71,11 @@ void test() {
   {
     leap.date();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     leap.value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+
+  {
+    using t = std::chrono::zoned_traits<const std::chrono::time_zone*>;
+    t::default_zone();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    t::locate_zone(""); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 }

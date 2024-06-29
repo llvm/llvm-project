@@ -38,6 +38,7 @@ class BasicBlock;
 class BlockAddress;
 class Constant;
 class ConstantArray;
+class ConstantPtrAuth;
 class DataLayout;
 class DIE;
 class DIEAbbrev;
@@ -583,6 +584,10 @@ public:
   /// a C++ static/global constructor list are emitted.
   virtual void emitXXStructor(const DataLayout &DL, const Constant *CV) {
     emitGlobalConstant(DL, CV);
+  }
+
+  virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
+    report_fatal_error("ptrauth constant lowering not implemented");
   }
 
   /// Return true if the basic block has exactly one predecessor and the control

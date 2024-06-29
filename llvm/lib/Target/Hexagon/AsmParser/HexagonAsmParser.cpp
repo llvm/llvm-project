@@ -745,10 +745,8 @@ bool HexagonAsmParser::ParseDirectiveSubsection(SMLoc L) {
   // end of the section.  Only legacy hexagon-gcc created assembly code
   // used negative subsections.
   if ((Res < 0) && (Res > -8193))
-    Subsection = HexagonMCExpr::create(
-        MCConstantExpr::create(8192 + Res, getContext()), getContext());
-
-  getStreamer().subSection(Subsection);
+    Res += 8192;
+  getStreamer().switchSection(getStreamer().getCurrentSectionOnly(), Res);
   return false;
 }
 

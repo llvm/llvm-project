@@ -30,4 +30,8 @@ void Test() {
 
 #pragma acc kernels num_workers(SomeE)
   while(1);
+
+  // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
+#pragma acc loop num_workers(1)
+  for(;;);
 }

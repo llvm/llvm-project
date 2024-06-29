@@ -42,6 +42,7 @@
 #include <utility>
 
 namespace clang {
+class ParsedAttr;
 
 class SemaOpenMP : public SemaBase {
 public:
@@ -1347,6 +1348,8 @@ public:
   ExprResult ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
                                   SourceLocation LLoc, SourceLocation RLoc,
                                   ArrayRef<OMPIteratorData> Data);
+
+  void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
 
 private:
   void *VarDataSharingAttributesStack;

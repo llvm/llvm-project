@@ -1,13 +1,9 @@
 // RUN: %libomptarget-compilexx-generic
 // RUN: %libomptarget-run-generic %fcheck-generic
 
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-// UNSUPPORTED: amdgcn-amd-amdhsa
+// REQURIES: gpu
+// UNSUPPORTED: nvidiagpu
+// UNSUPPORTED: amdgpu
 
 #include <cstdio>
 

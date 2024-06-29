@@ -58,4 +58,8 @@ void uses() {
 
 #pragma acc parallel attach(s.PtrMem)
   while (1);
+
+  // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
+#pragma acc loop attach(LocalInt)
+  for(;;);
 }

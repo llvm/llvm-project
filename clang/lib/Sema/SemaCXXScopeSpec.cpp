@@ -974,7 +974,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
       R.setBegin(SS.getRange().getBegin());
 
     Diag(CCLoc, diag::err_non_type_template_in_nested_name_specifier)
-      << (TD && isa<VarTemplateDecl>(TD)) << Template << R;
+        << isa_and_nonnull<VarTemplateDecl>(TD) << Template << R;
     NoteAllFoundTemplates(Template);
     return true;
   }

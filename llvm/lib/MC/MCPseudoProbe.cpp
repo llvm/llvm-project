@@ -80,7 +80,8 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(new MCPseudoProbeAddrFragment(AddrDelta));
+      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
+          AddrDelta));
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.
@@ -146,7 +147,7 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
     dbgs() << "Group [\n";
     MCPseudoProbeTable::DdgPrintIndent += 2;
   });
-  assert(!isRoot() && "Root should be handled seperately");
+  assert(!isRoot() && "Root should be handled separately");
 
   // Emit probes grouped by GUID.
   LLVM_DEBUG({
@@ -182,13 +183,10 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
   // Emit sorted descendant. InlineSite is unique for each pair, so there will
   // be no ordering of Inlinee based on MCPseudoProbeInlineTree*
   using InlineeType = std::pair<InlineSite, MCPseudoProbeInlineTree *>;
-  auto Comparer = [](const InlineeType &A, const InlineeType &B) {
-    return A.first < B.first;
-  };
   std::vector<InlineeType> Inlinees;
   for (const auto &Child : Children)
     Inlinees.emplace_back(Child.first, Child.second.get());
-  std::sort(Inlinees.begin(), Inlinees.end(), Comparer);
+  llvm::sort(Inlinees, llvm::less_first());
 
   for (const auto &Inlinee : Inlinees) {
     // Emit probe index
@@ -230,13 +228,10 @@ void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
       // Emit sorted descendant. InlineSite is unique for each pair, so there
       // will be no ordering of Inlinee based on MCPseudoProbeInlineTree*
       using InlineeType = std::pair<InlineSite, MCPseudoProbeInlineTree *>;
-      auto Comparer = [](const InlineeType &A, const InlineeType &B) {
-        return A.first < B.first;
-      };
       std::vector<InlineeType> Inlinees;
       for (const auto &Child : Root.getChildren())
         Inlinees.emplace_back(Child.first, Child.second.get());
-      std::sort(Inlinees.begin(), Inlinees.end(), Comparer);
+      llvm::sort(Inlinees, llvm::less_first());
 
       for (const auto &Inlinee : Inlinees) {
         // Emit the group guarded by a sentinel probe.

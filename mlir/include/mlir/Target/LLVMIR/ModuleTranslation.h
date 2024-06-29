@@ -57,7 +57,8 @@ class ComdatSelectorOp;
 /// needs to look up block and function mappings.
 class ModuleTranslation {
   friend std::unique_ptr<llvm::Module>
-  mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef);
+  mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef,
+                                bool);
 
 public:
   /// Stores the mapping between a function name and its LLVM IR representation.

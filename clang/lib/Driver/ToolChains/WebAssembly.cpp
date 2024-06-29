@@ -158,44 +158,46 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  // When optimizing, if wasm-opt is available, run it.
-  std::string WasmOptPath;
-  if (Args.getLastArg(options::OPT_O_Group)) {
-    WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
-    if (WasmOptPath == "wasm-opt") {
-      WasmOptPath = {};
+  if (Args.hasFlag(options::OPT_wasm_opt, options::OPT_no_wasm_opt, true)) {
+    // When optimizing, if wasm-opt is available, run it.
+    std::string WasmOptPath;
+    if (Args.getLastArg(options::OPT_O_Group)) {
+      WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
+      if (WasmOptPath == "wasm-opt") {
+        WasmOptPath = {};
+      }
     }
-  }
 
-  if (!WasmOptPath.empty()) {
-    CmdArgs.push_back("--keep-section=target_features");
-  }
-
-  C.addCommand(std::make_unique<Command>(JA, *this,
-                                         ResponseFileSupport::AtFileCurCP(),
-                                         Linker, CmdArgs, Inputs, Output));
-
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (!WasmOptPath.empty()) {
-      StringRef OOpt = "s";
-      if (A->getOption().matches(options::OPT_O4) ||
-          A->getOption().matches(options::OPT_Ofast))
-        OOpt = "4";
-      else if (A->getOption().matches(options::OPT_O0))
-        OOpt = "0";
-      else if (A->getOption().matches(options::OPT_O))
-        OOpt = A->getValue();
+      CmdArgs.push_back("--keep-section=target_features");
+    }
 
-      if (OOpt != "0") {
-        const char *WasmOpt = Args.MakeArgString(WasmOptPath);
-        ArgStringList OptArgs;
-        OptArgs.push_back(Output.getFilename());
-        OptArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
-        OptArgs.push_back("-o");
-        OptArgs.push_back(Output.getFilename());
-        C.addCommand(std::make_unique<Command>(
-            JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, OptArgs,
-            Inputs, Output));
+    C.addCommand(std::make_unique<Command>(JA, *this,
+                                           ResponseFileSupport::AtFileCurCP(),
+                                           Linker, CmdArgs, Inputs, Output));
+
+    if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+      if (!WasmOptPath.empty()) {
+        StringRef OOpt = "s";
+        if (A->getOption().matches(options::OPT_O4) ||
+            A->getOption().matches(options::OPT_Ofast))
+          OOpt = "4";
+        else if (A->getOption().matches(options::OPT_O0))
+          OOpt = "0";
+        else if (A->getOption().matches(options::OPT_O))
+          OOpt = A->getValue();
+
+        if (OOpt != "0") {
+          const char *WasmOpt = Args.MakeArgString(WasmOptPath);
+          ArgStringList OptArgs;
+          OptArgs.push_back(Output.getFilename());
+          OptArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
+          OptArgs.push_back("-o");
+          OptArgs.push_back(Output.getFilename());
+          C.addCommand(std::make_unique<Command>(
+              JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, OptArgs,
+              Inputs, Output));
+        }
       }
     }
   }

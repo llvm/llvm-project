@@ -208,10 +208,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     // Prepend label name
     Node.printAsOperand(OS, false);
     OS << ":\n";
-    for (auto J = Node.begin(), JE = Node.end(); J != JE; ++J) {
-      const Instruction *Inst = &*J;
-      OS << *Inst << "\n";
-    }
+    for (const Instruction &Inst : Node)
+      OS << Inst << "\n";
   }
 
   static std::string getCompleteNodeLabel(

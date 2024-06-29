@@ -56,25 +56,12 @@ define half @reduction_half16(<16 x half> %vec16) {
 ;
 ; VI-LABEL: @reduction_half16(
 ; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT8:%.*]] = extractelement <16 x half> [[VEC16:%.*]], i64 8
-; VI-NEXT:    [[ELT9:%.*]] = extractelement <16 x half> [[VEC16]], i64 9
-; VI-NEXT:    [[ELT10:%.*]] = extractelement <16 x half> [[VEC16]], i64 10
-; VI-NEXT:    [[ELT11:%.*]] = extractelement <16 x half> [[VEC16]], i64 11
-; VI-NEXT:    [[ELT12:%.*]] = extractelement <16 x half> [[VEC16]], i64 12
-; VI-NEXT:    [[ELT13:%.*]] = extractelement <16 x half> [[VEC16]], i64 13
-; VI-NEXT:    [[ELT14:%.*]] = extractelement <16 x half> [[VEC16]], i64 14
-; VI-NEXT:    [[ELT15:%.*]] = extractelement <16 x half> [[VEC16]], i64 15
-; VI-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VI-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; VI-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[TMP0]])
-; VI-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[ELT8]]
-; VI-NEXT:    [[OP_RDX1:%.*]] = fadd fast half [[ELT9]], [[ELT10]]
-; VI-NEXT:    [[OP_RDX2:%.*]] = fadd fast half [[ELT11]], [[ELT12]]
-; VI-NEXT:    [[OP_RDX3:%.*]] = fadd fast half [[ELT13]], [[ELT14]]
-; VI-NEXT:    [[OP_RDX4:%.*]] = fadd fast half [[OP_RDX]], [[OP_RDX1]]
-; VI-NEXT:    [[OP_RDX5:%.*]] = fadd fast half [[OP_RDX2]], [[OP_RDX3]]
-; VI-NEXT:    [[OP_RDX6:%.*]] = fadd fast half [[OP_RDX4]], [[OP_RDX5]]
-; VI-NEXT:    [[OP_RDX7:%.*]] = fadd fast half [[OP_RDX6]], [[ELT15]]
-; VI-NEXT:    ret half [[OP_RDX7]]
+; VI-NEXT:    [[TMP2:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; VI-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[TMP2]])
+; VI-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[TMP3]]
+; VI-NEXT:    ret half [[OP_RDX]]
 ;
 entry:
   %elt0 = extractelement <16 x half> %vec16, i64 0

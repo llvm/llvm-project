@@ -622,6 +622,7 @@ clang/tools/libclang/CXCursor.h
 clang/tools/scan-build-py/tests/functional/src/include/clean-one.h
 clang/unittests/Analysis/CFGBuildResult.h
 clang/unittests/Analysis/MacroExpansionContextTest.cpp
+clang/unittests/Analysis/FlowSensitive/ASTOpsTest.cpp
 clang/unittests/Analysis/FlowSensitive/CNFFormula.cpp
 clang/unittests/Analysis/FlowSensitive/DataflowAnalysisContextTest.cpp
 clang/unittests/Analysis/FlowSensitive/DataflowEnvironmentTest.cpp

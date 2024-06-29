@@ -12,7 +12,7 @@ program wsloop_dynamic
 !CHECK:  omp.parallel {
 
 !$OMP DO SCHEDULE(nonmonotonic:dynamic)
-!CHECK:     %[[I_REF:.*]] = fir.alloca i32 {{{.*}}, pinned}
+!CHECK:     %[[I_REF:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
 !CHECK:     %[[ALLOCA_IV:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:     %[[WS_LB:.*]] = arith.constant 1 : i32
 !CHECK:     %[[WS_UB:.*]] = arith.constant 9 : i32

@@ -32,7 +32,7 @@ INITIALIZE_PASS(GISelKnownBitsAnalysis, DEBUG_TYPE,
 
 GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
-      DL(MF.getFunction().getParent()->getDataLayout()), MaxDepth(MaxDepth) {}
+      DL(MF.getFunction().getDataLayout()), MaxDepth(MaxDepth) {}
 
 Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
   const MachineInstr *MI = MRI.getVRegDef(R);
@@ -607,7 +607,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   }
 
-  assert(!Known.hasConflict() && "Bits known to be one AND zero?");
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
 
   // Update the cache.

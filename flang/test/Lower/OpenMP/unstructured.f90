@@ -62,14 +62,14 @@ end
 ! CHECK:   omp.parallel {
 ! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned}
 ! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned}
-! CHECK:     %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned}
-! CHECK:     %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:     br ^bb1
 ! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb3
 ! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
 ! CHECK:   ^bb2:  // pred: ^bb1
+
+! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
+! CHECK:     %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
 ! CHECK:         fir.store %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#1 : !fir.ref<i32>
@@ -80,6 +80,10 @@ end
 ! CHECK:       }
 ! CHECK:       omp.terminator
 ! CHECK:     }
+
+! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
+! CHECK:     %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
 ! CHECK:         fir.store %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
@@ -125,7 +129,7 @@ end
 
 ! CHECK-LABEL: func @_QPss4{{.*}} {
 ! CHECK:       omp.parallel {
-! CHECK:         %[[ALLOCA:.*]] = fir.alloca i32 {{{.*}}, pinned}
+! CHECK:         %[[ALLOCA:.*]] = fir.alloca i32 {{{.*}}, pinned, uniq_name = "_QFss4Ej"}
 ! CHECK:         %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         omp.wsloop {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG:.*]]) : {{.*}} {

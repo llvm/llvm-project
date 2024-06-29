@@ -511,7 +511,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   bool Res = false;
   bool HasCalls = false;
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.
   for (auto &BB : F) {

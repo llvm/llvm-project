@@ -3,16 +3,19 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
 # RUN:   -run-pass ppc-mi-peepholes %s -o - | FileCheck %s --check-prefix=ALL
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole-skip=0,ppc-per-op-peephole-count=6 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole=0-5 \
 # RUN:   | FileCheck %s --check-prefix=ALL
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole-skip=3,ppc-per-op-peephole-count=1 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole=0-5 \
+# RUN:   | FileCheck %s --check-prefix=ALL
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole=3 \
 # RUN:   | FileCheck %s --check-prefix=ONE-FIRST-RLWINM
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole-skip=4,ppc-per-op-peephole-count=1 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole=4 \
 # RUN:   | FileCheck %s --check-prefix=ONE-SECOND-RLWINM
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole-skip=3,ppc-per-op-peephole-count=2 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-per-op-peephole=3-4 \
 # RUN:   | FileCheck %s --check-prefix=TWO
 
 ---

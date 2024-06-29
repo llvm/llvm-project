@@ -14,6 +14,7 @@
 #define LLVM_MC_MCSECTIONCOFF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/SectionKind.h"
 #include <cassert>
@@ -50,10 +51,12 @@ private:
   friend class MCContext;
   // The storage of Name is owned by MCContext's COFFUniquingMap.
   MCSectionCOFF(StringRef Name, unsigned Characteristics,
-                MCSymbol *COMDATSymbol, int Selection, SectionKind K,
-                MCSymbol *Begin)
-      : MCSection(SV_COFF, Name, K, Begin), Characteristics(Characteristics),
-        COMDATSymbol(COMDATSymbol), Selection(Selection) {
+                MCSymbol *COMDATSymbol, int Selection, MCSymbol *Begin)
+      : MCSection(SV_COFF, Name, Characteristics & COFF::IMAGE_SCN_CNT_CODE,
+                  Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA,
+                  Begin),
+        Characteristics(Characteristics), COMDATSymbol(COMDATSymbol),
+        Selection(Selection) {
     assert((Characteristics & 0x00F00000) == 0 &&
            "alignment must not be set upon section creation");
   }
@@ -71,9 +74,8 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
   StringRef getVirtualSectionKind() const override;
 
   unsigned getOrAssignWinCFISectionID(unsigned *NextID) const {

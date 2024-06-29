@@ -150,32 +150,34 @@ template <typename T, typename... Ts> struct Union<T, Ts...> {
 
 template <typename T> using ListT = llvm::SmallVector<T, 0>;
 
-// The ObjectT class represents a variable (as defined in the OpenMP spec).
+// The ObjectT class represents a variable or a locator (as defined in
+// the OpenMP spec).
+// Note: the ObjectT template is not defined. Any user of it is expected to
+// provide their own specialization that conforms to the requirements listed
+// below.
 //
-// A specialization of ObjectT<Id, Expr> must provide the following definitions:
+// Let ObjectS be any specialization of ObjectT:
+//
+// ObjectS must provide the following definitions:
 // {
 //    using IdTy = Id;
 //    using ExprTy = Expr;
 //
 //    auto id() const -> IdTy {
-//      return the identifier of the object (for use in tests for
-//         presence/absence of the object)
-//    }
-//
-//    auto ref() const -> (e.g. const ExprTy&) {
-//      return the expression accessing (referencing) the object
+//      // Return a value such that a.id() == b.id() if and only if:
+//      // (1) both `a` and `b` represent the same variable or location, or
+//      // (2) bool(a.id()) == false and bool(b.id()) == false
 //    }
 // }
 //
-// For example, the ObjectT instance created for "var[x+1]" would have
-// the `id()` return the identifier for `var`, and the `ref()` return the
-// representation of the array-access `var[x+1]`.
+// The type IdTy should be hashable (usable as key in unordered containers).
 //
-// The identity of an object must always be present, i.e. it cannot be
-// nullptr, std::nullopt, etc. The reference is optional.
+// Values of type IdTy should be contextually convertible to `bool`.
 //
-// Note: the ObjectT template is not defined. Any user of it is expected to
-// provide their own specialization that conforms to the above requirements.
+// If S is an object of type ObjectS, then `bool(S.id())` is `false` if
+// and only if S does not represent any variable or location.
+//
+// ObjectS should be copyable, movable, and default-constructible.
 template <typename IdType, typename ExprType> struct ObjectT;
 
 // By default, object equality is only determined by its identity.

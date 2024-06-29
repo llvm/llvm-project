@@ -2063,16 +2063,17 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
   case Instruction::Shl: {
     // shl X, C --> mul X, (1 << C)
     Constant *C;
-    if (match(BO1, m_Constant(C))) {
-      Constant *ShlOne = ConstantExpr::getShl(ConstantInt::get(Ty, 1), C);
+    if (match(BO1, m_ImmConstant(C))) {
+      Constant *ShlOne = ConstantFoldBinaryOpOperands(
+          Instruction::Shl, ConstantInt::get(Ty, 1), C, DL);
+      assert(ShlOne && "Constant folding of immediate constants failed");
       return {Instruction::Mul, BO0, ShlOne};
     }
     break;
   }
   case Instruction::Or: {
-    // or X, C --> add X, C (when X and C have no common bits set)
-    const APInt *C;
-    if (match(BO1, m_APInt(C)) && MaskedValueIsZero(BO0, *C, DL))
+    // or disjoin X, C --> add X, C
+    if (cast<PossiblyDisjointInst>(BO)->isDisjoint())
       return {Instruction::Add, BO0, BO1};
     break;
   }
@@ -2836,15 +2837,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     auto *XType = cast<FixedVectorType>(X->getType());
     unsigned XNumElts = XType->getNumElements();
     SmallVector<int, 16> ScaledMask;
-    if (XNumElts >= VWidth) {
-      assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
-      narrowShuffleMaskElts(XNumElts / VWidth, Mask, ScaledMask);
-    } else {
-      assert(VWidth % XNumElts == 0 && "Unexpected vector bitcast");
-      if (!widenShuffleMaskElts(VWidth / XNumElts, Mask, ScaledMask))
-        ScaledMask.clear();
-    }
-    if (!ScaledMask.empty()) {
+    if (scaleShuffleMaskElts(XNumElts, Mask, ScaledMask)) {
       // If the shuffled source vector simplifies, cast that value to this
       // shuffle's type.
       if (auto *V = simplifyShuffleVectorInst(X, UndefValue::get(XType),

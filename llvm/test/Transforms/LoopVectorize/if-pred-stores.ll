@@ -200,8 +200,8 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; UNROLL:       middle.block:
-; UNROLL-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI4]], [[PREDPHI]]
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
+; UNROLL-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI4]], [[PREDPHI]]
 ; UNROLL-NEXT:    [[TMP16:%.*]] = xor i1 [[CMP_N]], true
 ; UNROLL-NEXT:    call void @llvm.assume(i1 [[TMP16]])
 ; UNROLL-NEXT:    br label [[SCALAR_PH]]
@@ -276,8 +276,8 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
-; UNROLL-NOSIMPLIFY-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI4]], [[PREDPHI]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI4]], [[PREDPHI]]
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP_N]], label [[FOR_INC26_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[V_1]], [[FOR_BODY14_PREHEADER]] ]
@@ -357,8 +357,8 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VEC:       middle.block:
-; VEC-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PREDPHI]])
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
+; VEC-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PREDPHI]])
 ; VEC-NEXT:    [[TMP20:%.*]] = xor i1 [[CMP_N]], true
 ; VEC-NEXT:    call void @llvm.assume(i1 [[TMP20]])
 ; VEC-NEXT:    br label [[SCALAR_PH]]

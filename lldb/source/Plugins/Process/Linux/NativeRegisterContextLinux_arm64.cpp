@@ -388,7 +388,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
           return error;
       }
 
-      // ZA is part of the SME set but uses a seperate member buffer for
+      // ZA is part of the SME set but uses a separate member buffer for
       // storage. Therefore its effective byte offset is always 0 even if it
       // isn't 0 within the SME register set.
       src = (uint8_t *)GetZABuffer() + GetZAHeaderSize();

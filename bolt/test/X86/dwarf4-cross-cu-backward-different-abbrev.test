@@ -7,8 +7,8 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that BOLT handles backward cross CU references for dwarf4
-# when CUs are have different abbrev tables.
+## This test checks that BOLT handles backward cross CU references for dwarf4
+## when CUs are have different abbrev tables.
 
 # PRECHECK: DW_TAG_compile_unit
 # PRECHECK: DW_TAG_compile_unit

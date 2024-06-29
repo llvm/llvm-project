@@ -767,7 +767,7 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
   mlir::RewritePatternSet patterns(&context);
   mlir::GreedyRewriteConfig config;
   // prevent the pattern driver form merging blocks
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
   if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,

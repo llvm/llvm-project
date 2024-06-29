@@ -8,7 +8,6 @@
 
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/MathExtras.h"
@@ -372,12 +371,12 @@ SmallVector<T, 8> Matrix<T>::postMultiplyWithColumn(ArrayRef<T> colVec) const {
 /// sourceCol. This brings M(row, targetCol) to the range [0, M(row,
 /// sourceCol)). Apply the same column operation to otherMatrix, with the same
 /// integer multiple.
-static void modEntryColumnOperation(Matrix<MPInt> &m, unsigned row,
+static void modEntryColumnOperation(Matrix<DynamicAPInt> &m, unsigned row,
                                     unsigned sourceCol, unsigned targetCol,
-                                    Matrix<MPInt> &otherMatrix) {
+                                    Matrix<DynamicAPInt> &otherMatrix) {
   assert(m(row, sourceCol) != 0 && "Cannot divide by zero!");
   assert(m(row, sourceCol) > 0 && "Source must be positive!");
-  MPInt ratio = -floorDiv(m(row, targetCol), m(row, sourceCol));
+  DynamicAPInt ratio = -floorDiv(m(row, targetCol), m(row, sourceCol));
   m.addToColumn(sourceCol, targetCol, ratio);
   otherMatrix.addToColumn(sourceCol, targetCol, ratio);
 }
@@ -444,7 +443,7 @@ bool Matrix<T>::hasConsistentState() const {
 
 namespace mlir {
 namespace presburger {
-template class Matrix<MPInt>;
+template class Matrix<DynamicAPInt>;
 template class Matrix<Fraction>;
 } // namespace presburger
 } // namespace mlir
@@ -542,25 +541,25 @@ std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
   return {h, u};
 }
 
-MPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
+DynamicAPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
   return normalizeRange(getRow(row).slice(0, cols));
 }
 
-MPInt IntMatrix::normalizeRow(unsigned row) {
+DynamicAPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
-MPInt IntMatrix::determinant(IntMatrix *inverse) const {
+DynamicAPInt IntMatrix::determinant(IntMatrix *inverse) const {
   assert(nRows == nColumns &&
          "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
 
   FracMatrix fracInverse(nRows, nColumns);
-  MPInt detM = m.determinant(&fracInverse).getAsInteger();
+  DynamicAPInt detM = m.determinant(&fracInverse).getAsInteger();
 
   if (detM == 0)
-    return MPInt(0);
+    return DynamicAPInt(0);
 
   if (!inverse)
     return detM;
@@ -718,7 +717,7 @@ FracMatrix FracMatrix::gramSchmidt() const {
 //
 // We repeat this until k = n and return.
 void FracMatrix::LLL(Fraction delta) {
-  MPInt nearest;
+  DynamicAPInt nearest;
   Fraction mu;
 
   // `gsOrth` holds the Gram-Schmidt orthogonalisation
@@ -762,7 +761,7 @@ IntMatrix FracMatrix::normalizeRows() const {
   unsigned numColumns = getNumColumns();
   IntMatrix normalized(numRows, numColumns);
 
-  MPInt lcmDenoms = MPInt(1);
+  DynamicAPInt lcmDenoms = DynamicAPInt(1);
   for (unsigned i = 0; i < numRows; i++) {
     // For a row, first compute the LCM of the denominators.
     for (unsigned j = 0; j < numColumns; j++)

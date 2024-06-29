@@ -330,9 +330,7 @@ template <typename... Preds> struct And {
 template <typename Pred, typename... Preds>
 struct And<Pred, Preds...> : And<Preds...> {
   Pred P;
-  And(Pred &&p, Preds &&...preds)
-      : And<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {
-  }
+  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -349,8 +347,7 @@ template <typename... Preds> struct Or {
 template <typename Pred, typename... Preds>
 struct Or<Pred, Preds...> : Or<Preds...> {
   Pred P;
-  Or(Pred &&p, Preds &&...preds)
-      : Or<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {}
+  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -376,16 +373,16 @@ template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
   return Not{P};
 }
 
-template <typename... Preds> And<Preds...> m_AllOf(Preds &&...preds) {
-  return And<Preds...>(std::forward<Preds>(preds)...);
+template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
+  return And<Preds...>(preds...);
 }
 
-template <typename... Preds> Or<Preds...> m_AnyOf(Preds &&...preds) {
-  return Or<Preds...>(std::forward<Preds>(preds)...);
+template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
+  return Or<Preds...>(preds...);
 }
 
-template <typename... Preds> auto m_NoneOf(Preds &&...preds) {
-  return m_Unless(m_AnyOf(std::forward<Preds>(preds)...));
+template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
+  return m_Unless(m_AnyOf(preds...));
 }
 
 // === Generic node matching ===
@@ -402,10 +399,8 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
     : Operands_match<OpIdx + 1, OpndPreds...> {
   OpndPred P;
 
-  Operands_match(OpndPred &&p, OpndPreds &&...preds)
-      : Operands_match<OpIdx + 1, OpndPreds...>(
-            std::forward<OpndPreds>(preds)...),
-        P(std::forward<OpndPred>(p)) {}
+  Operands_match(const OpndPred &p, const OpndPreds &...preds)
+      : Operands_match<OpIdx + 1, OpndPreds...>(preds...), P(p) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -419,9 +414,8 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
 };
 
 template <typename... OpndPreds>
-auto m_Node(unsigned Opcode, OpndPreds &&...preds) {
-  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(
-                                    std::forward<OpndPreds>(preds)...));
+auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
+  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(preds...));
 }
 
 /// Provide number of operands that are not chain or glue, as well as the first
@@ -647,10 +641,8 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op);
 }
 
-template <typename Opnd> inline auto m_SExt(Opnd &&Op) {
-  return m_AnyOf(
-      UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op),
-      m_Node(ISD::SIGN_EXTEND_INREG, std::forward<Opnd>(Op), m_Value()));
+template <typename Opnd> inline auto m_SExt(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op);
 }
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_AnyExt(const Opnd &Op) {
@@ -663,30 +655,28 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
 
 /// Match a zext or identity
 /// Allows to peek through optional extensions
-template <typename Opnd> inline auto m_ZExtOrSelf(Opnd &&Op) {
-  return m_AnyOf(m_ZExt(std::forward<Opnd>(Op)), std::forward<Opnd>(Op));
+template <typename Opnd> inline auto m_ZExtOrSelf(const Opnd &Op) {
+  return m_AnyOf(m_ZExt(Op), Op);
 }
 
 /// Match a sext or identity
 /// Allows to peek through optional extensions
-template <typename Opnd> inline auto m_SExtOrSelf(Opnd &&Op) {
-  return m_AnyOf(m_SExt(std::forward<Opnd>(Op)), std::forward<Opnd>(Op));
+template <typename Opnd> inline auto m_SExtOrSelf(const Opnd &Op) {
+  return m_AnyOf(m_SExt(Op), Op);
 }
 
 /// Match a aext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_AExtOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_AnyExt(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_AExtOrSelf(const Opnd &Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_AnyExt(Op), Op);
 }
 
 /// Match a trunc or identity
 /// Allows to peek through optional truncations
 template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(Op), Op);
 }
 
 // === Constants ===

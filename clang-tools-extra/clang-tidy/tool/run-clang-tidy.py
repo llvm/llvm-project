@@ -107,6 +107,7 @@ def get_tidy_invocation(
     plugins,
     warnings_as_errors,
     exclude_header_filter,
+    allow_no_checks,
 ):
     """Gets a command line for clang-tidy."""
     start = [clang_tidy_binary]
@@ -147,6 +148,8 @@ def get_tidy_invocation(
         start.append("-load=" + plugin)
     if warnings_as_errors:
         start.append("--warnings-as-errors=" + warnings_as_errors)
+    if allow_no_checks:
+        start.append("--allow-no-checks")
     start.append(f)
     return start
 
@@ -232,6 +235,7 @@ def run_tidy(args, clang_tidy_binary, tmpdir, build_path, queue, lock, failed_fi
             args.plugins,
             args.warnings_as_errors,
             args.exclude_header_filter,
+            args.allow_no_checks,
         )
 
         proc = subprocess.Popen(
@@ -261,20 +265,20 @@ def main():
     parser.add_argument(
         "-allow-enabling-alpha-checkers",
         action="store_true",
-        help="allow alpha checkers from clang-analyzer.",
+        help="Allow alpha checkers from clang-analyzer.",
     )
     parser.add_argument(
-        "-clang-tidy-binary", metavar="PATH", help="path to clang-tidy binary"
+        "-clang-tidy-binary", metavar="PATH", help="Path to clang-tidy binary."
     )
     parser.add_argument(
         "-clang-apply-replacements-binary",
         metavar="PATH",
-        help="path to clang-apply-replacements binary",
+        help="Path to clang-apply-replacements binary.",
     )
     parser.add_argument(
         "-checks",
         default=None,
-        help="checks filter, when not specified, use clang-tidy default",
+        help="Checks filter, when not specified, use clang-tidy default.",
     )
     config_group = parser.add_mutually_exclusive_group()
     config_group.add_argument(
@@ -307,7 +311,7 @@ def main():
     parser.add_argument(
         "-header-filter",
         default=None,
-        help="regular expression matching the names of the "
+        help="Regular expression matching the names of the "
         "headers to output diagnostics from. Diagnostics from "
         "the main file of each translation unit are always "
         "displayed.",
@@ -347,19 +351,22 @@ def main():
         "-j",
         type=int,
         default=0,
-        help="number of tidy instances to be run in parallel.",
+        help="Number of tidy instances to be run in parallel.",
     )
     parser.add_argument(
-        "files", nargs="*", default=[".*"], help="files to be processed (regex on path)"
+        "files",
+        nargs="*",
+        default=[".*"],
+        help="Files to be processed (regex on path).",
     )
-    parser.add_argument("-fix", action="store_true", help="apply fix-its")
+    parser.add_argument("-fix", action="store_true", help="apply fix-its.")
     parser.add_argument(
-        "-format", action="store_true", help="Reformat code after applying fixes"
+        "-format", action="store_true", help="Reformat code after applying fixes."
     )
     parser.add_argument(
         "-style",
         default="file",
-        help="The style of reformat code after applying fixes",
+        help="The style of reformat code after applying fixes.",
     )
     parser.add_argument(
         "-use-color",
@@ -388,7 +395,7 @@ def main():
         help="Additional argument to prepend to the compiler command line.",
     )
     parser.add_argument(
-        "-quiet", action="store_true", help="Run clang-tidy in quiet mode"
+        "-quiet", action="store_true", help="Run clang-tidy in quiet mode."
     )
     parser.add_argument(
         "-load",
@@ -400,7 +407,12 @@ def main():
     parser.add_argument(
         "-warnings-as-errors",
         default=None,
-        help="Upgrades warnings to errors. Same format as '-checks'",
+        help="Upgrades warnings to errors. Same format as '-checks'.",
+    )
+    parser.add_argument(
+        "-allow-no-checks",
+        action="store_true",
+        help="Allow empty enabled checks.",
     )
     args = parser.parse_args()
 
@@ -463,6 +475,7 @@ def main():
             args.plugins,
             args.warnings_as_errors,
             args.exclude_header_filter,
+            args.allow_no_checks,
         )
         invocation.append("-list-checks")
         invocation.append("-")

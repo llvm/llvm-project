@@ -1,5 +1,4 @@
-//===-- ValueObjectPrinter.h ---------------------------------------*- C++
-//-*-===//
+//===-- ValueObjectPrinter.h ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,7 +24,7 @@ class ValueObjectPrinter {
   /// does not retain the ValueObject it is printing, that is the job of
   /// its caller.  It also doesn't attempt to track changes in the
   /// ValueObject, e.g. changing synthetic child providers or changing
-  /// dynamic vrs. static vrs. synthetic settings.
+  /// dynamic versus static versus synthetic settings.
 public:
   ValueObjectPrinter(ValueObject &valobj, Stream *s);
 
@@ -34,7 +33,7 @@ public:
 
   ~ValueObjectPrinter() = default;
 
-  bool PrintValueObject();
+  llvm::Error PrintValueObject();
 
 protected:
   typedef std::set<uint64_t> InstancePointersSet;
@@ -42,16 +41,16 @@ protected:
 
   InstancePointersSetSP m_printed_instance_pointers;
 
-  // only this class (and subclasses, if any) should ever be concerned with the
-  // depth mechanism
+  /// Only this class (and subclasses, if any) should ever be
+  /// concerned with the depth mechanism.
   ValueObjectPrinter(ValueObject &valobj, Stream *s,
                      const DumpValueObjectOptions &options,
                      const DumpValueObjectOptions::PointerDepth &ptr_depth,
                      uint32_t curr_depth,
                      InstancePointersSetSP printed_instance_pointers);
 
-  // we should actually be using delegating constructors here but some versions
-  // of GCC still have trouble with those
+  /// Ee should actually be using delegating constructors here but
+  /// some versions of GCC still have trouble with those.
   void Init(ValueObject &valobj, Stream *s,
             const DumpValueObjectOptions &options,
             const DumpValueObjectOptions::PointerDepth &ptr_depth,
@@ -67,7 +66,7 @@ protected:
   /// use dynamic and use synthetic settings of the ValueObject being printed,
   /// so changes made to these settings won't affect already made
   /// ValueObjectPrinters. SetupMostSpecializedValue();
-
+  ///
   /// Access the cached "most specialized value" - that is the one to use for
   /// printing the value object's value.  However, be sure to use
   /// GetValueForChildGeneration when you are generating the children of this
@@ -76,7 +75,7 @@ protected:
 
   void SetupMostSpecializedValue();
 
-  const char *GetDescriptionForDisplay();
+  llvm::Expected<std::string> GetDescriptionForDisplay();
 
   const char *GetRootNameForDisplay();
 
@@ -109,7 +108,8 @@ protected:
 
   bool PrintValueAndSummaryIfNeeded(bool &value_printed, bool &summary_printed);
 
-  bool PrintObjectDescriptionIfNeeded(bool value_printed, bool summary_printed);
+  llvm::Error PrintObjectDescriptionIfNeeded(bool value_printed,
+                                             bool summary_printed);
 
   bool
   ShouldPrintChildren(DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
@@ -133,7 +133,7 @@ protected:
   PrintChildren(bool value_printed, bool summary_printed,
                 const DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
 
-  void PrintChildrenIfNeeded(bool value_printed, bool summary_printed);
+  llvm::Error PrintChildrenIfNeeded(bool value_printed, bool summary_printed);
 
   bool PrintChildrenOneLiner(bool hide_names);
 
@@ -143,9 +143,9 @@ private:
   bool ShouldShowName() const;
 
   ValueObject &m_orig_valobj;
-  ValueObject *m_cached_valobj; /// Cache the current "most specialized" value.
-                                /// Don't use this directly, use
-                                /// GetMostSpecializedValue.
+  /// Cache the current "most specialized" value.  Don't use this
+  /// directly, use GetMostSpecializedValue.
+  ValueObject *m_cached_valobj;
   Stream *m_stream;
   DumpValueObjectOptions m_options;
   Flags m_type_flags;

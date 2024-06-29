@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
@@ -265,7 +266,7 @@ struct GenericKernelTy {
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
                            uint64_t NumBlocks, KernelArgsTy &KernelArgs,
-                           void *Args,
+                           KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
@@ -326,11 +327,12 @@ protected:
 
 private:
   /// Prepare the arguments before launching the kernel.
-  void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
-                    llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs,
-                    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+  KernelLaunchParamsTy
+  prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
+              ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+              llvm::SmallVectorImpl<void *> &Args,
+              llvm::SmallVectorImpl<void *> &Ptrs,
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
@@ -824,6 +826,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_MinThreadsForLowTripCount;
   }
 
+  /// Whether or not to reuse blocks for high trip count loops.
+  /// @see OMPX_ReuseBlocksForHighTripCount
+  bool getReuseBlocksForHighTripCount() {
+    return OMPX_ReuseBlocksForHighTripCount;
+  }
+
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -898,6 +906,9 @@ private:
   /// the outer (block/team) parallelism.
   UInt32Envar OMPX_MinThreadsForLowTripCount =
       UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
+
+  BoolEnvar OMPX_ReuseBlocksForHighTripCount =
+      BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -993,11 +1004,11 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
-  /// Get the plugin-specific device identifier offset.
-  int32_t getDeviceIdStartIndex() const { return DeviceIdStartIndex; }
-
-  /// Set the plugin-specific device identifier offset.
-  void setDeviceIdStartIndex(int32_t Offset) { DeviceIdStartIndex = Offset; }
+  /// Get the plugin-specific device identifier.
+  int32_t getUserId(int32_t DeviceId) const {
+    assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
+    return UserDeviceIds.at(DeviceId);
+  }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
@@ -1059,7 +1070,8 @@ struct GenericPluginTy {
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So
   /// we could not move this function into GenericDeviceTy.
-  virtual Expected<bool> isELFCompatible(StringRef Image) const = 0;
+  virtual Expected<bool> isELFCompatible(uint32_t DeviceID,
+                                         StringRef Image) const = 0;
 
 protected:
   /// Indicate whether a device id is valid.
@@ -1070,11 +1082,18 @@ protected:
 public:
   // TODO: This plugin interface needs to be cleaned up.
 
-  /// Returns true if the plugin has been initialized.
+  /// Returns non-zero if the plugin runtime has been initialized.
   int32_t is_initialized() const;
 
-  /// Returns non-zero if the provided \p Image can be executed by the runtime.
-  int32_t is_valid_binary(__tgt_device_image *Image, bool Initialized = true);
+  /// Returns non-zero if the \p Image is compatible with the plugin. This
+  /// function does not require the plugin to be initialized before use.
+  int32_t is_plugin_compatible(__tgt_device_image *Image);
+
+  /// Returns non-zero if the \p Image is compatible with the device.
+  int32_t is_device_compatible(int32_t DeviceId, __tgt_device_image *Image);
+
+  /// Returns non-zero if the plugin device has been initialized.
+  int32_t is_device_initialized(int32_t DeviceId) const;
 
   /// Initialize the device inside of the plugin.
   int32_t init_device(int32_t DeviceId);
@@ -1180,7 +1199,7 @@ public:
                            const char **ErrStr);
 
   /// Sets the offset into the devices for use by OMPT.
-  int32_t set_device_offset(int32_t DeviceIdOffset);
+  int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
 
   /// Returns if the plugin can support auotmatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
@@ -1200,10 +1219,8 @@ private:
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
 
-  /// Index offset, which when added to a DeviceId, will yield a unique
-  /// user-observable device identifier. This is especially important when
-  /// DeviceIds of multiple plugins / RTLs need to be distinguishable.
-  int32_t DeviceIdStartIndex = 0;
+  /// Map of plugin device identifiers to the user device identifier.
+  llvm::DenseMap<int32_t, int32_t> UserDeviceIds;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given

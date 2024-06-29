@@ -300,7 +300,7 @@ class LinkerScript final {
   std::pair<MemoryRegion *, MemoryRegion *>
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
 
-  void assignOffsets(OutputSection *sec);
+  bool assignOffsets(OutputSection *sec);
 
   // This captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
@@ -334,7 +334,7 @@ public:
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
-  const Defined *assignAddresses();
+  std::pair<const OutputSection *, const Defined *> assignAddresses();
   bool spillSections();
   void erasePotentialSpillSections();
   void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
@@ -349,6 +349,11 @@ public:
 
   // Describe memory region usage.
   void printMemoryUsage(raw_ostream &os);
+
+  // Record a pending error during an assignAddresses invocation.
+  // assignAddresses is executed more than once. Therefore, lld::error should be
+  // avoided to not report duplicate errors.
+  void recordError(const Twine &msg);
 
   // Check backward location counter assignment and memory region/LMA overflows.
   void checkFinalScriptConditions() const;
@@ -375,7 +380,7 @@ public:
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
-  std::string backwardDotErr;
+  SmallVector<SmallString<0>, 0> recordedErrors;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.

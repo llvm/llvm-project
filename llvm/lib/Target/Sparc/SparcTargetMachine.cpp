@@ -28,7 +28,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeSparcDAGToDAGISelPass(PR);
+  initializeSparcDAGToDAGISelLegacyPass(PR);
 }
 
 static cl::opt<bool>

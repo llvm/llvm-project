@@ -1,5 +1,3 @@
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --no-offload-new-driver --offload-arch=gfx803 -nogpulib \
 // RUN:   -x hip-cpp-output %s 2>&1 | FileCheck %s

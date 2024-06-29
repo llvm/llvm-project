@@ -163,17 +163,18 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
     unsigned PartialMapSrcIdx = PMI_##RBNameSrc##Size - PMI_Min;               \
     (void)PartialMapDstIdx;                                                    \
     (void)PartialMapSrcIdx;                                                    \
-    const ValueMapping *Map = getCopyMapping(                                  \
-        AArch64::RBNameDst##RegBankID, AArch64::RBNameSrc##RegBankID, Size);  \
+    const ValueMapping *Map = getCopyMapping(AArch64::RBNameDst##RegBankID,    \
+                                             AArch64::RBNameSrc##RegBankID,    \
+                                             TypeSize::getFixed(Size));        \
     (void)Map;                                                                 \
     assert(Map[0].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapDstIdx] &&  \
-           Map[0].NumBreakDowns == 1 && #RBNameDst #Size                       \
-           " Dst is incorrectly initialized");                                 \
+           Map[0].NumBreakDowns == 1 &&                                        \
+           #RBNameDst #Size " Dst is incorrectly initialized");                \
     assert(Map[1].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapSrcIdx] &&  \
-           Map[1].NumBreakDowns == 1 && #RBNameSrc #Size                       \
-           " Src is incorrectly initialized");                                 \
+           Map[1].NumBreakDowns == 1 &&                                        \
+           #RBNameSrc #Size " Src is incorrectly initialized");                \
                                                                                \
   } while (false)
 
@@ -218,7 +219,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
 
 unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
                                            const RegisterBank &B,
-                                           TypeSize Size) const {
+                                           const TypeSize Size) const {
   // What do we do with different size?
   // copy are same size.
   // Will introduce other hooks for different size:
@@ -257,6 +258,8 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::QQRegClassID:
   case AArch64::QQQRegClassID:
   case AArch64::QQQQRegClassID:
+  case AArch64::ZPRRegClassID:
+  case AArch64::ZPR_3bRegClassID:
     return getRegBank(AArch64::FPRRegBankID);
   case AArch64::GPR32commonRegClassID:
   case AArch64::GPR32RegClassID:
@@ -303,7 +306,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
   case TargetOpcode::G_OR: {
     // 32 and 64-bit or can be mapped on either FPR or
     // GPR for the same cost.
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64)
       break;
 
@@ -324,7 +327,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
   }
   case TargetOpcode::G_BITCAST: {
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64)
       break;
 
@@ -364,7 +367,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
   }
   case TargetOpcode::G_LOAD: {
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 64)
       break;
 
@@ -376,15 +379,17 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     InstructionMappings AltMappings;
     const InstructionMapping &GPRMapping = getInstructionMapping(
         /*ID*/ 1, /*Cost*/ 1,
-        getOperandsMapping({getValueMapping(PMI_FirstGPR, Size),
-                            // Addresses are GPR 64-bit.
-                            getValueMapping(PMI_FirstGPR, 64)}),
+        getOperandsMapping(
+            {getValueMapping(PMI_FirstGPR, Size),
+             // Addresses are GPR 64-bit.
+             getValueMapping(PMI_FirstGPR, TypeSize::getFixed(64))}),
         /*NumOperands*/ 2);
     const InstructionMapping &FPRMapping = getInstructionMapping(
         /*ID*/ 2, /*Cost*/ 1,
-        getOperandsMapping({getValueMapping(PMI_FirstFPR, Size),
-                            // Addresses are GPR 64-bit.
-                            getValueMapping(PMI_FirstGPR, 64)}),
+        getOperandsMapping(
+            {getValueMapping(PMI_FirstFPR, Size),
+             // Addresses are GPR 64-bit.
+             getValueMapping(PMI_FirstGPR, TypeSize::getFixed(64))}),
         /*NumOperands*/ 2);
 
     AltMappings.push_back(&GPRMapping);
@@ -436,7 +441,7 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
          "This code is for instructions with 3 or less operands");
 
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  unsigned Size = Ty.getSizeInBits();
+  TypeSize Size = Ty.getSizeInBits();
   bool IsFPR = Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
 
   PartialMappingIdx RBIdx = IsFPR ? PMI_FirstFPR : PMI_FirstGPR;
@@ -493,6 +498,20 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
            SrcTy.getElementCount().getFixedValue() >= 4;
   }
   }
+}
+
+bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                [&](const MachineInstr &UseMI) {
+                  if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
+                    return true;
+                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                });
 }
 
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
@@ -699,9 +718,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // If both RB are null that means both registers are generic.
       // We shouldn't be here.
       assert(DstRB && SrcRB && "Both RegBank were nullptr");
-      unsigned Size = getSizeInBits(DstReg, MRI, TRI);
+      TypeSize Size = getSizeInBits(DstReg, MRI, TRI);
       return getInstructionMapping(
-          DefaultMappingID, copyCost(*DstRB, *SrcRB, TypeSize::getFixed(Size)),
+          DefaultMappingID, copyCost(*DstRB, *SrcRB, Size),
           getCopyMapping(DstRB->getID(), SrcRB->getID(), Size),
           // We only care about the mapping of the destination.
           /*NumOperands*/ 1);
@@ -712,7 +731,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_BITCAST: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
-    unsigned Size = DstTy.getSizeInBits();
+    TypeSize Size = DstTy.getSizeInBits();
     bool DstIsGPR = !DstTy.isVector() && DstTy.getSizeInBits() <= 64;
     bool SrcIsGPR = !SrcTy.isVector() && SrcTy.getSizeInBits() <= 64;
     const RegisterBank &DstRB =
@@ -720,7 +739,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const RegisterBank &SrcRB =
         SrcIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     return getInstructionMapping(
-        DefaultMappingID, copyCost(DstRB, SrcRB, TypeSize::getFixed(Size)),
+        DefaultMappingID, copyCost(DstRB, SrcRB, Size),
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
         // We only care about the mapping of the destination for COPY.
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
@@ -743,12 +762,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MO.getReg());
     if (!Ty.isValid())
       continue;
-    OpSize[Idx] = Ty.getSizeInBits();
+    OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
 
-    // As a top-level guess, vectors go in FPRs, scalars and pointers in GPRs.
+    // As a top-level guess, vectors including both scalable and non-scalable
+    // ones go in FPRs, scalars and pointers in GPRs.
     // For floating-point instructions, scalars go in FPRs.
-    if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc) ||
-        Ty.getSizeInBits() > 64)
+    if (Ty.isVector())
+      OpRegBankIdx[Idx] = PMI_FirstFPR;
+    else if (isPreISelGenericFloatingPointOpcode(Opc) ||
+             Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
       OpRegBankIdx[Idx] = PMI_FirstGPR;
@@ -847,13 +869,18 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // instead of blind map every scalar to GPR.
     if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {
-                 // If we have at least one direct use in a FP instruction,
+                 // If we have at least one direct or indirect use
+                 // in a FP instruction,
                  // assume this was a floating point load in the IR. If it was
                  // not, we would have had a bitcast before reaching that
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
                  // onlyDefinesFP().
+
+                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                   return true;
+
                  return onlyUsesFP(UseMI, MRI, TRI) ||
                         onlyDefinesFP(UseMI, MRI, TRI);
                }))
@@ -1103,7 +1130,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       LLT Ty = MRI.getType(MI.getOperand(Idx).getReg());
       if (!Ty.isValid())
         continue;
-      auto Mapping = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
+      auto Mapping =
+          getValueMapping(OpRegBankIdx[Idx], TypeSize::getFixed(OpSize[Idx]));
       if (!Mapping->isValid())
         return getInvalidInstructionMapping();
 

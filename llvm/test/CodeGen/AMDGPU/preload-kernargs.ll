@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx90a -amdgpu-kernarg-preload-count=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90a-PRELOAD-2 %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx90a -amdgpu-kernarg-preload-count=8 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90a-PRELOAD-8 %s
 
-define amdgpu_kernel void @ptr1_i8_kernel_preload_arg(ptr addrspace(1) %out, i8 %arg0) {
+define amdgpu_kernel void @ptr1_i8_kernel_preload_arg(ptr addrspace(1) %out, i8 %arg0) #0 {
 ; GFX940-NO-PRELOAD-LABEL: ptr1_i8_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -74,7 +74,7 @@ define amdgpu_kernel void @ptr1_i8_kernel_preload_arg(ptr addrspace(1) %out, i8 
   ret void
 }
 
-define amdgpu_kernel void @ptr1_i8_zext_kernel_preload_arg(ptr addrspace(1) %out, i8 zeroext %arg0) {
+define amdgpu_kernel void @ptr1_i8_zext_kernel_preload_arg(ptr addrspace(1) %out, i8 zeroext %arg0) #0 {
 ; GFX940-NO-PRELOAD-LABEL: ptr1_i8_zext_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -145,7 +145,7 @@ define amdgpu_kernel void @ptr1_i8_zext_kernel_preload_arg(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @ptr1_i16_kernel_preload_arg(ptr addrspace(1) %out, i16 %arg0) {
+define amdgpu_kernel void @ptr1_i16_kernel_preload_arg(ptr addrspace(1) %out, i16 %arg0) #0 {
 ; GFX940-NO-PRELOAD-LABEL: ptr1_i16_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -212,7 +212,7 @@ define amdgpu_kernel void @ptr1_i16_kernel_preload_arg(ptr addrspace(1) %out, i1
   ret void
 }
 
-define amdgpu_kernel void @ptr1_i32_kernel_preload_arg(ptr addrspace(1) %out, i32 %arg0) {
+define amdgpu_kernel void @ptr1_i32_kernel_preload_arg(ptr addrspace(1) %out, i32 %arg0) #0 {
 ; GFX940-NO-PRELOAD-LABEL: ptr1_i32_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -273,7 +273,7 @@ define amdgpu_kernel void @ptr1_i32_kernel_preload_arg(ptr addrspace(1) %out, i3
 }
 
 
-define amdgpu_kernel void @i32_ptr1_i32_kernel_preload_arg(i32 %arg0, ptr addrspace(1) %out, i32 %arg1) {
+define amdgpu_kernel void @i32_ptr1_i32_kernel_preload_arg(i32 %arg0, ptr addrspace(1) %out, i32 %arg1) #0 {
 ; GFX940-NO-PRELOAD-LABEL: i32_ptr1_i32_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x10
@@ -346,7 +346,7 @@ define amdgpu_kernel void @i32_ptr1_i32_kernel_preload_arg(i32 %arg0, ptr addrsp
   ret void
 }
 
-define amdgpu_kernel void @ptr1_i16_i16_kernel_preload_arg(ptr addrspace(1) %out, i16 %arg0, i16 %arg1) {
+define amdgpu_kernel void @ptr1_i16_i16_kernel_preload_arg(ptr addrspace(1) %out, i16 %arg0, i16 %arg1) #0 {
 ; GFX940-NO-PRELOAD-LABEL: ptr1_i16_i16_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -431,7 +431,7 @@ define amdgpu_kernel void @ptr1_i16_i16_kernel_preload_arg(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @ptr1_v2i8_kernel_preload_arg(ptr addrspace(1) %out, <2 x i8> %in) {
+define amdgpu_kernel void @ptr1_v2i8_kernel_preload_arg(ptr addrspace(1) %out, <2 x i8> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: ptr1_v2i8_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -500,7 +500,7 @@ define amdgpu_kernel void @ptr1_v2i8_kernel_preload_arg(ptr addrspace(1) %out, <
 }
 
 
-define amdgpu_kernel void @byref_kernel_preload_arg(ptr addrspace(1) %out, ptr addrspace(4) byref(i32) align(256) %in.byref, i32 %after.offset) {
+define amdgpu_kernel void @byref_kernel_preload_arg(ptr addrspace(1) %out, ptr addrspace(4) byref(i32) align(256) %in.byref, i32 %after.offset) #0 {
 ; GFX940-NO-PRELOAD-LABEL: byref_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x100
@@ -595,7 +595,7 @@ define amdgpu_kernel void @byref_kernel_preload_arg(ptr addrspace(1) %out, ptr a
 }
 
 
-define amdgpu_kernel void @v8i32_kernel_preload_arg(ptr addrspace(1) nocapture %out, <8 x i32> %in) nounwind {
+define amdgpu_kernel void @v8i32_kernel_preload_arg(ptr addrspace(1) nocapture %out, <8 x i32> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v8i32_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x20
@@ -717,7 +717,7 @@ define amdgpu_kernel void @v8i32_kernel_preload_arg(ptr addrspace(1) nocapture %
   ret void
 }
 
-define amdgpu_kernel void @v3i16_kernel_preload_arg(ptr addrspace(1) nocapture %out, <3 x i16> %in) nounwind {
+define amdgpu_kernel void @v3i16_kernel_preload_arg(ptr addrspace(1) nocapture %out, <3 x i16> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v3i16_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -787,7 +787,7 @@ define amdgpu_kernel void @v3i16_kernel_preload_arg(ptr addrspace(1) nocapture %
   ret void
 }
 
-define amdgpu_kernel void @v3i32_kernel_preload_arg(ptr addrspace(1) nocapture %out, <3 x i32> %in) nounwind {
+define amdgpu_kernel void @v3i32_kernel_preload_arg(ptr addrspace(1) nocapture %out, <3 x i32> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v3i32_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -859,7 +859,7 @@ define amdgpu_kernel void @v3i32_kernel_preload_arg(ptr addrspace(1) nocapture %
   ret void
 }
 
-define amdgpu_kernel void @v3f32_kernel_preload_arg(ptr addrspace(1) nocapture %out, <3 x float> %in) nounwind {
+define amdgpu_kernel void @v3f32_kernel_preload_arg(ptr addrspace(1) nocapture %out, <3 x float> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v3f32_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -931,7 +931,7 @@ define amdgpu_kernel void @v3f32_kernel_preload_arg(ptr addrspace(1) nocapture %
   ret void
 }
 
-define amdgpu_kernel void @v5i8_kernel_preload_arg(ptr addrspace(1) nocapture %out, <5 x i8> %in) nounwind {
+define amdgpu_kernel void @v5i8_kernel_preload_arg(ptr addrspace(1) nocapture %out, <5 x i8> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v5i8_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1029,7 +1029,7 @@ define amdgpu_kernel void @v5i8_kernel_preload_arg(ptr addrspace(1) nocapture %o
   ret void
 }
 
-define amdgpu_kernel void @v5f64_kernel_preload_arg(ptr addrspace(1) nocapture %out, <5 x double> %in) nounwind {
+define amdgpu_kernel void @v5f64_kernel_preload_arg(ptr addrspace(1) nocapture %out, <5 x double> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v5f64_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x60
@@ -1169,7 +1169,7 @@ define amdgpu_kernel void @v5f64_kernel_preload_arg(ptr addrspace(1) nocapture %
   ret void
 }
 
-define amdgpu_kernel void @v8i8_kernel_preload_arg(ptr addrspace(1) %out, <8 x i8> %in) {
+define amdgpu_kernel void @v8i8_kernel_preload_arg(ptr addrspace(1) %out, <8 x i8> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v8i8_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1289,7 +1289,7 @@ define amdgpu_kernel void @v8i8_kernel_preload_arg(ptr addrspace(1) %out, <8 x i
   ret void
 }
 
-define amdgpu_kernel void @i64_kernel_preload_arg(ptr addrspace(1) %out, i64 %a) {
+define amdgpu_kernel void @i64_kernel_preload_arg(ptr addrspace(1) %out, i64 %a) #0 {
 ; GFX940-NO-PRELOAD-LABEL: i64_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1349,7 +1349,7 @@ define amdgpu_kernel void @i64_kernel_preload_arg(ptr addrspace(1) %out, i64 %a)
   ret void
 }
 
-define amdgpu_kernel void @f64_kernel_preload_arg(ptr addrspace(1) %out, double %in) {
+define amdgpu_kernel void @f64_kernel_preload_arg(ptr addrspace(1) %out, double %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: f64_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1409,7 +1409,7 @@ define amdgpu_kernel void @f64_kernel_preload_arg(ptr addrspace(1) %out, double 
   ret void
 }
 
-define amdgpu_kernel void @half_kernel_preload_arg(ptr addrspace(1) %out, half %in) {
+define amdgpu_kernel void @half_kernel_preload_arg(ptr addrspace(1) %out, half %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: half_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -1469,7 +1469,7 @@ define amdgpu_kernel void @half_kernel_preload_arg(ptr addrspace(1) %out, half %
   ret void
 }
 
-define amdgpu_kernel void @bfloat_kernel_preload_arg(ptr addrspace(1) %out, bfloat %in) {
+define amdgpu_kernel void @bfloat_kernel_preload_arg(ptr addrspace(1) %out, bfloat %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: bfloat_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -1529,7 +1529,7 @@ define amdgpu_kernel void @bfloat_kernel_preload_arg(ptr addrspace(1) %out, bflo
   ret void
 }
 
-define amdgpu_kernel void @v2bfloat_kernel_preload_arg(ptr addrspace(1) %out, <2 x bfloat> %in) {
+define amdgpu_kernel void @v2bfloat_kernel_preload_arg(ptr addrspace(1) %out, <2 x bfloat> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v2bfloat_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -1589,7 +1589,7 @@ define amdgpu_kernel void @v2bfloat_kernel_preload_arg(ptr addrspace(1) %out, <2
   ret void
 }
 
-define amdgpu_kernel void @v3bfloat_kernel_preload_arg(ptr addrspace(1) %out, <3 x bfloat> %in) {
+define amdgpu_kernel void @v3bfloat_kernel_preload_arg(ptr addrspace(1) %out, <3 x bfloat> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v3bfloat_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -1659,7 +1659,7 @@ define amdgpu_kernel void @v3bfloat_kernel_preload_arg(ptr addrspace(1) %out, <3
   ret void
 }
 
-define amdgpu_kernel void @v6bfloat_kernel_preload_arg(ptr addrspace(1) %out, <6 x bfloat> %in) {
+define amdgpu_kernel void @v6bfloat_kernel_preload_arg(ptr addrspace(1) %out, <6 x bfloat> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v6bfloat_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -1731,7 +1731,7 @@ define amdgpu_kernel void @v6bfloat_kernel_preload_arg(ptr addrspace(1) %out, <6
   ret void
 }
 
-define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) %out, half %in, <7 x bfloat> %in2, ptr addrspace(1) %out2) {
+define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) %out, half %in, <7 x bfloat> %in2, ptr addrspace(1) %out2) #0 {
 ; GFX940-NO-PRELOAD-LABEL: half_v7bfloat_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s10, s[0:1], 0x8
@@ -1840,7 +1840,7 @@ define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @i1_kernel_preload_arg(ptr addrspace(1) %out, i1 %in) {
+define amdgpu_kernel void @i1_kernel_preload_arg(ptr addrspace(1) %out, i1 %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: i1_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
@@ -1906,7 +1906,7 @@ define amdgpu_kernel void @i1_kernel_preload_arg(ptr addrspace(1) %out, i1 %in) 
   ret void
 }
 
-define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) %out, fp128 %in) {
+define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) %out, fp128 %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: fp128_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -1980,7 +1980,7 @@ define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) %out, fp128
   ret void
 }
 
-define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) %out, <7 x i8> %in) {
+define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) %out, <7 x i8> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v7i8_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -2096,7 +2096,7 @@ define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) %out, <7 x i
   ret void
 }
 
-define amdgpu_kernel void @v7half_kernel_preload_arg(ptr addrspace(1) %out, <7 x half> %in) {
+define amdgpu_kernel void @v7half_kernel_preload_arg(ptr addrspace(1) %out, <7 x half> %in) #0 {
 ; GFX940-NO-PRELOAD-LABEL: v7half_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -2181,7 +2181,7 @@ define amdgpu_kernel void @v7half_kernel_preload_arg(ptr addrspace(1) %out, <7 x
 }
 
 ; Test when previous argument was not dword aligned.
-define amdgpu_kernel void @i16_i32_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, i32 %in2, ptr addrspace(1) %out2) {
+define amdgpu_kernel void @i16_i32_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, i32 %in2, ptr addrspace(1) %out2) #0 {
 ; GFX940-NO-PRELOAD-LABEL: i16_i32_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
@@ -2260,7 +2260,7 @@ define amdgpu_kernel void @i16_i32_kernel_preload_arg(ptr addrspace(1) %out, i16
   ret void
 }
 
-define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, <3 x i32> %in2, ptr addrspace(1) %out2) {
+define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, <3 x i32> %in2, ptr addrspace(1) %out2) #0 {
 ; GFX940-NO-PRELOAD-LABEL: i16_v3i32_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
@@ -2359,7 +2359,7 @@ define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) %out, i
   ret void
 }
 
-define amdgpu_kernel void @i16_i16_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, i16 %in2, ptr addrspace(1) %out2) {
+define amdgpu_kernel void @i16_i16_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, i16 %in2, ptr addrspace(1) %out2) #0 {
 ; GFX940-NO-PRELOAD-LABEL: i16_i16_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s6, s[0:1], 0x8
@@ -2436,7 +2436,7 @@ define amdgpu_kernel void @i16_i16_kernel_preload_arg(ptr addrspace(1) %out, i16
   ret void
 }
 
-define amdgpu_kernel void @i16_v2i8_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, <2 x i8> %in2, ptr addrspace(1) %out2) {
+define amdgpu_kernel void @i16_v2i8_kernel_preload_arg(ptr addrspace(1) %out, i16 %in, <2 x i8> %in2, ptr addrspace(1) %out2) #0 {
 ; GFX940-NO-PRELOAD-LABEL: i16_v2i8_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
 ; GFX940-NO-PRELOAD-NEXT:    s_load_dword s6, s[0:1], 0x8
@@ -2520,3 +2520,5 @@ define amdgpu_kernel void @i16_v2i8_kernel_preload_arg(ptr addrspace(1) %out, i1
   store <2 x i8> %in2, ptr addrspace(1) %out2
   ret void
 }
+
+attributes #0 = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

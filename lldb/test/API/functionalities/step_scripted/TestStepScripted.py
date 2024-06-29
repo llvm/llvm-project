@@ -126,7 +126,7 @@ class StepScriptedTestCase(TestBase):
         cmd = "thread step-scripted -C Steps.StepReportsStopOthers -k token -v %s" % (
             token
         )
-        if run_mode != None:
+        if run_mode is not None:
             cmd = cmd + " --run-mode %s" % (run_mode)
         if self.TraceOn():
             print(cmd)

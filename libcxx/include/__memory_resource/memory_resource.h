@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 
-#include <__availability>
 #include <__config>
 #include <__fwd/memory_resource.h>
 #include <cstddef>

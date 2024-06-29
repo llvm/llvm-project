@@ -92,9 +92,21 @@ add_macro_header(
 )
 
 add_macro_header(
+  float16_macros
+  HDR
+    float16-macros.h
+)
+
+add_macro_header(
   limits_macros
   HDR
     limits-macros.h
+)
+
+add_macro_header(
+  link_macros
+  HDR
+    link-macros.h
 )
 
 add_macro_header(

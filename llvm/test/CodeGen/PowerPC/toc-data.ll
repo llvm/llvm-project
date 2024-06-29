@@ -36,7 +36,7 @@ define dso_local void @write_int(i32 signext %in) {
     ret void
 }
 ; CHECK32: name:            write_int
-; CHECK32:      %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc @i, $r2
+; CHECK32:      %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc $r2, @i
 ; CHECK32-NEXT: STW %{{[0-9]+}}, 0, killed %[[SCRATCH]] :: (store (s32) into @i)
 
 ; TEST32:         .write_int:
@@ -44,12 +44,12 @@ define dso_local void @write_int(i32 signext %in) {
 ; TEST32-NEXT:      stw 3, 0(4)
 
 ; CHECK64: name:            write_int
-; CHECK64:      %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @i, $x2
+; CHECK64:      %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @i
 ; CHECK64-NEXT: STW8 %{{[0-9]+}}, 0, killed %[[SCRATCH]] :: (store (s32) into @i)
 
 ; CHECK64-NOOPT:  name: write_int
 ; CHECK64-NOOPT:    %[[SUBREG:[0-9]+]]:gprc = COPY %{{[0-9]}}.sub_32
-; CHECK64-NOOPT:    %[[ADDR:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @i, $x2
+; CHECK64-NOOPT:    %[[ADDR:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @i
 ; CHECK64-NOOPT:    STW %[[SUBREG]], 0, %[[ADDR]]
 
 ; TEST64:         .write_int:
@@ -128,7 +128,7 @@ define dso_local float @read_float() {
     ret float %0
 }
 ; CHECK32: name:            read_float
-; CHECK32: %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc @f, $r2
+; CHECK32: %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc $r2, @f
 ; CHECK32: %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
 
 ; TEST32:       .read_float:
@@ -136,11 +136,11 @@ define dso_local float @read_float() {
 ; TEST32-NEXT:    lfs 1, 0(3)
 
 ; CHECK64: name:            read_float
-; CHECK64: %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @f, $x2
+; CHECK64: %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @f
 ; CHECK64: %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
 
 ; CHECK64-NOOPT: name:            read_float
-; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @f, $x2
+; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @f
 ; CHECK64-NOOPT:   %{{[0-9]+}}:f4rc = LFS 0, %[[SCRATCH]]
 
 ; TEST64:       .read_float:
@@ -217,18 +217,18 @@ define dso_local nonnull ptr @addr() {
     ret ptr @i
 }
 ; CHECK32: name:            addr
-; CHECK32:       %[[SCRATCH:[0-9]+]]:gprc = ADDItoc @i, $r2
+; CHECK32:       %[[SCRATCH:[0-9]+]]:gprc = ADDItoc $r2, @i
 ; CHECK32-NEXT:  $r3 = COPY %[[SCRATCH]]
 
 ; TEST32:       .addr
 ; TEST32:         la 3, i[TD](2)
 
 ; CHECK64: name:            addr
-; CHECK64:       %[[SCRATCH:[0-9]+]]:g8rc = ADDItoc8 @i, $x2
+; CHECK64:       %[[SCRATCH:[0-9]+]]:g8rc = ADDItoc8 $x2, @i
 ; CHECK64-NEXT:  $x3 = COPY %[[SCRATCH]]
 
 ; CHECK64-NOOPT: name:            addr
-; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @i, $x2
+; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @i
 ; CHECK64-NOOPT:   $x3 = COPY %[[SCRATCH]]
 
 ; TEST64:       .addr

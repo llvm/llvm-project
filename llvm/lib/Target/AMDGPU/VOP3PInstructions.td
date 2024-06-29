@@ -38,13 +38,13 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FPVRegInputMods:$src1_modifiers, VRegSrc_32:$src1,
                FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
 
-           // FIXME: clampmod0 misbehaves with the non-default vdst_in
+           // FIXME: Clamp0 misbehaves with the non-default vdst_in
            // following it. For now workaround this by requiring clamp
            // in tied patterns. This should use undef_tied_input, but it
            // seems underdeveloped and doesn't apply the right register
            // class constraints.
-    dag mods = !con(!if(UseTiedOutput, (ins clampmod:$clamp, VGPR_32:$vdst_in),
-                        (ins clampmod0:$clamp)),
+    dag mods = !con(!if(UseTiedOutput, (ins Clamp:$clamp, VGPR_32:$vdst_in),
+                        (ins Clamp0:$clamp)),
                     (ins op_sel0:$op_sel, op_sel_hi0:$op_sel_hi));
     // We use Ins64 because that is the one which populates InOperandList
     // due to the logic in class VOP3_Pseudo
@@ -90,7 +90,7 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
-defm V_PK_MAD_U16 : VOP3PInst<"v_pk_mad_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
+defm V_PK_MAD_U16 : VOP3PInst<"v_pk_mad_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>, imad>;
 
 let FPDPRounding = 1 in {
 defm V_PK_FMA_F16 : VOP3PInst<"v_pk_fma_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, any_fma>;
@@ -382,15 +382,19 @@ defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
   AMDGPUfdot2, 1/*ExplicitClamp*/>;
 
 let OtherPredicates = [HasDot7Insts] in {
-defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
+    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
+}
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
 let OtherPredicates = [HasDot1Insts] in {
-defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
+    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
+}
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8, 1>;
 } // End OtherPredicates = [HasDot1Insts]
@@ -1055,7 +1059,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag IndexKey = !cond(!eq(IndexType, 0) : (ins),
                        !eq(IndexType, 8) : (ins IndexKey8bit:$index_key_8bit),
                        !eq(IndexType, 16): (ins IndexKey16bit:$index_key_16bit));
-  dag Clamp = !if(IsIU, (ins clampmod0:$clamp), (ins));
+  dag Clamp = !if(IsIU, (ins Clamp0:$clamp), (ins));
   dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
                   !and(NegLoAny, !not(NegHiAny))       : (ins neg_lo0:$neg_lo),
                   !and(!not(NegLoAny), !not(NegHiAny)) : (ins));

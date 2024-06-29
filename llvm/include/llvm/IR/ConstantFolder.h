@@ -99,12 +99,12 @@ public:
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
-      return ConstantExpr::getCompare(P, LC, RC);
+      return ConstantFoldCompareInstruction(P, LC, RC);
     return nullptr;
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
+                 GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -113,10 +113,7 @@ public:
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
 
-      if (IsInBounds)
-        return ConstantExpr::getInBoundsGetElementPtr(Ty, PC, IdxList);
-      else
-        return ConstantExpr::getGetElementPtr(Ty, PC, IdxList);
+      return ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW);
     }
     return nullptr;
   }

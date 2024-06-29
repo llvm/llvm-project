@@ -1160,6 +1160,28 @@ define i32 @propagate_drop_flags_trunc(i64 %arg) {
   ret i32 %v1.fr
 }
 
+define ptr @propagate_drop_flags_gep_nusw(ptr %p) {
+; CHECK-LABEL: @propagate_drop_flags_gep_nusw(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P_FR]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw i8, ptr %p, i64 1
+  %gep.fr = freeze ptr %gep
+  ret ptr %gep.fr
+}
+
+define ptr @propagate_drop_flags_gep_nuw(ptr %p) {
+; CHECK-LABEL: @propagate_drop_flags_gep_nuw(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P_FR]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nuw i8, ptr %p, i64 1
+  %gep.fr = freeze ptr %gep
+  ret ptr %gep.fr
+}
+
 declare i32 @llvm.umax.i32(i32 %a, i32 %b)
 
 define i32 @freeze_call_with_range_attr(i32 %a) {

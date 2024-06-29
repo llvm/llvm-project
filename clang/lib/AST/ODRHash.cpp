@@ -146,10 +146,17 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::Template:
     AddDecl(Name.getAsTemplateDecl());
     break;
+  case TemplateName::QualifiedTemplate: {
+    QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
+    if (NestedNameSpecifier *NNS = QTN->getQualifier())
+      AddNestedNameSpecifier(NNS);
+    AddBoolean(QTN->hasTemplateKeyword());
+    AddTemplateName(QTN->getUnderlyingTemplate());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-  case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
@@ -244,7 +251,7 @@ unsigned ODRHash::CalculateHash() {
 
   assert(I == Bools.rend());
   Bools.clear();
-  return ID.ComputeHash();
+  return ID.computeStableHash();
 }
 
 namespace {

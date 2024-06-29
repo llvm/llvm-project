@@ -115,10 +115,13 @@ public:
   bool isExplicitBindName() const { return isExplicitBindName_; }
   void set_bindName(std::string &&name) { bindName_ = std::move(name); }
   void set_isExplicitBindName(bool yes) { isExplicitBindName_ = yes; }
+  bool isCDefined() const { return isCDefined_; }
+  void set_isCDefined(bool yes) { isCDefined_ = yes; }
 
 private:
   std::optional<std::string> bindName_;
   bool isExplicitBindName_{false};
+  bool isCDefined_{false};
 };
 
 // Device type specific OpenACC routine information
@@ -714,6 +717,7 @@ public:
       CrayPointer, CrayPointee,
       LocalityLocal, // named in LOCAL locality-spec
       LocalityLocalInit, // named in LOCAL_INIT locality-spec
+      LocalityReduce, // named in REDUCE locality-spec
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
@@ -813,6 +817,7 @@ public:
   void SetBindName(std::string &&);
   bool GetIsExplicitBindName() const;
   void SetIsExplicitBindName(bool);
+  void SetIsCDefined(bool);
   bool IsFuncResult() const;
   bool IsObjectArray() const;
   const ArraySpec *GetShape() const;

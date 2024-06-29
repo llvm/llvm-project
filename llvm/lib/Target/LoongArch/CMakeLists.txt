@@ -16,6 +16,7 @@ add_public_tablegen_target(LoongArchCommonTableGen)
 
 add_llvm_target(LoongArchCodeGen
   LoongArchAsmPrinter.cpp
+  LoongArchDeadRegisterDefinitions.cpp
   LoongArchExpandAtomicPseudoInsts.cpp
   LoongArchExpandPseudoInsts.cpp
   LoongArchFrameLowering.cpp

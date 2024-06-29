@@ -386,7 +386,7 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
 
   // Get the index type for this address space, results and intermediate
   // computations are performed at that width.
-  auto &DL = CB->getModule()->getDataLayout();
+  auto &DL = CB->getDataLayout();
   const unsigned IntTyBits = DL.getIndexTypeSizeInBits(CB->getType());
 
   // Handle strdup-like functions separately.

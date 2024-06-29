@@ -21,7 +21,7 @@ define void @test_three_blocks(ptr nocapture %Output, ptr nocapture readonly %Co
 ; CHECK-NEXT:    [[TEMP_09_UNR_PH:%.*]] = phi i32 [ [[TEMP_1_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[TEMP_1_LCSSA_PH:%.*]] = phi i32 [ undef, [[FOR_BODY_PREHEADER]] ], [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[TEMP_1_LCSSA_PH:%.*]] = phi i32 [ poison, [[FOR_BODY_PREHEADER]] ], [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    [[J_010_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[J_010_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TEMP_09_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[TEMP_09_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
@@ -365,7 +365,7 @@ define void @test_four_blocks(ptr nocapture %Output, ptr nocapture readonly %Con
 ; CHECK-NEXT:    [[TEMP_026_UNR_PH:%.*]] = phi i32 [ [[TEMP_1_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[TEMP_1_LCSSA_PH:%.*]] = phi i32 [ undef, [[FOR_BODY_LR_PH]] ], [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[TEMP_1_LCSSA_PH:%.*]] = phi i32 [ poison, [[FOR_BODY_LR_PH]] ], [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    [[I_UNR:%.*]] = phi i32 [ [[DOTPRE]], [[FOR_BODY_LR_PH]] ], [ [[I_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[J_027_UNR:%.*]] = phi i32 [ 1, [[FOR_BODY_LR_PH]] ], [ [[J_027_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TEMP_026_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[TEMP_026_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]

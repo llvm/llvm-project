@@ -811,8 +811,7 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
           &(parent_info->task_data), &(parent_info->frame),
           &(taskdata->ompt_task_info.task_data),
-          ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(taskdata), 0,
-          return_address);
+          TASK_TYPE_DETAILS_FORMAT(taskdata), 0, return_address);
     }
     __ompt_task_start(task, current_task, gtid);
   }
@@ -1156,6 +1155,11 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     // Note: no need to translate gtid to its shadow. If the current thread is a
     // hidden helper one, then the gtid is already correct. Otherwise, hidden
     // helper threads are disabled, and gtid refers to a OpenMP thread.
+#if OMPT_SUPPORT
+    if (ompt) {
+      __ompt_task_finish(task, resumed_task, ompt_task_switch);
+    }
+#endif
     __kmpc_give_task(task, __kmp_tid_from_gtid(gtid));
     if (KMP_HIDDEN_HELPER_THREAD(gtid))
       __kmp_hidden_helper_worker_thread_signal();
@@ -1711,6 +1715,7 @@ kmp_task_t *__kmpc_omp_target_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   auto &input_flags = reinterpret_cast<kmp_tasking_flags_t &>(flags);
   // target task is untied defined in the specification
   input_flags.tiedness = TASK_UNTIED;
+  input_flags.target = 1;
 
   if (__kmp_enable_hidden_helper)
     input_flags.hidden_helper = TRUE;
@@ -1942,6 +1947,11 @@ __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
 #endif
       __kmp_task_finish<false>(gtid, task, current_task);
   }
+#if OMPT_SUPPORT
+  else if (UNLIKELY(ompt_enabled.enabled && taskdata->td_flags.target)) {
+    __ompt_task_finish(task, current_task, ompt_task_switch);
+  }
+#endif
 
   KA_TRACE(
       30,
@@ -1974,7 +1984,8 @@ kmp_int32 __kmpc_omp_task_parts(ident_t *loc_ref, kmp_int32 gtid,
     if (ompt_enabled.ompt_callback_task_create) {
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
           &(parent->ompt_task_info.task_data), &(parent->ompt_task_info.frame),
-          &(new_taskdata->ompt_task_info.task_data), ompt_task_explicit, 0,
+          &(new_taskdata->ompt_task_info.task_data),
+          TASK_TYPE_DETAILS_FORMAT(new_taskdata), 0,
           OMPT_GET_RETURN_ADDRESS(0));
     }
   }
@@ -2132,7 +2143,7 @@ kmp_int32 __kmpc_omp_task(ident_t *loc_ref, kmp_int32 gtid,
             &(parent->ompt_task_info.task_data),
             &(parent->ompt_task_info.frame),
             &(new_taskdata->ompt_task_info.task_data),
-            ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 0,
+            TASK_TYPE_DETAILS_FORMAT(new_taskdata), 0,
             OMPT_LOAD_RETURN_ADDRESS(gtid));
       }
     } else {
@@ -2193,8 +2204,7 @@ kmp_int32 __kmp_omp_taskloop_task(ident_t *loc_ref, kmp_int32 gtid,
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
           &(parent->ompt_task_info.task_data), &(parent->ompt_task_info.frame),
           &(new_taskdata->ompt_task_info.task_data),
-          ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 0,
-          codeptr_ra);
+          TASK_TYPE_DETAILS_FORMAT(new_taskdata), 0, codeptr_ra);
     }
   }
 #endif

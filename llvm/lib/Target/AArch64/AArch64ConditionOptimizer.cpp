@@ -126,7 +126,7 @@ char AArch64ConditionOptimizer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64ConditionOptimizer, "aarch64-condopt",
                       "AArch64 CondOpt Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AArch64ConditionOptimizer, "aarch64-condopt",
                     "AArch64 CondOpt Pass", false, false)
 
@@ -135,8 +135,8 @@ FunctionPass *llvm::createAArch64ConditionOptimizerPass() {
 }
 
 void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -332,7 +332,7 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();
-  DomTree = &getAnalysis<MachineDominatorTree>();
+  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MRI = &MF.getRegInfo();
 
   bool Changed = false;

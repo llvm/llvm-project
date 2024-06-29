@@ -869,7 +869,7 @@ cc_library(
     ],
 )
 
-genrule(
+apple_genrule(
     name = "mach_gen",
     srcs = ["tools/debugserver/source/MacOSX/dbgnub-mig.defs"],
     outs = [
@@ -878,7 +878,10 @@ genrule(
         "mach_excUser.c",
     ],
     cmd = "mig -header $(location :mach_exc.h) -server $(location :mach_excServer.c) -user $(location :mach_excUser.c) $(SRCS)",
-    tags = ["nobuildkite"],
+    tags = [
+        "manual",
+        "nobuildkite",
+    ],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],

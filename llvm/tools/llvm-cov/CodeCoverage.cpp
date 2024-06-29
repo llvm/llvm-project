@@ -515,7 +515,7 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
   if (!PathRemappings)
     return;
 
-  // Convert remapping paths to native paths with trailing seperators.
+  // Convert remapping paths to native paths with trailing separators.
   auto nativeWithTrailing = [](StringRef Path) -> std::string {
     if (Path.empty())
       return "";

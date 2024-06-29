@@ -38,3 +38,14 @@ test.using_property_ref_in_custom 1 + 4 = 5
 // GENERIC: "test.with_default_valued_properties"()
 // GENERIC-SAME:  <{a = 0 : i32}>
 test.with_default_valued_properties <{a = 0 : i32}>
+
+// CHECK:   test.with_optional_properties
+// CHECK-SAME:  <{b = 0 : i32}>
+// GENERIC: "test.with_optional_properties"()
+// GENERIC-SAME:  <{b = 0 : i32}>
+test.with_optional_properties <{b = 0 : i32}>
+
+// CHECK:   test.with_optional_properties {{$}}
+// GENERIC: "test.with_optional_properties"()
+// GENERIC-SAME:  : () -> ()
+test.with_optional_properties

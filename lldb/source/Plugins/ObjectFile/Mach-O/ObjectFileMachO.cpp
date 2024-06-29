@@ -5140,12 +5140,20 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       case LC_LOADFVMLIB:
       case LC_LOAD_UPWARD_DYLIB: {
         uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
+        // For LC_LOAD_DYLIB there is an alternate encoding
+        // which adds a uint32_t `flags` field for `DYLD_USE_*`
+        // flags.  This can be detected by a timestamp field with
+        // the `DYLIB_USE_MARKER` constant value.
         bool is_delayed_init = false;
         uint32_t use_command_marker = m_data.GetU32(&offset);
         if (use_command_marker == 0x1a741800 /* DYLIB_USE_MARKER */) {
           offset += 4; /* uint32_t current_version */
           offset += 4; /* uint32_t compat_version */
           uint32_t flags = m_data.GetU32(&offset);
+          // If this LC_LOAD_DYLIB is marked delay-init,
+          // don't report it as a dependent library -- it
+          // may be loaded in the process at some point,
+          // but will most likely not be load at launch.
           if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
             is_delayed_init = true;
         }

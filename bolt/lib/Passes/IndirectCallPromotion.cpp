@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/IndirectCallPromotion.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/Inliner.h"
 #include "llvm/ADT/STLExtras.h"

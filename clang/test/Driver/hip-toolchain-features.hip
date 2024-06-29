@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib --no-offload-new-driver \
 // RUN:   -nogpuinc --offload-arch=gfx906:xnack+ --offload-arch=gfx900:xnack+ %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=XNACK

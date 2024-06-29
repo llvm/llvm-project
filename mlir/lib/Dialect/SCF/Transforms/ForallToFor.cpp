@@ -34,12 +34,9 @@ mlir::scf::forallToForLoop(RewriterBase &rewriter, scf::ForallOp forallOp,
   rewriter.setInsertionPoint(forallOp);
 
   Location loc = forallOp.getLoc();
-  SmallVector<Value> lbs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedLowerBound());
-  SmallVector<Value> ubs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedUpperBound());
-  SmallVector<Value> steps =
-      getValueOrCreateConstantIndexOp(rewriter, loc, forallOp.getMixedStep());
+  SmallVector<Value> lbs = forallOp.getLowerBound(rewriter);
+  SmallVector<Value> ubs = forallOp.getUpperBound(rewriter);
+  SmallVector<Value> steps = forallOp.getStep(rewriter);
   LoopNest loopNest = scf::buildLoopNest(rewriter, loc, lbs, ubs, steps);
 
   SmallVector<Value> ivs = llvm::map_to_vector(

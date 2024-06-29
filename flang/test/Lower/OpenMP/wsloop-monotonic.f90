@@ -11,7 +11,7 @@ program wsloop_dynamic
 !CHECK:  omp.parallel {
 
 !$OMP DO SCHEDULE(monotonic:dynamic)
-!CHECK:     %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned}
+!CHECK:     %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
 !CHECK:     %[[WS_LB:.*]] = arith.constant 1 : i32
 !CHECK:     %[[WS_UB:.*]] = arith.constant 9 : i32
 !CHECK:     %[[WS_STEP:.*]] = arith.constant 1 : i32

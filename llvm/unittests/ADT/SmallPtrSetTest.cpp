@@ -243,45 +243,6 @@ TEST(SmallPtrSetTest, SwapTest) {
   EXPECT_TRUE(a.count(&buf[3]));
 }
 
-void checkEraseAndIterators(SmallPtrSetImpl<int*> &S) {
-  int buf[3];
-
-  S.insert(&buf[0]);
-  S.insert(&buf[1]);
-  S.insert(&buf[2]);
-
-  // Iterators must still be valid after erase() calls;
-  auto B = S.begin();
-  auto M = std::next(B);
-  auto E = S.end();
-  EXPECT_TRUE(*B == &buf[0] || *B == &buf[1] || *B == &buf[2]);
-  EXPECT_TRUE(*M == &buf[0] || *M == &buf[1] || *M == &buf[2]);
-  EXPECT_TRUE(*B != *M);
-  int *Removable = *std::next(M);
-  // No iterator points to Removable now.
-  EXPECT_TRUE(Removable == &buf[0] || Removable == &buf[1] ||
-              Removable == &buf[2]);
-  EXPECT_TRUE(Removable != *B && Removable != *M);
-
-  S.erase(Removable);
-
-  // B,M,E iterators should still be valid
-  EXPECT_EQ(B, S.begin());
-  EXPECT_EQ(M, std::next(B));
-  EXPECT_EQ(E, S.end());
-  EXPECT_EQ(std::next(M), E);
-}
-
-TEST(SmallPtrSetTest, EraseTest) {
-  // Test when set stays small.
-  SmallPtrSet<int *, 8> B;
-  checkEraseAndIterators(B);
-
-  // Test when set grows big.
-  SmallPtrSet<int *, 2> A;
-  checkEraseAndIterators(A);
-}
-
 // Verify that dereferencing and iteration work.
 TEST(SmallPtrSetTest, dereferenceAndIterate) {
   int Ints[] = {0, 1, 2, 3, 4, 5, 6, 7};
@@ -408,4 +369,42 @@ TEST(SmallPtrSetTest, InsertIterator) {
   // Ensure that all of the values were copied into the set.
   for (const auto *Ptr : Buf)
     EXPECT_TRUE(Set.contains(Ptr));
+}
+
+TEST(SmallPtrSetTest, RemoveIf) {
+  SmallPtrSet<int *, 5> Set;
+  int Vals[6] = {0, 1, 2, 3, 4, 5};
+
+  // Stay in small regime.
+  Set.insert(&Vals[0]);
+  Set.insert(&Vals[1]);
+  Set.insert(&Vals[2]);
+  Set.insert(&Vals[3]);
+  Set.erase(&Vals[0]); // Leave a tombstone.
+
+  // Remove odd elements.
+  bool Removed = Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
+  // We should only have element 2 left now.
+  EXPECT_TRUE(Removed);
+  EXPECT_EQ(Set.size(), 1u);
+  EXPECT_TRUE(Set.contains(&Vals[2]));
+
+  // Switch to big regime.
+  Set.insert(&Vals[0]);
+  Set.insert(&Vals[1]);
+  Set.insert(&Vals[3]);
+  Set.insert(&Vals[4]);
+  Set.insert(&Vals[5]);
+  Set.erase(&Vals[0]); // Leave a tombstone.
+
+  // Remove odd elements.
+  Removed = Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
+  // We should only have elements 2 and 4 left now.
+  EXPECT_TRUE(Removed);
+  EXPECT_EQ(Set.size(), 2u);
+  EXPECT_TRUE(Set.contains(&Vals[2]));
+  EXPECT_TRUE(Set.contains(&Vals[4]));
+
+  Removed = Set.remove_if([](int *Ptr) { return false; });
+  EXPECT_FALSE(Removed);
 }

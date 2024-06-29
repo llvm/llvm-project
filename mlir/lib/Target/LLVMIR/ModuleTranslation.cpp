@@ -64,6 +64,8 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
 namespace {
@@ -632,8 +634,43 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
-      SmallVector<llvm::Constant *, 8> constants(numElements, child);
-      return llvm::ConstantArray::get(arrayType, constants);
+      if (child->isZeroValue()) {
+        return llvm::ConstantAggregateZero::get(arrayType);
+      } else {
+        if (llvm::ConstantDataSequential::isElementTypeCompatible(
+                elementType)) {
+          // TODO: Handle all compatible types. This code only handles integer.
+          if (llvm::IntegerType *iTy =
+                  dyn_cast<llvm::IntegerType>(elementType)) {
+            if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
+              if (ci->getBitWidth() == 8) {
+                SmallVector<int8_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+              if (ci->getBitWidth() == 16) {
+                SmallVector<int16_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+              if (ci->getBitWidth() == 32) {
+                SmallVector<int32_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+              if (ci->getBitWidth() == 64) {
+                SmallVector<int64_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+            }
+          }
+        }
+        // std::vector is used here to accomodate large number of elements that
+        // exceed SmallVector capacity.
+        std::vector<llvm::Constant *> constants(numElements, child);
+        return llvm::ConstantArray::get(arrayType, constants);
+      }
     }
   }
 
@@ -1355,10 +1392,10 @@ LogicalResult ModuleTranslation::convertDialectAttributes(
   return success();
 }
 
-/// Converts the function attributes from LLVMFuncOp and attaches them to the
-/// llvm::Function.
-static void convertFunctionAttributes(LLVMFuncOp func,
-                                      llvm::Function *llvmFunc) {
+/// Converts memory effect attributes from `func` and attaches them to
+/// `llvmFunc`.
+static void convertFunctionMemoryAttributes(LLVMFuncOp func,
+                                            llvm::Function *llvmFunc) {
   if (!func.getMemory())
     return;
 
@@ -1375,6 +1412,18 @@ static void convertFunctionAttributes(LLVMFuncOp func,
       llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                           convertModRefInfoToLLVM(memEffects.getOther()));
   llvmFunc->setMemoryEffects(newMemEffects);
+}
+
+/// Converts function attributes from `func` and attaches them to `llvmFunc`.
+static void convertFunctionAttributes(LLVMFuncOp func,
+                                      llvm::Function *llvmFunc) {
+  if (func.getNoInlineAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoInline);
+  if (func.getAlwaysInlineAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (func.getOptimizeNoneAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
 FailureOr<llvm::AttrBuilder>
@@ -1754,6 +1803,9 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                   StringRef name) {
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
+  // ModuleTranslation can currently only construct modules in the old debug
+  // info format, so set the flag accordingly.
+  llvmModule->setNewDbgInfoFormatFlag(false);
   if (auto dataLayoutAttr =
           m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
@@ -1783,7 +1835,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
 
 std::unique_ptr<llvm::Module>
 mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
-                              StringRef name) {
+                              StringRef name, bool disableVerification) {
   if (!satisfiesLLVMModule(module)) {
     module->emitOpError("can not be translated to an LLVMIR module");
     return nullptr;
@@ -1832,7 +1884,13 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertFunctions()))
     return nullptr;
 
-  if (llvm::verifyModule(*translator.llvmModule, &llvm::errs()))
+  // Once we've finished constructing elements in the module, we should convert
+  // it to use the debug info format desired by LLVM.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html
+  translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+
+  if (!disableVerification &&
+      llvm::verifyModule(*translator.llvmModule, &llvm::errs()))
     return nullptr;
 
   return std::move(translator.llvmModule);

@@ -76,7 +76,7 @@ define i32 @v_known_signbits_smed3(i16 %a, i16 %b) {
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_bfe_i32 v1, v1, 0, 16
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffc0
+; SI-GISEL-NEXT:    v_not_b32_e32 v2, 63
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x80
 ; SI-GISEL-NEXT:    v_med3_i32 v1, v1, v2, v3
 ; SI-GISEL-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
@@ -84,7 +84,7 @@ define i32 @v_known_signbits_smed3(i16 %a, i16 %b) {
 ; SI-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; SI-GISEL-NEXT:    v_cvt_f32_u32_e32 v3, v1
 ; SI-GISEL-NEXT:    v_sub_i32_e32 v5, vcc, 0, v1
-; SI-GISEL-NEXT:    v_mov_b32_e32 v4, 0xffffffe0
+; SI-GISEL-NEXT:    v_not_b32_e32 v4, 31
 ; SI-GISEL-NEXT:    v_rcp_iflag_f32_e32 v3, v3
 ; SI-GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; SI-GISEL-NEXT:    v_med3_i32 v0, v0, v4, 64

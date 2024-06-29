@@ -203,7 +203,6 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__format/enable_insertable.h>
 #include <__iterator/distance.h>
@@ -466,10 +465,10 @@ public:
 
 template <class _Tp, class _Alloc>
 class __list_imp {
-  __list_imp(const __list_imp&);
-  __list_imp& operator=(const __list_imp&);
-
 public:
+  __list_imp(const __list_imp&) = delete;
+  __list_imp& operator=(const __list_imp&) = delete;
+
   typedef _Alloc allocator_type;
   typedef allocator_traits<allocator_type> __alloc_traits;
   typedef typename __alloc_traits::size_type size_type;
@@ -494,9 +493,8 @@ protected:
 
   typedef __rebind_alloc<__alloc_traits, __node_base> __node_base_allocator;
   typedef typename allocator_traits<__node_base_allocator>::pointer __node_base_pointer;
-  static_assert((!is_same<allocator_type, __node_allocator>::value),
-                "internal allocator type must differ from user-specified "
-                "type; otherwise overload resolution breaks");
+  static_assert(!is_same<allocator_type, __node_allocator>::value,
+                "internal allocator type must differ from user-specified type; otherwise overload resolution breaks");
 
   __node_base __end_;
   __compressed_pair<size_type, __node_allocator> __size_alloc_;
@@ -534,7 +532,7 @@ protected:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __list_imp& __c) {
@@ -640,7 +638,7 @@ void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
@@ -675,7 +673,8 @@ class _LIBCPP_TEMPLATE_VIS list : private __list_imp<_Tp, _Alloc> {
 public:
   typedef _Tp value_type;
   typedef _Alloc allocator_type;
-  static_assert((is_same<value_type, typename allocator_type::value_type>::value),
+  static_assert(__check_valid_allocator<allocator_type>::value);
+  static_assert(is_same<value_type, typename allocator_type::value_type>::value,
                 "Allocator::value_type must be same type as value_type");
   typedef value_type& reference;
   typedef const value_type& const_reference;
@@ -692,10 +691,6 @@ public:
 #else
   typedef void __remove_return_type;
 #endif
-
-  static_assert(is_same<allocator_type, __rebind_alloc<allocator_traits<allocator_type>, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
 
   _LIBCPP_HIDE_FROM_ABI list() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value) {}
   _LIBCPP_HIDE_FROM_ABI explicit list(const allocator_type& __a) : base(__a) {}
@@ -862,8 +857,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT
 #else
-      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value ||
-                 __is_nothrow_swappable<__node_allocator>::value)
+      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
   {
     base::swap(__c);
@@ -1055,7 +1049,7 @@ list<_Tp, _Alloc>::list(initializer_list<value_type> __il) {
 }
 
 template <class _Tp, class _Alloc>
-inline list<_Tp, _Alloc>::list(list&& __c) _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value)
+inline list<_Tp, _Alloc>::list(list&& __c) noexcept(is_nothrow_move_constructible<__node_allocator>::value)
     : base(std::move(__c.__node_alloc())) {
   splice(end(), __c);
 }
@@ -1071,9 +1065,9 @@ inline list<_Tp, _Alloc>::list(list&& __c, const __type_identity_t<allocator_typ
 }
 
 template <class _Tp, class _Alloc>
-inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c)
-    _NOEXCEPT_(__node_alloc_traits::propagate_on_container_move_assignment::value&&
-                   is_nothrow_move_assignable<__node_allocator>::value) {
+inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c) noexcept(
+    __node_alloc_traits::propagate_on_container_move_assignment::value &&
+    is_nothrow_move_assignable<__node_allocator>::value) {
   __move_assign(__c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1088,8 +1082,8 @@ void list<_Tp, _Alloc>::__move_assign(list& __c, false_type) {
 }
 
 template <class _Tp, class _Alloc>
-void list<_Tp, _Alloc>::__move_assign(list& __c, true_type)
-    _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value) {
+void list<_Tp, _Alloc>::__move_assign(list& __c,
+                                      true_type) noexcept(is_nothrow_move_assignable<__node_allocator>::value) {
   clear();
   base::__move_assign_alloc(__c);
   splice(end(), __c);

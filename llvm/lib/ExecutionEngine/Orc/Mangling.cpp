@@ -35,7 +35,7 @@ void IRSymbolMapper::add(ExecutionSession &ES, const ManglingOptions &MO,
   if (GVs.empty())
     return;
 
-  MangleAndInterner Mangle(ES, GVs[0]->getParent()->getDataLayout());
+  MangleAndInterner Mangle(ES, GVs[0]->getDataLayout());
   for (auto *G : GVs) {
     assert(G && "GVs cannot contain null elements");
     if (!G->hasName() || G->isDeclaration() || G->hasLocalLinkage() ||

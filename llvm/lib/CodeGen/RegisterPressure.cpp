@@ -1288,7 +1288,7 @@ void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
   if (RequireIntervals)
     SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
 
-  // Account for register pressure similar to RegPressureTracker::recede().
+  // Account for register pressure similar to RegPressureTracker::advance().
   RegisterOperands RegOpers;
   RegOpers.collect(*MI, *TRI, *MRI, TrackLaneMasks, /*IgnoreDead=*/false);
   if (TrackLaneMasks)

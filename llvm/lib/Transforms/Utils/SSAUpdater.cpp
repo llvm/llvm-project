@@ -167,7 +167,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
   if (Value *V =
-          simplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
+          simplifyInstruction(InsertedPHI, BB->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }

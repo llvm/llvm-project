@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -47,7 +47,8 @@ void mlir::affine::getTripCountMapAndOperands(
     loopSpan = ub - lb;
     if (loopSpan < 0)
       loopSpan = 0;
-    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
+    *tripCountMap = AffineMap::getConstantMap(
+        llvm::divideCeilSigned(loopSpan, step), context);
     tripCountOperands->clear();
     return;
   }

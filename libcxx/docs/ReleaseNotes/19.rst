@@ -43,7 +43,6 @@ Implemented Papers
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
 - P2867R2 - Remove Deprecated ``strstream``\s From C++26
-- P2869R4 - Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
 - P2944R3 - Comparisons for ``reference_wrapper`` (comparison operators for ``reference_wrapper`` only)
@@ -59,6 +58,7 @@ Improvements and New Features
 -----------------------------
 
 - The performance of growing ``std::vector`` has been improved for trivially relocatable types.
+- A lot of types are considered trivially relocatable now, including ``vector`` and ``string``.
 - The performance of ``ranges::fill`` and ``ranges::fill_n`` has been improved for ``vector<bool>::iterator``\s,
   resulting in a performance increase of up to 1400x.
 - The ``std::mismatch`` algorithm has been optimized for integral types, which can lead up to 40x performance
@@ -68,9 +68,6 @@ Improvements and New Features
   up to 100x.
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM`` macro has been added to make the declarations in ``<strstream>`` available.
-
-- The ``_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS`` macro has been added to make the declarations in ``<memory>``
-  available.
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT`` macro has been added to make the declarations in ``<locale>``
   available.
@@ -123,6 +120,15 @@ Deprecations and Removals
 
 - The ``_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS`` macro has been removed and is not honored anymore. Additional
   warnings provided by libc++ as a matter of QoI will now be provided unconditionally.
+
+- libc++ no longer supports ``std::allocator<const T>`` and containers of ``const``-qualified element type, such
+  as ``std::vector<const T>`` and ``std::list<const T>``. This used to be supported as an undocumented extension.
+  If you were using ``std::vector<const T>``, replace it with ``std::vector<T>`` instead. The
+  ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro can be defined to temporarily re-enable this extension as
+  folks transition their code. This macro will be honored for one released and ignored starting in LLVM 20.
+  To assist with the clean-up process, consider running your code through Clang Tidy, with
+  `std-allocator-const <https://clang.llvm.org/extra/clang-tidy/checks/portability/std-allocator-const.html>`
+  enabled.
 
 
 Upcoming Deprecations and Removals

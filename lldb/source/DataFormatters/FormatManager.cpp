@@ -9,6 +9,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -176,8 +177,14 @@ void FormatManager::GetPossibleMatches(
     FormattersMatchCandidate::Flags current_flags, bool root_level) {
   compiler_type = compiler_type.GetTypeForFormatters();
   ConstString type_name(compiler_type.GetTypeName());
+  // A ValueObject that couldn't be made correctly won't necessarily have a
+  // target.  We aren't going to find a formatter in this case anyway, so we
+  // should just exit.
+  TargetSP target_sp = valobj.GetTargetSP();
+  if (!target_sp)
+    return;
   ScriptInterpreter *script_interpreter =
-      valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter();
+      target_sp->GetDebugger().GetScriptInterpreter();
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
@@ -442,16 +449,19 @@ lldb::Format FormatManager::GetSingleItemFormat(lldb::Format vector_format) {
 }
 
 bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
+  TargetSP target_sp = valobj.GetTargetSP();
   // if settings say no oneline whatsoever
-  if (valobj.GetTargetSP().get() &&
-      !valobj.GetTargetSP()->GetDebugger().GetAutoOneLineSummaries())
+  if (target_sp && !target_sp->GetDebugger().GetAutoOneLineSummaries())
     return false; // then don't oneline
 
   // if this object has a summary, then ask the summary
   if (valobj.GetSummaryFormat().get() != nullptr)
     return valobj.GetSummaryFormat()->IsOneLiner();
 
-  auto num_children = valobj.GetNumChildren();
+  const size_t max_num_children =
+      (target_sp ? *target_sp : Target::GetGlobalProperties())
+          .GetMaximumNumberOfChildrenToDisplay();
+  auto num_children = valobj.GetNumChildren(max_num_children);
   if (!num_children) {
     llvm::consumeError(num_children.takeError());
     return true;

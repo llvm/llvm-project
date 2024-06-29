@@ -205,7 +205,7 @@ bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
   SE = SE_;
   TLI = TLI_;
   TTI = TTI_;
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   bool Changed = false, ChangedInThisIteration;
   do {

@@ -70,7 +70,8 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 constexpr auto primary{instrumented("primary"_en_US,
     first(construct<Expr>(indirect(Parser<CharLiteralConstantSubstring>{})),
         construct<Expr>(literalConstant),
-        construct<Expr>(construct<Expr::Parentheses>(parenthesized(expr))),
+        construct<Expr>(construct<Expr::Parentheses>("(" >>
+            expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),
         construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
         construct<Expr>(designator / !"("_tok / !"%"_tok),
         construct<Expr>(indirect(Parser<SubstringInquiry>{})), // %LEN or %KIND
@@ -87,14 +88,8 @@ constexpr auto primary{instrumented("primary"_en_US,
 // R1002 level-1-expr -> [defined-unary-op] primary
 // TODO: Reasonable extension: permit multiple defined-unary-ops
 constexpr auto level1Expr{sourced(
-    first(primary, // must come before define op to resolve .TRUE._8 ambiguity
-        construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)),
-        extension<LanguageFeature::SignedPrimary>(
-            "nonstandard usage: signed primary"_port_en_US,
-            construct<Expr>(construct<Expr::UnaryPlus>("+" >> primary))),
-        extension<LanguageFeature::SignedPrimary>(
-            "nonstandard usage: signed primary"_port_en_US,
-            construct<Expr>(construct<Expr::Negate>("-" >> primary)))))};
+    primary || // must come before define op to resolve .TRUE._8 ambiguity
+    construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)))};
 
 // R1004 mult-operand -> level-1-expr [power-op mult-operand]
 // R1007 power-op -> **
@@ -105,7 +100,19 @@ struct MultOperand {
   static inline std::optional<Expr> Parse(ParseState &);
 };
 
-static constexpr auto multOperand{sourced(MultOperand{})};
+// Extension: allow + or - before a mult-operand
+// Such a unary operand has lower precedence than exponentiation,
+// so -x**2 is -(x**2), not (-x)**2; this matches all other
+// compilers with this extension.
+static constexpr auto standardMultOperand{sourced(MultOperand{})};
+static constexpr auto multOperand{standardMultOperand ||
+    extension<LanguageFeature::SignedMultOperand>(
+        "nonstandard usage: signed mult-operand"_port_en_US,
+        construct<Expr>(
+            construct<Expr::UnaryPlus>("+" >> standardMultOperand))) ||
+    extension<LanguageFeature::SignedMultOperand>(
+        "nonstandard usage: signed mult-operand"_port_en_US,
+        construct<Expr>(construct<Expr::Negate>("-" >> standardMultOperand)))};
 
 inline std::optional<Expr> MultOperand::Parse(ParseState &state) {
   std::optional<Expr> result{level1Expr.Parse(state)};

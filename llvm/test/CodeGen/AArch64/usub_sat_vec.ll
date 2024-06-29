@@ -3,7 +3,6 @@
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v12i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i4
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v2i128

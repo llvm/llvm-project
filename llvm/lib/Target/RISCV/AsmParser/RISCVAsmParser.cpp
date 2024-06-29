@@ -1245,7 +1245,7 @@ public:
   }
 
   void addRegRegOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
+    assert(N == 2 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(RegReg.Reg1));
     Inst.addOperand(MCOperand::createReg(RegReg.Reg2));
   }
@@ -2155,6 +2155,16 @@ bool RISCVAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
       break;
     if (!RISCVVType::isValidLMUL(Lmul, Fractional))
       break;
+
+    if (Fractional) {
+      unsigned ELEN = STI->hasFeature(RISCV::FeatureStdExtZve64x) ? 64 : 32;
+      unsigned MinLMUL = ELEN / 8;
+      if (Lmul > MinLMUL)
+        Warning(Tok.getLoc(),
+                "use of vtype encodings with LMUL < SEWMIN/ELEN == mf" +
+                    Twine(MinLMUL) + " is reserved");
+    }
+
     State = VTypeState_TailPolicy;
     return false;
   }
@@ -2194,6 +2204,7 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   bool MaskAgnostic = false;
 
   VTypeState State = VTypeState_SEW;
+  SMLoc SEWLoc = S;
 
   if (parseVTypeToken(getTok(), State, Sew, Lmul, Fractional, TailAgnostic,
                       MaskAgnostic))
@@ -2211,6 +2222,16 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
   if (getLexer().is(AsmToken::EndOfStatement) && State == VTypeState_Done) {
     RISCVII::VLMUL VLMUL = RISCVVType::encodeLMUL(Lmul, Fractional);
+    if (Fractional) {
+      unsigned ELEN = STI->hasFeature(RISCV::FeatureStdExtZve64x) ? 64 : 32;
+      unsigned MaxSEW = ELEN / Lmul;
+      // If MaxSEW < 8, we should have printed warning about reserved LMUL.
+      if (MaxSEW >= 8 && Sew > MaxSEW)
+        Warning(SEWLoc,
+                "use of vtype encodings with SEW > " + Twine(MaxSEW) +
+                    " and LMUL == mf" + Twine(Lmul) +
+                    " may not be compatible with all RVV implementations");
+    }
 
     unsigned VTypeI =
         RISCVVType::encodeVTYPE(VLMUL, Sew, TailAgnostic, MaskAgnostic);

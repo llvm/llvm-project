@@ -7,7 +7,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[H:%.*]]) !dbg [[DBG4:![0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i64 0, metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i64 0, [[META11:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]], !dbg [[DBG21:![0-9]+]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]], !dbg [[DBG21]]
@@ -43,7 +43,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]], !dbg [[DBG21]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC13:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i64 [[I_023]], metadata [[META11]], metadata !DIExpression()), !dbg [[DBG20]]
+; CHECK-NEXT:      #dbg_value(i64 [[I_023]], [[META11]], !DIExpression(), [[META20]])
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER:%.*]], !dbg [[DBG26]]
 ; CHECK:       for.cond5.preheader:
 ; CHECK-NEXT:    [[L_022:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INC10:%.*]], [[FOR_COND5_PREHEADER]] ]
@@ -60,7 +60,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_COND5_PREHEADER]], !dbg [[DBG26]]
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    [[INC13]] = add nuw nsw i64 [[I_023]], 1, !dbg [[DBG27]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i64 [[INC13]], metadata [[META11]], metadata !DIExpression()), !dbg [[DBG20]]
+; CHECK-NEXT:      #dbg_value(i64 [[INC13]], [[META11]], !DIExpression(), [[META20]])
 ; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG28]]
 ; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label [[EXIT]], label [[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       exit:
@@ -157,7 +157,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CHECK: [[META17]] = !DILocalVariable(name: "j", scope: [[META18:![0-9]+]], file: [[META1]], line: 12, type: [[META13]])
 ; CHECK: [[META18]] = distinct !DILexicalBlock(scope: [[META19:![0-9]+]], file: [[META1]], line: 12, column: 7)
 ; CHECK: [[META19]] = distinct !DILexicalBlock(scope: [[META15]], file: [[META1]], line: 11, column: 5)
-; CHECK: [[DBG20]] = !DILocation(line: 0, scope: [[META12]])
+; CHECK: [[META20]] = !DILocation(line: 0, scope: [[META12]])
 ; CHECK: [[DBG21]] = !DILocation(line: 10, column: 3, scope: [[META12]])
 ; CHECK: [[DBG22]] = !DILocation(line: 13, column: 11, scope: [[META23:![0-9]+]])
 ; CHECK: [[META23]] = distinct !DILexicalBlock(scope: [[META18]], file: [[META1]], line: 12, column: 7)

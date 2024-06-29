@@ -1,0 +1,95 @@
+name: Post-Commit Static Analyzer
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'clang/**'
+      - 'llvm/**'
+      - '.github/workflows/ci-post-commit-analyzer.yml'
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+    paths:
+      - '.github/workflows/ci-post-commit-analyzer.yml'
+      - '.github/workflows/ci-post-commit-analyzer-run.py'
+  schedule:
+    - cron: '30 0 * * *'
+
+concurrency:
+  group: >-
+    llvm-project-${{ github.workflow }}-${{ github.event_name == 'pull_request' &&
+      ( github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  post-commit-analyzer:
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.action != 'closed'
+    runs-on: ubuntu-22.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-22.04:latest'
+    env:
+      LLVM_VERSION: 18
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          # A full build of llvm, clang, lld, and lldb takes about 250MB
+          # of ccache space. There's not much reason to have more than this,
+          # because we usually won't need to save cache entries from older
+          # builds.  Also, there is an overall 10GB cache limit, and each
+          # run creates a new cache entry so we want to ensure that we have
+          # enough cache space for all the tests to run at once and still
+          # fit under the 10 GB limit.
+          # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
+          max-size: 2G
+          key: post-commit-analyzer
+          variant: sccache
+
+      - name: Configure
+        run: |
+              cmake -B build -S llvm -G Ninja \
+                  -DLLVM_ENABLE_ASSERTIONS=ON \
+                  -DLLVM_ENABLE_PROJECTS=clang \
+                  -DLLVM_BUILD_LLVM_DYLIB=ON \
+                  -DLLVM_LINK_LLVM_DYLIB=ON \
+                  -DCMAKE_CXX_COMPILER=clang++ \
+                  -DCMAKE_C_COMPILER=clang \
+                  -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+                  -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+                  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                  -DLLVM_INCLUDE_TESTS=OFF \
+                  -DCLANG_INCLUDE_TESTS=OFF \
+                  -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          # FIXME: We need to build all the generated header files in order to be able to run
+          # the analyzer on every file.  Building libLLVM and libclang is probably overkill for
+          # this, but it's better than building every target.
+          ninja -v -C build libLLVM.so libclang.so
+
+          # Run the analyzer.
+          python3 .github/workflows/ci-post-commit-analyzer-run.py build/compile_commands.json
+
+          scan-build --generate-index-only build/analyzer-results
+
+      - name: Upload Results
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always()
+        with:
+          name: analyzer-results
+          path: 'build/analyzer-results/*'
+

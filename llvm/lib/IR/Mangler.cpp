@@ -128,7 +128,7 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
       PrefixTy = Private;
   }
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   if (!GV->hasName()) {
     // Get the ID for the global, assigning a new one if we haven't got one
     // already.
@@ -227,7 +227,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       raw_string_ostream FlagOS(Flag);
       Mangler.getNameWithPrefix(FlagOS, GV, false);
       FlagOS.flush();
-      if (Flag[0] == GV->getParent()->getDataLayout().getGlobalPrefix())
+      if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
         OS << Flag.substr(1);
       else
         OS << Flag;
@@ -266,7 +266,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
     raw_string_ostream FlagOS(Flag);
     Mangler.getNameWithPrefix(FlagOS, GV, false);
     FlagOS.flush();
-    if (Flag[0] == GV->getParent()->getDataLayout().getGlobalPrefix())
+    if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
       OS << Flag.substr(1);
     else
       OS << Flag;

@@ -32,14 +32,15 @@ public:
                ProcessSP(ProcessAttachInfo &, Debugger &, Target *, Status &));
   MOCK_METHOD0(CalculateTrapHandlerSymbolNames, void());
 
-  MOCK_METHOD2(ResolveRemoteExecutable,
+  MOCK_METHOD2(ResolveExecutable,
                std::pair<Status, ModuleSP>(const ModuleSpec &,
                                            const FileSpecList *));
-  Status ResolveRemoteExecutable(
-      const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
-      const FileSpecList *module_search_paths_ptr) /*override*/
+  Status
+  ResolveExecutable(const ModuleSpec &module_spec,
+                    lldb::ModuleSP &exe_module_sp,
+                    const FileSpecList *module_search_paths_ptr) /*override*/
   { // NOLINT(modernize-use-override)
-    auto pair = ResolveRemoteExecutable(module_spec, module_search_paths_ptr);
+    auto pair = ResolveExecutable(module_spec, module_search_paths_ptr);
     exe_module_sp = pair.second;
     return pair.first;
   }
@@ -79,7 +80,7 @@ TEST_F(RemoteAwarePlatformTest, TestResolveExecutabelOnClientByPlatform) {
   static const ArchSpec process_host_arch;
   EXPECT_CALL(platform, GetSupportedArchitectures(process_host_arch))
       .WillRepeatedly(Return(std::vector<ArchSpec>()));
-  EXPECT_CALL(platform, ResolveRemoteExecutable(_, _))
+  EXPECT_CALL(platform, ResolveExecutable(_, _))
       .WillRepeatedly(Return(std::make_pair(Status(), expected_executable)));
 
   platform.SetRemotePlatform(std::make_shared<TargetPlatformTester>(false));

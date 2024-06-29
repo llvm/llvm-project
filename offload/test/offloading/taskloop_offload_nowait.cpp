@@ -1,7 +1,6 @@
 // RUN: %libomptarget-compilexx-and-run-generic
 
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// REQUIRES: gpu
 
 #include <cmath>
 #include <cstdlib>

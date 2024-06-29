@@ -78,7 +78,9 @@ public:
       return success();
     }
 
-    return failure();
+    // In cases of all other types, op requires the same element
+    // type for all operands and result.
+    return impl::verifySameOperandsAndResultElementType(op);
   }
 };
 

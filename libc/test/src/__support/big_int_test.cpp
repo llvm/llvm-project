@@ -205,6 +205,7 @@ TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
   }
 }
 
+using LL_UInt16 = UInt<16>;
 using LL_UInt64 = UInt<64>;
 // We want to test UInt<128> explicitly. So, for
 // convenience, we use a sugar which does not conflict with the UInt128 type
@@ -257,6 +258,19 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
   }
 }
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat16) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt16>::value);
+  static_assert(sizeof(LL_UInt16) == sizeof(float16));
+  const float16 array[] = {0, 0.1, 1};
+  for (float16 value : array) {
+    LL_UInt16 back = cpp::bit_cast<LL_UInt16>(value);
+    float16 forth = cpp::bit_cast<float16>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 TEST(LlvmLibcUIntClassTest, BasicInit) {
   LL_UInt128 half_val(12345);

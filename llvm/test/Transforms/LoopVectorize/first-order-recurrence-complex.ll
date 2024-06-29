@@ -385,12 +385,10 @@ define void @instruction_with_2_FOR_operands(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT3]], i32 3
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT4:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[BB74:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 1.000000e+00, [[BB:%.*]] ], [ [[VECTOR_RECUR_EXTRACT4]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[BB]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 1.000000e+00, [[BB:%.*]] ], [ [[TMP2]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[BB]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    br label [[BB13:%.*]]
 ; CHECK:       bb13:
@@ -463,12 +461,10 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses(ptr noalias
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT3]], i32 3
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT4:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 0.000000e+00, [[BB:%.*]] ], [ [[VECTOR_RECUR_EXTRACT4]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[BB]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 0.000000e+00, [[BB:%.*]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[BB]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -556,12 +552,10 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses_chain(ptr n
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT3]], i32 3
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT4:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 0.000000e+00, [[BB:%.*]] ], [ [[VECTOR_RECUR_EXTRACT4]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[BB]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 0.000000e+00, [[BB:%.*]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[BB]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

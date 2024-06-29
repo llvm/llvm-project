@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true  -polly-process-unprofitable -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true  -polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ;    void fence(void);
 ;

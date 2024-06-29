@@ -24,16 +24,20 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::tensor;
+
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
+using llvm::mod;
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
@@ -131,40 +135,40 @@ bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
 static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
                                            ArrayRef<OpFoldResult> mixedSizes) {
   llvm::SmallBitVector droppedDims(mixedSizes.size());
-  int64_t shapePos = 0;
+  int64_t shapePos = reducedShape.size() - 1;
 
-  for (const auto &size : enumerate(mixedSizes)) {
+  for (const auto &size : enumerate(llvm::reverse(mixedSizes))) {
+    size_t idx = mixedSizes.size() - size.index() - 1;
     // Rank-reduced dims must have a static unit dimension.
     bool isStaticUnitSize =
         size.value().is<Attribute>() &&
         llvm::cast<IntegerAttr>(size.value().get<Attribute>()).getInt() == 1;
 
-    if (shapePos == static_cast<int64_t>(reducedShape.size())) {
+    if (shapePos < 0) {
       // There are no more dims in the reduced shape. All remaining sizes must
       // be rank-reduced dims.
       assert(isStaticUnitSize && "expected unit dim");
-      droppedDims.set(size.index());
+      droppedDims.set(idx);
       continue;
     }
 
     // Dim is preserved if the size is not a static 1.
     if (!isStaticUnitSize) {
-      ++shapePos;
+      --shapePos;
       continue;
     }
 
     // Dim is preserved if the reduced shape dim is also 1.
     if (reducedShape[shapePos] == 1) {
-      ++shapePos;
+      --shapePos;
       continue;
     }
 
     // Otherwise: Dim is dropped.
-    droppedDims.set(size.index());
+    droppedDims.set(idx);
   }
 
-  assert(shapePos == static_cast<int64_t>(reducedShape.size()) &&
-         "dimension mismatch");
+  assert(shapePos < 0 && "dimension mismatch");
   return droppedDims;
 }
 
@@ -3973,8 +3977,8 @@ static SmallVector<int64_t> getPackOpResultTypeShape(
       resultShape[tiledDim.value()] = ShapedType::kDynamic;
       continue;
     }
-    resultShape[tiledDim.value()] = ceilDiv(resultShape[tiledDim.value()],
-                                            innerTileSizes[tiledDim.index()]);
+    resultShape[tiledDim.value()] = divideCeilSigned(
+        resultShape[tiledDim.value()], innerTileSizes[tiledDim.index()]);
   }
 
   // Swap tile loops if outer_dims_perm is available.
@@ -4531,17 +4535,18 @@ struct FoldTensorCastProducerOp
     if (!hasTensorCastOperand)
       return failure();
 
-    SmallVector<Type, 4> newResultTypes;
-    newResultTypes.reserve(op->getNumResults());
+    SmallVector<Type, 4> newResultTypes(op->getResultTypes());
     SmallVector<Value, 4> newOperands;
     newOperands.reserve(op->getNumOperands());
+    // Assumes that the result has dpsInits followed by nonDpsInits.
+    int64_t dpsInitIdx = 0;
     for (OpOperand &opOperand : op->getOpOperands()) {
       auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
       if (op.isDpsInit(&opOperand) &&
           !llvm::isa<MemRefType>(newOperands.back().getType()))
-        newResultTypes.push_back(newOperands.back().getType());
+        newResultTypes[dpsInitIdx++] = newOperands.back().getType();
     }
 
     // Clone op.

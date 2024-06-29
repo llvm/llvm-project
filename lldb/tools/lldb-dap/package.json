@@ -348,6 +348,17 @@
                 "type": "string",
                 "description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
               },
+              "gdb-remote-port": {
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "description": "TCP/IP port to attach to. Specifying both pid and port is an error."
+              },
+              "gdb-remote-hostname": {
+                "type": "string",
+                "description": "The hostname to connect to a remote system. The default hostname being used localhost."
+              },
               "enableAutoVariableSummaries": {
                 "type": "boolean",
                 "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",

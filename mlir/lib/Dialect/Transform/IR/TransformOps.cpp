@@ -211,8 +211,8 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::AlternativesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getOperands(), effects);
-  producesHandle(getResults(), effects);
+  consumesHandle(getOperation()->getOpOperands(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   for (Region *region : getRegions()) {
     if (!region->empty())
       producesHandle(region->front().getArguments(), effects);
@@ -269,8 +269,8 @@ transform::AnnotateOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::AnnotateOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
-  onlyReadsHandle(getParam(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getParamMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -296,7 +296,7 @@ transform::ApplyCommonSubexpressionEliminationOp::applyToOne(
 
 void transform::ApplyCommonSubexpressionEliminationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -361,7 +361,7 @@ DiagnosedSilenceableFailure transform::ApplyDeadCodeEliminationOp::applyToOne(
 
 void transform::ApplyDeadCodeEliminationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -469,7 +469,7 @@ LogicalResult transform::ApplyPatternsOp::verify() {
 
 void transform::ApplyPatternsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -674,9 +674,9 @@ LogicalResult transform::ApplyConversionPatternsOp::verify() {
 void transform::ApplyConversionPatternsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   if (!getPreserveHandles()) {
-    transform::consumesHandle(getTarget(), effects);
+    transform::consumesHandle(getTargetMutable(), effects);
   } else {
-    transform::onlyReadsHandle(getTarget(), effects);
+    transform::onlyReadsHandle(getTargetMutable(), effects);
   }
   transform::modifiesPayload(effects);
 }
@@ -757,7 +757,7 @@ transform::ApplyLoopInvariantCodeMotionOp::applyToOne(
 
 void transform::ApplyLoopInvariantCodeMotionOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -820,8 +820,8 @@ transform::CastOp::applyToOne(transform::TransformRewriter &rewriter,
 void transform::CastOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsPayload(effects);
-  onlyReadsHandle(getInput(), effects);
-  producesHandle(getOutput(), effects);
+  onlyReadsHandle(getInputMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 }
 
 bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -964,8 +964,8 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::CollectMatchingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getRoot(), effects);
-  producesHandle(getResults(), effects);
+  onlyReadsHandle(getRootMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   onlyReadsPayload(effects);
 }
 
@@ -1159,9 +1159,9 @@ void transform::ForeachMatchOp::getEffects(
     return modifiesPayload(effects);
   }
 
-  consumesHandle(getRoot(), effects);
-  onlyReadsHandle(getForwardedInputs(), effects);
-  producesHandle(getResults(), effects);
+  consumesHandle(getRootMutable(), effects);
+  onlyReadsHandle(getForwardedInputsMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -1391,46 +1391,100 @@ DiagnosedSilenceableFailure
 transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
                             transform::TransformResults &results,
                             transform::TransformState &state) {
-  SmallVector<SmallVector<Operation *>> resultOps(getNumResults(), {});
-  // Store payload ops in a vector because ops may be removed from the mapping
-  // by the TrackingRewriter while the iteration is in progress.
-  SmallVector<Operation *> targets =
-      llvm::to_vector(state.getPayloadOps(getTarget()));
-  for (Operation *op : targets) {
+  // We store the payloads before executing the body as ops may be removed from
+  // the mapping by the TrackingRewriter while iteration is in progress.
+  SmallVector<SmallVector<MappedValue>> payloads;
+  detail::prepareValueMappings(payloads, getTargets(), state);
+  size_t numIterations = payloads.empty() ? 0 : payloads.front().size();
+  bool isZipShortest = getZipShortest();
+
+  // In case of `zip_shortest`, set the number of iterations to the
+  // smallest payload in the targets.
+  if (isZipShortest) {
+    numIterations =
+        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &A,
+                                        const SmallVector<MappedValue> &B) {
+          return A.size() < B.size();
+        })->size();
+
+    for (size_t argIdx = 0; argIdx < payloads.size(); argIdx++)
+      payloads[argIdx].resize(numIterations);
+  }
+
+  // As we will be "zipping" over them, check all payloads have the same size.
+  // `zip_shortest` adjusts all payloads to the same size, so skip this check
+  // when true.
+  for (size_t argIdx = 1; !isZipShortest && argIdx < payloads.size();
+       argIdx++) {
+    if (payloads[argIdx].size() != numIterations) {
+      return emitSilenceableError()
+             << "prior targets' payload size (" << numIterations
+             << ") differs from payload size (" << payloads[argIdx].size()
+             << ") of target " << getTargets()[argIdx];
+    }
+  }
+
+  // Start iterating, indexing into payloads to obtain the right arguments to
+  // call the body with - each slice of payloads at the same argument index
+  // corresponding to a tuple to use as the body's block arguments.
+  ArrayRef<BlockArgument> blockArguments = getBody().front().getArguments();
+  SmallVector<SmallVector<MappedValue>> zippedResults(getNumResults(), {});
+  for (size_t iterIdx = 0; iterIdx < numIterations; iterIdx++) {
     auto scope = state.make_region_scope(getBody());
-    if (failed(state.mapBlockArguments(getIterationVariable(), {op})))
-      return DiagnosedSilenceableFailure::definiteFailure();
+    // Set up arguments to the region's block.
+    for (auto &&[argIdx, blockArg] : llvm::enumerate(blockArguments)) {
+      MappedValue argument = payloads[argIdx][iterIdx];
+      // Note that each blockArg's handle gets associated with just a single
+      // element from the corresponding target's payload.
+      if (failed(state.mapBlockArgument(blockArg, {argument})))
+        return DiagnosedSilenceableFailure::definiteFailure();
+    }
 
     // Execute loop body.
     for (Operation &transform : getBody().front().without_terminator()) {
       DiagnosedSilenceableFailure result = state.applyTransform(
-          cast<transform::TransformOpInterface>(transform));
+          llvm::cast<transform::TransformOpInterface>(transform));
       if (!result.succeeded())
         return result;
     }
 
-    // Append yielded payload ops to result list (if any).
-    for (unsigned i = 0; i < getNumResults(); ++i) {
-      auto yieldedOps = state.getPayloadOps(getYieldOp().getOperand(i));
-      resultOps[i].append(yieldedOps.begin(), yieldedOps.end());
-    }
+    // Append yielded payloads to corresponding results from prior iterations.
+    OperandRange yieldOperands = getYieldOp().getOperands();
+    for (auto &&[result, yieldOperand, resTuple] :
+         llvm::zip_equal(getResults(), yieldOperands, zippedResults))
+      // NB: each iteration we add any number of ops/vals/params to a result.
+      if (isa<TransformHandleTypeInterface>(result.getType()))
+        llvm::append_range(resTuple, state.getPayloadOps(yieldOperand));
+      else if (isa<TransformValueHandleTypeInterface>(result.getType()))
+        llvm::append_range(resTuple, state.getPayloadValues(yieldOperand));
+      else if (isa<TransformParamTypeInterface>(result.getType()))
+        llvm::append_range(resTuple, state.getParams(yieldOperand));
+      else
+        assert(false && "unhandled handle type");
   }
 
-  for (unsigned i = 0; i < getNumResults(); ++i)
-    results.set(llvm::cast<OpResult>(getResult(i)), resultOps[i]);
+  // Associate the accumulated result payloads to the op's actual results.
+  for (auto &&[result, resPayload] : zip_equal(getResults(), zippedResults))
+    results.setMappedValues(llvm::cast<OpResult>(result), resPayload);
 
   return DiagnosedSilenceableFailure::success();
 }
 
 void transform::ForeachOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  BlockArgument iterVar = getIterationVariable();
-  if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
-        return isHandleConsumed(iterVar, cast<TransformOpInterface>(&op));
-      })) {
-    consumesHandle(getTarget(), effects);
-  } else {
-    onlyReadsHandle(getTarget(), effects);
+  // NB: this `zip` should be `zip_equal` - while this op's verifier catches
+  // arity errors, this method might get called before/in absence of `verify()`.
+  for (auto &&[target, blockArg] :
+       llvm::zip(getTargetsMutable(), getBody().front().getArguments())) {
+    BlockArgument blockArgument = blockArg;
+    if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
+          return isHandleConsumed(blockArgument,
+                                  cast<TransformOpInterface>(&op));
+        })) {
+      consumesHandle(target, effects);
+    } else {
+      onlyReadsHandle(target, effects);
+    }
   }
 
   if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
@@ -1443,8 +1497,7 @@ void transform::ForeachOp::getEffects(
     onlyReadsPayload(effects);
   }
 
-  for (Value result : getResults())
-    producesHandle(result, effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 }
 
 void transform::ForeachOp::getSuccessorRegions(
@@ -1463,8 +1516,8 @@ void transform::ForeachOp::getSuccessorRegions(
 
 OperandRange
 transform::ForeachOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  // The iteration variable op handle is mapped to a subset (one op to be
-  // precise) of the payload ops of the ForeachOp operand.
+  // Each block argument handle is mapped to a subset (one op to be precise)
+  // of the payload of the corresponding `targets` operand of ForeachOp.
   assert(point == getBody() && "unexpected region index");
   return getOperation()->getOperands();
 }
@@ -1474,14 +1527,27 @@ transform::YieldOp transform::ForeachOp::getYieldOp() {
 }
 
 LogicalResult transform::ForeachOp::verify() {
-  auto yieldOp = getYieldOp();
-  if (getNumResults() != yieldOp.getNumOperands())
-    return emitOpError() << "expects the same number of results as the "
-                            "terminator has operands";
-  for (Value v : yieldOp.getOperands())
-    if (!llvm::isa<TransformHandleTypeInterface>(v.getType()))
-      return yieldOp->emitOpError("expects operands to have types implementing "
-                                  "TransformHandleTypeInterface");
+  for (auto [targetOpt, bodyArgOpt] :
+       llvm::zip_longest(getTargets(), getBody().front().getArguments())) {
+    if (!targetOpt || !bodyArgOpt)
+      return emitOpError() << "expects the same number of targets as the body "
+                              "has block arguments";
+    if (targetOpt.value().getType() != bodyArgOpt.value().getType())
+      return emitOpError(
+          "expects co-indexed targets and the body's "
+          "block arguments to have the same op/value/param type");
+  }
+
+  for (auto [resultOpt, yieldOperandOpt] :
+       llvm::zip_longest(getResults(), getYieldOp().getOperands())) {
+    if (!resultOpt || !yieldOperandOpt)
+      return emitOpError() << "expects the same number of results as the "
+                              "yield terminator has operands";
+    if (resultOpt.value().getType() != yieldOperandOpt.value().getType())
+      return emitOpError("expects co-indexed results and yield "
+                         "operands to have the same op/value/param type");
+  }
+
   return success();
 }
 
@@ -1683,8 +1749,8 @@ LogicalResult transform::GetResultOp::verify() {
 
 void transform::GetTypeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getValue(), effects);
-  producesHandle(getResult(), effects);
+  onlyReadsHandle(getValueMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   onlyReadsPayload(effects);
 }
 
@@ -1783,12 +1849,14 @@ void transform::IncludeOp::getEffects(
   modifiesPayload(effects);
 
   // Results are always produced.
-  producesHandle(getResults(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 
   // Adds default effects to operands and results. This will be added if
   // preconditions fail so the trait verifier doesn't complain about missing
   // effects and the real precondition failure is reported later on.
-  auto defaultEffects = [&] { onlyReadsHandle(getOperands(), effects); };
+  auto defaultEffects = [&] {
+    onlyReadsHandle(getOperation()->getOpOperands(), effects);
+  };
 
   // Bail if the callee is unknown. This may run as part of the verification
   // process before we verified the validity of the callee or of this op.
@@ -1809,9 +1877,9 @@ void transform::IncludeOp::getEffects(
 
   for (unsigned i = 0, e = getNumOperands(); i < e; ++i) {
     if (callee.getArgAttr(i, TransformDialect::kArgConsumedAttrName))
-      consumesHandle(getOperand(i), effects);
+      consumesHandle(getOperation()->getOpOperand(i), effects);
     else
-      onlyReadsHandle(getOperand(i), effects);
+      onlyReadsHandle(getOperation()->getOpOperand(i), effects);
   }
 }
 
@@ -1972,8 +2040,8 @@ transform::MatchParamCmpIOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::MatchParamCmpIOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getParam(), effects);
-  onlyReadsHandle(getReference(), effects);
+  onlyReadsHandle(getParamMutable(), effects);
+  onlyReadsHandle(getReferenceMutable(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2048,8 +2116,8 @@ bool transform::MergeHandlesOp::allowsRepeatedHandleOperands() {
 
 void transform::MergeHandlesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getHandles(), effects);
-  producesHandle(getResult(), effects);
+  onlyReadsHandle(getHandlesMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 
   // There are no effects on the Payload IR as this is only a handle
   // manipulation.
@@ -2390,8 +2458,8 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::SplitHandleOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getHandle(), effects);
-  producesHandle(getResults(), effects);
+  onlyReadsHandle(getHandleMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   // There are no effects on the Payload IR as this is only a handle
   // manipulation.
 }
@@ -2439,9 +2507,9 @@ transform::ReplicateOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::ReplicateOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getPattern(), effects);
-  onlyReadsHandle(getHandles(), effects);
-  producesHandle(getReplicated(), effects);
+  onlyReadsHandle(getPatternMutable(), effects);
+  onlyReadsHandle(getHandlesMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2752,7 +2820,7 @@ void transform::PrintOp::getEffects(
   // unconditionally casts to a specific type before verification could run
   // here.
   if (!getTargetMutable().empty())
-    onlyReadsHandle(getTargetMutable()[0].get(), effects);
+    onlyReadsHandle(getTargetMutable()[0], effects);
   onlyReadsPayload(effects);
 
   // There is no resource for stderr file descriptor, so just declare print
@@ -2780,7 +2848,7 @@ transform::VerifyOp::applyToOne(transform::TransformRewriter &rewriter,
 
 void transform::VerifyOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2789,5 +2857,5 @@ void transform::VerifyOp::getEffects(
 
 void transform::YieldOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getOperands(), effects);
+  onlyReadsHandle(getOperandsMutable(), effects);
 }

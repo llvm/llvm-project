@@ -398,8 +398,8 @@ static bool isParenthesizedVariable(const Fortran::evaluate::Expr<T> &expr) {
       return Fortran::evaluate::IsVariable(parentheses->left());
     return false;
   } else {
-    return std::visit([&](const auto &x) { return isParenthesizedVariable(x); },
-                      expr.u);
+    return Fortran::common::visit(
+        [&](const auto &x) { return isParenthesizedVariable(x); }, expr.u);
   }
 }
 
@@ -646,7 +646,7 @@ isOptimizableTranspose(Fortran::evaluate::Expr<T> expr,
   if (!isTransposeOptEnabled(converter))
     return false;
 
-  return std::visit(
+  return Fortran::common::visit(
       [&](const auto &e) { return isOptimizableTranspose(e, converter); },
       expr.u);
 }
@@ -696,7 +696,7 @@ public:
     //    - result of NULL() or NULL(MOLD) intrinsic.
     //    NULL() requires some context to be lowered, so it is not handled
     //    here and must be lowered according to the context where it appears.
-    ExtValue exv = std::visit(
+    ExtValue exv = Fortran::common::visit(
         [&](const auto &x) { return genMutableBoxValueImpl(x); }, expr.u);
     const fir::MutableBoxValue *mutableBox =
         exv.getBoxOf<fir::MutableBoxValue>();
@@ -737,7 +737,7 @@ public:
   template <typename T>
   ExtValue
   genMutableBoxValueImpl(const Fortran::evaluate::Designator<T> &designator) {
-    return std::visit(
+    return Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::SymbolRef &sym) -> ExtValue {
               return converter.getSymbolExtendedValue(*sym, &symMap);
@@ -754,8 +754,8 @@ public:
 
   template <typename T>
   ExtValue genMutableBoxValueImpl(const Fortran::evaluate::Expr<T> &expr) {
-    return std::visit([&](const auto &x) { return genMutableBoxValueImpl(x); },
-                      expr.u);
+    return Fortran::common::visit(
+        [&](const auto &x) { return genMutableBoxValueImpl(x); }, expr.u);
   }
 
   mlir::Location getLoc() { return location; }
@@ -1222,7 +1222,8 @@ public:
 
   ExtValue
   genval(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &op) {
-    return std::visit([&](const auto &x) { return genval(x); }, op.u);
+    return Fortran::common::visit([&](const auto &x) { return genval(x); },
+                                  op.u);
   }
 
   template <Fortran::common::TypeCategory TC1, int KIND,
@@ -1341,7 +1342,7 @@ public:
   /// Reference to a substring.
   ExtValue gen(const Fortran::evaluate::Substring &s) {
     // Get base string
-    auto baseString = std::visit(
+    auto baseString = Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::DataRef &x) { return gen(x); },
             [&](const Fortran::evaluate::StaticDataObject::Pointer &p)
@@ -1400,10 +1401,12 @@ public:
   }
 
   ExtValue gen(const Fortran::evaluate::DataRef &dref) {
-    return std::visit([&](const auto &x) { return gen(x); }, dref.u);
+    return Fortran::common::visit([&](const auto &x) { return gen(x); },
+                                  dref.u);
   }
   ExtValue genval(const Fortran::evaluate::DataRef &dref) {
-    return std::visit([&](const auto &x) { return genval(x); }, dref.u);
+    return Fortran::common::visit([&](const auto &x) { return genval(x); },
+                                  dref.u);
   }
 
   // Helper function to turn the Component structure into a list of nested
@@ -1418,7 +1421,7 @@ public:
                     std::list<const Fortran::evaluate::Component *> &list) {
     if (!getLastSym(cmpt).test(Fortran::semantics::Symbol::Flag::ParentComp))
       list.push_front(&cmpt);
-    return std::visit(
+    return Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::Component &x) {
               if (Fortran::semantics::IsAllocatableOrPointer(getLastSym(x)))
@@ -1713,11 +1716,12 @@ public:
 
   template <typename A>
   ExtValue gen(const Fortran::evaluate::Designator<A> &des) {
-    return std::visit([&](const auto &x) { return gen(x); }, des.u);
+    return Fortran::common::visit([&](const auto &x) { return gen(x); }, des.u);
   }
   template <typename A>
   ExtValue genval(const Fortran::evaluate::Designator<A> &des) {
-    return std::visit([&](const auto &x) { return genval(x); }, des.u);
+    return Fortran::common::visit([&](const auto &x) { return genval(x); },
+                                  des.u);
   }
 
   mlir::Type genType(const Fortran::evaluate::DynamicType &dt) {
@@ -2286,11 +2290,21 @@ public:
     bool isActualArgBox =
         fir::isa_box_type(fir::getBase(copyOutPair.var).getType());
     auto doCopyOut = [&]() {
-      if (!copyOutPair.argMayBeModifiedByCall) {
-        return;
-      }
       if (!isActualArgBox || inlineCopyInOutForBoxes) {
-        genArrayCopy(copyOutPair.var, copyOutPair.temp);
+        if (copyOutPair.argMayBeModifiedByCall)
+          genArrayCopy(copyOutPair.var, copyOutPair.temp);
+        if (mlir::isa<fir::RecordType>(
+                fir::getElementTypeOf(copyOutPair.temp))) {
+          // Destroy components of the temporary (if any).
+          // If there are no components requiring destruction, then the call
+          // is a no-op.
+          mlir::Value tempBox =
+              fir::getBase(builder.createBox(loc, copyOutPair.temp));
+          fir::runtime::genDerivedTypeDestroyWithoutFinalization(builder, loc,
+                                                                 tempBox);
+        }
+        // Deallocate the top-level entity of the temporary.
+        builder.create<fir::FreeMemOp>(loc, fir::getBase(copyOutPair.temp));
         return;
       }
       // Generate CopyOutAssign() call to copy data from the temporary
@@ -2301,51 +2315,39 @@ public:
       // Moreover, CopyOutAssign() guarantees that there will be no
       // finalization for the LHS even if it is of a derived type
       // with finalization.
+
+      // Create allocatable descriptor for the temp so that the runtime may
+      // deallocate it.
       mlir::Value srcBox =
           fir::getBase(builder.createBox(loc, copyOutPair.temp));
-      mlir::Value destBox =
-          fir::getBase(builder.createBox(loc, copyOutPair.var));
-      mlir::Value destBoxRef = builder.createTemporary(loc, destBox.getType());
-      builder.create<fir::StoreOp>(loc, destBox, destBoxRef);
-      fir::runtime::genCopyOutAssign(builder, loc, destBoxRef, srcBox,
-                                     /*skipToInit=*/true);
-    };
-    if (!copyOutPair.restrictCopyAndFreeAtRuntime) {
-      doCopyOut();
-
-      if (mlir::isa<fir::RecordType>(fir::getElementTypeOf(copyOutPair.temp))) {
-        // Destroy components of the temporary (if any).
-        // If there are no components requiring destruction, then the call
-        // is a no-op.
-        mlir::Value tempBox =
-            fir::getBase(builder.createBox(loc, copyOutPair.temp));
-        fir::runtime::genDerivedTypeDestroyWithoutFinalization(builder, loc,
-                                                               tempBox);
+      mlir::Type allocBoxTy =
+          mlir::cast<fir::BaseBoxType>(srcBox.getType())
+              .getBoxTypeWithNewAttr(fir::BaseBoxType::Attribute::Allocatable);
+      srcBox = builder.create<fir::ReboxOp>(loc, allocBoxTy, srcBox,
+                                            /*shift=*/mlir::Value{},
+                                            /*slice=*/mlir::Value{});
+      mlir::Value srcBoxRef = builder.createTemporary(loc, srcBox.getType());
+      builder.create<fir::StoreOp>(loc, srcBox, srcBoxRef);
+      // Create descriptor pointer to variable descriptor if copy out is needed,
+      // and nullptr otherwise.
+      mlir::Value destBoxRef;
+      if (copyOutPair.argMayBeModifiedByCall) {
+        mlir::Value destBox =
+            fir::getBase(builder.createBox(loc, copyOutPair.var));
+        destBoxRef = builder.createTemporary(loc, destBox.getType());
+        builder.create<fir::StoreOp>(loc, destBox, destBoxRef);
+      } else {
+        destBoxRef = builder.create<fir::ZeroOp>(loc, srcBoxRef.getType());
       }
+      fir::runtime::genCopyOutAssign(builder, loc, destBoxRef, srcBoxRef);
+    };
 
-      // Deallocate the top-level entity of the temporary.
-      builder.create<fir::FreeMemOp>(loc, fir::getBase(copyOutPair.temp));
-      return;
-    }
-
-    builder.genIfThen(loc, *copyOutPair.restrictCopyAndFreeAtRuntime)
-        .genThen([&]() {
-          doCopyOut();
-          if (mlir::isa<fir::RecordType>(
-                  fir::getElementTypeOf(copyOutPair.temp))) {
-            // Destroy components of the temporary (if any).
-            // If there are no components requiring destruction, then the call
-            // is a no-op.
-            mlir::Value tempBox =
-                fir::getBase(builder.createBox(loc, copyOutPair.temp));
-            fir::runtime::genDerivedTypeDestroyWithoutFinalization(builder, loc,
-                                                                   tempBox);
-          }
-
-          // Deallocate the top-level entity of the temporary.
-          builder.create<fir::FreeMemOp>(loc, fir::getBase(copyOutPair.temp));
-        })
-        .end();
+    if (!copyOutPair.restrictCopyAndFreeAtRuntime)
+      doCopyOut();
+    else
+      builder.genIfThen(loc, *copyOutPair.restrictCopyAndFreeAtRuntime)
+          .genThen([&]() { doCopyOut(); })
+          .end();
   }
 
   /// Lower a designator to a variable that may be absent at runtime into an
@@ -2900,8 +2902,8 @@ public:
   }
   template <typename T>
   bool isTransformationalRef(Fortran::evaluate::Expr<T> expr) {
-    return std::visit([&](const auto &e) { return isTransformationalRef(e); },
-                      expr.u);
+    return Fortran::common::visit(
+        [&](const auto &e) { return isTransformationalRef(e); }, expr.u);
   }
 
   template <typename A>
@@ -2914,11 +2916,13 @@ public:
   /// value, so it may be possible to avoid making a temporary.
   template <typename A>
   ExtValue asArrayArg(const Fortran::evaluate::Expr<A> &x) {
-    return std::visit([&](const auto &e) { return asArrayArg(e, x); }, x.u);
+    return Fortran::common::visit(
+        [&](const auto &e) { return asArrayArg(e, x); }, x.u);
   }
   template <typename A, typename B>
   ExtValue asArrayArg(const Fortran::evaluate::Expr<A> &x, const B &y) {
-    return std::visit([&](const auto &e) { return asArrayArg(e, y); }, x.u);
+    return Fortran::common::visit(
+        [&](const auto &e) { return asArrayArg(e, y); }, x.u);
   }
   template <typename A, typename B>
   ExtValue asArrayArg(const Fortran::evaluate::Designator<A> &, const B &x) {
@@ -2956,7 +2960,8 @@ public:
     if (isScalar(x) ||
         Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(x) ||
         (isTransformationalRef(x) && !isOptimizableTranspose(x, converter)))
-      return std::visit([&](const auto &e) { return genref(e); }, x.u);
+      return Fortran::common::visit([&](const auto &e) { return genref(e); },
+                                    x.u);
     if (useBoxArg)
       return asArrayArg(x);
     return asArray(x);
@@ -2967,7 +2972,8 @@ public:
       return val;
     if (isScalar(x) || Fortran::evaluate::UnwrapWholeSymbolDataRef(x) ||
         inInitializer)
-      return std::visit([&](const auto &e) { return genval(e); }, x.u);
+      return Fortran::common::visit([&](const auto &e) { return genval(e); },
+                                    x.u);
     return asArray(x);
   }
 
@@ -2976,7 +2982,8 @@ public:
                       Fortran::common::TypeCategory::Logical, KIND>> &exp) {
     if (mlir::Value val = getIfOverridenExpr(exp))
       return val;
-    return std::visit([&](const auto &e) { return genval(e); }, exp.u);
+    return Fortran::common::visit([&](const auto &e) { return genval(e); },
+                                  exp.u);
   }
 
   using RefSet =
@@ -3462,7 +3469,7 @@ public:
 
   ExtValue lowerBoxedArrayExpr(const Fortran::lower::SomeExpr &exp) {
     PushSemantics(ConstituentSemantics::BoxValue);
-    return std::visit(
+    return Fortran::common::visit(
         [&](const auto &e) {
           auto f = genarr(e);
           ExtValue exv = f(IterationSpace{});
@@ -3824,28 +3831,29 @@ private:
         fir::factory::getExtents(loc, builder, exv);
     mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
     for (auto ss : llvm::enumerate(x.subscript())) {
-      std::visit(Fortran::common::visitors{
-                     [&](const Fortran::evaluate::Triplet &trip) {
-                       // For a subscript of triple notation, we compute the
-                       // range of this dimension of the iteration space.
-                       auto lo = [&]() {
-                         if (auto optLo = trip.lower())
-                           return fir::getBase(asScalar(*optLo));
-                         return getLBound(exv, ss.index(), one);
-                       }();
-                       auto hi = [&]() {
-                         if (auto optHi = trip.upper())
-                           return fir::getBase(asScalar(*optHi));
-                         return getUBound(exv, ss.index(), one);
-                       }();
-                       auto step = builder.createConvert(
-                           loc, idxTy, fir::getBase(asScalar(trip.stride())));
-                       auto extent = builder.genExtentFromTriplet(loc, lo, hi,
-                                                                  step, idxTy);
-                       destShape.push_back(extent);
-                     },
-                     [&](auto) {}},
-                 ss.value().u);
+      Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::evaluate::Triplet &trip) {
+                // For a subscript of triple notation, we compute the
+                // range of this dimension of the iteration space.
+                auto lo = [&]() {
+                  if (auto optLo = trip.lower())
+                    return fir::getBase(asScalar(*optLo));
+                  return getLBound(exv, ss.index(), one);
+                }();
+                auto hi = [&]() {
+                  if (auto optHi = trip.upper())
+                    return fir::getBase(asScalar(*optHi));
+                  return getUBound(exv, ss.index(), one);
+                }();
+                auto step = builder.createConvert(
+                    loc, idxTy, fir::getBase(asScalar(trip.stride())));
+                auto extent =
+                    builder.genExtentFromTriplet(loc, lo, hi, step, idxTy);
+                destShape.push_back(extent);
+              },
+              [&](auto) {}},
+          ss.value().u);
     }
     return true;
   }
@@ -3855,8 +3863,8 @@ private:
     return genShapeFromDataRef(x.GetComponent());
   }
   bool genShapeFromDataRef(const Fortran::evaluate::DataRef &x) {
-    return std::visit([&](const auto &v) { return genShapeFromDataRef(v); },
-                      x.u);
+    return Fortran::common::visit(
+        [&](const auto &v) { return genShapeFromDataRef(v); }, x.u);
   }
 
   /// When in an explicit space, the ranked component must be evaluated to
@@ -3890,7 +3898,7 @@ private:
       TODO(getLoc(),
            "polymorphic array expression lowering with vector subscript");
 
-    return std::visit(
+    return Fortran::common::visit(
         [&](const auto &e) { return lowerArrayExpression(genarr(e), resTy); },
         exp.u);
   }
@@ -5012,10 +5020,12 @@ private:
     LLVM_DEBUG(Fortran::lower::DumpEvaluateExpr::dump(llvm::dbgs(), x));
     if (isArray(x) || (explicitSpaceIsActive() && isLeftHandSide()) ||
         isElementalProcWithArrayArgs(x))
-      return std::visit([&](const auto &e) { return genarr(e); }, x.u);
+      return Fortran::common::visit([&](const auto &e) { return genarr(e); },
+                                    x.u);
     if (explicitSpaceIsActive()) {
       assert(!isArray(x) && !isLeftHandSide());
-      auto cc = std::visit([&](const auto &e) { return genarr(e); }, x.u);
+      auto cc =
+          Fortran::common::visit([&](const auto &e) { return genarr(e); }, x.u);
       auto result = cc(IterationSpace{});
       return [=](IterSpace) { return result; };
     }
@@ -5289,7 +5299,8 @@ private:
   static Fortran::lower::SomeExpr
   ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Integer, 8>> &x) {
-    return std::visit([&](const auto &v) { return ignoreEvConvert(v); }, x.u);
+    return Fortran::common::visit(
+        [&](const auto &v) { return ignoreEvConvert(v); }, x.u);
   }
   template <Fortran::common::TypeCategory FROM>
   static Fortran::lower::SomeExpr ignoreEvConvert(
@@ -5310,8 +5321,8 @@ private:
   template <typename A>
   static const Fortran::semantics::Symbol *
   extractSubscriptSymbol(const Fortran::evaluate::Expr<A> &x) {
-    return std::visit([&](const auto &v) { return extractSubscriptSymbol(v); },
-                      x.u);
+    return Fortran::common::visit(
+        [&](const auto &v) { return extractSubscriptSymbol(v); }, x.u);
   }
   template <typename A>
   static const Fortran::semantics::Symbol *
@@ -5420,7 +5431,7 @@ private:
     std::size_t shapeIndex = 0;
     for (auto sub : llvm::enumerate(x.subscript())) {
       const std::size_t subsIndex = sub.index();
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::Triplet &t) {
                 mlir::Value lowerBound;
@@ -6034,8 +6045,8 @@ private:
   /// Substrings (see 9.4.1)
   CC genarr(const Fortran::evaluate::Substring &x, ComponentPath &components) {
     components.substring = &x;
-    return std::visit([&](const auto &v) { return genarr(v, components); },
-                      x.parent());
+    return Fortran::common::visit(
+        [&](const auto &v) { return genarr(v, components); }, x.parent());
   }
 
   template <typename T>
@@ -6333,7 +6344,7 @@ private:
     stmtCtx.pushScope();
     std::optional<mlir::Value> charLen;
     for (const Fortran::evaluate::ArrayConstructorValue<A> &acv : x.values()) {
-      auto [exv, copyNeeded] = std::visit(
+      auto [exv, copyNeeded] = Fortran::common::visit(
           [&](const auto &v) {
             return genArrayCtorInitializer(v, resTy, mem, buffPos, buffSize,
                                            stmtCtx);
@@ -6417,7 +6428,7 @@ private:
     // Populate the buffer with the elements, growing as necessary.
     std::optional<mlir::Value> charLen;
     for (const auto &expr : x) {
-      auto [exv, copyNeeded] = std::visit(
+      auto [exv, copyNeeded] = Fortran::common::visit(
           [&](const auto &e) {
             return genArrayCtorInitializer(e, resTy, mem, buffPos, buffSize,
                                            stmtCtx);
@@ -6582,22 +6593,24 @@ private:
   }
   CC genarr(
       const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &r) {
-    return std::visit([&](const auto &x) { return genarr(x); }, r.u);
+    return Fortran::common::visit([&](const auto &x) { return genarr(x); },
+                                  r.u);
   }
 
   template <typename A>
   CC genarr(const Fortran::evaluate::Designator<A> &des) {
     ComponentPath components(des.Rank() > 0);
-    return std::visit([&](const auto &x) { return genarr(x, components); },
-                      des.u);
+    return Fortran::common::visit(
+        [&](const auto &x) { return genarr(x, components); }, des.u);
   }
 
   /// Is the path component rank > 0?
   static bool ranked(const PathComponent &x) {
-    return std::visit(Fortran::common::visitors{
-                          [](const ImplicitSubscripts &) { return false; },
-                          [](const auto *v) { return v->Rank() > 0; }},
-                      x);
+    return Fortran::common::visit(
+        Fortran::common::visitors{
+            [](const ImplicitSubscripts &) { return false; },
+            [](const auto *v) { return v->Rank() > 0; }},
+        x);
   }
 
   void extendComponent(Fortran::lower::ComponentPath &component,
@@ -6653,7 +6666,7 @@ private:
                       : nextPathSemantics());
     unsigned index = 0;
     for (const auto &v : llvm::reverse(revPath)) {
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const ImplicitSubscripts &) {
                 prefix = false;
@@ -6678,7 +6691,7 @@ private:
                   unsigned ssIndex = 0u;
                   llvm::SmallVector<mlir::Value> componentsToAdd;
                   for (const auto &ss : x->subscript()) {
-                    std::visit(
+                    Fortran::common::visit(
                         Fortran::common::visitors{
                             [&](const Fortran::evaluate::
                                     IndirectSubscriptIntegerExpr &ie) {
@@ -7099,8 +7112,8 @@ private:
   }
 
   CC genarr(const Fortran::evaluate::DataRef &x, ComponentPath &components) {
-    return std::visit([&](const auto &v) { return genarr(v, components); },
-                      x.u);
+    return Fortran::common::visit(
+        [&](const auto &v) { return genarr(v, components); }, x.u);
   }
 
   bool pathIsEmpty(const ComponentPath &components) {
@@ -7575,13 +7588,13 @@ void Fortran::lower::createArrayLoads(
   };
   if (esp.lhsBases[counter]) {
     auto &base = *esp.lhsBases[counter];
-    auto load = std::visit(genLoad, base);
+    auto load = Fortran::common::visit(genLoad, base);
     esp.initialArgs.push_back(load);
     esp.resetInnerArgs();
     esp.bindLoad(base, load);
   }
   for (const auto &base : esp.rhsBases[counter])
-    esp.bindLoad(base, std::visit(genLoad, base));
+    esp.bindLoad(base, Fortran::common::visit(genLoad, base));
 }
 
 void Fortran::lower::createArrayMergeStores(

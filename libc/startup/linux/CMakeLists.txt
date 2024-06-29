@@ -26,7 +26,11 @@ function(merge_relocatable_object name)
   )
   # Pass -r to the driver is much cleaner than passing -Wl,-r: the compiler knows it is
   # a relocatable linking and will not pass other irrelevant flags to the linker.
-  target_link_options(${relocatable_target} PRIVATE -r -nostdlib)
+  set(link_opts -r -nostdlib)
+  if (explicit_target_triple AND LLVM_ENABLE_LLD)
+    list(APPEND link_opts --target=${explicit_target_triple})
+  endif()
+  target_link_options(${relocatable_target} PRIVATE ${link_opts})
   set_target_properties(
     ${relocatable_target}
     PROPERTIES
@@ -94,6 +98,7 @@ add_object_library(
     libc.config.linux.app_h
     libc.include.sys_mman
     libc.include.sys_syscall
+    libc.include.llvm-libc-macros.link_macros
     libc.src.__support.threads.thread
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.exit

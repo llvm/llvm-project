@@ -48,7 +48,7 @@
 "","","","","","",""
 "`P2875R4 <https://wg21.link/P2875R4>`__","LWG","Undeprecate ``polymorphic_allocator::destroy`` for C++26","Tokyo March 2024","|Complete|","15.0",""
 "`P2867R2 <https://wg21.link/P2867R2>`__","LWG","Remove Deprecated ``strstreams`` From C++26","Tokyo March 2024","|Complete|","19.0",""
-"`P2869R4 <https://wg21.link/P2869R4>`__","LWG","Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26","Tokyo March 2024","|Complete|","19.0",""
+"`P2869R4 <https://wg21.link/P2869R4>`__","LWG","Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26","Tokyo March 2024","","",""
 "`P2872R3 <https://wg21.link/P2872R3>`__","LWG","Remove ``wstring_convert`` From C++26","Tokyo March 2024","|Complete|","19.0",""
 "`P3107R5 <https://wg21.link/P3107R5>`__","LWG","Permit an efficient implementation of ``std::print``","Tokyo March 2024","","","|format| |DR|"
 "`P3142R0 <https://wg21.link/P3142R0>`__","LWG","Printing Blank Lines with ``println``","Tokyo March 2024","|Complete| [#note-P3142R0]_","19.0","|format|"

@@ -90,7 +90,7 @@ void reportDescriptiveName(int *p);
 extern int* ptr;
 extern int array[3];
 void top() {
-  reportDescriptiveName(&array[(long)ptr]);
+  reportDescriptiveName(&array[(long long)ptr]);
 })cpp";
 
   std::string Output;

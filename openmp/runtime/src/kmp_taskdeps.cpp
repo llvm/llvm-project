@@ -739,7 +739,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
           &(current_task->ompt_task_info.task_data),
           &(current_task->ompt_task_info.frame),
           &(new_taskdata->ompt_task_info.task_data),
-          ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
+          TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
 

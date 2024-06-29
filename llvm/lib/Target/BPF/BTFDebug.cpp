@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -1489,7 +1490,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     }
 
     // Calculate symbol size
-    const DataLayout &DL = Global.getParent()->getDataLayout();
+    const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
     DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,

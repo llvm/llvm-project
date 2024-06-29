@@ -3,7 +3,7 @@
 // RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
 // RUN: fir-opt --add-debug-info="is-optimized=true" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=OPT
 
-module attributes { fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128", llvm.target_triple = "aarch64-unknown-linux-gnu"} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QPsb() {
     return loc(#loc_sb)
   } loc(#loc_sb)
