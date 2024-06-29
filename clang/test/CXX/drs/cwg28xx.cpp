@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
+
 int main() {} // required for cwg2811
 
 namespace cwg2811 { // cwg2811: 3.5
