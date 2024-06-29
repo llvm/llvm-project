@@ -2746,11 +2746,11 @@ LogicalResult WinogradFilterTransformOp::verify() {
   int64_t r = getR();
 
   if (filterH != r && filterH != 1)
-    return failure();
+    return emitOpError("expect filter height either equals to r or 1");
   if (filterW != r && filterW != 1)
-    return failure();
+    return emitOpError("expect filter width either equals to r or 1");
   if (filterH == 1 && filterW == 1)
-    return failure();
+    return emitOpError("expect either filter height or width equals to r");
 
   return success();
 }
@@ -2781,21 +2781,21 @@ LogicalResult WinogradInputTransformOp::verify() {
   if (leftTransform) {
     int64_t tileH = (inputH - (r - 1)) / m;
     if (inputH != tileH * m + (r - 1))
-      return failure();
+      return emitOpError("input height cannot be tiled in full tile size");
     if (tileH != outputTileH)
-      return failure();
+      return emitOpError("number of output height tiles is not correct");
     if (outputH != m + r - 1)
-      return failure();
+      return emitOpError("expect output height equals to tile size");
   }
 
   if (rightTransform) {
     int64_t tileW = (inputW - (r - 1)) / m;
     if (inputW != tileW * m + (r - 1))
-      return failure();
+      return emitOpError("input width cannot be tiled in full tile size");
     if (tileW != outputTileW)
-      return failure();
+      return emitOpError("number of output width tiles is not correct");
     if (outputW != m + r - 1)
-      return failure();
+      return emitOpError("expect output width equals to tile size");
   }
 
   return success();
@@ -2826,16 +2826,16 @@ LogicalResult WinogradOutputTransformOp::verify() {
 
   if (leftTransform) {
     if (valueH != m + r - 1)
-      return failure();
+      return emitOpError("expect input height equals to input tile size");
     if (outputH != m * valueTileH)
-      return failure();
+      return emitOpError("expect output height aligned to output tile size");
   }
 
   if (rightTransform) {
     if (valueW != m + r - 1)
-      return failure();
+      return emitOpError("expect input width equals to input tile size");
     if (outputW != m * valueTileW)
-      return failure();
+      return emitOpError("expect output width aligned to output tile size");
   }
 
   return success();
