@@ -513,6 +513,16 @@ void CookedSource::Marshal(AllCookedSources &allCookedSources) {
       "(after end of source)"));
   data_ = buffer_.Marshal();
   buffer_.clear();
+  for (std::size_t ffStart : possibleFixedFormContinuations_) {
+    if (ffStart > 0 && ffStart + 1 < data_.size() &&
+        data_[ffStart - 1] == '\n' && data_[ffStart] == ' ') {
+      // This fixed form include line is the first source line in an
+      // #include file (or after an empty one).  Connect it with the previous
+      // source line by deleting its terminal newline.
+      data_[ffStart - 1] = ' ';
+    }
+  }
+  possibleFixedFormContinuations_.clear();
   allCookedSources.Register(*this);
 }
 

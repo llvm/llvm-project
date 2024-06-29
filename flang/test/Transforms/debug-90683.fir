@@ -2,7 +2,7 @@
 
 // This test checks that debug information for fir.real type works ok.
 
-module attributes {} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QPfn1(%arg0: !fir.ref<!fir.complex<8>> {fir.bindc_name = "a"} ) {
     %0 = fir.declare %arg0 {uniq_name = "_QFfn1Ea"} : (!fir.ref<!fir.complex<8>>) -> !fir.ref<!fir.complex<8>>
     %1 = fir.alloca f32 {bindc_name = "abserror", uniq_name = "_QFfn1Eabserror"}

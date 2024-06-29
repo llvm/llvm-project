@@ -268,9 +268,9 @@ public:
     OS.close();
   }
 
-  void saveKernelDescr(const char *Name, void **ArgPtrs, int32_t NumArgs,
-                       uint64_t NumTeamsClause, uint32_t ThreadLimitClause,
-                       uint64_t LoopTripCount) {
+  void saveKernelDescr(const char *Name, KernelLaunchParamsTy LaunchParams,
+                       int32_t NumArgs, uint64_t NumTeamsClause,
+                       uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
     json::Object JsonKernelInfo;
     JsonKernelInfo["Name"] = Name;
     JsonKernelInfo["NumArgs"] = NumArgs;
@@ -283,7 +283,7 @@ public:
 
     json::Array JsonArgPtrs;
     for (int I = 0; I < NumArgs; ++I)
-      JsonArgPtrs.push_back((intptr_t)ArgPtrs[I]);
+      JsonArgPtrs.push_back((intptr_t)LaunchParams.Ptrs[I]);
     JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
 
     json::Array JsonArgOffsets;
@@ -549,7 +549,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
-  void *KernelArgsPtr =
+  KernelLaunchParamsTy LaunchParams =
       prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
                   Ptrs, *KernelLaunchEnvOrErr);
 
@@ -564,7 +564,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (RecordReplay.isRecording()) {
     RecordReplay.saveImage(getName(), getImage());
     RecordReplay.saveKernelInput(getName(), getImage());
-    RecordReplay.saveKernelDescr(getName(), Ptrs.data(), KernelArgs.NumArgs,
+    RecordReplay.saveKernelDescr(getName(), LaunchParams, KernelArgs.NumArgs,
                                  NumBlocks, NumThreads, KernelArgs.Tripcount);
   }
 
@@ -573,10 +573,10 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     return Err;
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
-                    KernelArgsPtr, AsyncInfoWrapper);
+                    LaunchParams, AsyncInfoWrapper);
 }
 
-void *GenericKernelTy::prepareArgs(
+KernelLaunchParamsTy GenericKernelTy::prepareArgs(
     GenericDeviceTy &GenericDevice, void **ArgPtrs, ptrdiff_t *ArgOffsets,
     uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
@@ -585,22 +585,22 @@ void *GenericKernelTy::prepareArgs(
   NumArgs += KLEOffset;
 
   if (NumArgs == 0)
-    return nullptr;
+    return KernelLaunchParamsTy{};
 
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
   if (KernelLaunchEnvironment) {
-    Ptrs[0] = KernelLaunchEnvironment;
-    Args[0] = &Ptrs[0];
+    Args[0] = KernelLaunchEnvironment;
+    Ptrs[0] = &Args[0];
   }
 
   for (uint32_t I = KLEOffset; I < NumArgs; ++I) {
-    Ptrs[I] =
+    Args[I] =
         (void *)((intptr_t)ArgPtrs[I - KLEOffset] + ArgOffsets[I - KLEOffset]);
-    Args[I] = &Ptrs[I];
+    Ptrs[I] = &Args[I];
   }
-  return &Args[0];
+  return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
 }
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
@@ -701,8 +701,11 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       TripCountNumBlocks = LoopTripCount;
     }
   }
+
+  uint32_t PreferredNumBlocks = TripCountNumBlocks;
   // If the loops are long running we rather reuse blocks than spawn too many.
-  uint32_t PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+  if (GenericDevice.getReuseBlocksForHighTripCount())
+    PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
   return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 

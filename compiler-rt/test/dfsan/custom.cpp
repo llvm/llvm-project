@@ -2280,7 +2280,7 @@ void test_sscanf() {
   // %n, %s, %d, %f, and %% already tested
 }
 
-// Tested by a seperate source file.  This empty function is here to appease the
+// Tested by a separate source file.  This empty function is here to appease the
 // check-wrappers script.
 void test_fork() {}
 

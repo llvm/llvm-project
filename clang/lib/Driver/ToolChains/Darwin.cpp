@@ -1257,14 +1257,23 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
   if ((isTargetMacOSBased() && isMacosxVersionLT(10, 11)) ||
       (isTargetIOSBased() && isIPhoneOSVersionLT(9)))
     return 2;
-  return 4;
+  // Default to use DWARF 4 on OS X 10.11 - macOS 14 / iOS 9 - iOS 17.
+  if ((isTargetMacOSBased() && isMacosxVersionLT(15)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(18)) ||
+      (isTargetWatchOSBased() && TargetVersion < llvm::VersionTuple(11)) ||
+      (isTargetXROS() && TargetVersion < llvm::VersionTuple(2)) ||
+      (isTargetDriverKit() && TargetVersion < llvm::VersionTuple(24)) ||
+      (isTargetMacOSBased() &&
+       TargetVersion.empty())) // apple-darwin, no version.
+    return 4;
+  return 5;
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
                               StringRef Component, RuntimeLinkOptions Opts,
                               bool IsShared) const {
   SmallString<64> DarwinLibName = StringRef("libclang_rt.");
-  // an Darwin the builtins compomnent is not in the library name
+  // On Darwin the builtins component is not in the library name.
   if (Component != "builtins") {
     DarwinLibName += Component;
     if (!(Opts & RLO_IsEmbedded))
@@ -3464,6 +3473,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
   }
+
+  if (IsX86_64)
+    Res |= SanitizerKind::NumericalStability;
+
   return Res;
 }
 

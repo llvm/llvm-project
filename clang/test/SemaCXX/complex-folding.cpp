@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++1z -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++1z -fsyntax-only -verify -fexperimental-new-constant-interpreter
 //
 // Test the constant folding of builtin complex numbers.
 

@@ -55,6 +55,8 @@ namespace {
 /// ```
 ///
 /// When applied exhaustively, this will produce a sequence of 1-d gather ops.
+///
+/// Supports vector types with a fixed leading dimension.
 struct FlattenGather : OpRewritePattern<vector::GatherOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -64,6 +66,11 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
     if (resultTy.getRank() < 2)
       return rewriter.notifyMatchFailure(op, "already flat");
 
+    // Unrolling doesn't take vscale into account. Pattern is disabled for
+    // vectors with leading scalable dim(s).
+    if (resultTy.getScalableDims().front())
+      return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
+
     Location loc = op.getLoc();
     Value indexVec = op.getIndexVec();
     Value maskVec = op.getMask();
@@ -72,8 +79,7 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultTy, rewriter.getZeroAttr(resultTy));
 
-    Type subTy = VectorType::get(resultTy.getShape().drop_front(),
-                                 resultTy.getElementType());
+    VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
 
     for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
       int64_t thisIdx[1] = {i};
@@ -188,6 +194,9 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     VectorType resultTy = op.getType();
     if (resultTy.getRank() != 1)
       return rewriter.notifyMatchFailure(op, "unsupported rank");
+
+    if (resultTy.isScalable())
+      return rewriter.notifyMatchFailure(op, "not a fixed-width vector");
 
     Location loc = op.getLoc();
     Type elemTy = resultTy.getElementType();

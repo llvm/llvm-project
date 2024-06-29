@@ -302,7 +302,8 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
       dst = static_cast<word>((part1 << bit_offset) |
                               (part2 >> (WORD_BITS - bit_offset)));
     else
-      dst = (part1 >> bit_offset) | (part2 << (WORD_BITS - bit_offset));
+      dst = static_cast<word>((part1 >> bit_offset) |
+                              (part2 << (WORD_BITS - bit_offset)));
   }
   return out;
 }
@@ -386,7 +387,8 @@ public:
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                                    !cpp::is_same_v<T, bool>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
     const bool is_neg = Signed && (v < 0);
@@ -439,7 +441,7 @@ public:
     constexpr size_t MAX_COUNT =
         T_SIZE > Bits ? WORD_COUNT : T_SIZE / WORD_SIZE;
     for (size_t i = 1; i < MAX_COUNT; ++i)
-      lo += static_cast<T>(val[i]) << (WORD_SIZE * i);
+      lo += static_cast<T>(static_cast<T>(val[i]) << (WORD_SIZE * i));
     if constexpr (Signed && (T_SIZE > Bits)) {
       // Extend sign for negative numbers.
       constexpr T MASK = (~T(0) << Bits);
@@ -983,23 +985,18 @@ using UInt = BigInt<Bits, false, internal::WordTypeSelectorT<Bits>>;
 template <size_t Bits>
 using Int = BigInt<Bits, true, internal::WordTypeSelectorT<Bits>>;
 
-// Provides limits of U/Int<128>.
-template <> class cpp::numeric_limits<UInt<128>> {
-public:
-  LIBC_INLINE static constexpr UInt<128> max() { return UInt<128>::max(); }
-  LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>::min(); }
+// Provides limits of BigInt.
+template <size_t Bits, bool Signed, typename T>
+struct cpp::numeric_limits<BigInt<Bits, Signed, T>> {
+  LIBC_INLINE static constexpr BigInt<Bits, Signed, T> max() {
+    return BigInt<Bits, Signed, T>::max();
+  }
+  LIBC_INLINE static constexpr BigInt<Bits, Signed, T> min() {
+    return BigInt<Bits, Signed, T>::min();
+  }
   // Meant to match std::numeric_limits interface.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  LIBC_INLINE_VAR static constexpr int digits = 128;
-};
-
-template <> class cpp::numeric_limits<Int<128>> {
-public:
-  LIBC_INLINE static constexpr Int<128> max() { return Int<128>::max(); }
-  LIBC_INLINE static constexpr Int<128> min() { return Int<128>::min(); }
-  // Meant to match std::numeric_limits interface.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  LIBC_INLINE_VAR static constexpr int digits = 128;
+  LIBC_INLINE_VAR static constexpr int digits = Bits - Signed;
 };
 
 // type traits to determine whether a T is a BigInt.
@@ -1072,6 +1069,18 @@ struct make_integral_or_big_int_signed<T, cpp::enable_if_t<is_big_int_v<T>>>
 template <typename T>
 using make_integral_or_big_int_signed_t =
     typename make_integral_or_big_int_signed<T>::type;
+
+// is_unsigned_integral_or_big_int
+template <typename T>
+struct is_unsigned_integral_or_big_int
+    : cpp::bool_constant<
+          cpp::is_same_v<T, make_integral_or_big_int_unsigned_t<T>>> {};
+
+template <typename T>
+// Meant to look like <type_traits> helper variable templates.
+// NOLINTNEXTLINE(readability-identifier-naming)
+LIBC_INLINE_VAR constexpr bool is_unsigned_integral_or_big_int_v =
+    is_unsigned_integral_or_big_int<T>::value;
 
 namespace cpp {
 

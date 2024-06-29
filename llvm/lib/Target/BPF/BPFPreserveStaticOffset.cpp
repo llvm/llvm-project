@@ -374,7 +374,7 @@ static bool foldGEPChainAsU8Access(SmallVector<GetElementPtrInst *> &GEPs,
     return false;
 
   GetElementPtrInst *First = GEPs[0];
-  const DataLayout &DL = First->getModule()->getDataLayout();
+  const DataLayout &DL = First->getDataLayout();
   LLVMContext &C = First->getContext();
   Type *PtrTy = First->getType()->getScalarType();
   APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);

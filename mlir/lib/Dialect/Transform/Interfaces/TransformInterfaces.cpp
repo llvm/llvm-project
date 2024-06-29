@@ -1603,7 +1603,8 @@ transform::detail::makeTransformStateForTesting(Region *region,
 /// Appends to `effects` the memory effect instances on `target` with the same
 /// resource and effect as the ones the operation `iface` having on `source`.
 static void
-remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
+remapEffects(MemoryEffectOpInterface iface, BlockArgument source,
+             OpOperand *target,
              SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   SmallVector<MemoryEffects::EffectInstance> nestedEffects;
   iface.getEffectsOnValue(source, nestedEffects);
@@ -1614,7 +1615,7 @@ remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
 /// Appends to `effects` the same effects as the operations of `block` have on
 /// block arguments but associated with `operands.`
 static void
-remapArgumentEffects(Block &block, ValueRange operands,
+remapArgumentEffects(Block &block, MutableArrayRef<OpOperand> operands,
                      SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   for (Operation &op : block) {
     auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
@@ -1622,7 +1623,7 @@ remapArgumentEffects(Block &block, ValueRange operands,
       continue;
 
     for (auto &&[source, target] : llvm::zip(block.getArguments(), operands)) {
-      remapEffects(iface, source, target, effects);
+      remapEffects(iface, source, &target, effects);
     }
 
     SmallVector<MemoryEffects::EffectInstance> nestedEffects;
@@ -1635,8 +1636,8 @@ remapArgumentEffects(Block &block, ValueRange operands,
 void transform::detail::getPotentialTopLevelEffects(
     Operation *operation, Value root, Block &body,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(operation->getOperands(), effects);
-  transform::producesHandle(operation->getResults(), effects);
+  transform::onlyReadsHandle(operation->getOpOperands(), effects);
+  transform::producesHandle(operation->getOpResults(), effects);
 
   if (!root) {
     for (Operation &op : body) {
@@ -1652,7 +1653,7 @@ void transform::detail::getPotentialTopLevelEffects(
 
   // Carry over all effects on arguments of the entry block as those on the
   // operands, this is the same value just remapped.
-  remapArgumentEffects(body, operation->getOperands(), effects);
+  remapArgumentEffects(body, operation->getOpOperands(), effects);
 }
 
 LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
@@ -1761,10 +1762,10 @@ void transform::detail::getParamProducerTransformOpTraitEffects(
     Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   producesHandle(op->getResults(), effects);
   bool hasPayloadOperands = false;
-  for (Value operand : op->getOperands()) {
+  for (OpOperand &operand : op->getOpOperands()) {
     onlyReadsHandle(operand, effects);
     if (llvm::isa<TransformHandleTypeInterface,
-                  TransformValueHandleTypeInterface>(operand.getType()))
+                  TransformValueHandleTypeInterface>(operand.get().getType()))
       hasPayloadOperands = true;
   }
   if (hasPayloadOperands)
@@ -1796,12 +1797,12 @@ transform::detail::verifyParamProducerTransformOpTrait(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 void transform::consumesHandle(
-    ValueRange handles,
+    MutableArrayRef<OpOperand> handles,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value handle : handles) {
-    effects.emplace_back(MemoryEffects::Read::get(), handle,
+  for (OpOperand &handle : handles) {
+    effects.emplace_back(MemoryEffects::Read::get(), &handle,
                          TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Free::get(), handle,
+    effects.emplace_back(MemoryEffects::Free::get(), &handle,
                          TransformMappingResource::get());
   }
 }
@@ -1826,9 +1827,20 @@ bool transform::isHandleConsumed(Value handle,
 }
 
 void transform::producesHandle(
-    ValueRange handles,
+    ResultRange handles,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value handle : handles) {
+  for (OpResult handle : handles) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), handle,
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), handle,
+                         TransformMappingResource::get());
+  }
+}
+
+void transform::producesHandle(
+    MutableArrayRef<BlockArgument> handles,
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (BlockArgument handle : handles) {
     effects.emplace_back(MemoryEffects::Allocate::get(), handle,
                          TransformMappingResource::get());
     effects.emplace_back(MemoryEffects::Write::get(), handle,
@@ -1837,10 +1849,10 @@ void transform::producesHandle(
 }
 
 void transform::onlyReadsHandle(
-    ValueRange handles,
+    MutableArrayRef<OpOperand> handles,
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value handle : handles) {
-    effects.emplace_back(MemoryEffects::Read::get(), handle,
+  for (OpOperand &handle : handles) {
+    effects.emplace_back(MemoryEffects::Read::get(), &handle,
                          TransformMappingResource::get());
   }
 }

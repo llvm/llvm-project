@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERP_H
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
+#include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
@@ -368,6 +369,134 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status);
 }
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool Mulc(InterpState &S, CodePtr OpPC) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+
+    APFloat ResR(A.getSemantics());
+    APFloat ResI(A.getSemantics());
+    HandleComplexComplexMul(A, B, C, D, ResR, ResI);
+
+    // Copy into the result.
+    Result.atIndex(0).deref<Floating>() = Floating(ResR);
+    Result.atIndex(0).initialize();
+    Result.atIndex(1).deref<Floating>() = Floating(ResI);
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  } else {
+    // Integer element type.
+    const T &LHSR = LHS.atIndex(0).deref<T>();
+    const T &LHSI = LHS.atIndex(1).deref<T>();
+    const T &RHSR = RHS.atIndex(0).deref<T>();
+    const T &RHSI = RHS.atIndex(1).deref<T>();
+    unsigned Bits = LHSR.bitWidth();
+
+    // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
+    T A;
+    if (T::mul(LHSR, RHSR, Bits, &A))
+      return false;
+    T B;
+    if (T::mul(LHSI, RHSI, Bits, &B))
+      return false;
+    if (T::sub(A, B, Bits, &Result.atIndex(0).deref<T>()))
+      return false;
+    Result.atIndex(0).initialize();
+
+    // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
+    if (T::mul(LHSR, RHSI, Bits, &A))
+      return false;
+    if (T::mul(LHSI, RHSR, Bits, &B))
+      return false;
+    if (T::add(A, B, Bits, &Result.atIndex(1).deref<T>()))
+      return false;
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  }
+
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool Divc(InterpState &S, CodePtr OpPC) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+
+    APFloat ResR(A.getSemantics());
+    APFloat ResI(A.getSemantics());
+    HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
+
+    // Copy into the result.
+    Result.atIndex(0).deref<Floating>() = Floating(ResR);
+    Result.atIndex(0).initialize();
+    Result.atIndex(1).deref<Floating>() = Floating(ResI);
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  } else {
+    // Integer element type.
+    const T &LHSR = LHS.atIndex(0).deref<T>();
+    const T &LHSI = LHS.atIndex(1).deref<T>();
+    const T &RHSR = RHS.atIndex(0).deref<T>();
+    const T &RHSI = RHS.atIndex(1).deref<T>();
+    unsigned Bits = LHSR.bitWidth();
+    const T Zero = T::from(0, Bits);
+
+    if (Compare(RHSR, Zero) == ComparisonCategoryResult::Equal &&
+        Compare(RHSI, Zero) == ComparisonCategoryResult::Equal) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_expr_divide_by_zero);
+      return false;
+    }
+
+    // Den = real(RHS)² + imag(RHS)²
+    T A, B;
+    if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B))
+      return false;
+    T Den;
+    if (T::add(A, B, Bits, &Den))
+      return false;
+
+    // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
+    T &ResultR = Result.atIndex(0).deref<T>();
+    T &ResultI = Result.atIndex(1).deref<T>();
+
+    if (T::mul(LHSR, RHSR, Bits, &A) || T::mul(LHSI, RHSI, Bits, &B))
+      return false;
+    if (T::add(A, B, Bits, &ResultR))
+      return false;
+    if (T::div(ResultR, Den, Bits, &ResultR))
+      return false;
+    Result.atIndex(0).initialize();
+
+    // imag(Result) = ((imag(LHS) * real(RHS)) - (real(LHS) * imag(RHS))) / Den
+    if (T::mul(LHSI, RHSR, Bits, &A) || T::mul(LHSR, RHSI, Bits, &B))
+      return false;
+    if (T::sub(A, B, Bits, &ResultI))
+      return false;
+    if (T::div(ResultI, Den, Bits, &ResultI))
+      return false;
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  }
+
+  return true;
+}
+
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS & RHS' on the stack
@@ -1303,7 +1432,6 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
-
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1980,10 +2108,25 @@ static inline bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static inline bool VoidPtrCast(InterpState &S, CodePtr OpPC) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+
+  if (SrcIsVoidPtr && S.getLangOpts().CPlusPlus) {
+    bool HasValidResult = !Ptr.isZero();
+
+    if (HasValidResult) {
+      // FIXME: note_constexpr_invalid_void_star_cast
+    } else if (!S.getLangOpts().CPlusPlus26) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << 3 << "'void *'" << S.Current->getRange(OpPC);
+    }
+  } else {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+        << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  }
+
   return true;
 }
 
@@ -2426,6 +2569,11 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();
+
+  // We need to do this explicitly here since we don't have the necessary
+  // information to do it automatically.
+  if (F->isThisPointerExplicit())
+    VarArgSize -= align(primSize(PT_Ptr));
 
   if (F->isVirtual())
     return CallVirt(S, OpPC, F, VarArgSize);

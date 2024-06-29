@@ -12912,6 +12912,15 @@ TEST_F(FormatTest, FormatsAccessModifiers) {
                "  int j;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  Style.AttributeMacros.push_back("BAR");
+  verifyFormat("struct foo {\n"
+               "FOO private:\n"
+               "  int i;\n"
+               "BAR(x) protected:\n"
+               "  int j;\n"
+               "};",
+               Style);
 
   FormatStyle NoEmptyLines = getLLVMStyle();
   NoEmptyLines.MaxEmptyLinesToKeep = 0;
@@ -22866,6 +22875,22 @@ TEST_F(FormatTest, FormatsLambdas) {
       "      //\n"
       "    });");
 
+  FormatStyle LLVMStyle = getLLVMStyleWithColumns(60);
+  verifyFormat("very_long_function_name_yes_it_is_really_long(\n"
+               "    [](auto n) noexcept [[back_attr]]\n"
+               "        -> std::unordered_map<very_long_type_name_A,\n"
+               "                              very_long_type_name_B> {\n"
+               "      really_do_something();\n"
+               "    });",
+               LLVMStyle);
+  verifyFormat("very_long_function_name_yes_it_is_really_long(\n"
+               "    [](auto n) constexpr\n"
+               "        -> std::unordered_map<very_long_type_name_A,\n"
+               "                              very_long_type_name_B> {\n"
+               "      really_do_something();\n"
+               "    });",
+               LLVMStyle);
+
   FormatStyle DoNotMerge = getLLVMStyle();
   DoNotMerge.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
   verifyFormat("auto c = []() {\n"
@@ -26114,6 +26139,12 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "      int i;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  verifyFormat("class C {\n"
+               "   FOO public:\n"
+               "      int i;\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, LimitlessStringsAndComments) {
@@ -26976,6 +27007,9 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "; int bar;",
                Style);
 #endif
+
+  Style.TypenameMacros.push_back("STRUCT");
+  verifyFormat("STRUCT(T, B) { int i; };", Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {

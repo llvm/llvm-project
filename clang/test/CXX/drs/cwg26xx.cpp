@@ -35,7 +35,7 @@ namespace std {
   template<typename T> T declval();
 }
 
-namespace cwg2621 { // cwg2621: 16
+namespace cwg2621 { // cwg2621: sup 2877
 #if __cplusplus >= 202002L
 enum class E { a };
 namespace One {
@@ -45,9 +45,8 @@ auto v = a;
 }
 namespace Two {
 using cwg2621::E;
-int E; // we see this
+int E; // ignored by type-only lookup
 using enum E;
-// since-cxx20-error@-1 {{unknown type name E}}
 }
 #endif
 }

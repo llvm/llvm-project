@@ -10,12 +10,13 @@
 #define _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H
 
 #include <__algorithm/find_if.h>
+#include <__assert>
 #include <__atomic/atomic.h>
 #include <__config>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
-#include <__pstl/configuration_fwd.h>
+#include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
@@ -27,12 +28,11 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
-
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+namespace __pstl {
 
 template <class _Backend, class _Index, class _Brick, class _Compare>
 _LIBCPP_HIDE_FROM_ABI optional<_Index>
@@ -42,8 +42,8 @@ __parallel_find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool
   _DifferenceType __initial_dist = __b_first ? __n : -1;
   std::atomic<_DifferenceType> __extremum(__initial_dist);
   // TODO: find out what is better here: parallel_for or parallel_reduce
-  auto __res = __pstl::__cpu_traits<_Backend>::__for_each(
-      __first, __last, [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
+  auto __res =
+      __cpu_traits<_Backend>::__for_each(__first, __last, [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
         // See "Reducing Contention Through Priority Updates", PPoPP '13, for discussion of
         // why using a shared variable scales fairly well in this situation.
         if (__comp(__i - __first, __extremum)) {
@@ -66,8 +66,8 @@ template <class _Backend, class _Index, class _DifferenceType, class _Compare>
 _LIBCPP_HIDE_FROM_ABI _Index
 __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept {
   // Experiments show good block sizes like this
-  const _DifferenceType __block_size                                                        = 8;
-  alignas(__pstl::__cpu_traits<_Backend>::__lane_size) _DifferenceType __lane[__block_size] = {0};
+  const _DifferenceType __block_size                                                = 8;
+  alignas(__cpu_traits<_Backend>::__lane_size) _DifferenceType __lane[__block_size] = {0};
   while (__end - __begin >= __block_size) {
     _DifferenceType __found = 0;
     _PSTL_PRAGMA_SIMD_REDUCTION(| : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size; ++__i) {
@@ -98,38 +98,40 @@ __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Co
   return __first + __end;
 }
 
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-_LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
-__pstl_find_if(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
-  if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return std::__parallel_find<__cpu_backend_tag>(
-        __first,
-        __last,
-        [&__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-          auto __res = std::__pstl_find_if<__remove_parallel_policy_t<_ExecutionPolicy>>(
-              __cpu_backend_tag{}, __brick_first, __brick_last, __pred);
-          _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
-          return *std::move(__res);
-        },
-        less<>{},
-        true);
-  } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    using __diff_t = __iter_diff_t<_ForwardIterator>;
-    return std::__simd_first<__cpu_backend_tag>(
-        __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
-          return __pred(__iter[__i]);
-        });
-  } else {
-    return std::find_if(__first, __last, __pred);
+template <class _Backend, class _RawExecutionPolicy>
+struct __cpu_parallel_find_if {
+  template <class _Policy, class _ForwardIterator, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
+    if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      return __pstl::__parallel_find<_Backend>(
+          __first,
+          __last,
+          [&__policy, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
+            using _FindIfUnseq = __pstl::__find_if<_Backend, __remove_parallel_policy_t<_RawExecutionPolicy>>;
+            auto __res = _FindIfUnseq()(std::__remove_parallel_policy(__policy), __brick_first, __brick_last, __pred);
+            _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
+            return *std::move(__res);
+          },
+          less<>{},
+          true);
+    } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
+                         __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      using __diff_t = __iter_diff_t<_ForwardIterator>;
+      return __pstl::__simd_first<_Backend>(
+          __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
+            return __pred(__iter[__i]);
+          });
+    } else {
+      return std::find_if(__first, __last, __pred);
+    }
   }
-}
+};
 
+} // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
-
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H

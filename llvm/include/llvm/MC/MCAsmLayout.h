@@ -45,7 +45,7 @@ public:
   /// its bundle padding will be recomputed.
   void invalidateFragmentsFrom(MCFragment *F);
 
-  void layoutBundle(MCFragment *F);
+  void layoutBundle(MCFragment *Prev, MCFragment *F);
 
   /// \name Section Access (in layout order)
   /// @{

@@ -230,12 +230,6 @@ define i64 @mul_signed_ce() {
 	ret i64 mul nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
-define i64 @shl_signed_ce() {
-; CHECK: ret i64 shl nsw (i64 ptrtoint (ptr @addr to i64), i64 17)
-	ret i64 shl nsw (i64 ptrtoint (ptr @addr to i64), i64 17)
-}
-
-
 define i64 @add_unsigned_ce() {
 ; CHECK: ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 	ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)

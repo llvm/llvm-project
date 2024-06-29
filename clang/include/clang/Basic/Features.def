@@ -96,6 +96,7 @@ FEATURE(nullability, true)
 FEATURE(nullability_on_arrays, true)
 FEATURE(nullability_on_classes, true)
 FEATURE(nullability_nullable_result, true)
+FEATURE(numerical_stability_sanitizer, LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
 FEATURE(memory_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Memory |
                                    SanitizerKind::KernelMemory))

@@ -25,6 +25,7 @@
 #include "Program.h"
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 
@@ -154,6 +155,19 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
     Desc->dump(OS);
+
+    if (Desc->IsTemporary) {
+      if (const auto *MTE =
+              dyn_cast_if_present<MaterializeTemporaryExpr>(Desc->asExpr());
+          MTE && MTE->getLifetimeExtendedTemporaryDecl()) {
+        const APValue *V = MTE->getLifetimeExtendedTemporaryDecl()->getValue();
+        if (V->isInt())
+          OS << " (global temporary value: " << V->getInt() << ")";
+        else
+          OS << " (huh?)";
+      }
+    }
+
     OS << "\n";
     if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
       OS << "   ";
@@ -191,7 +205,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
       ND->printQualifiedName(OS);
     else if (asExpr())
-      OS << "expr (TODO)";
+      OS << "Expr " << (const void *)asExpr();
   }
 
   // Print a few interesting bits about the descriptor.
