@@ -38,7 +38,7 @@ define internal i1 @f1(i64 %r) {
 ; CHECK-LABEL: define internal i1 @f1(
 ; CHECK-SAME: i64 [[R:%.*]]) {
 ; CHECK-NEXT:    call void @sideeffect(i1 true, i64 [[R]])
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %c = icmp ult i64 %r, 256
   call void @sideeffect(i1 %c, i64 %r)

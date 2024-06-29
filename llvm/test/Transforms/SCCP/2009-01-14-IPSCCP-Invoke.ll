@@ -27,7 +27,7 @@ UnifiedReturnBlock:
 
 define internal i32 @f() {
 ; CHECK-LABEL: define internal i32 @f() {
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   ret i32 42
 }
