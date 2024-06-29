@@ -132,6 +132,10 @@ Clang Frontend Potentially Breaking Changes
     $ clang --target=<your target triple> -print-target-triple
     <the normalized target triple>
 
+- Clang now issues a deprecation warning when an identifier of a builtin is used
+  for something else than invoking the builtin, e.g. ``struct __is_pointer``.
+  This affects libstdc++ prior to 14.2, and libc++ prior to 3.5.
+
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
 
