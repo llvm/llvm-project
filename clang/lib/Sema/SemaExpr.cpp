@@ -1070,7 +1070,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
 
   // Copy blocks to the heap.
   if (ExprRes.get()->getType()->isBlockPointerType())
-    maybeExtendBlockObject(ExprRes);
+    ObjC().maybeExtendBlockObject(ExprRes);
 
   E = ExprRes.get();
 
@@ -7306,20 +7306,6 @@ Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
   return E;
 }
 
-/// Do an explicit extend of the given block pointer if we're in ARC.
-void Sema::maybeExtendBlockObject(ExprResult &E) {
-  assert(E.get()->getType()->isBlockPointerType());
-  assert(E.get()->isPRValue());
-
-  // Only do this in an r-value context.
-  if (!getLangOpts().ObjCAutoRefCount) return;
-
-  E = ImplicitCastExpr::Create(
-      Context, E.get()->getType(), CK_ARCExtendBlockObject, E.get(),
-      /*base path*/ nullptr, VK_PRValue, FPOptionsOverride());
-  Cleanup.setExprNeedsCleanups(true);
-}
-
 /// Prepares for a scalar cast, performing all the necessary stages
 /// except the final cast and returning the kind required.
 CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
@@ -7356,7 +7342,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
         return CK_BitCast;
       if (SrcKind == Type::STK_CPointer)
         return CK_CPointerToObjCPointerCast;
-      maybeExtendBlockObject(Src);
+      ObjC().maybeExtendBlockObject(Src);
       return CK_BlockPointerToObjCPointerCast;
     case Type::STK_Bool:
       return CK_PointerToBoolean;
@@ -9545,7 +9531,7 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     if (RHSType->isBlockPointerType() &&
         LHSType->isBlockCompatibleObjCPointerType(Context)) {
       if (ConvertRHS)
-        maybeExtendBlockObject(RHS);
+        ObjC().maybeExtendBlockObject(RHS);
       Kind = CK_BlockPointerToObjCPointerCast;
       return Compatible;
     }
@@ -13764,7 +13750,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
           getCurFunction()->markSafeWeakUse(RHS.get());
 
       } else if (getLangOpts().ObjCAutoRefCount || getLangOpts().ObjCWeak) {
-        checkUnsafeExprAssigns(Loc, LHSExpr, RHS.get());
+        ObjC().checkUnsafeExprAssigns(Loc, LHSExpr, RHS.get());
       }
     }
   } else {
@@ -16080,358 +16066,6 @@ ExprResult Sema::ActOnChooseExpr(SourceLocation BuiltinLoc,
 //===----------------------------------------------------------------------===//
 // Clang Extensions.
 //===----------------------------------------------------------------------===//
-
-/// ActOnBlockStart - This callback is invoked when a block literal is started.
-void Sema::ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope) {
-  BlockDecl *Block = BlockDecl::Create(Context, CurContext, CaretLoc);
-
-  if (LangOpts.CPlusPlus) {
-    MangleNumberingContext *MCtx;
-    Decl *ManglingContextDecl;
-    std::tie(MCtx, ManglingContextDecl) =
-        getCurrentMangleNumberContext(Block->getDeclContext());
-    if (MCtx) {
-      unsigned ManglingNumber = MCtx->getManglingNumber(Block);
-      Block->setBlockMangling(ManglingNumber, ManglingContextDecl);
-    }
-  }
-
-  PushBlockScope(CurScope, Block);
-  CurContext->addDecl(Block);
-  if (CurScope)
-    PushDeclContext(CurScope, Block);
-  else
-    CurContext = Block;
-
-  getCurBlock()->HasImplicitReturnType = true;
-
-  // Enter a new evaluation context to insulate the block from any
-  // cleanups from the enclosing full-expression.
-  PushExpressionEvaluationContext(
-      ExpressionEvaluationContext::PotentiallyEvaluated);
-}
-
-void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
-                               Scope *CurScope) {
-  assert(ParamInfo.getIdentifier() == nullptr &&
-         "block-id should have no identifier!");
-  assert(ParamInfo.getContext() == DeclaratorContext::BlockLiteral);
-  BlockScopeInfo *CurBlock = getCurBlock();
-
-  TypeSourceInfo *Sig = GetTypeForDeclarator(ParamInfo);
-  QualType T = Sig->getType();
-
-  // FIXME: We should allow unexpanded parameter packs here, but that would,
-  // in turn, make the block expression contain unexpanded parameter packs.
-  if (DiagnoseUnexpandedParameterPack(CaretLoc, Sig, UPPC_Block)) {
-    // Drop the parameters.
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.HasTrailingReturn = false;
-    EPI.TypeQuals.addConst();
-    T = Context.getFunctionType(Context.DependentTy, std::nullopt, EPI);
-    Sig = Context.getTrivialTypeSourceInfo(T);
-  }
-
-  // GetTypeForDeclarator always produces a function type for a block
-  // literal signature.  Furthermore, it is always a FunctionProtoType
-  // unless the function was written with a typedef.
-  assert(T->isFunctionType() &&
-         "GetTypeForDeclarator made a non-function block signature");
-
-  // Look for an explicit signature in that function type.
-  FunctionProtoTypeLoc ExplicitSignature;
-
-  if ((ExplicitSignature = Sig->getTypeLoc()
-                               .getAsAdjusted<FunctionProtoTypeLoc>())) {
-
-    // Check whether that explicit signature was synthesized by
-    // GetTypeForDeclarator.  If so, don't save that as part of the
-    // written signature.
-    if (ExplicitSignature.getLocalRangeBegin() ==
-        ExplicitSignature.getLocalRangeEnd()) {
-      // This would be much cheaper if we stored TypeLocs instead of
-      // TypeSourceInfos.
-      TypeLoc Result = ExplicitSignature.getReturnLoc();
-      unsigned Size = Result.getFullDataSize();
-      Sig = Context.CreateTypeSourceInfo(Result.getType(), Size);
-      Sig->getTypeLoc().initializeFullCopy(Result, Size);
-
-      ExplicitSignature = FunctionProtoTypeLoc();
-    }
-  }
-
-  CurBlock->TheDecl->setSignatureAsWritten(Sig);
-  CurBlock->FunctionType = T;
-
-  const auto *Fn = T->castAs<FunctionType>();
-  QualType RetTy = Fn->getReturnType();
-  bool isVariadic =
-      (isa<FunctionProtoType>(Fn) && cast<FunctionProtoType>(Fn)->isVariadic());
-
-  CurBlock->TheDecl->setIsVariadic(isVariadic);
-
-  // Context.DependentTy is used as a placeholder for a missing block
-  // return type.  TODO:  what should we do with declarators like:
-  //   ^ * { ... }
-  // If the answer is "apply template argument deduction"....
-  if (RetTy != Context.DependentTy) {
-    CurBlock->ReturnType = RetTy;
-    CurBlock->TheDecl->setBlockMissingReturnType(false);
-    CurBlock->HasImplicitReturnType = false;
-  }
-
-  // Push block parameters from the declarator if we had them.
-  SmallVector<ParmVarDecl*, 8> Params;
-  if (ExplicitSignature) {
-    for (unsigned I = 0, E = ExplicitSignature.getNumParams(); I != E; ++I) {
-      ParmVarDecl *Param = ExplicitSignature.getParam(I);
-      if (Param->getIdentifier() == nullptr && !Param->isImplicit() &&
-          !Param->isInvalidDecl() && !getLangOpts().CPlusPlus) {
-        // Diagnose this as an extension in C17 and earlier.
-        if (!getLangOpts().C23)
-          Diag(Param->getLocation(), diag::ext_parameter_name_omitted_c23);
-      }
-      Params.push_back(Param);
-    }
-
-  // Fake up parameter variables if we have a typedef, like
-  //   ^ fntype { ... }
-  } else if (const FunctionProtoType *Fn = T->getAs<FunctionProtoType>()) {
-    for (const auto &I : Fn->param_types()) {
-      ParmVarDecl *Param = BuildParmVarDeclForTypedef(
-          CurBlock->TheDecl, ParamInfo.getBeginLoc(), I);
-      Params.push_back(Param);
-    }
-  }
-
-  // Set the parameters on the block decl.
-  if (!Params.empty()) {
-    CurBlock->TheDecl->setParams(Params);
-    CheckParmsForFunctionDef(CurBlock->TheDecl->parameters(),
-                             /*CheckParameterNames=*/false);
-  }
-
-  // Finally we can process decl attributes.
-  ProcessDeclAttributes(CurScope, CurBlock->TheDecl, ParamInfo);
-
-  // Put the parameter variables in scope.
-  for (auto *AI : CurBlock->TheDecl->parameters()) {
-    AI->setOwningFunction(CurBlock->TheDecl);
-
-    // If this has an identifier, add it to the scope stack.
-    if (AI->getIdentifier()) {
-      CheckShadow(CurBlock->TheScope, AI);
-
-      PushOnScopeChains(AI, CurBlock->TheScope);
-    }
-
-    if (AI->isInvalidDecl())
-      CurBlock->TheDecl->setInvalidDecl();
-  }
-}
-
-/// ActOnBlockError - If there is an error parsing a block, this callback
-/// is invoked to pop the information about the block from the action impl.
-void Sema::ActOnBlockError(SourceLocation CaretLoc, Scope *CurScope) {
-  // Leave the expression-evaluation context.
-  DiscardCleanupsInEvaluationContext();
-  PopExpressionEvaluationContext();
-
-  // Pop off CurBlock, handle nested blocks.
-  PopDeclContext();
-  PopFunctionScopeInfo();
-}
-
-/// ActOnBlockStmtExpr - This is called when the body of a block statement
-/// literal was successfully completed.  ^(int x){...}
-ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
-                                    Stmt *Body, Scope *CurScope) {
-  // If blocks are disabled, emit an error.
-  if (!LangOpts.Blocks)
-    Diag(CaretLoc, diag::err_blocks_disable) << LangOpts.OpenCL;
-
-  // Leave the expression-evaluation context.
-  if (hasAnyUnrecoverableErrorsInThisFunction())
-    DiscardCleanupsInEvaluationContext();
-  assert(!Cleanup.exprNeedsCleanups() &&
-         "cleanups within block not correctly bound!");
-  PopExpressionEvaluationContext();
-
-  BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
-  BlockDecl *BD = BSI->TheDecl;
-
-  if (BSI->HasImplicitReturnType)
-    deduceClosureReturnType(*BSI);
-
-  QualType RetTy = Context.VoidTy;
-  if (!BSI->ReturnType.isNull())
-    RetTy = BSI->ReturnType;
-
-  bool NoReturn = BD->hasAttr<NoReturnAttr>();
-  QualType BlockTy;
-
-  // If the user wrote a function type in some form, try to use that.
-  if (!BSI->FunctionType.isNull()) {
-    const FunctionType *FTy = BSI->FunctionType->castAs<FunctionType>();
-
-    FunctionType::ExtInfo Ext = FTy->getExtInfo();
-    if (NoReturn && !Ext.getNoReturn()) Ext = Ext.withNoReturn(true);
-
-    // Turn protoless block types into nullary block types.
-    if (isa<FunctionNoProtoType>(FTy)) {
-      FunctionProtoType::ExtProtoInfo EPI;
-      EPI.ExtInfo = Ext;
-      BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
-
-      // Otherwise, if we don't need to change anything about the function type,
-      // preserve its sugar structure.
-    } else if (FTy->getReturnType() == RetTy &&
-               (!NoReturn || FTy->getNoReturnAttr())) {
-      BlockTy = BSI->FunctionType;
-
-    // Otherwise, make the minimal modifications to the function type.
-    } else {
-      const FunctionProtoType *FPT = cast<FunctionProtoType>(FTy);
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      EPI.TypeQuals = Qualifiers();
-      EPI.ExtInfo = Ext;
-      BlockTy = Context.getFunctionType(RetTy, FPT->getParamTypes(), EPI);
-    }
-
-  // If we don't have a function type, just build one from nothing.
-  } else {
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.ExtInfo = FunctionType::ExtInfo().withNoReturn(NoReturn);
-    BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
-  }
-
-  DiagnoseUnusedParameters(BD->parameters());
-  BlockTy = Context.getBlockPointerType(BlockTy);
-
-  // If needed, diagnose invalid gotos and switches in the block.
-  if (getCurFunction()->NeedsScopeChecking() &&
-      !PP.isCodeCompletionEnabled())
-    DiagnoseInvalidJumps(cast<CompoundStmt>(Body));
-
-  BD->setBody(cast<CompoundStmt>(Body));
-
-  if (Body && getCurFunction()->HasPotentialAvailabilityViolations)
-    DiagnoseUnguardedAvailabilityViolations(BD);
-
-  // Try to apply the named return value optimization. We have to check again
-  // if we can do this, though, because blocks keep return statements around
-  // to deduce an implicit return type.
-  if (getLangOpts().CPlusPlus && RetTy->isRecordType() &&
-      !BD->isDependentContext())
-    computeNRVO(Body, BSI);
-
-  if (RetTy.hasNonTrivialToPrimitiveDestructCUnion() ||
-      RetTy.hasNonTrivialToPrimitiveCopyCUnion())
-    checkNonTrivialCUnion(RetTy, BD->getCaretLocation(), NTCUC_FunctionReturn,
-                          NTCUK_Destruct|NTCUK_Copy);
-
-  PopDeclContext();
-
-  // Set the captured variables on the block.
-  SmallVector<BlockDecl::Capture, 4> Captures;
-  for (Capture &Cap : BSI->Captures) {
-    if (Cap.isInvalid() || Cap.isThisCapture())
-      continue;
-    // Cap.getVariable() is always a VarDecl because
-    // blocks cannot capture structured bindings or other ValueDecl kinds.
-    auto *Var = cast<VarDecl>(Cap.getVariable());
-    Expr *CopyExpr = nullptr;
-    if (getLangOpts().CPlusPlus && Cap.isCopyCapture()) {
-      if (const RecordType *Record =
-              Cap.getCaptureType()->getAs<RecordType>()) {
-        // The capture logic needs the destructor, so make sure we mark it.
-        // Usually this is unnecessary because most local variables have
-        // their destructors marked at declaration time, but parameters are
-        // an exception because it's technically only the call site that
-        // actually requires the destructor.
-        if (isa<ParmVarDecl>(Var))
-          FinalizeVarWithDestructor(Var, Record);
-
-        // Enter a separate potentially-evaluated context while building block
-        // initializers to isolate their cleanups from those of the block
-        // itself.
-        // FIXME: Is this appropriate even when the block itself occurs in an
-        // unevaluated operand?
-        EnterExpressionEvaluationContext EvalContext(
-            *this, ExpressionEvaluationContext::PotentiallyEvaluated);
-
-        SourceLocation Loc = Cap.getLocation();
-
-        ExprResult Result = BuildDeclarationNameExpr(
-            CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
-
-        // According to the blocks spec, the capture of a variable from
-        // the stack requires a const copy constructor.  This is not true
-        // of the copy/move done to move a __block variable to the heap.
-        if (!Result.isInvalid() &&
-            !Result.get()->getType().isConstQualified()) {
-          Result = ImpCastExprToType(Result.get(),
-                                     Result.get()->getType().withConst(),
-                                     CK_NoOp, VK_LValue);
-        }
-
-        if (!Result.isInvalid()) {
-          Result = PerformCopyInitialization(
-              InitializedEntity::InitializeBlock(Var->getLocation(),
-                                                 Cap.getCaptureType()),
-              Loc, Result.get());
-        }
-
-        // Build a full-expression copy expression if initialization
-        // succeeded and used a non-trivial constructor.  Recover from
-        // errors by pretending that the copy isn't necessary.
-        if (!Result.isInvalid() &&
-            !cast<CXXConstructExpr>(Result.get())->getConstructor()
-                ->isTrivial()) {
-          Result = MaybeCreateExprWithCleanups(Result);
-          CopyExpr = Result.get();
-        }
-      }
-    }
-
-    BlockDecl::Capture NewCap(Var, Cap.isBlockCapture(), Cap.isNested(),
-                              CopyExpr);
-    Captures.push_back(NewCap);
-  }
-  BD->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
-
-  // Pop the block scope now but keep it alive to the end of this function.
-  AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
-  PoppedFunctionScopePtr ScopeRAII = PopFunctionScopeInfo(&WP, BD, BlockTy);
-
-  BlockExpr *Result = new (Context) BlockExpr(BD, BlockTy);
-
-  // If the block isn't obviously global, i.e. it captures anything at
-  // all, then we need to do a few things in the surrounding context:
-  if (Result->getBlockDecl()->hasCaptures()) {
-    // First, this expression has a new cleanup object.
-    ExprCleanupObjects.push_back(Result->getBlockDecl());
-    Cleanup.setExprNeedsCleanups(true);
-
-    // It also gets a branch-protected scope if any of the captured
-    // variables needs destruction.
-    for (const auto &CI : Result->getBlockDecl()->captures()) {
-      const VarDecl *var = CI.getVariable();
-      if (var->getType().isDestructedType() != QualType::DK_none) {
-        setFunctionHasBranchProtectedScope();
-        break;
-      }
-    }
-  }
-
-  if (getCurFunction())
-    getCurFunction()->addBlock(BD);
-
-  if (BD->isInvalidDecl())
-    return CreateRecoveryExpr(Result->getBeginLoc(), Result->getEndLoc(),
-                              {Result}, Result->getType());
-  return Result;
-}
 
 ExprResult Sema::ActOnVAArg(SourceLocation BuiltinLoc, Expr *E, ParsedType Ty,
                             SourceLocation RPLoc) {

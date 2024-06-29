@@ -179,6 +179,13 @@ public:
   /// target type.
   void checkArrayLiteral(QualType TargetType, ObjCArrayLiteral *ArrayLiteral);
 
+  /// Retrieve the current block, if any.
+  sema::BlockScopeInfo *getCurBlock();
+
+  void PushBlockScope(Scope *BlockScope, BlockDecl *Block);
+
+  void diagnoseImplicitlyRetainedSelf();
+
 private:
   IdentifierInfo *Ident_NSError = nullptr;
 
@@ -571,6 +578,21 @@ public:
 
   ObjCContainerDecl *getObjCDeclContext() const;
 
+  /// List of SourceLocations where 'self' is implicitly retained inside a
+  /// block.
+  llvm::SmallVector<std::pair<SourceLocation, const BlockDecl *>, 1>
+      ImplicitlyRetainedSelfLocs;
+
+  /// checkUnsafeAssigns - Check whether +1 expr is being assigned
+  /// to weak/__unsafe_unretained type.
+  bool checkUnsafeAssigns(SourceLocation Loc, QualType LHS, Expr *RHS);
+
+  /// checkUnsafeExprAssigns - Check whether +1 expr is being assigned
+  /// to weak/__unsafe_unretained expression.
+  void checkUnsafeExprAssigns(SourceLocation Loc, Expr *LHS, Expr *RHS);
+
+  enum class RetainOwnershipKind { NS, CF, OS };
+
 private:
   /// AddMethodToGlobalPool - Add an instance or factory method to the global
   /// pool. See descriptoin of AddInstanceMethodToGlobalPool.
@@ -925,6 +947,27 @@ public:
   };
   ObjCLiteralKind CheckLiteralKind(Expr *FromE);
 
+  /// Do an explicit extend of the given block pointer if we're in ARC.
+  void maybeExtendBlockObject(ExprResult &E);
+
+  /// ActOnBlockStart - This callback is invoked when a block literal is
+  /// started.
+  void ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope);
+
+  /// ActOnBlockArguments - This callback allows processing of block arguments.
+  /// If there are no arguments, this is still invoked.
+  void ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
+                           Scope *CurScope);
+
+  /// ActOnBlockError - If there is an error parsing a block, this callback
+  /// is invoked to pop the information about the block from the action impl.
+  void ActOnBlockError(SourceLocation CaretLoc, Scope *CurScope);
+
+  /// ActOnBlockStmtExpr - This is called when the body of a block statement
+  /// literal was successfully completed.  ^(int x){...}
+  ExprResult ActOnBlockStmtExpr(SourceLocation CaretLoc, Stmt *Body,
+                                Scope *CurScope);
+
   ///@}
 
   //
@@ -1067,14 +1110,14 @@ public:
   void handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL);
 
   void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
-                        Sema::RetainOwnershipKind K,
+                        RetainOwnershipKind K,
                         bool IsTemplateInstantiation);
 
   /// \return whether the parameter is a pointer to OSObject pointer.
   bool isValidOSObjectOutParameter(const Decl *D);
   bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
 
-  Sema::RetainOwnershipKind
+  RetainOwnershipKind
   parsedAttrToRetainOwnershipKind(const ParsedAttr &AL);
 
   ///@}

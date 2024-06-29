@@ -15817,8 +15817,8 @@ ExprResult
 TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
   BlockDecl *oldBlock = E->getBlockDecl();
 
-  SemaRef.ActOnBlockStart(E->getCaretLocation(), /*Scope=*/nullptr);
-  BlockScopeInfo *blockScope = SemaRef.getCurBlock();
+  SemaRef.ObjC().ActOnBlockStart(E->getCaretLocation(), /*Scope=*/nullptr);
+  BlockScopeInfo *blockScope = SemaRef.ObjC().getCurBlock();
 
   blockScope->TheDecl->setIsVariadic(oldBlock->isVariadic());
   blockScope->TheDecl->setBlockMissingReturnType(
@@ -15835,7 +15835,7 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
           E->getCaretLocation(), oldBlock->parameters(), nullptr,
           exprFunctionType->getExtParameterInfosOrNull(), paramTypes, &params,
           extParamInfos)) {
-    getSema().ActOnBlockError(E->getCaretLocation(), /*Scope=*/nullptr);
+    getSema().ObjC().ActOnBlockError(E->getCaretLocation(), /*Scope=*/nullptr);
     return ExprError();
   }
 
@@ -15861,7 +15861,7 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
   // Transform the body
   StmtResult body = getDerived().TransformStmt(E->getBody());
   if (body.isInvalid()) {
-    getSema().ActOnBlockError(E->getCaretLocation(), /*Scope=*/nullptr);
+    getSema().ObjC().ActOnBlockError(E->getCaretLocation(), /*Scope=*/nullptr);
     return ExprError();
   }
 
@@ -15890,7 +15890,7 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
   }
 #endif
 
-  return SemaRef.ActOnBlockStmtExpr(E->getCaretLocation(), body.get(),
+  return SemaRef.ObjC().ActOnBlockStmtExpr(E->getCaretLocation(), body.get(),
                                     /*Scope=*/nullptr);
 }
 

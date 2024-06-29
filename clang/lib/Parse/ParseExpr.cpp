@@ -3733,7 +3733,7 @@ void Parser::ParseBlockId(SourceLocation CaretLoc) {
   MaybeParseGNUAttributes(DeclaratorInfo);
 
   // Inform sema that we are starting a block.
-  Actions.ActOnBlockArguments(CaretLoc, DeclaratorInfo, getCurScope());
+  Actions.ObjC().ActOnBlockArguments(CaretLoc, DeclaratorInfo, getCurScope());
 }
 
 /// ParseBlockLiteralExpression - Parse a block literal, which roughly looks
@@ -3761,7 +3761,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
                                   Scope::CompoundStmtScope | Scope::DeclScope);
 
   // Inform sema that we are starting a block.
-  Actions.ActOnBlockStart(CaretLoc, getCurScope());
+  Actions.ObjC().ActOnBlockStart(CaretLoc, getCurScope());
 
   // Parse the return type if present.
   DeclSpec DS(AttrFactory);
@@ -3786,14 +3786,14 @@ ExprResult Parser::ParseBlockLiteralExpression() {
       // If there was an error parsing the arguments, they may have
       // tried to use ^(x+y) which requires an argument list.  Just
       // skip the whole block literal.
-      Actions.ActOnBlockError(CaretLoc, getCurScope());
+      Actions.ObjC().ActOnBlockError(CaretLoc, getCurScope());
       return ExprError();
     }
 
     MaybeParseGNUAttributes(ParamInfo);
 
     // Inform sema that we are starting a block.
-    Actions.ActOnBlockArguments(CaretLoc, ParamInfo, getCurScope());
+    Actions.ObjC().ActOnBlockArguments(CaretLoc, ParamInfo, getCurScope());
   } else if (!Tok.is(tok::l_brace)) {
     ParseBlockId(CaretLoc);
   } else {
@@ -3823,7 +3823,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
     MaybeParseGNUAttributes(ParamInfo);
 
     // Inform sema that we are starting a block.
-    Actions.ActOnBlockArguments(CaretLoc, ParamInfo, getCurScope());
+    Actions.ObjC().ActOnBlockArguments(CaretLoc, ParamInfo, getCurScope());
   }
 
 
@@ -3831,16 +3831,16 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   if (!Tok.is(tok::l_brace)) {
     // Saw something like: ^expr
     Diag(Tok, diag::err_expected_expression);
-    Actions.ActOnBlockError(CaretLoc, getCurScope());
+    Actions.ObjC().ActOnBlockError(CaretLoc, getCurScope());
     return ExprError();
   }
 
   StmtResult Stmt(ParseCompoundStatementBody());
   BlockScope.Exit();
   if (!Stmt.isInvalid())
-    Result = Actions.ActOnBlockStmtExpr(CaretLoc, Stmt.get(), getCurScope());
+    Result = Actions.ObjC().ActOnBlockStmtExpr(CaretLoc, Stmt.get(), getCurScope());
   else
-    Actions.ActOnBlockError(CaretLoc, getCurScope());
+    Actions.ObjC().ActOnBlockError(CaretLoc, getCurScope());
   return Result;
 }
 

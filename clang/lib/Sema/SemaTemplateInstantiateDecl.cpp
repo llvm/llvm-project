@@ -725,15 +725,15 @@ void Sema::InstantiateAttrsForDecl(
   }
 }
 
-static Sema::RetainOwnershipKind
+static SemaObjC::RetainOwnershipKind
 attrToRetainOwnershipKind(const Attr *A) {
   switch (A->getKind()) {
   case clang::attr::CFConsumed:
-    return Sema::RetainOwnershipKind::CF;
+    return SemaObjC::RetainOwnershipKind::CF;
   case clang::attr::OSConsumed:
-    return Sema::RetainOwnershipKind::OS;
+    return SemaObjC::RetainOwnershipKind::OS;
   case clang::attr::NSConsumed:
-    return Sema::RetainOwnershipKind::NS;
+    return SemaObjC::RetainOwnershipKind::NS;
   default:
     llvm_unreachable("Wrong argument supplied");
   }
@@ -1238,7 +1238,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
     if (auto *F = dyn_cast<FunctionDecl>(DC))
       RT = F->getReturnType();
     else if (isa<BlockDecl>(DC))
-      RT = cast<FunctionType>(SemaRef.getCurBlock()->FunctionType)
+      RT = cast<FunctionType>(SemaRef.ObjC().getCurBlock()->FunctionType)
                ->getReturnType();
     else
       llvm_unreachable("Unknown context type");

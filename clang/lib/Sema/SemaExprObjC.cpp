@@ -21,6 +21,7 @@
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/Rewriters.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
@@ -1893,7 +1894,7 @@ bool SemaObjC::CheckMessageArgumentTypes(
           Args[i]->getType()->isBlockPointerType() &&
           origParamType->isObjCObjectPointerType()) {
         ExprResult arg = Args[i];
-        SemaRef.maybeExtendBlockObject(arg);
+        maybeExtendBlockObject(arg);
         Args[i] = arg.get();
       }
     }
@@ -4923,7 +4924,7 @@ ExprResult SemaObjC::BuildIvarRefExpr(Scope *S, SourceLocation Loc,
   }
   if (getLangOpts().ObjCAutoRefCount && !SemaRef.isUnevaluatedContext())
     if (const BlockDecl *BD = SemaRef.CurContext->getInnermostBlockDecl())
-      SemaRef.ImplicitlyRetainedSelfLocs.push_back({Loc, BD});
+      ImplicitlyRetainedSelfLocs.push_back({Loc, BD});
 
   return Result;
 }
@@ -5197,7 +5198,7 @@ CastKind SemaObjC::PrepareCastToObjCObjectPointer(ExprResult &E) {
   if (type->isObjCObjectPointerType()) {
     return CK_BitCast;
   } else if (type->isBlockPointerType()) {
-    SemaRef.maybeExtendBlockObject(E);
+    maybeExtendBlockObject(E);
     return CK_BlockPointerToObjCPointerCast;
   } else {
     assert(type->isPointerType());
@@ -5245,4 +5246,373 @@ SemaObjC::ObjCLiteralKind SemaObjC::CheckLiteralKind(Expr *FromE) {
   }
   }
   return LK_None;
+}
+
+void SemaObjC::maybeExtendBlockObject(ExprResult &E) {
+  assert(E.get()->getType()->isBlockPointerType());
+  assert(E.get()->isPRValue());
+
+  // Only do this in an r-value context.
+  if (!getLangOpts().ObjCAutoRefCount) return;
+
+  E = ImplicitCastExpr::Create(
+      getASTContext(), E.get()->getType(), CK_ARCExtendBlockObject, E.get(),
+      /*base path*/ nullptr, VK_PRValue, FPOptionsOverride());
+  SemaRef.Cleanup.setExprNeedsCleanups(true);
+}
+
+/// ActOnBlockStart - This callback is invoked when a block literal is started.
+void SemaObjC::ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope) {
+  ASTContext &Context = getASTContext();
+  BlockDecl *Block = BlockDecl::Create(Context, SemaRef.CurContext, CaretLoc);
+
+  if (getLangOpts().CPlusPlus) {
+    MangleNumberingContext *MCtx;
+    Decl *ManglingContextDecl;
+    std::tie(MCtx, ManglingContextDecl) =
+        SemaRef.getCurrentMangleNumberContext(Block->getDeclContext());
+    if (MCtx) {
+      unsigned ManglingNumber = MCtx->getManglingNumber(Block);
+      Block->setBlockMangling(ManglingNumber, ManglingContextDecl);
+    }
+  }
+
+  PushBlockScope(CurScope, Block);
+  SemaRef.CurContext->addDecl(Block);
+  if (CurScope)
+    SemaRef.PushDeclContext(CurScope, Block);
+  else
+    SemaRef.CurContext = Block;
+
+  getCurBlock()->HasImplicitReturnType = true;
+
+  // Enter a new evaluation context to insulate the block from any
+  // cleanups from the enclosing full-expression.
+  SemaRef.PushExpressionEvaluationContext(
+      Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+}
+
+void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
+                               Scope *CurScope) {
+  assert(ParamInfo.getIdentifier() == nullptr &&
+         "block-id should have no identifier!");
+  assert(ParamInfo.getContext() == DeclaratorContext::BlockLiteral);
+  ASTContext &Context = getASTContext();
+  BlockScopeInfo *CurBlock = getCurBlock();
+
+  TypeSourceInfo *Sig = SemaRef.GetTypeForDeclarator(ParamInfo);
+  QualType T = Sig->getType();
+
+  // FIXME: We should allow unexpanded parameter packs here, but that would,
+  // in turn, make the block expression contain unexpanded parameter packs.
+  if (SemaRef.DiagnoseUnexpandedParameterPack(CaretLoc, Sig, Sema::UPPC_Block)) {
+    // Drop the parameters.
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.HasTrailingReturn = false;
+    EPI.TypeQuals.addConst();
+    T = Context.getFunctionType(Context.DependentTy, std::nullopt, EPI);
+    Sig = Context.getTrivialTypeSourceInfo(T);
+  }
+
+  // GetTypeForDeclarator always produces a function type for a block
+  // literal signature.  Furthermore, it is always a FunctionProtoType
+  // unless the function was written with a typedef.
+  assert(T->isFunctionType() &&
+         "GetTypeForDeclarator made a non-function block signature");
+
+  // Look for an explicit signature in that function type.
+  FunctionProtoTypeLoc ExplicitSignature;
+
+  if ((ExplicitSignature = Sig->getTypeLoc()
+                               .getAsAdjusted<FunctionProtoTypeLoc>())) {
+
+    // Check whether that explicit signature was synthesized by
+    // GetTypeForDeclarator.  If so, don't save that as part of the
+    // written signature.
+    if (ExplicitSignature.getLocalRangeBegin() ==
+        ExplicitSignature.getLocalRangeEnd()) {
+      // This would be much cheaper if we stored TypeLocs instead of
+      // TypeSourceInfos.
+      TypeLoc Result = ExplicitSignature.getReturnLoc();
+      unsigned Size = Result.getFullDataSize();
+      Sig = Context.CreateTypeSourceInfo(Result.getType(), Size);
+      Sig->getTypeLoc().initializeFullCopy(Result, Size);
+
+      ExplicitSignature = FunctionProtoTypeLoc();
+    }
+  }
+
+  CurBlock->TheDecl->setSignatureAsWritten(Sig);
+  CurBlock->FunctionType = T;
+
+  const auto *Fn = T->castAs<FunctionType>();
+  QualType RetTy = Fn->getReturnType();
+  bool isVariadic =
+      (isa<FunctionProtoType>(Fn) && cast<FunctionProtoType>(Fn)->isVariadic());
+
+  CurBlock->TheDecl->setIsVariadic(isVariadic);
+
+  // Context.DependentTy is used as a placeholder for a missing block
+  // return type.  TODO:  what should we do with declarators like:
+  //   ^ * { ... }
+  // If the answer is "apply template argument deduction"....
+  if (RetTy != Context.DependentTy) {
+    CurBlock->ReturnType = RetTy;
+    CurBlock->TheDecl->setBlockMissingReturnType(false);
+    CurBlock->HasImplicitReturnType = false;
+  }
+
+  // Push block parameters from the declarator if we had them.
+  SmallVector<ParmVarDecl*, 8> Params;
+  if (ExplicitSignature) {
+    for (unsigned I = 0, E = ExplicitSignature.getNumParams(); I != E; ++I) {
+      ParmVarDecl *Param = ExplicitSignature.getParam(I);
+      if (Param->getIdentifier() == nullptr && !Param->isImplicit() &&
+          !Param->isInvalidDecl() && !getLangOpts().CPlusPlus) {
+        // Diagnose this as an extension in C17 and earlier.
+        if (!getLangOpts().C23)
+          Diag(Param->getLocation(), diag::ext_parameter_name_omitted_c23);
+      }
+      Params.push_back(Param);
+    }
+
+  // Fake up parameter variables if we have a typedef, like
+  //   ^ fntype { ... }
+  } else if (const FunctionProtoType *Fn = T->getAs<FunctionProtoType>()) {
+    for (const auto &I : Fn->param_types()) {
+      ParmVarDecl *Param = SemaRef.BuildParmVarDeclForTypedef(
+          CurBlock->TheDecl, ParamInfo.getBeginLoc(), I);
+      Params.push_back(Param);
+    }
+  }
+
+  // Set the parameters on the block decl.
+  if (!Params.empty()) {
+    CurBlock->TheDecl->setParams(Params);
+    SemaRef.CheckParmsForFunctionDef(CurBlock->TheDecl->parameters(),
+                             /*CheckParameterNames=*/false);
+  }
+
+  // Finally we can process decl attributes.
+  SemaRef.ProcessDeclAttributes(CurScope, CurBlock->TheDecl, ParamInfo);
+
+  // Put the parameter variables in scope.
+  for (auto *AI : CurBlock->TheDecl->parameters()) {
+    AI->setOwningFunction(CurBlock->TheDecl);
+
+    // If this has an identifier, add it to the scope stack.
+    if (AI->getIdentifier()) {
+      SemaRef.CheckShadow(CurBlock->TheScope, AI);
+
+      SemaRef.PushOnScopeChains(AI, CurBlock->TheScope);
+    }
+
+    if (AI->isInvalidDecl())
+      CurBlock->TheDecl->setInvalidDecl();
+  }
+}
+
+/// ActOnBlockError - If there is an error parsing a block, this callback
+/// is invoked to pop the information about the block from the action impl.
+void SemaObjC::ActOnBlockError(SourceLocation CaretLoc, Scope *CurScope) {
+  // Leave the expression-evaluation context.
+  SemaRef.DiscardCleanupsInEvaluationContext();
+  SemaRef.PopExpressionEvaluationContext();
+
+  // Pop off CurBlock, handle nested blocks.
+  SemaRef.PopDeclContext();
+  SemaRef.PopFunctionScopeInfo();
+}
+
+/// ActOnBlockStmtExpr - This is called when the body of a block statement
+/// literal was successfully completed.  ^(int x){...}
+ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
+                                    Stmt *Body, Scope *CurScope) {
+  // If blocks are disabled, emit an error.
+  if (!getLangOpts().Blocks)
+    Diag(CaretLoc, diag::err_blocks_disable) << getLangOpts().OpenCL;
+
+  ASTContext &Context = getASTContext();
+
+  // Leave the expression-evaluation context.
+  if (SemaRef.hasAnyUnrecoverableErrorsInThisFunction())
+    SemaRef.DiscardCleanupsInEvaluationContext();
+  assert(!SemaRef.Cleanup.exprNeedsCleanups() &&
+         "cleanups within block not correctly bound!");
+  SemaRef.PopExpressionEvaluationContext();
+
+  BlockScopeInfo *BSI = cast<BlockScopeInfo>(SemaRef.FunctionScopes.back());
+  BlockDecl *BD = BSI->TheDecl;
+
+  if (BSI->HasImplicitReturnType)
+    SemaRef.deduceClosureReturnType(*BSI);
+
+  QualType RetTy = Context.VoidTy;
+  if (!BSI->ReturnType.isNull())
+    RetTy = BSI->ReturnType;
+
+  bool NoReturn = BD->hasAttr<NoReturnAttr>();
+  QualType BlockTy;
+
+  // If the user wrote a function type in some form, try to use that.
+  if (!BSI->FunctionType.isNull()) {
+    const FunctionType *FTy = BSI->FunctionType->castAs<FunctionType>();
+
+    FunctionType::ExtInfo Ext = FTy->getExtInfo();
+    if (NoReturn && !Ext.getNoReturn()) Ext = Ext.withNoReturn(true);
+
+    // Turn protoless block types into nullary block types.
+    if (isa<FunctionNoProtoType>(FTy)) {
+      FunctionProtoType::ExtProtoInfo EPI;
+      EPI.ExtInfo = Ext;
+      BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
+
+      // Otherwise, if we don't need to change anything about the function type,
+      // preserve its sugar structure.
+    } else if (FTy->getReturnType() == RetTy &&
+               (!NoReturn || FTy->getNoReturnAttr())) {
+      BlockTy = BSI->FunctionType;
+
+    // Otherwise, make the minimal modifications to the function type.
+    } else {
+      const FunctionProtoType *FPT = cast<FunctionProtoType>(FTy);
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.TypeQuals = Qualifiers();
+      EPI.ExtInfo = Ext;
+      BlockTy = Context.getFunctionType(RetTy, FPT->getParamTypes(), EPI);
+    }
+
+  // If we don't have a function type, just build one from nothing.
+  } else {
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.ExtInfo = FunctionType::ExtInfo().withNoReturn(NoReturn);
+    BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
+  }
+
+  SemaRef.DiagnoseUnusedParameters(BD->parameters());
+  BlockTy = Context.getBlockPointerType(BlockTy);
+
+  // If needed, diagnose invalid gotos and switches in the block.
+  if (SemaRef.getCurFunction()->NeedsScopeChecking() &&
+      !SemaRef.PP.isCodeCompletionEnabled())
+    SemaRef.DiagnoseInvalidJumps(cast<CompoundStmt>(Body));
+
+  BD->setBody(cast<CompoundStmt>(Body));
+
+  if (Body && SemaRef.getCurFunction()->HasPotentialAvailabilityViolations)
+    SemaRef.DiagnoseUnguardedAvailabilityViolations(BD);
+
+  // Try to apply the named return value optimization. We have to check again
+  // if we can do this, though, because blocks keep return statements around
+  // to deduce an implicit return type.
+  if (getLangOpts().CPlusPlus && RetTy->isRecordType() &&
+      !BD->isDependentContext())
+    SemaRef.computeNRVO(Body, BSI);
+
+  if (RetTy.hasNonTrivialToPrimitiveDestructCUnion() ||
+      RetTy.hasNonTrivialToPrimitiveCopyCUnion())
+    SemaRef.checkNonTrivialCUnion(RetTy, BD->getCaretLocation(), Sema::NTCUC_FunctionReturn,
+                          Sema::NTCUK_Destruct|Sema::NTCUK_Copy);
+
+  SemaRef.PopDeclContext();
+
+  // Set the captured variables on the block.
+  SmallVector<BlockDecl::Capture, 4> Captures;
+  for (Capture &Cap : BSI->Captures) {
+    if (Cap.isInvalid() || Cap.isThisCapture())
+      continue;
+    // Cap.getVariable() is always a VarDecl because
+    // blocks cannot capture structured bindings or other ValueDecl kinds.
+    auto *Var = cast<VarDecl>(Cap.getVariable());
+    Expr *CopyExpr = nullptr;
+    if (getLangOpts().CPlusPlus && Cap.isCopyCapture()) {
+      if (const RecordType *Record =
+              Cap.getCaptureType()->getAs<RecordType>()) {
+        // The capture logic needs the destructor, so make sure we mark it.
+        // Usually this is unnecessary because most local variables have
+        // their destructors marked at declaration time, but parameters are
+        // an exception because it's technically only the call site that
+        // actually requires the destructor.
+        if (isa<ParmVarDecl>(Var))
+          SemaRef.FinalizeVarWithDestructor(Var, Record);
+
+        // Enter a separate potentially-evaluated context while building block
+        // initializers to isolate their cleanups from those of the block
+        // itself.
+        // FIXME: Is this appropriate even when the block itself occurs in an
+        // unevaluated operand?
+        EnterExpressionEvaluationContext EvalContext(
+            SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
+        SourceLocation Loc = Cap.getLocation();
+
+        ExprResult Result = SemaRef.BuildDeclarationNameExpr(
+            CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
+
+        // According to the blocks spec, the capture of a variable from
+        // the stack requires a const copy constructor.  This is not true
+        // of the copy/move done to move a __block variable to the heap.
+        if (!Result.isInvalid() &&
+            !Result.get()->getType().isConstQualified()) {
+          Result = SemaRef.ImpCastExprToType(Result.get(),
+                                     Result.get()->getType().withConst(),
+                                     CK_NoOp, VK_LValue);
+        }
+
+        if (!Result.isInvalid()) {
+          Result = SemaRef.PerformCopyInitialization(
+              InitializedEntity::InitializeBlock(Var->getLocation(),
+                                                 Cap.getCaptureType()),
+              Loc, Result.get());
+        }
+
+        // Build a full-expression copy expression if initialization
+        // succeeded and used a non-trivial constructor.  Recover from
+        // errors by pretending that the copy isn't necessary.
+        if (!Result.isInvalid() &&
+            !cast<CXXConstructExpr>(Result.get())->getConstructor()
+                ->isTrivial()) {
+          Result = SemaRef.MaybeCreateExprWithCleanups(Result);
+          CopyExpr = Result.get();
+        }
+      }
+    }
+
+    BlockDecl::Capture NewCap(Var, Cap.isBlockCapture(), Cap.isNested(),
+                              CopyExpr);
+    Captures.push_back(NewCap);
+  }
+  BD->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
+
+  // Pop the block scope now but keep it alive to the end of this function.
+  AnalysisBasedWarnings::Policy WP = SemaRef.AnalysisWarnings.getDefaultPolicy();
+  Sema::PoppedFunctionScopePtr ScopeRAII = SemaRef.PopFunctionScopeInfo(&WP, BD, BlockTy);
+
+  BlockExpr *Result = new (Context) BlockExpr(BD, BlockTy);
+
+  // If the block isn't obviously global, i.e. it captures anything at
+  // all, then we need to do a few things in the surrounding context:
+  if (Result->getBlockDecl()->hasCaptures()) {
+    // First, this expression has a new cleanup object.
+    SemaRef.ExprCleanupObjects.push_back(Result->getBlockDecl());
+    SemaRef.Cleanup.setExprNeedsCleanups(true);
+
+    // It also gets a branch-protected scope if any of the captured
+    // variables needs destruction.
+    for (const auto &CI : Result->getBlockDecl()->captures()) {
+      const VarDecl *var = CI.getVariable();
+      if (var->getType().isDestructedType() != QualType::DK_none) {
+        SemaRef.setFunctionHasBranchProtectedScope();
+        break;
+      }
+    }
+  }
+
+  if (SemaRef.getCurFunction())
+    SemaRef.getCurFunction()->addBlock(BD);
+
+  if (BD->isInvalidDecl())
+    return SemaRef.CreateRecoveryExpr(Result->getBeginLoc(), Result->getEndLoc(),
+                              {Result}, Result->getType());
+  return Result;
 }

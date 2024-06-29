@@ -1737,17 +1737,17 @@ static bool isValidSubjectOfOSAttribute(QualType QT) {
 }
 
 void SemaObjC::AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
-                                Sema::RetainOwnershipKind K,
+                                RetainOwnershipKind K,
                                 bool IsTemplateInstantiation) {
   ValueDecl *VD = cast<ValueDecl>(D);
   switch (K) {
-  case Sema::RetainOwnershipKind::OS:
+  case RetainOwnershipKind::OS:
     handleSimpleAttributeOrDiagnose<OSConsumedAttr>(
         *this, VD, CI, isValidSubjectOfOSAttribute(VD->getType()),
         diag::warn_ns_attribute_wrong_parameter_type,
         /*ExtraArgs=*/CI.getRange(), "os_consumed", /*pointers*/ 1);
     return;
-  case Sema::RetainOwnershipKind::NS:
+  case RetainOwnershipKind::NS:
     handleSimpleAttributeOrDiagnose<NSConsumedAttr>(
         *this, VD, CI, isValidSubjectOfNSAttribute(VD->getType()),
 
@@ -1760,7 +1760,7 @@ void SemaObjC::AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
              : diag::warn_ns_attribute_wrong_parameter_type),
         /*ExtraArgs=*/CI.getRange(), "ns_consumed", /*objc pointers*/ 0);
     return;
-  case Sema::RetainOwnershipKind::CF:
+  case RetainOwnershipKind::CF:
     handleSimpleAttributeOrDiagnose<CFConsumedAttr>(
         *this, VD, CI, isValidSubjectOfCFAttribute(VD->getType()),
         diag::warn_ns_attribute_wrong_parameter_type,
@@ -1769,26 +1769,26 @@ void SemaObjC::AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
   }
 }
 
-Sema::RetainOwnershipKind
+SemaObjC::RetainOwnershipKind
 SemaObjC::parsedAttrToRetainOwnershipKind(const ParsedAttr &AL) {
   switch (AL.getKind()) {
   case ParsedAttr::AT_CFConsumed:
   case ParsedAttr::AT_CFReturnsRetained:
   case ParsedAttr::AT_CFReturnsNotRetained:
-    return Sema::RetainOwnershipKind::CF;
+    return RetainOwnershipKind::CF;
   case ParsedAttr::AT_OSConsumesThis:
   case ParsedAttr::AT_OSConsumed:
   case ParsedAttr::AT_OSReturnsRetained:
   case ParsedAttr::AT_OSReturnsNotRetained:
   case ParsedAttr::AT_OSReturnsRetainedOnZero:
   case ParsedAttr::AT_OSReturnsRetainedOnNonZero:
-    return Sema::RetainOwnershipKind::OS;
+    return RetainOwnershipKind::OS;
   case ParsedAttr::AT_NSConsumesSelf:
   case ParsedAttr::AT_NSConsumed:
   case ParsedAttr::AT_NSReturnsRetained:
   case ParsedAttr::AT_NSReturnsNotRetained:
   case ParsedAttr::AT_NSReturnsAutoreleased:
-    return Sema::RetainOwnershipKind::NS;
+    return RetainOwnershipKind::NS;
   default:
     llvm_unreachable("Wrong argument supplied");
   }
@@ -1816,7 +1816,7 @@ bool SemaObjC::isValidOSObjectOutParameter(const Decl *D) {
 
 void SemaObjC::handleXReturnsXRetainedAttr(Decl *D, const ParsedAttr &AL) {
   QualType ReturnType;
-  Sema::RetainOwnershipKind K = parsedAttrToRetainOwnershipKind(AL);
+  RetainOwnershipKind K = parsedAttrToRetainOwnershipKind(AL);
 
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     ReturnType = MD->getReturnType();
@@ -1830,7 +1830,7 @@ void SemaObjC::handleXReturnsXRetainedAttr(Decl *D, const ParsedAttr &AL) {
   } else if (const auto *Param = dyn_cast<ParmVarDecl>(D)) {
     // Attributes on parameters are used for out-parameters,
     // passed as pointers-to-pointers.
-    unsigned DiagID = K == Sema::RetainOwnershipKind::CF
+    unsigned DiagID = K == RetainOwnershipKind::CF
                           ? /*pointer-to-CF-pointer*/ 2
                           : /*pointer-to-OSObject-pointer*/ 3;
     ReturnType = Param->getType()->getPointeeType();
@@ -2403,6 +2403,174 @@ void SemaObjC::checkDictionaryLiteral(
     checkCollectionLiteralElement(SemaRef, TargetKeyType, Element.Key, 1);
     checkCollectionLiteralElement(SemaRef, TargetObjectType, Element.Value, 2);
   }
+}
+
+sema::BlockScopeInfo *SemaObjC::getCurBlock() {
+  if (SemaRef.FunctionScopes.empty())
+    return nullptr;
+
+  auto CurBSI = dyn_cast<sema::BlockScopeInfo>(SemaRef.FunctionScopes.back());
+  if (CurBSI && CurBSI->TheDecl &&
+      !CurBSI->TheDecl->Encloses(SemaRef.CurContext)) {
+    // We have switched contexts due to template instantiation.
+    assert(!SemaRef.CodeSynthesisContexts.empty());
+    return nullptr;
+  }
+
+  return CurBSI;
+}
+
+static bool checkUnsafeAssignLiteral(Sema &S, SourceLocation Loc,
+                                     Expr *RHS, bool isProperty) {
+  // Check if RHS is an Objective-C object literal, which also can get
+  // immediately zapped in a weak reference.  Note that we explicitly
+  // allow ObjCStringLiterals, since those are designed to never really die.
+  RHS = RHS->IgnoreParenImpCasts();
+
+  // This enum needs to match with the 'select' in
+  // warn_objc_arc_literal_assign (off-by-1).
+  SemaObjC::ObjCLiteralKind Kind = S.ObjC().CheckLiteralKind(RHS);
+  if (Kind == SemaObjC::LK_String || Kind == SemaObjC::LK_None)
+    return false;
+
+  S.Diag(Loc, diag::warn_arc_literal_assign)
+    << (unsigned) Kind
+    << (isProperty ? 0 : 1)
+    << RHS->getSourceRange();
+
+  return true;
+}
+
+static bool checkUnsafeAssignObject(Sema &S, SourceLocation Loc,
+                                    Qualifiers::ObjCLifetime LT,
+                                    Expr *RHS, bool isProperty) {
+  // Strip off any implicit cast added to get to the one ARC-specific.
+  while (ImplicitCastExpr *cast = dyn_cast<ImplicitCastExpr>(RHS)) {
+    if (cast->getCastKind() == CK_ARCConsumeObject) {
+      S.Diag(Loc, diag::warn_arc_retained_assign)
+        << (LT == Qualifiers::OCL_ExplicitNone)
+        << (isProperty ? 0 : 1)
+        << RHS->getSourceRange();
+      return true;
+    }
+    RHS = cast->getSubExpr();
+  }
+
+  if (LT == Qualifiers::OCL_Weak &&
+      checkUnsafeAssignLiteral(S, Loc, RHS, isProperty))
+    return true;
+
+  return false;
+}
+
+bool SemaObjC::checkUnsafeAssigns(SourceLocation Loc,
+                              QualType LHS, Expr *RHS) {
+  Qualifiers::ObjCLifetime LT = LHS.getObjCLifetime();
+
+  if (LT != Qualifiers::OCL_Weak && LT != Qualifiers::OCL_ExplicitNone)
+    return false;
+
+  if (checkUnsafeAssignObject(SemaRef, Loc, LT, RHS, false))
+    return true;
+
+  return false;
+}
+
+void SemaObjC::checkUnsafeExprAssigns(SourceLocation Loc,
+                              Expr *LHS, Expr *RHS) {
+  QualType LHSType;
+  // PropertyRef on LHS type need be directly obtained from
+  // its declaration as it has a PseudoType.
+  ObjCPropertyRefExpr *PRE
+    = dyn_cast<ObjCPropertyRefExpr>(LHS->IgnoreParens());
+  if (PRE && !PRE->isImplicitProperty()) {
+    const ObjCPropertyDecl *PD = PRE->getExplicitProperty();
+    if (PD)
+      LHSType = PD->getType();
+  }
+
+  if (LHSType.isNull())
+    LHSType = LHS->getType();
+
+  Qualifiers::ObjCLifetime LT = LHSType.getObjCLifetime();
+
+  if (LT == Qualifiers::OCL_Weak) {
+    if (!getDiagnostics().isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
+      SemaRef.getCurFunction()->markSafeWeakUse(LHS);
+  }
+
+  if (checkUnsafeAssigns(Loc, LHSType, RHS))
+    return;
+
+  // FIXME. Check for other life times.
+  if (LT != Qualifiers::OCL_None)
+    return;
+
+  if (PRE) {
+    if (PRE->isImplicitProperty())
+      return;
+    const ObjCPropertyDecl *PD = PRE->getExplicitProperty();
+    if (!PD)
+      return;
+
+    unsigned Attributes = PD->getPropertyAttributes();
+    if (Attributes & ObjCPropertyAttribute::kind_assign) {
+      // when 'assign' attribute was not explicitly specified
+      // by user, ignore it and rely on property type itself
+      // for lifetime info.
+      unsigned AsWrittenAttr = PD->getPropertyAttributesAsWritten();
+      if (!(AsWrittenAttr & ObjCPropertyAttribute::kind_assign) &&
+          LHSType->isObjCRetainableType())
+        return;
+
+      while (ImplicitCastExpr *cast = dyn_cast<ImplicitCastExpr>(RHS)) {
+        if (cast->getCastKind() == CK_ARCConsumeObject) {
+          Diag(Loc, diag::warn_arc_retained_property_assign)
+          << RHS->getSourceRange();
+          return;
+        }
+        RHS = cast->getSubExpr();
+      }
+    } else if (Attributes & ObjCPropertyAttribute::kind_weak) {
+      if (checkUnsafeAssignObject(SemaRef, Loc, Qualifiers::OCL_Weak, RHS, true))
+        return;
+    }
+  }
+}
+
+void SemaObjC::diagnoseImplicitlyRetainedSelf() {
+  llvm::DenseMap<const BlockDecl *, bool> EscapeInfo;
+
+  auto IsOrNestedInEscapingBlock = [&](const BlockDecl *BD) {
+    if (EscapeInfo.count(BD))
+      return EscapeInfo[BD];
+
+    bool R = false;
+    const BlockDecl *CurBD = BD;
+
+    do {
+      R = !CurBD->doesNotEscape();
+      if (R)
+        break;
+      CurBD = CurBD->getParent()->getInnermostBlockDecl();
+    } while (CurBD);
+
+    return EscapeInfo[BD] = R;
+  };
+
+  // If the location where 'self' is implicitly retained is inside a escaping
+  // block, emit a diagnostic.
+  for (const std::pair<SourceLocation, const BlockDecl *> &P :
+       ImplicitlyRetainedSelfLocs)
+    if (IsOrNestedInEscapingBlock(P.second))
+      Diag(P.first, diag::warn_implicitly_retains_self)
+          << FixItHint::CreateInsertion(P.first, "self->");
+}
+
+void SemaObjC::PushBlockScope(Scope *BlockScope, BlockDecl *Block) {
+  SemaRef.FunctionScopes.push_back(new sema::BlockScopeInfo(getDiagnostics(),
+                                              BlockScope, Block));
+  SemaRef.CapturingFunctionScopes++;
 }
 
 } // namespace clang

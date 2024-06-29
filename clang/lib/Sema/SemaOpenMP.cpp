@@ -2372,7 +2372,7 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
   // 'target' we return true so that this global is also mapped to the device.
   //
   if (VD && !VD->hasLocalStorage() &&
-      (SemaRef.getCurCapturedRegion() || SemaRef.getCurBlock() ||
+      (SemaRef.getCurCapturedRegion() || SemaRef.ObjC().getCurBlock() ||
        SemaRef.getCurLambda())) {
     if (isInOpenMPTargetExecutionDirective()) {
       DSAStackTy::DSAVarData DVarTop =
@@ -22986,7 +22986,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (SemaRef.LangOpts.OpenMP >= 50 &&
       (SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true) ||
-       SemaRef.getCurBlock() || SemaRef.getCurCapturedRegion()) &&
+       SemaRef.ObjC().getCurBlock() || SemaRef.getCurCapturedRegion()) &&
       VD->hasGlobalStorage()) {
     if (!MapTy || (*MapTy != OMPDeclareTargetDeclAttr::MT_To &&
                    *MapTy != OMPDeclareTargetDeclAttr::MT_Enter)) {

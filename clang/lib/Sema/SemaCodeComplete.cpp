@@ -413,7 +413,7 @@ void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
   if (!Enabled)
     return;
   if (isa<BlockDecl>(S.CurContext)) {
-    if (sema::BlockScopeInfo *BSI = S.getCurBlock()) {
+    if (sema::BlockScopeInfo *BSI = S.ObjC().getCurBlock()) {
       ComputeType = nullptr;
       Type = BSI->ReturnType;
       ExpectedLoc = Tok;
@@ -2473,9 +2473,9 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       ReturnType = Function->getReturnType();
     else if (const auto *Method = dyn_cast<ObjCMethodDecl>(SemaRef.CurContext))
       ReturnType = Method->getReturnType();
-    else if (SemaRef.getCurBlock() &&
-             !SemaRef.getCurBlock()->ReturnType.isNull())
-      ReturnType = SemaRef.getCurBlock()->ReturnType;;
+    else if (SemaRef.ObjC().getCurBlock() &&
+             !SemaRef.ObjC().getCurBlock()->ReturnType.isNull())
+      ReturnType = SemaRef.ObjC().getCurBlock()->ReturnType;;
     if (ReturnType.isNull() || ReturnType->isVoidType()) {
       Builder.AddTypedTextChunk("return");
       Builder.AddChunk(CodeCompletionString::CK_SemiColon);
