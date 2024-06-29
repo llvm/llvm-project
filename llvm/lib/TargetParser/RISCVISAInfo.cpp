@@ -840,9 +840,9 @@ void RISCVISAInfo::updateImplication() {
 
   // This loop may execute over 1 iteration since implication can be layered
   // Exits loop if no more implication is applied
-  SmallSetVector<StringRef, 16> WorkList;
+  SmallVector<StringRef, 16> WorkList;
   for (auto const &Ext : Exts)
-    WorkList.insert(Ext.first);
+    WorkList.push_back(Ext.first);
 
   while (!WorkList.empty()) {
     StringRef ExtName = WorkList.pop_back_val();
@@ -851,13 +851,11 @@ void RISCVISAInfo::updateImplication() {
     std::for_each(Range.first, Range.second,
                   [&](const ImpliedExtsEntry &Implied) {
                     const char *ImpliedExt = Implied.ImpliedExt;
-                    if (WorkList.count(ImpliedExt))
-                      return;
                     if (Exts.count(ImpliedExt))
                       return;
                     auto Version = findDefaultVersion(ImpliedExt);
                     addExtension(ImpliedExt, *Version);
-                    WorkList.insert(ImpliedExt);
+                    WorkList.push_back(ImpliedExt);
                   });
   }
 
