@@ -1,5 +1,8 @@
 ; RUN: opt -S -passes=lower-constant-intrinsics < %s | FileCheck %s
 
+; Check that LowerConstantIntrinsics's replaceConditionalBranchesOnConstant() correctly
+; propagates the debug location from the old br instruction to the new one.
+
 ; Function Attrs: nounwind
 define i32 @test_branch(i32 %in) !dbg !5 {
 ; CHECK-LABEL: define i32 @test_branch(
@@ -43,4 +46,3 @@ declare i1 @llvm.is.constant.i32(i32)
 !11 = !DILocation(line: 4, column: 1, scope: !5)
 !12 = !DILocation(line: 5, column: 1, scope: !5)
 !13 = !DILocation(line: 6, column: 1, scope: !5)
-
