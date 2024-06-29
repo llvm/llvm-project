@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-03 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++03 %s -verify=expected,cxx98-03 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
@@ -146,9 +145,9 @@ namespace cwg2351 { // cwg2351: 19
   // since-cxx11-error@-1 {{cannot initialize non-class type 'void' with a parenthesized initializer list}}
 #else
   int I = (void{}, 0);
-  // cxx98-03-error@-1 {{expected ')'}}
-  //   cxx98-03-note@-2 {{to match this '('}}
-  // cxx98-03-error@-3 {{expected expression}}
+  // cxx98-error@-1 {{expected ')'}}
+  //   cxx98-note@-2 {{to match this '('}}
+  // cxx98-error@-3 {{expected expression}}
 #endif
 }
 
