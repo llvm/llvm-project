@@ -9,40 +9,40 @@
 
 // JSON-INDEX: async function LoadIndex() {
 // JSON-INDEX-NEXT: return{
-// JSON-INDEX-NEXT:   "USR": "0000000000000000000000000000000000000000",
+// JSON-INDEX-NEXT:   "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:   "Name": "",
 // JSON-INDEX-NEXT:   "RefType": "default",
 // JSON-INDEX-NEXT:   "Path": "",
 // JSON-INDEX-NEXT:   "Children": [
 // JSON-INDEX-NEXT:     {
-// JSON-INDEX-NEXT:       "USR": "0000000000000000000000000000000000000000",
+// JSON-INDEX-NEXT:       "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:       "Name": "GlobalNamespace",
 // JSON-INDEX-NEXT:       "RefType": "namespace",
 // JSON-INDEX-NEXT:       "Path": "GlobalNamespace",
 // JSON-INDEX-NEXT:       "Children": [
 // JSON-INDEX-NEXT:         {
-// JSON-INDEX-NEXT:           "USR": "49BA9D09A2363C7ADC5AE39DD0FDD500B18DC6AB",
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:           "Name": "Calculator",
 // JSON-INDEX-NEXT:           "RefType": "record",
 // JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
 // JSON-INDEX-NEXT:           "Children": []
 // JSON-INDEX-NEXT:         },
 // JSON-INDEX-NEXT:         {
-// JSON-INDEX-NEXT:           "USR": "EED5CC8668044E01443E4004714123CDBB550272",
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:           "Name": "Circle",
 // JSON-INDEX-NEXT:           "RefType": "record",
 // JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
 // JSON-INDEX-NEXT:           "Children": []
 // JSON-INDEX-NEXT:         },
 // JSON-INDEX-NEXT:         {
-// JSON-INDEX-NEXT:           "USR": "9D820FDE192D63198713DAB951621E6A3ED24EA2",
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:           "Name": "Rectangle",
 // JSON-INDEX-NEXT:           "RefType": "record",
 // JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
 // JSON-INDEX-NEXT:           "Children": []
 // JSON-INDEX-NEXT:         },
 // JSON-INDEX-NEXT:         {
-// JSON-INDEX-NEXT:           "USR": "4769D2967A9F68AE11B7339276D408F289B3D4CC",
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:           "Name": "Shape",
 // JSON-INDEX-NEXT:           "RefType": "record",
 // JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
