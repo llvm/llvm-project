@@ -245,15 +245,20 @@ public:
   };
 
   struct GroupInfo {
-    diag::Severity Severity : 3 = {};
-    bool HasNoWarningAsError : 1 = false;
+    diag::Severity Severity : 3;
+    bool HasNoWarningAsError : 1;
   };
 
 private:
   /// Information for uniquing and looking up custom diags.
   std::unique_ptr<diag::CustomDiagInfo> CustomDiagInfo;
-  std::unique_ptr<GroupInfo[]> GroupInfos = std::make_unique<GroupInfo[]>(
-      static_cast<size_t>(diag::Group::NUM_GROUPS));
+  std::unique_ptr<GroupInfo[]> GroupInfos = []() {
+    auto GIs = std::make_unique<GroupInfo[]>(
+        static_cast<size_t>(diag::Group::NUM_GROUPS));
+    for (size_t i = 0; i != static_cast<size_t>(diag::Group::NUM_GROUPS); ++i)
+      GIs[i] = {{}, false};
+    return GIs;
+  }();
 
 public:
   DiagnosticIDs();
