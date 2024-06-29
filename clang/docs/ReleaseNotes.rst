@@ -967,6 +967,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 - Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
   of the address of operator. (#GH97483).
+- Fixed an assertion failure about constant expression did not evaluate to integer. (#GH96670).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
