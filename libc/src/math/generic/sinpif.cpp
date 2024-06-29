@@ -14,7 +14,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE {
 
