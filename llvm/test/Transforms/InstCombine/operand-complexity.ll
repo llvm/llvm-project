@@ -29,15 +29,15 @@ define <2 x i8> @neg_vec(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
-define <2 x i8> @neg_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @neg_vec_undef(
+define <2 x i8> @neg_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @neg_vec_poison(
 ; CHECK-NEXT:    [[BO:%.*]] = udiv <2 x i8> [[X:%.*]], <i8 42, i8 -42>
-; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i8> <i8 0, i8 undef>, [[X]]
+; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i8> <i8 0, i8 poison>, [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[BO]], [[NEGX]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %bo = udiv <2 x i8> %x, <i8 42, i8 -42>
-  %negx = sub <2 x i8> <i8 0, i8 undef>, %x
+  %negx = sub <2 x i8> <i8 0, i8 poison>, %x
   %r = xor <2 x i8> %negx, %bo
   ret <2 x i8> %r
 }
@@ -70,15 +70,15 @@ define <2 x i8> @not_vec(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
-define <2 x i8> @not_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @not_vec_undef(
+define <2 x i8> @not_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @not_vec_poison(
 ; CHECK-NEXT:    [[BO:%.*]] = udiv <2 x i8> [[X:%.*]], <i8 42, i8 -42>
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i8> [[X]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i8> [[X]], <i8 -1, i8 poison>
 ; CHECK-NEXT:    [[R:%.*]] = mul <2 x i8> [[BO]], [[NOTX]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %bo = udiv <2 x i8> %x, <i8 42, i8 -42>
-  %notx = xor <2 x i8> <i8 -1, i8 undef>, %x
+  %notx = xor <2 x i8> <i8 -1, i8 poison>, %x
   %r = mul <2 x i8> %notx, %bo
   ret <2 x i8> %r
 }
@@ -134,8 +134,8 @@ define <2 x float> @fneg_vec(<2 x float> %x) {
   ret <2 x float> %r
 }
 
-define <2 x float> @fneg_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @fneg_vec_undef(
+define <2 x float> @fneg_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @fneg_vec_poison(
 ; CHECK-NEXT:    [[BO:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.200000e+01, float -4.200000e+01>
 ; CHECK-NEXT:    [[FNEGX:%.*]] = fneg <2 x float> [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = fmul <2 x float> [[BO]], [[FNEGX]]
@@ -143,7 +143,7 @@ define <2 x float> @fneg_vec_undef(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %bo = fdiv <2 x float> %x, <float 42.0, float -42.0>
-  %fnegx = fsub <2 x float> <float -0.0, float undef>, %x
+  %fnegx = fsub <2 x float> <float -0.0, float poison>, %x
   %r = fmul <2 x float> %fnegx, %bo
   call void @use_vec(<2 x float> %fnegx)
   ret <2 x float> %r

@@ -4,7 +4,7 @@
 
 ; CHECK: .section .text.f1,"axG",@progbits,f1{{$}}
 ; CHECK: .section .text.f2,"axG",@progbits,f1{{$}}
-; CHECK: .section .bss.g1,"aGw",@nobits,f1{{$}}
+; CHECK: .section .bss.g1,"awG",@nobits,f1{{$}}
 
 $f1 = comdat nodeduplicate
 

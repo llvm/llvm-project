@@ -69,6 +69,13 @@ struct AArch64Relaxer {
 };
 } // namespace
 
+// Return the bits [Start, End] from Val shifted Start bits.
+// For instance, getBits(0xF0, 4, 8) returns 0xF.
+static uint64_t getBits(uint64_t val, int start, int end) {
+  uint64_t mask = ((uint64_t)1 << (end + 1 - start)) - 1;
+  return (val >> start) & mask;
+}
+
 AArch64::AArch64() {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
@@ -113,6 +120,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
     return R_ABS;
+  case R_AARCH64_AUTH_ABS64:
+    return R_AARCH64_AUTH;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return R_AARCH64_TLSDESC_PAGE;
   case R_AARCH64_TLSDESC_LD64_LO12:
@@ -165,6 +174,9 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return R_AARCH64_GOT_PAGE_PC;
+  case R_AARCH64_GOTPCREL32:
+  case R_AARCH64_GOT_LD_PREL19:
+    return R_GOT_PC;
   case R_AARCH64_NONE:
     return R_NONE;
   default:
@@ -202,7 +214,7 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 RelType AArch64::getDynRel(RelType type) const {
-  if (type == R_AARCH64_ABS64)
+  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64)
     return type;
   return R_AARCH64_NONE;
 }
@@ -215,6 +227,10 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_GLOB_DAT:
   case R_AARCH64_JUMP_SLOT:
     return 0;
+  case R_AARCH64_ABS16:
+  case R_AARCH64_PREL16:
+    return SignExtend64<16>(read16(buf));
+  case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
     return SignExtend64<32>(read32(buf));
   case R_AARCH64_ABS64:
@@ -223,6 +239,30 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_IRELATIVE:
   case R_AARCH64_TLS_TPREL64:
     return read64(buf);
+  case R_AARCH64_MOVW_UABS_G0:
+  case R_AARCH64_MOVW_UABS_G0_NC:
+    return getBits(SignExtend64<16>(read16(buf)), 0, 15);
+  case R_AARCH64_MOVW_UABS_G1:
+  case R_AARCH64_MOVW_UABS_G1_NC:
+    return getBits(SignExtend64<32>(read32(buf)), 16, 31);
+  case R_AARCH64_MOVW_UABS_G2:
+  case R_AARCH64_MOVW_UABS_G2_NC:
+    return getBits(read64(buf), 32, 47);
+  case R_AARCH64_MOVW_UABS_G3:
+    return getBits(read64(buf), 48, 63);
+  case R_AARCH64_TSTBR14:
+    return getBits(SignExtend64<32>(read32(buf)), 2, 15);
+  case R_AARCH64_CONDBR19:
+  case R_AARCH64_LD_PREL_LO19:
+    return getBits(SignExtend64<32>(read32(buf)), 2, 20);
+  case R_AARCH64_ADD_ABS_LO12_NC:
+    return getBits(SignExtend64<16>(read16(buf)), 0, 11);
+  case R_AARCH64_ADR_PREL_PG_HI21:
+  case R_AARCH64_ADR_PREL_PG_HI21_NC:
+    return getBits(SignExtend64<32>(read32(buf)), 12, 32);
+  case R_AARCH64_JUMP26:
+  case R_AARCH64_CALL26:
+    return getBits(SignExtend64<32>(read32(buf)), 2, 27);
   default:
     internalLinkerError(getErrorLocation(buf),
                         "cannot read addend for relocation " + toString(type));
@@ -326,13 +366,6 @@ static void write32AArch64Addr(uint8_t *l, uint64_t imm) {
   write32le(l, (read32le(l) & ~mask) | immLo | immHi);
 }
 
-// Return the bits [Start, End] from Val shifted Start bits.
-// For instance, getBits(0xF0, 4, 8) returns 0xF.
-static uint64_t getBits(uint64_t val, int start, int end) {
-  uint64_t mask = ((uint64_t)1 << (end + 1 - start)) - 1;
-  return (val >> start) & mask;
-}
-
 static void or32le(uint8_t *p, int32_t v) { write32le(p, read32le(p) | v); }
 
 // Update the immediate field in a AARCH64 ldr, str, and add instruction.
@@ -374,6 +407,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32(loc, val);
     break;
   case R_AARCH64_PLT32:
+  case R_AARCH64_GOTPCREL32:
     checkInt(loc, val, 32, rel);
     write32(loc, val);
     break;
@@ -427,6 +461,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
+  case R_AARCH64_GOT_LD_PREL19:
     checkAlignment(loc, val, 4, rel);
     checkInt(loc, val, 21, rel);
     or32le(loc, (val & 0x1FFFFC) << 3);
@@ -991,7 +1026,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
     error("non-RELA relocations are not allowed with memtag globals");
 
   for (const typename ELFT::Rela &rel : rels.relas) {
-    Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
+    Symbol &sym = sec.file->getRelocTargetSym(rel);
     // Linker-synthesized symbols such as __executable_start may be referenced
     // as tagged in input objfiles, and we don't want them to be tagged. A
     // cheap way to exclude them is the type check, but their type is
@@ -1025,8 +1060,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
 void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
-  assert(config->emachine == EM_AARCH64 &&
-         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE);
+  assert(hasMemtag());
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.

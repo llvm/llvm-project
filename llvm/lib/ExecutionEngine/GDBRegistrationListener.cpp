@@ -56,9 +56,9 @@ extern "C" {
 namespace {
 
 // FIXME: lli aims to provide both, RuntimeDyld and JITLink, as the dynamic
-// loaders for it's JIT implementations. And they both offer debugging via the
+// loaders for its JIT implementations. And they both offer debugging via the
 // GDB JIT interface, which builds on the two well-known symbol names below.
-// As these symbols must be unique accross the linked executable, we can only
+// As these symbols must be unique across the linked executable, we can only
 // define them in one of the libraries and make the other depend on it.
 // OrcTargetProcess is a minimal stub for embedding a JIT client in remote
 // executors. For the moment it seems reasonable to have the definition there

@@ -12,6 +12,21 @@
 ; RUN:   | FileCheck %s --check-prefix=FASTISEL-INSTRREF \
 ; RUN:     --implicit-check-not=DBG_VALUE
 
+;; Repeat tests using experimental debuginfo iterators.
+; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel -experimental-debug-variable-locations=false \
+; RUN:   | FileCheck %s --check-prefix=NORMAL \
+; RUN:     --implicit-check-not=debug-instr-number \
+; RUN:     --implicit-check-not=DBG_INSTR_REF
+; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
+; RUN:     -experimental-debug-variable-locations -verify-machineinstrs \
+; RUN:   | FileCheck %s --check-prefix=INSTRREF \
+; RUN:     --implicit-check-not=DBG_VALUE
+; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
+; RUN:     -experimental-debug-variable-locations -verify-machineinstrs \
+; RUN:     -fast-isel \
+; RUN:   | FileCheck %s --check-prefix=FASTISEL-INSTRREF \
+; RUN:     --implicit-check-not=DBG_VALUE
+
 ; NORMAL: ![[SOCKS:[0-9]+]] = !DILocalVariable(name: "socks",
 ; NORMAL: ![[KNEES:[0-9]+]] = !DILocalVariable(name: "knees",
 ; INSTRREF: ![[SOCKS:[0-9]+]] = !DILocalVariable(name: "socks",

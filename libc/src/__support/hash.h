@@ -11,8 +11,8 @@
 
 #include "src/__support/CPP/bit.h"           // rotl
 #include "src/__support/CPP/limits.h"        // numeric_limits
-#include "src/__support/UInt128.h"           // UInt128
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/uint128.h"           // UInt128
 #include <stdint.h>                          // For uint64_t
 
 namespace LIBC_NAMESPACE {

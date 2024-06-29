@@ -55,6 +55,8 @@ bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
 bool Type::isIndex() const { return llvm::isa<IndexType>(*this); }
 
+bool Type::isInteger() const { return llvm::isa<IntegerType>(*this); }
+
 /// Return true if this is an integer type with the specified width.
 bool Type::isInteger(unsigned width) const {
   if (auto intTy = llvm::dyn_cast<IntegerType>(*this))

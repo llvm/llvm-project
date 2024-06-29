@@ -417,4 +417,56 @@ class EnumAttr<Dialect dialect, EnumAttrInfo enumInfo, string name = "",
   let assemblyFormat = "$value";
 }
 
+class _symbolToValue<EnumAttrInfo enumAttrInfo, string case> {
+  defvar cases =
+    !filter(iter, enumAttrInfo.enumerants, !eq(iter.str, case));
+
+  assert !not(!empty(cases)), "failed to find enum-case '" # case # "'";
+
+  // `!empty` check to not cause an error if the cases are empty.
+  // The assertion catches the issue later and emits a proper error message.
+  string value = enumAttrInfo.cppType # "::"
+    # !if(!empty(cases), "", !head(cases).symbol);
+}
+
+class _bitSymbolsToValue<BitEnumAttr bitEnumAttr, string case> {
+  defvar pos = !find(case, "|");
+
+  // Recursive instantiation looking up the symbol before the `|` in
+  // enum cases.
+  string value = !if(
+    !eq(pos, -1), /*baseCase=*/_symbolToValue<bitEnumAttr, case>.value,
+    /*rec=*/_symbolToValue<bitEnumAttr, !substr(case, 0, pos)>.value # "|"
+    # _bitSymbolsToValue<bitEnumAttr, !substr(case, !add(pos, 1))>.value
+  );
+}
+
+class ConstantEnumCaseBase<Attr attribute,
+    EnumAttrInfo enumAttrInfo, string case>
+  : ConstantAttr<attribute,
+  !if(!isa<BitEnumAttr>(enumAttrInfo),
+    _bitSymbolsToValue<!cast<BitEnumAttr>(enumAttrInfo), case>.value,
+    _symbolToValue<enumAttrInfo, case>.value
+  )
+>;
+
+/// Attribute constraint matching a constant enum case. `attribute` should be
+/// one of `EnumAttrInfo` or `EnumAttr` and `symbol` the string representation
+/// of an enum case. Multiple enum values of a bit-enum can be combined using
+/// `|` as a separator. Note that there mustn't be any whitespace around the
+/// separator.
+/// This attribute constraint is additionally buildable, making it possible to
+/// use it in result patterns.
+///
+/// Examples:
+/// * ConstantEnumCase<Arith_IntegerOverflowAttr, "nsw|nuw">
+/// * ConstantEnumCase<Arith_CmpIPredicateAttr, "slt">
+class ConstantEnumCase<Attr attribute, string case>
+  : ConstantEnumCaseBase<attribute,
+    !if(!isa<EnumAttrInfo>(attribute), !cast<EnumAttrInfo>(attribute),
+          !cast<EnumAttr>(attribute).enum), case> {
+  assert !or(!isa<EnumAttr>(attribute), !isa<EnumAttrInfo>(attribute)),
+    "attribute must be one of 'EnumAttr' or 'EnumAttrInfo'";
+}
+
 #endif // ENUMATTR_TD

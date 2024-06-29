@@ -108,7 +108,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
+#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -176,7 +176,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
-#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
+#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
 
 .macro COMMON name, size, align_power
 #if KMP_OS_DARWIN
@@ -1150,6 +1150,9 @@ KMP_LABEL(kmp_invoke_pass_parms):	// put 1st - 6th parms to pkfn in registers.
 	movq	%rdi, %rbx	// pkfn -> %rbx
 	leaq	__gtid(%rbp), %rdi // &gtid -> %rdi (store 1st parm to pkfn)
 	leaq	__tid(%rbp), %rsi  // &tid -> %rsi (store 2nd parm to pkfn)
+	// Check if argc is 0
+	cmpq $0, %rax
+	je KMP_LABEL(kmp_no_args) // Jump ahead
 
 	movq	%r8, %r11	// p_argv -> %r11
 
@@ -1195,6 +1198,7 @@ KMP_LABEL(kmp_1_exit):
 	cmovnsq	(%r11), %rdx	// p_argv[0] -> %rdx (store 3rd parm to pkfn)
 #endif // KMP_MIC
 
+KMP_LABEL(kmp_no_args):
 	call	*%rbx		// call (*pkfn)();
 	movq	$1, %rax	// move 1 into return register;
 
@@ -1236,7 +1240,7 @@ KMP_LABEL(kmp_1_exit):
 #endif /* KMP_ARCH_X86_64 */
 
 // '
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
+#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
 
 //------------------------------------------------------------------------
 // int
@@ -1360,7 +1364,7 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
+#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32) */
 
 #if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM
 
@@ -1505,7 +1509,7 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
+#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM */
 
 #if KMP_ARCH_PPC64
 
@@ -2405,18 +2409,21 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_S390X */
 
-#if KMP_ARCH_ARM || KMP_ARCH_MIPS
+#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32
+#ifndef KMP_PREFIX_UNDERSCORE
+# define KMP_PREFIX_UNDERSCORE(x) x
+#endif
     .data
     COMMON .gomp_critical_user_, 32, 3
     .data
     .align 4
-    .global __kmp_unnamed_critical_addr
-__kmp_unnamed_critical_addr:
+    .global KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr)
+KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .4byte .gomp_critical_user_
 #ifdef __ELF__
-    .size __kmp_unnamed_critical_addr,4
+    .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),4
 #endif
-#endif /* KMP_ARCH_ARM */
+#endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||                   \
     KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE ||                 \
@@ -2441,7 +2448,27 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64
 .section .note.GNU-stack,"",%progbits
-# else
+# elif !KMP_ARCH_WASM
 .section .note.GNU-stack,"",@progbits
 # endif
+#endif
+
+#if KMP_ARCH_WASM
+.data
+.global .gomp_critical_user_
+.global .gomp_critical_user_.var
+.global .gomp_critical_user_.reduction.var
+.global __kmp_unnamed_critical_addr
+.gomp_critical_user_:
+.zero 4
+.size .gomp_critical_user_, 4
+.gomp_critical_user_.var:
+.zero 4
+.size .gomp_critical_user_.var, 4
+.gomp_critical_user_.reduction.var:
+.zero 4
+.size .gomp_critical_user_.reduction.var, 4
+__kmp_unnamed_critical_addr:
+    .4byte .gomp_critical_user_
+    .size __kmp_unnamed_critical_addr, 4
 #endif

@@ -1,6 +1,6 @@
 ! RUN: %flang -S -emit-llvm -flang-deprecated-no-hlfir -o - %s | FileCheck %s
 ! Test communication of COMPILER_OPTIONS from flang-new to flang-new -fc1.
-! CHECK: [[OPTSVAR:@_QQclX[0-9a-f]+]] = {{[a-z]+}} constant [[[OPTSLEN:[0-9]+]] x i8] c"{{.*}}flang-new{{(\.exe)?}} -S -emit-llvm -flang-deprecated-no-hlfir -o - {{.*}}compiler-options.f90"
+! CHECK: [[OPTSVAR:@_QQclX[0-9a-f]+]] = {{[a-z]+}} constant [[[OPTSLEN:[0-9]+]] x i8] c"{{.*}}flang-new{{(\.exe)?}} {{.*}}-S -emit-llvm -flang-deprecated-no-hlfir -o - {{.*}}compiler-options.f90"
 program main
     use ISO_FORTRAN_ENV, only: compiler_options
     implicit none

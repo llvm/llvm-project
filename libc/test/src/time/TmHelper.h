@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
-#define LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
+#ifndef LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H
+#define LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H
 
 #include <time.h>
 
@@ -40,4 +40,4 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
 } // namespace tmhelper
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
+#endif // LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H

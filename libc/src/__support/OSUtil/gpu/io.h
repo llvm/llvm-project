@@ -18,4 +18,4 @@ void write_to_stderr(cpp::string_view msg);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_IO_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_IO_H

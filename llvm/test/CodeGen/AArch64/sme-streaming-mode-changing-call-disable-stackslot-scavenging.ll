@@ -15,11 +15,12 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 ; CHECK-LABEL: test_no_stackslot_scavenging:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x30, x24, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x9, x24, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
@@ -31,8 +32,8 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ldp x30, x24, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x24, [sp, #88] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -46,4 +47,4 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 
 declare void @use_f(float)
 
-attributes #0 = { nounwind "target-features"="+sme" "aarch64_pstate_sm_enabled" }
+attributes #0 = { nounwind "target-features"="+sve,+sme" "aarch64_pstate_sm_enabled" }

@@ -126,9 +126,12 @@ void test_integer(void) {
                              // expected-note@vecintrin.h:* 13 {{candidate function not viable}}
                              // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
 
-  vuc = vec_msum_u128(vul, vul, vuc, idx);  // expected-error {{must be a constant integer}}
-  vuc = vec_msum_u128(vul, vul, vuc, -1);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  vuc = vec_msum_u128(vul, vul, vuc, 16);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vuc = vec_msum_u128(vul, vul, vuc, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vmslg' must be a constant integer}}
+                                            // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+  vuc = vec_msum_u128(vul, vul, vuc, -1);   // expected-error {{no matching function}} expected-error {{argument value -1 is outside the valid range [0, 15]}}
+                                            // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+  vuc = vec_msum_u128(vul, vul, vuc, 16);   // expected-error {{no matching function}} expected-error {{argument value 16 is outside the valid range [0, 15]}}
+                                            // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
 }
 
 void test_float(void) {

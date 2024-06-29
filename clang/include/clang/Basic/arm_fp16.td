@@ -14,7 +14,7 @@
 include "arm_neon_incl.td"
 
 // ARMv8.2-A FP16 intrinsics.
-let ArchGuard = "defined(__aarch64__)", TargetGuard = "fullfp16" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "fullfp16" in {
 
   // Negate
   def VNEGSH          : SInst<"vneg", "11", "Sh">;

@@ -59,7 +59,7 @@ void testMin(int i, long l) {
   clang_analyzer_dumpL(l - intMin); // expected-warning-re {{(reg_${{[0-9]+}}<long l>) + 2147483648 }} instead of - -2147483648
 }
 
-void changingToUnsinged(unsigned u, int i) {
+void changingToUnsigned(unsigned u, int i) {
   unsigned c = u + (unsigned)i;
   unsigned d = u - (unsigned)i;
   if (i == -1) {
@@ -89,7 +89,7 @@ void extendingToSigned(long l, int i) {
   }
 }
 
-void extendingToUnigned(unsigned long ul, int i) {
+void extendingToUnsigned(unsigned long ul, int i) {
   unsigned long c = ul + (unsigned long)i;
   unsigned long d = ul - (unsigned long)i;
   if (i == -1) {

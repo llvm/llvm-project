@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Attributes.h"
+#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
@@ -306,6 +308,82 @@ TEST(Attributes, RemoveParamAttributes) {
   EXPECT_EQ(AL.getNumAttrSets(), 4U);
   AL = AL.removeParamAttribute(C, 1, Attribute::NoUndef);
   EXPECT_EQ(AL.getNumAttrSets(), 0U);
+}
+
+TEST(Attributes, ConstantRangeAttributeCAPI) {
+  LLVMContext C;
+  {
+    const unsigned NumBits = 8;
+    const uint64_t LowerWords[] = {0};
+    const uint64_t UpperWords[] = {42};
+
+    ConstantRange Range(APInt(NumBits, ArrayRef(LowerWords)),
+                        APInt(NumBits, ArrayRef(UpperWords)));
+
+    Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
+    auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
+        wrap(&C), Attribute::Range, NumBits, LowerWords, UpperWords));
+    EXPECT_EQ(OutAttr, RangeAttr);
+  }
+  {
+    const unsigned NumBits = 128;
+    const uint64_t LowerWords[] = {1, 1};
+    const uint64_t UpperWords[] = {42, 42};
+
+    ConstantRange Range(APInt(NumBits, ArrayRef(LowerWords)),
+                        APInt(NumBits, ArrayRef(UpperWords)));
+
+    Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
+    auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
+        wrap(&C), Attribute::Range, NumBits, LowerWords, UpperWords));
+    EXPECT_EQ(OutAttr, RangeAttr);
+  }
+}
+
+TEST(Attributes, CalleeAttributes) {
+  const char *IRString = R"IR(
+    declare void @f1(i32 %i)
+    declare void @f2(i32 range(i32 1, 2) %i)
+
+    define void @g1(i32 %i) {
+      call void @f1(i32 %i)
+      ret void
+    }
+    define void @g2(i32 %i) {
+      call void @f2(i32 %i)
+      ret void
+    }
+    define void @g3(i32 %i) {
+      call void @f1(i32 range(i32 3, 4) %i)
+      ret void
+    }
+    define void @g4(i32 %i) {
+      call void @f2(i32 range(i32 3, 4) %i)
+      ret void
+    }
+  )IR";
+
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(IRString, Err, Context);
+  ASSERT_TRUE(M);
+
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g1")->getEntryBlock().front());
+    ASSERT_FALSE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g2")->getEntryBlock().front());
+    ASSERT_TRUE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g3")->getEntryBlock().front());
+    ASSERT_TRUE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g4")->getEntryBlock().front());
+    ASSERT_TRUE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
 }
 
 } // end anonymous namespace

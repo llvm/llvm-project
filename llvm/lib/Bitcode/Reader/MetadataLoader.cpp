@@ -609,17 +609,25 @@ class MetadataLoader::MetadataLoaderImpl {
     if (!NeedDeclareExpressionUpgrade)
       return;
 
+    auto UpdateDeclareIfNeeded = [&](auto *Declare) {
+      auto *DIExpr = Declare->getExpression();
+      if (!DIExpr || !DIExpr->startsWithDeref() ||
+          !isa_and_nonnull<Argument>(Declare->getAddress()))
+        return;
+      SmallVector<uint64_t, 8> Ops;
+      Ops.append(std::next(DIExpr->elements_begin()), DIExpr->elements_end());
+      Declare->setExpression(DIExpression::get(Context, Ops));
+    };
+
     for (auto &BB : F)
-      for (auto &I : BB)
+      for (auto &I : BB) {
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          if (DVR.isDbgDeclare())
+            UpdateDeclareIfNeeded(&DVR);
+        }
         if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
-          if (auto *DIExpr = DDI->getExpression())
-            if (DIExpr->startsWithDeref() &&
-                isa_and_nonnull<Argument>(DDI->getAddress())) {
-              SmallVector<uint64_t, 8> Ops;
-              Ops.append(std::next(DIExpr->elements_begin()),
-                         DIExpr->elements_end());
-              DDI->setExpression(DIExpression::get(Context, Ops));
-            }
+          UpdateDeclareIfNeeded(DDI);
+      }
   }
 
   /// Upgrade the expression from previous versions.
@@ -1556,7 +1564,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_DERIVED_TYPE: {
-    if (Record.size() < 12 || Record.size() > 14)
+    if (Record.size() < 12 || Record.size() > 15)
       return error("Invalid record");
 
     // DWARF address space is encoded as N->getDWARFAddressSpace() + 1. 0 means
@@ -1566,8 +1574,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       DWARFAddressSpace = Record[12] - 1;
 
     Metadata *Annotations = nullptr;
-    if (Record.size() > 13 && Record[13])
-      Annotations = getMDOrNull(Record[13]);
+    std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
+
+    // Only look for annotations/ptrauth if both are allocated.
+    // If not, we can't tell which was intended to be embedded, as both ptrauth
+    // and annotations have been expected at Record[13] at various times.
+    if (Record.size() > 14) {
+      if (Record[13])
+        Annotations = getMDOrNull(Record[13]);
+      if (Record[14])
+        PtrAuthData.emplace(Record[14]);
+    }
 
     IsDistinct = Record[0];
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
@@ -1577,7 +1594,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                          getMDOrNull(Record[3]), Record[4],
                          getDITypeRefOrNull(Record[5]),
                          getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                         Record[9], DWARFAddressSpace, Flags,
+                         Record[9], DWARFAddressSpace, PtrAuthData, Flags,
                          getDITypeRefOrNull(Record[11]), Annotations)),
         NextMetadataNo);
     NextMetadataNo++;
@@ -1615,27 +1632,32 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Annotations = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
-    // into another module, composite types only need to be imported
-    // as type declarations (unless full type definitions requested).
-    // Create type declarations up front to save memory. Also, buildODRType
-    // handles the case where this is type ODRed with a definition needed
-    // by the importing module, in which case the existing definition is
-    // used.
-    if (IsImporting && !ImportFullTypeDefinitions && Identifier &&
+    // into another module, composite types only need to be imported as
+    // type declarations (unless full type definitions are requested).
+    // Create type declarations up front to save memory. This is only
+    // done for types which have an Identifier, and are therefore
+    // subject to the ODR.
+    //
+    // buildODRType handles the case where this is type ODRed with a
+    // definition needed by the importing module, in which case the
+    // existing definition is used.
+    //
+    // We always import full definitions for anonymous composite types,
+    // as without a name, debuggers cannot easily resolve a declaration
+    // to its definition.
+    if (IsImporting && !ImportFullTypeDefinitions && Identifier && Name &&
         (Tag == dwarf::DW_TAG_enumeration_type ||
          Tag == dwarf::DW_TAG_class_type ||
          Tag == dwarf::DW_TAG_structure_type ||
          Tag == dwarf::DW_TAG_union_type)) {
       Flags = Flags | DINode::FlagFwdDecl;
-      if (Name) {
-        // This is a hack around preserving template parameters for simplified
-        // template names - it should probably be replaced with a
-        // DICompositeType flag specifying whether template parameters are
-        // required on declarations of this type.
-        StringRef NameStr = Name->getString();
-        if (!NameStr.contains('<') || NameStr.startswith("_STN|"))
-          TemplateParams = getMDOrNull(Record[14]);
-      }
+      // This is a hack around preserving template parameters for simplified
+      // template names - it should probably be replaced with a
+      // DICompositeType flag specifying whether template parameters are
+      // required on declarations of this type.
+      StringRef NameStr = Name->getString();
+      if (!NameStr.contains('<') || NameStr.starts_with("_STN|"))
+        TemplateParams = getMDOrNull(Record[14]);
     } else {
       BaseType = getDITypeRefOrNull(Record[6]);
       OffsetInBits = Record[9];

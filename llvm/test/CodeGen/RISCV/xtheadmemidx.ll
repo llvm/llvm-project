@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d -mattr=+xtheadmemidx -mattr=+m -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64XTHEADMEMIDX
 
-define i8* @lbia(i8* %base, i8* %addr.2, i8 %a) {
+define ptr @lbia(ptr %base, ptr %addr.2, i8 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lbia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lbia a3, (a0), -1, 0
@@ -18,15 +18,15 @@ define i8* @lbia(i8* %base, i8* %addr.2, i8 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV64XTHEADMEMIDX-NEXT:    sb a2, 0(a1)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i8, i8* %base, i8 0
-  %ld = load i8, i8* %addr
-  %addr.1 = getelementptr i8, i8* %base, i8 -1
+  %addr = getelementptr i8, ptr %base, i8 0
+  %ld = load i8, ptr %addr
+  %addr.1 = getelementptr i8, ptr %base, i8 -1
   %res = add i8 %ld, %a
-  store i8 %res, i8* %addr.2
-  ret i8* %addr.1
+  store i8 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i8* @lbib(i8* %base, i8 %a) {
+define ptr @lbib(ptr %base, i8 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lbib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lbib a2, (a0), 1, 0
@@ -40,15 +40,15 @@ define i8* @lbib(i8* %base, i8 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a2, a1
 ; RV64XTHEADMEMIDX-NEXT:    sb a1, 1(a0)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i8, i8* %base, i8 1
-  %ld = load i8, i8* %addr
-  %addr.1 = getelementptr i8, i8* %base, i8 2
+  %addr = getelementptr i8, ptr %base, i8 1
+  %ld = load i8, ptr %addr
+  %addr.1 = getelementptr i8, ptr %base, i8 2
   %res = add i8 %ld, %a
-  store i8 %res, i8* %addr.1
-  ret i8* %addr
+  store i8 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i8* @lbuia(i8* %base, i64* %addr.2, i64 %a) {
+define ptr @lbuia(ptr %base, ptr %addr.2, i64 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lbuia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lbuia a4, (a0), -1, 0
@@ -65,16 +65,16 @@ define i8* @lbuia(i8* %base, i64* %addr.2, i64 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV64XTHEADMEMIDX-NEXT:    sd a2, 0(a1)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i8, i8* %base, i8 0
-  %ld = load i8, i8* %addr
+  %addr = getelementptr i8, ptr %base, i8 0
+  %ld = load i8, ptr %addr
   %zext = zext i8 %ld to i64
-  %addr.1 = getelementptr i8, i8* %base, i8 -1
+  %addr.1 = getelementptr i8, ptr %base, i8 -1
   %res = add i64 %zext, %a
-  store i64 %res, i64* %addr.2
-  ret i8* %addr.1
+  store i64 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i8* @lbuib(i8* %base, i64 %a, i64* %addr.1) {
+define ptr @lbuib(ptr %base, i64 %a, ptr %addr.1) {
 ; RV32XTHEADMEMIDX-LABEL: lbuib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lbuib a4, (a0), 1, 0
@@ -91,15 +91,15 @@ define i8* @lbuib(i8* %base, i64 %a, i64* %addr.1) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a3, a1
 ; RV64XTHEADMEMIDX-NEXT:    sd a1, 0(a2)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i8, i8* %base, i8 1
-  %ld = load i8, i8* %addr
+  %addr = getelementptr i8, ptr %base, i8 1
+  %ld = load i8, ptr %addr
   %zext = zext i8 %ld to i64
   %res = add i64 %zext, %a
-  store i64 %res, i64* %addr.1
-  ret i8* %addr
+  store i64 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i16* @lhia(i16* %base, i16* %addr.2, i16 %a) {
+define ptr @lhia(ptr %base, ptr %addr.2, i16 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lhia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lhia a3, (a0), -16, 1
@@ -113,15 +113,15 @@ define i16* @lhia(i16* %base, i16* %addr.2, i16 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV64XTHEADMEMIDX-NEXT:    sh a2, 0(a1)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i16, i16* %base, i16 0
-  %ld = load i16, i16* %addr
-  %addr.1 = getelementptr i16, i16* %base, i16 -16
+  %addr = getelementptr i16, ptr %base, i16 0
+  %ld = load i16, ptr %addr
+  %addr.1 = getelementptr i16, ptr %base, i16 -16
   %res = add i16 %ld, %a
-  store i16 %res, i16* %addr.2
-  ret i16* %addr.1
+  store i16 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i16* @lhib(i16* %base, i16 %a) {
+define ptr @lhib(ptr %base, i16 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lhib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lhib a2, (a0), 2, 0
@@ -135,15 +135,15 @@ define i16* @lhib(i16* %base, i16 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a2, a1
 ; RV64XTHEADMEMIDX-NEXT:    sh a1, 2(a0)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i16, i16* %base, i16 1
-  %ld = load i16, i16* %addr
-  %addr.1 = getelementptr i16, i16* %base, i16 2
+  %addr = getelementptr i16, ptr %base, i16 1
+  %ld = load i16, ptr %addr
+  %addr.1 = getelementptr i16, ptr %base, i16 2
   %res = add i16 %ld, %a
-  store i16 %res, i16* %addr.1
-  ret i16* %addr
+  store i16 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i16* @lhuia(i16* %base, i64* %addr.2, i64 %a) {
+define ptr @lhuia(ptr %base, ptr %addr.2, i64 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lhuia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lhuia a4, (a0), -16, 1
@@ -160,16 +160,16 @@ define i16* @lhuia(i16* %base, i64* %addr.2, i64 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV64XTHEADMEMIDX-NEXT:    sd a2, 0(a1)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i16, i16* %base, i16 0
-  %ld = load i16, i16* %addr
+  %addr = getelementptr i16, ptr %base, i16 0
+  %ld = load i16, ptr %addr
   %zext = zext i16 %ld to i64
-  %addr.1 = getelementptr i16, i16* %base, i16 -16
+  %addr.1 = getelementptr i16, ptr %base, i16 -16
   %res = add i64 %zext, %a
-  store i64 %res, i64* %addr.2
-  ret i16* %addr.1
+  store i64 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i16* @lhuib(i16* %base, i64 %a, i64* %addr.1) {
+define ptr @lhuib(ptr %base, i64 %a, ptr %addr.1) {
 ; RV32XTHEADMEMIDX-LABEL: lhuib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lhuib a4, (a0), 2, 0
@@ -186,15 +186,15 @@ define i16* @lhuib(i16* %base, i64 %a, i64* %addr.1) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a3, a1
 ; RV64XTHEADMEMIDX-NEXT:    sd a1, 0(a2)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i16, i16* %base, i16 1
-  %ld = load i16, i16* %addr
+  %addr = getelementptr i16, ptr %base, i16 1
+  %ld = load i16, ptr %addr
   %zext = zext i16 %ld to i64
   %res = add i64 %zext, %a
-  store i64 %res, i64* %addr.1
-  ret i16* %addr
+  store i64 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i32* @lwia(i32* %base, i32* %addr.2, i32 %a) {
+define ptr @lwia(ptr %base, ptr %addr.2, i32 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lwia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lwia a3, (a0), -16, 2
@@ -208,15 +208,15 @@ define i32* @lwia(i32* %base, i32* %addr.2, i32 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV64XTHEADMEMIDX-NEXT:    sw a2, 0(a1)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i32, i32* %base, i32 0
-  %ld = load i32, i32* %addr
-  %addr.1 = getelementptr i32, i32* %base, i32 -16
+  %addr = getelementptr i32, ptr %base, i32 0
+  %ld = load i32, ptr %addr
+  %addr.1 = getelementptr i32, ptr %base, i32 -16
   %res = add i32 %ld, %a
-  store i32 %res, i32* %addr.2
-  ret i32* %addr.1
+  store i32 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i32* @lwib(i32* %base, i32 %a) {
+define ptr @lwib(ptr %base, i32 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lwib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lwib a2, (a0), 4, 0
@@ -230,15 +230,15 @@ define i32* @lwib(i32* %base, i32 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a2, a1
 ; RV64XTHEADMEMIDX-NEXT:    sw a1, 4(a0)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i32, i32* %base, i32 1
-  %ld = load i32, i32* %addr
-  %addr.1 = getelementptr i32, i32* %base, i32 2
+  %addr = getelementptr i32, ptr %base, i32 1
+  %ld = load i32, ptr %addr
+  %addr.1 = getelementptr i32, ptr %base, i32 2
   %res = add i32 %ld, %a
-  store i32 %res, i32* %addr.1
-  ret i32* %addr
+  store i32 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i32* @lwuia(i32* %base, i64* %addr.2, i64 %a) {
+define ptr @lwuia(ptr %base, ptr %addr.2, i64 %a) {
 ; RV32XTHEADMEMIDX-LABEL: lwuia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lwia a4, (a0), -16, 2
@@ -255,16 +255,16 @@ define i32* @lwuia(i32* %base, i64* %addr.2, i64 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV64XTHEADMEMIDX-NEXT:    sd a2, 0(a1)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i32, i32* %base, i32 0
-  %ld = load i32, i32* %addr
+  %addr = getelementptr i32, ptr %base, i32 0
+  %ld = load i32, ptr %addr
   %zext = zext i32 %ld to i64
-  %addr.1 = getelementptr i32, i32* %base, i32 -16
+  %addr.1 = getelementptr i32, ptr %base, i32 -16
   %res = add i64 %zext, %a
-  store i64 %res, i64* %addr.2
-  ret i32* %addr.1
+  store i64 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i32* @lwuib(i32* %base, i64 %a, i64* %addr.1) {
+define ptr @lwuib(ptr %base, i64 %a, ptr %addr.1) {
 ; RV32XTHEADMEMIDX-LABEL: lwuib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lwib a4, (a0), 4, 0
@@ -281,15 +281,15 @@ define i32* @lwuib(i32* %base, i64 %a, i64* %addr.1) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a3, a1
 ; RV64XTHEADMEMIDX-NEXT:    sd a1, 0(a2)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i32, i32* %base, i32 1
-  %ld = load i32, i32* %addr
+  %addr = getelementptr i32, ptr %base, i32 1
+  %ld = load i32, ptr %addr
   %zext = zext i32 %ld to i64
   %res = add i64 %zext, %a
-  store i64 %res, i64* %addr.1
-  ret i32* %addr
+  store i64 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i64* @ldia(i64* %base, i64* %addr.2, i64 %a) {
+define ptr @ldia(ptr %base, ptr %addr.2, i64 %a) {
 ; RV32XTHEADMEMIDX-LABEL: ldia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    lw a4, 4(a0)
@@ -309,15 +309,15 @@ define i64* @ldia(i64* %base, i64* %addr.2, i64 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV64XTHEADMEMIDX-NEXT:    sd a2, 0(a1)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i64, i64* %base, i64 0
-  %ld = load i64, i64* %addr
-  %addr.1 = getelementptr i64, i64* %base, i64 -16
+  %addr = getelementptr i64, ptr %base, i64 0
+  %ld = load i64, ptr %addr
+  %addr.1 = getelementptr i64, ptr %base, i64 -16
   %res = add i64 %ld, %a
-  store i64 %res, i64* %addr.2
-  ret i64* %addr.1
+  store i64 %res, ptr %addr.2
+  ret ptr %addr.1
 }
 
-define i64* @ldib(i64* %base, i64 %a) {
+define ptr @ldib(ptr %base, i64 %a) {
 ; RV32XTHEADMEMIDX-LABEL: ldib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lwib a3, (a0), 8, 0
@@ -336,15 +336,15 @@ define i64* @ldib(i64* %base, i64 %a) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a2, a1
 ; RV64XTHEADMEMIDX-NEXT:    sd a1, 8(a0)
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr = getelementptr i64, i64* %base, i64 1
-  %ld = load i64, i64* %addr
-  %addr.1 = getelementptr i64, i64* %base, i64 2
+  %addr = getelementptr i64, ptr %base, i64 1
+  %ld = load i64, ptr %addr
+  %addr.1 = getelementptr i64, ptr %base, i64 2
   %res = add i64 %ld, %a
-  store i64 %res, i64* %addr.1
-  ret i64* %addr
+  store i64 %res, ptr %addr.1
+  ret ptr %addr
 }
 
-define i8* @sbia(i8* %base, i8 %a, i8 %b) {
+define ptr @sbia(ptr %base, i8 %a, i8 %b) {
 ; RV32XTHEADMEMIDX-LABEL: sbia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
@@ -356,13 +356,13 @@ define i8* @sbia(i8* %base, i8 %a, i8 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.sbia a1, (a0), 1, 0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i8, i8* %base, i8 1
+  %addr.1 = getelementptr i8, ptr %base, i8 1
   %res = add i8 %a, %b
-  store i8 %res, i8* %base
-  ret i8* %addr.1
+  store i8 %res, ptr %base
+  ret ptr %addr.1
 }
 
-define i8* @sbib(i8* %base, i8 %a, i8 %b) {
+define ptr @sbib(ptr %base, i8 %a, i8 %b) {
 ; RV32XTHEADMEMIDX-LABEL: sbib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
@@ -374,13 +374,13 @@ define i8* @sbib(i8* %base, i8 %a, i8 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.sbib a1, (a0), 1, 0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i8, i8* %base, i8 1
+  %addr.1 = getelementptr i8, ptr %base, i8 1
   %res = add i8 %a, %b
-  store i8 %res, i8* %addr.1
-  ret i8* %addr.1
+  store i8 %res, ptr %addr.1
+  ret ptr %addr.1
 }
 
-define i16* @shia(i16* %base, i16 %a, i16 %b) {
+define ptr @shia(ptr %base, i16 %a, i16 %b) {
 ; RV32XTHEADMEMIDX-LABEL: shia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
@@ -392,13 +392,13 @@ define i16* @shia(i16* %base, i16 %a, i16 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.shia a1, (a0), -9, 1
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i16, i16* %base, i16 -9
+  %addr.1 = getelementptr i16, ptr %base, i16 -9
   %res = add i16 %a, %b
-  store i16 %res, i16* %base
-  ret i16* %addr.1
+  store i16 %res, ptr %base
+  ret ptr %addr.1
 }
 
-define i16* @shib(i16* %base, i16 %a, i16 %b) {
+define ptr @shib(ptr %base, i16 %a, i16 %b) {
 ; RV32XTHEADMEMIDX-LABEL: shib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
@@ -410,13 +410,13 @@ define i16* @shib(i16* %base, i16 %a, i16 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.shib a1, (a0), 2, 0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i16, i16* %base, i16 1
+  %addr.1 = getelementptr i16, ptr %base, i16 1
   %res = add i16 %a, %b
-  store i16 %res, i16* %addr.1
-  ret i16* %addr.1
+  store i16 %res, ptr %addr.1
+  ret ptr %addr.1
 }
 
-define i32* @swia(i32* %base, i32 %a, i32 %b) {
+define ptr @swia(ptr %base, i32 %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: swia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
@@ -428,13 +428,13 @@ define i32* @swia(i32* %base, i32 %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.swia a1, (a0), 8, 2
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i32, i32* %base, i32 8
+  %addr.1 = getelementptr i32, ptr %base, i32 8
   %res = add i32 %a, %b
-  store i32 %res, i32* %base
-  ret i32* %addr.1
+  store i32 %res, ptr %base
+  ret ptr %addr.1
 }
 
-define i32* @swib(i32* %base, i32 %a, i32 %b) {
+define ptr @swib(ptr %base, i32 %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: swib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
@@ -446,13 +446,13 @@ define i32* @swib(i32* %base, i32 %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.swib a1, (a0), -13, 3
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i32, i32* %base, i32 -26
+  %addr.1 = getelementptr i32, ptr %base, i32 -26
   %res = add i32 %a, %b
-  store i32 %res, i32* %addr.1
-  ret i32* %addr.1
+  store i32 %res, ptr %addr.1
+  ret ptr %addr.1
 }
 
-define i64* @sdia(i64* %base, i64 %a, i64 %b) {
+define ptr @sdia(ptr %base, i64 %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: sdia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    addi a5, a0, 64
@@ -470,13 +470,13 @@ define i64* @sdia(i64* %base, i64 %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.sdia a1, (a0), 8, 3
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i64, i64* %base, i64 8
+  %addr.1 = getelementptr i64, ptr %base, i64 8
   %res = add i64 %a, %b
-  store i64 %res, i64* %base
-  ret i64* %addr.1
+  store i64 %res, ptr %base
+  ret ptr %addr.1
 }
 
-define i64* @sdib(i64* %base, i64 %a, i64 %b) {
+define ptr @sdib(ptr %base, i64 %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: sdib:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a4
@@ -492,13 +492,28 @@ define i64* @sdib(i64* %base, i64 %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.sdib a1, (a0), 8, 0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i64, i64* %base, i64 1
+  %addr.1 = getelementptr i64, ptr %base, i64 1
   %res = add i64 %a, %b
-  store i64 %res, i64* %addr.1
-  ret i64* %addr.1
+  store i64 %res, ptr %addr.1
+  ret ptr %addr.1
 }
 
-define i64 @lrb(i8* %a, i64 %b) {
+define i8 @lrb_anyext(ptr %a, i64 %b) {
+; RV32XTHEADMEMIDX-LABEL: lrb_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrb a0, a0, a1, 0
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lrb_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lrb a0, a0, a1, 0
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = getelementptr i8, ptr %a, i64 %b
+  %2 = load i8, ptr %1, align 1
+  ret i8 %2
+}
+
+define i64 @lrb(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrb:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrb a1, a0, a1, 0
@@ -514,14 +529,30 @@ define i64 @lrb(i8* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    th.lrb a0, a0, a1, 0
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %1 = getelementptr i8, i8* %a, i64 %b
-  %2 = load i8, i8* %1, align 1
+  %1 = getelementptr i8, ptr %a, i64 %b
+  %2 = load i8, ptr %1, align 1
   %3 = sext i8 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define i64 @lurb(i8* %a, i32 %b) {
+define i8 @lurb_anyext(ptr %a, i32 %b) {
+; RV32XTHEADMEMIDX-LABEL: lurb_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrb a0, a0, a1, 0
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lurb_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lurb a0, a0, a1, 0
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = zext i32 %b to i64
+  %2 = getelementptr i8, ptr %a, i64 %1
+  %3 = load i8, ptr %2, align 1
+  ret i8 %3
+}
+
+define i64 @lurb(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurb:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrb a1, a0, a1, 0
@@ -538,14 +569,14 @@ define i64 @lurb(i8* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr i8, i8* %a, i64 %1
-  %3 = load i8, i8* %2, align 1
+  %2 = getelementptr i8, ptr %a, i64 %1
+  %3 = load i8, ptr %2, align 1
   %4 = sext i8 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
 }
 
-define i64 @lrbu(i8* %a, i64 %b) {
+define i64 @lrbu(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrbu:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrbu a1, a0, a1, 0
@@ -558,14 +589,14 @@ define i64 @lrbu(i8* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    th.lrbu a0, a0, a1, 0
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %1 = getelementptr i8, i8* %a, i64 %b
-  %2 = load i8, i8* %1, align 1
+  %1 = getelementptr i8, ptr %a, i64 %b
+  %2 = load i8, ptr %1, align 1
   %3 = zext i8 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define i64 @lurbu(i8* %a, i32 %b) {
+define i64 @lurbu(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurbu:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrbu a1, a0, a1, 0
@@ -579,14 +610,29 @@ define i64 @lurbu(i8* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr i8, i8* %a, i64 %1
-  %3 = load i8, i8* %2, align 1
+  %2 = getelementptr i8, ptr %a, i64 %1
+  %3 = load i8, ptr %2, align 1
   %4 = zext i8 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
 }
 
-define i64 @lrh(i16* %a, i64 %b) {
+define i16 @lrh_anyext(ptr %a, i64 %b) {
+; RV32XTHEADMEMIDX-LABEL: lrh_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrh a0, a0, a1, 1
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lrh_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lrh a0, a0, a1, 1
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = getelementptr i16, ptr %a, i64 %b
+  %2 = load i16, ptr %1, align 2
+  ret i16 %2
+}
+
+define i64 @lrh(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrh:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrh a1, a0, a1, 1
@@ -602,14 +648,30 @@ define i64 @lrh(i16* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    th.lrh a0, a0, a1, 1
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %1 = getelementptr i16, i16* %a, i64 %b
-  %2 = load i16, i16* %1, align 4
+  %1 = getelementptr i16, ptr %a, i64 %b
+  %2 = load i16, ptr %1, align 2
   %3 = sext i16 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define i64 @lurh(i16* %a, i32 %b) {
+define i16 @lurh_anyext(ptr %a, i32 %b) {
+; RV32XTHEADMEMIDX-LABEL: lurh_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrh a0, a0, a1, 1
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lurh_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lurh a0, a0, a1, 1
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = zext i32 %b to i64
+  %2 = getelementptr i16, ptr %a, i64 %1
+  %3 = load i16, ptr %2, align 2
+  ret i16 %3
+}
+
+define i64 @lurh(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurh:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrh a1, a0, a1, 1
@@ -626,14 +688,14 @@ define i64 @lurh(i16* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr i16, i16* %a, i64 %1
-  %3 = load i16, i16* %2, align 4
+  %2 = getelementptr i16, ptr %a, i64 %1
+  %3 = load i16, ptr %2, align 2
   %4 = sext i16 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
 }
 
-define i64 @lrhu(i16* %a, i64 %b) {
+define i64 @lrhu(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrhu:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrhu a1, a0, a1, 1
@@ -646,14 +708,14 @@ define i64 @lrhu(i16* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    th.lrhu a0, a0, a1, 1
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %1 = getelementptr i16, i16* %a, i64 %b
-  %2 = load i16, i16* %1, align 4
+  %1 = getelementptr i16, ptr %a, i64 %b
+  %2 = load i16, ptr %1, align 2
   %3 = zext i16 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define i64 @lurhu(i16* %a, i32 %b) {
+define i64 @lurhu(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurhu:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrhu a1, a0, a1, 1
@@ -667,14 +729,29 @@ define i64 @lurhu(i16* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr i16, i16* %a, i64 %1
-  %3 = load i16, i16* %2, align 4
+  %2 = getelementptr i16, ptr %a, i64 %1
+  %3 = load i16, ptr %2, align 2
   %4 = zext i16 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
 }
 
-define i64 @lrw(i32* %a, i64 %b) {
+define i32 @lrw_anyext(ptr %a, i64 %b) {
+; RV32XTHEADMEMIDX-LABEL: lrw_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrw a0, a0, a1, 2
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lrw_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lrw a0, a0, a1, 2
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = getelementptr i32, ptr %a, i64 %b
+  %2 = load i32, ptr %1, align 4
+  ret i32 %2
+}
+
+define i64 @lrw(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 2
@@ -690,14 +767,30 @@ define i64 @lrw(i32* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    th.lrw a0, a0, a1, 2
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %1 = getelementptr i32, i32* %a, i64 %b
-  %2 = load i32, i32* %1, align 4
+  %1 = getelementptr i32, ptr %a, i64 %b
+  %2 = load i32, ptr %1, align 4
   %3 = sext i32 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define i64 @lurw(i32* %a, i32 %b) {
+define i32 @lurw_anyext(ptr %a, i32 %b) {
+; RV32XTHEADMEMIDX-LABEL: lurw_anyext:
+; RV32XTHEADMEMIDX:       # %bb.0:
+; RV32XTHEADMEMIDX-NEXT:    th.lrw a0, a0, a1, 2
+; RV32XTHEADMEMIDX-NEXT:    ret
+;
+; RV64XTHEADMEMIDX-LABEL: lurw_anyext:
+; RV64XTHEADMEMIDX:       # %bb.0:
+; RV64XTHEADMEMIDX-NEXT:    th.lurw a0, a0, a1, 2
+; RV64XTHEADMEMIDX-NEXT:    ret
+  %1 = zext i32 %b to i64
+  %2 = getelementptr i32, ptr %a, i64 %1
+  %3 = load i32, ptr %2, align 4
+  ret i32 %3
+}
+
+define i64 @lurw(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 2
@@ -714,14 +807,14 @@ define i64 @lurw(i32* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr i32, i32* %a, i64 %1
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr i32, ptr %a, i64 %1
+  %3 = load i32, ptr %2, align 4
   %4 = sext i32 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
 }
 
-define i64 @lrwu(i32* %a, i64 %b) {
+define i64 @lrwu(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrwu:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 2
@@ -734,14 +827,14 @@ define i64 @lrwu(i32* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    th.lrwu a0, a0, a1, 2
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %1 = getelementptr i32, i32* %a, i64 %b
-  %2 = load i32, i32* %1, align 4
+  %1 = getelementptr i32, ptr %a, i64 %b
+  %2 = load i32, ptr %1, align 4
   %3 = zext i32 %2 to i64
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define i64 @lurwu(i32* %a, i32 %b) {
+define i64 @lurwu(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurwu:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 2
@@ -755,14 +848,14 @@ define i64 @lurwu(i32* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr i32, i32* %a, i64 %1
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr i32, ptr %a, i64 %1
+  %3 = load i32, ptr %2, align 4
   %4 = zext i32 %3 to i64
   %5 = add i64 %4, %4
   ret i64 %5
 }
 
-define i64 @lrd(i64* %a, i64 %b) {
+define i64 @lrd(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    slli a2, a1, 3
@@ -780,13 +873,13 @@ define i64 @lrd(i64* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    th.lrd a0, a0, a1, 3
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %1 = getelementptr i64, i64* %a, i64 %b
-  %2 = load i64, i64* %1, align 8
+  %1 = getelementptr i64, ptr %a, i64 %b
+  %2 = load i64, ptr %1, align 8
   %3 = add i64 %2, %2
   ret i64 %3
 }
 
-define i64 @lrd_2(i64* %a, i64 %b) {
+define i64 @lrd_2(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd_2:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    addi a2, a0, 96
@@ -806,13 +899,13 @@ define i64 @lrd_2(i64* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i64 %b, 12
-  %2 = getelementptr i64, i64* %a, i64 %1
-  %3 = load i64, i64* %2, align 8
+  %2 = getelementptr i64, ptr %a, i64 %1
+  %3 = load i64, ptr %2, align 8
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define i64 @lurd(i64* %a, i32 %b) {
+define i64 @lurd(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    slli a2, a1, 3
@@ -831,13 +924,13 @@ define i64 @lurd(i64* %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a0, a0, a0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr i64, i64* %a, i64 %1
-  %3 = load i64, i64* %2, align 8
+  %2 = getelementptr i64, ptr %a, i64 %1
+  %3 = load i64, ptr %2, align 8
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define void @srb(i8* %a, i64 %b, i8 %c) {
+define void @srb(ptr %a, i64 %b, i8 %c) {
 ; RV32XTHEADMEMIDX-LABEL: srb:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a3
@@ -850,12 +943,12 @@ define void @srb(i8* %a, i64 %b, i8 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    th.srb a2, a0, a1, 0
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i8 %c, %c
-  %2 = getelementptr i8, i8* %a, i64 %b
-  store i8 %1, i8* %2, align 8
+  %2 = getelementptr i8, ptr %a, i64 %b
+  store i8 %1, ptr %2, align 1
   ret void
 }
 
-define void @surb(i8* %a, i32 %b, i8 %c) {
+define void @surb(ptr %a, i32 %b, i8 %c) {
 ; RV32XTHEADMEMIDX-LABEL: surb:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
@@ -869,12 +962,12 @@ define void @surb(i8* %a, i32 %b, i8 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = add i8 %c, %c
-  %3 = getelementptr i8, i8* %a, i64 %1
-  store i8 %2, i8* %3, align 8
+  %3 = getelementptr i8, ptr %a, i64 %1
+  store i8 %2, ptr %3, align 1
   ret void
 }
 
-define void @srh(i16* %a, i64 %b, i16 %c) {
+define void @srh(ptr %a, i64 %b, i16 %c) {
 ; RV32XTHEADMEMIDX-LABEL: srh:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a3
@@ -887,12 +980,12 @@ define void @srh(i16* %a, i64 %b, i16 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    th.srh a2, a0, a1, 1
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i16 %c, %c
-  %2 = getelementptr i16, i16* %a, i64 %b
-  store i16 %1, i16* %2, align 8
+  %2 = getelementptr i16, ptr %a, i64 %b
+  store i16 %1, ptr %2, align 2
   ret void
 }
 
-define void @surh(i16* %a, i32 %b, i16 %c) {
+define void @surh(ptr %a, i32 %b, i16 %c) {
 ; RV32XTHEADMEMIDX-LABEL: surh:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
@@ -906,12 +999,12 @@ define void @surh(i16* %a, i32 %b, i16 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = add i16 %c, %c
-  %3 = getelementptr i16, i16* %a, i64 %1
-  store i16 %2, i16* %3, align 8
+  %3 = getelementptr i16, ptr %a, i64 %1
+  store i16 %2, ptr %3, align 2
   ret void
 }
 
-define void @srw(i32* %a, i64 %b, i32 %c) {
+define void @srw(ptr %a, i64 %b, i32 %c) {
 ; RV32XTHEADMEMIDX-LABEL: srw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a3
@@ -924,12 +1017,12 @@ define void @srw(i32* %a, i64 %b, i32 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    th.srw a2, a0, a1, 2
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i32 %c, %c
-  %2 = getelementptr i32, i32* %a, i64 %b
-  store i32 %1, i32* %2, align 8
+  %2 = getelementptr i32, ptr %a, i64 %b
+  store i32 %1, ptr %2, align 4
   ret void
 }
 
-define void @surw(i32* %a, i32 %b, i32 %c) {
+define void @surw(ptr %a, i32 %b, i32 %c) {
 ; RV32XTHEADMEMIDX-LABEL: surw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
@@ -943,12 +1036,12 @@ define void @surw(i32* %a, i32 %b, i32 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = add i32 %c, %c
-  %3 = getelementptr i32, i32* %a, i64 %1
-  store i32 %2, i32* %3, align 8
+  %3 = getelementptr i32, ptr %a, i64 %1
+  store i32 %2, ptr %3, align 4
   ret void
 }
 
-define void @srd(i64* %a, i64 %b, i64 %c) {
+define void @srd(ptr %a, i64 %b, i64 %c) {
 ; RV32XTHEADMEMIDX-LABEL: srd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a3
@@ -967,12 +1060,12 @@ define void @srd(i64* %a, i64 %b, i64 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    th.srd a2, a0, a1, 3
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i64 %c, %c
-  %2 = getelementptr i64, i64* %a, i64 %b
-  store i64 %1, i64* %2, align 8
+  %2 = getelementptr i64, ptr %a, i64 %b
+  store i64 %1, ptr %2, align 8
   ret void
 }
 
-define void @surd(i64* %a, i32 %b, i64 %c) {
+define void @surd(ptr %a, i32 %b, i64 %c) {
 ; RV32XTHEADMEMIDX-LABEL: surd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a4, a2, a2
@@ -992,12 +1085,12 @@ define void @surd(i64* %a, i32 %b, i64 %c) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = add i64 %c, %c
-  %3 = getelementptr i64, i64* %a, i64 %1
-  store i64 %2, i64* %3, align 8
+  %3 = getelementptr i64, ptr %a, i64 %1
+  store i64 %2, ptr %3, align 8
   ret void
 }
 
-define i32* @test_simm5(i32* %base, i32 %a, i32 %b) {
+define ptr @test_simm5(ptr %base, i32 %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: test_simm5:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
@@ -1009,13 +1102,13 @@ define i32* @test_simm5(i32* %base, i32 %a, i32 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV64XTHEADMEMIDX-NEXT:    th.swia a1, (a0), -12, 2
 ; RV64XTHEADMEMIDX-NEXT:    ret
-  %addr.1 = getelementptr i32, i32* %base, i32 -12
+  %addr.1 = getelementptr i32, ptr %base, i32 -12
   %res = add i32 %a, %b
-  store i32 %res, i32* %base
-  ret i32* %addr.1
+  store i32 %res, ptr %base
+  ret ptr %addr.1
 }
 
-define i64 @lrd_large_shift(i64* %a, i64 %b) {
+define i64 @lrd_large_shift(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd_large_shift:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    slli a1, a1, 5
@@ -1032,12 +1125,12 @@ define i64 @lrd_large_shift(i64* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i64 %b, 12
   %2 = shl i64 %1, 2
-  %3 = getelementptr i64, i64* %a, i64 %2
-  %4 = load i64, i64* %3, align 8
+  %3 = getelementptr i64, ptr %a, i64 %2
+  %4 = load i64, ptr %3, align 8
   ret i64 %4
 }
 
-define i64 @lrd_large_offset(i64* %a, i64 %b) {
+define i64 @lrd_large_offset(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd_large_offset:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    slli a1, a1, 3
@@ -1058,7 +1151,7 @@ define i64 @lrd_large_offset(i64* %a, i64 %b) {
 ; RV64XTHEADMEMIDX-NEXT:    ld a0, 1792(a0)
 ; RV64XTHEADMEMIDX-NEXT:    ret
   %1 = add i64 %b, 12000
-  %2 = getelementptr i64, i64* %a, i64 %1
-  %3 = load i64, i64* %2, align 8
+  %2 = getelementptr i64, ptr %a, i64 %1
+  %3 = load i64, ptr %2, align 8
   ret i64 %3
 }

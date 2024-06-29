@@ -64,6 +64,9 @@ private:
                  StringRef Description, SourceRange ReplacementRange,
                  StringRef Replacement);
 
+  bool canBeBypassed(const Stmt *S) const;
+
+  const bool IgnoreMacros;
   const bool ChainedConditionalReturn;
   const bool ChainedConditionalAssignment;
   const bool SimplifyDeMorgan;

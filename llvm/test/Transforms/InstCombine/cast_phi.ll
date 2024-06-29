@@ -16,9 +16,9 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[TID]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[DOTBB1:%.*]], label [[DOTBB2:%.*]]
 ; CHECK:       .bb1:
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLA]], i64 0, i64 256
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i8, ptr [[CALLA]], i64 1024
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX10]], align 4
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLB]], i64 0, i64 256
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[CALLB]], i64 1024
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    br label [[DOTBB2]]
 ; CHECK:       .bb2:

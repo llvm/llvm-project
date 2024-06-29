@@ -5,7 +5,10 @@ a C compiler.
 
 REQUIRES: c-compiler
 
-RUN: %cc -std=c99 %s -I%include %libruntime %libdecimal -lm -o /dev/null
+RUN: %if system-aix %{ export OBJECT_MODE=64 %}
+RUN: %cc -std=c99 %s -I%include %libruntime %libdecimal -lm  \
+RUN: %if system-aix %{-lpthread %}
+RUN: rm a.out
 */
 
 #include "flang/Runtime/entry-names.h"

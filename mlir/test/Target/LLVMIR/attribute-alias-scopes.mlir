@@ -59,14 +59,48 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 #alias_scope1 = #llvm.alias_scope<id = distinct[1]<>, domain = #alias_scope_domain>
 
 // CHECK-LABEL: @noalias_intr_only
-llvm.func @noalias_intr_only(%arg1 : !llvm.ptr) {
-  %0 = llvm.mlir.constant(0 : i32) : i32
-  // CHECK:  call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPES1:[0-9]+]])
+llvm.func @noalias_intr_only() {
+  // CHECK: call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPES:[0-9]+]])
   llvm.intr.experimental.noalias.scope.decl #alias_scope1
   llvm.return
 }
 
 // Check the translated metadata.
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
-// CHECK-DAG: ![[SCOPE1:[0-9]+]] = distinct !{![[SCOPE1]], ![[DOMAIN]]}
-// CHECK-DAG: ![[SCOPES1]] = !{![[SCOPE1]]}
+// CHECK-DAG: ![[SCOPE:[0-9]+]] = distinct !{![[SCOPE]], ![[DOMAIN]]}
+// CHECK-DAG: ![[SCOPES]] = !{![[SCOPE]]}
+
+// -----
+
+// This test ensures the alias scope translation creates a temporary metadata
+// node as a placeholder for self-references. Without this, the debug info
+// translation of a type list with a null entry could inadvertently reference
+// access group metadata. This occurs when both translations generate a metadata
+// list with a null entry, which are then uniqued to the same metadata node.
+// The access group translation subsequently updates the null entry to a
+// self-reference, which causes the type list to reference the access
+// group node as well. The use of a temporary placeholder node avoids the issue.
+
+#alias_scope_domain = #llvm.alias_scope_domain<id = distinct[0]<>>
+#alias_scope = #llvm.alias_scope<id = distinct[1]<>, domain = #alias_scope_domain>
+
+#di_null_type = #llvm.di_null_type
+#di_subroutine_type = #llvm.di_subroutine_type<types = #di_null_type>
+#di_file = #llvm.di_file<"attribute-alias-scope.mlir" in "">
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[3]<>, sourceLanguage = DW_LANG_C11, file = #di_file, isOptimized = true, emissionKind = Full>
+#di_subprogram = #llvm.di_subprogram<id = distinct[2]<>, compileUnit = #di_compile_unit, scope = #di_file, file = #di_file, subprogramFlags = "Definition", type = #di_subroutine_type>
+
+// CHECK-LABEL: @self_reference
+llvm.func @self_reference() {
+  // CHECK: call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPES:[0-9]+]])
+  llvm.intr.experimental.noalias.scope.decl #alias_scope
+  llvm.return
+} loc(fused<#di_subprogram>[unknown])
+
+// Check that the translated subroutine types do not reference the access group
+// domain since both of them are created as metadata list with a null entry.
+// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]]}
+// CHECK-DAG: ![[SCOPE:[0-9]+]] = distinct !{![[SCOPE]], ![[DOMAIN]]}
+// CHECK-DAG: ![[SCOPES]] = !{![[SCOPE]]}
+// CHECK-DAG: = !DISubroutineType(types: ![[TYPES:[0-9]+]])
+// CHECK-DAG: ![[TYPES]] = !{null}

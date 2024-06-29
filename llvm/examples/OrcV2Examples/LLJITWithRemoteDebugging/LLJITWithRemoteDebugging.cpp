@@ -77,6 +77,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
@@ -174,32 +175,13 @@ int main(int argc, char *argv[]) {
     TSMs.push_back(ExitOnErr(parseExampleModuleFromFile(Path)));
   }
 
-  std::string TT;
-  StringRef MainModuleName;
-  TSMs.front().withModuleDo([&MainModuleName, &TT](Module &M) {
-    MainModuleName = M.getName();
-    TT = M.getTargetTriple();
-    if (TT.empty())
-      TT = sys::getProcessTriple();
-  });
-
-  // Create a target machine that matches the input triple.
-  JITTargetMachineBuilder JTMB((Triple(TT)));
-  JTMB.setCodeModel(CodeModel::Small);
-  JTMB.setRelocationModel(Reloc::PIC_);
-
   // Create LLJIT and destroy it before disconnecting the target process.
   outs() << "Initializing LLJIT for remote executor\n";
-  auto J = ExitOnErr(LLJITBuilder()
-                          .setExecutorProcessControl(std::move(EPC))
-                          .setJITTargetMachineBuilder(std::move(JTMB))
-                          .setObjectLinkingLayerCreator([&](auto &ES, const auto &TT) {
-                            return std::make_unique<ObjectLinkingLayer>(ES);
-                          })
-                          .create());
+  auto J = ExitOnErr(
+      LLJITBuilder().setExecutorProcessControl(std::move(EPC)).create());
 
   // Add plugin for debug support.
-  ExitOnErr(addDebugSupport(J->getObjLinkingLayer()));
+  ExitOnErr(enableDebuggerSupport(*J));
 
   // Load required shared libraries on the remote target and add a generator
   // for each of it, so the compiler can lookup their symbols.

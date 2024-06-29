@@ -5,7 +5,7 @@
 ; LD1SB/LD1B
 ;
 
-define <vscale x 16 x i32> @ld1b_i8_sext_i32(<vscale x 16 x i8> *%base) {
+define <vscale x 16 x i32> @ld1b_i8_sext_i32(ptr %base) {
 ; CHECK-LABEL: ld1b_i8_sext_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -14,12 +14,12 @@ define <vscale x 16 x i32> @ld1b_i8_sext_i32(<vscale x 16 x i8> *%base) {
 ; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 16 x i8>, <vscale x 16 x i8>* %base
+  %wide.load = load <vscale x 16 x i8>, ptr %base
   %res = sext <vscale x 16 x i8> %wide.load to <vscale x 16 x i32>
   ret <vscale x 16 x i32> %res
 }
 
-define <vscale x 16 x i32> @ld1b_i8_zext_i32(<vscale x 16 x i8> *%base) {
+define <vscale x 16 x i32> @ld1b_i8_zext_i32(ptr %base) {
 ; CHECK-LABEL: ld1b_i8_zext_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -28,12 +28,12 @@ define <vscale x 16 x i32> @ld1b_i8_zext_i32(<vscale x 16 x i8> *%base) {
 ; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z3.s }, p0/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 16 x i8>, <vscale x 16 x i8>* %base
+  %wide.load = load <vscale x 16 x i8>, ptr %base
   %res = zext <vscale x 16 x i8> %wide.load to <vscale x 16 x i32>
   ret <vscale x 16 x i32> %res
 }
 
-define <vscale x 16 x i64> @ld1b_i8_sext(<vscale x 16 x i8> *%base) {
+define <vscale x 16 x i64> @ld1b_i8_sext(ptr %base) {
 ; CHECK-LABEL: ld1b_i8_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -46,12 +46,12 @@ define <vscale x 16 x i64> @ld1b_i8_sext(<vscale x 16 x i8> *%base) {
 ; CHECK-NEXT:    ld1sb { z6.d }, p0/z, [x0, #6, mul vl]
 ; CHECK-NEXT:    ld1sb { z7.d }, p0/z, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 16 x i8>, <vscale x 16 x i8>* %base
+  %wide.load = load <vscale x 16 x i8>, ptr %base
   %res = sext <vscale x 16 x i8> %wide.load to <vscale x 16 x i64>
   ret <vscale x 16 x i64> %res
 }
 
-define <vscale x 16 x i64> @ld1b_i8_zext(<vscale x 16 x i8> *%base) {
+define <vscale x 16 x i64> @ld1b_i8_zext(ptr %base) {
 ; CHECK-LABEL: ld1b_i8_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -64,7 +64,7 @@ define <vscale x 16 x i64> @ld1b_i8_zext(<vscale x 16 x i8> *%base) {
 ; CHECK-NEXT:    ld1b { z6.d }, p0/z, [x0, #6, mul vl]
 ; CHECK-NEXT:    ld1b { z7.d }, p0/z, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 16 x i8>, <vscale x 16 x i8>* %base
+  %wide.load = load <vscale x 16 x i8>, ptr %base
   %res = zext <vscale x 16 x i8> %wide.load to <vscale x 16 x i64>
   ret <vscale x 16 x i64> %res
 }
@@ -73,7 +73,7 @@ define <vscale x 16 x i64> @ld1b_i8_zext(<vscale x 16 x i8> *%base) {
 ; LD1H
 ;
 
-define <vscale x 8 x i64> @ld1h_i16_sext(<vscale x 8 x i16> *%base) {
+define <vscale x 8 x i64> @ld1h_i16_sext(ptr %base) {
 ; CHECK-LABEL: ld1h_i16_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -82,12 +82,12 @@ define <vscale x 8 x i64> @ld1h_i16_sext(<vscale x 8 x i16> *%base) {
 ; CHECK-NEXT:    ld1sh { z2.d }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1sh { z3.d }, p0/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 8 x i16>, <vscale x 8 x i16>* %base
+  %wide.load = load <vscale x 8 x i16>, ptr %base
   %res = sext <vscale x 8 x i16> %wide.load to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %res
 }
 
-define <vscale x 8 x i64> @ld1h_i16_zext(<vscale x 8 x i16> *%base) {
+define <vscale x 8 x i64> @ld1h_i16_zext(ptr %base) {
 ; CHECK-LABEL: ld1h_i16_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -96,7 +96,7 @@ define <vscale x 8 x i64> @ld1h_i16_zext(<vscale x 8 x i16> *%base) {
 ; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 8 x i16>, <vscale x 8 x i16>* %base
+  %wide.load = load <vscale x 8 x i16>, ptr %base
   %res = zext <vscale x 8 x i16> %wide.load to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %res
 }
@@ -105,26 +105,26 @@ define <vscale x 8 x i64> @ld1h_i16_zext(<vscale x 8 x i16> *%base) {
 ; LD1W
 ;
 
-define <vscale x 4 x i64> @ld1w_i32_sext(<vscale x 4 x i32> *%base) {
+define <vscale x 4 x i64> @ld1w_i32_sext(ptr %base) {
 ; CHECK-LABEL: ld1w_i32_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sw { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %base
+  %wide.load = load <vscale x 4 x i32>, ptr %base
   %res = sext <vscale x 4 x i32> %wide.load to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %res
 }
 
-define <vscale x 4 x i64> @ld1w_i32_zext(<vscale x 4 x i32> *%base) {
+define <vscale x 4 x i64> @ld1w_i32_zext(ptr %base) {
 ; CHECK-LABEL: ld1w_i32_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
-  %wide.load = load <vscale x 4 x i32>, <vscale x 4 x i32>* %base
+  %wide.load = load <vscale x 4 x i32>, ptr %base
   %res = zext <vscale x 4 x i32> %wide.load to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %res
 }

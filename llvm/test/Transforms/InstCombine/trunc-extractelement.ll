@@ -176,13 +176,13 @@ define i16 @shrinkExtractElt_i64_to_i16_2_extra_use(<3 x i64> %x) {
 define <4 x i64> @PR45314(<4 x i64> %x) {
 ; LE-LABEL: @PR45314(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[X:%.*]] to <8 x i32>
-; LE-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; LE-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; LE-NEXT:    [[B:%.*]] = bitcast <8 x i32> [[S]] to <4 x i64>
 ; LE-NEXT:    ret <4 x i64> [[B]]
 ;
 ; BE-LABEL: @PR45314(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[X:%.*]] to <8 x i32>
-; BE-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; BE-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; BE-NEXT:    [[B:%.*]] = bitcast <8 x i32> [[S]] to <4 x i64>
 ; BE-NEXT:    ret <4 x i64> [[B]]
 ;

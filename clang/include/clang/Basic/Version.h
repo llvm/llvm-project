@@ -40,6 +40,9 @@ namespace clang {
   /// string as getClangRevision.
   std::string getLLVMRevision();
 
+  /// Retrieves the Clang vendor tag.
+  std::string getClangVendor();
+
   /// Retrieves the full repository version that is an amalgamation of
   /// the information in getClangRepositoryPath() and getClangRevision().
   std::string getClangFullRepositoryVersion();

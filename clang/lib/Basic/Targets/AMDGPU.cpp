@@ -17,6 +17,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/SmallString.h"
 using namespace clang;
 using namespace clang::targets;
 
@@ -32,55 +33,56 @@ static const char *const DataLayoutStringR600 =
 
 static const char *const DataLayoutStringAMDGCN =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-    "-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
+    "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:"
+    "32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
-    "-ni:7:8";
+    "-ni:7:8:9";
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
-    Generic,  // Default
-    Global,   // opencl_global
-    Local,    // opencl_local
-    Constant, // opencl_constant
-    Private,  // opencl_private
-    Generic,  // opencl_generic
-    Global,   // opencl_global_device
-    Global,   // opencl_global_host
-    Global,   // cuda_device
-    Constant, // cuda_constant
-    Local,    // cuda_shared
-    Global,   // sycl_global
-    Global,   // sycl_global_device
-    Global,   // sycl_global_host
-    Local,    // sycl_local
-    Private,  // sycl_private
-    Generic,  // ptr32_sptr
-    Generic,  // ptr32_uptr
-    Generic,  // ptr64
-    Generic,  // hlsl_groupshared
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_host
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // sycl_local
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
-    Private,  // Default
-    Global,   // opencl_global
-    Local,    // opencl_local
-    Constant, // opencl_constant
-    Private,  // opencl_private
-    Generic,  // opencl_generic
-    Global,   // opencl_global_device
-    Global,   // opencl_global_host
-    Global,   // cuda_device
-    Constant, // cuda_constant
-    Local,    // cuda_shared
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // Default
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
     // SYCL address space values for this map are dummy
-    Generic, // sycl_global
-    Generic, // sycl_global_device
-    Generic, // sycl_global_host
-    Generic, // sycl_local
-    Generic, // sycl_private
-    Generic, // ptr32_sptr
-    Generic, // ptr32_uptr
-    Generic, // ptr64
-    Generic, // hlsl_groupshared
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_device
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_host
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_local
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS, // hlsl_groupshared
 
 };
 } // namespace targets
@@ -230,7 +232,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   HasLegalHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32 ? 32 : 64;
+  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
   AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
 
   // Set pointer width and alignment for the generic address space.
@@ -273,30 +275,42 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__R600__");
 
-  if (GPUKind != llvm::AMDGPU::GK_NONE) {
-    StringRef CanonName = isAMDGCN(getTriple()) ?
-      getArchNameAMDGCN(GPUKind) : getArchNameR600(GPUKind);
-    Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
-    // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-    if (isAMDGCN(getTriple())) {
-      assert(CanonName.startswith("gfx") && "Invalid amdgcn canonical name");
-      Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
-                          Twine("__"));
-    }
-    if (isAMDGCN(getTriple())) {
-      Builder.defineMacro("__amdgcn_processor__",
-                          Twine("\"") + Twine(CanonName) + Twine("\""));
-      Builder.defineMacro("__amdgcn_target_id__",
-                          Twine("\"") + Twine(*getTargetID()) + Twine("\""));
-      for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
-        auto Loc = OffloadArchFeatures.find(F);
-        if (Loc != OffloadArchFeatures.end()) {
-          std::string NewF = F.str();
-          std::replace(NewF.begin(), NewF.end(), '-', '_');
-          Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
-                                  Twine("__"),
-                              Loc->second ? "1" : "0");
-        }
+  // Legacy HIP host code relies on these default attributes to be defined.
+  bool IsHIPHost = Opts.HIP && !Opts.CUDAIsDevice;
+  if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
+    return;
+
+  llvm::SmallString<16> CanonName =
+      (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
+                             : getArchNameR600(GPUKind));
+
+  // Sanitize the name of generic targets.
+  // e.g. gfx10-1-generic -> gfx10_1_generic
+  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
+      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
+    std::replace(CanonName.begin(), CanonName.end(), '-', '_');
+  }
+
+  Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
+  // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
+  if (isAMDGCN(getTriple()) && !IsHIPHost) {
+    assert(StringRef(CanonName).starts_with("gfx") &&
+           "Invalid amdgcn canonical name");
+    StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
+    Builder.defineMacro(Twine("__") + Twine(CanonFamilyName.upper()) +
+                        Twine("__"));
+    Builder.defineMacro("__amdgcn_processor__",
+                        Twine("\"") + Twine(CanonName) + Twine("\""));
+    Builder.defineMacro("__amdgcn_target_id__",
+                        Twine("\"") + Twine(*getTargetID()) + Twine("\""));
+    for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
+      auto Loc = OffloadArchFeatures.find(F);
+      if (Loc != OffloadArchFeatures.end()) {
+        std::string NewF = F.str();
+        std::replace(NewF.begin(), NewF.end(), '-', '_');
+        Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
+                                Twine("__"),
+                            Loc->second ? "1" : "0");
       }
     }
   }

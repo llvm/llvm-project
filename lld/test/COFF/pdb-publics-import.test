@@ -115,7 +115,7 @@ CHECK-NEXT:          characteristics =
 CHECK-NEXT:            initialized data
 CHECK-NEXT:            read permissions
 CHECK-NEXT: {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$2`
-CHECK-NEXT:          length = 40, addr = 0002:0061
+CHECK-NEXT:          length = 40, addr = 0002:0064
 CHECK-NEXT:          characteristics =
 CHECK-NEXT:            initialized data
 CHECK-NEXT:            read permissions
@@ -162,9 +162,9 @@ CHECK-NEXT:   SC[.rdata]  | mod = 3, 0002:0000, size = 28, data crc = 0, reloc c
 CHECK-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
 CHECK-NEXT:   SC[.rdata]  | mod = 3, 0002:0028, size = 33, data crc = 0, reloc crc = 0
 CHECK-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
-CHECK-NEXT:   SC[.rdata]  | mod = 3, 0002:0061, size = 20, data crc = 0, reloc crc = 0
+CHECK-NEXT:   SC[.rdata]  | mod = 3, 0002:0064, size = 20, data crc = 0, reloc crc = 0
 CHECK-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
-CHECK-NEXT:   SC[.rdata]  | mod = 3, 0002:0081, size = 20, data crc = 0, reloc crc = 0
+CHECK-NEXT:   SC[.rdata]  | mod = 3, 0002:0084, size = 20, data crc = 0, reloc crc = 0
 CHECK-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
 CHECK-NEXT:   SC[.rdata]  | mod = 3, 0002:0104, size = 8, data crc = 0, reloc crc = 0
 CHECK-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ

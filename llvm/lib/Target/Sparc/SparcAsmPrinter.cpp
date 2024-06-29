@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/SparcInstPrinter.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "MCTargetDesc/SparcTargetStreamer.h"
 #include "Sparc.h"
 #include "SparcInstrInfo.h"
@@ -109,6 +110,15 @@ static void EmitCall(MCStreamer &OutStreamer,
   CallInst.setOpcode(SP::CALL);
   CallInst.addOperand(Callee);
   OutStreamer.emitInstruction(CallInst, STI);
+}
+
+static void EmitRDPC(MCStreamer &OutStreamer, MCOperand &RD,
+                     const MCSubtargetInfo &STI) {
+  MCInst RDPCInst;
+  RDPCInst.setOpcode(SP::RDASR);
+  RDPCInst.addOperand(RD);
+  RDPCInst.addOperand(MCOperand::createReg(SP::ASR5));
+  OutStreamer.emitInstruction(RDPCInst, STI);
 }
 
 static void EmitSETHI(MCStreamer &OutStreamer,
@@ -226,7 +236,7 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   MCOperand RegO7   = MCOperand::createReg(SP::O7);
 
   // <StartLabel>:
-  //   call <EndLabel>
+  //   <GET-PC> // This will be either `call <EndLabel>` or `rd %pc, %o7`.
   // <SethiLabel>:
   //     sethi %hi(_GLOBAL_OFFSET_TABLE_+(<SethiLabel>-<StartLabel>)), <MO>
   // <EndLabel>:
@@ -234,8 +244,17 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   //   add <MO>, %o7, <MO>
 
   OutStreamer->emitLabel(StartLabel);
-  MCOperand Callee =  createPCXCallOP(EndLabel, OutContext);
-  EmitCall(*OutStreamer, Callee, STI);
+  if (!STI.getTargetTriple().isSPARC64() ||
+      STI.hasFeature(Sparc::TuneSlowRDPC)) {
+    MCOperand Callee = createPCXCallOP(EndLabel, OutContext);
+    EmitCall(*OutStreamer, Callee, STI);
+  } else {
+    // TODO find out whether it is possible to store PC
+    // in other registers, to enable leaf function optimization.
+    // (On the other hand, approx. over 97.8% of GETPCXes happen
+    // in non-leaf functions, so would this be worth the effort?)
+    EmitRDPC(*OutStreamer, RegO7, STI);
+  }
   OutStreamer->emitLabel(SethiLabel);
   MCOperand hiImm = createPCXRelExprOp(SparcMCExpr::VK_Sparc_PC22,
                                        GOTLabel, StartLabel, SethiLabel,
@@ -415,6 +434,50 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+    case 'L': // Low order register of a twin word register operand
+    case 'H': // High order register of a twin word register operand
+    {
+      const SparcSubtarget &Subtarget = MF->getSubtarget<SparcSubtarget>();
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      const SparcRegisterInfo *RegisterInfo = Subtarget.getRegisterInfo();
+      Register MOReg = MO.getReg();
+
+      Register HiReg, LoReg;
+      if (!SP::IntPairRegClass.contains(MOReg)) {
+        // If we aren't given a register pair already, find out which pair it
+        // belongs to. Note that here, the specified register operand, which
+        // refers to the high part of the twinword, needs to be an even-numbered
+        // register.
+        MOReg = RegisterInfo->getMatchingSuperReg(MOReg, SP::sub_even,
+                                                  &SP::IntPairRegClass);
+        if (!MOReg) {
+          SMLoc Loc;
+          OutContext.reportError(
+              Loc, "Hi part of pair should point to an even-numbered register");
+          OutContext.reportError(
+              Loc, "(note that in some cases it might be necessary to manually "
+                   "bind the input/output registers instead of relying on "
+                   "automatic allocation)");
+          return true;
+        }
+      }
+
+      HiReg = RegisterInfo->getSubReg(MOReg, SP::sub_even);
+      LoReg = RegisterInfo->getSubReg(MOReg, SP::sub_odd);
+
+      Register Reg;
+      switch (ExtraCode[0]) {
+      case 'L':
+        Reg = LoReg;
+        break;
+      case 'H':
+        Reg = HiReg;
+        break;
+      }
+
+      O << '%' << SparcInstPrinter::getRegisterName(Reg);
+      return false;
+    }
     case 'f':
     case 'r':
      break;

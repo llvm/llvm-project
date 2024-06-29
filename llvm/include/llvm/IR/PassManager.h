@@ -39,15 +39,10 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManagerInternal.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
@@ -59,327 +54,10 @@
 #include <utility>
 #include <vector>
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace llvm {
 
-// RemoveDIs: Provide facilities for converting debug-info from one form to
-// another, which are no-ops for everything but modules.
-template <class IRUnitT> inline bool shouldConvertDbgInfo(IRUnitT &IR) {
-  return false;
-}
-template <> inline bool shouldConvertDbgInfo(Module &IR) {
-  return !IR.IsNewDbgInfoFormat && UseNewDbgInfoFormat;
-}
-template <class IRUnitT> inline void doConvertDbgInfoToNew(IRUnitT &IR) {}
-template <> inline void doConvertDbgInfoToNew(Module &IR) {
-  IR.convertToNewDbgValues();
-}
-template <class IRUnitT> inline void doConvertDebugInfoToOld(IRUnitT &IR) {}
-template <> inline void doConvertDebugInfoToOld(Module &IR) {
-  IR.convertFromNewDbgValues();
-}
-
-/// A special type used by analysis passes to provide an address that
-/// identifies that particular analysis pass type.
-///
-/// Analysis passes should have a static data member of this type and derive
-/// from the \c AnalysisInfoMixin to get a static ID method used to identify
-/// the analysis in the pass management infrastructure.
-struct alignas(8) AnalysisKey {};
-
-/// A special type used to provide an address that identifies a set of related
-/// analyses.  These sets are primarily used below to mark sets of analyses as
-/// preserved.
-///
-/// For example, a transformation can indicate that it preserves the CFG of a
-/// function by preserving the appropriate AnalysisSetKey.  An analysis that
-/// depends only on the CFG can then check if that AnalysisSetKey is preserved;
-/// if it is, the analysis knows that it itself is preserved.
-struct alignas(8) AnalysisSetKey {};
-
-/// This templated class represents "all analyses that operate over \<a
-/// particular IR unit\>" (e.g. a Function or a Module) in instances of
-/// PreservedAnalysis.
-///
-/// This lets a transformation say e.g. "I preserved all function analyses".
-///
-/// Note that you must provide an explicit instantiation declaration and
-/// definition for this template in order to get the correct behavior on
-/// Windows. Otherwise, the address of SetKey will not be stable.
-template <typename IRUnitT> class AllAnalysesOn {
-public:
-  static AnalysisSetKey *ID() { return &SetKey; }
-
-private:
-  static AnalysisSetKey SetKey;
-};
-
-template <typename IRUnitT> AnalysisSetKey AllAnalysesOn<IRUnitT>::SetKey;
-
-extern template class AllAnalysesOn<Module>;
-extern template class AllAnalysesOn<Function>;
-
-/// Represents analyses that only rely on functions' control flow.
-///
-/// This can be used with \c PreservedAnalyses to mark the CFG as preserved and
-/// to query whether it has been preserved.
-///
-/// The CFG of a function is defined as the set of basic blocks and the edges
-/// between them. Changing the set of basic blocks in a function is enough to
-/// mutate the CFG. Mutating the condition of a branch or argument of an
-/// invoked function does not mutate the CFG, but changing the successor labels
-/// of those instructions does.
-class CFGAnalyses {
-public:
-  static AnalysisSetKey *ID() { return &SetKey; }
-
-private:
-  static AnalysisSetKey SetKey;
-};
-
-/// A set of analyses that are preserved following a run of a transformation
-/// pass.
-///
-/// Transformation passes build and return these objects to communicate which
-/// analyses are still valid after the transformation. For most passes this is
-/// fairly simple: if they don't change anything all analyses are preserved,
-/// otherwise only a short list of analyses that have been explicitly updated
-/// are preserved.
-///
-/// This class also lets transformation passes mark abstract *sets* of analyses
-/// as preserved. A transformation that (say) does not alter the CFG can
-/// indicate such by marking a particular AnalysisSetKey as preserved, and
-/// then analyses can query whether that AnalysisSetKey is preserved.
-///
-/// Finally, this class can represent an "abandoned" analysis, which is
-/// not preserved even if it would be covered by some abstract set of analyses.
-///
-/// Given a `PreservedAnalyses` object, an analysis will typically want to
-/// figure out whether it is preserved. In the example below, MyAnalysisType is
-/// preserved if it's not abandoned, and (a) it's explicitly marked as
-/// preserved, (b), the set AllAnalysesOn<MyIRUnit> is preserved, or (c) both
-/// AnalysisSetA and AnalysisSetB are preserved.
-///
-/// ```
-///   auto PAC = PA.getChecker<MyAnalysisType>();
-///   if (PAC.preserved() || PAC.preservedSet<AllAnalysesOn<MyIRUnit>>() ||
-///       (PAC.preservedSet<AnalysisSetA>() &&
-///        PAC.preservedSet<AnalysisSetB>())) {
-///     // The analysis has been successfully preserved ...
-///   }
-/// ```
-class PreservedAnalyses {
-public:
-  /// Convenience factory function for the empty preserved set.
-  static PreservedAnalyses none() { return PreservedAnalyses(); }
-
-  /// Construct a special preserved set that preserves all passes.
-  static PreservedAnalyses all() {
-    PreservedAnalyses PA;
-    PA.PreservedIDs.insert(&AllAnalysesKey);
-    return PA;
-  }
-
-  /// Construct a preserved analyses object with a single preserved set.
-  template <typename AnalysisSetT>
-  static PreservedAnalyses allInSet() {
-    PreservedAnalyses PA;
-    PA.preserveSet<AnalysisSetT>();
-    return PA;
-  }
-
-  /// Mark an analysis as preserved.
-  template <typename AnalysisT> void preserve() { preserve(AnalysisT::ID()); }
-
-  /// Given an analysis's ID, mark the analysis as preserved, adding it
-  /// to the set.
-  void preserve(AnalysisKey *ID) {
-    // Clear this ID from the explicit not-preserved set if present.
-    NotPreservedAnalysisIDs.erase(ID);
-
-    // If we're not already preserving all analyses (other than those in
-    // NotPreservedAnalysisIDs).
-    if (!areAllPreserved())
-      PreservedIDs.insert(ID);
-  }
-
-  /// Mark an analysis set as preserved.
-  template <typename AnalysisSetT> void preserveSet() {
-    preserveSet(AnalysisSetT::ID());
-  }
-
-  /// Mark an analysis set as preserved using its ID.
-  void preserveSet(AnalysisSetKey *ID) {
-    // If we're not already in the saturated 'all' state, add this set.
-    if (!areAllPreserved())
-      PreservedIDs.insert(ID);
-  }
-
-  /// Mark an analysis as abandoned.
-  ///
-  /// An abandoned analysis is not preserved, even if it is nominally covered
-  /// by some other set or was previously explicitly marked as preserved.
-  ///
-  /// Note that you can only abandon a specific analysis, not a *set* of
-  /// analyses.
-  template <typename AnalysisT> void abandon() { abandon(AnalysisT::ID()); }
-
-  /// Mark an analysis as abandoned using its ID.
-  ///
-  /// An abandoned analysis is not preserved, even if it is nominally covered
-  /// by some other set or was previously explicitly marked as preserved.
-  ///
-  /// Note that you can only abandon a specific analysis, not a *set* of
-  /// analyses.
-  void abandon(AnalysisKey *ID) {
-    PreservedIDs.erase(ID);
-    NotPreservedAnalysisIDs.insert(ID);
-  }
-
-  /// Intersect this set with another in place.
-  ///
-  /// This is a mutating operation on this preserved set, removing all
-  /// preserved passes which are not also preserved in the argument.
-  void intersect(const PreservedAnalyses &Arg) {
-    if (Arg.areAllPreserved())
-      return;
-    if (areAllPreserved()) {
-      *this = Arg;
-      return;
-    }
-    // The intersection requires the *union* of the explicitly not-preserved
-    // IDs and the *intersection* of the preserved IDs.
-    for (auto *ID : Arg.NotPreservedAnalysisIDs) {
-      PreservedIDs.erase(ID);
-      NotPreservedAnalysisIDs.insert(ID);
-    }
-    for (auto *ID : PreservedIDs)
-      if (!Arg.PreservedIDs.count(ID))
-        PreservedIDs.erase(ID);
-  }
-
-  /// Intersect this set with a temporary other set in place.
-  ///
-  /// This is a mutating operation on this preserved set, removing all
-  /// preserved passes which are not also preserved in the argument.
-  void intersect(PreservedAnalyses &&Arg) {
-    if (Arg.areAllPreserved())
-      return;
-    if (areAllPreserved()) {
-      *this = std::move(Arg);
-      return;
-    }
-    // The intersection requires the *union* of the explicitly not-preserved
-    // IDs and the *intersection* of the preserved IDs.
-    for (auto *ID : Arg.NotPreservedAnalysisIDs) {
-      PreservedIDs.erase(ID);
-      NotPreservedAnalysisIDs.insert(ID);
-    }
-    for (auto *ID : PreservedIDs)
-      if (!Arg.PreservedIDs.count(ID))
-        PreservedIDs.erase(ID);
-  }
-
-  /// A checker object that makes it easy to query for whether an analysis or
-  /// some set covering it is preserved.
-  class PreservedAnalysisChecker {
-    friend class PreservedAnalyses;
-
-    const PreservedAnalyses &PA;
-    AnalysisKey *const ID;
-    const bool IsAbandoned;
-
-    /// A PreservedAnalysisChecker is tied to a particular Analysis because
-    /// `preserved()` and `preservedSet()` both return false if the Analysis
-    /// was abandoned.
-    PreservedAnalysisChecker(const PreservedAnalyses &PA, AnalysisKey *ID)
-        : PA(PA), ID(ID), IsAbandoned(PA.NotPreservedAnalysisIDs.count(ID)) {}
-
-  public:
-    /// Returns true if the checker's analysis was not abandoned and either
-    ///  - the analysis is explicitly preserved or
-    ///  - all analyses are preserved.
-    bool preserved() {
-      return !IsAbandoned && (PA.PreservedIDs.count(&AllAnalysesKey) ||
-                              PA.PreservedIDs.count(ID));
-    }
-
-    /// Return true if the checker's analysis was not abandoned, i.e. it was not
-    /// explicitly invalidated. Even if the analysis is not explicitly
-    /// preserved, if the analysis is known stateless, then it is preserved.
-    bool preservedWhenStateless() {
-      return !IsAbandoned;
-    }
-
-    /// Returns true if the checker's analysis was not abandoned and either
-    ///  - \p AnalysisSetT is explicitly preserved or
-    ///  - all analyses are preserved.
-    template <typename AnalysisSetT> bool preservedSet() {
-      AnalysisSetKey *SetID = AnalysisSetT::ID();
-      return !IsAbandoned && (PA.PreservedIDs.count(&AllAnalysesKey) ||
-                              PA.PreservedIDs.count(SetID));
-    }
-  };
-
-  /// Build a checker for this `PreservedAnalyses` and the specified analysis
-  /// type.
-  ///
-  /// You can use the returned object to query whether an analysis was
-  /// preserved. See the example in the comment on `PreservedAnalysis`.
-  template <typename AnalysisT> PreservedAnalysisChecker getChecker() const {
-    return PreservedAnalysisChecker(*this, AnalysisT::ID());
-  }
-
-  /// Build a checker for this `PreservedAnalyses` and the specified analysis
-  /// ID.
-  ///
-  /// You can use the returned object to query whether an analysis was
-  /// preserved. See the example in the comment on `PreservedAnalysis`.
-  PreservedAnalysisChecker getChecker(AnalysisKey *ID) const {
-    return PreservedAnalysisChecker(*this, ID);
-  }
-
-  /// Test whether all analyses are preserved (and none are abandoned).
-  ///
-  /// This is used primarily to optimize for the common case of a transformation
-  /// which makes no changes to the IR.
-  bool areAllPreserved() const {
-    return NotPreservedAnalysisIDs.empty() &&
-           PreservedIDs.count(&AllAnalysesKey);
-  }
-
-  /// Directly test whether a set of analyses is preserved.
-  ///
-  /// This is only true when no analyses have been explicitly abandoned.
-  template <typename AnalysisSetT> bool allAnalysesInSetPreserved() const {
-    return allAnalysesInSetPreserved(AnalysisSetT::ID());
-  }
-
-  /// Directly test whether a set of analyses is preserved.
-  ///
-  /// This is only true when no analyses have been explicitly abandoned.
-  bool allAnalysesInSetPreserved(AnalysisSetKey *SetID) const {
-    return NotPreservedAnalysisIDs.empty() &&
-           (PreservedIDs.count(&AllAnalysesKey) || PreservedIDs.count(SetID));
-  }
-
-private:
-  /// A special key used to indicate all analyses.
-  static AnalysisSetKey AllAnalysesKey;
-
-  /// The IDs of analyses and analysis sets that are preserved.
-  SmallPtrSet<void *, 2> PreservedIDs;
-
-  /// The IDs of explicitly not-preserved analyses.
-  ///
-  /// If an analysis in this set is covered by a set in `PreservedIDs`, we
-  /// consider it not-preserved. That is, `NotPreservedAnalysisIDs` always
-  /// "wins" over analysis sets in `PreservedIDs`.
-  ///
-  /// Also, a given ID should never occur both here and in `PreservedIDs`.
-  SmallPtrSet<AnalysisKey *, 2> NotPreservedAnalysisIDs;
-};
+class Function;
+class Module;
 
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -465,12 +143,6 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
 
 } // namespace detail
 
-// Forward declare the pass instrumentation analysis explicitly queried in
-// generic PassManager code.
-// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
-// header.
-class PassInstrumentationAnalysis;
-
 /// Manages a sequence of passes over a particular unit of IR.
 ///
 /// A pass manager contains a sequence of passes to run over a particular unit
@@ -516,64 +188,13 @@ public:
   /// Run all of the passes in this manager over the given unit of IR.
   /// ExtraArgs are passed to each pass.
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
-                        ExtraArgTs... ExtraArgs) {
-    PreservedAnalyses PA = PreservedAnalyses::all();
-
-    // Request PassInstrumentation from analysis manager, will use it to run
-    // instrumenting callbacks for the passes later.
-    // Here we use std::tuple wrapper over getResult which helps to extract
-    // AnalysisManager's arguments out of the whole ExtraArgs set.
-    PassInstrumentation PI =
-        detail::getAnalysisResult<PassInstrumentationAnalysis>(
-            AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
-
-    // RemoveDIs: if requested, convert debug-info to DPValue representation
-    // for duration of these passes.
-    bool ShouldConvertDbgInfo = shouldConvertDbgInfo(IR);
-    if (ShouldConvertDbgInfo)
-      doConvertDbgInfoToNew(IR);
-
-    for (auto &Pass : Passes) {
-      // Check the PassInstrumentation's BeforePass callbacks before running the
-      // pass, skip its execution completely if asked to (callback returns
-      // false).
-      if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
-        continue;
-
-      PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
-
-      // Update the analysis manager as each pass runs and potentially
-      // invalidates analyses.
-      AM.invalidate(IR, PassPA);
-
-      // Call onto PassInstrumentation's AfterPass callbacks immediately after
-      // running the pass.
-      PI.runAfterPass<IRUnitT>(*Pass, IR, PassPA);
-
-      // Finally, intersect the preserved analyses to compute the aggregate
-      // preserved set for this pass manager.
-      PA.intersect(std::move(PassPA));
-    }
-
-    if (ShouldConvertDbgInfo)
-      doConvertDebugInfoToOld(IR);
-
-    // Invalidation was handled after each pass in the above loop for the
-    // current unit of IR. Therefore, the remaining analysis results in the
-    // AnalysisManager are preserved. We mark this with a set so that we don't
-    // need to inspect each one individually.
-    PA.preserveSet<AllAnalysesOn<IRUnitT>>();
-
-    return PA;
-  }
+                        ExtraArgTs... ExtraArgs);
 
   template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<!std::is_same<PassT, PassManager>::value>
-      addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<!std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
     using PassModelT =
-        detail::PassModel<IRUnitT, PassT, PreservedAnalyses, AnalysisManagerT,
-                          ExtraArgTs...>;
+        detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
     // Do not use make_unique or emplace_back, they cause too many template
     // instantiations, causing terrible compile times.
     Passes.push_back(std::unique_ptr<PassConceptT>(
@@ -581,14 +202,13 @@ public:
   }
 
   /// When adding a pass manager pass that has the same type as this pass
-  /// manager, simply move the passes over. This is because we don't have use
-  /// cases rely on executing nested pass managers. Doing this could reduce
-  /// implementation complexity and avoid potential invalidation issues that may
-  /// happen with nested pass managers of the same type.
+  /// manager, simply move the passes over. This is because we don't have
+  /// use cases rely on executing nested pass managers. Doing this could
+  /// reduce implementation complexity and avoid potential invalidation
+  /// issues that may happen with nested pass managers of the same type.
   template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<std::is_same<PassT, PassManager>::value>
-      addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
     for (auto &P : Pass.Passes)
       Passes.push_back(std::move(P));
   }
@@ -605,41 +225,25 @@ protected:
   std::vector<std::unique_ptr<PassConceptT>> Passes;
 };
 
+template <typename IRUnitT>
+void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
+
+template <>
+void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+
 extern template class PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
 
+template <>
+void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                            const Function &IR);
+
 extern template class PassManager<Function>;
 
 /// Convenience typedef for a pass manager over functions.
 using FunctionPassManager = PassManager<Function>;
-
-/// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
-/// managers. Goes before AnalysisManager definition to provide its
-/// internals (e.g PassInstrumentationAnalysis::ID) for use there if needed.
-/// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
-/// header.
-class PassInstrumentationAnalysis
-    : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
-  friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
-  static AnalysisKey Key;
-
-  PassInstrumentationCallbacks *Callbacks;
-
-public:
-  /// PassInstrumentationCallbacks object is shared, owned by something else,
-  /// not this analysis.
-  PassInstrumentationAnalysis(PassInstrumentationCallbacks *Callbacks = nullptr)
-      : Callbacks(Callbacks) {}
-
-  using Result = PassInstrumentation;
-
-  template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
-  Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {
-    return PassInstrumentation(Callbacks);
-  }
-};
 
 /// A container for analyses that lazily runs them and caches their
 /// results.
@@ -652,11 +256,9 @@ public:
 
 private:
   // Now that we've defined our invalidator, we can define the concept types.
-  using ResultConceptT =
-      detail::AnalysisResultConcept<IRUnitT, PreservedAnalyses, Invalidator>;
+  using ResultConceptT = detail::AnalysisResultConcept<IRUnitT, Invalidator>;
   using PassConceptT =
-      detail::AnalysisPassConcept<IRUnitT, PreservedAnalyses, Invalidator,
-                                  ExtraArgTs...>;
+      detail::AnalysisPassConcept<IRUnitT, Invalidator, ExtraArgTs...>;
 
   /// List of analysis pass IDs and associated concept pointers.
   ///
@@ -708,7 +310,7 @@ public:
     bool invalidate(IRUnitT &IR, const PreservedAnalyses &PA) {
       using ResultModelT =
           detail::AnalysisResultModel<IRUnitT, PassT, typename PassT::Result,
-                                      PreservedAnalyses, Invalidator>;
+                                      Invalidator>;
 
       return invalidateImpl<ResultModelT>(PassT::ID(), IR, PA);
     }
@@ -808,7 +410,7 @@ public:
 
     using ResultModelT =
         detail::AnalysisResultModel<IRUnitT, PassT, typename PassT::Result,
-                                    PreservedAnalyses, Invalidator>;
+                                    Invalidator>;
 
     return static_cast<ResultModelT &>(ResultConcept).Result;
   }
@@ -829,7 +431,7 @@ public:
 
     using ResultModelT =
         detail::AnalysisResultModel<IRUnitT, PassT, typename PassT::Result,
-                                    PreservedAnalyses, Invalidator>;
+                                    Invalidator>;
 
     return &static_cast<ResultModelT *>(ResultConcept)->Result;
   }
@@ -865,8 +467,7 @@ public:
   bool registerPass(PassBuilderT &&PassBuilder) {
     using PassT = decltype(PassBuilder());
     using PassModelT =
-        detail::AnalysisPassModel<IRUnitT, PassT, PreservedAnalyses,
-                                  Invalidator, ExtraArgTs...>;
+        detail::AnalysisPassModel<IRUnitT, PassT, Invalidator, ExtraArgTs...>;
 
     auto &PassPtr = AnalysisPasses[PassT::ID()];
     if (PassPtr)
@@ -1247,8 +848,7 @@ ModuleToFunctionPassAdaptor
 createModuleToFunctionPassAdaptor(FunctionPassT &&Pass,
                                   bool EagerlyInvalidate = false) {
   using PassModelT =
-      detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
-                        FunctionAnalysisManager>;
+      detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return ModuleToFunctionPassAdaptor(
@@ -1330,58 +930,6 @@ struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
     return PreservedAnalyses::none();
   }
 };
-
-/// A utility pass template that simply runs another pass multiple times.
-///
-/// This can be useful when debugging or testing passes. It also serves as an
-/// example of how to extend the pass manager in ways beyond composition.
-template <typename PassT>
-class RepeatedPass : public PassInfoMixin<RepeatedPass<PassT>> {
-public:
-  RepeatedPass(int Count, PassT &&P)
-      : Count(Count), P(std::forward<PassT>(P)) {}
-
-  template <typename IRUnitT, typename AnalysisManagerT, typename... Ts>
-  PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM, Ts &&... Args) {
-
-    // Request PassInstrumentation from analysis manager, will use it to run
-    // instrumenting callbacks for the passes later.
-    // Here we use std::tuple wrapper over getResult which helps to extract
-    // AnalysisManager's arguments out of the whole Args set.
-    PassInstrumentation PI =
-        detail::getAnalysisResult<PassInstrumentationAnalysis>(
-            AM, IR, std::tuple<Ts...>(Args...));
-
-    auto PA = PreservedAnalyses::all();
-    for (int i = 0; i < Count; ++i) {
-      // Check the PassInstrumentation's BeforePass callbacks before running the
-      // pass, skip its execution completely if asked to (callback returns
-      // false).
-      if (!PI.runBeforePass<IRUnitT>(P, IR))
-        continue;
-      PreservedAnalyses IterPA = P.run(IR, AM, std::forward<Ts>(Args)...);
-      PA.intersect(IterPA);
-      PI.runAfterPass(P, IR, IterPA);
-    }
-    return PA;
-  }
-
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    OS << "repeat<" << Count << ">(";
-    P.printPipeline(OS, MapClassName2PassName);
-    OS << ')';
-  }
-
-private:
-  int Count;
-  PassT P;
-};
-
-template <typename PassT>
-RepeatedPass<PassT> createRepeatedPass(int Count, PassT &&P) {
-  return RepeatedPass<PassT>(Count, std::forward<PassT>(P));
-}
 
 } // end namespace llvm
 

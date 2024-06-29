@@ -338,7 +338,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   const auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
   if (!GV)
     return false;
-  if (GV->getName().startswith("llvm.preserve.array.access.index")) {
+  if (GV->getName().starts_with("llvm.preserve.array.access.index")) {
     CInfo.Kind = BPFPreserveArrayAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -348,7 +348,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.RecordAlignment = DL->getABITypeAlign(getBaseElementType(Call));
     return true;
   }
-  if (GV->getName().startswith("llvm.preserve.union.access.index")) {
+  if (GV->getName().starts_with("llvm.preserve.union.access.index")) {
     CInfo.Kind = BPFPreserveUnionAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -358,7 +358,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.Base = Call->getArgOperand(0);
     return true;
   }
-  if (GV->getName().startswith("llvm.preserve.struct.access.index")) {
+  if (GV->getName().starts_with("llvm.preserve.struct.access.index")) {
     CInfo.Kind = BPFPreserveStructAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -369,7 +369,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.RecordAlignment = DL->getABITypeAlign(getBaseElementType(Call));
     return true;
   }
-  if (GV->getName().startswith("llvm.bpf.preserve.field.info")) {
+  if (GV->getName().starts_with("llvm.bpf.preserve.field.info")) {
     CInfo.Kind = BPFPreserveFieldInfoAI;
     CInfo.Metadata = nullptr;
     // Check validity of info_kind as clang did not check this.
@@ -379,7 +379,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.AccessIndex = InfoKind;
     return true;
   }
-  if (GV->getName().startswith("llvm.bpf.preserve.type.info")) {
+  if (GV->getName().starts_with("llvm.bpf.preserve.type.info")) {
     CInfo.Kind = BPFPreserveFieldInfoAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -395,7 +395,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       CInfo.AccessIndex = BTF::TYPE_SIZE;
     return true;
   }
-  if (GV->getName().startswith("llvm.bpf.preserve.enum.value")) {
+  if (GV->getName().starts_with("llvm.bpf.preserve.enum.value")) {
     CInfo.Kind = BPFPreserveFieldInfoAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -426,8 +426,9 @@ static void replaceWithGEP(CallInst *Call, uint32_t DimensionIndex,
     IdxList.push_back(Zero);
   IdxList.push_back(Call->getArgOperand(GEPIndex));
 
-  auto *GEP = GetElementPtrInst::CreateInBounds(
-      getBaseElementType(Call), Call->getArgOperand(0), IdxList, "", Call);
+  auto *GEP = GetElementPtrInst::CreateInBounds(getBaseElementType(Call),
+                                                Call->getArgOperand(0), IdxList,
+                                                "", Call->getIterator());
   Call->replaceAllUsesWith(GEP);
   Call->eraseFromParent();
 }
@@ -1091,9 +1092,11 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
     // Load the global variable which represents the returned field info.
     LoadInst *LDInst;
     if (IsInt32Ret)
-      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "", Call);
+      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
+                            Call->getIterator());
     else
-      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                            Call->getIterator());
 
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
@@ -1113,7 +1116,8 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // The original Call inst is removed.
 
   // Load the global variable.
-  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                              Call->getIterator());
 
   // Generate a BitCast
   auto *BCInst =

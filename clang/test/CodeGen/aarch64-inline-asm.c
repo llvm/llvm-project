@@ -95,3 +95,11 @@ void test_reduced_gpr_constraints(int var32, long var64) {
 // CHECK: [[ARG2:%.+]] = load i64, ptr
 // CHECK: call void asm sideeffect "add x0, x0, $0", "@3Ucj,~{x0}"(i64 [[ARG2]])
 }
+
+void test_sme_constraints(){
+  asm("movt zt0[3, mul vl], z0" : : : "za");
+// CHECK: call void asm sideeffect "movt zt0[3, mul vl], z0", "~{za}"()
+
+  asm("movt zt0[3, mul vl], z0" : : : "zt0");
+// CHECK: call void asm sideeffect "movt zt0[3, mul vl], z0", "~{zt0}"()
+}

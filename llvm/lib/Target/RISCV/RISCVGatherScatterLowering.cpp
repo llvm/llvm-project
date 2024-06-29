@@ -136,8 +136,13 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   // multipled.
   auto *BO = dyn_cast<BinaryOperator>(Start);
   if (!BO || (BO->getOpcode() != Instruction::Add &&
+              BO->getOpcode() != Instruction::Or &&
               BO->getOpcode() != Instruction::Shl &&
               BO->getOpcode() != Instruction::Mul))
+    return std::make_pair(nullptr, nullptr);
+
+  if (BO->getOpcode() == Instruction::Or &&
+      !cast<PossiblyDisjointInst>(BO)->isDisjoint())
     return std::make_pair(nullptr, nullptr);
 
   // Look for an operand that is splatted.
@@ -163,6 +168,10 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case Instruction::Or:
+    // TODO: We'd be better off creating disjoint or here, but we don't yet
+    // have an IRBuilder API for that.
+    [[fallthrough]];
   case Instruction::Add:
     Start = Builder.CreateAdd(Start, Splat);
     break;
@@ -220,9 +229,9 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
 
     // Build scalar phi and increment.
     BasePtr =
-        PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar", Phi);
+        PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar", Phi->getIterator());
     Inc = BinaryOperator::CreateAdd(BasePtr, Step, Inc->getName() + ".scalar",
-                                    Inc);
+                                    Inc->getIterator());
     BasePtr->addIncoming(Start, Phi->getIncomingBlock(1 - IncrementingBlock));
     BasePtr->addIncoming(Inc, Phi->getIncomingBlock(IncrementingBlock));
 
@@ -241,7 +250,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     return false;
   case Instruction::Or:
     // We need to be able to treat Or as Add.
-    if (!haveNoCommonBitsSet(BO->getOperand(0), BO->getOperand(1), *DL))
+    if (!cast<PossiblyDisjointInst>(BO)->isDisjoint())
       return false;
     break;
   case Instruction::Add:
@@ -340,8 +349,27 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
   SmallVector<Value *, 2> Ops(GEP->operands());
 
+  // If the base pointer is a vector, check if it's strided.
+  Value *Base = GEP->getPointerOperand();
+  if (auto *BaseInst = dyn_cast<Instruction>(Base);
+      BaseInst && BaseInst->getType()->isVectorTy()) {
+    // If GEP's offset is scalar then we can add it to the base pointer's base.
+    auto IsScalar = [](Value *Idx) { return !Idx->getType()->isVectorTy(); };
+    if (all_of(GEP->indices(), IsScalar)) {
+      auto [BaseBase, Stride] = determineBaseAndStride(BaseInst, Builder);
+      if (BaseBase) {
+        Builder.SetInsertPoint(GEP);
+        SmallVector<Value *> Indices(GEP->indices());
+        Value *OffsetBase =
+            Builder.CreateGEP(GEP->getSourceElementType(), BaseBase, Indices,
+                              GEP->getName() + "offset", GEP->isInBounds());
+        return {OffsetBase, Stride};
+      }
+    }
+  }
+
   // Base pointer needs to be a scalar.
-  Value *ScalarBase = Ops[0];
+  Value *ScalarBase = Base;
   if (ScalarBase->getType()->isVectorTy()) {
     ScalarBase = getSplatValue(ScalarBase);
     if (!ScalarBase)
@@ -362,7 +390,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
     VecOperand = i;
 
-    TypeSize TS = DL->getTypeAllocSize(GTI.getIndexedType());
+    TypeSize TS = GTI.getSequentialElementStride(*DL);
     if (TS.isScalable())
       return std::make_pair(nullptr, nullptr);
 

@@ -3,7 +3,7 @@
 readability-container-contains
 ==============================
 
-Finds usages of ``container.count()`` and ``container.find() == container.end()`` which should be replaced by a call to the ``container.contains()`` method introduced in C++ 20.
+Finds usages of ``container.count()`` and ``container.find() == container.end()`` which should be replaced by a call to the ``container.contains()`` method introduced in C++20.
 
 Whether an element is contained inside a container should be checked with ``contains`` instead of ``count``/``find`` because ``contains`` conveys the intent more clearly. Furthermore, for containers which permit multiple entries per key (``multimap``, ``multiset``, ...), ``contains`` is more efficient than ``count`` because ``count`` has to do unnecessary additional work.
 

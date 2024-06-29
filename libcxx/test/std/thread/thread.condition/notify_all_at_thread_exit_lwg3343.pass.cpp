@@ -14,8 +14,8 @@
 // The fix of LWG3343 is done in the dylib. That means Apple backdeployment
 // targets remain broken. Due to the nature of the test, testing on a broken
 // system does not guarantee that the test fails, so the test can't use XFAIL.
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{.+}}
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.{{.+}}
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx10.{{.+}}
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx11.{{.+}}
 
 // This is a regression test for LWG3343.
 //
@@ -35,12 +35,18 @@
 
 int condition_variable_lock_skipped_counter = 0;
 
+TEST_DIAGNOSTIC_PUSH
+// MSVC warning C4583: 'X::cv_': destructor is not implicitly called
+TEST_MSVC_DIAGNOSTIC_IGNORED(4583)
+
 union X {
     X() : cv_() {}
     ~X() {}
     std::condition_variable cv_;
     unsigned char bytes_[sizeof(std::condition_variable)];
 };
+
+TEST_DIAGNOSTIC_POP
 
 void test()
 {

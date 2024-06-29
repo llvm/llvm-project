@@ -393,7 +393,7 @@ protected:
   /// for ELF targets.  Defaults to true.
   bool HasSingleParameterDotFile = true;
 
-  /// True if the target has a four strings .file directive, strings seperated
+  /// True if the target has a four strings .file directive, strings separated
   /// by comma. Defaults to false.
   bool HasFourStringsDotFile = false;
 
@@ -524,16 +524,9 @@ protected:
   /// Preserve Comments in assembly
   bool PreserveAsmComments;
 
-  /// Compress DWARF debug sections. Defaults to no compression.
-  DebugCompressionType CompressDebugSections = DebugCompressionType::None;
-
   /// True if the integrated assembler should interpret 'a >> b' constant
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr = true;
-
-  // If true, emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL, on
-  // X86_64 ELF.
-  bool RelaxELFRelocations = true;
 
   // If true, then the lexer and expression parser will support %neg(),
   // %hi(), and similar unary operators.
@@ -799,7 +792,8 @@ public:
   /// frame information to unwind.
   bool usesCFIForEH() const {
     return (ExceptionsType == ExceptionHandling::DwarfCFI ||
-            ExceptionsType == ExceptionHandling::ARM || usesWindowsCFI());
+            ExceptionsType == ExceptionHandling::ARM ||
+            ExceptionsType == ExceptionHandling::ZOS || usesWindowsCFI());
   }
 
   bool usesWindowsCFI() const {
@@ -874,18 +868,9 @@ public:
     PreserveAsmComments = Value;
   }
 
-  DebugCompressionType compressDebugSections() const {
-    return CompressDebugSections;
-  }
-
-  void setCompressDebugSections(DebugCompressionType CompressDebugSections) {
-    this->CompressDebugSections = CompressDebugSections;
-  }
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
-  bool canRelaxRelocations() const { return RelaxELFRelocations; }
-  void setRelaxELFRelocations(bool V) { RelaxELFRelocations = V; }
   bool hasMipsExpressions() const { return HasMipsExpressions; }
   bool needsFunctionDescriptors() const { return NeedsFunctionDescriptors; }
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }

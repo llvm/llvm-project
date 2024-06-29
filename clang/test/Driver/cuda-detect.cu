@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-//
 // Check that we properly detect CUDA installation.
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
@@ -10,7 +7,6 @@
 // RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 // RUN: %clang -v --target=x86_64-apple-macosx \
 // RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
-
 
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/Inputs/CUDA --cuda-path-ignore-env 2>&1 | FileCheck %s
@@ -146,9 +142,9 @@
 // RUN:     -check-prefix NOCUDAINC
 
 // Verify that C++ include paths are passed for both host and device frontends.
-// RUN: not %clang -### --target=x86_64-linux-gnu %s \
-// RUN: --stdlib=libstdc++ --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
-// RUN: --gcc-toolchain="" 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu %s \
+// RUN:   --stdlib=libstdc++ --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
+// RUN:   -nogpulib -nogpuinc 2>&1 \
 // RUN: | FileCheck %s --check-prefix CHECK-CXXINCLUDE
 
 // Verify that CUDA SDK version is propagated to the CC1 compilations.

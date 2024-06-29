@@ -1,21 +1,30 @@
 add_startup_object(
-  crt1
+  tls
   SRC
-    start.cpp
+    tls.cpp
   DEPENDS
     libc.config.linux.app_h
     libc.include.sys_mman
     libc.include.sys_syscall
-    libc.include.unistd
-    libc.src.__support.threads.thread
     libc.src.__support.OSUtil.osutil
-    libc.src.stdlib.exit
-    libc.src.stdlib.abort
-    libc.src.stdlib.atexit
     libc.src.string.memory_utils.inline_memcpy
-    libc.src.unistd.environ
   COMPILE_OPTIONS
+    -fno-stack-protector
     -fno-omit-frame-pointer
-    -ffreestanding # To avoid compiler warnings about calling the main function.
+    -ffreestanding
+    -fno-builtin
+)
+
+add_startup_object(
+  start
+  SRC
+    start.cpp
+  DEPENDS
+    libc.config.linux.app_h
+    libc.src.__support.macros.attributes
+  COMPILE_OPTIONS
+    -fno-stack-protector
+    -fno-omit-frame-pointer
+    -ffreestanding
     -fno-builtin
 )

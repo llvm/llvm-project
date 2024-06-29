@@ -44,10 +44,12 @@
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/WindowScheduler.h"
 #include "llvm/InitializePasses.h"
 
 #include <deque>
@@ -107,6 +109,9 @@ private:
   bool scheduleLoop(MachineLoop &L);
   bool swingModuloScheduler(MachineLoop &L);
   void setPragmaPipelineOptions(MachineLoop &L);
+  bool runWindowScheduler(MachineLoop &L);
+  bool useSwingModuloScheduler();
+  bool useWindowScheduler(bool Changed);
 };
 
 /// This class builds the dependence graph for the instructions in a loop,
@@ -273,8 +278,8 @@ public:
 
   /// Return the new base register that was stored away for the changed
   /// instruction.
-  unsigned getInstrBaseReg(SUnit *SU) {
-    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::iterator It =
+  unsigned getInstrBaseReg(SUnit *SU) const {
+    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::const_iterator It =
         InstrChanges.find(SU);
     if (It != InstrChanges.end())
       return It->second.first;
@@ -449,7 +454,7 @@ private:
   const MCSchedModel &SM;
   const TargetSubtargetInfo *ST;
   const TargetInstrInfo *TII;
-  SwingSchedulerDAG *DAG;
+  ScheduleDAGInstrs *DAG;
   const bool UseDFA;
   /// DFA resources for each slot
   llvm::SmallVector<std::unique_ptr<DFAPacketizer>> DFAResources;
@@ -493,7 +498,7 @@ private:
 #endif
 
 public:
-  ResourceManager(const TargetSubtargetInfo *ST, SwingSchedulerDAG *DAG)
+  ResourceManager(const TargetSubtargetInfo *ST, ScheduleDAGInstrs *DAG)
       : STI(ST), SM(ST->getSchedModel()), ST(ST), TII(ST->getInstrInfo()),
         DAG(DAG), UseDFA(ST->useDFAforSMS()),
         ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
@@ -639,16 +644,20 @@ public:
   computeUnpipelineableNodes(SwingSchedulerDAG *SSD,
                              TargetInstrInfo::PipelinerLoopInfo *PLI);
 
+  std::deque<SUnit *>
+  reorderInstructions(const SwingSchedulerDAG *SSD,
+                      const std::deque<SUnit *> &Instrs) const;
+
   bool
   normalizeNonPipelinedInstructions(SwingSchedulerDAG *SSD,
                                     TargetInstrInfo::PipelinerLoopInfo *PLI);
   bool isValidSchedule(SwingSchedulerDAG *SSD);
   void finalizeSchedule(SwingSchedulerDAG *SSD);
-  void orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
-                       std::deque<SUnit *> &Insts);
-  bool isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi);
-  bool isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD, MachineInstr *Def,
-                             MachineOperand &MO);
+  void orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
+                       std::deque<SUnit *> &Insts) const;
+  bool isLoopCarried(const SwingSchedulerDAG *SSD, MachineInstr &Phi) const;
+  bool isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD, MachineInstr *Def,
+                             MachineOperand &MO) const;
   void print(raw_ostream &os) const;
   void dump() const;
 };

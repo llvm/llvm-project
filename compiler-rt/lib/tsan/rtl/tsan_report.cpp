@@ -273,26 +273,10 @@ static ReportStack *ChooseSummaryStack(const ReportDesc *rep) {
   return 0;
 }
 
-static bool FrameIsInternal(const SymbolizedStack *frame) {
-  if (frame == 0)
-    return false;
-  const char *file = frame->info.file;
-  const char *module = frame->info.module;
-  if (file != 0 &&
-      (internal_strstr(file, "tsan_interceptors_posix.cpp") ||
-       internal_strstr(file, "tsan_interceptors_memintrinsics.cpp") ||
-       internal_strstr(file, "sanitizer_common_interceptors.inc") ||
-       internal_strstr(file, "tsan_interface_")))
-    return true;
-  if (module != 0 && (internal_strstr(module, "libclang_rt.tsan_")))
-    return true;
-  return false;
-}
-
-static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
-  while (FrameIsInternal(frames) && frames->next)
-    frames = frames->next;
-  return frames;
+static const SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
+  if (const SymbolizedStack *f = SkipInternalFrames(frames))
+    return f;
+  return frames;  // Fallback to the top frame.
 }
 
 void PrintReport(const ReportDesc *rep) {
@@ -366,7 +350,7 @@ void PrintReport(const ReportDesc *rep) {
     Printf("  And %d more similar thread leaks.\n\n", rep->count - 1);
 
   if (ReportStack *stack = ChooseSummaryStack(rep)) {
-    if (SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
+    if (const SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
       ReportErrorSummary(rep_typ_str, frame->info);
   }
 

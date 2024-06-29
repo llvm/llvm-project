@@ -51,7 +51,7 @@ define i32 @computeNumSignBits_sub1(i32 %in) {
 
 define i32 @computeNumSignBits_sub2(i32 %in) {
 ; CHECK-LABEL: @computeNumSignBits_sub2(
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[IN:%.*]], -1
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[IN:%.*]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 43
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[SUB]], 3

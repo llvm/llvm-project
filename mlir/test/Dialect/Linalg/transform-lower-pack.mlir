@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter -cse --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -cse -verify-diagnostics -split-input-file | FileCheck %s
 
   // CHECK-LABEL: func.func @pack(
 func.func @pack(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<17x2x16x16x32x8xf32>) -> tensor<17x2x16x16x32x8xf32> {
@@ -143,9 +143,9 @@ func.func @unpack(%arg0: tensor<17x2x16x16x32x8xf32>, %arg1: tensor<129x47x16x16
   // CHECK-SAME:   : tensor<136x64x16x16xf32> to tensor<129x47x16x16xf32>
   //      CHECK: linalg.copy ins(%[[SLICE]] : tensor<129x47x16x16xf32>)
   // CHECK-SAME:        outs(%[[ARG1]] : tensor<129x47x16x16xf32>)
-  %pack = tensor.unpack %arg0 inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %arg1
+  %unpack = tensor.unpack %arg0 inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %arg1
     : tensor<17x2x16x16x32x8xf32> -> tensor<129x47x16x16xf32>
-  return %pack : tensor<129x47x16x16xf32>
+  return %unpack : tensor<129x47x16x16xf32>
 }
 
 module attributes {transform.with_named_sequence} {
@@ -162,6 +162,42 @@ module attributes {transform.with_named_sequence} {
 }
 
 // -----
+
+// CHECK-LABEL: func.func @unpack_with_identity_outer_dims_perm(
+func.func @unpack_with_identity_outer_dims_perm(%arg0: tensor<17x2x16x16x32x8xf32>, %arg1: tensor<129x47x16x16xf32>) -> tensor<129x47x16x16xf32> {
+  %cst_0 = arith.constant 0.0 : f32
+  // CHECK-SAME: %[[ARG0:.*]]: tensor<17x2x16x16x32x8xf32>, %[[ARG1:.*]]: tensor<129x47x16x16xf32>
+  //      CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<17x8x2x32x16x16xf32>
+  //      CHECK: %[[TRAN:.*]] = linalg.transpose
+  // CHECK-SAME:    ins(%[[ARG0]] : tensor<17x2x16x16x32x8xf32>)
+  // CHECK-SAME:   outs(%[[EMPTY]] : tensor<17x8x2x32x16x16xf32>)
+  // CHECK-SAME:   permutation = [0, 5, 1, 4, 2, 3]
+  //      CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0, 1], [2, 3], [4], [5]]
+  // CHECK-SAME:   : tensor<17x8x2x32x16x16xf32> into tensor<136x64x16x16xf32>
+  //      CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0, 0, 0] [129, 47, 16, 16] [1, 1, 1, 1]
+  // CHECK-SAME:   : tensor<136x64x16x16xf32> to tensor<129x47x16x16xf32>
+  //      CHECK: linalg.copy ins(%[[SLICE]] : tensor<129x47x16x16xf32>)
+  // CHECK-SAME:        outs(%[[ARG1]] : tensor<129x47x16x16xf32>)
+  %unpack = tensor.unpack %arg0 outer_dims_perm = [0, 1, 2, 3] inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %arg1
+    : tensor<17x2x16x16x32x8xf32> -> tensor<129x47x16x16xf32>
+  return %unpack : tensor<129x47x16x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
+}
+
+// -----
+
 // When an unpack is a plain 'unpad', lower it to a simple extract_slice.
 // CHECK-LABEL: func.func @unpack_as_pad(
 func.func @unpack_as_pad(%arg0: tensor<1x1x1x1x136x64x16x16xf32>, %arg1: tensor<129x47x16x16xf32>) -> tensor<129x47x16x16xf32> {
@@ -446,6 +482,163 @@ func.func @unpack_with_dynamic_dest(%arg0: tensor<32x2x49x16x16xf32>, %arg1: ten
   %pack = tensor.unpack %arg0 inner_dims_pos = [1, 2] inner_tiles = [16, 16] into %arg1
     : tensor<32x2x49x16x16xf32> -> tensor<32x?x?xf32>
   return %pack : tensor<32x?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
+}
+
+// -----
+
+// Check that we can lower unpack with dynamic dimensions in the input and destination.
+// CHECK-LABEL: func.func @unpack_with_dynamic_input_dest(
+// CHECK-SAME: %[[ARG0:.*]]: tensor<?x?x8x16xf32>, %[[ARG1:.*]]: tensor<?x?xf32>)
+//      CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//      CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//      CHECK-DAG: %[[DIM00:.*]] = tensor.dim %[[ARG0]], %[[C0]]
+//      CHECK-DAG: %[[DIM01:.*]] = tensor.dim %[[ARG0]], %[[C1]]
+//      CHECK: %[[EMPTY:.*]] = tensor.empty(%[[DIM00]], %[[DIM01]]) : tensor<?x8x?x16xf32>
+//      CHECK: %[[TRAN:.*]] = linalg.transpose
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<?x?x8x16xf32>)
+// CHECK-SAME:   outs(%[[EMPTY]] : tensor<?x8x?x16xf32>)
+// CHECK-SAME:   permutation = [0, 2, 1, 3]
+//      CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0, 1], [2, 3]]
+// CHECK-SAME:   : tensor<?x8x?x16xf32> into tensor<?x?xf32>
+//      CHECK: %[[DIM10:.*]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<?x?xf32>
+//      CHECK: %[[DIM11:.*]] = tensor.dim %[[ARG1]], %[[C1]] : tensor<?x?xf32>
+//      CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0] [%[[DIM10]], %[[DIM11]]] [1, 1]
+// CHECK-SAME:   : tensor<?x?xf32> to tensor<?x?xf32>
+//      CHECK: linalg.copy ins(%[[SLICE]] : tensor<?x?xf32>)
+// CHECK-SAME:        outs(%[[ARG1]] : tensor<?x?xf32>)
+func.func @unpack_with_dynamic_input_dest(%arg0: tensor<?x?x8x16xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+    %unpack = tensor.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 16] into %arg1 : tensor<?x?x8x16xf32> -> tensor<?x?xf32>
+    return %unpack : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
+}
+
+// -----
+
+// Check that we can lower unpack with dynamic dimensions in the input, destination, inner_tiles.
+// CHECK-LABEL: func.func @unpack_fully_dynamic(
+// CHECK-SAME: %[[ARG0:.*]]: tensor<?x?x?x?xf32>, %[[ARG1:.*]]: tensor<?x?xf32>, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+//      CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//      CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//      CHECK-DAG:  %[[C2:.*]] = arith.constant 2 : index
+//      CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
+//      CHECK-DAG: %[[DIM00:.*]] = tensor.dim %[[ARG0]], %[[C0]]
+//      CHECK-DAG: %[[DIM01:.*]] = tensor.dim %[[ARG0]], %[[C1]]
+//      CHECK-DAG: %[[DIM02:.*]] = tensor.dim %[[ARG0]], %[[C2]]
+//      CHECK-DAG: %[[DIM03:.*]] = tensor.dim %[[ARG0]], %[[C3]]
+//      CHECK: %[[EMPTY:.*]] = tensor.empty(%[[DIM00]], %[[DIM02]], %[[DIM01]], %[[DIM03]]) : tensor<?x?x?x?xf32>
+//      CHECK: %[[TRAN:.*]] = linalg.transpose
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<?x?x?x?xf32>)
+// CHECK-SAME:   outs(%[[EMPTY]] : tensor<?x?x?x?xf32>)
+// CHECK-SAME:   permutation = [0, 2, 1, 3]
+//      CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0, 1], [2, 3]]
+// CHECK-SAME:   : tensor<?x?x?x?xf32> into tensor<?x?xf32>
+//      CHECK: %[[DIM10:.*]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<?x?xf32>
+//      CHECK: %[[DIM11:.*]] = tensor.dim %[[ARG1]], %[[C1]] : tensor<?x?xf32>
+//      CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0] [%[[DIM10]], %[[DIM11]]] [1, 1]
+// CHECK-SAME:   : tensor<?x?xf32> to tensor<?x?xf32>
+//      CHECK: linalg.copy ins(%[[SLICE]] : tensor<?x?xf32>)
+// CHECK-SAME:        outs(%[[ARG1]] : tensor<?x?xf32>)
+func.func @unpack_fully_dynamic(%source: tensor<?x?x?x?xf32>, %dest: tensor<?x?xf32>, %tile_n : index, %tile_m : index) -> tensor<?x?xf32> {
+  %0 = tensor.unpack %source inner_dims_pos = [0, 1] inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack"> 
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+          -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+      transform.yield
+  }
+}
+
+// -----
+
+// Check that we can lower unpack "as unpad" with dynamic dims.
+// CHECK-LABEL: func.func @unpack_as_pad_dynamic(
+// CHECK-SAME: %[[ARG0:.*]]: tensor<1x1x1x1x?x?x?x?xf32>, %[[ARG1:.*]]: tensor<?x?x?x?xf32>
+//      CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//      CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//      CHECK-DAG:  %[[C2:.*]] = arith.constant 2 : index
+//      CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
+//      CHECK-DAG: %[[DIM0:.*]] = tensor.dim %[[ARG1]], %[[C0]]
+//      CHECK-DAG: %[[DIM1:.*]] = tensor.dim %[[ARG1]], %[[C1]]
+//      CHECK-DAG: %[[DIM2:.*]] = tensor.dim %[[ARG1]], %[[C2]]
+//      CHECK-DAG: %[[DIM3:.*]] = tensor.dim %[[ARG1]], %[[C3]]
+//      CHECK: %[[RES:.*]] = tensor.extract_slice %[[ARG0]]
+// offsets.
+// CHECK-SAME:   [0, 0, 0, 0, 0, 0, 0, 0]
+// sizes.
+// CHECK-SAME:   [1, 1, 1, 1, %[[DIM0]], %[[DIM1]], %[[DIM2]], %[[DIM3]]]
+// strides multiplers.
+// CHECK-SAME:   [1, 1, 1, 1, 1, 1, 1, 1]
+// CHECK-SAME:   : tensor<1x1x1x1x?x?x?x?xf32> to tensor<?x?x?x?xf32>
+func.func @unpack_as_pad_dynamic(%arg0: tensor<1x1x1x1x?x?x?x?xf32>, %arg1: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %pack = tensor.unpack %arg0 inner_dims_pos = [0, 1, 2, 3] inner_tiles = [136, 64, 16, 16] into %arg1
+    : tensor<1x1x1x1x?x?x?x?xf32> -> tensor<?x?x?x?xf32>
+  return %pack : tensor<?x?x?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @unpack_with_outer_dims_perm
+//  CHECK-SAME: %[[ARG0:.*]]: tensor<32x64xf32>, %[[ARG1:.*]]: tensor<2x4x32x8xf32>
+//       CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8x2x32xf32>
+//       CHECK: %[[TRAN:.*]] = linalg.transpose 
+//  CHECK-SAME:   ins(%[[ARG1]] : tensor<2x4x32x8xf32>) 
+//  CHECK-SAME:   outs(%[[EMPTY]] : tensor<4x8x2x32xf32>) 
+//  CHECK-SAME:   permutation = [1, 3, 0, 2]
+//       CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0, 1], [2, 3]]
+//  CHECK-SAME:   : tensor<4x8x2x32xf32> into tensor<32x64xf32>
+//       CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0] [32, 64] [1, 1]
+//  CHECK-SAME:   : tensor<32x64xf32> to tensor<32x64xf32>
+//       CHECK: linalg.copy ins(%[[SLICE]]
+//  CHECK-SAME:   : tensor<32x64xf32>) outs(%[[ARG0]] : tensor<32x64xf32>) -> tensor<32x64xf32>
+func.func @unpack_with_outer_dims_perm(%arg0: tensor<32x64xf32>, %arg1: tensor<2x4x32x8xf32>) -> tensor<32x64xf32> {
+  %unpack = tensor.unpack %arg1 outer_dims_perm = [1, 0] 
+    inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %arg0 : tensor<2x4x32x8xf32> -> tensor<32x64xf32>
+  return %unpack : tensor<32x64xf32>
 }
 
 module attributes {transform.with_named_sequence} {

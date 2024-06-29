@@ -35,25 +35,24 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   InstTest3
 ]>;
 
-// CHECK:      const int64_t *GenMyCombiner::getMatchTable() const {
-// CHECK-NEXT:   constexpr static int64_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/65, 69, /*)*//*default:*//*Label 2*/ 51,
-// CHECK-NEXT:     /*TargetOpcode::G_UNMERGE_VALUES*//*Label 0*/ 9, 0, 0,
-// CHECK-NEXT:     /*TargetOpcode::G_BUILD_VECTOR*//*Label 1*/ 30,
-// CHECK-NEXT:     // Label 0: @9
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 3*/ 19, // Rule ID 2 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule2Enabled,
+// CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
+// CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(69), GIMT_Encode2(73), /*)*//*default:*//*Label 2*/ GIMT_Encode4(84),
+// CHECK-NEXT:     /*TargetOpcode::G_UNMERGE_VALUES*//*Label 0*/ GIMT_Encode4(26), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:     /*TargetOpcode::G_BUILD_VECTOR*//*Label 1*/ GIMT_Encode4(55),
+// CHECK-NEXT:     // Label 0: @26
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(40), // Rule ID 2 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule2Enabled),
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #2: InstTest2
-// CHECK-NEXT:       GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
-// CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 3: @19
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ 29, // Rule ID 3 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule3Enabled,
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:     // Label 3: @40
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(54), // Rule ID 3 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule3Enabled),
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
@@ -64,24 +63,22 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // MIs[0] d
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #3: InstTest3
-// CHECK-NEXT:       GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
-// CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 4: @29
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:     // Label 4: @54
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 1: @30
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ 40, // Rule ID 1 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule1Enabled,
+// CHECK-NEXT:     // Label 1: @55
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(69), // Rule ID 1 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #1: InstTest1
-// CHECK-NEXT:       GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
-// CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 5: @40
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ 50, // Rule ID 0 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:     // Label 5: @69
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(83), // Rule ID 0 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
@@ -92,12 +89,11 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // MIs[0] d
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #0: InstTest0
-// CHECK-NEXT:       GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
-// CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 6: @50
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:     // Label 6: @83
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 2: @51
+// CHECK-NEXT:     // Label 2: @84
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     };
+// CHECK-NEXT:     }; // Size: 85 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }

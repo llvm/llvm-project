@@ -102,7 +102,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --dyn-relocations %t3 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT --implicit-check-not=warning:
 
-## INVALID-DT-RELAENT: warning: '[[FILE]]': invalid DT_RELASZ value (0x18) or DT_RELAENT value (0xff)
+# INVALID-DT-RELAENT: warning: '[[FILE]]': invalid DT_RELASZ value (0x18) or DT_RELAENT value (0xff)
 
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELSZ entry.
 
@@ -112,7 +112,7 @@ ProgramHeaders:
 # RUN: llvm-readobj --dyn-relocations %t4a 2>&1 | FileCheck %s -DFILE=%t4a --check-prefix=INVALID-DT-RELSZ1
 # RUN: llvm-readelf --dyn-relocations %t4a 2>&1 | FileCheck %s -DFILE=%t4a --check-prefix=INVALID-DT-RELSZ1
 
-## INVALID-DT-RELSZ1: warning: '[[FILE]]': invalid DT_RELSZ value (0xff) or DT_RELENT value (0x18)
+# INVALID-DT-RELSZ1: warning: '[[FILE]]': invalid DT_RELSZ value (0xff) or DT_RELENT value (0x18)
 
 ## Case B: the DT_RELSZ has value of 0x251, what is too large, because the relocation table goes past the EOF.
 
@@ -127,7 +127,7 @@ ProgramHeaders:
 # RUN: llvm-readobj --dyn-relocations %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=INVALID-DT-RELENT
 # RUN: llvm-readelf --dyn-relocations %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=INVALID-DT-RELENT
 
-## INVALID-DT-RELENT: warning: '[[FILE]]': invalid DT_RELSZ value (0x18) or DT_RELENT value (0xff)
+# INVALID-DT-RELENT: warning: '[[FILE]]': invalid DT_RELSZ value (0x18) or DT_RELENT value (0xff)
 
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELRSZ/DT_ANDROID_RELRSZ entry.
 # RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_RELRSZ -DTAG1VAL=0xFF -DTAG2=DT_RELRENT %s -o %t6
@@ -138,8 +138,8 @@ ProgramHeaders:
 # RUN: llvm-readobj --dyn-relocations %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DT-ANDROID-RELRSZ
 # RUN: llvm-readelf --dyn-relocations %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DT-ANDROID-RELRSZ
 
-## INVALID-DT-RELRSZ:         warning: '[[FILE]]': invalid DT_RELRSZ value (0xff) or DT_RELRENT value (0x18)
-## INVALID-DT-ANDROID-RELRSZ: warning: '[[FILE]]': invalid DT_ANDROID_RELRSZ value (0xff) or DT_ANDROID_RELRENT value (0x18)
+# INVALID-DT-RELRSZ:         warning: '[[FILE]]': invalid DT_RELRSZ value (0xff) or DT_RELRENT value (0x18)
+# INVALID-DT-ANDROID-RELRSZ: warning: '[[FILE]]': invalid DT_ANDROID_RELRSZ value (0xff) or DT_ANDROID_RELRENT value (0x18)
 
 ## Show we print a warning for an invalid relocation table entry size stored in a DT_RELRENT/DT_ANDROID_RELRENT entry.
 # RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_RELRSZ -DTAG2=DT_RELRENT -DTAG2VAL=0xFF %s -o %t8
@@ -149,8 +149,8 @@ ProgramHeaders:
 # RUN: llvm-readobj --dyn-relocations %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=INVALID-DT-ANDROID-RELRENT
 # RUN: llvm-readelf --dyn-relocations %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=INVALID-DT-ANDROID-RELRENT
 
-## INVALID-DT-RELRENT:         invalid DT_RELRSZ value (0x18) or DT_RELRENT value (0xff)
-## INVALID-DT-ANDROID-RELRENT: invalid DT_ANDROID_RELRSZ value (0x18) or DT_ANDROID_RELRENT value (0xff)
+# INVALID-DT-RELRENT:         invalid DT_RELRSZ value (0x18) or DT_RELRENT value (0xff)
+# INVALID-DT-ANDROID-RELRENT: invalid DT_ANDROID_RELRSZ value (0x18) or DT_ANDROID_RELRENT value (0xff)
 
 ## Show we print a warning for an invalid value of DT_PLTRELSZ, which describes the total size
 ## of the relocation entries associated with the procedure linkage table.

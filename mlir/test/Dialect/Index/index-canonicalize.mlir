@@ -499,6 +499,26 @@ func.func @cmp(%arg0: index) -> (i1, i1, i1, i1, i1, i1) {
   return %0, %1, %2, %3, %5, %7 : i1, i1, i1, i1, i1, i1
 }
 
+// CHECK-LABEL: @cmp_same_args
+func.func @cmp_same_args(%a: index) -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+  %0 = index.cmp eq(%a, %a)
+  %1 = index.cmp sge(%a, %a)
+  %2 = index.cmp sle(%a, %a)
+  %3 = index.cmp uge(%a, %a)
+  %4 = index.cmp ule(%a, %a)
+  %5 = index.cmp ne(%a, %a)
+  %6 = index.cmp sgt(%a, %a)
+  %7 = index.cmp slt(%a, %a)
+  %8 = index.cmp ugt(%a, %a)
+  %9 = index.cmp ult(%a, %a)
+
+  // CHECK-DAG: %[[TRUE:.*]] = index.bool.constant true
+  // CHECK-DAG: %[[FALSE:.*]] = index.bool.constant false
+  // CHECK-NEXT: return %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]],
+  // CHECK-SAME: %[[FALSE]], %[[FALSE]], %[[FALSE]], %[[FALSE]], %[[FALSE]]
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9 : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
+}
+
 // CHECK-LABEL: @cmp_nofold
 func.func @cmp_nofold() -> i1 {
   %lhs = index.constant 1

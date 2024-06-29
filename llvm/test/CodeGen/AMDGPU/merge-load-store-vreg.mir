@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 # If there's a base offset, check that SILoadStoreOptimizer creates
 # V_ADD_{I|U}32_e64 for that offset; _e64 uses a vreg for the carry (rather than
@@ -29,10 +29,10 @@
       ret void
 
     bb2:
-      %tmp = getelementptr inbounds [256 x float], [256 x float] addrspace(3)* @0, i32 0, i32 0
-      %tmp1 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 8
-      %tmp2 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 16
-      %tmp3 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 24
+      %tmp = getelementptr inbounds [256 x float], ptr addrspace(3) @0, i32 0, i32 0
+      %tmp1 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 8
+      %tmp2 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 16
+      %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
 
@@ -44,10 +44,10 @@
       ret void
 
     bb2:
-      %tmp = getelementptr inbounds [256 x float], [256 x float] addrspace(3)* @0, i32 0, i32 0
-      %tmp1 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 8
-      %tmp2 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 16
-      %tmp3 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 24
+      %tmp = getelementptr inbounds [256 x float], ptr addrspace(3) @0, i32 0, i32 0
+      %tmp1 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 8
+      %tmp2 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 16
+      %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
 
@@ -59,10 +59,10 @@
       ret void
 
     bb2:
-      %tmp = getelementptr inbounds [256 x float], [256 x float] addrspace(3)* @0, i32 0, i32 0
-      %tmp1 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 8
-      %tmp2 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 16
-      %tmp3 = getelementptr inbounds float, float addrspace(3)* %tmp, i32 24
+      %tmp = getelementptr inbounds [256 x float], ptr addrspace(3) @0, i32 0, i32 0
+      %tmp1 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 8
+      %tmp2 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 16
+      %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
 ---

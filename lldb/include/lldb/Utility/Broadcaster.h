@@ -39,12 +39,12 @@ namespace lldb_private {
 /// Debugger maintains a list of BroadcastEventSpec's and when it is made
 class BroadcastEventSpec {
 public:
-  BroadcastEventSpec(const ConstString &broadcaster_class, uint32_t event_bits)
+  BroadcastEventSpec(llvm::StringRef broadcaster_class, uint32_t event_bits)
       : m_broadcaster_class(broadcaster_class), m_event_bits(event_bits) {}
 
   ~BroadcastEventSpec() = default;
 
-  ConstString GetBroadcasterClass() const { return m_broadcaster_class; }
+  const std::string &GetBroadcasterClass() const { return m_broadcaster_class; }
 
   uint32_t GetEventBits() const { return m_event_bits; }
 
@@ -67,7 +67,7 @@ public:
   bool operator<(const BroadcastEventSpec &rhs) const;
 
 private:
-  ConstString m_broadcaster_class;
+  std::string m_broadcaster_class;
   uint32_t m_event_bits;
 };
 
@@ -177,13 +177,12 @@ public:
     m_broadcaster_sp->BroadcastEvent(event_type, event_data_sp);
   }
 
-  void BroadcastEvent(uint32_t event_type, EventData *event_data = nullptr) {
-    m_broadcaster_sp->BroadcastEvent(event_type, event_data);
+  void BroadcastEvent(uint32_t event_type) {
+    m_broadcaster_sp->BroadcastEvent(event_type);
   }
 
-  void BroadcastEventIfUnique(uint32_t event_type,
-                              EventData *event_data = nullptr) {
-    m_broadcaster_sp->BroadcastEventIfUnique(event_type, event_data);
+  void BroadcastEventIfUnique(uint32_t event_type) {
+    m_broadcaster_sp->BroadcastEventIfUnique(event_type);
   }
 
   void Clear() { m_broadcaster_sp->Clear(); }
@@ -308,7 +307,7 @@ public:
   /// FIXME: Probably should make a ManagedBroadcaster subclass with all the
   /// bits needed to work with the BroadcasterManager, so that it is clearer
   /// how to add one.
-  virtual ConstString &GetBroadcasterClass() const;
+  virtual llvm::StringRef GetBroadcasterClass() const;
 
   lldb::BroadcasterManagerSP GetManager();
 
@@ -346,13 +345,12 @@ protected:
 
     void BroadcastEventIfUnique(lldb::EventSP &event_sp);
 
-    void BroadcastEvent(uint32_t event_type, EventData *event_data = nullptr);
+    void BroadcastEvent(uint32_t event_type);
 
     void BroadcastEvent(uint32_t event_type,
                         const lldb::EventDataSP &event_data_sp);
 
-    void BroadcastEventIfUnique(uint32_t event_type,
-                                EventData *event_data = nullptr);
+    void BroadcastEventIfUnique(uint32_t event_type);
 
     void Clear();
 

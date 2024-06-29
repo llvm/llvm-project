@@ -1,4 +1,5 @@
 ; RUN: opt -S --passes=instcombine %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S --passes=instcombine %s | FileCheck %s
 
 ; https://github.com/llvm/llvm-project/issues/56807
 declare void @foo(ptr %pixels)
@@ -8,7 +9,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-LABEL: @toplevel(
 ; CHECK:  entry:
 ; CHECK-NEXT:    %pixels1 = alloca [3 x i8], align 1
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %pixels1, metadata ![[MD:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG:[0-9]+]]
+; CHECK-NEXT:    #dbg_declare(ptr %pixels1, ![[MD:[0-9]+]], !DIExpression(), ![[DBG:[0-9]+]]
 ; CHECK-NEXT:    call void @foo(ptr nonnull %pixels1)
 ; CHECK-NEXT:    ret void
 define dso_local void @toplevel() {

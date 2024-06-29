@@ -351,7 +351,7 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!retTy.isa<fir::SequenceType>()) {
+    if (!mlir::isa<fir::SequenceType>(retTy)) {
       LLVM_DEBUG(llvm::dbgs()
                  << "--Allocation is not for an array: skipping\n");
       return;
@@ -449,7 +449,7 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     const LatticePoint *lattice = solver.lookupState<LatticePoint>(op);
     // there will be no lattice for an unreachable block
     if (lattice)
-      point.join(*lattice);
+      (void)point.join(*lattice);
   };
   func->walk([&](mlir::func::ReturnOp child) { joinOperationLattice(child); });
   func->walk([&](fir::UnreachableOp child) { joinOperationLattice(child); });
@@ -767,7 +767,7 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
   mlir::RewritePatternSet patterns(&context);
   mlir::GreedyRewriteConfig config;
   // prevent the pattern driver form merging blocks
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
   if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,
@@ -775,8 +775,4 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<mlir::Pass> fir::createStackArraysPass() {
-  return std::make_unique<StackArraysPass>();
 }

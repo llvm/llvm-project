@@ -14,7 +14,7 @@ define i32 @my_access_global_a() #0 {
 ; CHECK-NEXT:    move.l (%a0), %d0
 ; CHECK-NEXT:    rts
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 }
 
@@ -29,7 +29,7 @@ define i32 @my_access_global_b() #0 {
 ; CHECK-NEXT:    move.l (%a0), %d0
 ; CHECK-NEXT:    rts
 entry:
- %0 = load i32, i32* @b, align 4
+ %0 = load i32, ptr @b, align 4
  ret i32 %0
 }
 
@@ -43,7 +43,7 @@ define i32 @my_access_global_c() #0 {
 ; CHECK-NEXT:    move.l (c,%pc), %d0
 ; CHECK-NEXT:    rts
 entry:
- %0 = load i32, i32* @c, align 4
+ %0 = load i32, ptr @c, align 4
  ret i32 %0
 }
 
@@ -58,7 +58,7 @@ define i32 @my_access_global_load_d() #0 {
 ; CHECK-NEXT:    move.l (%a0), %d0
 ; CHECK-NEXT:    rts
 entry:
- %0 = load i32, i32* @d, align 4
+ %0 = load i32, ptr @d, align 4
  ret i32 %0
 }
 
@@ -69,15 +69,15 @@ define i32 @my_access_global_store_d() #0 {
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (d@GOTPCREL,%pc), %a0
 ; CHECK-NEXT:    move.l #2, (%a0)
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 entry:
- store i32 2, i32* @d, align 4
+ store i32 2, ptr @d, align 4
  ret i32 0
 }
 
 ; External Linkage, function pointer access.
-declare i32 @access_fp(i32 ()*)
+declare i32 @access_fp(ptr)
 declare i32 @foo()
 
 define i32 @my_access_fp_foo() #0 {
@@ -91,7 +91,7 @@ define i32 @my_access_fp_foo() #0 {
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
- %call = call i32 @access_fp(i32 ()* @foo)
+ %call = call i32 @access_fp(ptr @foo)
  ret i32 %call
 }
 
@@ -103,7 +103,7 @@ define linkonce_odr i32 @bar() comdat {
 ; CHECK-LABEL: bar:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 entry:
  ret i32 0
@@ -120,7 +120,7 @@ define i32 @my_access_fp_bar() #0 {
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
- %call = call i32 @access_fp(i32 ()* @bar)
+ %call = call i32 @access_fp(ptr @bar)
  ret i32 %call
 }
 

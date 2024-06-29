@@ -8,6 +8,7 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -694,6 +695,7 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
                              SF->getAddressSpace(), SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
   F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
+  F->IsNewDbgInfoFormat = SF->IsNewDbgInfoFormat;
   return F;
 }
 
@@ -1545,10 +1547,11 @@ Error IRLinker::run() {
     if (Error Err = SrcM->getMaterializer()->materializeMetadata())
       return Err;
 
-  DstM.IsNewDbgInfoFormat = SrcM->IsNewDbgInfoFormat;
+  // Convert source module to match dest for the duration of the link.
+  ScopedDbgInfoFormatSetter FormatSetter(*SrcM, DstM.IsNewDbgInfoFormat);
 
-  // Inherit the target data from the source module if the destination module
-  // doesn't have one already.
+  // Inherit the target data from the source module if the destination
+  // module doesn't have one already.
   if (DstM.getDataLayout().isDefault())
     DstM.setDataLayout(SrcM->getDataLayout());
 
@@ -1569,7 +1572,7 @@ Error IRLinker::run() {
     std::string ModuleId = SrcM->getModuleIdentifier();
     StringRef FileName = llvm::sys::path::filename(ModuleId);
     bool SrcIsLibDevice =
-        FileName.startswith("libdevice") && FileName.endswith(".10.bc");
+        FileName.starts_with("libdevice") && FileName.ends_with(".10.bc");
     bool SrcHasLibDeviceDL =
         (SrcM->getDataLayoutStr().empty() ||
          SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");

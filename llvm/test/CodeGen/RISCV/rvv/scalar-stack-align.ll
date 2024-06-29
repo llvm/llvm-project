@@ -19,7 +19,7 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    addi a0, sp, 32
-; RV32-NEXT:    call extern@plt
+; RV32-NEXT:    call extern
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 1
@@ -36,7 +36,7 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    addi a0, sp, 32
-; RV64-NEXT:    call extern@plt
+; RV64-NEXT:    call extern
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 1
@@ -46,8 +46,8 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV64-NEXT:    ret
   %a = alloca <vscale x 2 x i32>
   %c = alloca i64, align 16
-  call void @extern(<vscale x 2 x i32>* %a)
+  call void @extern(ptr %a)
   ret ptr %c
 }
 
-declare void @extern(<vscale x 2 x i32>*)
+declare void @extern(ptr)

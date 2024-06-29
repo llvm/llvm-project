@@ -59,7 +59,7 @@ TEST_F(TBAATest, checkVerifierBehaviorForOldTBAA) {
 
   EXPECT_TRUE(verifyFunction(*F, &Outs));
   EXPECT_TRUE(StringRef(ErrorMsg.begin(), ErrorMsg.size())
-                  .startswith(ExpectedFailureMsg));
+                  .starts_with(ExpectedFailureMsg));
 }
 
 TEST_F(TBAATest, checkTBAAMerging) {

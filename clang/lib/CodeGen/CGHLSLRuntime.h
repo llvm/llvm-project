@@ -16,7 +16,11 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -25,6 +29,22 @@
 
 #include <optional>
 #include <vector>
+
+// A function generator macro for picking the right intrinsic
+// for the target backend
+#define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
+  llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
+    llvm::Triple::ArchType Arch = getArch();                                   \
+    switch (Arch) {                                                            \
+    case llvm::Triple::dxil:                                                   \
+      return llvm::Intrinsic::dx_##IntrinsicPostfix;                           \
+    case llvm::Triple::spirv:                                                  \
+      return llvm::Intrinsic::spv_##IntrinsicPostfix;                          \
+    default:                                                                   \
+      llvm_unreachable("Intrinsic " #IntrinsicPostfix                          \
+                       " not supported by target architecture");               \
+    }                                                                          \
+  }
 
 namespace llvm {
 class GlobalVariable;
@@ -48,6 +68,20 @@ class CodeGenModule;
 
 class CGHLSLRuntime {
 public:
+  //===----------------------------------------------------------------------===//
+  // Start of reserved area for HLSL intrinsic getters.
+  //===----------------------------------------------------------------------===//
+
+  GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Any, any)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
+
+  //===----------------------------------------------------------------------===//
+  // End of reserved area for HLSL intrinsic getters.
+  //===----------------------------------------------------------------------===//
+
   struct BufferResBinding {
     // The ID like 2 in register(b2, space1).
     std::optional<unsigned> Reg;
@@ -90,12 +124,13 @@ public:
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                   llvm::StringRef TyName,
                                    llvm::hlsl::ResourceClass RC,
-                                   llvm::hlsl::ResourceKind RK,
+                                   llvm::hlsl::ResourceKind RK, bool IsROV,
+                                   llvm::hlsl::ElementType ET,
                                    BufferResBinding &Binding);
   void addConstant(VarDecl *D, Buffer &CB);
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
+  llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
 };
 

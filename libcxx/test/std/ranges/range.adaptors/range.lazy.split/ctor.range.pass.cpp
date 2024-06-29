@@ -22,22 +22,21 @@
 #include <utility>
 
 #include "test_convertible.h"
+#include "test_macros.h"
 #include "types.h"
 
 struct ElementWithCounting {
   int* times_copied = nullptr;
-  int* times_moved = nullptr;
+  int* times_moved  = nullptr;
 
   constexpr ElementWithCounting(int& copies_ctr, int& moves_ctr) : times_copied(&copies_ctr), times_moved(&moves_ctr) {}
 
   constexpr ElementWithCounting(const ElementWithCounting& rhs)
-      : times_copied(rhs.times_copied)
-      , times_moved(rhs.times_moved) {
+      : times_copied(rhs.times_copied), times_moved(rhs.times_moved) {
     ++(*times_copied);
   }
   constexpr ElementWithCounting(ElementWithCounting&& rhs)
-      : times_copied(rhs.times_copied)
-      , times_moved(rhs.times_moved) {
+      : times_copied(rhs.times_copied), times_moved(rhs.times_moved) {
     ++(*times_moved);
   }
 
@@ -48,18 +47,15 @@ struct RangeWithCounting {
   using value_type = ElementWithCounting;
 
   int* times_copied = nullptr;
-  int* times_moved = nullptr;
+  int* times_moved  = nullptr;
 
   constexpr RangeWithCounting(int& copies_ctr, int& moves_ctr) : times_copied(&copies_ctr), times_moved(&moves_ctr) {}
 
   constexpr RangeWithCounting(const RangeWithCounting& rhs)
-    : times_copied(rhs.times_copied)
-    , times_moved(rhs.times_moved) {
+      : times_copied(rhs.times_copied), times_moved(rhs.times_moved) {
     ++(*times_copied);
   }
-  constexpr RangeWithCounting(RangeWithCounting&& rhs)
-    : times_copied(rhs.times_copied)
-    , times_moved(rhs.times_moved) {
+  constexpr RangeWithCounting(RangeWithCounting&& rhs) : times_copied(rhs.times_copied), times_moved(rhs.times_moved) {
     ++(*times_moved);
   }
 
@@ -67,10 +63,10 @@ struct RangeWithCounting {
   constexpr const ElementWithCounting* end() const { return nullptr; }
 
   constexpr RangeWithCounting& operator=(const RangeWithCounting&) = default;
-  constexpr RangeWithCounting& operator=(RangeWithCounting&&) = default;
+  constexpr RangeWithCounting& operator=(RangeWithCounting&&)      = default;
   constexpr bool operator==(const RangeWithCounting&) const { return true; }
 };
-static_assert( std::ranges::forward_range<RangeWithCounting>);
+static_assert(std::ranges::forward_range<RangeWithCounting>);
 static_assert(!std::ranges::view<RangeWithCounting>);
 
 struct StrView : std::ranges::view_base {
@@ -86,9 +82,9 @@ struct StrView : std::ranges::view_base {
   constexpr std::string_view::const_iterator end() const { return buffer_.end(); }
   constexpr bool operator==(const StrView& rhs) const { return buffer_ == rhs.buffer_; }
 };
-static_assert( std::ranges::random_access_range<StrView>);
-static_assert( std::ranges::view<StrView>);
-static_assert( std::is_copy_constructible_v<StrView>);
+static_assert(std::ranges::random_access_range<StrView>);
+static_assert(std::ranges::view<StrView>);
+static_assert(std::is_copy_constructible_v<StrView>);
 
 // SFINAE tests.
 
@@ -131,7 +127,7 @@ constexpr bool test() {
 
   // Make sure the arguments are moved, not copied.
   {
-    using Range = RangeWithCounting;
+    using Range   = RangeWithCounting;
     using Element = ElementWithCounting;
     using Pattern = std::ranges::single_view<Element>;
 
@@ -144,10 +140,13 @@ constexpr bool test() {
       Element element(element_copied, element_moved);
 
       std::ranges::lazy_split_view<View, Pattern> v(range, element);
-      assert(range_copied == 0); // `ref_view` does neither copy...
-      assert(range_moved == 0); // ...nor move the element.
+      assert(range_copied == 0);   // `ref_view` does neither copy...
+      assert(range_moved == 0);    // ...nor move the element.
       assert(element_copied == 1); // The element is copied into the argument...
+#ifndef TEST_COMPILER_GCC
+      //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98995
       assert(element_moved == 1); // ...and moved into the member variable.
+#endif
     }
 
     // Arguments are rvalues.
@@ -160,7 +159,10 @@ constexpr bool test() {
       assert(range_copied == 0);
       assert(range_moved == 1); // `owning_view` moves the given argument.
       assert(element_copied == 0);
+#ifndef TEST_COMPILER_GCC
+      //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98995
       assert(element_moved == 1);
+#endif
     }
   }
 

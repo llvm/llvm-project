@@ -44,3 +44,28 @@ namespace Access {
   };
   D z = {Z(), {}};
 }
+
+namespace GH69987 {
+template<class> struct X {};
+template<class = void> struct X;
+X x;
+
+template<class T, class B> struct Y { Y(T); };
+template<class T, class B=void> struct Y ;
+Y y(1);
+}
+
+namespace NoCrashOnGettingDefaultArgLoc {
+template <typename>
+class A {
+  A(int = 1); // expected-note {{candidate template ignored: couldn't infer template argumen}}
+};
+class C : A<int> {
+  using A::A;
+};
+template <typename>
+class D : C { // expected-note {{candidate function template not viable: requires 1 argument}}
+  using C::C;
+};
+D abc; // expected-error {{no viable constructor or deduction guide}}
+}

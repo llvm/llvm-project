@@ -14,11 +14,11 @@
 #ifndef LLVM_TEXTAPI_RECORDSLICE_H
 #define LLVM_TEXTAPI_RECORDSLICE_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/FileTypes.h"
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Record.h"
+#include "llvm/TextAPI/RecordVisitor.h"
 
 namespace llvm {
 namespace MachO {
@@ -50,25 +50,29 @@ public:
   /// Add non-ObjC global record.
   ///
   /// \param Name The name of symbol.
-  /// \param Flags The flags that describe attributes of the symbol.
-  /// \param GV The kind of global.
   /// \param Linkage The linkage of symbol.
+  /// \param GV The kind of global.
+  /// \param Flags The flags that describe attributes of the symbol.
+  /// \param Inlined Whether declaration is inlined, only applicable to
+  /// functions.
   /// \return The non-owning pointer to added record in slice.
   GlobalRecord *addGlobal(StringRef Name, RecordLinkage Linkage,
                           GlobalRecord::Kind GV,
-                          SymbolFlags Flags = SymbolFlags::None);
+                          SymbolFlags Flags = SymbolFlags::None,
+                          bool Inlined = false);
 
   /// Add ObjC Class record.
   ///
   /// \param Name The name of class, not symbol.
   /// \param Linkage The linkage of symbol.
-  /// \param HasEHType Whether symbol represents an eh_type.
+  /// \param SymType The symbols this class represents.
   /// \return The non-owning pointer to added record in slice.
   ObjCInterfaceRecord *addObjCInterface(StringRef Name, RecordLinkage Linkage,
-                                        bool HasEHType = false);
+                                        ObjCIFSymbolKind SymType);
 
   /// Add ObjC IVar record.
   ///
+  /// \param Container Owning pointer for instance variable.
   /// \param Name The name of ivar, not symbol.
   /// \param Linkage The linkage of symbol.
   /// \return The non-owning pointer to added record in slice.
@@ -93,7 +97,7 @@ public:
   /// Find ObjC Category.
   ///
   /// \param ClassToExtend The name of class, not full symbol name.
-  /// \param Categories The name of category.
+  /// \param Category The name of category.
   /// \return The non-owning pointer to record in slice.
   ObjCCategoryRecord *findObjCCategory(StringRef ClassToExtend,
                                        StringRef Category) const;
@@ -132,6 +136,9 @@ public:
     return !hasBinaryAttrs() && Globals.empty() && Classes.empty() &&
            Categories.empty();
   }
+
+  // Visit all records known to RecordsSlice.
+  void visit(RecordVisitor &V) const;
 
   struct BinaryAttrs {
     std::vector<StringRef> AllowableClients;
@@ -174,12 +181,22 @@ private:
     R->Linkage = std::max(R->Linkage, L);
   }
 
+  /// Update set flags of requested record.
+  ///
+  /// \param R The record to update.
+  /// \param F Flags to update to.
+  void updateFlags(Record *R, SymbolFlags F) { R->Flags |= F; }
+
   RecordMap<GlobalRecord> Globals;
   RecordMap<ObjCInterfaceRecord> Classes;
   RecordMap<ObjCCategoryRecord, std::pair<StringRef, StringRef>> Categories;
 
   std::unique_ptr<BinaryAttrs> BA{nullptr};
 };
+
+using Records = llvm::SmallVector<std::shared_ptr<RecordsSlice>, 4>;
+class InterfaceFile;
+std::unique_ptr<InterfaceFile> convertToInterfaceFile(const Records &Slices);
 
 } // namespace MachO
 } // namespace llvm

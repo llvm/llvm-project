@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT=float %s | FileCheck %s --check-prefixes=CHECK,CHECK-FLOAT
-// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT=double %s | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE
-// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT="long double" %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP80
-// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT=__float128 %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP128
+// RUN: %clang_cc1 -triple x86_64-linux -w -o - -emit-llvm -DT=float %s | FileCheck %s --check-prefixes=CHECK,CHECK-FLOAT
+// RUN: %clang_cc1 -triple x86_64-linux -w -o - -emit-llvm -DT=double %s | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE
+// RUN: %clang_cc1 -triple x86_64-linux -w -o - -emit-llvm -DT="long double" %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP80
+// RUN: %clang_cc1 -triple x86_64-linux -w -o - -emit-llvm -DT=__float128 %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP128
 // FIXME: If we start to support _Complex __fp16 or _Complex _Float16, add tests for them too.
 
 // CHECK-FLOAT: @global ={{.*}} global { [[T:float]], [[T]] } { [[T]] 1.0{{.*}}, [[T]] 2.0{{.*}} }

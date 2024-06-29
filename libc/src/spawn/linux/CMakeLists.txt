@@ -8,6 +8,7 @@ add_entrypoint_object(
     libc.include.fcntl
     libc.include.spawn
     libc.include.sys_syscall
+    libc.include.signal
     libc.src.__support.CPP.optional
     libc.src.__support.OSUtil.osutil
     libc.src.spawn.file_actions

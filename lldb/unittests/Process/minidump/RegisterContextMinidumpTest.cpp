@@ -152,7 +152,7 @@ static void TestARMRegInfo(const lldb_private::RegisterInfo *info) {
   // correctly when using this information.
   llvm::StringRef name(info->name);
   llvm::StringRef alt_name(info->alt_name);
-  if (name.startswith("r") || alt_name.startswith("r")) {
+  if (name.starts_with("r") || alt_name.starts_with("r")) {
     EXPECT_NE(info->kinds[lldb::eRegisterKindEHFrame], LLDB_INVALID_REGNUM);
     EXPECT_NE(info->kinds[lldb::eRegisterKindDWARF], LLDB_INVALID_REGNUM);
   }

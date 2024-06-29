@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
 #include "DFAEmitter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -72,8 +72,7 @@ public:
   DFAPacketizerEmitter(RecordKeeper &R);
 
   // Construct a map of function unit names to bits.
-  int collectAllFuncUnits(
-      ArrayRef<const CodeGenProcModel *> ProcModels);
+  int collectAllFuncUnits(ArrayRef<const CodeGenProcModel *> ProcModels);
 
   // Construct a map from a combo function unit bit to the bits of all included
   // functional units.
@@ -129,7 +128,8 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
   return totalFUs;
 }
 
-int DFAPacketizerEmitter::collectAllComboFuncs(ArrayRef<Record *> ComboFuncList) {
+int DFAPacketizerEmitter::collectAllComboFuncs(
+    ArrayRef<Record *> ComboFuncList) {
   LLVM_DEBUG(dbgs() << "-------------------------------------------------------"
                        "----------------------\n");
   LLVM_DEBUG(dbgs() << "collectAllComboFuncs");

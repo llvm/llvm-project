@@ -9,7 +9,7 @@ _Complex float foo1(_Complex float x) {
 // CHECK-LABEL:             define{{.*}} { float, float } @foo1(float noundef %x.{{.*}}, float noundef %x.{{.*}}) #0 {
 // CHECK:                   ret { float, float }
 
-// PPC32LNX-LABEL:          define{{.*}} void @foo1(ptr noalias sret({ float, float }) align 4 %agg.result, ptr noundef byval({ float, float }) align 4 %x) #0 {
+// PPC32LNX-LABEL:          define{{.*}} void @foo1(ptr dead_on_unwind noalias writable sret({ float, float }) align 4 %agg.result, ptr noundef byval({ float, float }) align 4 %x) #0 {
 // PPC32LNX:                [[RETREAL:%.*]] = getelementptr inbounds { float, float }, ptr %agg.result, i32 0, i32 0
 // PPC32LNX-NEXT:           [[RETIMAG:%.*]] = getelementptr inbounds { float, float }, ptr %agg.result, i32 0, i32 1
 // PPC32LNX-NEXT:           store float %{{.*}}, ptr [[RETREAL]], align 4
@@ -21,7 +21,7 @@ _Complex double foo2(_Complex double x) {
 // CHECK-LABEL:             define{{.*}} { double, double } @foo2(double noundef %x.{{.*}}, double noundef %x.{{.*}}) #0 {
 // CHECK:                   ret { double, double }
 
-// PPC32LNX-LABEL:          define{{.*}} void @foo2(ptr noalias sret({ double, double }) align 8 %agg.result, ptr noundef byval({ double, double }) align 8 %x) #0 {
+// PPC32LNX-LABEL:          define{{.*}} void @foo2(ptr dead_on_unwind noalias writable sret({ double, double }) align 8 %agg.result, ptr noundef byval({ double, double }) align 8 %x) #0 {
 // PPC32LNX:                [[RETREAL:%.*]] = getelementptr inbounds { double, double }, ptr %agg.result, i32 0, i32 0
 // PPC32LNX-NEXT:           [[RETIMAG:%.*]] = getelementptr inbounds { double, double }, ptr %agg.result, i32 0, i32 1
 // PPC32LNX-NEXT:           store double %{{.*}}, ptr [[RETREAL]], align 8
@@ -36,7 +36,7 @@ _Complex long double foo3(_Complex long double x) {
 // CHECK-LDBL128-LABEL:     define{{.*}} { ppc_fp128, ppc_fp128 } @foo3(ppc_fp128 noundef %x.{{.*}}, ppc_fp128 noundef %x.{{.*}}) #0 {
 // CHECK-LDBL128:           ret { ppc_fp128, ppc_fp128 }
 
-// PPC32LNX-LABEL:          define{{.*}} void @foo3(ptr noalias sret({ ppc_fp128, ppc_fp128 }) align 16 %agg.result, ptr noundef byval({ ppc_fp128, ppc_fp128 }) align 16 %x) #0 {
+// PPC32LNX-LABEL:          define{{.*}} void @foo3(ptr dead_on_unwind noalias writable sret({ ppc_fp128, ppc_fp128 }) align 16 %agg.result, ptr noundef byval({ ppc_fp128, ppc_fp128 }) align 16 %x) #0 {
 // PPC32LNX:                [[RETREAL:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %agg.result, i32 0, i32 0
 // PPC32LNX-NEXT:           [[RETIMAG:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %agg.result, i32 0, i32 1
 // PPC32LNX-NEXT:           store ppc_fp128 %{{.*}}, ptr [[RETREAL]], align 16

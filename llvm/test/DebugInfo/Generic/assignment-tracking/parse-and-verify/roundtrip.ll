@@ -1,6 +1,9 @@
 ; RUN: opt %s -passes=verify   \
 ; RUN: | opt -passes=verify -S \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=verify   \
+; RUN: | opt -passes=verify -S \
+; RUN: | FileCheck %s
 
 ;; Roundtrip test (text -> bitcode -> text) for DIAssignID metadata and
 ;; llvm.dbg.assign intrinsics.
@@ -16,7 +19,7 @@ entry:
 
 ;; Unlinked llvm.dbg.assign.
 ; CHECK-DAG: @fun2()
-; CHECK: llvm.dbg.assign(metadata i32 undef, metadata ![[VAR2:[0-9]+]], metadata !DIExpression(), metadata ![[ID2:[0-9]+]], metadata i32 undef, metadata !DIExpression()), !dbg ![[DBG2:[0-9]+]]
+; CHECK: #dbg_assign(i32 undef, ![[VAR2:[0-9]+]], !DIExpression(), ![[ID2:[0-9]+]], i32 undef, !DIExpression(), ![[DBG2:[0-9]+]]
 define dso_local void @fun2() !dbg !15 {
 entry:
   %local = alloca i32, align 4
@@ -27,7 +30,7 @@ entry:
 ;; An llvm.dbg.assign linked to an alloca.
 ; CHECK-LABEL: @fun3()
 ; CHECK: %local = alloca i32, align 4, !DIAssignID ![[ID3:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i32 undef, metadata ![[VAR3:[0-9]+]], metadata !DIExpression(), metadata ![[ID3]], metadata i32 undef, metadata !DIExpression()), !dbg ![[DBG3:[0-9]+]]
+; CHECK-NEXT: #dbg_assign(i32 undef, ![[VAR3:[0-9]+]], !DIExpression(), ![[ID3]], i32 undef, !DIExpression(), ![[DBG3:[0-9]+]]
 define dso_local void @fun3() !dbg !19 {
 entry:
   %local = alloca i32, align 4, !DIAssignID !22
@@ -38,7 +41,7 @@ entry:
 ;; Check that using a DIAssignID as an operand before using it as an attachment
 ;; works (the order of the alloca and dbg.assign has been swapped).
 ; CHECK-LABEL: @fun4()
-; CHECK: llvm.dbg.assign(metadata i32 undef, metadata ![[VAR4:[0-9]+]], metadata !DIExpression(), metadata ![[ID4:[0-9]+]], metadata i32 undef, metadata !DIExpression()), !dbg ![[DBG4:[0-9]+]]
+; CHECK: #dbg_assign(i32 undef, ![[VAR4:[0-9]+]], !DIExpression(), ![[ID4:[0-9]+]], i32 undef, !DIExpression(), ![[DBG4:[0-9]+]]
 ; CHECK-NEXT: %local = alloca i32, align 4, !DIAssignID ![[ID4]]
 define dso_local void @fun4() !dbg !23 {
 entry:
@@ -51,8 +54,8 @@ entry:
 ;; There are currently no plans to support DIArgLists for the address component.
 ; CHECK-LABEL: @fun5
 ; CHECK: %local = alloca i32, align 4, !DIAssignID ![[ID5:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i32 %v, metadata ![[VAR5:[0-9]+]], metadata !DIExpression(), metadata ![[ID5]], metadata ptr %local, metadata !DIExpression()), !dbg ![[DBG5:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata !DIArgList(i32 %v, i32 1), metadata ![[VAR5]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_stack_value), metadata ![[ID5]], metadata ptr %local, metadata !DIExpression()), !dbg ![[DBG5]]
+; CHECK-NEXT: #dbg_assign(i32 %v, ![[VAR5:[0-9]+]], !DIExpression(), ![[ID5]], ptr %local, !DIExpression(), ![[DBG5:[0-9]+]]
+; CHECK-NEXT: #dbg_assign(!DIArgList(i32 %v, i32 1), ![[VAR5]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_stack_value), ![[ID5]], ptr %local, !DIExpression(), ![[DBG5]]
 define dso_local void @fun5(i32 %v) !dbg !27 {
 entry:
   %local = alloca i32, align 4, !DIAssignID !30

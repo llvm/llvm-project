@@ -3,7 +3,7 @@
 // Only check the overall shape of the code and the presence of relevant
 // runtime calls. Actual IR checking is done at the OpenMPIRBuilder level.
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -26,11 +26,15 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr)
-    for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-      %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : f32, !llvm.ptr
-      omp.yield
+    omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
+      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+        %1 = llvm.mlir.constant(2.0 : f32) : f32
+        %2 = llvm.load %prv : !llvm.ptr -> f32
+        %3 = llvm.fadd %1, %2 : f32
+        llvm.store %3, %prv : f32, !llvm.ptr
+        omp.yield
+      }
+      omp.terminator
     }
     omp.terminator
   }
@@ -67,7 +71,7 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
 // Update of the private variable using the reduction region
 // (the body block currently comes after all the other blocks).
 // CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
-// CHECK: %[[UPDATED:.+]] = fadd float %[[PARTIAL]], 2.000000e+00
+// CHECK: %[[UPDATED:.+]] = fadd float 2.000000e+00, %[[PARTIAL]]
 // CHECK: store float %[[UPDATED]], ptr %[[PRIVATE]]
 
 // Reduction function.
@@ -76,7 +80,7 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -103,12 +107,18 @@ llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr, @add_f32 -> %2 : !llvm.ptr)
-    for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-      %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : f32, !llvm.ptr
-      omp.reduction %1, %2 : f32, !llvm.ptr
-      omp.yield
+    omp.wsloop reduction(@add_f32 %0 -> %prv0 : !llvm.ptr, @add_f32 %2 -> %prv1 : !llvm.ptr) {
+      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+        %1 = llvm.mlir.constant(2.0 : f32) : f32
+        %3 = llvm.load %prv0 : !llvm.ptr -> f32
+        %4 = llvm.fadd %3, %1 : f32
+        llvm.store %4, %prv0 : f32, !llvm.ptr
+        %5 = llvm.load %prv1 : !llvm.ptr -> f32
+        %6 = llvm.fadd %5, %1 : f32
+        llvm.store %6, %prv1 : f32, !llvm.ptr
+        omp.yield
+      }
+      omp.terminator
     }
     omp.terminator
   }
@@ -164,7 +174,7 @@ llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -189,11 +199,15 @@ llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr, @add_f32 -> %2 : !llvm.ptr)
-    for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-      %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : f32, !llvm.ptr
-      omp.yield
+    omp.wsloop reduction(@add_f32 %0 -> %prv0 : !llvm.ptr, @add_f32 %2 -> %prv1 : !llvm.ptr) {
+      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+        %1 = llvm.mlir.constant(2.0 : f32) : f32
+        %3 = llvm.load %prv0 : !llvm.ptr -> f32
+        %4 = llvm.fadd %3, %1 : f32
+        llvm.store %4, %prv0 : f32, !llvm.ptr
+        omp.yield
+      }
+      omp.terminator
     }
     omp.terminator
   }
@@ -247,7 +261,7 @@ llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -272,12 +286,18 @@ llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr)
-    for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-      %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : f32, !llvm.ptr
-      omp.reduction %1, %0 : f32, !llvm.ptr
-      omp.yield
+    omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
+      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+        %1 = llvm.mlir.constant(2.0 : f32) : f32
+        %2 = llvm.load %prv : !llvm.ptr -> f32
+        %3 = llvm.fadd %2, %1 : f32
+        llvm.store %3, %prv : f32, !llvm.ptr
+        %4 = llvm.load %prv : !llvm.ptr -> f32
+        %5 = llvm.fadd %4, %1 : f32
+        llvm.store %5, %prv : f32, !llvm.ptr
+        omp.yield
+      }
+      omp.terminator
     }
     omp.terminator
   }
@@ -326,7 +346,7 @@ llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -344,7 +364,7 @@ atomic {
   omp.yield
 }
 
-omp.reduction.declare @mul_f32 : f32
+omp.declare_reduction @mul_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(1.0 : f32) : f32
@@ -362,12 +382,18 @@ llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr, @mul_f32 -> %2 : !llvm.ptr)
-    for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-      %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : f32, !llvm.ptr
-      omp.reduction %1, %2 : f32, !llvm.ptr
-      omp.yield
+    omp.wsloop reduction(@add_f32 %0 -> %prv0 : !llvm.ptr, @mul_f32 %2 -> %prv1 : !llvm.ptr) {
+      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+        %1 = llvm.mlir.constant(2.0 : f32) : f32
+        %3 = llvm.load %prv0 : !llvm.ptr -> f32
+        %4 = llvm.fadd %3, %1 : f32
+        llvm.store %4, %prv0 : f32, !llvm.ptr
+        %5 = llvm.load %prv1 : !llvm.ptr -> f32
+        %6 = llvm.fmul %5, %1 : f32
+        llvm.store %6, %prv1 : f32, !llvm.ptr
+        omp.yield
+      }
+      omp.terminator
     }
     omp.terminator
   }
@@ -419,7 +445,7 @@ llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -441,9 +467,11 @@ atomic {
 llvm.func @simple_reduction_parallel() {
   %c1 = llvm.mlir.constant(1 : i32) : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr) {
+  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
     %1 = llvm.mlir.constant(2.0 : f32) : f32
-    omp.reduction %1, %0 : f32, !llvm.ptr
+    %2 = llvm.load %prv : !llvm.ptr -> f32
+    %3 = llvm.fadd %2, %1 : f32
+    llvm.store %3, %prv : f32, !llvm.ptr
     omp.terminator
   }
   llvm.return
@@ -486,7 +514,7 @@ llvm.func @simple_reduction_parallel() {
 
 // -----
 
-omp.reduction.declare @add_i32 : i32
+omp.declare_reduction @add_i32 : i32
 init {
 ^bb0(%arg: i32):
   %0 = llvm.mlir.constant(0 : i32) : i32
@@ -512,11 +540,16 @@ llvm.func @parallel_nested_workshare_reduction(%ub : i64) {
   %lb = llvm.mlir.constant(1 : i64) : i64
   %step = llvm.mlir.constant(1 : i64) : i64
   
-  omp.parallel reduction(@add_i32 -> %0 : !llvm.ptr) {
-    omp.wsloop for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-      %ival = llvm.trunc %iv : i64 to i32
-      omp.reduction %ival, %0 : i32, !llvm.ptr
-      omp.yield
+  omp.parallel reduction(@add_i32 %0 -> %prv : !llvm.ptr) {
+    omp.wsloop {
+      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+        %ival = llvm.trunc %iv : i64 to i32
+        %lprv = llvm.load %prv : !llvm.ptr -> i32
+        %add = llvm.add %lprv, %ival : i32
+        llvm.store %add, %prv : i32, !llvm.ptr
+        omp.yield
+      }
+      omp.terminator
     }
     omp.terminator
   }

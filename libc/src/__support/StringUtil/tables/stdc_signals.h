@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_STDC_SIGNALS_H
-#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_STDC_SIGNALS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_SIGNALS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_SIGNALS_H
 
 #include <signal.h> // For signal numbers
 
@@ -26,4 +26,4 @@ LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNALS = {
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_SIGNALS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_SIGNALS_H

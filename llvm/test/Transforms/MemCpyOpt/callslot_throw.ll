@@ -56,9 +56,39 @@ entry:
   ret void
 }
 
-; TODO: With updated semantics, sret could also be invisible on unwind.
-define void @test_sret(ptr nocapture noalias dereferenceable(4) sret(i32) %x) {
-; CHECK-LABEL: @test_sret(
+define void @test_dead_on_unwind(ptr nocapture noalias writable dead_on_unwind dereferenceable(4) %x) {
+; CHECK-LABEL: @test_dead_on_unwind(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[T:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @may_throw(ptr nonnull [[X:%.*]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %t = alloca i32, align 4
+  call void @may_throw(ptr nonnull %t)
+  %load = load i32, ptr %t, align 4
+  store i32 %load, ptr %x, align 4
+  ret void
+}
+
+; Same as previous test, but dereferenceability information is provided by sret.
+define void @test_dead_on_unwind_sret(ptr nocapture noalias writable dead_on_unwind sret(i32) %x) {
+; CHECK-LABEL: @test_dead_on_unwind_sret(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[T:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @may_throw(ptr nonnull [[X:%.*]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %t = alloca i32, align 4
+  call void @may_throw(ptr nonnull %t)
+  %load = load i32, ptr %t, align 4
+  store i32 %load, ptr %x, align 4
+  ret void
+}
+
+define void @test_dead_on_unwind_missing_writable(ptr nocapture noalias dead_on_unwind dereferenceable(4) %x) {
+; CHECK-LABEL: @test_dead_on_unwind_missing_writable(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @may_throw(ptr nonnull [[T]])

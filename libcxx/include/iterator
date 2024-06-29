@@ -475,6 +475,11 @@ constexpr move_iterator<Iterator> operator+(   // constexpr in C++17
 template <class Iterator>   // constexpr in C++17
 constexpr  move_iterator<Iterator> make_move_iterator(const Iterator& i);
 
+template<class Iterator1, class Iterator2>
+    requires (!sized_sentinel_for<Iterator1, Iterator2>)
+  inline constexpr bool disable_sized_sentinel_for<move_iterator<Iterator1>,    // since C++20
+                                                    move_iterator<Iterator2>> = true;
+
 template<semiregular S>
 class move_sentinel {
 public:
@@ -674,7 +679,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__iterator/access.h>
 #include <__iterator/advance.h>

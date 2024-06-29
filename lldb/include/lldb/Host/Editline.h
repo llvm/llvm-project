@@ -75,6 +75,8 @@ using EditLineCharType = char;
 // to wchar_t. It is not possible to detect differentiate between the two
 // versions exactly, but this is a pretty good approximation and allows us to
 // build against almost any editline version out there.
+// It does, however, require extra care when invoking el_getc, as the type
+// of the input is a single char buffer, but the callback will write a wchar_t.
 #if LLDB_EDITLINE_USE_WCHAR || defined(EL_CLIENTDATA) || LLDB_HAVE_EL_RFUNC_T
 using EditLineGetCharType = wchar_t;
 #else

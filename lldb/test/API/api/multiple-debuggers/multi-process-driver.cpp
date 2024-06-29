@@ -216,6 +216,22 @@ void *do_one_debugger (void *in)
     return (void*) 1;
 }
 
+int count_completed_threads(int num_threads) {
+  int num_completed_threads = 0;
+  for (int i = 0; i < num_threads; i++)
+    if (completed_threads_array[i])
+      num_completed_threads++;
+  return num_completed_threads;
+}
+
+int count_successful_threads(int num_threads) {
+  int num_successful_threads = 0;
+  for (int i = 0; i < num_threads; i++)
+    if (successful_threads_array[i])
+      num_successful_threads++;
+  return num_successful_threads;
+}
+
 int main (int argc, char **argv)
 {
 #if !defined(_MSC_VER)
@@ -241,26 +257,15 @@ int main (int argc, char **argv)
     }
 
 
-    int max_time_to_wait = 20;  // 20 iterations, or 60 seconds
-    int iter = 0;
-    while (1)
-    {
+    int max_time_to_wait = 40;  // 40 iterations, or 120 seconds
+    if (getenv("ASAN_OPTIONS"))
+      max_time_to_wait *= 4;
+    for (int iter = 0; iter < max_time_to_wait; iter++) {
         std::this_thread::sleep_for(std::chrono::seconds(3));
-        bool all_done = true;
-        int successful_threads = 0;
-        int total_completed_threads = 0;
-        for (uint64_t i = 0; i < NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS; i++)
-        {
-            if (successful_threads_array[i] == true)
-                successful_threads++;
-            if (completed_threads_array[i] == true)
-                total_completed_threads++;
-            if (completed_threads_array[i] == false)
-            {
-                all_done = false;
-            }
-        }
-        if (all_done)
+        int successful_threads = count_successful_threads(NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
+        int total_completed_threads = count_completed_threads(NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
+
+        if (total_completed_threads == NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS)
         {
 #if DEBUG == 1
             printf ("All threads completed.\n");
@@ -275,13 +280,13 @@ int main (int argc, char **argv)
             printf ("%d threads completed so far (%d successfully), out of %d\n", total_completed_threads, successful_threads, NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
 #endif
         }
-        if (iter++ == max_time_to_wait)
-        {
-            printf ("reached maximum timeout but only %d threads have completed so far (%d successfully), out of %d.  Exiting.\n", total_completed_threads, successful_threads, NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
-            break;
-        }
+        if (iter == max_time_to_wait)
+          printf("reached maximum timeout but only %d threads have completed "
+                 "so far "
+                 "(%d successfully), out of %d.  Exiting.\n",
+                 total_completed_threads, successful_threads,
+                 NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
     }
-
 
     SBDebugger::Terminate();
     exit (1);

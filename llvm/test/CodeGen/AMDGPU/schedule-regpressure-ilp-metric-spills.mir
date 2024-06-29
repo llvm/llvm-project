@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,1 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,1 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 --- |
   define amdgpu_kernel void @no_sched_metric_due_to_spills() #0 {

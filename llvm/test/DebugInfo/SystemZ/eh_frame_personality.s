@@ -25,7 +25,7 @@ foo:                                    # @foo
 
 	.hidden	DW.ref.__gxx_personality_v0
 	.weak	DW.ref.__gxx_personality_v0
-	.section	.data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
+	.section	.data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 	.align	8
 	.type	DW.ref.__gxx_personality_v0,@object
 	.size	DW.ref.__gxx_personality_v0, 8

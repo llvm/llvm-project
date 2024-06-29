@@ -17,10 +17,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -99,6 +99,11 @@ public:
     ArgInfo() = default;
   };
 
+  struct PtrAuthInfo {
+    uint64_t Key;
+    Register Discriminator;
+  };
+
   struct CallLoweringInfo {
     /// Calling convention to be used for the call.
     CallingConv::ID CallConv = CallingConv::C;
@@ -117,10 +122,16 @@ public:
     /// vreg that the swifterror should be copied into after the call.
     Register SwiftErrorVReg;
 
+    /// Valid if the call is a controlled convergent operation.
+    Register ConvergenceCtrlToken;
+
     /// Original IR callsite corresponding to this call, if available.
     const CallBase *CB = nullptr;
 
     MDNode *KnownCallees = nullptr;
+
+    /// The auth-call information in the "ptrauth" bundle, if present.
+    std::optional<PtrAuthInfo> PAI;
 
     /// True if the call must be tail call optimized.
     bool IsMustTailCall = false;
@@ -291,8 +302,8 @@ public:
     /// \p If the handler wants the assignments to be delayed until after
     /// mem loc assignments, then it sets \p Thunk to the thunk to do the
     /// assignment.
-    /// \return The number of \p VAs that have been assigned after the first
-    ///         one, and which should therefore be skipped from further
+    /// \return The number of \p VAs that have been assigned including the
+    ///         first one, and which should therefore be skipped from further
     ///         processing.
     virtual unsigned assignCustomValue(ArgInfo &Arg, ArrayRef<CCValAssign> VAs,
                                        std::function<void()> *Thunk = nullptr) {
@@ -584,6 +595,7 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
+                 std::optional<PtrAuthInfo> PAI, Register ConvergenceCtrlToken,
                  std::function<unsigned()> GetCalleeReg) const;
 
   /// For targets which want to use big-endian can enable it with

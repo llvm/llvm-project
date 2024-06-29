@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes='default<O0>' -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='default<O0>' -S | FileCheck %s
 
 ; Define a function 'f' that resembles the Clang frontend's output for the
 ; following C++ coroutine:
@@ -30,36 +31,38 @@
 ; CHECK-LABEL: define void @f() {{.*}} {
 ; CHECK:       entry:
 ; CHECK:         %j = alloca i32, align 4
-; CHECK:         call void @llvm.dbg.declare(metadata ptr %j, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
-; CHECK:         %[[MEMORY:.*]] = call ptr @new
-; CHECK:         call void @llvm.dbg.declare(metadata ptr %[[MEMORY]], metadata ![[XVAR:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 32)), !dbg ![[IDBGLOC:[0-9]+]]
-; CHECK:         call void @llvm.dbg.declare(metadata ptr %[[MEMORY]], metadata ![[IVAR:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC]]
+; CHECK:         #dbg_declare(ptr %j, ![[JVAR:[0-9]+]], !DIExpression(), ![[JDBGLOC:[0-9]+]]
+; CHECK:         %[[MEMORY:.*]] = call ptr @new({{.+}}), !dbg ![[IDBGLOC:[0-9]+]]
+; CHECK:         #dbg_declare(ptr %[[MEMORY]], ![[XVAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 32), ![[IDBGLOC]]
+; CHECK:         #dbg_declare(ptr %[[MEMORY]], ![[IVAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 20), ![[IDBGLOC]]
 ; CHECK:       await.ready:
 ;
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {{.*}} {
 ; CHECK:       entry.resume:
 ; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca ptr
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[XVAR_RESUME:[0-9]+]],   metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
+; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[XVAR_RESUME:[0-9]+]],   !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32),
+; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[IVAR_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 20), ![[IDBGLOC_RESUME:[0-9]+]]
 ; CHECK-NEXT:    store ptr {{.*}}, ptr %[[DBG_PTR]]
 ; CHECK:         %[[J:.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %[[J]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
+; CHECK-NEXT:    #dbg_declare(ptr %[[J]], ![[JVAR_RESUME:[0-9]+]], !DIExpression(), ![[JDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       init.ready:
 ; CHECK:       await.ready:
 ;
 ; CHECK-DAG: ![[IVAR]] = !DILocalVariable(name: "i"
-; CHECK-DAG: ![[SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !6, file: !1, line: 23, column: 12)
-; CHECK-DAG: ![[IDBGLOC]] = !DILocation(line: 24, column: 7, scope: ![[SCOPE]])
+; CHECK-DAG: ![[PROG_SCOPE:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
+; CHECK-DAG: ![[BLK_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[PROG_SCOPE]], file: !1, line: 23, column: 12)
+; CHECK-DAG: ![[IDBGLOC]] = !DILocation(line: 23, column: 6, scope: ![[PROG_SCOPE]])
 ; CHECK-DAG: ![[XVAR]] = !DILocalVariable(name: "x"
 ; CHECK-DAG: ![[JVAR]] = !DILocalVariable(name: "j"
-; CHECK-DAG: ![[JDBGLOC]] = !DILocation(line: 32, column: 7, scope: ![[SCOPE]])
+; CHECK-DAG: ![[JDBGLOC]] = !DILocation(line: 32, column: 7, scope: ![[BLK_SCOPE]])
 
 ; CHECK-DAG: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
-; CHECK-DAG: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_SCOPE:[0-9]+]])
-; CHECK-DAG: ![[RESUME_SCOPE]] = distinct !DILexicalBlock(scope: !22, file: !1, line: 23, column: 12)
+; CHECK-DAG: ![[RESUME_PROG_SCOPE:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
+; CHECK-DAG: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_BLK_SCOPE:[0-9]+]])
+; CHECK-DAG: ![[RESUME_BLK_SCOPE]] = distinct !DILexicalBlock(scope: ![[RESUME_PROG_SCOPE]], file: !1, line: 23, column: 12)
 ; CHECK-DAG: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK-DAG: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"
-; CHECK-DAG: ![[JDBGLOC_RESUME]] = !DILocation(line: 32, column: 7, scope: ![[RESUME_SCOPE]])
+; CHECK-DAG: ![[JDBGLOC_RESUME]] = !DILocation(line: 32, column: 7, scope: ![[RESUME_BLK_SCOPE]])
 define void @f() presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
@@ -71,13 +74,13 @@ entry:
   br i1 %alloc, label %coro.alloc, label %coro.init
 
 coro.alloc:                                       ; preds = %entry
-  %size = call i64 @llvm.coro.size.i64()
-  %memory = call ptr @new(i64 %size)
-  br label %coro.init
+  %size = call i64 @llvm.coro.size.i64(), !dbg !23
+  %memory = call ptr @new(i64 %size), !dbg !23
+  br label %coro.init, !dbg !23
 
 coro.init:                                        ; preds = %coro.alloc, %entry
-  %phi.entry.alloc = phi ptr [ null, %entry ], [ %memory, %coro.alloc ]
-  %begin = call ptr @llvm.coro.begin(token %id, ptr %phi.entry.alloc)
+  %phi.entry.alloc = phi ptr [ null, %entry ], [ %memory, %coro.alloc ], !dbg !23
+  %begin = call ptr @llvm.coro.begin(token %id, ptr %phi.entry.alloc), !dbg !23
   %ready = call i1 @await_ready()
   br i1 %ready, label %init.ready, label %init.suspend
 
@@ -239,3 +242,4 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 !20 = !DILocation(line: 43, column: 3, scope: !7)
 !21 = !DILocation(line: 43, column: 8, scope: !7)
 !22 = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
+!23 = !DILocation(line: 23, column: 6, scope: !8)

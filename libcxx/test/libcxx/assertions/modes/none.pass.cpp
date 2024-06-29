@@ -11,6 +11,7 @@
 
 // REQUIRES: libcpp-hardening-mode=none
 
+#include <__assert>
 #include <cassert>
 
 bool executed_condition = false;

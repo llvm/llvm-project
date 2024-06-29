@@ -14,37 +14,37 @@
 
   %struct.A = type { i16, i16 }
 
-  define i32 @test(%struct.A* noalias nocapture %s, i16* noalias nocapture readonly %r, i32 %n) {
+  define i32 @test(ptr noalias nocapture %s, ptr noalias nocapture readonly %r, i32 %n) {
   entry:
     %cmp19 = icmp eq i32 %n, 2
     br i1 %cmp19, label %for.end, label %for.body.preheader
 
   for.body.preheader:
     %0 = add i32 %n, -2
-    %cgep = getelementptr %struct.A, %struct.A* %s, i32 2, i32 1
-    %scevgep1 = bitcast i16* %cgep to %struct.A*
-    %cgep9 = getelementptr i16, i16* %r, i32 2
+    %cgep = getelementptr %struct.A, ptr %s, i32 2, i32 1
+    %scevgep1 = bitcast ptr %cgep to ptr
+    %cgep9 = getelementptr i16, ptr %r, i32 2
     br label %for.body
 
   for.body:
-    %lsr.iv7 = phi i16* [ %cgep9, %for.body.preheader ], [ %cgep12, %for.body ]
-    %lsr.iv2 = phi %struct.A* [ %scevgep1, %for.body.preheader ], [ %cgep11, %for.body ]
+    %lsr.iv7 = phi ptr [ %cgep9, %for.body.preheader ], [ %cgep12, %for.body ]
+    %lsr.iv2 = phi ptr [ %scevgep1, %for.body.preheader ], [ %cgep11, %for.body ]
     %lsr.iv = phi i32 [ %0, %for.body.preheader ], [ %lsr.iv.next, %for.body ]
     %sum.020 = phi i32 [ %add7, %for.body ], [ 0, %for.body.preheader ]
-    %lsr.iv24 = bitcast %struct.A* %lsr.iv2 to i16*
-    %1 = load i16, i16* %lsr.iv7, align 2
+    %lsr.iv24 = bitcast ptr %lsr.iv2 to ptr
+    %1 = load i16, ptr %lsr.iv7, align 2
     %conv = sext i16 %1 to i32
-    %cgep10 = getelementptr i16, i16* %lsr.iv24, i32 -4
-    %2 = load i16, i16* %cgep10, align 2
+    %cgep10 = getelementptr i16, ptr %lsr.iv24, i32 -4
+    %2 = load i16, ptr %cgep10, align 2
     %conv2 = sext i16 %2 to i32
     %add = add i16 %1, 10
-    store i16 %add, i16* %lsr.iv24, align 2
+    store i16 %add, ptr %lsr.iv24, align 2
     %add6 = add i32 %sum.020, %conv
     %add7 = add i32 %add6, %conv2
     %lsr.iv.next = add i32 %lsr.iv, -1
     %cmp = icmp eq i32 %lsr.iv.next, 0
-    %cgep11 = getelementptr %struct.A, %struct.A* %lsr.iv2, i32 1
-    %cgep12 = getelementptr i16, i16* %lsr.iv7, i32 1
+    %cgep11 = getelementptr %struct.A, ptr %lsr.iv2, i32 1
+    %cgep12 = getelementptr i16, ptr %lsr.iv7, i32 1
     br i1 %cmp, label %for.end, label %for.body
 
   for.end:

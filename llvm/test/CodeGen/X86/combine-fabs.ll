@@ -11,12 +11,12 @@
 define float @combine_fabs_constant() {
 ; SSE-LABEL: combine_fabs_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_fabs_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
   %1 = call float @llvm.fabs.f32(float -2.0)
   ret float %1

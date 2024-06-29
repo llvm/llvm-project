@@ -280,4 +280,4 @@ define amdgpu_kernel void @byref_constant_i32_arg_offset0(ptr addrspace(4) byref
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

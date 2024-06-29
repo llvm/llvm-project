@@ -12,8 +12,8 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
-#include "CGOps.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -86,10 +86,10 @@ public:
     // If the embox does not include a shape, then do not convert it
     if (auto shapeVal = embox.getShape())
       return rewriteDynamicShape(embox, rewriter, shapeVal);
-    if (embox.getType().isa<fir::ClassType>())
+    if (mlir::isa<fir::ClassType>(embox.getType()))
       TODO(embox.getLoc(), "embox conversion for fir.class type");
-    if (auto boxTy = embox.getType().dyn_cast<fir::BoxType>())
-      if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
+    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(embox.getType()))
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
         if (!seqTy.hasDynamicExtents())
           return rewriteStaticShape(embox, rewriter, seqTy);
     return mlir::failure();
@@ -270,20 +270,68 @@ public:
 };
 
 class DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
+  bool preserveDeclare;
+
 public:
   using OpRewritePattern::OpRewritePattern;
+  DeclareOpConversion(mlir::MLIRContext *ctx, bool preserveDecl)
+      : OpRewritePattern(ctx), preserveDeclare(preserveDecl) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.replaceOp(declareOp, declareOp.getMemref());
+    if (!preserveDeclare) {
+      rewriter.replaceOp(declareOp, declareOp.getMemref());
+      return mlir::success();
+    }
+    auto loc = declareOp.getLoc();
+    llvm::SmallVector<mlir::Value> shapeOpers;
+    llvm::SmallVector<mlir::Value> shiftOpers;
+    if (auto shapeVal = declareOp.getShape()) {
+      if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
+        populateShape(shapeOpers, shapeOp);
+      else if (auto shiftOp =
+                   mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
+        populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+      else if (auto shiftOp =
+                   mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
+        populateShift(shiftOpers, shiftOp);
+      else
+        return mlir::failure();
+    }
+    // FIXME: Add FortranAttrs and CudaAttrs
+    auto xDeclOp = rewriter.create<fir::cg::XDeclareOp>(
+        loc, declareOp.getType(), declareOp.getMemref(), shapeOpers, shiftOpers,
+        declareOp.getTypeparams(), declareOp.getDummyScope(),
+        declareOp.getUniqName());
+    LLVM_DEBUG(llvm::dbgs()
+               << "rewriting " << declareOp << " to " << xDeclOp << '\n');
+    rewriter.replaceOp(declareOp, xDeclOp.getOperation()->getResults());
+    return mlir::success();
+  }
+};
+
+class DummyScopeOpConversion
+    : public mlir::OpRewritePattern<fir::DummyScopeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DummyScopeOp dummyScopeOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<fir::UndefOp>(dummyScopeOp,
+                                              dummyScopeOp.getType());
     return mlir::success();
   }
 };
 
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
-  void runOn(mlir::Operation *op, mlir::Region &region) {
+  using CodeGenRewriteBase<CodeGenRewrite>::CodeGenRewriteBase;
+
+  void runOnOperation() override final {
+    mlir::ModuleOp mod = getOperation();
+
     auto &context = getContext();
     mlir::ConversionTarget target(context);
     target.addLegalDialect<mlir::arith::ArithDialect, fir::FIROpsDialect,
@@ -291,17 +339,16 @@ public:
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
     target.addIllegalOp<fir::DeclareOp>();
+    target.addIllegalOp<fir::DummyScopeOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
-      return !(embox.getShape() || embox.getType()
-                                       .cast<fir::BaseBoxType>()
-                                       .getEleTy()
-                                       .isa<fir::SequenceType>());
+      return !(embox.getShape() ||
+               mlir::isa<fir::SequenceType>(
+                   mlir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
     });
     mlir::RewritePatternSet patterns(&context);
-    patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
-                    DeclareOpConversion>(&context);
+    fir::populatePreCGRewritePatterns(patterns, preserveDeclare);
     if (mlir::failed(
-            mlir::applyPartialConversion(op, target, std::move(patterns)))) {
+            mlir::applyPartialConversion(mod, target, std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(&context),
                       "error in running the pre-codegen conversions");
       signalPassFailure();
@@ -309,21 +356,15 @@ public:
     }
     // Erase any residual (fir.shape, fir.slice...).
     mlir::IRRewriter rewriter(&context);
-    (void)mlir::runRegionDCE(rewriter, op->getRegions());
-  }
-
-  void runOnOperation() override final {
-    // Call runOn on all top level regions that may contain emboxOp/arrayCoorOp.
-    auto mod = getOperation();
-    for (auto func : mod.getOps<mlir::func::FuncOp>())
-      runOn(func, func.getBody());
-    for (auto global : mod.getOps<fir::GlobalOp>())
-      runOn(global, global.getRegion());
+    (void)mlir::runRegionDCE(rewriter, mod->getRegions());
   }
 };
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::createFirCodeGenRewritePass() {
-  return std::make_unique<CodeGenRewrite>();
+void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
+                                       bool preserveDeclare) {
+  patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
+                  DummyScopeOpConversion>(patterns.getContext());
+  patterns.add<DeclareOpConversion>(patterns.getContext(), preserveDeclare);
 }

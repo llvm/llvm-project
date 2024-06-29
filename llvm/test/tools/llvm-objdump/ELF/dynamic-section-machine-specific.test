@@ -268,6 +268,9 @@ ProgramHeaders:
 # AARCH64:      Dynamic Section:
 # AARCH64-NEXT:  AARCH64_BTI_PLT      0x0000000000000001
 # AARCH64-NEXT:  AARCH64_PAC_PLT      0x0000000000000002
+# AARCH64-NEXT:  AARCH64_AUTH_RELR    0x0000000000000003
+# AARCH64-NEXT:  AARCH64_AUTH_RELRSZ  0x0000000000000004
+# AARCH64-NEXT:  AARCH64_AUTH_RELRENT 0x0000000000000005
 
 --- !ELF
 FileHeader:
@@ -283,6 +286,12 @@ Sections:
         Value: 1
       - Tag:   DT_AARCH64_PAC_PLT
         Value: 2
+      - Tag:   DT_AARCH64_AUTH_RELR
+        Value: 3
+      - Tag:   DT_AARCH64_AUTH_RELRSZ
+        Value: 4
+      - Tag:   DT_AARCH64_AUTH_RELRENT
+        Value: 5
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:

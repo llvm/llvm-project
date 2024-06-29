@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking %s -o - | FileCheck -check-prefix=GCN %s
 
 ---
 # GCN-LABEL: name: reduce_and_saveexec

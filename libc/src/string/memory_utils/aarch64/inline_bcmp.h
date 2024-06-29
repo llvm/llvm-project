@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE {
     }
     switch (count) {
     case 0:
-      return BcmpReturnType::ZERO();
+      return BcmpReturnType::zero();
     case 1:
       return generic::Bcmp<uint8_t>::block(p1, p2);
     case 2:

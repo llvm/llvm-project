@@ -16,7 +16,7 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYTARGETSTREAMER_H
 
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {

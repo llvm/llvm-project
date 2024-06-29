@@ -197,8 +197,8 @@ TEST(ToolInvocation, TestMapVirtualFile) {
 
 TEST(ToolInvocation, TestVirtualModulesCompilation) {
   // FIXME: Currently, this only tests that we don't exit with an error if a
-  // mapped module.map is found on the include path. In the future, expand this
-  // test to run a full modules enabled compilation, so we make sure we can
+  // mapped module.modulemap is found on the include path. In the future, expand
+  // this test to run a full modules enabled compilation, so we make sure we can
   // rerun modules compilations with a virtual file system.
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
       new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
@@ -218,9 +218,9 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
       "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("#include <abc>\n"));
   InMemoryFileSystem->addFile("def/abc", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
-  // Add a module.map file in the include directory of our header, so we trigger
-  // the module.map header search logic.
-  InMemoryFileSystem->addFile("def/module.map", 0,
+  // Add a module.modulemap file in the include directory of our header, so we
+  // trigger the module.modulemap header search logic.
+  InMemoryFileSystem->addFile("def/module.modulemap", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   EXPECT_TRUE(Invocation.run());
 }

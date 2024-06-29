@@ -1,5 +1,7 @@
 ; RUN: opt -safe-stack -safestack-use-pointer-address < %s -S | FileCheck %s
 ; RUN: opt -passes=safe-stack -safestack-use-pointer-address < %s -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=safe-stack -safestack-use-pointer-address < %s -S | FileCheck %s
+
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7-pc-linux-android"
 

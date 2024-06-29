@@ -1,5 +1,7 @@
 RUN: dsymutil -f -verbose -no-output %p/Inputs/fat-test.dylib -oso-prepend-path %p | FileCheck %s
 
+RUN: dsymutil --linker parallel -f -verbose -no-output %p/Inputs/fat-test.dylib -oso-prepend-path %p | FileCheck %s
+
 This test doesn't produce any filesytstem output, we just look at the verbose
 log output.
 

@@ -144,7 +144,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,
                               bool KeepOriginalSym) override;
@@ -154,7 +154,10 @@ public:
   void emitGNUAttribute(unsigned Tag, unsigned Value) override;
 
   StringRef getMnemonic(MCInst &MI) override {
-    return InstPrinter->getMnemonic(&MI).first;
+    auto [Ptr, Bits] = InstPrinter->getMnemonic(&MI);
+    assert((Bits != 0 || Ptr == nullptr) &&
+           "Invalid char pointer for instruction with no mnemonic");
+    return Ptr;
   }
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
@@ -267,7 +270,7 @@ public:
                          SMLoc Loc) override;
 
   void emitFileDirective(StringRef Filename) override;
-  void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+  void emitFileDirective(StringRef Filename, StringRef CompilerVersion,
                          StringRef TimeStamp, StringRef Description) override;
   Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
@@ -465,14 +468,14 @@ void MCAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
 
 void MCAsmStreamer::addExplicitComment(const Twine &T) {
   StringRef c = T.getSingleStringRef();
-  if (c.equals(StringRef(MAI->getSeparatorString())))
+  if (c == MAI->getSeparatorString())
     return;
-  if (c.startswith(StringRef("//"))) {
+  if (c.starts_with(StringRef("//"))) {
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(MAI->getCommentString());
     // drop //
     ExplicitCommentToEmit.append(c.slice(2, c.size()).str());
-  } else if (c.startswith(StringRef("/*"))) {
+  } else if (c.starts_with(StringRef("/*"))) {
     size_t p = 2, len = c.size() - 2;
     // emit each line in comment as separate newline.
     do {
@@ -485,7 +488,7 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
         ExplicitCommentToEmit.append("\n");
       p = newp + 1;
     } while (p < len);
-  } else if (c.startswith(StringRef(MAI->getCommentString()))) {
+  } else if (c.starts_with(StringRef(MAI->getCommentString()))) {
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(c.str());
   } else if (c.front() == '#') {
@@ -507,8 +510,7 @@ void MCAsmStreamer::emitExplicitComments() {
   ExplicitCommentToEmit.clear();
 }
 
-void MCAsmStreamer::changeSection(MCSection *Section,
-                                  const MCExpr *Subsection) {
+void MCAsmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);
@@ -1581,23 +1583,28 @@ void MCAsmStreamer::emitFileDirective(StringRef Filename) {
 }
 
 void MCAsmStreamer::emitFileDirective(StringRef Filename,
-                                      StringRef CompilerVerion,
+                                      StringRef CompilerVersion,
                                       StringRef TimeStamp,
                                       StringRef Description) {
   assert(MAI->hasFourStringsDotFile());
   OS << "\t.file\t";
   PrintQuotedString(Filename, OS);
-  OS << ",";
-  if (!CompilerVerion.empty()) {
-    PrintQuotedString(CompilerVerion, OS);
-  }
-  if (!TimeStamp.empty()) {
+  bool useTimeStamp = !TimeStamp.empty();
+  bool useCompilerVersion = !CompilerVersion.empty();
+  bool useDescription = !Description.empty();
+  if (useTimeStamp || useCompilerVersion || useDescription) {
     OS << ",";
-    PrintQuotedString(TimeStamp, OS);
-  }
-  if (!Description.empty()) {
-    OS << ",";
-    PrintQuotedString(Description, OS);
+    if (useTimeStamp)
+      PrintQuotedString(TimeStamp, OS);
+    if (useCompilerVersion || useDescription) {
+      OS << ",";
+      if (useCompilerVersion)
+        PrintQuotedString(CompilerVersion, OS);
+      if (useDescription) {
+        OS << ",";
+        PrintQuotedString(Description, OS);
+      }
+    }
   }
   EmitEOL();
 }
@@ -2467,8 +2474,7 @@ void MCAsmStreamer::emitAddrsigSym(const MCSymbol *Sym) {
 /// the specified string in the output .s file.  This capability is
 /// indicated by the hasRawTextSupport() predicate.
 void MCAsmStreamer::emitRawTextImpl(StringRef String) {
-  if (!String.empty() && String.back() == '\n')
-    String = String.substr(0, String.size()-1);
+  String.consume_back("\n");
   OS << String;
   EmitEOL();
 }

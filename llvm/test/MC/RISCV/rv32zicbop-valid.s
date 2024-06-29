@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zicbop -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zicbop < %s \
-# RUN:     | llvm-objdump --mattr=+zicbop -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zicbop -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zicbop < %s \
-# RUN:     | llvm-objdump --mattr=+zicbop -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zicbop -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: prefetch.i -2048(t0)

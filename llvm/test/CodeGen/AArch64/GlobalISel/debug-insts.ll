@@ -2,6 +2,10 @@
 ; RUN: llc -global-isel -mtriple=aarch64 %s -stop-after=irtranslator -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null
 ; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null -debug
+;
+; RUN: llc -global-isel -mtriple=aarch64 %s -stop-after=irtranslator -o - --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null --try-experimental-debuginfo-iterators
+; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null -debug --try-experimental-debuginfo-iterators
 
 ; CHECK-LABEL: name: debug_declare
 ; CHECK: stack:

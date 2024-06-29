@@ -16,7 +16,10 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class BPFRegisterBankInfo;
+class BPFSubtarget;
 class BPFTargetMachine;
+class InstructionSelector;
 class PassRegistry;
 
 ModulePass *createBPFCheckAndAdjustIR();
@@ -27,8 +30,12 @@ FunctionPass *createBPFMIPeepholePass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
+InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
+                                                  const BPFSubtarget &,
+                                                  const BPFRegisterBankInfo &);
+
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
-void initializeBPFDAGToDAGISelPass(PassRegistry &);
+void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
@@ -53,6 +60,14 @@ public:
 };
 
 class BPFIRPeepholePass : public PassInfoMixin<BPFIRPeepholePass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
+class BPFASpaceCastSimplifyPass
+    : public PassInfoMixin<BPFASpaceCastSimplifyPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

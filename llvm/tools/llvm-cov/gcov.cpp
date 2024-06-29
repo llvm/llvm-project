@@ -35,12 +35,10 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
     // A file was given. Ignore the source file and look next to this file.
     sys::path::replace_extension(CoverageFileStem, "");
 
-  std::string GCNO = InputGCNO.empty()
-                         ? std::string(CoverageFileStem.str()) + ".gcno"
-                         : InputGCNO;
-  std::string GCDA = InputGCDA.empty()
-                         ? std::string(CoverageFileStem.str()) + ".gcda"
-                         : InputGCDA;
+  std::string GCNO =
+      InputGCNO.empty() ? std::string(CoverageFileStem) + ".gcno" : InputGCNO;
+  std::string GCDA =
+      InputGCDA.empty() ? std::string(CoverageFileStem) + ".gcda" : InputGCDA;
   GCOVFile GF;
 
   // Open .gcda and .gcda without requiring a NUL terminator. The concurrent

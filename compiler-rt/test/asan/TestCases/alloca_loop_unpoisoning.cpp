@@ -24,11 +24,15 @@ void *top, *bot;
 __attribute__((noinline)) void foo(int len) {
   char x;
   top = &x;
-  char array[len];
+  volatile char array[len];
+  if (len)
+    array[0] = 0;
   assert(!(reinterpret_cast<uintptr_t>(array) & 31L));
   alloca(len);
   for (int i = 0; i < 32; ++i) {
-    char array[i];
+    volatile char array[i];
+    if (i)
+      array[0] = 0;
     bot = alloca(i);
     assert(!(reinterpret_cast<uintptr_t>(bot) & 31L));
   }

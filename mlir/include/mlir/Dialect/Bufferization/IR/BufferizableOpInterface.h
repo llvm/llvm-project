@@ -142,9 +142,19 @@ public:
   /// This function adds an ALLOW entry.
   void allowDialect(StringRef dialectNamespace) {
     Entry::FilterFn filterFn = [=](Operation *op) {
-      return op->getDialect()->getNamespace() == dialectNamespace;
+      return op->getName().getDialectNamespace() == dialectNamespace;
     };
     entries.push_back(Entry{filterFn, Entry::FilterType::ALLOW});
+  }
+
+  /// Deny the given dialect.
+  ///
+  /// This function adds a DENY entry.
+  void denyDialect(StringRef dialectNamespace) {
+    Entry::FilterFn filterFn = [=](Operation *op) {
+      return op->getDialect()->getNamespace() == dialectNamespace;
+    };
+    entries.push_back(Entry{filterFn, Entry::FilterType::DENY});
   }
 
   /// Allow the given ops.
@@ -257,6 +267,9 @@ struct BufferizationOptions {
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       Value, Attribute memorySpace, const BufferizationOptions &)>;
+  // Produce a MemorySpace attribute from a tensor type
+  using DefaultMemorySpaceFn =
+      std::function<std::optional<Attribute>(TensorType t)>;
 
   BufferizationOptions();
 
@@ -296,10 +309,10 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
-  /// The default memory space that should be used when it cannot be inferred
-  /// from the context. If case of std::nullopt, bufferization fails when the
-  /// memory space cannot be inferred at any point.
-  std::optional<Attribute> defaultMemorySpace = Attribute();
+  // Specifies whether to account for parallel regions in RaW analysis. If true,
+  // then writes inside of parallel regions that write to buffers defined
+  // outside of the parallel region will be given a new buffer.
+  bool checkParallelRegions = true;
 
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
@@ -351,9 +364,12 @@ struct BufferizationOptions {
   /// used.
   UnknownTypeConverterFn unknownTypeConverterFn = nullptr;
 
-  /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
-  /// Should be used only with `testAnalysisOnly = true`.
-  unsigned analysisFuzzerSeed = 0;
+  // Use during type conversion to determine the memory space for memref based
+  // on the original tensor type if the memory space cannot be inferred.
+  // Returning std::nullopt will cause bufferization to fail (useful to indicate
+  // failure to determine memory space for a tensor type).
+  DefaultMemorySpaceFn defaultMemorySpaceFn =
+      [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.
@@ -374,9 +390,6 @@ struct BufferizationOptions {
   /// initialize dialect-specific analysis state.
   SmallVector<AnalysisStateInitFn> stateInitializers;
 };
-
-/// Return `true` if the given value is a BlockArgument of a func::FuncOp.
-bool isFunctionArgument(Value value);
 
 /// Traversal parameters for `findValueInReverseUseDefChain`.
 struct TraversalConfig {
@@ -601,6 +614,12 @@ FailureOr<BaseMemRefType> getBufferType(Value value,
                                         const BufferizationOptions &options,
                                         SmallVector<Value> &invocationStack);
 
+/// Return "true" if the given op has tensor semantics and should be bufferized.
+/// If the op is bufferizable, the BufferizableOpInterface is queried.
+/// Otherwise, an op has tensor semantics if it has tensor operands, tensor
+/// op results and/or tensor block arguments.
+bool hasTensorSemantics(Operation *op);
+
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
 void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
@@ -694,6 +713,10 @@ AliasingOpOperandList unknownGetAliasingOpOperands(Value value);
 /// This is the default implementation of getAliasingValues in case the owner
 /// op does not implement the BufferizableOpInterface.
 AliasingValueList unknownGetAliasingValues(OpOperand &opOperand);
+
+/// This is the default implementation of
+/// BufferizableOpInterface::hasTensorSemantics
+bool defaultHasTensorSemantics(Operation *op);
 } // namespace detail
 
 } // namespace bufferization

@@ -3669,4 +3669,3 @@ entry:
 }
 
 declare <16 x float> @llvm.riscv.sf.vc.v.fvv.se.nxv16f32.nxv16f32.nxv16i32.f32.iXLen(iXLen, <16 x float>, <16 x i32>, float %rs1, iXLen)
-

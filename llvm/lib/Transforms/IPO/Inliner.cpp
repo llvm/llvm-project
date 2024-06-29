@@ -197,6 +197,14 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
   return *IAA->getAdvisor();
 }
 
+void makeFunctionBodyUnreachable(Function &F) {
+  F.dropAllReferences();
+  for (BasicBlock &BB : make_early_inc_range(F))
+    BB.eraseFromParent();
+  BasicBlock *BB = BasicBlock::Create(F.getContext(), "", &F);
+  new UnreachableInst(F.getContext(), BB);
+}
+
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {
@@ -448,11 +456,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                              }),
               Calls.end());
 
-          // Clear the body and queue the function itself for deletion when we
-          // finish inlining and call graph updates.
-          // Note that after this point, it is an error to do anything other
-          // than use the callee's address or delete it.
-          Callee.dropAllReferences();
+          // Clear the body and queue the function itself for call graph
+          // updating when we finish inlining.
+          makeFunctionBodyUnreachable(Callee);
           assert(!is_contained(DeadFunctions, &Callee) &&
                  "Cannot put cause a function to become dead twice!");
           DeadFunctions.push_back(&Callee);
@@ -530,7 +536,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   if (!DeadFunctionsInComdats.empty()) {
     filterDeadComdatFunctions(DeadFunctionsInComdats);
     for (auto *Callee : DeadFunctionsInComdats)
-      Callee->dropAllReferences();
+      makeFunctionBodyUnreachable(*Callee);
     DeadFunctions.append(DeadFunctionsInComdats);
   }
 
@@ -542,25 +548,18 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // that is OK as all we do is delete things and add pointers to unordered
   // sets.
   for (Function *DeadF : DeadFunctions) {
+    CG.markDeadFunction(*DeadF);
     // Get the necessary information out of the call graph and nuke the
     // function there. Also, clear out any cached analyses.
     auto &DeadC = *CG.lookupSCC(*CG.lookup(*DeadF));
     FAM.clear(*DeadF, DeadF->getName());
     AM.clear(DeadC, DeadC.getName());
-    auto &DeadRC = DeadC.getOuterRefSCC();
-    CG.removeDeadFunction(*DeadF);
 
     // Mark the relevant parts of the call graph as invalid so we don't visit
     // them.
     UR.InvalidatedSCCs.insert(&DeadC);
-    UR.InvalidatedRefSCCs.insert(&DeadRC);
 
-    // If the updated SCC was the one containing the deleted function, clear it.
-    if (&DeadC == UR.UpdatedC)
-      UR.UpdatedC = nullptr;
-
-    // And delete the actual function from the module.
-    M.getFunctionList().erase(DeadF);
+    UR.DeadFunctions.push_back(DeadF);
 
     ++NumDeleted;
   }

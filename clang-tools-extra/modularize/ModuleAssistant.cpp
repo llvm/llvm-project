@@ -175,7 +175,7 @@ static bool addModuleDescription(Module *RootModule,
   llvm::SmallString<256> NativePath, NativePrefix;
   llvm::sys::path::native(HeaderFilePath, NativePath);
   llvm::sys::path::native(HeaderPrefix, NativePrefix);
-  if (NativePath.startswith(NativePrefix))
+  if (NativePath.starts_with(NativePrefix))
     FilePath = std::string(NativePath.substr(NativePrefix.size() + 1));
   else
     FilePath = std::string(HeaderFilePath);

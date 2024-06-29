@@ -178,6 +178,7 @@ libc_support_library(
     deps = [
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fp_bits",
+        "//libc:hdr_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
@@ -293,8 +294,11 @@ libc_support_library(
     name = "ilogb_test_template",
     hdrs = ["ILogbTest.h"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_manipulation_functions",
+        "//libc:hdr_math_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
@@ -321,6 +325,7 @@ libc_support_library(
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc:hdr_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -345,8 +350,10 @@ libc_support_library(
     name = "ldexp_test_template",
     hdrs = ["LdExpTest.h"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_normal_float",
+        "//libc:hdr_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -371,8 +378,11 @@ libc_support_library(
     name = "rint_test_template",
     hdrs = ["RIntTest.h"],
     deps = [
+        "//libc:__support_cpp_algorithm",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc:hdr_fenv_macros",
+        "//libc:hdr_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
@@ -407,8 +417,10 @@ libc_support_library(
     name = "round_to_integer_test_template",
     hdrs = ["RoundToIntegerTest.h"],
     deps = [
+        "//libc:__support_cpp_algorithm",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc:hdr_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
@@ -519,7 +531,10 @@ libc_support_library(
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_type_traits",
         "//libc:__support_fputil_basic_operations",
+        "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc:hdr_fenv_macros",
+        "//libc:hdr_math_macros",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -783,6 +798,7 @@ math_test(
         "LdExpTest.h",
         "ScalbnTest.h",
     ],
+    deps = ["//libc:__support_cpp_limits"],
 )
 
 math_test(
@@ -791,6 +807,7 @@ math_test(
         "LdExpTest.h",
         "ScalbnTest.h",
     ],
+    deps = ["//libc:__support_cpp_limits"],
 )
 
 math_test(
@@ -799,4 +816,5 @@ math_test(
         "LdExpTest.h",
         "ScalbnTest.h",
     ],
+    deps = ["//libc:__support_cpp_limits"],
 )

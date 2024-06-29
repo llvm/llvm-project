@@ -14,9 +14,16 @@ asynchronous signals.
 The atomic instructions are designed specifically to provide readable IR and
 optimized code generation for the following:
 
-* The C++11 ``<atomic>`` header.  (`C++11 draft available here
-  <http://www.open-std.org/jtc1/sc22/wg21/>`_.) (`C11 draft available here
-  <http://www.open-std.org/jtc1/sc22/wg14/>`_.)
+* The C++ ``<atomic>`` header and C ``<stdatomic.h>`` headers. These
+  were originally added in C++11 and C11. The memory model has been
+  subsequently adjusted to correct errors in the initial
+  specification, so LLVM currently intends to implement the version
+  specified by C++20. (See the `C++20 draft standard
+  <https://isocpp.org/files/papers/N4860.pdf>`_ or the unofficial
+  `latest C++ draft <https://eel.is/c++draft/>`_. A `C2x draft
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf>`_ is
+  also available, though the text has not yet been updated with the
+  errata corrected by C++20.)
 
 * Proper semantics for Java-style memory, for both ``volatile`` and regular
   shared variables. (`Java Specification
@@ -110,13 +117,14 @@ where threads and signals are involved.
 atomic store (where the store is conditional for ``cmpxchg``), but no other
 memory operation can happen on any thread between the load and store.
 
-A ``fence`` provides Acquire and/or Release ordering which is not part of
-another operation; it is normally used along with Monotonic memory operations.
-A Monotonic load followed by an Acquire fence is roughly equivalent to an
-Acquire load, and a Monotonic store following a Release fence is roughly
-equivalent to a Release store. SequentiallyConsistent fences behave as both
-an Acquire and a Release fence, and offer some additional complicated
-guarantees, see the C++11 standard for details.
+A ``fence`` provides Acquire and/or Release ordering which is not part
+of another operation; it is normally used along with Monotonic memory
+operations.  A Monotonic load followed by an Acquire fence is roughly
+equivalent to an Acquire load, and a Monotonic store following a
+Release fence is roughly equivalent to a Release
+store. SequentiallyConsistent fences behave as both an Acquire and a
+Release fence, and additionally provide a total ordering with some
+complicated guarantees, see the C++ standard for details.
 
 Frontends generating atomic instructions generally need to be aware of the
 target to some degree; atomic instructions are guaranteed to be lock-free, and
@@ -222,7 +230,7 @@ essentially guarantees that if you take all the operations affecting a specific
 address, a consistent ordering exists.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_relaxed``; see those
+  This corresponds to the C++/C ``memory_order_relaxed``; see those
   standards for the exact definition.
 
 Notes for frontends
@@ -252,8 +260,8 @@ Acquire provides a barrier of the sort necessary to acquire a lock to access
 other memory with normal loads and stores.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_acquire``. It should also be
-  used for C++11/C11 ``memory_order_consume``.
+  This corresponds to the C++/C ``memory_order_acquire``. It should also be
+  used for C++/C ``memory_order_consume``.
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
@@ -282,7 +290,7 @@ Release is similar to Acquire, but with a barrier of the sort necessary to
 release a lock.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_release``.
+  This corresponds to the C++/C ``memory_order_release``.
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
@@ -308,7 +316,7 @@ AcquireRelease (``acq_rel`` in IR) provides both an Acquire and a Release
 barrier (for fences and operations which both read and write memory).
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_acq_rel``.
+  This corresponds to the C++/C ``memory_order_acq_rel``.
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
@@ -331,7 +339,7 @@ and Release semantics for stores. Additionally, it guarantees that a total
 ordering exists between all SequentiallyConsistent operations.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_seq_cst``, Java volatile, and
+  This corresponds to the C++/C ``memory_order_seq_cst``, Java volatile, and
   the gcc-compatible ``__sync_*`` builtins which do not specify otherwise.
 
 Notes for frontends

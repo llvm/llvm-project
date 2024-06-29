@@ -39,7 +39,7 @@ int main(int, char**)
         }
         catch (const A& a)
         {
-#ifndef _LIBCPP_ABI_MICROSOFT
+#ifndef TEST_ABI_MICROSOFT
             assert(A::constructed == 1);
 #else
             // On Windows exception_ptr copies the exception

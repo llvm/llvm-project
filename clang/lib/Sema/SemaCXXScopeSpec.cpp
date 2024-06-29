@@ -796,6 +796,14 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
         Diag(IdInfo.IdentifierLoc,
              diag::ext_undeclared_unqual_id_with_dependent_base)
             << IdInfo.Identifier << ContainingClass;
+        // Fake up a nested-name-specifier that starts with the
+        // injected-class-name of the enclosing class.
+        QualType T = Context.getTypeDeclType(ContainingClass);
+        TypeLocBuilder TLB;
+        TLB.pushTrivial(Context, T, IdInfo.IdentifierLoc);
+        SS.Extend(Context, /*TemplateKWLoc=*/SourceLocation(),
+                  TLB.getTypeLocInContext(Context, T), IdInfo.IdentifierLoc);
+        // Add the identifier to form a dependent name.
         SS.Extend(Context, IdInfo.Identifier, IdInfo.IdentifierLoc,
                   IdInfo.CCLoc);
         return false;
@@ -863,6 +871,29 @@ bool Sema::ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS,
   DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
   DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
   SS.Extend(Context, SourceLocation(), TLB.getTypeLocInContext(Context, T),
+            ColonColonLoc);
+  return false;
+}
+
+bool Sema::ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
+                                                  const DeclSpec &DS,
+                                                  SourceLocation ColonColonLoc,
+                                                  QualType Type) {
+  if (SS.isInvalid() || DS.getTypeSpecType() == DeclSpec::TST_error)
+    return true;
+
+  assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
+
+  if (Type.isNull())
+    return true;
+
+  TypeLocBuilder TLB;
+  TLB.pushTrivial(getASTContext(),
+                  cast<PackIndexingType>(Type.getTypePtr())->getPattern(),
+                  DS.getBeginLoc());
+  PackIndexingTypeLoc PIT = TLB.push<PackIndexingTypeLoc>(Type);
+  PIT.setEllipsisLoc(DS.getEllipsisLoc());
+  SS.Extend(Context, SourceLocation(), TLB.getTypeLocInContext(Context, Type),
             ColonColonLoc);
   return false;
 }
@@ -943,7 +974,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
       R.setBegin(SS.getRange().getBegin());
 
     Diag(CCLoc, diag::err_non_type_template_in_nested_name_specifier)
-      << (TD && isa<VarTemplateDecl>(TD)) << Template << R;
+        << isa_and_nonnull<VarTemplateDecl>(TD) << Template << R;
     NoteAllFoundTemplates(Template);
     return true;
   }

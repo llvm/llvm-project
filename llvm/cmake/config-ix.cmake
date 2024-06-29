@@ -240,21 +240,22 @@ if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
     else()
       set(HAVE_LIBEDIT 0)
     endif()
-    if(LLVM_ENABLE_TERMINFO)
-      if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
-        find_package(Terminfo REQUIRED)
-      else()
-        find_package(Terminfo)
-      endif()
-      set(LLVM_ENABLE_TERMINFO "${Terminfo_FOUND}")
-    endif()
   else()
     set(HAVE_LIBEDIT 0)
-    set(LLVM_ENABLE_TERMINFO 0)
   endif()
 else()
   set(HAVE_LIBEDIT 0)
-  set(LLVM_ENABLE_TERMINFO 0)
+endif()
+
+if(LLVM_HAS_LOGF128)
+  include(CheckCXXSymbolExists)
+  check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
+
+  if(LLVM_HAS_LOGF128 STREQUAL FORCE_ON AND NOT HAS_LOGF128)
+    message(FATAL_ERROR "Failed to configure logf128")
+  endif()
+
+  set(LLVM_HAS_LOGF128 "${HAS_LOGF128}")
 endif()
 
 # function checks
@@ -415,15 +416,18 @@ if( LLVM_ENABLE_PIC )
   set(ENABLE_PIC 1)
 else()
   set(ENABLE_PIC 0)
-  check_cxx_compiler_flag("-fno-pie" SUPPORTS_NO_PIE_FLAG)
-  if(SUPPORTS_NO_PIE_FLAG)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fno-pie")
-  endif()
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fno-pie")
 endif()
 
-check_cxx_compiler_flag("-Wvariadic-macros" SUPPORTS_VARIADIC_MACROS_FLAG)
-check_cxx_compiler_flag("-Wgnu-zero-variadic-macro-arguments"
-                        SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
+set(SUPPORTS_VARIADIC_MACROS_FLAG 0)
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(SUPPORTS_VARIADIC_MACROS_FLAG 1)
+endif()
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG 1)
+else()
+  set(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG 0)
+endif()
 
 set(USE_NO_MAYBE_UNINITIALIZED 0)
 set(USE_NO_UNINITIALIZED 0)
@@ -431,15 +435,11 @@ set(USE_NO_UNINITIALIZED 0)
 # Disable gcc's potentially uninitialized use analysis as it presents lots of
 # false positives.
 if (CMAKE_COMPILER_IS_GNUCXX)
-  check_cxx_compiler_flag("-Wmaybe-uninitialized" HAS_MAYBE_UNINITIALIZED)
-  if (HAS_MAYBE_UNINITIALIZED)
-    set(USE_NO_MAYBE_UNINITIALIZED 1)
+  # Disable all -Wuninitialized warning for old GCC versions.
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+    set(USE_NO_UNINITIALIZED 1)
   else()
-    # Only recent versions of gcc make the distinction between -Wuninitialized
-    # and -Wmaybe-uninitialized. If -Wmaybe-uninitialized isn't supported, just
-    # turn off all uninitialized use warnings.
-    check_cxx_compiler_flag("-Wuninitialized" HAS_UNINITIALIZED)
-    set(USE_NO_UNINITIALIZED ${HAS_UNINITIALIZED})
+    set(USE_NO_MAYBE_UNINITIALIZED 1)
   endif()
 endif()
 
@@ -641,12 +641,25 @@ if(CMAKE_HOST_APPLE AND APPLE)
     if(NOT CMAKE_XCRUN)
       find_program(CMAKE_XCRUN NAMES xcrun)
     endif()
+
+    # First, check if there's ld-classic, which is ld64 in newer SDKs.
     if(CMAKE_XCRUN)
-      execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+      execute_process(COMMAND ${CMAKE_XCRUN} -find ld-classic
         OUTPUT_VARIABLE LD64_EXECUTABLE
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
-      find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+      find_program(LD64_EXECUTABLE NAMES ld-classic DOC "The ld64 linker")
+    endif()
+
+    # Otherwise look for ld directly.
+    if(NOT LD64_EXECUTABLE)
+        if(CMAKE_XCRUN)
+          execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+            OUTPUT_VARIABLE LD64_EXECUTABLE
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        else()
+          find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+        endif()
     endif()
   endif()
 

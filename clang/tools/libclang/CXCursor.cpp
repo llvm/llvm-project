@@ -335,6 +335,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::ObjCSubscriptRefExprClass:
   case Stmt::RecoveryExprClass:
   case Stmt::SYCLUniqueStableNameExprClass:
+  case Stmt::EmbedExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
@@ -423,8 +424,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_UnexposedExpr;
     break;
 
-  case Stmt::OMPArraySectionExprClass:
-    K = CXCursor_OMPArraySectionExpr;
+  case Stmt::ArraySectionExprClass:
+    K = CXCursor_ArraySectionExpr;
     break;
 
   case Stmt::OMPArrayShapingExprClass:
@@ -565,6 +566,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
 
   case Stmt::SizeOfPackExprClass:
     K = CXCursor_SizeOfPackExpr;
+    break;
+
+  case Stmt::PackIndexingExprClass:
+    K = CXCursor_PackIndexingExpr;
     break;
 
   case Stmt::DeclRefExprClass:
@@ -865,6 +870,12 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OMPParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPParallelGenericLoopDirective;
+    break;
+  case Stmt::OpenACCComputeConstructClass:
+    K = CXCursor_OpenACCComputeConstruct;
+    break;
+  case Stmt::OpenACCLoopConstructClass:
+    K = CXCursor_OpenACCLoopConstruct;
     break;
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPTargetParallelGenericLoopDirective;
@@ -1466,6 +1477,9 @@ enum CXTemplateArgumentKind clang_Cursor_getTemplateArgumentKind(CXCursor C,
     return CXTemplateArgumentKind_NullPtr;
   case TemplateArgument::Integral:
     return CXTemplateArgumentKind_Integral;
+  case TemplateArgument::StructuralValue:
+    // FIXME: Expose these values.
+    return CXTemplateArgumentKind_Invalid;
   case TemplateArgument::Template:
     return CXTemplateArgumentKind_Template;
   case TemplateArgument::TemplateExpansion:

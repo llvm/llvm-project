@@ -39,32 +39,43 @@ using year_month_day = std::chrono::year_month_day;
 constexpr bool test() {
   { // year_month_day + months
     year_month_day ym{year{1234}, std::chrono::January, day{12}};
-    for (int i = 0; i <= 10; ++i) // TODO test wrap-around
-    {
-      year_month_day ym1 = ym + months{i};
-      year_month_day ym2 = months{i} + ym;
-      assert(static_cast<int>(ym1.year()) == 1234);
-      assert(static_cast<int>(ym2.year()) == 1234);
-      assert(ym1.month() == month(1 + i));
-      assert(ym2.month() == month(1 + i));
-      assert(ym1.day() == day{12});
-      assert(ym2.day() == day{12});
-      assert(ym1 == ym2);
+    for (int i = 0; i <= 10; ++i) {
+      year_month_day ymd1 = ym + months{i};
+      year_month_day ymd2 = months{i} + ym;
+      assert(static_cast<int>(ymd1.year()) == 1234);
+      assert(static_cast<int>(ymd2.year()) == 1234);
+      assert(ymd1.month() == month(1 + i));
+      assert(ymd2.month() == month(1 + i));
+      assert(ymd1.day() == day{12});
+      assert(ymd2.day() == day{12});
+      assert(ymd1 == ymd2);
+    }
+    // Test the year wraps around.
+    for (int i = 12; i <= 15; ++i) {
+      year_month_day ymd1 = ym + months{i};
+      year_month_day ymd2 = months{i} + ym;
+      assert(static_cast<int>(ymd1.year()) == 1235);
+      assert(static_cast<int>(ymd2.year()) == 1235);
+      assert(ymd1.month() == month(1 + i - 12));
+      assert(ymd2.month() == month(1 + i - 12));
+      assert(ymd1.day() == day{12});
+      assert(ymd2.day() == day{12});
+      assert(ymd1 == ymd2);
     }
   }
 
   { // year_month_day + years
     year_month_day ym{year{1234}, std::chrono::January, day{12}};
     for (int i = 0; i <= 10; ++i) {
-      year_month_day ym1 = ym + years{i};
-      year_month_day ym2 = years{i} + ym;
-      assert(static_cast<int>(ym1.year()) == i + 1234);
-      assert(static_cast<int>(ym2.year()) == i + 1234);
-      assert(ym1.month() == std::chrono::January);
-      assert(ym2.month() == std::chrono::January);
-      assert(ym1.day() == day{12});
-      assert(ym2.day() == day{12});
-      assert(ym1 == ym2);
+      year_month_day ymd1 = ym + years{i};
+      year_month_day ymd2 = years{i} + ym;
+      assert(static_cast<int>(ymd1.year()) == i + 1234);
+      assert(static_cast<int>(ymd2.year()) == i + 1234);
+      assert(ymd1.month() == std::chrono::January);
+      assert(ymd2.month() == std::chrono::January);
+      assert(ymd1.day() == day{12});
+      assert(ymd2.day() == day{12});
+      assert(ymd1 == ymd2);
     }
   }
 

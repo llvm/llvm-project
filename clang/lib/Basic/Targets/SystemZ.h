@@ -29,11 +29,13 @@ class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
   bool HasTransactionalExecution;
   bool HasVector;
   bool SoftFloat;
+  bool UnalignedSymbols;
 
 public:
   SystemZTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple), CPU("z10"), ISARevision(8),
-        HasTransactionalExecution(false), HasVector(false), SoftFloat(false) {
+        HasTransactionalExecution(false), HasVector(false), SoftFloat(false),
+        UnalignedSymbols(false) {
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
     IntWidth = IntAlign = 32;
@@ -45,6 +47,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     DefaultAlignForAttributeAligned = 64;
     MinGlobalAlign = 16;
+    HasUnalignedAccess = true;
     if (Triple.isOSzOS()) {
       TLSSupported = false;
       // All vector types are default aligned on an 8-byte boundary, even if the
@@ -64,6 +67,8 @@ public:
     HasStrictFP = true;
   }
 
+  unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -79,7 +84,7 @@ public:
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("r15");
+    return RegName == "r15";
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -163,6 +168,7 @@ public:
     HasTransactionalExecution = false;
     HasVector = false;
     SoftFloat = false;
+    UnalignedSymbols = false;
     for (const auto &Feature : Features) {
       if (Feature == "+transactional-execution")
         HasTransactionalExecution = true;
@@ -170,6 +176,8 @@ public:
         HasVector = true;
       else if (Feature == "+soft-float")
         SoftFloat = true;
+      else if (Feature == "+unaligned-symbols")
+        UnalignedSymbols = true;
     }
     HasVector &= !SoftFloat;
 
@@ -211,6 +219,10 @@ public:
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 256);
   }
 };
 } // namespace targets

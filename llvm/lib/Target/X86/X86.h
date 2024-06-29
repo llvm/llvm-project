@@ -131,9 +131,9 @@ FunctionPass *createX86FixupBWInsts();
 /// to another, when profitable.
 FunctionPass *createX86DomainReassignmentPass();
 
-/// This pass replaces EVEX encoded of AVX-512 instructiosn by VEX
-/// encoding when possible in order to reduce code size.
-FunctionPass *createX86EvexToVexInsts();
+/// This pass compress instructions from EVEX space to legacy/VEX/EVEX space when
+/// possible in order to reduce code size or facilitate HW decoding.
+FunctionPass *createX86CompressEVEXPass();
 
 /// This pass creates the thunks for the retpoline feature.
 FunctionPass *createX86IndirectThunksPass();
@@ -167,7 +167,7 @@ FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
 FunctionPass *createX86ArgumentStackSlotPass();
 
-void initializeEvexToVexInstPassPass(PassRegistry &);
+void initializeCompressEVEXPassPass(PassRegistry &);
 void initializeFPSPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
@@ -179,7 +179,7 @@ void initializeX86AvoidSFBPassPass(PassRegistry &);
 void initializeX86AvoidTrailingCallPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
-void initializeX86DAGToDAGISelPass(PassRegistry &);
+void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);

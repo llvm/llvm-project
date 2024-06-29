@@ -184,7 +184,7 @@ INTERCEPTOR_ALIAS(void *, malloc, SIZE_T size);
 INTERCEPTOR_ALIAS(void *, memalign, SIZE_T alignment, SIZE_T size);
 INTERCEPTOR_ALIAS(void *, pvalloc, SIZE_T size);
 INTERCEPTOR_ALIAS(void, cfree, void *ptr);
-INTERCEPTOR_ALIAS(__sanitizer_struct_mallinfo, mallinfo);
+INTERCEPTOR_ALIAS(__sanitizer_struct_mallinfo, mallinfo,);
 INTERCEPTOR_ALIAS(int, mallopt, int cmd, int value);
 INTERCEPTOR_ALIAS(void, malloc_stats, void);
 #  endif

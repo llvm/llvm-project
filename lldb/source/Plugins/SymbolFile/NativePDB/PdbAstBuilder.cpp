@@ -1264,9 +1264,9 @@ void PdbAstBuilder::ParseNamespace(clang::DeclContext &context) {
 
     clang::NamespaceDecl *ns = llvm::cast<clang::NamespaceDecl>(context);
     llvm::StringRef ns_name = ns->getName();
-    if (ns_name.startswith(qname)) {
+    if (ns_name.starts_with(qname)) {
       ns_name = ns_name.drop_front(qname.size());
-      if (ns_name.startswith("::"))
+      if (ns_name.starts_with("::"))
         GetOrCreateType(tid);
     }
   }

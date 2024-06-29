@@ -12,14 +12,14 @@ import os
 
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 import lldbsuite
 
 
 # The test suite.
-suite = unittest2.TestSuite()
+suite = unittest.TestSuite()
 
 # The list of categories we said we care about
 categories_list = None
@@ -43,6 +43,7 @@ arch = None
 compiler = None
 dsymutil = None
 sdkroot = None
+make_path = None
 
 # The overriden dwarf verison.
 dwarf_version = 0
@@ -119,6 +120,7 @@ all_tests = set()
 
 # LLDB library directory.
 lldb_libs_dir = None
+lldb_obj_root = None
 
 libcxx_include_dir = None
 libcxx_include_target_dir = None

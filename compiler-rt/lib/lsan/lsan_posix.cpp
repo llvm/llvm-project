@@ -14,11 +14,13 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 #if SANITIZER_POSIX
-#include "lsan.h"
-#include "lsan_allocator.h"
-#include "lsan_thread.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
+#  include <pthread.h>
+
+#  include "lsan.h"
+#  include "lsan_allocator.h"
+#  include "lsan_thread.h"
+#  include "sanitizer_common/sanitizer_stacktrace.h"
+#  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __lsan {
 
@@ -96,6 +98,29 @@ void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
 void InstallAtExitCheckLeaks() {
   if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit)
     Atexit(DoLeakCheck);
+}
+
+static void BeforeFork() {
+  LockGlobal();
+  LockThreads();
+  LockAllocator();
+  StackDepotLockBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  StackDepotUnlockAfterFork(fork_child);
+  UnlockAllocator();
+  UnlockThreads();
+  UnlockGlobal();
+}
+
+void InstallAtForkHandler() {
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
+  return;  // FIXME: Implement FutexWait.
+#  endif
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
 }
 
 }  // namespace __lsan

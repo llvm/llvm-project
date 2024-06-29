@@ -5,11 +5,11 @@
 
 target triple = "x86_64-apple-macosx10.15.0"
 
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i16* @__swift_reflection_version to i8*)], section "llvm.metadata", align 8
+@llvm.used = appending global [1 x ptr] [ptr @__swift_reflection_version], section "llvm.metadata", align 8
 @__swift_reflection_version = linkonce_odr hidden constant i16 3
 
-define i32 @main(i32 %0, i8** %1) #0 {
-  %3 = bitcast i8** %1 to i8*
+define i32 @main(i32 %0, ptr %1) #0 {
+  %3 = bitcast ptr %1 to ptr
   ret i32 0
 }
 
@@ -25,7 +25,7 @@ attributes #0 = { "frame-pointer"="all" "target-cpu"="penryn" "target-features"=
 !1 = !{!"-lswiftSwiftOnoneSupport"}
 !2 = !{!"-lswiftCore"}
 !3 = !{!"-lobjc"}
-!4 = !{[1 x i8*]* @llvm.used, null, null, i1 false, i1 true}
+!4 = !{ptr @llvm.used, null, null, i1 false, i1 true}
 !5 = !{i32 2, !"SDK Version", [2 x i32] [i32 10, i32 15]}
 !6 = !{i32 1, !"Objective-C Version", i32 2}
 !7 = !{i32 1, !"Objective-C Image Info Version", i32 0}

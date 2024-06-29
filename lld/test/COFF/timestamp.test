@@ -3,9 +3,28 @@ RUN: yaml2obj %p/Inputs/generic.yaml -o %t.obj
 RUN: lld-link %t.obj /debug /Brepro /entry:main /nodefaultlib /out:%t.1.exe
 RUN: lld-link %t.obj /debug /Brepro /entry:main /nodefaultlib /out:%t.2.exe
 RUN: lld-link %t.obj /debug /timestamp:0 /entry:main /nodefaultlib /out:%t.3.exe
+RUN: env SOURCE_DATE_EPOCH=0 lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.4.exe
+# Test timestamps corresponding to INT32_TMAX
+RUN: lld-link %t.obj /debug /timestamp:2147483647 /entry:main /nodefaultlib /out:%t.5.exe
+RUN: env SOURCE_DATE_EPOCH=2147483647 lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.6.exe
+# Test that the command line option /timestamp has precedence over SOURCE_DATE_EPOCH
+RUN: env SOURCE_DATE_EPOCH=12345 lld-link %t.obj /debug /timestamp:0 /entry:main /nodefaultlib /out:%t.7.exe
+# Test timestamps corresponding to UINT32_TMAX
+RUN: lld-link %t.obj /debug /timestamp:4294967295 /entry:main /nodefaultlib /out:%t.8.exe
+RUN: env SOURCE_DATE_EPOCH=4294967295 lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.9.exe
+# Test that setting UINT32_MAX+1 as timestamp fails.
+RUN: env LLD_IN_TEST=1 not lld-link %t.obj /debug /timestamp:4294967296 /entry:main /nodefaultlib /out:%t.10.exe 2>&1 | FileCheck %s --check-prefix=ERROR
+RUN: env SOURCE_DATE_EPOCH=4294967296 env LLD_IN_TEST=1 not lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.11.exe 2>&1 | FileCheck %s --check-prefix=ERROR2
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.1.exe | FileCheck %s --check-prefix=HASH
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.2.exe | FileCheck %s --check-prefix=HASH
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.3.exe | FileCheck %s --check-prefix=ZERO
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.4.exe | FileCheck %s --check-prefix=ZERO
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.5.exe | FileCheck %s --check-prefix=LARGE
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.6.exe | FileCheck %s --check-prefix=LARGE
+RUN: llvm-readobj --file-headers --coff-debug-directory %t.7.exe | FileCheck %s --check-prefix=ZERO
+
+# Not inspecting %t.8.exe and %t.9.exe; llvm-readobj with a 32 bit time_t fails to print dates
+# past INT32_MAX correctly.
 
 HASH: ImageFileHeader {
 HASH: TimeDateStamp: [[STAMP:.*]]
@@ -16,3 +35,11 @@ ZERO: ImageFileHeader {
 ZERO: TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 ZERO: DebugDirectory [
 ZERO: TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+
+LARGE: ImageFileHeader {
+LARGE: TimeDateStamp: 2038-01-19 03:14:07 (0x7FFFFFFF)
+LARGE: DebugDirectory [
+LARGE: TimeDateStamp: 2038-01-19 03:14:07 (0x7FFFFFFF)
+
+ERROR: error: invalid timestamp: 4294967296.  Expected 32-bit integer
+ERROR2: error: invalid SOURCE_DATE_EPOCH timestamp: 4294967296.  Expected 32-bit integer

@@ -136,7 +136,7 @@ for.end:                                          ; preds = %for.body
 
 @fp_inc = common global float 0.000000e+00, align 4
 
-define void @NonSCEVableIV(float %init, float* %A, i32 %N) {
+define void @NonSCEVableIV(float %init, ptr %A, i32 %N) {
 ; CHECK-LABEL: define void @NonSCEVableIV
 ; CHECK-SAME: (float [[INIT:%.*]], ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -157,14 +157,14 @@ define void @NonSCEVableIV(float %init, float* %A, i32 %N) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load float, float* @fp_inc, align 4
+  %0 = load float, ptr @fp_inc, align 4
   br label %for.body
 
 for.body:                                         ; preds = %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  store float %x.05, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  store float %x.05, ptr %arrayidx, align 4
   %add = fsub float %x.05, %0
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32

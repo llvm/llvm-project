@@ -5,15 +5,15 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @foo(i32 %arg, i32 %arg1, ptr %arg2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label %bb3
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ %arg1, %bb ], [ [[TMP:%.*]]4, %bb7 ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ %arg, %bb ], [ [[TMP]], %bb7 ]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 %arg2(i32 [[TMP4]], i32 [[TMP]])
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[ARG1:%.*]], [[BB:%.*]] ], [ [[TMP4:%.*]], [[BB7:%.*]] ]
+; CHECK-NEXT:    [[TMP4]] = phi i32 [ [[ARG:%.*]], [[BB]] ], [ [[TMP]], [[BB7]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 [[ARG2:%.*]](i32 [[TMP4]], i32 [[TMP]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[TMP6]], label %bb7, label %bb8
+; CHECK-NEXT:    br i1 [[TMP6]], label [[BB7]], label [[BB8:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br label %bb3
+; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;

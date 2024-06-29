@@ -5,6 +5,7 @@ define void @and() {
   %res1 = and i16 undef, undef
   %res2 = and i32 undef, undef
   %res3 = and i64 undef, undef
+  %resQ = and i128 undef, undef
   %res4 = and <2 x i8> undef, undef
   %res5 = and <2 x i16> undef, undef
   %res6 = and <2 x i32> undef, undef
@@ -26,6 +27,7 @@ define void @and() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = and i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = and i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = and i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = and i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = and <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = and <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = and <2 x i32> undef, undef
@@ -51,6 +53,7 @@ define void @ashr() {
   %res1 = ashr i16 undef, undef
   %res2 = ashr i32 undef, undef
   %res3 = ashr i64 undef, undef
+  %resQ = ashr i128 undef, undef
   %res4 = ashr <2 x i8> undef, undef
   %res5 = ashr <2 x i16> undef, undef
   %res6 = ashr <2 x i32> undef, undef
@@ -72,6 +75,7 @@ define void @ashr() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = ashr i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = ashr i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = ashr i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = ashr i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = ashr <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = ashr <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = ashr <2 x i32> undef, undef
@@ -97,6 +101,7 @@ define void @lshr() {
   %res1 = lshr i16 undef, undef
   %res2 = lshr i32 undef, undef
   %res3 = lshr i64 undef, undef
+  %resQ = lshr i128 undef, undef
   %res4 = lshr <2 x i8> undef, undef
   %res5 = lshr <2 x i16> undef, undef
   %res6 = lshr <2 x i32> undef, undef
@@ -118,6 +123,7 @@ define void @lshr() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = lshr i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = lshr i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = lshr i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = lshr i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = lshr <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = lshr <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = lshr <2 x i32> undef, undef
@@ -143,6 +149,7 @@ define void @or() {
   %res1 = or i16 undef, undef
   %res2 = or i32 undef, undef
   %res3 = or i64 undef, undef
+  %resQ = or i128 undef, undef
   %res4 = or <2 x i8> undef, undef
   %res5 = or <2 x i16> undef, undef
   %res6 = or <2 x i32> undef, undef
@@ -164,6 +171,7 @@ define void @or() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = or i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = or i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = or i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = or i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = or <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = or <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = or <2 x i32> undef, undef
@@ -189,6 +197,7 @@ define void @shl() {
   %res1 = shl i16 undef, undef
   %res2 = shl i32 undef, undef
   %res3 = shl i64 undef, undef
+  %resQ = shl i128 undef, undef
   %res4 = shl <2 x i8> undef, undef
   %res5 = shl <2 x i16> undef, undef
   %res6 = shl <2 x i32> undef, undef
@@ -210,6 +219,7 @@ define void @shl() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = shl i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = shl i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = shl i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = shl i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = shl <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = shl <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = shl <2 x i32> undef, undef
@@ -235,6 +245,7 @@ define void @xor() {
   %res1 = xor i16 undef, undef
   %res2 = xor i32 undef, undef
   %res3 = xor i64 undef, undef
+  %resQ = xor i128 undef, undef
   %res4 = xor <2 x i8> undef, undef
   %res5 = xor <2 x i16> undef, undef
   %res6 = xor <2 x i32> undef, undef
@@ -256,6 +267,7 @@ define void @xor() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = xor i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = xor i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = xor i64 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %resQ = xor i128 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = xor <2 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = xor <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = xor <2 x i32> undef, undef

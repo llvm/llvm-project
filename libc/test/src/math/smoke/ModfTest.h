@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-template <typename T> class ModfTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class ModfTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -81,12 +84,16 @@ public:
   }
 
   void testRange(ModfFunc func) {
-    constexpr UIntType COUNT = 100'000;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = T(FPBits(v));
-      if (isnan(x) || isinf(x) || x == T(0.0))
+    constexpr int COUNT = 100'000;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0;
+    for (int i = 0; i <= COUNT; ++i, v += STEP) {
+      FPBits x_bits(v);
+      if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
+
+      T x = x_bits.get_val();
 
       T integral;
       T frac = func(x, &integral);

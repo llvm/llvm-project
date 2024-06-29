@@ -72,7 +72,7 @@ define dso_local void @test1(ptr noalias nocapture %points, ptr noalias nocaptur
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: @test1(
 ; ENABLED_MASKED_STRIDED-NEXT:  entry:
-; ENABLED_MASKED_STRIDED-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i16, ptr [[POINTS:%.*]], i64 -1
+; ENABLED_MASKED_STRIDED-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[POINTS:%.*]], i64 -2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -239,7 +239,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; ENABLED_MASKED_STRIDED-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i16, ptr [[POINTS:%.*]], i64 -1
+; ENABLED_MASKED_STRIDED-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[POINTS:%.*]], i64 -2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

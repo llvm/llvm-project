@@ -14,6 +14,7 @@
 #include "CXString.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -125,21 +126,28 @@ const std::string &CIndexer::getClangResourcesPath() {
 #elif defined(_AIX)
   getClangResourcesPathImplAIX(LibClangPath);
 #else
+  bool PathFound = false;
+#if defined(CLANG_HAVE_DLFCN_H) && defined(CLANG_HAVE_DLADDR)
   Dl_info info;
-  std::string Path;
   // This silly cast below avoids a C++ warning.
   if (dladdr((void *)(uintptr_t)clang_createTranslationUnit, &info) != 0) {
     // We now have the CIndex directory, locate clang relative to it.
     LibClangPath += info.dli_fname;
-  } else if (!(Path = llvm::sys::fs::getMainExecutable(nullptr, nullptr)).empty()) {
-    // If we can't get the path using dladdr, try to get the main executable
-    // path. This may be needed when we're statically linking libclang with
-    // musl libc, for example.
-    LibClangPath += Path;
-  } else {
-    // It's rather unlikely we end up here. But it could happen, so report an
-    // error instead of crashing.
-    llvm::report_fatal_error("could not locate Clang resource path");
+    PathFound = true;
+  }
+#endif
+  std::string Path;
+  if (!PathFound) {
+    if (!(Path = llvm::sys::fs::getMainExecutable(nullptr, nullptr)).empty()) {
+      // If we can't get the path using dladdr, try to get the main executable
+      // path. This may be needed when we're statically linking libclang with
+      // musl libc, for example.
+      LibClangPath += Path;
+    } else {
+      // It's rather unlikely we end up here. But it could happen, so report an
+      // error instead of crashing.
+      llvm::report_fatal_error("could not locate Clang resource path");
+    }
   }
 
 #endif

@@ -366,14 +366,11 @@ define void @fun_3Eltsx2x4i(ptr %Dst) {
  ret void
 }
 
-; i128 replicated '1': not using vrepib, but should compile.
 define void @fun_16x1i(ptr %Dst) {
 ; CHECK-LABEL: fun_16x1i:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    llihf %r0, 16843009
-; CHECK-NEXT:    oilf %r0, 16843009
-; CHECK-NEXT:    stg %r0, 8(%r2)
-; CHECK-NEXT:    stg %r0, 0(%r2)
+; CHECK-NEXT:    vrepib %v0, 1
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
  store i128 1334440654591915542993625911497130241, ptr %Dst
  ret void

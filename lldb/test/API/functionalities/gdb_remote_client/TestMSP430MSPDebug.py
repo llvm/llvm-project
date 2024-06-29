@@ -74,8 +74,8 @@ class TestMSP430MSPDebug(GDBRemoteTestBase):
         # Test if the breakpoint address is resolved correctly
         self.assertEqual(bp.GetNumLocations(), 1, "Only one location")
         bp_loc = bp.GetLocationAtIndex(0)
-        self.assertTrue(
-            bp_loc.GetAddress().GetLoadAddress(target) == 0x510, "Address of main"
+        self.assertEqual(
+            bp_loc.GetAddress().GetLoadAddress(target), 0x510, "Address of main"
         )
 
         # Test if the process stops at the breakpoint
@@ -93,8 +93,9 @@ class TestMSP430MSPDebug(GDBRemoteTestBase):
 
         # Test if thread can step a single instruction
         thread.StepInstruction(False)
-        self.assertTrue(
-            thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(target) == 0x516,
+        self.assertEqual(
+            thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(target),
+            0x516,
             "Address of the next instruction",
         )
 
@@ -122,6 +123,6 @@ class TestMSP430MSPDebug(GDBRemoteTestBase):
             self.assertEqual(reg.GetValueAsUnsigned(), reg_val_dict[reg.GetName()])
 
         # Check if backtracing works:
-        self.assertTrue(len(thread.frames) >= 3)
+        self.assertGreaterEqual(len(thread.frames), 3)
         crt0_addr = thread.GetFrameAtIndex(2).GetPCAddress().GetLoadAddress(target)
         self.assertEqual(crt0_addr, 0x50A)

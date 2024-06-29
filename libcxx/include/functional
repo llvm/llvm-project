@@ -77,6 +77,15 @@ template <class T> struct unwrap_ref_decay : unwrap_reference<decay_t<T>> { };  
 template <class T> using unwrap_reference_t = typename unwrap_reference<T>::type; // since C++20
 template <class T> using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type; // since C++20
 
+// [refwrap.comparisons], comparisons
+friend constexpr bool operator==(reference_wrapper, reference_wrapper);           // Since C++26
+friend constexpr bool operator==(reference_wrapper, const T&);                    // Since C++26
+friend constexpr bool operator==(reference_wrapper, reference_wrapper<const T>);  // Since C++26
+
+friend constexpr auto operator<=>(reference_wrapper, reference_wrapper);          // Since C++26
+friend constexpr auto operator<=>(reference_wrapper, const T&);                   // Since C++26
+friend constexpr auto operator<=>(reference_wrapper, reference_wrapper<const T>); // Since C++26
+
 template <class T> // <class T=void> in C++14
 struct plus {
     T operator()(const T& x, const T& y) const;
@@ -206,6 +215,12 @@ binary_negate<Predicate> not2(const Predicate& pred);
 
 template <class F>
 constexpr unspecified not_fn(F&& f); // C++17, constexpr in C++20
+
+// [func.bind.partial], function templates bind_front and bind_back
+template<class F, class... Args>
+  constexpr unspecified bind_front(F&&, Args&&...); // C++20
+template<class F, class... Args>
+  constexpr unspecified bind_back(F&&, Args&&...);  // C++23
 
 template<class T> struct is_bind_expression;
 template<class T> struct is_placeholder;
@@ -513,7 +528,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 */
 
 #include <__algorithm/search.h>
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__compare/compare_three_way.h>
 #include <__config>
 #include <__functional/binary_function.h>

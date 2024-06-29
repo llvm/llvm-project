@@ -3,12 +3,15 @@
 // CHECK: data['!tablegen_json_version'] == 1
 
 // CHECK: all(data[s]['!name'] == s for s in data if not s.startswith("!"))
+// CHECK: all('!locs' in data[s] for s in data if not s.startswith("!"))
+// CHECK: all(all(loc.startswith("JSON.td:") for loc in data[s]['!locs']) for s in data if not s.startswith("!"))
 
 class Base {}
 class Intermediate : Base {}
 class Derived : Intermediate {}
 
 def D : Intermediate {}
+// CHECK: data['D']['!locs'] == ['JSON.td:13']
 // CHECK: 'D' in data['!instanceof']['Base']
 // CHECK: 'D' in data['!instanceof']['Intermediate']
 // CHECK: 'D' not in data['!instanceof']['Derived']

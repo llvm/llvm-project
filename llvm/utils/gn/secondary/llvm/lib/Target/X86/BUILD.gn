@@ -12,9 +12,9 @@ tablegen("X86GenDAGISel") {
   td_file = "X86.td"
 }
 
-tablegen("X86GenEVEX2VEXTables") {
+tablegen("X86GenInstrMapping") {
   visibility = [ ":LLVMX86CodeGen" ]
-  args = [ "-gen-x86-EVEX2VEX-tables" ]
+  args = [ "-gen-x86-instr-mapping" ]
   td_file = "X86.td"
 }
 
@@ -49,10 +49,10 @@ static_library("LLVMX86CodeGen") {
   deps = [
     ":X86GenCallingConv",
     ":X86GenDAGISel",
-    ":X86GenEVEX2VEXTables",
     ":X86GenFastISel",
     ":X86GenFoldTables",
     ":X86GenGlobalISel",
+    ":X86GenInstrMapping",
     ":X86GenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
@@ -63,12 +63,14 @@ static_library("LLVMX86CodeGen") {
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/Instrumentation",
+    "//llvm/lib/Transforms/Scalar",
   ]
   include_dirs = [ "." ]
   sources = [
@@ -83,10 +85,11 @@ static_library("LLVMX86CodeGen") {
     "X86CallFrameOptimization.cpp",
     "X86CallingConv.cpp",
     "X86CmovConversion.cpp",
+    "X86CodeGenPassBuilder.cpp",
+    "X86CompressEVEX.cpp",
     "X86DiscriminateMemOps.cpp",
     "X86DomainReassignment.cpp",
     "X86DynAllocaExpander.cpp",
-    "X86EvexToVex.cpp",
     "X86ExpandPseudo.cpp",
     "X86FastISel.cpp",
     "X86FastPreTileConfig.cpp",

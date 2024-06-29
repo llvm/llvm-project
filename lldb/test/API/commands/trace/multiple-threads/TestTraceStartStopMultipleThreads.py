@@ -236,7 +236,7 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
                 ].strip()
                 output = json.loads(response)
 
-        self.assertTrue(output is not None)
+        self.assertIsNotNone(output)
         self.assertIn("cpus", output)
         self.assertIn("tscPerfZeroConversion", output)
         found_non_empty_context_switch = False
@@ -249,8 +249,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
                     ipt_trace_size = binary_data["size"]
                 elif binary_data["kind"] == "perfContextSwitchTrace":
                     context_switch_size = binary_data["size"]
-            self.assertTrue(context_switch_size is not None)
-            self.assertTrue(ipt_trace_size is not None)
+            self.assertIsNotNone(context_switch_size)
+            self.assertIsNotNone(ipt_trace_size)
             if context_switch_size > 0:
                 found_non_empty_context_switch = True
 

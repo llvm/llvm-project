@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -fblocks -verify %s
 
 int* f1(void) {
   int x = 0;
@@ -20,13 +20,13 @@ int* f3(int x, int *y) {
 
 void* compound_literal(int x, int y) {
   if (x)
-    return &(unsigned short){((unsigned short)0x22EF)}; // expected-warning{{Address of stack memory}}
+    return &(unsigned short){((unsigned short)0x22EF)}; // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
 
   int* array[] = {};
   struct s { int z; double y; int w; };
   
   if (y)
-    return &((struct s){ 2, 0.4, 5 * 8 }); // expected-warning{{Address of stack memory}}
+    return &((struct s){ 2, 0.4, 5 * 8 }); // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
     
   
   void* p = &((struct s){ 42, 0.4, x ? 42 : 0 });

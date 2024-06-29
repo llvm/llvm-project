@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood
+;RUN: llc < %s -mtriple=r600 -mcpu=redwood
 
 define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:

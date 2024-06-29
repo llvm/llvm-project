@@ -15,12 +15,12 @@ define i32 @func1(i32 %x) #0 {
 ; CHECK-NEXT:    mul a0, a0, a0
 ; CHECK-NEXT:    addi s0, a0, 1
 ; CHECK-NEXT:    li a0, 4
-; CHECK-NEXT:    call __cxa_allocate_exception@plt
+; CHECK-NEXT:    call __cxa_allocate_exception
 ; CHECK-NEXT:    sw s0, 0(a0)
 ; CHECK-NEXT:    lui a1, %hi(_ZTIi)
 ; CHECK-NEXT:    addi a1, a1, %lo(_ZTIi)
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    call __cxa_throw@plt
+; CHECK-NEXT:    call __cxa_throw
 entry:
   %mul = mul i32 %x, %x
   %add = add i32 %mul, 1
@@ -42,12 +42,12 @@ define i32 @func2(i32 %x) #0 {
 ; CHECK-NEXT:    mul a0, a0, a0
 ; CHECK-NEXT:    addi s0, a0, 1
 ; CHECK-NEXT:    li a0, 4
-; CHECK-NEXT:    call __cxa_allocate_exception@plt
+; CHECK-NEXT:    call __cxa_allocate_exception
 ; CHECK-NEXT:    sw s0, 0(a0)
 ; CHECK-NEXT:    lui a1, %hi(_ZTIi)
 ; CHECK-NEXT:    addi a1, a1, %lo(_ZTIi)
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    call __cxa_throw@plt
+; CHECK-NEXT:    call __cxa_throw
 entry:
   %mul = mul i32 %x, %x
   %add = add i32 %mul, 1

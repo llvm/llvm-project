@@ -46,7 +46,9 @@ void test() {
     static_assert((std::is_same<typename Alloc::difference_type, std::ptrdiff_t>::value), "");
     static_assert((std::is_same<typename Alloc::value_type, T>::value), "");
     static_assert((std::is_same<typename Alloc::propagate_on_container_move_assignment, std::true_type>::value), "");
+#if TEST_STD_VER <= 23
     static_assert((std::is_same<typename Alloc::is_always_equal, std::true_type>::value), "");
+#endif
 
 #if TEST_STD_VER <= 17
     static_assert((std::is_same<typename Alloc::pointer, T*>::value), "");
@@ -59,8 +61,5 @@ void test() {
 
 int main(int, char**) {
     test<char>();
-#ifdef _LIBCPP_VERSION
-    test<char const>(); // extension
-#endif
     return 0;
 }

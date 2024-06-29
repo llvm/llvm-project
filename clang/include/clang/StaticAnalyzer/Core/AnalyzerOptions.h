@@ -227,6 +227,7 @@ public:
   unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
+  unsigned AnalyzerNoteAnalysisEntryPoints : 1;
 
   unsigned eagerlyAssumeBinOpBifurcation : 1;
 
@@ -291,10 +292,10 @@ public:
         ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
         ShowConfigOptionsList(false),
         ShouldEmitErrorsOnInvalidConfigValue(false), AnalyzeAll(false),
-        AnalyzerDisplayProgress(false), eagerlyAssumeBinOpBifurcation(false),
-        TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
-        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false),
-        AnalyzerWerror(false) {}
+        AnalyzerDisplayProgress(false), AnalyzerNoteAnalysisEntryPoints(false),
+        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
+        visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
+        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {}
 
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.
@@ -409,8 +410,8 @@ AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {
   };
   std::vector<StringRef> Checkers;
   for (StringRef CheckerName : StaticAnalyzerCheckerNames) {
-    if (!CheckerName.startswith("debug.") &&
-        (IncludeExperimental || !CheckerName.startswith("alpha.")))
+    if (!CheckerName.starts_with("debug.") &&
+        (IncludeExperimental || !CheckerName.starts_with("alpha.")))
       Checkers.push_back(CheckerName);
   }
   return Checkers;

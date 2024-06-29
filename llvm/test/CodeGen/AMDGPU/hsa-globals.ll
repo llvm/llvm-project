@@ -16,7 +16,7 @@ define amdgpu_kernel void @test() {
 @weak_global = extern_weak addrspace(1) global i32
 
 ; ASM: .type linkonce_odr_global_program,@object
-; ASM: .section .bss,#alloc,#write
+; ASM: .section .bss,"aw"
 ; ASM: .weak linkonce_odr_global_program
 ; ASM: linkonce_odr_global_program:
 ; ASM: .long 0

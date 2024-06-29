@@ -27,18 +27,22 @@ subroutine test()
   ! descriptor involved, copy-in/copy-out...)
 
   !ERROR: References to the procedure 'foo' require an explicit interface
+  !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   call foo(a_pointer)
 
   ! This call would be error if the interface was explicit here.
 
   !ERROR: References to the procedure 'foo' require an explicit interface
+  !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   call foo(an_array)
 
   !ERROR: References to the procedure 'bar' require an explicit interface
+  !BECAUSE: a dummy procedure is optional or a pointer
   !WARNING: If the procedure's interface were explicit, this reference would be in error
   !BECAUSE: Actual argument associated with procedure pointer dummy argument 'a_pointer=' must be a pointer unless INTENT(IN)
   call bar(sin)
 
   !ERROR: References to the procedure 'baz' require an explicit interface
+  !BECAUSE: a dummy procedure is optional or a pointer
   call baz(sin)
 end subroutine

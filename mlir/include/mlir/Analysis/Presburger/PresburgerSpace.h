@@ -236,7 +236,7 @@ public:
   /// symbol count, either a chunk of dimensional variables immediately before
   /// the split become symbols, or some of the symbols immediately after the
   /// split become dimensions.
-  void setVarSymbolSeperation(unsigned newSymbolCount);
+  void setVarSymbolSeparation(unsigned newSymbolCount);
 
   /// Swaps the posA^th variable of kindA and posB^th variable of kindB.
   void swapVar(VarKind kindA, VarKind kindB, unsigned posA, unsigned posB);
@@ -250,19 +250,32 @@ public:
   /// locals).
   bool isEqual(const PresburgerSpace &other) const;
 
-  /// Get the identifier of the specified variable.
-  Identifier &getId(VarKind kind, unsigned pos) {
-    assert(kind != VarKind::Local && "Local variables have no identifiers");
-    return identifiers[getVarKindOffset(kind) + pos];
-  }
+  /// Get the identifier of pos^th variable of the specified kind.
   Identifier getId(VarKind kind, unsigned pos) const {
     assert(kind != VarKind::Local && "Local variables have no identifiers");
+    if (!usingIds)
+      return Identifier();
     return identifiers[getVarKindOffset(kind) + pos];
   }
 
   ArrayRef<Identifier> getIds(VarKind kind) const {
     assert(kind != VarKind::Local && "Local variables have no identifiers");
+    assert(usingIds && "Identifiers not enabled for space");
     return {identifiers.data() + getVarKindOffset(kind), getNumVarKind(kind)};
+  }
+
+  ArrayRef<Identifier> getIds() const {
+    assert(usingIds && "Identifiers not enabled for space");
+    return identifiers;
+  }
+
+  /// Set the identifier of pos^th variable of the specified kind. Calls
+  /// resetIds if identifiers are not enabled.
+  void setId(VarKind kind, unsigned pos, Identifier id) {
+    assert(kind != VarKind::Local && "Local variables have no identifiers");
+    if (!usingIds)
+      resetIds();
+    identifiers[getVarKindOffset(kind) + pos] = id;
   }
 
   /// Returns if identifiers are being used.
@@ -289,6 +302,11 @@ public:
   /// Same as above but only check the specified VarKind. Useful to check if
   /// the symbols in two spaces are aligned.
   bool isAligned(const PresburgerSpace &other, VarKind kind) const;
+
+  /// Merge and align symbol variables of `this` and `other` with respect to
+  /// identifiers. After this operation the symbol variables of both spaces have
+  /// the same identifiers in the same order.
+  void mergeAndAlignSymbols(PresburgerSpace &other);
 
   void print(llvm::raw_ostream &os) const;
   void dump() const;

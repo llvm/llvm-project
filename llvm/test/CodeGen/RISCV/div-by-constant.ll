@@ -121,7 +121,7 @@ define i64 @udiv64_constant_add(i64 %a) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a2, 7
 ; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __udivdi3@plt
+; RV32-NEXT:    call __udivdi3
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -383,7 +383,7 @@ define i64 @sdiv64_constant_no_srai(i64 %a) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a2, 3
 ; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __divdi3@plt
+; RV32-NEXT:    call __divdi3
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -407,7 +407,7 @@ define i64 @sdiv64_constant_srai(i64 %a) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a2, 5
 ; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __divdi3@plt
+; RV32-NEXT:    call __divdi3
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -432,7 +432,7 @@ define i64 @sdiv64_constant_add_srai(i64 %a) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a2, 15
 ; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __divdi3@plt
+; RV32-NEXT:    call __divdi3
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -460,7 +460,7 @@ define i64 @sdiv64_constant_sub_srai(i64 %a) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a2, -3
 ; RV32-NEXT:    li a3, -1
-; RV32-NEXT:    call __divdi3@plt
+; RV32-NEXT:    call __divdi3
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret

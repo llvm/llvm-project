@@ -22,9 +22,9 @@ define i64 @va1(ptr %fmt, ...) {
 ; LA64-FPELIM-NEXT:    st.d $a4, $sp, 48
 ; LA64-FPELIM-NEXT:    st.d $a3, $sp, 40
 ; LA64-FPELIM-NEXT:    st.d $a2, $sp, 32
+; LA64-FPELIM-NEXT:    st.d $a1, $sp, 24
 ; LA64-FPELIM-NEXT:    addi.d $a1, $sp, 32
 ; LA64-FPELIM-NEXT:    st.d $a1, $sp, 8
-; LA64-FPELIM-NEXT:    st.d $a0, $sp, 24
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 80
 ; LA64-FPELIM-NEXT:    ret
 ;
@@ -45,9 +45,9 @@ define i64 @va1(ptr %fmt, ...) {
 ; LA64-WITHFP-NEXT:    st.d $a4, $fp, 32
 ; LA64-WITHFP-NEXT:    st.d $a3, $fp, 24
 ; LA64-WITHFP-NEXT:    st.d $a2, $fp, 16
+; LA64-WITHFP-NEXT:    st.d $a1, $fp, 8
 ; LA64-WITHFP-NEXT:    addi.d $a1, $fp, 16
 ; LA64-WITHFP-NEXT:    st.d $a1, $fp, -24
-; LA64-WITHFP-NEXT:    st.d $a0, $fp, 8
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 96
@@ -73,9 +73,9 @@ define i64 @va1_va_arg(ptr %fmt, ...) nounwind {
 ; LA64-FPELIM-NEXT:    st.d $a4, $sp, 48
 ; LA64-FPELIM-NEXT:    st.d $a3, $sp, 40
 ; LA64-FPELIM-NEXT:    st.d $a2, $sp, 32
+; LA64-FPELIM-NEXT:    st.d $a1, $sp, 24
 ; LA64-FPELIM-NEXT:    addi.d $a1, $sp, 32
 ; LA64-FPELIM-NEXT:    st.d $a1, $sp, 8
-; LA64-FPELIM-NEXT:    st.d $a0, $sp, 24
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 80
 ; LA64-FPELIM-NEXT:    ret
 ;
@@ -92,9 +92,9 @@ define i64 @va1_va_arg(ptr %fmt, ...) nounwind {
 ; LA64-WITHFP-NEXT:    st.d $a4, $fp, 32
 ; LA64-WITHFP-NEXT:    st.d $a3, $fp, 24
 ; LA64-WITHFP-NEXT:    st.d $a2, $fp, 16
+; LA64-WITHFP-NEXT:    st.d $a1, $fp, 8
 ; LA64-WITHFP-NEXT:    addi.d $a1, $fp, 16
 ; LA64-WITHFP-NEXT:    st.d $a1, $fp, -24
-; LA64-WITHFP-NEXT:    st.d $a0, $fp, 8
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 96
@@ -124,9 +124,9 @@ define i64 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; LA64-FPELIM-NEXT:    st.d $a4, $fp, 32
 ; LA64-FPELIM-NEXT:    st.d $a3, $fp, 24
 ; LA64-FPELIM-NEXT:    st.d $a2, $fp, 16
+; LA64-FPELIM-NEXT:    st.d $a1, $fp, 8
 ; LA64-FPELIM-NEXT:    addi.d $a0, $fp, 16
 ; LA64-FPELIM-NEXT:    st.d $a0, $fp, -32
-; LA64-FPELIM-NEXT:    st.d $a1, $fp, 8
 ; LA64-FPELIM-NEXT:    addi.d $a0, $a1, 15
 ; LA64-FPELIM-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-FPELIM-NEXT:    sub.d $a0, $sp, $a0
@@ -154,9 +154,9 @@ define i64 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; LA64-WITHFP-NEXT:    st.d $a4, $fp, 32
 ; LA64-WITHFP-NEXT:    st.d $a3, $fp, 24
 ; LA64-WITHFP-NEXT:    st.d $a2, $fp, 16
+; LA64-WITHFP-NEXT:    st.d $a1, $fp, 8
 ; LA64-WITHFP-NEXT:    addi.d $a0, $fp, 16
 ; LA64-WITHFP-NEXT:    st.d $a0, $fp, -32
-; LA64-WITHFP-NEXT:    st.d $a1, $fp, 8
 ; LA64-WITHFP-NEXT:    addi.d $a0, $a1, 15
 ; LA64-WITHFP-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-WITHFP-NEXT:    sub.d $a0, $sp, $a0
@@ -288,18 +288,18 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-FPELIM-NEXT:    lu32i.d $a0, 335544
 ; LA64-FPELIM-NEXT:    lu52i.d $a0, $a0, -328
 ; LA64-FPELIM-NEXT:    st.d $a0, $sp, 16
-; LA64-FPELIM-NEXT:    ori $a0, $zero, 1000
-; LA64-FPELIM-NEXT:    st.d $a0, $sp, 64
 ; LA64-FPELIM-NEXT:    st.d $zero, $sp, 88
 ; LA64-FPELIM-NEXT:    st.d $zero, $sp, 80
 ; LA64-FPELIM-NEXT:    st.d $zero, $sp, 72
+; LA64-FPELIM-NEXT:    ori $a5, $zero, 1000
+; LA64-FPELIM-NEXT:    ori $a0, $zero, 1
 ; LA64-FPELIM-NEXT:    ori $a1, $zero, 11
 ; LA64-FPELIM-NEXT:    addi.d $a2, $sp, 64
 ; LA64-FPELIM-NEXT:    ori $a3, $zero, 12
 ; LA64-FPELIM-NEXT:    ori $a4, $zero, 13
-; LA64-FPELIM-NEXT:    ori $a0, $zero, 1
+; LA64-FPELIM-NEXT:    ori $a7, $zero, 1
+; LA64-FPELIM-NEXT:    st.d $a5, $sp, 64
 ; LA64-FPELIM-NEXT:    move $a6, $zero
-; LA64-FPELIM-NEXT:    move $a7, $a0
 ; LA64-FPELIM-NEXT:    bl %plt(va_aligned_stack_callee)
 ; LA64-FPELIM-NEXT:    ld.d $ra, $sp, 104 # 8-byte Folded Reload
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 112
@@ -329,18 +329,18 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-WITHFP-NEXT:    lu32i.d $a0, 335544
 ; LA64-WITHFP-NEXT:    lu52i.d $a0, $a0, -328
 ; LA64-WITHFP-NEXT:    st.d $a0, $sp, 16
-; LA64-WITHFP-NEXT:    ori $a0, $zero, 1000
-; LA64-WITHFP-NEXT:    st.d $a0, $fp, -48
 ; LA64-WITHFP-NEXT:    st.d $zero, $fp, -24
 ; LA64-WITHFP-NEXT:    st.d $zero, $fp, -32
 ; LA64-WITHFP-NEXT:    st.d $zero, $fp, -40
+; LA64-WITHFP-NEXT:    ori $a5, $zero, 1000
+; LA64-WITHFP-NEXT:    ori $a0, $zero, 1
 ; LA64-WITHFP-NEXT:    ori $a1, $zero, 11
 ; LA64-WITHFP-NEXT:    addi.d $a2, $fp, -48
 ; LA64-WITHFP-NEXT:    ori $a3, $zero, 12
 ; LA64-WITHFP-NEXT:    ori $a4, $zero, 13
-; LA64-WITHFP-NEXT:    ori $a0, $zero, 1
+; LA64-WITHFP-NEXT:    ori $a7, $zero, 1
+; LA64-WITHFP-NEXT:    st.d $a5, $fp, -48
 ; LA64-WITHFP-NEXT:    move $a6, $zero
-; LA64-WITHFP-NEXT:    move $a7, $a0
 ; LA64-WITHFP-NEXT:    bl %plt(va_aligned_stack_callee)
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 96 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 104 # 8-byte Folded Reload

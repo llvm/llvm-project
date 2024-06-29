@@ -62,13 +62,6 @@ public:
   /// tricky way for optimization.
   virtual bool allowEnhancedRelaxation() const { return false; }
 
-  /// Give the target a chance to manipulate state related to instruction
-  /// alignment (e.g. padding for optimization), instruction relaxablility, etc.
-  /// before and after actually emitting the instruction.
-  virtual void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
-                                    const MCSubtargetInfo &STI) {}
-  virtual void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) {}
-
   /// lifetime management
   virtual void reset() {}
 
@@ -198,9 +191,9 @@ public:
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
-  virtual bool relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
-                           int64_t &Value) const {
-    return false;
+  virtual std::pair<bool, bool>
+  relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout, int64_t &Value) const {
+    return std::make_pair(false, false);
   }
 
   /// @}

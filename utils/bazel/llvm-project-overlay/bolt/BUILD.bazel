@@ -80,10 +80,10 @@ cc_library(
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
+        "//llvm:DWARFLinker",
         "//llvm:DWP",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
-        "//llvm:DWARFLinker",
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:MCDisassembler",
@@ -167,7 +167,10 @@ cc_library(
     ]),
     hdrs = glob([
         "include/bolt/Passes/*.h",
-    ]),
+    ]) + [
+        # To avoid circular dependency on "Profile".
+        "include/bolt/Profile/BoltAddressTranslation.h",
+    ],
     includes = ["include"],
     deps = [
         ":Core",
@@ -220,8 +223,6 @@ cc_library(
     name = "TargetAArch64",
     srcs = glob([
         "lib/Target/AArch64/*.cpp",
-    ]),
-    hdrs = glob([
     ]),
     includes = ["include"],
     deps = [

@@ -8,7 +8,7 @@
 define i32 @add(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: <add>:
 ; CHECK:    add a0, a1, a0
-; CHECK-NEXT:    jalr zero, 0(ra)
+; CHECK-NEXT:    jalr zero, 0x0(ra)
   tail call void asm sideeffect ".option rvc", ""()
   %add = add nsw i32 %b, %a
   ret i32 %add

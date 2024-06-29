@@ -193,7 +193,7 @@ ELFLinkGraphBuilder<ELFT>::ELFLinkGraphBuilder(
     StringRef FileName, LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : ELFLinkGraphBuilderBase(std::make_unique<LinkGraph>(
           FileName.str(), Triple(std::move(TT)), std::move(Features),
-          ELFT::Is64Bits ? 8 : 4, llvm::endianness(ELFT::TargetEndianness),
+          ELFT::Is64Bits ? 8 : 4, llvm::endianness(ELFT::Endianness),
           std::move(GetEdgeKindName))),
       Obj(Obj) {
   LLVM_DEBUG(
@@ -396,6 +396,12 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       B = &G->createZeroFillBlock(*GraphSec, Sec.sh_size,
                                   orc::ExecutorAddr(Sec.sh_addr),
                                   Sec.sh_addralign, 0);
+
+    if (Sec.sh_type == ELF::SHT_ARM_EXIDX) {
+      // Add live symbol to avoid dead-stripping for .ARM.exidx sections
+      G->addAnonymousSymbol(*B, orc::ExecutorAddrDiff(),
+                            orc::ExecutorAddrDiff(), false, true);
+    }
 
     setGraphBlock(SecIndex, B);
   }

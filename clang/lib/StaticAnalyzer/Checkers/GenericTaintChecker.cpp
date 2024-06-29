@@ -59,13 +59,6 @@ constexpr llvm::StringLiteral MsgSanitizeSystemArgs =
     "Untrusted data is passed to a system call "
     "(CERT/STR02-C. Sanitize data passed to complex subsystems)";
 
-/// Check if tainted data is used as a buffer size in strn.. functions,
-/// and allocators.
-constexpr llvm::StringLiteral MsgTaintedBufferSize =
-    "Untrusted data is used to specify the buffer size "
-    "(CERT/STR31-C. Guarantee that storage for strings has sufficient space "
-    "for character data and the null terminator)";
-
 /// Check if tainted data is used as a custom sink's parameter.
 constexpr llvm::StringLiteral MsgCustomSink =
     "Untrusted data is passed to a user-defined sink";
@@ -298,14 +291,6 @@ public:
     return {{}, {}, std::move(SrcArgs), std::move(DstArgs)};
   }
 
-  /// Make a rule that taints all PropDstArgs if any of PropSrcArgs is tainted.
-  static GenericTaintRule
-  SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs, ArgSet &&DstArgs,
-           std::optional<StringRef> Msg = std::nullopt) {
-    return {
-        std::move(SinkArgs), {}, std::move(SrcArgs), std::move(DstArgs), Msg};
-  }
-
   /// Process a function which could either be a taint source, a taint sink, a
   /// taint filter or a taint propagator.
   void process(const GenericTaintChecker &Checker, const CallEvent &Call,
@@ -415,17 +400,14 @@ private:
   void taintUnsafeSocketProtocol(const CallEvent &Call,
                                  CheckerContext &C) const;
 
-  /// Default taint rules are initalized with the help of a CheckerContext to
-  /// access the names of built-in functions like memcpy.
+  /// The taint rules are initalized with the help of a CheckerContext to
+  /// access user-provided configuration.
   void initTaintRules(CheckerContext &C) const;
 
-  /// CallDescription currently cannot restrict matches to the global namespace
-  /// only, which is why multiple CallDescriptionMaps are used, as we want to
-  /// disambiguate global C functions from functions inside user-defined
-  /// namespaces.
-  // TODO: Remove separation to simplify matching logic once CallDescriptions
-  // are more expressive.
-
+  // TODO: The two separate `CallDescriptionMap`s were introduced when
+  // `CallDescription` was unable to restrict matches to the global namespace
+  // only. This limitation no longer exists, so the following two maps should
+  // be unified.
   mutable std::optional<RuleLookupTy> StaticTaintRules;
   mutable std::optional<RuleLookupTy> DynamicTaintRules;
 };
@@ -521,7 +503,8 @@ void GenericTaintRuleParser::consumeRulesFromConfig(const Config &C,
                                                     GenericTaintRule &&Rule,
                                                     RulesContTy &Rules) {
   NamePartsTy NameParts = parseNameParts(C);
-  Rules.emplace_back(CallDescription(NameParts), std::move(Rule));
+  Rules.emplace_back(CallDescription(CDM::Unspecified, NameParts),
+                     std::move(Rule));
 }
 
 void GenericTaintRuleParser::parseConfig(const std::string &Option,
@@ -587,205 +570,236 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       std::vector<std::pair<CallDescription, GenericTaintRule>>;
   using TR = GenericTaintRule;
 
-  const Builtin::Context &BI = C.getASTContext().BuiltinInfo;
-
   RulesConstructionTy GlobalCRules{
       // Sources
-      {{{"fdopen"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"fopen"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"freopen"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"getch"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"getchar"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"getchar_unlocked"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"gets"}}, TR::Source({{0}, ReturnValueIndex})},
-      {{{"gets_s"}}, TR::Source({{0}, ReturnValueIndex})},
-      {{{"scanf"}}, TR::Source({{}, 1})},
-      {{{"scanf_s"}}, TR::Source({{}, {1}})},
-      {{{"wgetch"}}, TR::Source({{}, ReturnValueIndex})},
+      {{CDM::CLibrary, {"fdopen"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"fopen"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"freopen"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getch"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getchar"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getchar_unlocked"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"gets"}}, TR::Source({{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"gets_s"}}, TR::Source({{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"scanf"}}, TR::Source({{}, 1})},
+      {{CDM::CLibrary, {"scanf_s"}}, TR::Source({{}, 1})},
+      {{CDM::CLibrary, {"wgetch"}}, TR::Source({{ReturnValueIndex}})},
       // Sometimes the line between taint sources and propagators is blurry.
       // _IO_getc is choosen to be a source, but could also be a propagator.
       // This way it is simpler, as modeling it as a propagator would require
       // to model the possible sources of _IO_FILE * values, which the _IO_getc
       // function takes as parameters.
-      {{{"_IO_getc"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"getcwd"}}, TR::Source({{0, ReturnValueIndex}})},
-      {{{"getwd"}}, TR::Source({{0, ReturnValueIndex}})},
-      {{{"readlink"}}, TR::Source({{1, ReturnValueIndex}})},
-      {{{"readlinkat"}}, TR::Source({{2, ReturnValueIndex}})},
-      {{{"get_current_dir_name"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"gethostname"}}, TR::Source({{0}})},
-      {{{"getnameinfo"}}, TR::Source({{2, 4}})},
-      {{{"getseuserbyname"}}, TR::Source({{1, 2}})},
-      {{{"getgroups"}}, TR::Source({{1, ReturnValueIndex}})},
-      {{{"getlogin"}}, TR::Source({{ReturnValueIndex}})},
-      {{{"getlogin_r"}}, TR::Source({{0}})},
+      {{CDM::CLibrary, {"_IO_getc"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getcwd"}}, TR::Source({{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getwd"}}, TR::Source({{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"readlink"}}, TR::Source({{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"readlinkat"}}, TR::Source({{2, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"get_current_dir_name"}},
+       TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"gethostname"}}, TR::Source({{0}})},
+      {{CDM::CLibrary, {"getnameinfo"}}, TR::Source({{2, 4}})},
+      {{CDM::CLibrary, {"getseuserbyname"}}, TR::Source({{1, 2}})},
+      {{CDM::CLibrary, {"getgroups"}}, TR::Source({{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getlogin"}}, TR::Source({{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getlogin_r"}}, TR::Source({{0}})},
 
       // Props
-      {{{"accept"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"atoi"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"atol"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"atoll"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"fgetc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"fgetln"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"fgets"}}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
-      {{{"fgetws"}}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
-      {{{"fscanf"}}, TR::Prop({{0}}, {{}, 2})},
-      {{{"fscanf_s"}}, TR::Prop({{0}}, {{}, {2}})},
-      {{{"sscanf"}}, TR::Prop({{0}}, {{}, 2})},
+      {{CDM::CLibrary, {"accept"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"atoi"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"atol"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"atoll"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"fgetc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"fgetln"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"fgets"}},
+       TR::Prop({{2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"fgetws"}},
+       TR::Prop({{2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"fscanf"}}, TR::Prop({{0}}, {{}, 2})},
+      {{CDM::CLibrary, {"fscanf_s"}}, TR::Prop({{0}}, {{}, 2})},
+      {{CDM::CLibrary, {"sscanf"}}, TR::Prop({{0}}, {{}, 2})},
+      {{CDM::CLibrary, {"sscanf_s"}}, TR::Prop({{0}}, {{}, 2})},
 
-      {{{"getc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"getc_unlocked"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"getdelim"}}, TR::Prop({{3}}, {{0}})},
-      {{{"getline"}}, TR::Prop({{2}}, {{0}})},
-      {{{"getw"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"pread"}}, TR::Prop({{0, 1, 2, 3}}, {{1, ReturnValueIndex}})},
-      {{{"read"}}, TR::Prop({{0, 2}}, {{1, ReturnValueIndex}})},
-      {{{"strchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strrchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"tolower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"toupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"fread"}}, TR::Prop({{3}}, {{0, ReturnValueIndex}})},
-      {{{"recv"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{{"recvfrom"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getc_unlocked"}},
+       TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"getdelim"}}, TR::Prop({{3}}, {{0}})},
+      // TODO: this intends to match the C function `getline()`, but the call
+      // description also matches the C++ function `std::getline()`; it should
+      // be ruled out by some additional logic.
+      {{CDM::CLibrary, {"getline"}}, TR::Prop({{2}}, {{0}})},
+      {{CDM::CLibrary, {"getw"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"pread"}},
+       TR::Prop({{0, 1, 2, 3}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"read"}},
+       TR::Prop({{0, 2}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"fread"}},
+       TR::Prop({{3}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"recv"}},
+       TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"recvfrom"}},
+       TR::Prop({{0}}, {{1, ReturnValueIndex}})},
 
-      {{{"ttyname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"ttyname_r"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"ttyname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"ttyname_r"}},
+       TR::Prop({{0}}, {{1, ReturnValueIndex}})},
 
-      {{{"basename"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"dirname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"fnmatch"}}, TR::Prop({{1}}, {{ReturnValueIndex}})},
-      {{{"memchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"memrchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"rawmemchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"basename"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"dirname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"fnmatch"}}, TR::Prop({{1}}, {{ReturnValueIndex}})},
 
-      {{{"mbtowc"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{{"wctomb"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{{"wcwidth"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"mbtowc"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"wctomb"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"wcwidth"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{{"memcmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{{"memcpy"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{{"memmove"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      // If memmem was called with a tainted needle and the search was
-      // successful, that would mean that the value pointed by the return value
-      // has the same content as the needle. If we choose to go by the policy of
-      // content equivalence implies taintedness equivalence, that would mean
-      // haystack should be considered a propagation source argument.
-      {{{"memmem"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"memcmp"}},
+       TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"memcpy"}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"memmove"}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"bcopy"}}, TR::Prop({{0, 2}}, {{1}})},
 
-      // The comment for memmem above also applies to strstr.
-      {{{"strstr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strcasestr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      // Note: "memmem" and its variants search for a byte sequence ("needle")
+      // in a larger area ("haystack"). Currently we only propagate taint from
+      // the haystack to the result, but in theory tampering with the needle
+      // could also produce incorrect results.
+      {{CDM::CLibrary, {"memmem"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strstr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strcasestr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{{"strchrnul"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      {{{"index"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"rindex"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      // Analogously, the following functions search for a byte within a buffer
+      // and we only propagate taint from the buffer to the result.
+      {{CDM::CLibraryMaybeHardened, {"memchr"}},
+       TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"memrchr"}},
+       TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"rawmemchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"strchr"}},
+       TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"strrchr"}},
+       TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"strchrnul"}},
+       TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"index"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"rindex"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
       // FIXME: In case of arrays, only the first element of the array gets
       // tainted.
-      {{{"qsort"}}, TR::Prop({{0}}, {{0}})},
-      {{{"qsort_r"}}, TR::Prop({{0}}, {{0}})},
+      {{CDM::CLibrary, {"qsort"}}, TR::Prop({{0}}, {{0}})},
+      {{CDM::CLibrary, {"qsort_r"}}, TR::Prop({{0}}, {{0}})},
 
-      {{{"strcmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{{"strcasecmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{{"strncmp"}}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
-      {{{"strncasecmp"}}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
-      {{{"strspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{{"strcspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{{"strpbrk"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strndup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strndupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strcmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strcasecmp"}},
+       TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strncmp"}},
+       TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strncasecmp"}},
+       TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strcspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strpbrk"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      {{CDM::CLibrary, {"strndup"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strndupa"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strdup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strdupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"wcsdup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
       // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
       // See the details here: https://github.com/llvm/llvm-project/pull/66086
 
-      {{{"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{{"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{{"strtoul"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{{"strtoull"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strtoul"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{CDM::CLibrary, {"strtoull"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
 
-      {{{"isalnum"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isalpha"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isascii"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isblank"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"iscntrl"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isgraph"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"islower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isprint"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"ispunct"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isspace"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"isxdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"tolower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"toupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrncat)}},
+      {{CDM::CLibrary, {"isalnum"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isalpha"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isascii"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isblank"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"iscntrl"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isgraph"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"islower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isprint"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"ispunct"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isspace"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"isxdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      {{CDM::CLibraryMaybeHardened, {"strcpy"}},
+       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"stpcpy"}},
+       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"strcat"}},
+       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"wcsncat"}},
+       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"strncpy"}},
        TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrlcpy)}},
-       TR::Prop({{1, 2}}, {{0}})},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrlcat)}},
-       TR::Prop({{1, 2}}, {{0}})},
-      {{CDF_MaybeBuiltin, {{"snprintf"}}},
-       TR::Prop({{1}, 3}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"sprintf"}}},
+      {{CDM::CLibraryMaybeHardened, {"strncat"}},
+       TR::Prop({{0, 1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {"strlcpy"}}, TR::Prop({{1, 2}}, {{0}})},
+      {{CDM::CLibraryMaybeHardened, {"strlcat"}}, TR::Prop({{0, 1, 2}}, {{0}})},
+
+      // Usually the matching mode `CDM::CLibraryMaybeHardened` is sufficient
+      // for unified handling of a function `FOO()` and its hardened variant
+      // `__FOO_chk()`, but in the "sprintf" family the extra parameters of the
+      // hardened variants are inserted into the middle of the parameter list,
+      // so that would not work in their case.
+      // int snprintf(char * str, size_t maxlen, const char * format, ...);
+      {{CDM::CLibrary, {"snprintf"}},
+       TR::Prop({{1, 2}, 3}, {{0, ReturnValueIndex}})},
+      // int sprintf(char * str, const char * format, ...);
+      {{CDM::CLibrary, {"sprintf"}},
        TR::Prop({{1}, 2}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"strcpy"}}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"stpcpy"}}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"strcat"}}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"wcsncat"}}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"strdupa"}}},
-       TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {{"wcsdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      // int __snprintf_chk(char * str, size_t maxlen, int flag, size_t strlen,
+      //                    const char * format, ...);
+      {{CDM::CLibrary, {"__snprintf_chk"}},
+       TR::Prop({{1, 4}, 5}, {{0, ReturnValueIndex}})},
+      // int __sprintf_chk(char * str, int flag, size_t strlen, const char *
+      //                   format, ...);
+      {{CDM::CLibrary, {"__sprintf_chk"}},
+       TR::Prop({{3}, 4}, {{0, ReturnValueIndex}})},
 
       // Sinks
-      {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"popen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execl"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
-      {{{"execle"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
-      {{{"execlp"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
-      {{{"execv"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
-      {{{"execve"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
-      {{{"fexecve"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
-      {{{"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
-      {{{"execvpe"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
-      {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{CDF_MaybeBuiltin, {{"malloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"calloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"alloca"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"memccpy"}}},
-       TR::Sink({{3}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"realloc"}}},
-       TR::Sink({{1}}, MsgTaintedBufferSize)},
-      {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
-      {{{{"setproctitle_fast"}}},
+      {{CDM::CLibrary, {"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"popen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"execl"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"execle"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"execlp"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"execv"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"execve"}},
+       TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"fexecve"}},
+       TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"execvpe"}},
+       TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
+      {{CDM::CLibrary, {"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+
+      // malloc, calloc, alloca, realloc, memccpy
+      // are intentionally not marked as taint sinks because unconditional
+      // reporting for these functions generates many false positives.
+      // These taint sinks should be implemented in other checkers with more
+      // sophisticated sanitation heuristics.
+
+      {{CDM::CLibrary, {"setproctitle"}},
        TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
+      {{CDM::CLibrary, {"setproctitle_fast"}},
+       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)}};
 
-      // SinkProps
-      {{CDF_MaybeBuiltin, BI.getName(Builtin::BImemcpy)},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BImemmove)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrncpy)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrndup)}},
-       TR::SinkProp({{1}}, {{0, 1}}, {{ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"bcopy"}}},
-       TR::SinkProp({{2}}, {{0, 2}}, {{1}}, MsgTaintedBufferSize)}};
-
-  // `getenv` returns taint only in untrusted environments.
   if (TR::UntrustedEnv(C)) {
     // void setproctitle_init(int argc, char *argv[], char *envp[])
+    // TODO: replace `MsgCustomSink` with a message that fits this situation.
+    GlobalCRules.push_back({{CDM::CLibrary, {"setproctitle_init"}},
+                            TR::Sink({{1, 2}}, MsgCustomSink)});
+
+    // `getenv` returns taint only in untrusted environments.
     GlobalCRules.push_back(
-        {{{"setproctitle_init"}}, TR::Sink({{1, 2}}, MsgCustomSink)});
-    GlobalCRules.push_back({{{"getenv"}}, TR::Source({{ReturnValueIndex}})});
+        {{CDM::CLibrary, {"getenv"}}, TR::Source({{ReturnValueIndex}})});
   }
 
   StaticTaintRules.emplace(std::make_move_iterator(GlobalCRules.begin()),
@@ -1089,15 +1103,14 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
   const IdentifierInfo *ID = Call.getCalleeIdentifier();
   if (!ID)
     return;
-  if (!ID->getName().equals("socket"))
+  if (ID->getName() != "socket")
     return;
 
   SourceLocation DomLoc = Call.getArgExpr(0)->getExprLoc();
   StringRef DomName = C.getMacroNameOrSpelling(DomLoc);
   // Allow internal communication protocols.
-  bool SafeProtocol = DomName.equals("AF_SYSTEM") ||
-                      DomName.equals("AF_LOCAL") || DomName.equals("AF_UNIX") ||
-                      DomName.equals("AF_RESERVED_36");
+  bool SafeProtocol = DomName == "AF_SYSTEM" || DomName == "AF_LOCAL" ||
+                      DomName == "AF_UNIX" || DomName == "AF_RESERVED_36";
   if (SafeProtocol)
     return;
 

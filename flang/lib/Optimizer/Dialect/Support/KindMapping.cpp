@@ -180,7 +180,7 @@ static MatchResult parseInt(unsigned &result, const char *&ptr,
 static mlir::LogicalResult matchString(const char *&ptr, const char *endPtr,
                                        llvm::StringRef literal) {
   llvm::StringRef s(ptr, endPtr - ptr);
-  if (s.startswith(literal)) {
+  if (s.starts_with(literal)) {
     ptr += literal.size();
     return mlir::success();
   }

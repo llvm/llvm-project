@@ -10,6 +10,7 @@ set(LIBCXX_SOURCES
   chrono.cpp
   error_category.cpp
   exception.cpp
+  expected.cpp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
@@ -84,11 +85,13 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
+    fstream.cpp
     include/sso_allocator.h
     ios.cpp
     ios.instantiations.cpp
     iostream.cpp
     locale.cpp
+    ostream.cpp
     regex.cpp
     strstream.cpp
     )
@@ -228,20 +231,15 @@ if (LIBCXX_ENABLE_SHARED)
   # Maybe re-export symbols from libc++abi
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
-  if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
-            AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
+  if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
-  endif()
+    target_link_libraries(cxx_shared PRIVATE cxxabi-reexports)
 
-  if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
+    # TODO: These exports controls should not be tied to whether we re-export libc++abi symbols
     target_link_libraries(cxx_shared PRIVATE
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
-      "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
-
-    target_link_libraries(cxx_shared PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.
@@ -304,7 +302,10 @@ if (LIBCXX_ENABLE_STATIC)
     # then its code shouldn't declare them with hidden visibility.  They might
     # actually be provided by a shared library at link time.
     if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete=force-hidden)
+      if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+        append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+      endif()
     endif()
     target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
     # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
@@ -321,12 +322,13 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
+add_dependencies(cxx-test-depends cxx)
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   )
 
-if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
+if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
     )
@@ -334,7 +336,15 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
-    tz.cpp
+    include/tzdb/time_zone_private.h
+    include/tzdb/types_private.h
+    include/tzdb/tzdb_list_private.h
+    include/tzdb/tzdb_private.h
+    # TODO TZDB The exception could be moved in chrono once the TZDB library
+    # is no longer experimental.
+    chrono_exception.cpp
+    time_zone.cpp
+    tzdb.cpp
     tzdb_list.cpp
     )
 endif()
@@ -360,6 +370,7 @@ set_target_properties(cxx_experimental
 )
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
+add_dependencies(cxx-test-depends cxx_experimental)
 
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared
@@ -397,10 +408,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
     endif()
+    if(LIBCXX_INSTALL_MODULES)
+      set(module_install_target install-cxx-modules)
+    endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
@@ -408,6 +423,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -DCMAKE_INSTALL_DO_STRIP=1

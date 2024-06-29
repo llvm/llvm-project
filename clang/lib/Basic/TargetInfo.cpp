@@ -157,6 +157,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasAArch64SVETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
+  HasUnalignedAccess = false;
   ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.
@@ -405,6 +406,16 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     LongDoubleAlign = 64;
   }
 
+  // HLSL explicitly defines the sizes and formats of some data types, and we
+  // need to conform to those regardless of what architecture you are targeting.
+  if (Opts.HLSL) {
+    LongWidth = LongAlign = 64;
+    if (!Opts.NativeHalfType) {
+      HalfFormat = &llvm::APFloat::IEEEsingle();
+      HalfWidth = HalfAlign = 32;
+    }
+  }
+
   if (Opts.OpenCL) {
     // OpenCL C requires specific widths for types, irrespective of
     // what these normally are for the target.
@@ -551,26 +562,26 @@ ParsedTargetAttr TargetInfo::parseTargetAttr(StringRef Features) const {
     // TODO: Support the fpmath option. It will require checking
     // overall feature validity for the function with the rest of the
     // attributes on the function.
-    if (Feature.startswith("fpmath="))
+    if (Feature.starts_with("fpmath="))
       continue;
 
-    if (Feature.startswith("branch-protection=")) {
+    if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
       continue;
     }
 
     // While we're here iterating check for a different target cpu.
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "arch=";
       else
         Ret.CPU = Feature.split("=").second.trim();
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("no-"))
+    } else if (Feature.starts_with("no-"))
       Ret.Features.push_back("-" + Feature.split("-").second.str());
     else
       Ret.Features.push_back("+" + Feature.str());
@@ -923,6 +934,10 @@ bool TargetInfo::validateInputConstraint(
   }
 
   return true;
+}
+
+bool TargetInfo::validatePointerAuthKey(const llvm::APSInt &value) const {
+  return false;
 }
 
 void TargetInfo::CheckFixedPointBits() const {

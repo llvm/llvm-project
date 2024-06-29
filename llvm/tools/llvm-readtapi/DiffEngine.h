@@ -94,7 +94,7 @@ private:
   /// The order is the file from which the diff is found.
   InterfaceInputOrder Order;
   const MachO::Symbol *Val;
-  StringLiteral getSymbolNamePrefix(MachO::SymbolKind Kind);
+  StringLiteral getSymbolNamePrefix(MachO::EncodeKind Kind);
 };
 
 class DiffStrVec : public AttributeDiff {

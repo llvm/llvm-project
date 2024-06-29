@@ -62,18 +62,18 @@ DiffScalarVal<bool, AD_Diff_Scalar_Bool>::print(raw_ostream &OS,
 
 } // end namespace llvm
 
-StringLiteral SymScalar::getSymbolNamePrefix(MachO::SymbolKind Kind) {
+StringLiteral SymScalar::getSymbolNamePrefix(MachO::EncodeKind Kind) {
   switch (Kind) {
-  case MachO::SymbolKind::GlobalSymbol:
+  case MachO::EncodeKind::GlobalSymbol:
     return StringLiteral("");
-  case MachO::SymbolKind::ObjectiveCClass:
+  case MachO::EncodeKind::ObjectiveCClass:
     return ObjC2MetaClassNamePrefix;
-  case MachO::SymbolKind ::ObjectiveCClassEHType:
+  case MachO::EncodeKind ::ObjectiveCClassEHType:
     return ObjC2EHTypePrefix;
-  case MachO::SymbolKind ::ObjectiveCInstanceVariable:
+  case MachO::EncodeKind ::ObjectiveCInstanceVariable:
     return ObjC2IVarPrefix;
   }
-  llvm_unreachable("Unknown llvm::MachO::SymbolKind enum");
+  llvm_unreachable("Unknown llvm::MachO::EncodeKind enum");
 }
 
 std::string SymScalar::getFlagString(const MachO::Symbol *Sym) {
@@ -99,7 +99,7 @@ std::string SymScalar::getFlagString(const MachO::Symbol *Sym) {
 }
 
 void SymScalar::print(raw_ostream &OS, std::string Indent, MachO::Target Targ) {
-  if (Val->getKind() == MachO::SymbolKind::ObjectiveCClass) {
+  if (Val->getKind() == MachO::EncodeKind::ObjectiveCClass) {
     if (Targ.Arch == MachO::AK_i386 && Targ.Platform == MachO::PLATFORM_MACOS) {
       OS << Indent << "\t\t" << ((Order == lhs) ? "< " : "> ")
          << ObjC1ClassNamePrefix << Val->getName() << getFlagString(Val)

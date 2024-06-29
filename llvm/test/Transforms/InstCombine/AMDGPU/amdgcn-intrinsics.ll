@@ -2599,7 +2599,8 @@ declare i32 @llvm.amdgcn.ballot.i32(i1) nounwind readnone convergent
 
 define i64 @ballot_nocombine_64(i1 %i) {
 ; CHECK-LABEL: @ballot_nocombine_64(
-; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[I:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[I:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %b = call i64 @llvm.amdgcn.ballot.i64(i1 %i)
@@ -2616,7 +2617,8 @@ define i64 @ballot_zero_64() {
 
 define i64 @ballot_one_64() {
 ; CHECK-LABEL: @ballot_one_64(
-; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
+; CHECK-NEXT:    [[B:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)
@@ -2712,7 +2714,7 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_constant(
-; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
@@ -2735,7 +2737,7 @@ define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
 
 define i32 @readfirstlane_idempotent(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_idempotent(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2746,7 +2748,7 @@ define i32 @readfirstlane_idempotent(i32 %arg) {
 
 define i32 @readfirstlane_readlane(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_readlane(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2757,10 +2759,10 @@ define i32 @readfirstlane_readlane(i32 %arg) {
 define i32 @readfirstlane_readfirstlane_different_block(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_readfirstlane_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[READ0]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[READ0]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:
@@ -2775,10 +2777,10 @@ bb1:
 define i32 @readfirstlane_readlane_different_block(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_readlane_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 0)
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 0)
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[READ0]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[READ0]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:
@@ -2798,7 +2800,7 @@ declare i32 @llvm.amdgcn.readlane(i32, i32)
 
 define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: @readlane_constant(
-; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 7)
+; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 7)
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
@@ -2821,7 +2823,7 @@ define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
 
 define i32 @readlane_idempotent(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: @readlane_idempotent(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 %lane)
@@ -2831,8 +2833,8 @@ define i32 @readlane_idempotent(i32 %arg, i32 %lane) {
 
 define i32 @readlane_idempotent_different_lanes(i32 %arg, i32 %lane0, i32 %lane1) {
 ; CHECK-LABEL: @readlane_idempotent_different_lanes(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 [[LANE0:%.*]])
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[READ0]], i32 [[LANE1:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 [[LANE0:%.*]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[READ0]], i32 [[LANE1:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
   %read0 = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 %lane0)
@@ -2842,7 +2844,7 @@ define i32 @readlane_idempotent_different_lanes(i32 %arg, i32 %lane0, i32 %lane1
 
 define i32 @readlane_readfirstlane(i32 %arg) {
 ; CHECK-LABEL: @readlane_readfirstlane(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2853,10 +2855,10 @@ define i32 @readlane_readfirstlane(i32 %arg) {
 define i32 @readlane_idempotent_different_block(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: @readlane_idempotent_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[READ0]], i32 [[LANE]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[READ0]], i32 [[LANE]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:
@@ -2872,10 +2874,10 @@ bb1:
 define i32 @readlane_readfirstlane_different_block(i32 %arg) {
 ; CHECK-LABEL: @readlane_readfirstlane_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[READ0]], i32 0)
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[READ0]], i32 0)
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:
@@ -2931,37 +2933,37 @@ define amdgpu_kernel void @update_dpp_undef_old(ptr addrspace(1) %out, i32 %in1)
 ; llvm.amdgcn.permlane16
 ; --------------------------------------------------------------------
 
-declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1 immarg, i1 immarg)
 
 define amdgpu_kernel void @permlane16(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  %res = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlane16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  %res = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  %res = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
@@ -2970,37 +2972,37 @@ define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(ptr addrspace(1) 
 ; llvm.amdgcn.permlanex16
 ; --------------------------------------------------------------------
 
-declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1 immarg, i1 immarg)
 
 define amdgpu_kernel void @permlanex16(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  %res = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlanex16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  %res = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  %res = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }

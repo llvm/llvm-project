@@ -252,8 +252,7 @@ public:
   }
 
   bool isValid(unsigned S) const override {
-    return S >= static_cast<unsigned>(System) &&
-           S <= static_cast<unsigned>(Last);
+    return S <= static_cast<unsigned>(Last);
   }
 
   ArrayRef<unsigned> getRuntimeValues() const override {

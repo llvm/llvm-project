@@ -9,8 +9,8 @@
 ; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
 ; RUN: opt < %s -S -mtriple=amdgcn-unknown-unknown -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
 
-; RUN: llc < %s -march=r600 -mcpu=cypress -disable-promote-alloca-to-vector | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=cypress | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=cypress -disable-promote-alloca-to-vector | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
 
 ; HSAOPT: @mova_same_clause.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] poison, align 4
 ; HSAOPT: @high_alignment.stack = internal unnamed_addr addrspace(3) global [256 x [8 x i32]] poison, align 16
@@ -52,9 +52,9 @@
 ; HSAOPT: [[LDZU:%[0-9]+]] = load i32, ptr addrspace(4) [[GEP1]], align 4, !range !2, !invariant.load !1
 ; HSAOPT: [[EXTRACTY:%[0-9]+]] = lshr i32 [[LDXY]], 16
 
-; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.x(), !range !3
-; HSAOPT: [[WORKITEM_ID_Y:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.y(), !range !3
-; HSAOPT: [[WORKITEM_ID_Z:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.z(), !range !3
+; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
+; HSAOPT: [[WORKITEM_ID_Y:%[0-9]+]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.y()
+; HSAOPT: [[WORKITEM_ID_Z:%[0-9]+]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.z()
 
 ; HSAOPT: [[Y_SIZE_X_Z_SIZE:%[0-9]+]] = mul nuw nsw i32 [[EXTRACTY]], [[LDZU]]
 ; HSAOPT: [[YZ_X_XID:%[0-9]+]] = mul i32 [[Y_SIZE_X_Z_SIZE]], [[WORKITEM_ID_X]]
@@ -68,11 +68,11 @@
 ; HSAOPT: %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(3) [[LOCAL_GEP]], i32 0, i32 1
 
 
-; NOHSAOPT: call i32 @llvm.r600.read.local.size.y(), !range !1
-; NOHSAOPT: call i32 @llvm.r600.read.local.size.z(), !range !1
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !2
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !2
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !2
+; NOHSAOPT: call range(i32 0, 257) i32 @llvm.r600.read.local.size.y()
+; NOHSAOPT: call range(i32 0, 257) i32 @llvm.r600.read.local.size.z()
+; NOHSAOPT: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
+; NOHSAOPT: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.y()
+; NOHSAOPT: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.z()
 define amdgpu_kernel void @mova_same_clause(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
@@ -209,8 +209,8 @@ for.end:
 
 ; R600-VECT: MOVA_INT
 
-; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:6 ; encoding: [0x06,0x00,0x68,0xe0
-; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; encoding: [0x04,0x00,0x68,0xe0
+; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:2 ; encoding: [0x02,0x00,0x68,0xe0
+; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x68,0xe0
 ; Loaded value is 0 or 1, so sext will become zext, so we get buffer_load_ushort instead of buffer_load_sshort.
 ; SI-ALLOCA: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0
 
@@ -238,8 +238,8 @@ entry:
 ; SI-PROMOTE-VECT-DAG: s_lshl_b32
 ; SI-PROMOTE-VECT-DAG: v_lshrrev
 
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; encoding: [0x04,0x00,0x60,0xe0
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:5 ; encoding: [0x05,0x00,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:1 ; encoding: [0x01,0x00,0x60,0xe0
 define amdgpu_kernel void @char_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i8], addrspace(5)
@@ -258,7 +258,7 @@ entry:
 ; FUNC-LABEL: {{^}}no_overlap:
 ;
 ; A total of 5 bytes should be allocated and used.
-; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ;
+; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ;
 define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)
@@ -530,11 +530,6 @@ attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-s
 attributes #1 = { nounwind "amdgpu-flat-work-group-size"="1,256" }
 
 !llvm.module.flags = !{!99}
-!99 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!99 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
 ; HSAOPT: !1 = !{}
-; HSAOPT: !2 = !{i32 0, i32 257}
-; HSAOPT: !3 = !{i32 0, i32 256}
-
-; NOHSAOPT: !1 = !{i32 0, i32 257}
-; NOHSAOPT: !2 = !{i32 0, i32 256}

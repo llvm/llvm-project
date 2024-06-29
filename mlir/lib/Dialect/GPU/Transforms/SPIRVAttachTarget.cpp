@@ -64,13 +64,13 @@ void SPIRVAttachTarget::runOnOperation() {
   Version version = versionSymbol.value();
   SmallVector<Capability, 4> capabilities;
   SmallVector<Extension, 8> extensions;
-  for (auto cap : spirvCapabilities) {
+  for (const auto &cap : spirvCapabilities) {
     auto capSymbol = symbolizeCapability(cap);
     if (capSymbol)
       capabilities.push_back(capSymbol.value());
   }
   ArrayRef<Capability> caps(capabilities);
-  for (auto ext : spirvExtensions) {
+  for (const auto &ext : spirvExtensions) {
     auto extSymbol = symbolizeExtension(ext);
     if (extSymbol)
       extensions.push_back(extSymbol.value());
@@ -91,7 +91,7 @@ void SPIRVAttachTarget::runOnOperation() {
       targets.append(attrs->getValue().begin(), attrs->getValue().end());
     targets.push_back(target);
     // Remove any duplicate targets.
-    targets.erase(std::unique(targets.begin(), targets.end()), targets.end());
+    targets.erase(llvm::unique(targets), targets.end());
     // Update the target attribute array.
     gpuModule.setTargetsAttr(builder.getArrayAttr(targets));
   });

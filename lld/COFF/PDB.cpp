@@ -268,7 +268,7 @@ void PDBLinker::pdbMakeAbsolute(SmallVectorImpl<char> &fileName) {
   // decide that it's a unix path if we're fairly certain.  Specifically, if
   // it starts with a forward slash.
   SmallString<128> absoluteFileName = ctx.config.pdbSourcePath;
-  sys::path::Style guessedStyle = absoluteFileName.startswith("/")
+  sys::path::Style guessedStyle = absoluteFileName.starts_with("/")
                                       ? sys::path::Style::posix
                                       : sys::path::Style::windows;
   sys::path::append(absoluteFileName, guessedStyle, fileName);
@@ -832,7 +832,7 @@ void DebugSHandler::advanceRelocIndex(SectionChunk *sc,
   assert(vaBegin > 0);
   auto relocs = sc->getRelocs();
   for (; nextRelocIndex < relocs.size(); ++nextRelocIndex) {
-    if (relocs[nextRelocIndex].VirtualAddress >= vaBegin)
+    if (relocs[nextRelocIndex].VirtualAddress >= (uint32_t)vaBegin)
       break;
   }
 }
@@ -1726,15 +1726,15 @@ void PDBLinker::commit(codeview::GUID *guid) {
   }
 }
 
-static uint32_t getSecrelReloc(llvm::COFF::MachineTypes machine) {
-  switch (machine) {
-  case AMD64:
+static uint32_t getSecrelReloc(Triple::ArchType arch) {
+  switch (arch) {
+  case Triple::x86_64:
     return COFF::IMAGE_REL_AMD64_SECREL;
-  case I386:
+  case Triple::x86:
     return COFF::IMAGE_REL_I386_SECREL;
-  case ARMNT:
+  case Triple::thumb:
     return COFF::IMAGE_REL_ARM_SECREL;
-  case ARM64:
+  case Triple::aarch64:
     return COFF::IMAGE_REL_ARM64_SECREL;
   default:
     llvm_unreachable("unknown machine type");
@@ -1752,7 +1752,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
                           DebugLinesSubsectionRef &lines,
                           uint32_t &offsetInLinetable) {
   ExitOnError exitOnErr;
-  const uint32_t secrelReloc = getSecrelReloc(c->file->ctx.config.machine);
+  const uint32_t secrelReloc = getSecrelReloc(c->getArch());
 
   for (SectionChunk *dbgC : c->file->getDebugChunks()) {
     if (dbgC->getSectionName() != ".debug$S")

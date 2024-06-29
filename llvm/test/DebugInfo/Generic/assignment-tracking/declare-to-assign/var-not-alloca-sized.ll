@@ -1,4 +1,5 @@
 ; RUN: opt -passes=declare-to-assign -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=declare-to-assign -S %s -o - | FileCheck %s
 
 ;; The variable doesn't fill the whole alloca which has a range of different
 ;; sized stores to it, overlapping (or not) the variable in various ways. Check
@@ -16,24 +17,24 @@ entry:
   %0 = alloca [4 x i16], align 4
   call void @llvm.dbg.declare(metadata ptr %0, metadata !15, metadata !DIExpression()), !dbg !16
 ; CHECK: %0 = alloca [4 x i16], align 4, !DIAssignID ![[ID1:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i1 undef, metadata ![[#]], metadata !DIExpression(), metadata ![[ID1]], metadata ptr %0, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i1 undef, ![[#]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
   %a = getelementptr inbounds [4 x i16], ptr %0, i32 0, i32 0
   %a.5 = getelementptr inbounds [4 x i16], ptr %0, i32 0, i32 1
   %b = getelementptr inbounds [4 x i16], ptr %0, i32 0, i32 2
   store i64 1, ptr %a, align 4
 ; CHECK: store i64 1, ptr %a, align 4, !DIAssignID ![[ID2:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i64 1, metadata ![[#]], metadata !DIExpression(), metadata ![[ID2]], metadata ptr %a, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i64 1, ![[#]], !DIExpression(), ![[ID2]], ptr %a, !DIExpression(),
   store i64 2, ptr %b, align 4
 ;; %b is outside the variable bounds, no debug intrinsic needed.
   store i16 3, ptr %a.5, align 4
 ; CHECK: store i16 3, ptr %a.5, align 4, !DIAssignID ![[ID3:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i16 3, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 16, 16), metadata ![[ID3]], metadata ptr %a.5, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i16 3, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 16, 16), ![[ID3]], ptr %a.5, !DIExpression(),
   store i32 4, ptr %a.5, align 4
 ; CHECK: store i32 4, ptr %a.5, align 4, !DIAssignID ![[ID4:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i32 4, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 16, 16), metadata ![[ID4]], metadata ptr %a.5, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 4, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 16, 16), ![[ID4]], ptr %a.5, !DIExpression(),
   store i32 5, ptr %a, align 4
 ; CHECK: store i32 5, ptr %a, align 4, !DIAssignID ![[ID5:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i32 5, metadata ![[#]], metadata !DIExpression(), metadata ![[ID5]], metadata ptr %a, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 5, ![[#]], !DIExpression(), ![[ID5]], ptr %a, !DIExpression(),
   ret i32 0
 }
 

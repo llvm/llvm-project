@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRAMDGPUTransforms
   MLIRAMDGPUUtils
   MLIRArithDialect
   MLIRControlFlowDialect
+  MLIRFuncDialect
   MLIRIR
   MLIRPass
   MLIRTransforms

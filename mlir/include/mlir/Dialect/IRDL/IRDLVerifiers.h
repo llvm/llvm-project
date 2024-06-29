@@ -30,7 +30,10 @@ class DynamicTypeDefinition;
 namespace mlir {
 namespace irdl {
 
+class AttributeOp;
 class Constraint;
+class OperationOp;
+class TypeOp;
 
 /// Provides context to the verification of constraints.
 /// It contains the assignment of variables to attributes, and the assignment
@@ -97,6 +100,48 @@ public:
 
 private:
   Attribute expectedAttribute;
+};
+
+/// A constraint that checks that an attribute is of a given attribute base
+/// (e.g. IntegerAttr).
+class BaseAttrConstraint : public Constraint {
+public:
+  BaseAttrConstraint(TypeID baseTypeID, StringRef baseName)
+      : baseTypeID(baseTypeID), baseName(baseName) {}
+
+  virtual ~BaseAttrConstraint() = default;
+
+  LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute attr,
+                       ConstraintVerifier &context) const override;
+
+private:
+  /// The expected base attribute typeID.
+  TypeID baseTypeID;
+
+  /// The base attribute name, only used for error reporting.
+  StringRef baseName;
+};
+
+/// A constraint that checks that a type is of a given type base (e.g.
+/// IntegerType).
+class BaseTypeConstraint : public Constraint {
+public:
+  BaseTypeConstraint(TypeID baseTypeID, StringRef baseName)
+      : baseTypeID(baseTypeID), baseName(baseName) {}
+
+  virtual ~BaseTypeConstraint() = default;
+
+  LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute attr,
+                       ConstraintVerifier &context) const override;
+
+private:
+  /// The expected base type typeID.
+  TypeID baseTypeID;
+
+  /// The base type name, only used for error reporting.
+  StringRef baseName;
 };
 
 /// A constraint that checks that an attribute is of a
@@ -204,6 +249,14 @@ private:
   std::optional<SmallVector<unsigned>> argumentConstraints;
   std::optional<size_t> blockCount;
 };
+
+/// Generate an op verifier function from the given IRDL operation definition.
+llvm::unique_function<LogicalResult(Operation *) const> createVerifier(
+    OperationOp operation,
+    const DenseMap<irdl::TypeOp, std::unique_ptr<DynamicTypeDefinition>>
+        &typeDefs,
+    const DenseMap<irdl::AttributeOp, std::unique_ptr<DynamicAttrDefinition>>
+        &attrDefs);
 } // namespace irdl
 } // namespace mlir
 

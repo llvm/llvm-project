@@ -87,29 +87,6 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><a id="alpha.core.CallAndMessageUnInitRefArg"><div class="namedescr expandable"><span class="name">
-alpha.core.CallAndMessageUnInitRefArg</span><span class="lang">
-(C, C++)</span><div class="descr">
-Check for uninitialized arguments in function calls and Objective-C
-message expressions.</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test(void) {
-  int t;
-  int &p = t;
-  int &s = p;
-  int &q = s;
-  foo(q); // warn
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test(void) {
-  int x;
-  foo(&x); // warn
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.core.CastSize"><div class="namedescr expandable"><span class="name">
 alpha.core.CastSize</span><span class="lang">
 (C)</span><div class="descr">
@@ -262,22 +239,6 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><a id="alpha.core.SizeofPtr"><div class="namedescr expandable"><span class="name">
-alpha.core.SizeofPtr</span><span class="lang">
-(C)</span><div class="descr">
-Warn about unintended use of <code>sizeof()</code> on pointer
-expressions.</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-struct s {};
-
-int test(struct s *p) {
-  return sizeof(p);
-    // warn: sizeof(ptr) can produce an unexpected result
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.core.StackAddressAsyncEscape"><div class="namedescr expandable"><span class="name">
 alpha.core.StackAddressAsyncEscape</span><span class="lang">
 (C)</span><div class="descr">
@@ -330,26 +291,6 @@ void test(int x) {
 <tbody>
 
 
-<tr><td><a id="alpha.cplusplus.ArrayDelete"><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.ArrayDelete</span><span class="lang">
-(C++)</span><div class="descr">
-Reports destructions of arrays of polymorphic objects that are destructed as
-their base class
-</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-Base *create() {
-  Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
-  return x;
-}
-
-void sink(Base *x) {
-  delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' undefined
-}
-
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.cplusplus.DeleteWithNonVirtualDtor"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.DeleteWithNonVirtualDtor</span><span class="lang">
 (C++)</span><div class="descr">
@@ -369,25 +310,6 @@ void sink(NonVirtual *x) {
             //       destructor
 }
 </pre></div></div></td></tr>
-
-<tr><td><a id="alpha.cplusplus.EnumCastOutOfRange"><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.EnumCastOutOfRange</span><span class="lang">
-(C++)</span><div class="descr">
-  Check for integer to enumeration casts that could result in undefined values.
-</div></div></a></td>
-  <td><div class="exampleContainer expandable">
-    <div class="example"><pre>
-enum TestEnum {
-  A = 0
-};
-
-void foo() {
-  TestEnum t = static_cast<TestEnum>(-1);
-      // warn: the value provided to the cast expression is not in
-               the valid range of values for the enum
-}
-</pre></div></div></td></tr>
-
 
 <tr><td><a id="alpha.cplusplus.InvalidatedIterator"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.InvalidatedIterator</span><span class="lang">
@@ -842,39 +764,6 @@ void test() {
 <tbody>
 
 
-<tr><td><a id="alpha.unix.BlockInCriticalSection"><div class="namedescr expandable"><span class="name">
-alpha.unix.BlockInCriticalSection</span><span class="lang">
-(C)</span><div class="descr">
-Check for calls to blocking functions inside a critical section. Applies to:
-<div class=functions>
-lock<br>
-unlock<br>
-sleep<br>
-getc<br>
-fgets<br>
-read<br>
-revc<br>
-pthread_mutex_lock<br>
-pthread_mutex_unlock<br>
-mtx_lock<br>
-mtx_timedlock<br>
-mtx_trylock<br>
-mtx_unlock<br>
-lock_guard<br>
-unique_lock</div>
-</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test() {
-  std::mutex m;
-  m.lock();
-  sleep(3); // warn: a blocking function sleep is called inside a critical
-            //       section
-  m.unlock();
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.unix.Chroot"><div class="namedescr expandable"><span class="name">
 alpha.unix.Chroot</span><span class="lang">
 (C)</span><div class="descr">
@@ -968,63 +857,6 @@ void test() {
     fclose(F);
 
   fclose(F); // warn: closing a previously closed file stream
-}
-</pre></div></div></td></tr>
-
-
-<tr><td><a id="alpha.unix.Stream"><div class="namedescr expandable"><span class="name">
-alpha.unix.Stream</span><span class="lang">
-(C)</span><div class="descr">
-Check stream handling functions:<div class=functions>fopen<br>
-tmpfile<br>
-fclose<br>
-fread<br>
-fwrite<br>
-fseek<br>
-ftell<br>
-rewind<br>
-fgetpos<br>
-fsetpos<br>
-clearerr<br>
-feof<br>
-ferror<br>
-fileno</div></div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-} // warn: opened file is never closed
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-  fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
-  fclose(p);
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-
-  if (p)
-    fseek(p, 1, 3);
-     // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
-
-  fclose(p);
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-  fclose(p);
-  fclose(p); // warn: already closed
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = tmpfile();
-  ftell(p); // warn: stream pointer might be NULL
-  fclose(p);
 }
 </pre></div></div></td></tr>
 

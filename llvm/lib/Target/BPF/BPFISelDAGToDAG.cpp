@@ -46,12 +46,10 @@ class BPFDAGToDAGISel : public SelectionDAGISel {
   const BPFSubtarget *Subtarget;
 
 public:
-  static char ID;
-
   BPFDAGToDAGISel() = delete;
 
   explicit BPFDAGToDAGISel(BPFTargetMachine &TM)
-      : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -94,11 +92,18 @@ private:
   // Mapping from ConstantStruct global value to corresponding byte-list values
   std::map<const void *, val_vec_type> cs_vals_;
 };
+
+class BPFDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  BPFDAGToDAGISelLegacy(BPFTargetMachine &TM)
+      : SelectionDAGISelLegacy(ID, std::make_unique<BPFDAGToDAGISel>(TM)) {}
+};
 } // namespace
 
-char BPFDAGToDAGISel::ID = 0;
+char BPFDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(BPFDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(BPFDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 // ComplexPattern used on BPF Load/Store instructions
 bool BPFDAGToDAGISel::SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
@@ -192,22 +197,8 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
-  case ISD::SDIV: {
-    if (!Subtarget->hasSdivSmod()) {
-      DebugLoc Empty;
-      const DebugLoc &DL = Node->getDebugLoc();
-      if (DL != Empty)
-        errs() << "Error at line " << DL.getLine() << ": ";
-      else
-        errs() << "Error: ";
-      errs() << "Unsupport signed division for DAG: ";
-      Node->print(errs(), CurDAG);
-      errs() << "Please convert to unsigned div/mod.\n";
-    }
-    break;
-  }
   case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
     case Intrinsic::bpf_load_byte:
     case Intrinsic::bpf_load_half:
@@ -256,7 +247,9 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
   bool to_replace = false;
   SDLoc DL(Node);
   const LoadSDNode *LD = cast<LoadSDNode>(Node);
-  uint64_t size = LD->getMemOperand()->getSize();
+  if (!LD->getMemOperand()->getSize().hasValue())
+    return;
+  uint64_t size = LD->getMemOperand()->getSize().getValue();
 
   if (!size || size > 8 || (size & (size - 1)) || !LD->isSimple())
     return;
@@ -483,7 +476,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
   if (BaseV.getOpcode() != ISD::INTRINSIC_W_CHAIN)
     return;
 
-  unsigned IntNo = cast<ConstantSDNode>(BaseV->getOperand(1))->getZExtValue();
+  unsigned IntNo = BaseV->getConstantOperandVal(1);
   uint64_t MaskV = MaskN->getZExtValue();
 
   if (!((IntNo == Intrinsic::bpf_load_byte && MaskV == 0xFF) ||
@@ -501,5 +494,5 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
 }
 
 FunctionPass *llvm::createBPFISelDag(BPFTargetMachine &TM) {
-  return new BPFDAGToDAGISel(TM);
+  return new BPFDAGToDAGISelLegacy(TM);
 }

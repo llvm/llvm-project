@@ -1,4 +1,5 @@
 ; RUN: opt < %s -aarch64-stack-tagging -S -o - | FileCheck %s
+; RUN: opt < %s -aarch64-stack-tagging -S -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -20,8 +21,8 @@ entry:
 
 ; CHECK-LABEL: define void @DbgIntrinsics(
 ; CHECK:  [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; CHECK:  call void @llvm.dbg.declare(metadata ptr [[X]],
-; CHECK:  call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]])
+; CHECK:  #dbg_declare(ptr [[X]],
+; CHECK:  #dbg_value(!DIArgList(ptr [[X]], ptr [[X]])
 
 
 !llvm.dbg.cu = !{!0}

@@ -66,6 +66,23 @@ define void @types() {
   ret void
 }
 
+; Target extension types:
+define target("target.ext.1") @target_ext_01(target("target.ext.1") %0) {
+  ret target("target.ext.1") %0
+}
+
+define target("target.ext.2", i8, i1) @target_ext_02(target("target.ext.2", i8, i1) %0) {
+  ret target("target.ext.2", i8, i1) %0
+}
+
+define target("target.ext.3", 7) @target_ext_03(target("target.ext.3", 7) %0) {
+  ret target("target.ext.3", 7) %0
+}
+
+define target("target.ext.4", i1, i32, 7) @target_ext_04(target("target.ext.4", i1, i32, 7) %0) {
+  ret target("target.ext.4", i1, i32, 7) %0
+}
+
 define i32 @iops(i32 %a, i32 %b) {
   %1 = add i32 %a, %b
   %2 = mul i32 %a, %1
@@ -269,6 +286,17 @@ exit:
   ret void
 }
 
+define void @operandbundles() personality ptr @personalityFn {
+  call void @decl() [ "foo"(), "bar\00x"(i32 0, ptr null, token none) ]
+  invoke void @decl() [ "baz"(label %bar) ] to label %foo unwind label %bar
+foo:
+  ret void
+bar:
+  %1 = landingpad { ptr, i32 }
+          cleanup
+  ret void
+}
+
 define void @with_debuginfo() !dbg !4 {
   ret void, !dbg !7
 }
@@ -285,6 +313,81 @@ entry:
   call void @llvm.lifetime.start.p0(i64 1, ptr %0)
   call void @llvm.lifetime.end.p0(i64 1, ptr %0)
   call void @llvm.stackrestore(ptr %sp)
+  ret void
+}
+
+define void @test_fast_math_flags(i1 %c, float %a, float %b) {
+entry:
+  %select.f.1 = select i1 %c, float %a, float %b
+  %select.f.2 = select nsz i1 %c, float %a, float %b
+  %select.f.3 = select fast i1 %c, float %a, float %b
+  %select.f.4 = select nnan arcp afn i1 %c, float %a, float %b
+
+  br i1 %c, label %choose_a, label %choose_b
+
+choose_a:
+  br label %final
+
+choose_b:
+  br label %final
+
+final:
+  %phi.f.1 = phi float  [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.2 = phi nsz float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.3 = phi fast float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.4 = phi nnan arcp afn float [ %a, %choose_a ], [ %b, %choose_b ]
+  ret void
+}
+
+define float @test_fast_math_flags_call_inner(float %a) {
+  ret float %a
+}
+
+define void @test_fast_math_flags_call_outer(float %a) {
+  %a.1 = call float @test_fast_math_flags_call_inner(float %a)
+  %a.2 = call nsz float @test_fast_math_flags_call_inner(float %a)
+  %a.3 = call fast float @test_fast_math_flags_call_inner(float %a)
+  %a.4 = call nnan arcp afn float @test_fast_math_flags_call_inner(float %a)
+  ret void
+}
+
+define void @test_func_prefix_data_01() prefix i32 123 {
+  ret void
+}
+
+define void @test_func_prefix_data_02() prefix i64 2000 {
+  ret void
+}
+
+%func_prolog_struct = type <{ i8, i8, ptr }>
+
+define void @test_func_prologue_data_01() prologue %func_prolog_struct <{ i8 235, i8 8, ptr zeroinitializer}> {
+  ret void
+}
+
+
+define void @test_call_br_01(i32 %input) {
+entry:
+  callbr void asm "nop", "r,!i"(i32 %input) to label %bb_01 [label %bb_02]
+
+bb_01:
+  ret void
+bb_02:
+  ret void
+}
+
+define void @test_call_br_02(i32 %input0, i32 %input1) {
+entry:
+  ; Multiple indirect destinations, operand bundles, and arguments
+  callbr void asm "nop", "r,r,!i,!i"(i32 %input0, i32 %input1)
+    ["op0"(i32 %input1), "op1"(label %bb_02)]
+    to label %bb_01 [label %bb_03, label %bb_02]
+
+bb_01:
+  ret void
+bb_02:
+  ret void
+bb_03:
   ret void
 }
 

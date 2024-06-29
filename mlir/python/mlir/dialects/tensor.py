@@ -4,6 +4,7 @@
 
 from ._tensor_ops_gen import *
 from ._tensor_ops_gen import _Dialect
+from ..extras.meta import region_op
 
 try:
     from ..ir import *
@@ -40,3 +41,9 @@ class EmptyOp(EmptyOp):
                 dynamic_sizes.append(s)
         result_type = RankedTensorType.get(static_sizes, element_type)
         super().__init__(result_type, dynamic_sizes, loc=loc, ip=ip)
+
+
+generate = region_op(
+    lambda result, dynamic_extents: GenerateOp(result, dynamic_extents),
+    terminator=lambda args: YieldOp(args[0]),
+)

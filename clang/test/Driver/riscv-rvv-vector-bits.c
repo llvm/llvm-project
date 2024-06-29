@@ -44,7 +44,7 @@
 
 // CHECK-BAD-VALUE-ERROR: error: unsupported argument '{{.*}}' to option '-mrvv-vector-bits='
 
-// Error if using attribute without -msve-vector-bits=<bits> or if using -msve-vector-bits=<bits>+ syntax
+// Error if using attribute without -mrvv-vector-bits=<bits> or if using -mrvv-vector-bits=<bits>+ syntax
 // -----------------------------------------------------------------------------
 // RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
 // RUN:  -march=rv64gc_zve64x 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s

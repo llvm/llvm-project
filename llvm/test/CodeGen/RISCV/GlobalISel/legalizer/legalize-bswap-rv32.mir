@@ -2,7 +2,9 @@
 # RUN: llc -mtriple=riscv32 -run-pass=legalizer %s -o - \
 # RUN:   | FileCheck %s --check-prefix=RV32I
 # RUN: llc -mtriple=riscv32 -mattr=+zbb -run-pass=legalizer %s -o - \
-# RUN:   | FileCheck %s --check-prefix=RV32ZBB
+# RUN:   | FileCheck %s --check-prefix=RV32ZBB_OR_RV32ZBKB
+# RUN: llc -mtriple=riscv32 -mattr=+zbkb -run-pass=legalizer %s -o - \
+# RUN:   | FileCheck %s --check-prefix=RV32ZBB_OR_RV32ZBKB
 
 ---
 name:            bswap_i16
@@ -23,16 +25,16 @@ body:             |
     ; RV32I-NEXT: $x10 = COPY [[AND]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV32ZBB-LABEL: name: bswap_i16
-    ; RV32ZBB: liveins: $x10
-    ; RV32ZBB-NEXT: {{  $}}
-    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; RV32ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-    ; RV32ZBB-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[ASSERT_ZEXT]]
-    ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; RV32ZBB-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[C]](s32)
-    ; RV32ZBB-NEXT: $x10 = COPY [[LSHR]](s32)
-    ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ; RV32ZBB_OR_RV32ZBKB-LABEL: name: bswap_i16
+    ; RV32ZBB_OR_RV32ZBKB: liveins: $x10
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: {{  $}}
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[ASSERT_ZEXT]]
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[C]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: $x10 = COPY [[LSHR]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = G_ASSERT_ZEXT %0, 16
     %2:_(s16) = G_TRUNC %1(s32)
@@ -65,13 +67,13 @@ body:             |
     ; RV32I-NEXT: $x10 = COPY [[OR2]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV32ZBB-LABEL: name: bswap_i32
-    ; RV32ZBB: liveins: $x10
-    ; RV32ZBB-NEXT: {{  $}}
-    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; RV32ZBB-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY]]
-    ; RV32ZBB-NEXT: $x10 = COPY [[BSWAP]](s32)
-    ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ; RV32ZBB_OR_RV32ZBKB-LABEL: name: bswap_i32
+    ; RV32ZBB_OR_RV32ZBKB: liveins: $x10
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: {{  $}}
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY]]
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: $x10 = COPY [[BSWAP]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = G_BSWAP %0
     $x10 = COPY %1(s32)
@@ -115,16 +117,16 @@ body:             |
     ; RV32I-NEXT: $x11 = COPY [[OR5]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10, implicit $x11
     ;
-    ; RV32ZBB-LABEL: name: bswap_i64
-    ; RV32ZBB: liveins: $x10, $x11
-    ; RV32ZBB-NEXT: {{  $}}
-    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32ZBB-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY1]]
-    ; RV32ZBB-NEXT: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[COPY]]
-    ; RV32ZBB-NEXT: $x10 = COPY [[BSWAP]](s32)
-    ; RV32ZBB-NEXT: $x11 = COPY [[BSWAP1]](s32)
-    ; RV32ZBB-NEXT: PseudoRET implicit $x10, implicit $x11
+    ; RV32ZBB_OR_RV32ZBKB-LABEL: name: bswap_i64
+    ; RV32ZBB_OR_RV32ZBKB: liveins: $x10, $x11
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: {{  $}}
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY1]]
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[COPY]]
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: $x10 = COPY [[BSWAP]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: $x11 = COPY [[BSWAP1]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s32) = COPY $x10
     %1:_(s32) = COPY $x11
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)

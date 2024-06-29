@@ -30,7 +30,7 @@ public:
   const char *getName() const override { return "adr-relaxation"; }
 
   /// Pass entry point
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
   void runOnFunction(BinaryFunction &BF);
 };
 

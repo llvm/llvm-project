@@ -1,5 +1,8 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - | FileCheck %s
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - | FileCheck %s
+
 ;; Hand written. Check AssignmentTrackingAnalysis doesn't try to get the size
 ;; of scalable vectors (which causes an assertion failure).
 

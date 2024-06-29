@@ -37,3 +37,11 @@ __rvv_int64m1_t foo64() { /* expected-error {{RISC-V type '__rvv_int64m1_t' requ
 
   return i64m1; /* expected-error {{RISC-V type '__rvv_int64m1_t' requires the 'zve64x' extension}} */
 }
+
+__rvv_bool64_t vbool64 () { /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve64x' extension}} */
+  __rvv_bool64_t b64; /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve64x' extension}} */
+
+  (void)b64; /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve64x' extension}} */
+
+  return b64; /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve64x' extension}} */
+}

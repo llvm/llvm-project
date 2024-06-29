@@ -446,7 +446,7 @@ define <64 x i8> @fold_with_poison_elts_avx512(<64 x i8> %InVec) {
 
 define <16 x i8> @fold_with_allpoison_elts(<16 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allpoison_elts(
-; CHECK-NEXT:    ret <16 x i8> undef
+; CHECK-NEXT:    ret <16 x i8> poison
 ;
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> poison)
   ret <16 x i8> %1
@@ -454,7 +454,7 @@ define <16 x i8> @fold_with_allpoison_elts(<16 x i8> %InVec) {
 
 define <32 x i8> @fold_with_allpoison_elts_avx2(<32 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allpoison_elts_avx2(
-; CHECK-NEXT:    ret <32 x i8> undef
+; CHECK-NEXT:    ret <32 x i8> poison
 ;
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> poison)
   ret <32 x i8> %1
@@ -462,7 +462,7 @@ define <32 x i8> @fold_with_allpoison_elts_avx2(<32 x i8> %InVec) {
 
 define <64 x i8> @fold_with_allpoison_elts_avx512(<64 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allpoison_elts_avx512(
-; CHECK-NEXT:    ret <64 x i8> undef
+; CHECK-NEXT:    ret <64 x i8> poison
 ;
   %1 = tail call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> %InVec, <64 x i8> poison)
   ret <64 x i8> %1

@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
 // XFAIL: !has-64-bit-atomics
-// XFAIL: target={{x86_64-.*}} && tsan
-// UNSUPPORTED: !non-lockfree-atomics
 
 //  floating-point-type load(memory_order = memory_order::seq_cst) volatile noexcept;
 //  floating-point-type load(memory_order = memory_order::seq_cst) noexcept;
@@ -79,7 +76,7 @@ void test_impl() {
     }
   }
 
-  // memory_order::comsume
+  // memory_order::consume
   {
     std::unique_ptr<T> p = std::make_unique<T>(T(0.0));
     MaybeVolatile<std::atomic<T>> at(T(0.0));
@@ -134,7 +131,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

@@ -88,12 +88,122 @@ const char *BeginHeader =
     "<meta name='viewport' content='width=device-width,initial-scale=1'>"
     "<meta charset='UTF-8'>";
 
+const char *JSForCoverage =
+    R"javascript(
+
+function next_uncovered(selector, reverse, scroll_selector) {
+  function visit_element(element) {
+    element.classList.add("seen");
+    element.classList.add("selected");
+  
+  if (!scroll_selector) {
+    scroll_selector = "tr:has(.selected) td.line-number"
+  }
+  
+  const scroll_to = document.querySelector(scroll_selector);
+  if (scroll_to) {
+    scroll_to.scrollIntoView({behavior: "smooth", block: "center", inline: "end"});
+  }
+  
+  }
+  
+  function select_one() {
+    if (!reverse) {
+      const previously_selected = document.querySelector(".selected");
+      
+      if (previously_selected) {
+        previously_selected.classList.remove("selected");
+      }
+      
+      return document.querySelector(selector + ":not(.seen)");
+    } else {      
+      const previously_selected = document.querySelector(".selected");
+      
+      if (previously_selected) {
+        previously_selected.classList.remove("selected");
+        previously_selected.classList.remove("seen");
+      }
+      
+      const nodes = document.querySelectorAll(selector + ".seen");
+      if (nodes) {
+        const last = nodes[nodes.length - 1]; // last
+        return last;
+      } else {
+        return undefined;
+      }
+    }
+  }
+  
+  function reset_all() {
+    if (!reverse) {
+      const all_seen = document.querySelectorAll(selector + ".seen");
+  
+      if (all_seen) {
+        all_seen.forEach(e => e.classList.remove("seen"));
+      }
+    } else {
+      const all_seen = document.querySelectorAll(selector + ":not(.seen)");
+  
+      if (all_seen) {
+        all_seen.forEach(e => e.classList.add("seen"));
+      }
+    }
+    
+  }
+  
+  const uncovered = select_one();
+
+  if (uncovered) {
+    visit_element(uncovered);
+  } else {
+    reset_all();
+    
+    
+    const uncovered = select_one();
+    
+    if (uncovered) {
+      visit_element(uncovered);
+    }
+  }
+}
+
+function next_line(reverse) { 
+  next_uncovered("td.uncovered-line", reverse)
+}
+
+function next_region(reverse) { 
+  next_uncovered("span.red.region", reverse);
+}
+
+function next_branch(reverse) { 
+  next_uncovered("span.red.branch", reverse);
+}
+
+document.addEventListener("keypress", function(event) {
+  console.log(event);
+  const reverse = event.shiftKey;
+  if (event.code == "KeyL") {
+    next_line(reverse);
+  }
+  if (event.code == "KeyB") {
+    next_branch(reverse);
+  }
+  if (event.code == "KeyR") {
+    next_region(reverse);
+  }
+  
+});
+)javascript";
+
 const char *CSSForCoverage =
     R"(.red {
-  background-color: #ffd0d0;
+  background-color: #f004;
 }
 .cyan {
   background-color: cyan;
+}
+html {
+  scroll-behavior: smooth;
 }
 body {
   font-family: -apple-system, sans-serif;
@@ -104,36 +214,37 @@ pre {
 }
 .source-name-title {
   padding: 5px 10px;
-  border-bottom: 1px solid #dbdbdb;
-  background-color: #eee;
+  border-bottom: 1px solid #8888;
+  background-color: #0002;
   line-height: 35px;
 }
 .centered {
   display: table;
   margin-left: left;
   margin-right: auto;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
   border-radius: 3px;
 }
 .expansion-view {
-  background-color: rgba(0, 0, 0, 0);
   margin-left: 0px;
   margin-top: 5px;
   margin-right: 5px;
   margin-bottom: 5px;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
   border-radius: 3px;
 }
 table {
   border-collapse: collapse;
 }
 .light-row {
-  background: #ffffff;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
+  border-left: none;
+  border-right: none;
 }
 .light-row-bold {
-  background: #ffffff;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
+  border-left: none;
+  border-right: none;
   font-weight: bold;
 }
 .column-entry {
@@ -145,41 +256,47 @@ table {
 }
 .column-entry-yellow {
   text-align: left;
-  background-color: #ffffd0;
-}
-.column-entry-yellow:hover {
-  background-color: #fffff0;
+  background-color: #ff06;
 }
 .column-entry-red {
   text-align: left;
-  background-color: #ffd0d0;
+  background-color: #f004;
 }
-.column-entry-red:hover {
-  background-color: #fff0f0;
+.column-entry-gray {
+  text-align: left;
+  background-color: #fff4;
 }
 .column-entry-green {
   text-align: left;
-  background-color: #d0ffd0;
-}
-.column-entry-green:hover {
-  background-color: #f0fff0;
+  background-color: #0f04;
 }
 .line-number {
   text-align: right;
-  color: #aaa;
 }
 .covered-line {
   text-align: right;
-  color: #0080ff;
+  color: #06d;
 }
 .uncovered-line {
   text-align: right;
-  color: #ff3300;
+  color: #d00;
+}
+.uncovered-line.selected {
+  color: #f00;
+  font-weight: bold;
+}
+.region.red.selected {
+  background-color: #f008;
+  font-weight: bold;
+}
+.branch.red.selected {
+  background-color: #f008;
+  font-weight: bold;
 }
 .tooltip {
   position: relative;
   display: inline;
-  background-color: #b3e6ff;
+  background-color: #bef;
   text-decoration: none;
 }
 .tooltip span.tooltip-content {
@@ -216,12 +333,13 @@ th, td {
   vertical-align: top;
   padding: 2px 8px;
   border-collapse: collapse;
-  border-right: solid 1px #eee;
-  border-left: solid 1px #eee;
+  border-right: 1px solid #8888;
+  border-left: 1px solid #8888;
   text-align: left;
 }
 td pre {
   display: inline-block;
+  text-decoration: inherit;
 }
 td:first-child {
   border-left: none;
@@ -230,7 +348,47 @@ td:last-child {
   border-right: none;
 }
 tr:hover {
-  background-color: #f0f0f0;
+  background-color: #eee;
+}
+tr:last-child {
+  border-bottom: none;
+}
+tr:has(> td >a:target), tr:has(> td.uncovered-line.selected) {
+  background-color: #8884;
+}
+a {
+  color: inherit;
+}
+.control {
+  position: fixed;
+  top: 0em;
+  right: 0em;
+  padding: 1em;
+  background: #FFF8;
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #222;
+    color: whitesmoke;
+  }
+  tr:hover {
+    background-color: #111;
+  }
+  .covered-line {
+    color: #39f;
+  }
+  .uncovered-line {
+    color: #f55;
+  }
+  .tooltip {
+    background-color: #068;
+  }
+  .control {
+    background: #2228;
+  }
+  tr:has(> td >a:target), tr:has(> td.uncovered-line.selected) {
+    background-color: #8884;
+  }
 }
 )";
 
@@ -275,8 +433,18 @@ std::string getPathToStyle(StringRef ViewPath) {
   return PathToStyle + "style.css";
 }
 
+std::string getPathToJavaScript(StringRef ViewPath) {
+  std::string PathToJavaScript;
+  std::string PathSep = std::string(sys::path::get_separator());
+  unsigned NumSeps = ViewPath.count(PathSep);
+  for (unsigned I = 0, E = NumSeps; I < E; ++I)
+    PathToJavaScript += ".." + PathSep;
+  return PathToJavaScript + "control.js";
+}
+
 void emitPrelude(raw_ostream &OS, const CoverageViewOptions &Opts,
-                 const std::string &PathToStyle = "") {
+                 const std::string &PathToStyle = "",
+                 const std::string &PathToJavaScript = "") {
   OS << "<!doctype html>"
         "<html>"
      << BeginHeader;
@@ -287,6 +455,12 @@ void emitPrelude(raw_ostream &OS, const CoverageViewOptions &Opts,
   else
     OS << "<link rel='stylesheet' type='text/css' href='"
        << escape(PathToStyle, Opts) << "'>";
+
+  // Link to a JavaScript if one is available
+  if (PathToJavaScript.empty())
+    OS << "<script>" << JSForCoverage << "</script>";
+  else
+    OS << "<script src='" << escape(PathToJavaScript, Opts) << "'></script>";
 
   OS << EndHeader << "<body>";
 }
@@ -309,7 +483,9 @@ void emitTableRow(raw_ostream &OS, const CoverageViewOptions &Opts,
           RSO << '(' << Hit << '/' << Total << ')';
         }
         const char *CellClass = "column-entry-yellow";
-        if (Pctg >= Opts.HighCovWatermark)
+        if (!Total)
+          CellClass = "column-entry-gray";
+        else if (Pctg >= Opts.HighCovWatermark)
           CellClass = "column-entry-green";
         else if (Pctg < Opts.LowCovWatermark)
           CellClass = "column-entry-red";
@@ -335,6 +511,10 @@ void emitTableRow(raw_ostream &OS, const CoverageViewOptions &Opts,
     AddCoverageTripleToColumn(FCS.BranchCoverage.getCovered(),
                               FCS.BranchCoverage.getNumBranches(),
                               FCS.BranchCoverage.getPercentCovered());
+  if (Opts.ShowMCDCSummary)
+    AddCoverageTripleToColumn(FCS.MCDCCoverage.getCoveredPairs(),
+                              FCS.MCDCCoverage.getNumPairs(),
+                              FCS.MCDCCoverage.getPercentCovered());
 
   if (IsTotals)
     OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row-bold");
@@ -361,7 +541,8 @@ CoveragePrinterHTML::createViewFile(StringRef Path, bool InToplevel) {
     emitPrelude(*OS.get(), Opts);
   } else {
     std::string ViewPath = getOutputPath(Path, "html", InToplevel);
-    emitPrelude(*OS.get(), Opts, getPathToStyle(ViewPath));
+    emitPrelude(*OS.get(), Opts, getPathToStyle(ViewPath),
+                getPathToJavaScript(ViewPath));
   }
 
   return std::move(OS);
@@ -385,6 +566,8 @@ static void emitColumnLabelsForIndex(raw_ostream &OS,
     Columns.emplace_back(tag("td", "Region Coverage", "column-entry-bold"));
   if (Opts.ShowBranchSummary)
     Columns.emplace_back(tag("td", "Branch Coverage", "column-entry-bold"));
+  if (Opts.ShowMCDCSummary)
+    Columns.emplace_back(tag("td", "MC/DC", "column-entry-bold"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
 
@@ -407,6 +590,17 @@ Error CoveragePrinterHTML::emitStyleSheet() {
 
   OwnedStream CSS = std::move(CSSOrErr.get());
   CSS->operator<<(CSSForCoverage);
+
+  return Error::success();
+}
+
+Error CoveragePrinterHTML::emitJavaScript() {
+  auto JSOrErr = createOutputStream("control", "js", /*InToplevel=*/true);
+  if (Error E = JSOrErr.takeError())
+    return E;
+
+  OwnedStream JS = std::move(JSOrErr.get());
+  JS->operator<<(JSForCoverage);
 
   return Error::success();
 }
@@ -456,6 +650,10 @@ Error CoveragePrinterHTML::createIndexFile(
   if (Error E = emitStyleSheet())
     return E;
 
+  // Emit the JavaScript UI implementation
+  if (Error E = emitJavaScript())
+    return E;
+
   // Emit a file index along with some coverage statistics.
   auto OSOrErr = createOutputStream("index", "html", /*InToplevel=*/true);
   if (Error E = OSOrErr.takeError())
@@ -464,7 +662,7 @@ Error CoveragePrinterHTML::createIndexFile(
   raw_ostream &OSRef = *OS.get();
 
   assert(Opts.hasOutputDirectory() && "No output directory for index file");
-  emitPrelude(OSRef, Opts, getPathToStyle(""));
+  emitPrelude(OSRef, Opts, getPathToStyle(""), getPathToJavaScript(""));
 
   emitReportHeader(OSRef, "Coverage Report");
 
@@ -530,7 +728,8 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
 
     auto IndexHtmlPath = Printer.getOutputPath((LCPath + "index").str(), "html",
                                                /*InToplevel=*/false);
-    emitPrelude(OSRef, Options, getPathToStyle(IndexHtmlPath));
+    emitPrelude(OSRef, Options, getPathToStyle(IndexHtmlPath),
+                getPathToJavaScript(IndexHtmlPath));
 
     auto NavLink = buildTitleLinks(LCPath);
     Printer.emitReportHeader(OSRef, "Coverage Report (" + NavLink + ")");
@@ -639,7 +838,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
     sys::path::native(LinkTextStr);
 
     // remove_dots will remove trailing slash, so we need to check before it.
-    auto IsDir = LinkTextStr.endswith(sys::path::get_separator());
+    auto IsDir = LinkTextStr.ends_with(sys::path::get_separator());
     sys::path::remove_dots(LinkTextStr, /*remove_dot_dot=*/true);
 
     SmallString<128> LinkTargetStr(LinkTextStr);
@@ -666,6 +865,10 @@ Error CoveragePrinterHTMLDirectory::createIndexFile(
 
   // Emit the default stylesheet.
   if (Error E = emitStyleSheet())
+    return E;
+
+  // Emit the JavaScript UI implementation
+  if (Error E = emitJavaScript())
     return E;
 
   // Emit index files in every subdirectory.
@@ -769,7 +972,10 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
     if (getOptions().Debug)
       HighlightedRanges.emplace_back(LC, RC);
-    return tag("span", Snippet, std::string(*Color));
+    if (Snippet.empty())
+      return tag("span", Snippet, std::string(*Color));
+    else
+      return tag("span", Snippet, "region " + std::string(*Color));
   };
 
   auto CheckIfUncovered = [&](const CoverageSegment *S) {
@@ -852,7 +1058,9 @@ void SourceCoverageViewHTML::renderLineCoverageColumn(
   if (Line.isMapped())
     Count = tag("pre", formatCount(Line.getExecutionCount()));
   std::string CoverageClass =
-      (Line.getExecutionCount() > 0) ? "covered-line" : "uncovered-line";
+      (Line.getExecutionCount() > 0)
+          ? "covered-line"
+          : (Line.isMapped() ? "uncovered-line" : "skipped-line");
   OS << tag("td", Count, CoverageClass);
 }
 
@@ -926,7 +1134,7 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
     }
 
     // Display TrueCount or TruePercent.
-    std::string TrueColor = R.ExecutionCount ? "None" : "red";
+    std::string TrueColor = R.ExecutionCount ? "None" : "red branch";
     std::string TrueCovClass =
         (R.ExecutionCount > 0) ? "covered-line" : "uncovered-line";
 
@@ -938,7 +1146,7 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
       OS << format("%0.2f", TruePercent) << "%, ";
 
     // Display FalseCount or FalsePercent.
-    std::string FalseColor = R.FalseExecutionCount ? "None" : "red";
+    std::string FalseColor = R.FalseExecutionCount ? "None" : "red branch";
     std::string FalseCovClass =
         (R.FalseExecutionCount > 0) ? "covered-line" : "uncovered-line";
 
@@ -953,6 +1161,50 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
   }
   OS << EndPre;
   OS << EndExpansionDiv;
+}
+
+void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
+                                            unsigned ViewDepth) {
+  for (auto &Record : MRV.Records) {
+    OS << BeginExpansionDiv;
+    OS << BeginPre;
+    OS << "  MC/DC Decision Region (";
+
+    // Display Line + Column information.
+    const CounterMappingRegion &DecisionRegion = Record.getDecisionRegion();
+    std::string LineNoStr = Twine(DecisionRegion.LineStart).str();
+    std::string ColNoStr = Twine(DecisionRegion.ColumnStart).str();
+    std::string TargetName = "L" + LineNoStr;
+    OS << tag("span",
+              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr)),
+              "line-number") +
+              ") to (";
+    LineNoStr = utostr(uint64_t(DecisionRegion.LineEnd));
+    ColNoStr = utostr(uint64_t(DecisionRegion.ColumnEnd));
+    OS << tag("span",
+              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr)),
+              "line-number") +
+              ")\n\n";
+
+    // Display MC/DC Information.
+    OS << "  Number of Conditions: " << Record.getNumConditions() << "\n";
+    for (unsigned i = 0; i < Record.getNumConditions(); i++) {
+      OS << "     " << Record.getConditionHeaderString(i);
+    }
+    OS << "\n";
+    OS << "  Executed MC/DC Test Vectors:\n\n     ";
+    OS << Record.getTestVectorHeaderString();
+    for (unsigned i = 0; i < Record.getNumTestVectors(); i++)
+      OS << Record.getTestVectorString(i);
+    OS << "\n";
+    for (unsigned i = 0; i < Record.getNumConditions(); i++)
+      OS << Record.getConditionCoverageString(i);
+    OS << "  MC/DC Coverage for Expression: ";
+    OS << format("%0.2f", Record.getPercentCovered()) << "%\n";
+    OS << EndPre;
+    OS << EndExpansionDiv;
+  }
+  return;
 }
 
 void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
@@ -978,24 +1230,21 @@ void SourceCoverageViewHTML::renderTitle(raw_ostream &OS, StringRef Title) {
   if (getOptions().hasCreatedTime())
     OS << tag(CreatedTimeTag,
               escape(getOptions().CreatedTimeStr, getOptions()));
+
+  OS << tag("span",
+            a("javascript:next_line()", "next uncovered line (L)") + ", " +
+                a("javascript:next_region()", "next uncovered region (R)") +
+                ", " +
+                a("javascript:next_branch()", "next uncovered branch (B)"),
+            "control");
 }
 
 void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
-                                               unsigned FirstUncoveredLineNo,
                                                unsigned ViewDepth) {
-  std::string SourceLabel;
-  if (FirstUncoveredLineNo == 0) {
-    SourceLabel = tag("td", tag("pre", "Source"));
-  } else {
-    std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
-    SourceLabel =
-        tag("td", tag("pre", "Source (" +
-                                 a(LinkTarget, "jump to first uncovered line") +
-                                 ")"));
-  }
+  std::string Links;
 
   renderLinePrefix(OS, ViewDepth);
-  OS << tag("td", tag("pre", "Line")) << tag("td", tag("pre", "Count"))
-     << SourceLabel;
+  OS << tag("td", tag("pre", "Line")) << tag("td", tag("pre", "Count"));
+  OS << tag("td", tag("pre", "Source" + Links));
   renderLineSuffix(OS, ViewDepth);
 }

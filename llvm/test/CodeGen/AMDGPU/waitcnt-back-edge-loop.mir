@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -march=amdgcn -mcpu=fiji -run-pass=si-insert-waitcnts -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -o - %s -mtriple=amdgcn -mcpu=fiji -run-pass=si-insert-waitcnts -verify-machineinstrs | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: waitcnt-back-edge-loop
 # GCN: bb.2

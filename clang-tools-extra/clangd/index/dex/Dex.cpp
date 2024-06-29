@@ -395,7 +395,7 @@ generateProximityURIs(llvm::StringRef URI) {
       return Result;
   }
   // The root foo://bar/ is a proximity URI.
-  if (Path.startswith("/"))
+  if (Path.starts_with("/"))
     Result.push_back(URI.substr(0, Path.begin() + 1 - URI.data()));
   return Result;
 }

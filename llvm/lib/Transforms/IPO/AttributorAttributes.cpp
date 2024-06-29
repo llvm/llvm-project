@@ -290,48 +290,16 @@ static const Value *getPointerOperand(const Instruction *I,
   return nullptr;
 }
 
-/// Helper function to create a pointer of type \p ResTy, based on \p Ptr, and
-/// advanced by \p Offset bytes. To aid later analysis the method tries to build
-/// getelement pointer instructions that traverse the natural type of \p Ptr if
-/// possible. If that fails, the remaining offset is adjusted byte-wise, hence
-/// through a cast to i8*.
-///
-/// TODO: This could probably live somewhere more prominantly if it doesn't
-///       already exist.
-static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
-                               int64_t Offset, IRBuilder<NoFolder> &IRB,
-                               const DataLayout &DL) {
-  assert(Offset >= 0 && "Negative offset not supported yet!");
+/// Helper function to create a pointer based on \p Ptr, and advanced by \p
+/// Offset bytes.
+static Value *constructPointer(Value *Ptr, int64_t Offset,
+                               IRBuilder<NoFolder> &IRB) {
   LLVM_DEBUG(dbgs() << "Construct pointer: " << *Ptr << " + " << Offset
-                    << "-bytes as " << *ResTy << "\n");
+                    << "-bytes\n");
 
-  if (Offset) {
-    Type *Ty = PtrElemTy;
-    APInt IntOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-    SmallVector<APInt> IntIndices = DL.getGEPIndicesForOffset(Ty, IntOffset);
-
-    SmallVector<Value *, 4> ValIndices;
-    std::string GEPName = Ptr->getName().str();
-    for (const APInt &Index : IntIndices) {
-      ValIndices.push_back(IRB.getInt(Index));
-      GEPName += "." + std::to_string(Index.getZExtValue());
-    }
-
-    // Create a GEP for the indices collected above.
-    Ptr = IRB.CreateGEP(PtrElemTy, Ptr, ValIndices, GEPName);
-
-    // If an offset is left we use byte-wise adjustment.
-    if (IntOffset != 0) {
-      Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(IntOffset),
-                          GEPName + ".b" + Twine(IntOffset.getZExtValue()));
-    }
-  }
-
-  // Ensure the result has the requested type.
-  Ptr = IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, ResTy,
-                                                Ptr->getName() + ".cast");
-
-  LLVM_DEBUG(dbgs() << "Constructed pointer: " << *Ptr << "\n");
+  if (Offset)
+    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt64(Offset),
+                           Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 
@@ -451,7 +419,8 @@ struct AAReturnedFromReturnedValues : public BaseType {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     StateType S(StateType::getBestState(this->getState()));
-    clampReturnedValueStates<AAType, StateType, IRAttributeKind, RecurseForSelectAndPHI>(
+    clampReturnedValueStates<AAType, StateType, IRAttributeKind,
+                             RecurseForSelectAndPHI>(
         A, *this, S,
         PropagateCallBaseContext ? this->getCallBaseContext() : nullptr);
     // TODO: If we know we visited all returned values, thus no are assumed
@@ -1504,7 +1473,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     // Make a strictly ascending list of offsets as required by addAccess()
     llvm::sort(Offsets);
-    auto *Last = std::unique(Offsets.begin(), Offsets.end());
+    auto *Last = llvm::unique(Offsets);
     Offsets.erase(Last, Offsets.end());
 
     VectorType *VT = dyn_cast<VectorType>(&Ty);
@@ -1639,11 +1608,15 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     //
     // The RHS is a reference that may be invalidated by an insertion caused by
     // the LHS. So we ensure that the side-effect of the LHS happens first.
+
+    assert(OffsetInfoMap.contains(CurPtr) &&
+           "CurPtr does not exist in the map!");
+
     auto &UsrOI = OffsetInfoMap[Usr];
     auto &PtrOI = OffsetInfoMap[CurPtr];
     assert(!PtrOI.isUnassigned() &&
            "Cannot pass through if the input Ptr was not visited!");
-    UsrOI = PtrOI;
+    UsrOI.merge(PtrOI);
     Follow = true;
     return true;
   };
@@ -1666,8 +1639,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
       if (CE->isCast())
         return HandlePassthroughUser(Usr, CurPtr, Follow);
-      if (CE->isCompare())
-        return true;
       if (!isa<GEPOperator>(CE)) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
                           << "\n");
@@ -2479,13 +2450,14 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
               return true;
             },
             IRP.getAssociatedFunction(), nullptr, {Instruction::Ret},
-            UsedAssumedInformation))
+            UsedAssumedInformation, false, /*CheckPotentiallyDead=*/true))
       return false;
   }
 
   if (llvm::any_of(Worklist, [&](AA::ValueAndContext VAC) {
-        return !isKnownNonZero(VAC.getValue(), A.getDataLayout(), 0, AC,
-                               VAC.getCtxI(), DT);
+        return !isKnownNonZero(
+            VAC.getValue(),
+            SimplifyQuery(A.getDataLayout(), DT, AC, VAC.getCtxI()));
       }))
     return false;
 
@@ -5222,6 +5194,12 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (LI->getPointerOperand() == UseV)
       MA = LI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicRMWInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
   }
 
   if (!MA || *MA <= QueryingAA.getKnownAlign())
@@ -5715,6 +5693,9 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     return V.use_empty();
 
   // You cannot "capture" null in the default address space.
+  //
+  // FIXME: This should use NullPointerIsDefined to account for the function
+  // attribute.
   if (isa<UndefValue>(V) || (isa<ConstantPointerNull>(V) &&
                              V.getType()->getPointerAddressSpace() == 0)) {
     return true;
@@ -5924,10 +5905,13 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
 
   const Function *F =
       isArgumentPosition() ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
-  assert(F && "Expected a function!");
-  const IRPosition &FnPos = IRPosition::function(*F);
+
+  // TODO: Is the checkForAllUses below useful for constants?
+  if (!F)
+    return indicatePessimisticFixpoint();
 
   AANoCapture::StateType T;
+  const IRPosition &FnPos = IRPosition::function(*F);
 
   // Readonly means we cannot capture through memory.
   bool IsKnown;
@@ -6160,8 +6144,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       return TypedV;
     if (CtxI && V.getType()->canLosslesslyBitCastTo(&Ty))
       return Check ? &V
-                   : BitCastInst::CreatePointerBitCastOrAddrSpaceCast(&V, &Ty,
-                                                                      "", CtxI);
+                   : BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
+                         &V, &Ty, "", CtxI->getIterator());
     return nullptr;
   }
 
@@ -6757,14 +6741,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         LLVMContext &Ctx = AI.CB->getContext();
         ObjectSizeOpts Opts;
         ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
-        SizeOffsetEvalType SizeOffsetPair = Eval.compute(AI.CB);
+        SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
         assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
-               cast<ConstantInt>(SizeOffsetPair.second)->isZero());
-        Size = SizeOffsetPair.first;
+               cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
+        Size = SizeOffsetPair.Size;
       }
 
-      Instruction *IP =
-          AI.MoveAllocaIntoEntry ? &F->getEntryBlock().front() : AI.CB;
+      BasicBlock::iterator IP = AI.MoveAllocaIntoEntry
+                                    ? F->getEntryBlock().begin()
+                                    : AI.CB->getIterator();
 
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
@@ -6785,7 +6770,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       if (Alloca->getType() != AI.CB->getType())
         Alloca = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
-            Alloca, AI.CB->getType(), "malloc_cast", AI.CB);
+            Alloca, AI.CB->getType(), "malloc_cast", AI.CB->getIterator());
 
       auto *I8Ty = Type::getInt8Ty(F->getContext());
       auto *InitVal = getInitialValueOfAllocation(AI.CB, TLI, I8Ty);
@@ -6993,10 +6978,9 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared) {
       Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
       if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
-        LLVM_DEBUG(
-            dbgs()
-            << "[H2S] unique free call might not be executed with the allocation "
-            << *UniqueFree << "\n");
+        LLVM_DEBUG(dbgs() << "[H2S] unique free call might not be executed "
+                             "with the allocation "
+                          << *UniqueFree << "\n");
         return false;
       }
     }
@@ -7482,33 +7466,29 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
   /// The values needed are taken from the arguments of \p F starting at
   /// position \p ArgNo.
   static void createInitialization(Type *PrivType, Value &Base, Function &F,
-                                   unsigned ArgNo, Instruction &IP) {
+                                   unsigned ArgNo, BasicBlock::iterator IP) {
     assert(PrivType && "Expected privatizable type!");
 
-    IRBuilder<NoFolder> IRB(&IP);
+    IRBuilder<NoFolder> IRB(IP->getParent(), IP);
     const DataLayout &DL = F.getParent()->getDataLayout();
 
     // Traverse the type, build GEPs and stores.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
-        Type *PointeeTy = PrivStructType->getElementType(u)->getPointerTo();
         Value *Ptr =
-            constructPointer(PointeeTy, PrivType, &Base,
-                             PrivStructLayout->getElementOffset(u), IRB, DL);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
+            constructPointer(&Base, PrivStructLayout->getElementOffset(u), IRB);
+        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
-      Type *PointeePtrTy = PointeeTy->getPointerTo();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(PointeePtrTy, PrivType, &Base,
-                                      u * PointeeTySize, IRB, DL);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
+        Value *Ptr = constructPointer(&Base, u * PointeeTySize, IRB);
+        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
       }
     } else {
-      new StoreInst(F.getArg(ArgNo), &Base, &IP);
+      new StoreInst(F.getArg(ArgNo), &Base, IP);
     }
   }
 
@@ -7522,12 +7502,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     Instruction *IP = ACS.getInstruction();
 
     IRBuilder<NoFolder> IRB(IP);
-    const DataLayout &DL = IP->getModule()->getDataLayout();
-
-    Type *PrivPtrType = PrivType->getPointerTo();
-    if (Base->getType() != PrivPtrType)
-      Base = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
-          Base, PrivPtrType, "", ACS.getInstruction());
+    const DataLayout &DL = IP->getDataLayout();
 
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -7535,25 +7510,22 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
         Type *PointeeTy = PrivStructType->getElementType(u);
         Value *Ptr =
-            constructPointer(PointeeTy->getPointerTo(), PrivType, Base,
-                             PrivStructLayout->getElementOffset(u), IRB, DL);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
+            constructPointer(Base, PrivStructLayout->getElementOffset(u), IRB);
+        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
-      Type *PointeePtrTy = PointeeTy->getPointerTo();
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(PointeePtrTy, PrivType, Base,
-                                      u * PointeeTySize, IRB, DL);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
+        Value *Ptr = constructPointer(Base, u * PointeeTySize, IRB);
+        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
     } else {
-      LoadInst *L = new LoadInst(PrivType, Base, "", IP);
+      LoadInst *L = new LoadInst(PrivType, Base, "", IP->getIterator());
       L->setAlignment(Alignment);
       ReplacementValues.push_back(L);
     }
@@ -7593,13 +7565,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         [=](const Attributor::ArgumentReplacementInfo &ARI,
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
           BasicBlock &EntryBB = ReplacementFn.getEntryBlock();
-          Instruction *IP = &*EntryBB.getFirstInsertionPt();
-          const DataLayout &DL = IP->getModule()->getDataLayout();
+          BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
+          const DataLayout &DL = IP->getDataLayout();
           unsigned AS = DL.getAllocaAddrSpace();
           Instruction *AI = new AllocaInst(*PrivatizableType, AS,
                                            Arg->getName() + ".priv", IP);
           createInitialization(*PrivatizableType, *AI, ReplacementFn,
-                               ArgIt->getArgNo(), *IP);
+                               ArgIt->getArgNo(), IP);
 
           if (AI->getType() != Arg->getType())
             AI = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
@@ -9066,7 +9038,8 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     if (!LVI || !CtxI)
       return getWorstState(getBitWidth());
     return LVI->getConstantRange(&getAssociatedValue(),
-                                 const_cast<Instruction *>(CtxI));
+                                 const_cast<Instruction *>(CtxI),
+                                 /*UndefAllowed*/ false);
   }
 
   /// Return true if \p CtxI is valid for querying outside analyses.
@@ -10367,48 +10340,25 @@ struct AANoFPClassImpl : AANoFPClass {
   /// See followUsesInMBEC
   bool followUseInMBEC(Attributor &A, const Use *U, const Instruction *I,
                        AANoFPClass::StateType &State) {
-    const Value *UseV = U->get();
-    const DominatorTree *DT = nullptr;
-    AssumptionCache *AC = nullptr;
-    const TargetLibraryInfo *TLI = nullptr;
-    InformationCache &InfoCache = A.getInfoCache();
-
-    if (Function *F = getAnchorScope()) {
-      DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
-      AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
-      TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
-    }
-
-    const DataLayout &DL = A.getDataLayout();
-
-    KnownFPClass KnownFPClass =
-        computeKnownFPClass(UseV, DL,
-                            /*InterestedClasses=*/fcAllFlags,
-                            /*Depth=*/0, TLI, AC, I, DT);
-    State.addKnownBits(~KnownFPClass.KnownFPClasses);
-
-    if (auto *CI = dyn_cast<CallInst>(UseV)) {
-      // Special case FP intrinsic with struct return type.
-      switch (CI->getIntrinsicID()) {
-      case Intrinsic::frexp:
-        return true;
-      case Intrinsic::not_intrinsic:
-        // TODO: Could recognize math libcalls
-        return false;
-      default:
-        break;
-      }
-    }
-
-    if (!UseV->getType()->isFPOrFPVectorTy())
+    // TODO: Determine what instructions can be looked through.
+    auto *CB = dyn_cast<CallBase>(I);
+    if (!CB)
       return false;
-    return !isa<LoadInst, AtomicRMWInst>(UseV);
+
+    if (!CB->isArgOperand(U))
+      return false;
+
+    unsigned ArgNo = CB->getArgOperandNo(U);
+    IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
+    if (auto *NoFPAA = A.getAAFor<AANoFPClass>(*this, IRP, DepClassTy::NONE))
+      State.addKnownBits(NoFPAA->getState().getKnown());
+    return false;
   }
 
   const std::string getAsStr(Attributor *A) const override {
     std::string Result = "nofpclass";
     raw_string_ostream OS(Result);
-    OS << getAssumedNoFPClass();
+    OS << getKnownNoFPClass() << '/' << getAssumedNoFPClass();
     return Result;
   }
 
@@ -10460,11 +10410,12 @@ struct AANoFPClassFloating : public AANoFPClassImpl {
 
 struct AANoFPClassReturned final
     : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                   AANoFPClassImpl::StateType, false, Attribute::None, false> {
+                                   AANoFPClassImpl::StateType, false,
+                                   Attribute::None, false> {
   AANoFPClassReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                     AANoFPClassImpl::StateType, false, Attribute::None, false>(
-            IRP, A) {}
+                                     AANoFPClassImpl::StateType, false,
+                                     Attribute::None, false>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -10813,9 +10764,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return;
     }
     Value *Stripped = getAssociatedValue().stripPointerCasts();
-    auto *CE = dyn_cast<ConstantExpr>(Stripped);
-    if (isa<Constant>(Stripped) &&
-        (!CE || CE->getOpcode() != Instruction::ICmp)) {
+    if (isa<Constant>(Stripped) && !isa<ConstantExpr>(Stripped)) {
       addValue(A, getState(), *Stripped, getCtxI(), AA::AnyScope,
                getAnchorScope());
       indicateOptimisticFixpoint();
@@ -11327,7 +11276,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
     auto *AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
 
-    const DataLayout &DL = I.getModule()->getDataLayout();
+    const DataLayout &DL = I.getDataLayout();
     SimplifyQuery Q(DL, TLI, DT, AC, &I);
     Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q);
     if (!NewV || NewV == &I)
@@ -11407,13 +11356,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       if (NewV && NewV != V) {
         Worklist.push_back({{*NewV, CtxI}, S});
         continue;
-      }
-
-      if (auto *CE = dyn_cast<ConstantExpr>(V)) {
-        if (CE->getOpcode() == Instruction::ICmp)
-          if (handleCmp(A, *CE, CE->getOperand(0), CE->getOperand(1),
-                        CmpInst::Predicate(CE->getPredicate()), II, Worklist))
-            continue;
       }
 
       if (auto *I = dyn_cast<Instruction>(V)) {
@@ -11797,11 +11739,14 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
       return ChangeStatus::UNCHANGED;
 
     const IRPosition &IRP = getIRPosition();
-    return A.manifestAttrs(
-        IRP,
-        Attribute::get(IRP.getAnchorValue().getContext(), AssumptionAttrKey,
-                       llvm::join(getAssumed().getSet(), ",")),
-        /* ForceReplace */ true);
+    SmallVector<StringRef, 0> Set(getAssumed().getSet().begin(),
+                                  getAssumed().getSet().end());
+    llvm::sort(Set);
+    return A.manifestAttrs(IRP,
+                           Attribute::get(IRP.getAnchorValue().getContext(),
+                                          AssumptionAttrKey,
+                                          llvm::join(Set, ",")),
+                           /*ForceReplace=*/true);
   }
 
   bool hasAssumption(const StringRef Assumption) const override {
@@ -11813,13 +11758,15 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
     const SetContents &Known = getKnown();
     const SetContents &Assumed = getAssumed();
 
-    const std::string KnownStr =
-        llvm::join(Known.getSet().begin(), Known.getSet().end(), ",");
-    const std::string AssumedStr =
-        (Assumed.isUniversal())
-            ? "Universal"
-            : llvm::join(Assumed.getSet().begin(), Assumed.getSet().end(), ",");
+    SmallVector<StringRef, 0> Set(Known.getSet().begin(), Known.getSet().end());
+    llvm::sort(Set);
+    const std::string KnownStr = llvm::join(Set, ",");
 
+    std::string AssumedStr = "Universal";
+    if (!Assumed.isUniversal()) {
+      Set.assign(Assumed.getSet().begin(), Assumed.getSet().end());
+      AssumedStr = llvm::join(Set, ",");
+    }
     return "Known [" + KnownStr + "]," + " Assumed [" + AssumedStr + "]";
   }
 };
@@ -12356,10 +12303,10 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     Value *FP = CB->getCalledOperand();
     if (FP->getType()->getPointerAddressSpace())
       FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
-                                 FP->getName() + ".as0", CB);
+                                 FP->getName() + ".as0", CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();
-    Instruction *IP = CB;
+    BasicBlock::iterator IP = CB->getIterator();
     FunctionType *CSFT = CB->getFunctionType();
     SmallVector<Value *> CSArgs(CB->arg_begin(), CB->arg_end());
 
@@ -12379,8 +12326,9 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         promoteCall(*CB, NewCallee, nullptr);
         return ChangeStatus::CHANGED;
       }
-      Instruction *NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee),
-                                              CSArgs, CB->getName(), CB);
+      Instruction *NewCall =
+          CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
+                           CB->getName(), CB->getIterator());
       if (!CBIsVoid)
         A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewCall);
       A.deleteAfterManifest(*CB);
@@ -12412,14 +12360,14 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
       BasicBlock *CBBB = CB->getParent();
       A.registerManifestAddedBasicBlock(*ThenTI->getParent());
-      A.registerManifestAddedBasicBlock(*CBBB);
+      A.registerManifestAddedBasicBlock(*IP->getParent());
       auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
-      if (IP == CB) {
+      if (&*IP == CB) {
         ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
                                     ThenTI->getFunction(), CBBB);
         A.registerManifestAddedBasicBlock(*ElseBB);
-        IP = BranchInst::Create(CBBB, ElseBB);
+        IP = BranchInst::Create(CBBB, ElseBB)->getIterator();
         SplitTI->replaceUsesOfWith(CBBB, ElseBB);
       } else {
         ElseBB = IP->getParent();
@@ -12433,7 +12381,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
       } else {
         NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
-                                   CB->getName(), ThenTI);
+                                   CB->getName(), ThenTI->getIterator());
       }
       NewCalls.push_back({NewCall, RetBC});
     }
@@ -12459,7 +12407,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     } else {
       auto *CBClone = cast<CallInst>(CB->clone());
       CBClone->setName(CB->getName());
-      CBClone->insertBefore(IP);
+      CBClone->insertBefore(*IP->getParent(), IP);
       NewCalls.push_back({CBClone, nullptr});
       AttachCalleeMetadata(*CBClone);
     }
@@ -12468,7 +12416,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     if (!CBIsVoid) {
       auto *PHI = PHINode::Create(CB->getType(), NewCalls.size(),
                                   CB->getName() + ".phi",
-                                  &*CB->getParent()->getFirstInsertionPt());
+                                  CB->getParent()->getFirstInsertionPt());
       for (auto &It : NewCalls) {
         CallBase *NewCall = It.first;
         Instruction *CallRet = It.second ? It.second : It.first;
@@ -12826,9 +12774,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       auto *NumBytesToValue =
           ConstantInt::get(I->getContext(), APInt(32, NumBytesToAllocate));
 
+      BasicBlock::iterator insertPt = AI->getIterator();
+      insertPt = std::next(insertPt);
       AllocaInst *NewAllocaInst =
           new AllocaInst(CharType, AI->getAddressSpace(), NumBytesToValue,
-                         AI->getAlign(), AI->getName(), AI->getNextNode());
+                         AI->getAlign(), AI->getName(), insertPt);
 
       if (A.changeAfterManifest(IRPosition::inst(*AI), *NewAllocaInst))
         return ChangeStatus::CHANGED;

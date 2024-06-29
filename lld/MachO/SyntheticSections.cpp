@@ -12,6 +12,7 @@
 #include "ExportTrie.h"
 #include "InputFiles.h"
 #include "MachOStructs.h"
+#include "ObjC.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -793,7 +794,7 @@ void StubHelperSection::setUp() {
 
   in.imageLoaderCache->parent =
       ConcatOutputSection::getOrCreateForInput(in.imageLoaderCache);
-  inputSections.push_back(in.imageLoaderCache);
+  addInputSection(in.imageLoaderCache);
   // Since this isn't in the symbol table or in any input file, the noDeadStrip
   // argument doesn't matter.
   dyldPrivate =
@@ -806,21 +807,101 @@ void StubHelperSection::setUp() {
   dyldPrivate->used = true;
 }
 
+llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
+    ObjCSelRefsHelper::methnameToSelref;
+void ObjCSelRefsHelper::initialize() {
+  // Do not fold selrefs without ICF.
+  if (config->icfLevel == ICFLevel::none)
+    return;
+
+  // Search methnames already referenced in __objc_selrefs
+  // Map the name to the corresponding selref entry
+  // which we will reuse when creating objc stubs.
+  for (ConcatInputSection *isec : inputSections) {
+    if (isec->shouldOmitFromOutput())
+      continue;
+    if (isec->getName() != section_names::objcSelrefs)
+      continue;
+    // We expect a single relocation per selref entry to __objc_methname that
+    // might be aggregated.
+    assert(isec->relocs.size() == 1);
+    auto Reloc = isec->relocs[0];
+    if (const auto *sym = Reloc.referent.dyn_cast<Symbol *>()) {
+      if (const auto *d = dyn_cast<Defined>(sym)) {
+        auto *cisec = cast<CStringInputSection>(d->isec());
+        auto methname = cisec->getStringRefAtOffset(d->value);
+        methnameToSelref[CachedHashStringRef(methname)] = isec;
+      }
+    }
+  }
+}
+
+void ObjCSelRefsHelper::cleanup() { methnameToSelref.clear(); }
+
+ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
+  auto methnameOffset =
+      in.objcMethnameSection->getStringOffset(methname).outSecOff;
+
+  size_t wordSize = target->wordSize;
+  uint8_t *selrefData = bAlloc().Allocate<uint8_t>(wordSize);
+  write64le(selrefData, methnameOffset);
+  ConcatInputSection *objcSelref =
+      makeSyntheticInputSection(segment_names::data, section_names::objcSelrefs,
+                                S_LITERAL_POINTERS | S_ATTR_NO_DEAD_STRIP,
+                                ArrayRef<uint8_t>{selrefData, wordSize},
+                                /*align=*/wordSize);
+  assert(objcSelref->live);
+  objcSelref->relocs.push_back({/*type=*/target->unsignedRelocType,
+                                /*pcrel=*/false, /*length=*/3,
+                                /*offset=*/0,
+                                /*addend=*/static_cast<int64_t>(methnameOffset),
+                                /*referent=*/in.objcMethnameSection->isec});
+  objcSelref->parent = ConcatOutputSection::getOrCreateForInput(objcSelref);
+  addInputSection(objcSelref);
+  objcSelref->isFinal = true;
+  methnameToSelref[CachedHashStringRef(methname)] = objcSelref;
+  return objcSelref;
+}
+
+ConcatInputSection *ObjCSelRefsHelper::getSelRef(StringRef methname) {
+  auto it = methnameToSelref.find(CachedHashStringRef(methname));
+  if (it == methnameToSelref.end())
+    return nullptr;
+  return it->second;
+}
+
 ObjCStubsSection::ObjCStubsSection()
     : SyntheticSection(segment_names::text, section_names::objcStubs) {
   flags = S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
-  align = target->objcStubsAlignment;
+  align = config->objcStubsMode == ObjCStubsMode::fast
+              ? target->objcStubsFastAlignment
+              : target->objcStubsSmallAlignment;
+}
+
+bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
+  return sym->getName().starts_with(symbolPrefix);
+}
+
+StringRef ObjCStubsSection::getMethname(Symbol *sym) {
+  assert(isObjCStubSymbol(sym) && "not an objc stub");
+  auto name = sym->getName();
+  StringRef methname = name.drop_front(symbolPrefix.size());
+  return methname;
 }
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
-  assert(sym->getName().starts_with(symbolPrefix) && "not an objc stub");
-  StringRef methname = sym->getName().drop_front(symbolPrefix.size());
-  offsets.push_back(
-      in.objcMethnameSection->getStringOffset(methname).outSecOff);
+  StringRef methname = getMethname(sym);
+  // We create a selref entry for each unique methname.
+  if (!ObjCSelRefsHelper::getSelRef(methname))
+    ObjCSelRefsHelper::makeSelRef(methname);
+
+  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
+                      ? target->objcStubsFastSize
+                      : target->objcStubsSmallSize;
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
-      /*value=*/symbols.size() * target->objcStubsFastSize,
-      /*size=*/target->objcStubsFastSize,
+      /*value=*/symbols.size() * stubSize,
+      /*size=*/stubSize,
       /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false);
@@ -828,55 +909,44 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
 }
 
 void ObjCStubsSection::setUp() {
-  Symbol *objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
-                                             /*isWeakRef=*/false);
+  objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
+                                     /*isWeakRef=*/false);
+  if (auto *undefined = dyn_cast<Undefined>(objcMsgSend))
+    treatUndefinedSymbol(*undefined,
+                         "lazy binding (normally in libobjc.dylib)");
   objcMsgSend->used = true;
-  in.got->addEntry(objcMsgSend);
-  assert(objcMsgSend->isInGot());
-  objcMsgSendGotIndex = objcMsgSend->gotIndex;
-
-  size_t size = offsets.size() * target->wordSize;
-  uint8_t *selrefsData = bAlloc().Allocate<uint8_t>(size);
-  for (size_t i = 0, n = offsets.size(); i < n; ++i)
-    write64le(&selrefsData[i * target->wordSize], offsets[i]);
-
-  in.objcSelrefs =
-      makeSyntheticInputSection(segment_names::data, section_names::objcSelrefs,
-                                S_LITERAL_POINTERS | S_ATTR_NO_DEAD_STRIP,
-                                ArrayRef<uint8_t>{selrefsData, size},
-                                /*align=*/target->wordSize);
-  in.objcSelrefs->live = true;
-
-  for (size_t i = 0, n = offsets.size(); i < n; ++i) {
-    in.objcSelrefs->relocs.push_back(
-        {/*type=*/target->unsignedRelocType,
-         /*pcrel=*/false, /*length=*/3,
-         /*offset=*/static_cast<uint32_t>(i * target->wordSize),
-         /*addend=*/offsets[i] * in.objcMethnameSection->align,
-         /*referent=*/in.objcMethnameSection->isec});
+  if (config->objcStubsMode == ObjCStubsMode::fast) {
+    in.got->addEntry(objcMsgSend);
+    assert(objcMsgSend->isInGot());
+  } else {
+    assert(config->objcStubsMode == ObjCStubsMode::small);
+    // In line with ld64's behavior, when objc_msgSend is a direct symbol,
+    // we directly reference it.
+    // In other cases, typically when binding in libobjc.dylib,
+    // we generate a stub to invoke objc_msgSend.
+    if (!isa<Defined>(objcMsgSend))
+      in.stubs->addEntry(objcMsgSend);
   }
-
-  in.objcSelrefs->parent =
-      ConcatOutputSection::getOrCreateForInput(in.objcSelrefs);
-  inputSections.push_back(in.objcSelrefs);
-  in.objcSelrefs->isFinal = true;
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  return target->objcStubsFastSize * symbols.size();
+  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
+                      ? target->objcStubsFastSize
+                      : target->objcStubsSmallSize;
+  return stubSize * symbols.size();
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
-  assert(in.objcSelrefs->live);
-  assert(in.objcSelrefs->isFinal);
-
   uint64_t stubOffset = 0;
   for (size_t i = 0, n = symbols.size(); i < n; ++i) {
     Defined *sym = symbols[i];
+
+    auto methname = getMethname(sym);
+    InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
+    assert(selRef != nullptr && "no selref for methname");
+    auto selrefAddr = selRef->getVA(0);
     target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                 stubOffset, in.objcSelrefs->getVA(), i,
-                                 in.got->addr, objcMsgSendGotIndex);
-    stubOffset += target->objcStubsFastSize;
+                                 stubOffset, selrefAddr, objcMsgSend);
   }
 }
 
@@ -995,10 +1065,13 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
     if (entries.empty())
       continue;
 
-    assert(is_sorted(entries, [](const data_in_code_entry &lhs,
+    std::vector<MachO::data_in_code_entry> sortedEntries;
+    sortedEntries.assign(entries.begin(), entries.end());
+    llvm::sort(sortedEntries, [](const data_in_code_entry &lhs,
                                  const data_in_code_entry &rhs) {
       return lhs.offset < rhs.offset;
-    }));
+    });
+
     // For each code subsection find 'data in code' entries residing in it.
     // Compute the new offset values as
     // <offset within subsection> + <subsection address> - <__TEXT address>.
@@ -1011,12 +1084,12 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
           continue;
         const uint64_t beginAddr = section->addr + subsec.offset;
         auto it = llvm::lower_bound(
-            entries, beginAddr,
+            sortedEntries, beginAddr,
             [](const MachO::data_in_code_entry &entry, uint64_t addr) {
               return entry.offset < addr;
             });
         const uint64_t endAddr = beginAddr + isec->getSize();
-        for (const auto end = entries.end();
+        for (const auto end = sortedEntries.end();
              it != end && it->offset + it->length <= endAddr; ++it)
           dataInCodeEntries.push_back(
               {static_cast<uint32_t>(isec->getVA(it->offset - beginAddr) -
@@ -1054,7 +1127,7 @@ void FunctionStartsSection::finalizeContents() {
     if (auto *objFile = dyn_cast<ObjFile>(file)) {
       for (const Symbol *sym : objFile->symbols) {
         if (const auto *defined = dyn_cast_or_null<Defined>(sym)) {
-          if (!defined->isec || !isCodeSection(defined->isec) ||
+          if (!defined->isec() || !isCodeSection(defined->isec()) ||
               !defined->isLive())
             continue;
           addrs.push_back(defined->getVA());
@@ -1147,15 +1220,18 @@ void SymtabSection::emitStabs() {
         continue;
 
       // Constant-folded symbols go in the executable's symbol table, but don't
-      // get a stabs entry.
-      if (defined->wasIdenticalCodeFolded)
+      // get a stabs entry unless --keep-icf-stabs flag is specified
+      if (!config->keepICFStabs && defined->wasIdenticalCodeFolded)
         continue;
 
       ObjFile *file = defined->getObjectFile();
       if (!file || !file->compileUnit)
         continue;
 
-      symbolsNeedingStabs.emplace_back(defined, defined->isec->getFile()->id);
+      // We use 'originalIsec' to get the file id of the symbol since 'isec()'
+      // might point to the merged ICF symbol's file
+      symbolsNeedingStabs.emplace_back(defined,
+                                       defined->originalIsec->getFile()->id);
     }
   }
 
@@ -1170,7 +1246,9 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
-    InputSection *isec = defined->isec;
+    // We use 'originalIsec' of the symbol since we care about the actual origin
+    // of the symbol, not the canonical location returned by `isec()`.
+    InputSection *isec = defined->originalIsec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1183,7 +1261,7 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = defined->isec->parent->index;
+    symStab.sect = isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = defined->getVA();
 
@@ -1334,7 +1412,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
         nList->n_value = defined->value;
       } else {
         nList->n_type = scope | N_SECT;
-        nList->n_sect = defined->isec->parent->index;
+        nList->n_sect = defined->isec()->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
@@ -1400,11 +1478,8 @@ void IndirectSymtabSection::finalizeContents() {
 }
 
 static uint32_t indirectValue(const Symbol *sym) {
-  if (sym->symtabIndex == UINT32_MAX)
+  if (sym->symtabIndex == UINT32_MAX || !needsBinding(sym))
     return INDIRECT_SYMBOL_LOCAL;
-  if (auto *defined = dyn_cast<Defined>(sym))
-    if (defined->privateExtern)
-      return INDIRECT_SYMBOL_LOCAL;
   return sym->symtabIndex;
 }
 
@@ -1901,6 +1976,241 @@ void InitOffsetsSection::setUp() {
         in.stubs->addEntry(sym);
     }
   }
+}
+
+ObjCMethListSection::ObjCMethListSection()
+    : SyntheticSection(segment_names::text, section_names::objcMethList) {
+  flags = S_ATTR_NO_DEAD_STRIP;
+  align = relativeOffsetSize;
+}
+
+// Go through all input method lists and ensure that we have selrefs for all
+// their method names. The selrefs will be needed later by ::writeTo. We need to
+// create them early on here to ensure they are processed correctly by the lld
+// pipeline.
+void ObjCMethListSection::setUp() {
+  for (const ConcatInputSection *isec : inputs) {
+    uint32_t structSizeAndFlags = 0, structCount = 0;
+    readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
+    uint32_t originalStructSize = structSizeAndFlags & structSizeMask;
+    // Method name is immediately after header
+    uint32_t methodNameOff = methodListHeaderSize;
+
+    // Loop through all methods, and ensure a selref for each of them exists.
+    while (methodNameOff < isec->data.size()) {
+      const Reloc *reloc = isec->getRelocAt(methodNameOff);
+      assert(reloc && "Relocation expected at method list name slot");
+      auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
+      assert(def && "Expected valid Defined at method list name slot");
+      auto *cisec = cast<CStringInputSection>(def->isec());
+      assert(cisec && "Expected method name to be in a CStringInputSection");
+      auto methname = cisec->getStringRefAtOffset(def->value);
+      if (!ObjCSelRefsHelper::getSelRef(methname))
+        ObjCSelRefsHelper::makeSelRef(methname);
+
+      // Jump to method name offset in next struct
+      methodNameOff += originalStructSize;
+    }
+  }
+}
+
+// Calculate section size and final offsets for where InputSection's need to be
+// written.
+void ObjCMethListSection::finalize() {
+  // sectionSize will be the total size of the __objc_methlist section
+  sectionSize = 0;
+  for (ConcatInputSection *isec : inputs) {
+    // We can also use sectionSize as write offset for isec
+    assert(sectionSize == alignToPowerOf2(sectionSize, relativeOffsetSize) &&
+           "expected __objc_methlist to be aligned by default with the "
+           "required section alignment");
+    isec->outSecOff = sectionSize;
+
+    isec->isFinal = true;
+    uint32_t relativeListSize =
+        computeRelativeMethodListSize(isec->data.size());
+    sectionSize += relativeListSize;
+
+    // If encoding the method list in relative offset format shrinks the size,
+    // then we also need to adjust symbol sizes to match the new size. Note that
+    // on 32bit platforms the size of the method list will remain the same when
+    // encoded in relative offset format.
+    if (relativeListSize != isec->data.size()) {
+      for (Symbol *sym : isec->symbols) {
+        assert(isa<Defined>(sym) &&
+               "Unexpected undefined symbol in ObjC method list");
+        auto *def = cast<Defined>(sym);
+        // There can be 0-size symbols, check if this is the case and ignore
+        // them.
+        if (def->size) {
+          assert(
+              def->size == isec->data.size() &&
+              "Invalid ObjC method list symbol size: expected symbol size to "
+              "match isec size");
+          def->size = relativeListSize;
+        }
+      }
+    }
+  }
+}
+
+void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
+  uint8_t *buf = bufStart;
+  for (const ConcatInputSection *isec : inputs) {
+    assert(buf - bufStart == long(isec->outSecOff) &&
+           "Writing at unexpected offset");
+    uint32_t writtenSize = writeRelativeMethodList(isec, buf);
+    buf += writtenSize;
+  }
+  assert(buf - bufStart == sectionSize &&
+         "Written size does not match expected section size");
+}
+
+// Check if an InputSection is a method list. To do this we scan the
+// InputSection for any symbols who's names match the patterns we expect clang
+// to generate for method lists.
+bool ObjCMethListSection::isMethodList(const ConcatInputSection *isec) {
+  const char *symPrefixes[] = {objc::symbol_names::classMethods,
+                               objc::symbol_names::instanceMethods,
+                               objc::symbol_names::categoryInstanceMethods,
+                               objc::symbol_names::categoryClassMethods};
+  if (!isec)
+    return false;
+  for (const Symbol *sym : isec->symbols) {
+    auto *def = dyn_cast_or_null<Defined>(sym);
+    if (!def)
+      continue;
+    for (const char *prefix : symPrefixes) {
+      if (def->getName().starts_with(prefix)) {
+        assert(def->size == isec->data.size() &&
+               "Invalid ObjC method list symbol size: expected symbol size to "
+               "match isec size");
+        assert(def->value == 0 &&
+               "Offset of ObjC method list symbol must be 0");
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+// Encode a single relative offset value. The input is the data/symbol at
+// (&isec->data[inSecOff]). The output is written to (&buf[outSecOff]).
+// 'createSelRef' indicates that we should not directly use the specified
+// symbol, but instead get the selRef for the symbol and use that instead.
+void ObjCMethListSection::writeRelativeOffsetForIsec(
+    const ConcatInputSection *isec, uint8_t *buf, uint32_t &inSecOff,
+    uint32_t &outSecOff, bool useSelRef) const {
+  const Reloc *reloc = isec->getRelocAt(inSecOff);
+  assert(reloc && "Relocation expected at __objc_methlist Offset");
+  auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
+  assert(def && "Expected all syms in __objc_methlist to be defined");
+  uint32_t symVA = def->getVA();
+
+  if (useSelRef) {
+    auto *cisec = cast<CStringInputSection>(def->isec());
+    auto methname = cisec->getStringRefAtOffset(def->value);
+    ConcatInputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
+    assert(selRef && "Expected all selector names to already be already be "
+                     "present in __objc_selrefs");
+    symVA = selRef->getVA();
+    assert(selRef->data.size() == sizeof(target->wordSize) &&
+           "Expected one selref per ConcatInputSection");
+  }
+
+  uint32_t currentVA = isec->getVA() + outSecOff;
+  uint32_t delta = symVA - currentVA;
+  write32le(buf + outSecOff, delta);
+
+  // Move one pointer forward in the absolute method list
+  inSecOff += target->wordSize;
+  // Move one relative offset forward in the relative method list (32 bits)
+  outSecOff += relativeOffsetSize;
+}
+
+// Write a relative method list to buf, return the size of the written
+// information
+uint32_t
+ObjCMethListSection::writeRelativeMethodList(const ConcatInputSection *isec,
+                                             uint8_t *buf) const {
+  // Copy over the header, and add the "this is a relative method list" magic
+  // value flag
+  uint32_t structSizeAndFlags = 0, structCount = 0;
+  readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
+  // Set the struct size for the relative method list
+  uint32_t relativeStructSizeAndFlags =
+      (relativeOffsetSize * pointersPerStruct) & structSizeMask;
+  // Carry over the old flags from the input struct
+  relativeStructSizeAndFlags |= structSizeAndFlags & structFlagsMask;
+  // Set the relative method list flag
+  relativeStructSizeAndFlags |= relMethodHeaderFlag;
+
+  writeMethodListHeader(buf, relativeStructSizeAndFlags, structCount);
+
+  assert(methodListHeaderSize +
+                 (structCount * pointersPerStruct * target->wordSize) ==
+             isec->data.size() &&
+         "Invalid computed ObjC method list size");
+
+  uint32_t inSecOff = methodListHeaderSize;
+  uint32_t outSecOff = methodListHeaderSize;
+
+  // Go through the method list and encode input absolute pointers as relative
+  // offsets. writeRelativeOffsetForIsec will be incrementing inSecOff and
+  // outSecOff
+  for (uint32_t i = 0; i < structCount; i++) {
+    // Write the name of the method
+    writeRelativeOffsetForIsec(isec, buf, inSecOff, outSecOff, true);
+    // Write the type of the method
+    writeRelativeOffsetForIsec(isec, buf, inSecOff, outSecOff, false);
+    // Write reference to the selector of the method
+    writeRelativeOffsetForIsec(isec, buf, inSecOff, outSecOff, false);
+  }
+
+  // Expecting to have read all the data in the isec
+  assert(inSecOff == isec->data.size() &&
+         "Invalid actual ObjC method list size");
+  assert(
+      outSecOff == computeRelativeMethodListSize(inSecOff) &&
+      "Mismatch between input & output size when writing relative method list");
+  return outSecOff;
+}
+
+// Given the size of an ObjC method list InputSection, return the size of the
+// method list when encoded in relative offsets format. We can do this without
+// decoding the actual data, as it can be directly inferred from the size of the
+// isec.
+uint32_t ObjCMethListSection::computeRelativeMethodListSize(
+    uint32_t absoluteMethodListSize) const {
+  uint32_t oldPointersSize = absoluteMethodListSize - methodListHeaderSize;
+  uint32_t pointerCount = oldPointersSize / target->wordSize;
+  assert(((pointerCount % pointersPerStruct) == 0) &&
+         "__objc_methlist expects method lists to have multiple-of-3 pointers");
+
+  uint32_t newPointersSize = pointerCount * relativeOffsetSize;
+  uint32_t newTotalSize = methodListHeaderSize + newPointersSize;
+
+  assert((newTotalSize <= absoluteMethodListSize) &&
+         "Expected relative method list size to be smaller or equal than "
+         "original size");
+  return newTotalSize;
+}
+
+// Read a method list header from buf
+void ObjCMethListSection::readMethodListHeader(const uint8_t *buf,
+                                               uint32_t &structSizeAndFlags,
+                                               uint32_t &structCount) const {
+  structSizeAndFlags = read32le(buf);
+  structCount = read32le(buf + sizeof(uint32_t));
+}
+
+// Write a method list header to buf
+void ObjCMethListSection::writeMethodListHeader(uint8_t *buf,
+                                                uint32_t structSizeAndFlags,
+                                                uint32_t structCount) const {
+  write32le(buf, structSizeAndFlags);
+  write32le(buf + sizeof(structSizeAndFlags), structCount);
 }
 
 void macho::createSyntheticSymbols() {

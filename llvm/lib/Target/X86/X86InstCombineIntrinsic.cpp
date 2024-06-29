@@ -26,20 +26,21 @@ using namespace llvm;
 
 /// Return a constant boolean vector that has true elements in all positions
 /// where the input constant data vector has an element with the sign bit set.
-static Constant *getNegativeIsTrueBoolVec(Constant *V) {
+static Constant *getNegativeIsTrueBoolVec(Constant *V, const DataLayout &DL) {
   VectorType *IntTy = VectorType::getInteger(cast<VectorType>(V->getType()));
   V = ConstantExpr::getBitCast(V, IntTy);
-  V = ConstantExpr::getICmp(CmpInst::ICMP_SGT, Constant::getNullValue(IntTy),
-                            V);
+  V = ConstantFoldCompareInstOperands(CmpInst::ICMP_SGT,
+                                      Constant::getNullValue(IntTy), V, DL);
+  assert(V && "Vector must be foldable");
   return V;
 }
 
 /// Convert the x86 XMM integer vector mask to a vector of bools based on
 /// each element's most significant bit (the sign bit).
-static Value *getBoolVecFromMask(Value *Mask) {
+static Value *getBoolVecFromMask(Value *Mask, const DataLayout &DL) {
   // Fold Constant Mask.
   if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask))
-    return getNegativeIsTrueBoolVec(ConstantMask);
+    return getNegativeIsTrueBoolVec(ConstantMask, DL);
 
   // Mask was extended from a boolean vector.
   Value *ExtMask;
@@ -65,7 +66,7 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
 
   // The mask is constant or extended from a bool vector. Convert this x86
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
-  if (Value *BoolMask = getBoolVecFromMask(Mask)) {
+  if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
     // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
     // the LLVM intrinsic definition for the pointer argument.
     unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
@@ -102,7 +103,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
 
   // The mask is constant or extended from a bool vector. Convert this x86
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
-  if (Value *BoolMask = getBoolVecFromMask(Mask)) {
+  if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
     unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
     PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
     Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
@@ -212,7 +213,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   if (IsImm) {
     assert(AmtVT->isIntegerTy(32) && "Unexpected shift-by-immediate type");
     KnownBits KnownAmtBits =
-        llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+        llvm::computeKnownBits(Amt, II.getDataLayout());
     if (KnownAmtBits.getMaxValue().ult(BitWidth)) {
       Amt = Builder.CreateZExtOrTrunc(Amt, SVT);
       Amt = Builder.CreateVectorSplat(VWidth, Amt);
@@ -236,9 +237,9 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     APInt DemandedLower = APInt::getOneBitSet(NumAmtElts, 0);
     APInt DemandedUpper = APInt::getBitsSet(NumAmtElts, 1, NumAmtElts / 2);
     KnownBits KnownLowerBits = llvm::computeKnownBits(
-        Amt, DemandedLower, II.getModule()->getDataLayout());
+        Amt, DemandedLower, II.getDataLayout());
     KnownBits KnownUpperBits = llvm::computeKnownBits(
-        Amt, DemandedUpper, II.getModule()->getDataLayout());
+        Amt, DemandedUpper, II.getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
         (DemandedUpper.isZero() || KnownUpperBits.isZero())) {
       SmallVector<int, 16> ZeroSplat(VWidth, 0);
@@ -356,7 +357,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   // If the shift amount is guaranteed to be in-range we can replace it with a
   // generic shift.
   KnownBits KnownAmt =
-      llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+      llvm::computeKnownBits(Amt, II.getDataLayout());
   if (KnownAmt.getMaxValue().ult(BitWidth)) {
     return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                       : Builder.CreateLShr(Vec, Amt))
@@ -2688,7 +2689,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // Constant Mask - select 1st/2nd argument lane based on top bit of mask.
     if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask)) {
-      Constant *NewSelector = getNegativeIsTrueBoolVec(ConstantMask);
+      Constant *NewSelector =
+          getNegativeIsTrueBoolVec(ConstantMask, IC.getDataLayout());
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
 
@@ -2699,14 +2701,14 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Mask, PatternMatch::m_SExt(PatternMatch::m_Value(BoolVec))) &&
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
-      assert(Mask->getType()->getPrimitiveSizeInBits() ==
-                 II.getType()->getPrimitiveSizeInBits() &&
+      auto *MaskTy = cast<FixedVectorType>(Mask->getType());
+      auto *OpTy = cast<FixedVectorType>(II.getType());
+      assert(MaskTy->getPrimitiveSizeInBits() ==
+                 OpTy->getPrimitiveSizeInBits() &&
              "Not expecting mask and operands with different sizes");
+      unsigned NumMaskElts = MaskTy->getNumElements();
+      unsigned NumOperandElts = OpTy->getNumElements();
 
-      unsigned NumMaskElts =
-          cast<FixedVectorType>(Mask->getType())->getNumElements();
-      unsigned NumOperandElts =
-          cast<FixedVectorType>(II.getType())->getNumElements();
       if (NumMaskElts == NumOperandElts) {
         return SelectInst::Create(BoolVec, Op1, Op0);
       }
@@ -2714,8 +2716,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // If the mask has less elements than the operands, each mask bit maps to
       // multiple elements of the operands. Bitcast back and forth.
       if (NumMaskElts < NumOperandElts) {
-        Value *CastOp0 = IC.Builder.CreateBitCast(Op0, Mask->getType());
-        Value *CastOp1 = IC.Builder.CreateBitCast(Op1, Mask->getType());
+        Value *CastOp0 = IC.Builder.CreateBitCast(Op0, MaskTy);
+        Value *CastOp1 = IC.Builder.CreateBitCast(Op1, MaskTy);
         Value *Sel = IC.Builder.CreateSelect(BoolVec, CastOp1, CastOp0);
         return new BitCastInst(Sel, II.getType());
       }

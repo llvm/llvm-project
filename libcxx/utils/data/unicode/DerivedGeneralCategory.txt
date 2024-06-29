@@ -1,6 +1,6 @@
-# DerivedGeneralCategory-15.0.0.txt
-# Date: 2022-04-26, 23:14:35 GMT
-# © 2022 Unicode®, Inc.
+# DerivedGeneralCategory-15.1.0.txt
+# Date: 2023-07-28, 23:34:02 GMT
+# © 2023 Unicode®, Inc.
 # Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and other countries.
 # For terms of use, see https://www.unicode.org/terms_of_use.html
 #
@@ -284,13 +284,12 @@
 2E9A          ; Cn #       <reserved-2E9A>
 2EF4..2EFF    ; Cn #  [12] <reserved-2EF4>..<reserved-2EFF>
 2FD6..2FEF    ; Cn #  [26] <reserved-2FD6>..<reserved-2FEF>
-2FFC..2FFF    ; Cn #   [4] <reserved-2FFC>..<reserved-2FFF>
 3040          ; Cn #       <reserved-3040>
 3097..3098    ; Cn #   [2] <reserved-3097>..<reserved-3098>
 3100..3104    ; Cn #   [5] <reserved-3100>..<reserved-3104>
 3130          ; Cn #       <reserved-3130>
 318F          ; Cn #       <reserved-318F>
-31E4..31EF    ; Cn #  [12] <reserved-31E4>..<reserved-31EF>
+31E4..31EE    ; Cn #  [11] <reserved-31E4>..<reserved-31EE>
 321F          ; Cn #       <reserved-321F>
 A48D..A48F    ; Cn #   [3] <reserved-A48D>..<reserved-A48F>
 A4C7..A4CF    ; Cn #   [9] <reserved-A4C7>..<reserved-A4CF>
@@ -713,7 +712,8 @@ FFFE..FFFF    ; Cn #   [2] <noncharacter-FFFE>..<noncharacter-FFFF>
 2B73A..2B73F  ; Cn #   [6] <reserved-2B73A>..<reserved-2B73F>
 2B81E..2B81F  ; Cn #   [2] <reserved-2B81E>..<reserved-2B81F>
 2CEA2..2CEAF  ; Cn #  [14] <reserved-2CEA2>..<reserved-2CEAF>
-2EBE1..2F7FF  ; Cn # [3103] <reserved-2EBE1>..<reserved-2F7FF>
+2EBE1..2EBEF  ; Cn #  [15] <reserved-2EBE1>..<reserved-2EBEF>
+2EE5E..2F7FF  ; Cn # [2466] <reserved-2EE5E>..<reserved-2F7FF>
 2FA1E..2FFFF  ; Cn # [1506] <reserved-2FA1E>..<noncharacter-2FFFF>
 3134B..3134F  ; Cn #   [5] <reserved-3134B>..<reserved-3134F>
 323B0..E0000  ; Cn # [711761] <reserved-323B0>..<reserved-E0000>
@@ -723,7 +723,7 @@ E01F0..EFFFF  ; Cn # [65040] <reserved-E01F0>..<noncharacter-EFFFF>
 FFFFE..FFFFF  ; Cn #   [2] <noncharacter-FFFFE>..<noncharacter-FFFFF>
 10FFFE..10FFFF; Cn #   [2] <noncharacter-10FFFE>..<noncharacter-10FFFF>
 
-# Total code points: 825345
+# Total code points: 824718
 
 # ================================================
 
@@ -2649,11 +2649,12 @@ FFDA..FFDC    ; Lo #   [3] HALFWIDTH HANGUL LETTER EU..HALFWIDTH HANGUL LETTER I
 2B740..2B81D  ; Lo # [222] CJK UNIFIED IDEOGRAPH-2B740..CJK UNIFIED IDEOGRAPH-2B81D
 2B820..2CEA1  ; Lo # [5762] CJK UNIFIED IDEOGRAPH-2B820..CJK UNIFIED IDEOGRAPH-2CEA1
 2CEB0..2EBE0  ; Lo # [7473] CJK UNIFIED IDEOGRAPH-2CEB0..CJK UNIFIED IDEOGRAPH-2EBE0
+2EBF0..2EE5D  ; Lo # [622] CJK UNIFIED IDEOGRAPH-2EBF0..CJK UNIFIED IDEOGRAPH-2EE5D
 2F800..2FA1D  ; Lo # [542] CJK COMPATIBILITY IDEOGRAPH-2F800..CJK COMPATIBILITY IDEOGRAPH-2FA1D
 30000..3134A  ; Lo # [4939] CJK UNIFIED IDEOGRAPH-30000..CJK UNIFIED IDEOGRAPH-3134A
 31350..323AF  ; Lo # [4192] CJK UNIFIED IDEOGRAPH-31350..CJK UNIFIED IDEOGRAPH-323AF
 
-# Total code points: 131612
+# Total code points: 132234
 
 # ================================================
 
@@ -4092,7 +4093,7 @@ FFE3          ; Sk #       FULLWIDTH MACRON
 2E80..2E99    ; So #  [26] CJK RADICAL REPEAT..CJK RADICAL RAP
 2E9B..2EF3    ; So #  [89] CJK RADICAL CHOKE..CJK RADICAL C-SIMPLIFIED TURTLE
 2F00..2FD5    ; So # [214] KANGXI RADICAL ONE..KANGXI RADICAL FLUTE
-2FF0..2FFB    ; So #  [12] IDEOGRAPHIC DESCRIPTION CHARACTER LEFT TO RIGHT..IDEOGRAPHIC DESCRIPTION CHARACTER OVERLAID
+2FF0..2FFF    ; So #  [16] IDEOGRAPHIC DESCRIPTION CHARACTER LEFT TO RIGHT..IDEOGRAPHIC DESCRIPTION CHARACTER ROTATION
 3004          ; So #       JAPANESE INDUSTRIAL STANDARD SYMBOL
 3012..3013    ; So #   [2] POSTAL MARK..GETA MARK
 3020          ; So #       POSTAL MARK FACE
@@ -4101,6 +4102,7 @@ FFE3          ; Sk #       FULLWIDTH MACRON
 3190..3191    ; So #   [2] IDEOGRAPHIC ANNOTATION LINKING MARK..IDEOGRAPHIC ANNOTATION REVERSE MARK
 3196..319F    ; So #  [10] IDEOGRAPHIC ANNOTATION TOP MARK..IDEOGRAPHIC ANNOTATION MAN MARK
 31C0..31E3    ; So #  [36] CJK STROKE T..CJK STROKE Q
+31EF          ; So #       IDEOGRAPHIC DESCRIPTION CHARACTER SUBTRACTION
 3200..321E    ; So #  [31] PARENTHESIZED HANGUL KIYEOK..PARENTHESIZED KOREAN CHARACTER O HU
 322A..3247    ; So #  [30] PARENTHESIZED IDEOGRAPH MOON..CIRCLED IDEOGRAPH KOTO
 3250          ; So #       PARTNERSHIP SIGN
@@ -4191,7 +4193,7 @@ FFFC..FFFD    ; So #   [2] OBJECT REPLACEMENT CHARACTER..REPLACEMENT CHARACTER
 1FB00..1FB92  ; So # [147] BLOCK SEXTANT-1..UPPER HALF INVERSE MEDIUM SHADE AND LOWER HALF BLOCK
 1FB94..1FBCA  ; So #  [55] LEFT HALF INVERSE MEDIUM SHADE AND RIGHT HALF BLOCK..WHITE UP-POINTING CHEVRON
 
-# Total code points: 6634
+# Total code points: 6639
 
 # ================================================
 

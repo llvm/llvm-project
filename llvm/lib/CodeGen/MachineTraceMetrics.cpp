@@ -939,15 +939,15 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
   }
 
   // Now we know the height of MI. Update any regunits read.
-  for (size_t I = 0, E = ReadOps.size(); I != E; ++I) {
-    MCRegister Reg = MI.getOperand(ReadOps[I]).getReg().asMCReg();
+  for (unsigned Op : ReadOps) {
+    MCRegister Reg = MI.getOperand(Op).getReg().asMCReg();
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
       LiveRegUnit &LRU = RegUnits[Unit];
       // Set the height to the highest reader of the unit.
       if (LRU.Cycle <= Height && LRU.MI != &MI) {
         LRU.Cycle = Height;
         LRU.MI = &MI;
-        LRU.Op = ReadOps[I];
+        LRU.Op = Op;
       }
     }
   }

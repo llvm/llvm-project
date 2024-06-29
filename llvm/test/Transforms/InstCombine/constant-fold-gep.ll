@@ -12,26 +12,26 @@ target datalayout = "E-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-
 define void @frob() {
 ; CHECK-LABEL: @frob(
 ; CHECK-NEXT:    store i32 1, ptr @Y, align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 2), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 1, i64 1), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 1, i64 2), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 0, i64 0), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 0, i64 2), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 1, i64 1), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 1, i64 2), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 0, i64 0), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 0, i64 2), align 8
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 1, i64 1), align 8
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 1, i64 2), align 4
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 1, i64 0, i32 0, i64 0), align 8
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 2, i64 0, i32 0, i64 0), align 8
-; CHECK-NEXT:    store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 1, i64 0, i32 0, i64 1), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 4), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 8), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 12), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 16), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 20), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 24), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 28), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 32), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 36), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 40), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 44), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 48), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 52), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 56), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 60), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 64), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 68), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds (i8, ptr @Y, i64 72), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @Y, i64 144), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr (i8, ptr @Y, i64 76), align 8
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr @Y, align 4

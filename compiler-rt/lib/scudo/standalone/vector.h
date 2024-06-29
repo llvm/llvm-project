@@ -35,7 +35,9 @@ public:
     DCHECK_LE(Size, capacity());
     if (Size == capacity()) {
       const uptr NewCapacity = roundUpPowerOfTwo(Size + 1);
-      reallocate(NewCapacity);
+      if (!reallocate(NewCapacity)) {
+        return;
+      }
     }
     memcpy(&Data[Size++], &Element, sizeof(T));
   }
@@ -51,14 +53,17 @@ public:
   const T *data() const { return Data; }
   T *data() { return Data; }
   constexpr uptr capacity() const { return CapacityBytes / sizeof(T); }
-  void reserve(uptr NewSize) {
+  bool reserve(uptr NewSize) {
     // Never downsize internal buffer.
     if (NewSize > capacity())
-      reallocate(NewSize);
+      return reallocate(NewSize);
+    return true;
   }
   void resize(uptr NewSize) {
     if (NewSize > Size) {
-      reserve(NewSize);
+      if (!reserve(NewSize)) {
+        return;
+      }
       memset(&Data[Size], 0, sizeof(T) * (NewSize - Size));
     }
     Size = NewSize;
@@ -86,13 +91,16 @@ protected:
   }
 
 private:
-  void reallocate(uptr NewCapacity) {
+  bool reallocate(uptr NewCapacity) {
     DCHECK_GT(NewCapacity, 0);
     DCHECK_LE(Size, NewCapacity);
 
     MemMapT NewExternalBuffer;
     NewCapacity = roundUp(NewCapacity * sizeof(T), getPageSizeCached());
-    NewExternalBuffer.map(/*Addr=*/0U, NewCapacity, "scudo:vector");
+    if (!NewExternalBuffer.map(/*Addr=*/0U, NewCapacity, "scudo:vector",
+                               MAP_ALLOWNOMEM)) {
+      return false;
+    }
     T *NewExternalData = reinterpret_cast<T *>(NewExternalBuffer.getBase());
 
     memcpy(NewExternalData, Data, Size * sizeof(T));
@@ -101,6 +109,7 @@ private:
     Data = NewExternalData;
     CapacityBytes = NewCapacity;
     ExternalBuffer = NewExternalBuffer;
+    return true;
   }
 
   T *Data = nullptr;

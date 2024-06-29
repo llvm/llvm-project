@@ -23,7 +23,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/TargetSelect.h"
@@ -132,7 +131,7 @@ static Expected<std::string> searchForFile(const Twine &FileName) {
 static Error processCommandLineLibraries() {
   for (StringRef BaseName : Libraries) {
     Expected<std::string> FullPath = searchForFile(
-        BaseName.endswith(".o") ? BaseName.str() : "lib" + BaseName + ".a");
+        BaseName.ends_with(".o") ? BaseName.str() : "lib" + BaseName + ".a");
     if (!FullPath)
       return FullPath.takeError();
     InputFiles.push_back(FullPath.get());
@@ -727,7 +726,6 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
 }
 
 int llvm_libtool_darwin_main(int Argc, char **Argv, const llvm::ToolContext &) {
-  InitLLVM X(Argc, Argv);
   Expected<Config> ConfigOrErr = parseCommandLine(Argc, Argv);
   if (!ConfigOrErr) {
     WithColor::defaultErrorHandler(ConfigOrErr.takeError());

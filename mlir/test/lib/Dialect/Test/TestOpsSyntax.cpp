@@ -8,6 +8,7 @@
 
 #include "TestOpsSyntax.h"
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/Base64.h"
 
@@ -412,7 +413,7 @@ void PrettyPrintedRegionOp::print(OpAsmPrinter &p) {
   // of inner-op), then we can print the entire region in a succinct way.
   // Here we assume that the prototype of "test.special.op" can be trivially
   // derived while parsing it back.
-  if (innerOp.getName().getStringRef().equals("test.special.op")) {
+  if (innerOp.getName().getStringRef() == "test.special.op") {
     p << " start test.special.op end";
   } else {
     p << " (";

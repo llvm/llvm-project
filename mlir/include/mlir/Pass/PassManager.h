@@ -18,8 +18,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <functional>
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace mlir {
 class AnalysisManager;
@@ -207,6 +207,27 @@ enum class PassDisplayMode {
   Pipeline,
 };
 
+/// Streams on which to output crash reproducer.
+struct ReproducerStream {
+  virtual ~ReproducerStream() = default;
+
+  /// Description of the reproducer stream.
+  virtual StringRef description() = 0;
+
+  /// Stream on which to output reproducer.
+  virtual raw_ostream &os() = 0;
+};
+
+/// Method type for constructing ReproducerStream.
+using ReproducerStreamFactory =
+    std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
+
+std::string
+makeReproducer(StringRef anchorName,
+               const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+               Operation *op, StringRef outputFile, bool disableThreads = false,
+               bool verifyPasses = false);
+
 /// The main pass manager and pipeline builder.
 class PassManager : public OpPassManager {
 public:
@@ -242,21 +263,6 @@ public:
   /// smallest pipeline.
   void enableCrashReproducerGeneration(StringRef outputFile,
                                        bool genLocalReproducer = false);
-
-  /// Streams on which to output crash reproducer.
-  struct ReproducerStream {
-    virtual ~ReproducerStream() = default;
-
-    /// Description of the reproducer stream.
-    virtual StringRef description() = 0;
-
-    /// Stream on which to output reproducer.
-    virtual raw_ostream &os() = 0;
-  };
-
-  /// Method type for constructing ReproducerStream.
-  using ReproducerStreamFactory =
-      std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
 
   /// Enable support for the pass manager to generate a reproducer on the event
   /// of a crash or a pass failure. `factory` is used to construct the streams
@@ -379,6 +385,43 @@ public:
           [](Pass *, Operation *) { return true; },
       bool printModuleScope = true, bool printAfterOnlyOnChange = true,
       bool printAfterOnlyOnFailure = false, raw_ostream &out = llvm::errs(),
+      OpPrintingFlags opPrintingFlags = OpPrintingFlags());
+
+  /// Similar to `enableIRPrinting` above, except that instead of printing
+  /// the IR to a single output stream, the instrumentation will print the
+  /// output of each pass to a separate file. The files will be organized into a
+  /// directory tree rooted at `printTreeDir`. The directories mirror the
+  /// nesting structure of the IR. For example, if the IR is congruent to the
+  /// pass-pipeline "builtin.module(passA,passB,func.func(passC,passD),passE)",
+  /// and `printTreeDir=/tmp/pipeline_output`, then then the tree file tree
+  /// created will look like:
+  ///
+  /// ```
+  /// /tmp/pass_output
+  /// ├── builtin_module_the_symbol_name
+  /// │   ├── 0_passA.mlir
+  /// │   ├── 1_passB.mlir
+  /// │   ├── 2_passE.mlir
+  /// │   ├── func_func_my_func_name
+  /// │   │   ├── 1_0_passC.mlir
+  /// │   │   ├── 1_1__passD.mlir
+  /// │   ├── func_func_my_other_func_name
+  /// │   │   ├── 1_0_passC.mlir
+  /// │   │   ├── 1_1_passD.mlir
+  /// ```
+  ///
+  /// The subdirectories are given names that reflect the parent operation name
+  /// and symbol name (if present). The output MLIR files are prefixed using an
+  /// atomic counter to indicate the order the passes were printed in and to
+  /// prevent any potential name collisions.
+  void enableIRPrintingToFileTree(
+      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass =
+          [](Pass *, Operation *) { return true; },
+      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass =
+          [](Pass *, Operation *) { return true; },
+      bool printModuleScope = true, bool printAfterOnlyOnChange = true,
+      bool printAfterOnlyOnFailure = false,
+      llvm::StringRef printTreeDir = ".pass_manager_output",
       OpPrintingFlags opPrintingFlags = OpPrintingFlags());
 
   //===--------------------------------------------------------------------===//

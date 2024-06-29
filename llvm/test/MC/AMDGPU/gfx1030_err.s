@@ -25,7 +25,7 @@ s_get_waveid_in_workgroup s0
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_getreg_b32 s2, hwreg(HW_REG_XNACK_MASK)
-// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 v_mac_f32 v0, v1, v2
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

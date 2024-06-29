@@ -175,7 +175,7 @@ public:
         Ty = Type::getPPC_FP128Ty(Context);
       else if (Arg == "x86_mmx")
         Ty = Type::getX86_MMXTy(Context);
-      else if (Arg.startswith("i")) {
+      else if (Arg.starts_with("i")) {
         unsigned N = 0;
         Arg.drop_front().getAsInteger(10, N);
         if (N > 0)
@@ -467,7 +467,7 @@ struct AllocaModifier: public Modifier {
 
   void Act() override {
     Type *Tp = pickType();
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     PT->push_back(new AllocaInst(Tp, DL.getAllocaAddrSpace(),
                                  "A", BB->getFirstNonPHI()));
   }

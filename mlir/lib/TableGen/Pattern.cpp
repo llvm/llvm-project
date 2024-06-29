@@ -225,7 +225,7 @@ StringRef SymbolInfoMap::getValuePackName(StringRef symbol, int *index) {
 SymbolInfoMap::SymbolInfo::SymbolInfo(
     const Operator *op, SymbolInfo::Kind kind,
     std::optional<DagAndConstant> dagAndConstant)
-    : op(op), kind(kind), dagAndConstant(std::move(dagAndConstant)) {}
+    : op(op), kind(kind), dagAndConstant(dagAndConstant) {}
 
 int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
   switch (kind) {

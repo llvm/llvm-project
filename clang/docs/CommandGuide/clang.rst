@@ -302,7 +302,7 @@ Language Selection and Mode Options
 .. option:: -fmsc-version=
 
  Set ``_MSC_VER``. When on Windows, this defaults to either the same value as
- the currently installed version of cl.exe, or ``1920``. Not set otherwise.
+ the currently installed version of cl.exe, or ``1933``. Not set otherwise.
 
 .. option:: -fborland-extensions
 
@@ -362,7 +362,7 @@ number of cross compilers, or may only support a native target.
 
   Specify the architecture to build for (all platforms).
 
-.. option:: -mmacosx-version-min=<version>
+.. option:: -mmacos-version-min=<version>
 
   When building for macOS, specify the minimum version supported by your
   application.
@@ -723,7 +723,7 @@ ENVIRONMENT
 
 .. envvar:: MACOSX_DEPLOYMENT_TARGET
 
-  If :option:`-mmacosx-version-min` is unspecified, the default deployment
+  If :option:`-mmacos-version-min` is unspecified, the default deployment
   target is read from this environment variable. This option only affects
   Darwin targets.
 

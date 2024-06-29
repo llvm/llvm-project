@@ -6,7 +6,7 @@ define void @tinkywinky(ptr %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    store i64 undef, ptr [[B:%.*]]
+; CHECK-NEXT:    store i64 undef, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    br label [[BODY]]

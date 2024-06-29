@@ -86,8 +86,6 @@ public:
   READ_FEATURE(AccObjectList)
   READ_FEATURE(AccObjectListWithModifier)
   READ_FEATURE(AccObjectListWithReduction)
-  READ_FEATURE(AccReductionOperator)
-  READ_FEATURE(AccReductionOperator::Operator)
   READ_FEATURE(AccSizeExpr)
   READ_FEATURE(AccSizeExprList)
   READ_FEATURE(AccSelfClause)
@@ -281,7 +279,7 @@ public:
   READ_FEATURE(ErrorRecovery)
   READ_FEATURE(EventPostStmt)
   READ_FEATURE(EventWaitStmt)
-  READ_FEATURE(EventWaitStmt::EventWaitSpec)
+  READ_FEATURE(EventWaitSpec)
   READ_FEATURE(ExecutableConstruct)
   READ_FEATURE(ExecutionPart)
   READ_FEATURE(ExecutionPartConstruct)
@@ -410,10 +408,13 @@ public:
   READ_FEATURE(LetterSpec)
   READ_FEATURE(LiteralConstant)
   READ_FEATURE(IntLiteralConstant)
+  READ_FEATURE(ReductionOperator)
+  READ_FEATURE(ReductionOperator::Operator)
   READ_FEATURE(LocalitySpec)
   READ_FEATURE(LocalitySpec::DefaultNone)
   READ_FEATURE(LocalitySpec::Local)
   READ_FEATURE(LocalitySpec::LocalInit)
+  READ_FEATURE(LocalitySpec::Reduce)
   READ_FEATURE(LocalitySpec::Shared)
   READ_FEATURE(LockStmt)
   READ_FEATURE(LockStmt::LockStat)
@@ -438,6 +439,7 @@ public:
   READ_FEATURE(NamelistStmt::Group)
   READ_FEATURE(NonLabelDoStmt)
   READ_FEATURE(NoPass)
+  READ_FEATURE(NotifyWaitStmt)
   READ_FEATURE(NullifyStmt)
   READ_FEATURE(NullInit)
   READ_FEATURE(ObjectDecl)
@@ -774,7 +776,9 @@ class FeatureListAction : public PluginParseTreeAction {
     }
   }
 
-  bool beginSourceFileAction() override { return runPrescan() && runParse(); }
+  bool beginSourceFileAction() override {
+    return runPrescan() && runParse(/*emitMessages=*/true);
+  }
 };
 
 static FrontendPluginRegistry::Add<FeatureListAction> X(

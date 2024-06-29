@@ -15,7 +15,6 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -182,6 +181,18 @@ public:
     return getKnownMinValue() % RHS == 0;
   }
 
+  /// Returns whether or not the callee is known to be a multiple of RHS.
+  constexpr bool isKnownMultipleOf(const FixedOrScalableQuantity &RHS) const {
+    // x % y == 0 => x % y == 0
+    // x % y == 0 => (vscale * x) % y == 0
+    // x % y == 0 => (vscale * x) % (vscale * y) == 0
+    // but
+    // x % y == 0 !=> x % (vscale * y) == 0
+    if (!isScalable() && RHS.isScalable())
+      return false;
+    return getKnownMinValue() % RHS.getKnownMinValue() == 0;
+  }
+
   // Return the minimum value with the assumption that the count is exact.
   // Use in places where a scalable count doesn't make sense (e.g. non-vector
   // types, or vectors in backends which don't support scalable vectors).
@@ -322,8 +333,6 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
       : FixedOrScalableQuantity(V) {}
 
 public:
-  constexpr TypeSize() : FixedOrScalableQuantity(0, false) {}
-
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
@@ -336,6 +345,7 @@ public:
   static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
+  static constexpr TypeSize getZero() { return TypeSize(0, false); }
 
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are

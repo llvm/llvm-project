@@ -18,8 +18,12 @@
 
 static const __llvm_profile_data *DataFirst = NULL;
 static const __llvm_profile_data *DataLast = NULL;
+static const VTableProfData *VTableProfDataFirst = NULL;
+static const VTableProfData *VTableProfDataLast = NULL;
 static const char *NamesFirst = NULL;
 static const char *NamesLast = NULL;
+static const char *VNamesFirst = NULL;
+static const char *VNamesLast = NULL;
 static char *CountersFirst = NULL;
 static char *CountersLast = NULL;
 static uint32_t *OrderFileFirst = NULL;
@@ -80,10 +84,21 @@ COMPILER_RT_VISIBILITY
 const __llvm_profile_data *__llvm_profile_begin_data(void) { return DataFirst; }
 COMPILER_RT_VISIBILITY
 const __llvm_profile_data *__llvm_profile_end_data(void) { return DataLast; }
+COMPILER_RT_VISIBILITY const VTableProfData *
+__llvm_profile_begin_vtables(void) {
+  return VTableProfDataFirst;
+}
+COMPILER_RT_VISIBILITY const VTableProfData *__llvm_profile_end_vtables(void) {
+  return VTableProfDataLast;
+}
 COMPILER_RT_VISIBILITY
 const char *__llvm_profile_begin_names(void) { return NamesFirst; }
 COMPILER_RT_VISIBILITY
 const char *__llvm_profile_end_names(void) { return NamesLast; }
+COMPILER_RT_VISIBILITY
+const char *__llvm_profile_begin_vtabnames(void) { return VNamesFirst; }
+COMPILER_RT_VISIBILITY
+const char *__llvm_profile_end_vtabnames(void) { return VNamesLast; }
 COMPILER_RT_VISIBILITY
 char *__llvm_profile_begin_counters(void) { return CountersFirst; }
 COMPILER_RT_VISIBILITY

@@ -51,7 +51,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   // When |x| > 25*log(2), or nan
   if (LIBC_UNLIKELY(x_abs >= 0x418a'a123U)) {
     // x < log(2^-25)
-    if (xbits.get_sign()) {
+    if (xbits.is_neg()) {
       // exp(-Inf) = 0
       if (xbits.is_inf())
         return -1.0f;
@@ -68,12 +68,12 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
         if (xbits.uintval() < 0x7f80'0000U) {
           int rounding = fputil::quick_get_round();
           if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-            return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
+            return FPBits::max_normal().get_val();
 
           fputil::set_errno_if_required(ERANGE);
           fputil::raise_except_if_required(FE_OVERFLOW);
         }
-        return x + static_cast<float>(FPBits::inf());
+        return x + FPBits::inf().get_val();
       }
     }
   }
@@ -104,7 +104,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
         // intermediate results as it is more efficient than using an emulated
         // version of FMA.
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
-      return fputil::fma(x, x, x);
+      return fputil::fma<float>(x, x, x);
 #else
       double xd = x;
       return static_cast<float>(fputil::multiply_add(xd, xd, xd));

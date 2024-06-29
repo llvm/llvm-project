@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=r600 -mcpu=r600 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=rs880 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=rv670 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=r600 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rs880 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv670 | FileCheck %s
 
 ; R600 supports 8 fetches in a clause
 ; CHECK: {{^}}fetch_limits_r600:

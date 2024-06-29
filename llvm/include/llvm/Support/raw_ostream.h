@@ -55,6 +55,7 @@ public:
   enum class OStreamKind {
     OK_OStream,
     OK_FDStream,
+    OK_SVecStream,
   };
 
 private:
@@ -102,6 +103,14 @@ public:
     MAGENTA,
     CYAN,
     WHITE,
+    BRIGHT_BLACK,
+    BRIGHT_RED,
+    BRIGHT_GREEN,
+    BRIGHT_YELLOW,
+    BRIGHT_BLUE,
+    BRIGHT_MAGENTA,
+    BRIGHT_CYAN,
+    BRIGHT_WHITE,
     SAVEDCOLOR,
     RESET,
   };
@@ -114,6 +123,14 @@ public:
   static constexpr Colors MAGENTA = Colors::MAGENTA;
   static constexpr Colors CYAN = Colors::CYAN;
   static constexpr Colors WHITE = Colors::WHITE;
+  static constexpr Colors BRIGHT_BLACK = Colors::BRIGHT_BLACK;
+  static constexpr Colors BRIGHT_RED = Colors::BRIGHT_RED;
+  static constexpr Colors BRIGHT_GREEN = Colors::BRIGHT_GREEN;
+  static constexpr Colors BRIGHT_YELLOW = Colors::BRIGHT_YELLOW;
+  static constexpr Colors BRIGHT_BLUE = Colors::BRIGHT_BLUE;
+  static constexpr Colors BRIGHT_MAGENTA = Colors::BRIGHT_MAGENTA;
+  static constexpr Colors BRIGHT_CYAN = Colors::BRIGHT_CYAN;
+  static constexpr Colors BRIGHT_WHITE = Colors::BRIGHT_WHITE;
   static constexpr Colors SAVEDCOLOR = Colors::SAVEDCOLOR;
   static constexpr Colors RESET = Colors::RESET;
 
@@ -615,6 +632,8 @@ public:
   /// immediately destroyed.
   raw_fd_stream(StringRef Filename, std::error_code &EC);
 
+  raw_fd_stream(int fd, bool shouldClose);
+
   /// This reads the \p Size bytes into a buffer pointed by \p Ptr.
   ///
   /// \param Ptr The start of the buffer to hold data to be read.
@@ -685,7 +704,11 @@ public:
   ///
   /// \param O The vector to write to; this should generally have at least 128
   /// bytes free to avoid any extraneous memory overhead.
-  explicit raw_svector_ostream(SmallVectorImpl<char> &O) : OS(O) {
+  explicit raw_svector_ostream(SmallVectorImpl<char> &O)
+      : raw_pwrite_stream(false, raw_ostream::OStreamKind::OK_SVecStream),
+        OS(O) {
+    // FIXME: here and in a few other places, set directly to unbuffered in the
+    // ctor.
     SetUnbuffered();
   }
 
@@ -695,10 +718,13 @@ public:
 
   /// Return a StringRef for the vector contents.
   StringRef str() const { return StringRef(OS.data(), OS.size()); }
+  SmallVectorImpl<char> &buffer() { return OS; }
 
   void reserveExtraSpace(uint64_t ExtraSize) override {
     OS.reserve(tell() + ExtraSize);
   }
+
+  static bool classof(const raw_ostream *OS);
 };
 
 /// A raw_ostream that discards all output.

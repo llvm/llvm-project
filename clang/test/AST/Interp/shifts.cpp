@@ -34,12 +34,13 @@ namespace shifts {
                  // ref-warning {{shift count is negative}} \
                  // ref-cxx17-warning {{shift count is negative}}
     c = 1 << (unsigned)-1; // expected-warning {{shift count >= width of type}} \
-                           // FIXME: 'implicit conversion' warning missing in the new interpreter. \
+                           // expected-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
                            // cxx17-warning {{shift count >= width of type}} \
+                           // cxx17-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
                            // ref-warning {{shift count >= width of type}} \
-                           // ref-warning {{implicit conversion}} \
+                           // ref-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
                            // ref-cxx17-warning {{shift count >= width of type}} \
-                           // ref-cxx17-warning {{implicit conversion}}
+                           // ref-cxx17-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}}
     c = 1 >> (unsigned)-1; // expected-warning {{shift count >= width of type}} \
                            // cxx17-warning {{shift count >= width of type}} \
                            // ref-warning {{shift count >= width of type}} \
@@ -187,4 +188,13 @@ namespace shifts {
                           // cxx17-note {{in call to 'foo(2)'}} \
                           // ref-cxx17-error {{not an integral constant expression}} \
                           // ref-cxx17-note {{in call to 'foo(2)'}}
+};
+
+namespace LongInt {
+  constexpr int f() {
+    int a = 1;
+    a <<= (long)0;
+    return 1;
+  }
+  static_assert(f() == 1, "");
 };

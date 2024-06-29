@@ -399,8 +399,8 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
 
   size_t posNoEVEX512 = FS.rfind("-evex512");
   // Make sure we won't be cheated by "-avx512fp16".
-  size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
-                                                : FS.rfind("-avx512f,");
+  size_t posNoAVX512F =
+      FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
   size_t posEVEX512 = FS.rfind("+evex512");
   size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
 
@@ -742,6 +742,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
     TargetRegistry::RegisterNullTargetStreamer(*T, createX86NullTargetStreamer);
 
     TargetRegistry::RegisterCOFFStreamer(*T, createX86WinCOFFStreamer);
+    TargetRegistry::RegisterELFStreamer(*T, createX86ELFStreamer);
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createX86MCInstPrinter);

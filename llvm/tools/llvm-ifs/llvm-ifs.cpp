@@ -212,17 +212,17 @@ static int writeTbdStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
 
   for (const auto &Symbol : Symbols) {
     auto Name = Symbol.Name;
-    auto Kind = SymbolKind::GlobalSymbol;
+    auto Kind = EncodeKind::GlobalSymbol;
     switch (Symbol.Type) {
     default:
     case IFSSymbolType::NoType:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     case IFSSymbolType::Object:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     case IFSSymbolType::Func:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     }
     if (Symbol.Weak)

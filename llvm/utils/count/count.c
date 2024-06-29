@@ -6,10 +6,18 @@
  *
 \*===----------------------------------------------------------------------===*/
 
-#include <stdlib.h>
+#include "llvm/Support/AutoConvert.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(int argc, char **argv) {
+#ifdef __MVS__
+  if (enableAutoConversion(fileno(stdin)) == -1)
+    fprintf(stderr, "Setting conversion on stdin failed\n");
+
+  if (enableAutoConversion(fileno(stderr)) == -1)
+    fprintf(stdout, "Setting conversion on stderr failed\n");
+#endif
   size_t Count, NumLines, NumRead;
   char Buffer[4096], *End;
 

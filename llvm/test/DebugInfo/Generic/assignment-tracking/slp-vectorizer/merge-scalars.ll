@@ -1,6 +1,8 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt -passes=slp-vectorizer -S -o - %s \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=slp-vectorizer -S -o - %s \
+; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; float get();
@@ -22,11 +24,11 @@
 ;; Test that dbg.assigns linked to the the scalar stores to quad get linked to
 ;; the vector store that replaces them.
 
-; CHECK: call void @llvm.dbg.assign(metadata float undef, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx, metadata !DIExpression())
-; CHECK: call void @llvm.dbg.assign(metadata float undef, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID]], metadata ptr %quad, metadata !DIExpression(DW_OP_plus_uconst, 4))
-; CHECK: call void @llvm.dbg.assign(metadata float undef, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[ID]], metadata ptr %quad, metadata !DIExpression(DW_OP_plus_uconst, 8))
+; CHECK: #dbg_assign(float undef, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[ID:[0-9]+]], ptr %arrayidx, !DIExpression(),
+; CHECK: #dbg_assign(float undef, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 4),
+; CHECK: #dbg_assign(float undef, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 8),
 ; CHECK: store <4 x float> {{.*}} !DIAssignID ![[ID]]
-; CHECK: call void @llvm.dbg.assign(metadata float undef, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[ID]], metadata ptr %quad, metadata !DIExpression(DW_OP_plus_uconst, 12))
+; CHECK: #dbg_assign(float undef, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 12),
 
 target triple = "x86_64-unknown-unknown"
 
@@ -64,10 +66,10 @@ entry:
   ret void, !dbg !62
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare !dbg !63 dso_local float @_Z3getv() local_unnamed_addr #2
 declare !dbg !66 dso_local float @_Z3extPf(ptr) local_unnamed_addr #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!0}

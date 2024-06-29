@@ -29,7 +29,5 @@ if not @LIBUNWIND_ENABLE_THREADS@:
     config.available_features.add('libunwind-no-threads')
 
 # Add substitutions for bootstrapping the test suite configuration
-import shlex
-config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
 config.substitutions.append(('%{include}', '@LIBUNWIND_SOURCE_DIR@/include'))
 config.substitutions.append(('%{lib}', '@LIBUNWIND_LIBRARY_DIR@'))

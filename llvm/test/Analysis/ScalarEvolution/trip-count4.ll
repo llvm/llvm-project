@@ -7,10 +7,8 @@ define void @another_count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: 'another_count_down_signed'
 ; CHECK-NEXT:  Determining loop execution counts for: @another_count_down_signed
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-11 + %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-11 + %n)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-11 + %n)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

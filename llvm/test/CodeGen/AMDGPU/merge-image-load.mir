@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
 
 # GFX9-LABEL: name: image_load_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V4 %5, %3, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)

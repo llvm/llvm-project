@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++14 -fblocks -analyze -analyzer-output=text\
+// RUN: %clang_analyze_cc1 -std=c++14 -fblocks -analyzer-output=text\
 // RUN:   -analyzer-checker=core,osx,debug.ExprInspection -verify %s
 
 #include "os_object_base.h"

@@ -22,11 +22,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenHwModes.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
-#include "InfoByHwMode.h"
-#include "VarLenCodeEmitterGen.h"
+#include "Common/CodeGenHwModes.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
+#include "Common/VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -68,7 +68,7 @@ private:
 
   void emitInstructionBaseValues(
       raw_ostream &o, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-      CodeGenTarget &Target, int HwMode = -1);
+      CodeGenTarget &Target, unsigned HwMode = DefaultMode);
   void
   emitCaseMap(raw_ostream &o,
               const std::map<std::string, std::vector<std::string>> &CaseMap);
@@ -78,8 +78,8 @@ private:
 
 // If the VarBitInit at position 'bit' matches the specified variable then
 // return the variable bit position.  Otherwise return -1.
-int CodeEmitterGen::getVariableBit(const std::string &VarName,
-                                   BitsInit *BI, int bit) {
+int CodeEmitterGen::getVariableBit(const std::string &VarName, BitsInit *BI,
+                                   int bit) {
   if (VarBitInit *VBI = dyn_cast<VarBitInit>(BI->getBit(bit))) {
     if (VarInit *VI = dyn_cast<VarInit>(VBI->getBitVar()))
       if (VI->getName() == VarName)
@@ -101,16 +101,16 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
   CodeGenInstruction &CGI = Target.getInstruction(R);
 
   // Determine if VarName actually contributes to the Inst encoding.
-  int bit = BI->getNumBits()-1;
+  int bit = BI->getNumBits() - 1;
 
   // Scan for a bit that this contributed to.
-  for (; bit >= 0; ) {
+  for (; bit >= 0;) {
     if (getVariableBit(VarName, BI, bit) != -1)
       break;
-    
+
     --bit;
   }
-  
+
   // If we found no bits, ignore this value, otherwise emit the call to get the
   // operand encoding.
   if (bit < 0)
@@ -127,12 +127,14 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[OpIdx].MIOperandNo;
   } else {
-    PrintError(R, Twine("No operand named ") + VarName + " in record " + R->getName());
+    PrintError(R, Twine("No operand named ") + VarName + " in record " +
+                      R->getName());
     return false;
   }
 
   if (CGI.Operands.isFlatOperandNotEmitted(OpIdx)) {
-    PrintError(R, "Operand " + VarName + " used but also marked as not emitted!");
+    PrintError(R,
+               "Operand " + VarName + " used but also marked as not emitted!");
     return false;
   }
 
@@ -156,10 +158,12 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     Case += ", Fixups, STI);\n";
   } else {
     if (UseAPInt) {
-      Case += "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
+      Case +=
+          "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
       Case += ", op, Fixups, STI";
     } else {
-      Case += "      op = getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
+      Case += "      op = getMachineOpValue(MI, MI.getOperand(" +
+              utostr(OpIdx) + ")";
       Case += ", Fixups, STI";
     }
     Case += ");\n";
@@ -193,9 +197,9 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
   }
 
   unsigned BitOffset = -1;
-  for (; bit >= 0; ) {
+  for (; bit >= 0;) {
     int varBit = getVariableBit(VarName, BI, bit);
-    
+
     // If this bit isn't from a variable, skip it.
     if (varBit == -1) {
       --bit;
@@ -209,7 +213,8 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     int N = 1;
     for (--bit; bit >= 0;) {
       varBit = getVariableBit(VarName, BI, bit);
-      if (varBit == -1 || varBit != (beginVarBit - N)) break;
+      if (varBit == -1 || varBit != (beginVarBit - N))
+        break;
       ++N;
       --bit;
     }
@@ -276,7 +281,7 @@ std::pair<std::string, std::string>
 CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
   std::string Case, BitOffsetCase;
 
-  auto append = [&](const char *S) {
+  auto append = [&](const std::string &S) {
     Case += S;
     BitOffsetCase += S;
   };
@@ -285,21 +290,55 @@ CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
     if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
       const CodeGenHwModes &HWM = Target.getHwModes();
       EncodingInfoByHwMode EBM(DI->getDef(), HWM);
+
+      // Invoke the interface to obtain the HwMode ID controlling the
+      // EncodingInfo for the current subtarget. This interface will
+      // mask off irrelevant HwMode IDs.
+      append("      unsigned HwMode = "
+             "STI.getHwMode(MCSubtargetInfo::HwMode_EncodingInfo);\n");
+      Case += "      switch (HwMode) {\n";
+      Case += "      default: llvm_unreachable(\"Unknown hardware mode!\"); "
+              "break;\n";
+      for (auto &[ModeId, Encoding] : EBM) {
+        if (ModeId == DefaultMode) {
+          Case +=
+              "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
+        } else {
+          Case += "      case " + itostr(ModeId) +
+                  ": InstBitsByHw = InstBits_" +
+                  std::string(HWM.getMode(ModeId).Name);
+        }
+        Case += "; break;\n";
+      }
+      Case += "      };\n";
+
+      // We need to remodify the 'Inst' value from the table we found above.
+      if (UseAPInt) {
+        int NumWords = APInt::getNumWords(BitWidth);
+        Case += "      Inst = APInt(" + itostr(BitWidth);
+        Case += ", ArrayRef(InstBitsByHw + opcode * " + itostr(NumWords) +
+                ", " + itostr(NumWords);
+        Case += "));\n";
+        Case += "      Value = Inst;\n";
+      } else {
+        Case += "      Value = InstBitsByHw[opcode];\n";
+      }
+
       append("      switch (HwMode) {\n");
       append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
-      for (auto &KV : EBM) {
-        append(("      case " + itostr(KV.first) + ": {\n").c_str());
-        addInstructionCasesForEncoding(R, KV.second, Target, Case,
+      for (auto &[ModeId, Encoding] : EBM) {
+        append("      case " + itostr(ModeId) + ": {\n");
+        addInstructionCasesForEncoding(R, Encoding, Target, Case,
                                        BitOffsetCase);
         append("      break;\n");
         append("      }\n");
       }
       append("      }\n");
-      return std::make_pair(std::move(Case), std::move(BitOffsetCase));
+      return std::pair(std::move(Case), std::move(BitOffsetCase));
     }
   }
   addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
-  return std::make_pair(std::move(Case), std::move(BitOffsetCase));
+  return std::pair(std::move(Case), std::move(BitOffsetCase));
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(
@@ -355,20 +394,22 @@ static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
 
 void CodeEmitterGen::emitInstructionBaseValues(
     raw_ostream &o, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-    CodeGenTarget &Target, int HwMode) {
+    CodeGenTarget &Target, unsigned HwMode) {
   const CodeGenHwModes &HWM = Target.getHwModes();
-  if (HwMode == -1)
+  if (HwMode == DefaultMode)
     o << "  static const uint64_t InstBits[] = {\n";
   else
-    o << "  static const uint64_t InstBits_" << HWM.getMode(HwMode).Name
-      << "[] = {\n";
+    o << "  static const uint64_t InstBits_"
+      << HWM.getModeName(HwMode, /*IncludeDefault=*/true) << "[] = {\n";
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     Record *R = CGI->TheDef;
 
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo")) {
-      o << "    "; emitInstBits(o, APInt(BitWidth, 0)); o << ",\n";
+      o << "    ";
+      emitInstBits(o, APInt(BitWidth, 0));
+      o << ",\n";
       continue;
     }
 
@@ -376,8 +417,17 @@ void CodeEmitterGen::emitInstructionBaseValues(
     if (const RecordVal *RV = R->getValue("EncodingInfos")) {
       if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        if (EBM.hasMode(HwMode))
+        if (EBM.hasMode(HwMode)) {
           EncodingDef = EBM.get(HwMode);
+        } else {
+          // If the HwMode does not match, then Encoding '0'
+          // should be generated.
+          APInt Value(BitWidth, 0);
+          o << "    ";
+          emitInstBits(o, Value);
+          o << "," << '\t' << "// " << R->getName() << "\n";
+          continue;
+        }
       }
     }
     BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
@@ -419,18 +469,15 @@ void CodeEmitterGen::run(raw_ostream &o) {
   emitSourceFileHeader("Machine Code Emitter", o);
 
   CodeGenTarget Target(Records);
-  std::vector<Record*> Insts = Records.getAllDerivedDefinitions("Instruction");
+  std::vector<Record *> Insts = Records.getAllDerivedDefinitions("Instruction");
 
   // For little-endian instruction bit encodings, reverse the bit order
   Target.reverseBitsForLittleEndianEncoding();
 
-  ArrayRef<const CodeGenInstruction*> NumberedInstructions =
-    Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
+      Target.getInstructionsByEnumValue();
 
-  if (any_of(NumberedInstructions, [](const CodeGenInstruction *CGI) {
-        Record *R = CGI->TheDef;
-        return R->getValue("Inst") && isa<DagInit>(R->getValueInit("Inst"));
-      })) {
+  if (Target.hasVariableLengthEncodings()) {
     emitVarLenCodeEmitter(Records, o);
   } else {
     const CodeGenHwModes &HWM = Target.getHwModes();
@@ -475,23 +522,17 @@ void CodeEmitterGen::run(raw_ostream &o) {
     }
 
     // Emit instruction base values
-    if (HwModes.empty()) {
-      emitInstructionBaseValues(o, NumberedInstructions, Target, -1);
-    } else {
-      for (unsigned HwMode : HwModes)
-        emitInstructionBaseValues(o, NumberedInstructions, Target, (int)HwMode);
-    }
-
+    emitInstructionBaseValues(o, NumberedInstructions, Target, DefaultMode);
     if (!HwModes.empty()) {
-      o << "  const uint64_t *InstBits;\n";
-      o << "  unsigned HwMode = STI.getHwMode();\n";
-      o << "  switch (HwMode) {\n";
-      o << "  default: llvm_unreachable(\"Unknown hardware mode!\"); break;\n";
-      for (unsigned I : HwModes) {
-        o << "  case " << I << ": InstBits = InstBits_" << HWM.getMode(I).Name
-          << "; break;\n";
+      // Emit table for instrs whose encodings are controlled by HwModes.
+      for (unsigned HwMode : HwModes) {
+        if (HwMode == DefaultMode)
+          continue;
+        emitInstructionBaseValues(o, NumberedInstructions, Target, HwMode);
       }
-      o << "  };\n";
+
+      // This pointer will be assigned to the HwMode table later.
+      o << "  const uint64_t *InstBitsByHw;\n";
     }
 
     // Map to accumulate all the cases.

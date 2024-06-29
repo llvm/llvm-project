@@ -26,7 +26,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Target() {
   // Register the target.
   RegisterTargetMachine<MSP430TargetMachine> X(getTheMSP430Target());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeMSP430DAGToDAGISelPass(PR);
+  initializeMSP430DAGToDAGISelLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -65,6 +65,7 @@ public:
     return getTM<MSP430TargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
 };
@@ -79,6 +80,12 @@ MachineFunctionInfo *MSP430TargetMachine::createMachineFunctionInfo(
     const TargetSubtargetInfo *STI) const {
   return MSP430MachineFunctionInfo::create<MSP430MachineFunctionInfo>(Allocator,
                                                                       F, STI);
+}
+
+void MSP430PassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
+  TargetPassConfig::addIRPasses();
 }
 
 bool MSP430PassConfig::addInstSelector() {

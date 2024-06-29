@@ -15,12 +15,6 @@ extern "C" int main(int argc, char **argv, char **envp);
 
 namespace LIBC_NAMESPACE {
 
-// The AMDGPU architecture provides a fixed frequency clock used for obtaining
-// real time. However, the frequency of this clock varies between cards and can
-// only be obtained via the driver. The loader will set this so we can use it.
-extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq = 0;
-
 extern "C" uintptr_t __init_array_start[];
 extern "C" uintptr_t __init_array_end[];
 extern "C" uintptr_t __fini_array_start[];

@@ -533,7 +533,7 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
      << "struct " << interfaceTraitsName << " {\n";
   emitConceptDecl(interface);
   emitModelDecl(interface);
-  os << "};";
+  os << "};\n";
 
   // Emit the derived trait for the interface.
   os << "template <typename " << valueTemplate << ">\n";

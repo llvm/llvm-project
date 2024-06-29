@@ -3,30 +3,30 @@
 --- |
 
   @.str = private unnamed_addr constant [11 x i8] c"string %s\0A\00", align 1
-  declare void @llvm.va_start(i8*) #0
-  declare void @llvm.va_copy(i8*, i8*) #0
-  declare i32 @printf(i8*, ...)
+  declare void @llvm.va_start(ptr) #0
+  declare void @llvm.va_copy(ptr, ptr) #0
+  declare i32 @printf(ptr, ...)
 
-  define void @testVaCopyArg(i8* %fmt, ...) {
+  define void @testVaCopyArg(ptr %fmt, ...) {
   entry:
-    %fmt.addr = alloca i8*, align 4
-    %ap = alloca i8*, align 4
-    %aq = alloca i8*, align 4
-    %s = alloca i8*, align 4
-    store i8* %fmt, i8** %fmt.addr, align 4
-    %ap1 = bitcast i8** %ap to i8*
-    call void @llvm.va_start(i8* %ap1)
-    %0 = bitcast i8** %aq to i8*
-    %1 = bitcast i8** %ap to i8*
-    call void @llvm.va_copy(i8* %0, i8* %1)
-    %argp.cur = load i8*, i8** %aq, align 4
-    %argp.next = getelementptr inbounds i8, i8* %argp.cur, i32 4
-    store i8* %argp.next, i8** %aq, align 4
-    %2 = bitcast i8* %argp.cur to i8**
-    %3 = load i8*, i8** %2, align 4
-    store i8* %3, i8** %s, align 4
-    %4 = load i8*, i8** %s, align 4
-    %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %4)
+    %fmt.addr = alloca ptr, align 4
+    %ap = alloca ptr, align 4
+    %aq = alloca ptr, align 4
+    %s = alloca ptr, align 4
+    store ptr %fmt, ptr %fmt.addr, align 4
+    %ap1 = bitcast ptr %ap to ptr
+    call void @llvm.va_start(ptr %ap1)
+    %0 = bitcast ptr %aq to ptr
+    %1 = bitcast ptr %ap to ptr
+    call void @llvm.va_copy(ptr %0, ptr %1)
+    %argp.cur = load ptr, ptr %aq, align 4
+    %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
+    store ptr %argp.next, ptr %aq, align 4
+    %2 = bitcast ptr %argp.cur to ptr
+    %3 = load ptr, ptr %2, align 4
+    store ptr %3, ptr %s, align 4
+    %4 = load ptr, ptr %s, align 4
+    %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %4)
     ret void
   }
 

@@ -13,6 +13,18 @@ using namespace llvm;
 
 void ARMFunctionInfo::anchor() {}
 
+yaml::ARMFunctionInfo::ARMFunctionInfo(const llvm::ARMFunctionInfo &MFI)
+    : LRSpilled(MFI.isLRSpilled()) {}
+
+void yaml::ARMFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
+  MappingTraits<ARMFunctionInfo>::mapping(YamlIO, *this);
+}
+
+void ARMFunctionInfo::initializeBaseYamlFields(
+    const yaml::ARMFunctionInfo &YamlMFI) {
+  LRSpilled = YamlMFI.LRSpilled;
+}
+
 static bool GetBranchTargetEnforcement(const Function &F,
                                        const ARMSubtarget *Subtarget) {
   if (!Subtarget->isMClass() || !Subtarget->hasV7Ops())
@@ -49,13 +61,13 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
   }
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope.equals("none"))
+  if (Scope == "none")
     return {false, false};
 
-  if (Scope.equals("all"))
+  if (Scope == "all")
     return {true, true};
 
-  assert(Scope.equals("non-leaf"));
+  assert(Scope == "non-leaf");
   return {true, false};
 }
 

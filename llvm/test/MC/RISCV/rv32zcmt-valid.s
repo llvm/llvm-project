@@ -3,7 +3,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zcmt\
 # RUN:  -mattr=m < %s \
-# RUN:     | llvm-objdump --mattr=+zcmt\
+# RUN:     | llvm-objdump --mattr=+zcmt --no-print-imm-hex \
 # RUN:  -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zcmt\
@@ -11,7 +11,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zcmt\
 # RUN:  -mattr=m < %s \
-# RUN:     | llvm-objdump --mattr=+zcmt\
+# RUN:     | llvm-objdump --mattr=+zcmt --no-print-imm-hex \
 # RUN:  -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 #

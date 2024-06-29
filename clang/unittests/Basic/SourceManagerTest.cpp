@@ -530,6 +530,7 @@ struct MacroAction {
 
   SourceLocation Loc;
   std::string Name;
+  LLVM_PREFERRED_TYPE(Kind)
   unsigned MAKind : 3;
 
   MacroAction(SourceLocation Loc, StringRef Name, unsigned K)

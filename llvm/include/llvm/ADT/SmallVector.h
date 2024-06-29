@@ -61,7 +61,7 @@ protected:
 
   SmallVectorBase() = delete;
   SmallVectorBase(void *FirstEl, size_t TotalCapacity)
-      : BeginX(FirstEl), Capacity(TotalCapacity) {}
+      : BeginX(FirstEl), Capacity(static_cast<Size_T>(TotalCapacity)) {}
 
   /// This is a helper for \a grow() that's out of line to reduce code
   /// duplication.  This function will report a fatal error if it can't grow at
@@ -99,8 +99,18 @@ protected:
   ///
   /// This does not construct or destroy any elements in the vector.
   void set_size(size_t N) {
-    assert(N <= capacity());
-    Size = N;
+    assert(N <= capacity()); // implies no overflow in assignment
+    Size = static_cast<Size_T>(N);
+  }
+
+  /// Set the array data pointer to \p Begin and capacity to \p N.
+  ///
+  /// This does not construct or destroy any elements in the vector.
+  //  This does not clean up any existing allocation.
+  void set_allocation_range(void *Begin, size_t N) {
+    assert(N <= SizeTypeMax());
+    BeginX = Begin;
+    Capacity = static_cast<Size_T>(N);
   }
 };
 
@@ -467,8 +477,7 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(
   if (!this->isSmall())
     free(this->begin());
 
-  this->BeginX = NewElts;
-  this->Capacity = NewCapacity;
+  this->set_allocation_range(NewElts, NewCapacity);
 }
 
 /// SmallVectorTemplateBase<TriviallyCopyable = true> - This is where we put

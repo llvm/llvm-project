@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
 declare float @llvm.amdgcn.rcp.f32(float) #0
 declare double @llvm.amdgcn.rcp.f64(double) #0
@@ -176,10 +176,10 @@ define amdgpu_kernel void @safe_rsq_rcp_pat_f64(ptr addrspace(1) %out, double %s
 ; SI-NOT: v_rsq_f64_e32
 ; SI: v_sqrt_f64
 ; SI: v_rcp_f64
-define amdgpu_kernel void @safe_amdgcn_sqrt_rsq_rcp_pat_f64(double addrspace(1)* %out, double %src) #1 {
+define amdgpu_kernel void @safe_amdgcn_sqrt_rsq_rcp_pat_f64(ptr addrspace(1) %out, double %src) #1 {
   %sqrt = call double @llvm.amdgcn.sqrt.f64(double %src)
   %rcp = call double @llvm.amdgcn.rcp.f64(double %sqrt)
-  store double %rcp, double addrspace(1)* %out, align 8
+  store double %rcp, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -195,10 +195,10 @@ define amdgpu_kernel void @safe_amdgcn_sqrt_rsq_rcp_pat_f64(double addrspace(1)*
 ; SI: v_fma_f64
 ; SI: v_rcp_f64
 ; SI: buffer_store_dwordx2
-define amdgpu_kernel void @unsafe_rsq_rcp_pat_f64(double addrspace(1)* %out, double %src) #2 {
+define amdgpu_kernel void @unsafe_rsq_rcp_pat_f64(ptr addrspace(1) %out, double %src) #2 {
   %sqrt = call double @llvm.sqrt.f64(double %src)
   %rcp = call double @llvm.amdgcn.rcp.f64(double %sqrt)
-  store double %rcp, double addrspace(1)* %out, align 8
+  store double %rcp, ptr addrspace(1) %out, align 8
   ret void
 }
 

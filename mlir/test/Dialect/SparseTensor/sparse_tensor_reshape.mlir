@@ -9,12 +9,12 @@
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[B:.*]] = bufferization.alloc_tensor()
-// CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
-// CHECK:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
-// CHECK:         %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
-// CHECK:         %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
-// CHECK:         %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-DAG:     %[[B:.*]] = bufferization.alloc_tensor()
+// CHECK-DAG:     %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
+// CHECK-DAG:     %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
+// CHECK-DAG:     %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK:         %[[RET:.*]] = scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] iter_args(%[[A0:.*]] = %[[B]])
@@ -29,7 +29,7 @@
 // CHECK:             %[[DI:.*]] = arith.addi %[[T]], %[[SI1]] : index
 // CHECK:             %[[D:.*]] = arith.divui %[[DI]], %[[C10]] : index
 // CHECK:             %[[R:.*]] = arith.remui %[[DI]], %[[C10]] : index
-// CHECK:             %[[R1:.*]] = sparse_tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[D]], %[[R]]]
+// CHECK:             %[[R1:.*]] = tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[D]], %[[R]]]
 // CHECK:              scf.yield %[[R1]]
 // CHECK:            }
 // CHECK:            scf.yield %[[RET_1]]

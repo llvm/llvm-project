@@ -28,7 +28,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "flattencfg"
+#define DEBUG_TYPE "flatten-cfg"
 
 namespace {
 
@@ -407,6 +407,10 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
 /// form, by inverting the condition and the branch successors. The same
 /// approach goes for the opposite case.
 bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
+  // We cannot merge the if-region if the merge point has phi nodes.
+  if (isa<PHINode>(BB->front()))
+    return false;
+
   BasicBlock *IfTrue2, *IfFalse2;
   BranchInst *DomBI2 = GetIfCondition(BB, IfTrue2, IfFalse2);
   if (!DomBI2)
@@ -492,16 +496,6 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   Value *NC = Builder.CreateBinOp(CombineOp, CInst1, PBI->getCondition());
   PBI->replaceUsesOfWith(PBI->getCondition(), NC);
   Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
-
-  // Handle PHI node to replace its predecessors to FirstEntryBlock.
-  for (BasicBlock *Succ : successors(PBI)) {
-    for (PHINode &Phi : Succ->phis()) {
-      for (unsigned i = 0, e = Phi.getNumIncomingValues(); i != e; ++i) {
-        if (Phi.getIncomingBlock(i) == SecondEntryBlock)
-          Phi.setIncomingBlock(i, FirstEntryBlock);
-      }
-    }
-  }
 
   // Remove IfTrue1
   if (IfTrue1 != FirstEntryBlock) {

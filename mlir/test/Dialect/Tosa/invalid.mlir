@@ -20,7 +20,7 @@ func.func @test_conv2d(%arg0: tensor<*xi8>, %arg1: tensor<16x3x3x4xi8>, %arg2: t
 // -----
 
 func.func @test_conv2d(%arg0: tensor<1x29x29x4xi8>, %arg1: tensor<*xi8>, %arg2: tensor<16xi8>) -> tensor<1x27x27x16xi8> {
-  // expected-error@+1 {{'tosa.conv2d' op operand #1 must be 4D tensor of 4-bit signless integer or 8-bit signless integer or Quint8 type or Qint4 type or Qint8 type or Qint16 type or Qint32 type or 32-bit float or 16-bit float or bfloat16 type values, but got 'tensor<*xi8>'}}
+  // expected-error@+1 {{'tosa.conv2d' op operand #1 must be 4D tensor of 4-bit signless integer or 8-bit signless integer or Quint8 type or Qint4 type or Qint8 type or Qint16 type or Qint32 type or floating-point values, but got 'tensor<*xi8>'}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2 {dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>}
            : (tensor<1x29x29x4xi8>, tensor<*xi8>, tensor<16xi8>) -> tensor<1x27x27x16xi8>
   return %0 : tensor<1x27x27x16xi8>
@@ -76,6 +76,49 @@ func.func @test_transpose_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3x
   // expected-error@+1 {{'tosa.transpose' op perms of transpose is not constant}}
   %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21xf32>
   return %0 : tensor<3x13x21xf32>
+}
+
+// -----
+
+func.func @test_transpose_io_rank_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21x1xf32> {
+  // expected-error@+1 {{'tosa.transpose' op expected input tensor rank to equal result tensor rank}}
+  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21x1xf32>
+  return %0 : tensor<3x13x21x1xf32>
+}
+
+// -----
+
+func.func @test_transpose_invalid_perms_rank(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3x2xi32>) -> tensor<3x13x21xf32> {
+  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor to be rank 1 but got rank 2}}
+  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3x2xi32>) -> tensor<3x13x21xf32>
+  return %0 : tensor<3x13x21xf32>
+}
+
+// -----
+
+func.func @test_transpose_rank0_perms() {
+  %14 = tensor.empty() : tensor<5x27xi64>
+  %cst = tensor.empty() : tensor<i32>
+  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor to be rank 1 but got rank 0}}
+  %72 = tosa.transpose %14, %cst : (tensor<5x27xi64>, tensor<i32>) -> tensor<?x?xi64>
+  return
+}
+
+// -----
+
+func.func @test_transpose_invalid_perms_size(%arg0: tensor<13x21x3xf32>, %arg1: tensor<7xi32>) -> tensor<3x13x21xf32> {
+  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor dim 0 to have size 3 (input rank) but got size 7}}
+  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<7xi32>) -> tensor<3x13x21xf32>
+  return %0 : tensor<3x13x21xf32>
+}
+
+// -----
+
+func.func @test_transpose_invalid_permutation_tensor(%arg0: tensor<13x21x3xf32>) -> tensor<?x?x?xf32> {
+  %perms = arith.constant dense<[2, 0, 0]> : tensor<3xi32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation tensor}}
+  %0 = tosa.transpose %arg0, %perms : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
 }
 
 // -----
@@ -200,22 +243,6 @@ func.func @test_reshape_type_mismatch(%arg0 : tensor<13x21x3xf32>) -> () {
 
 // -----
 
-func.func @test_reverse_axis_out_of_range(%arg0 : tensor<13x21x3xf32>) -> () {
-  // expected-error@+1 {{'tosa.reverse' op expect input tensor rank (3) to be larger than reverse axis (5)}}
-  %0 = tosa.reverse %arg0 {axis = 5 : i32} : (tensor<13x21x3xf32>) -> tensor<?x?x?xi32>
-  return
-}
-
-// -----
-
-func.func @test_const_attribute_type_mismatch() -> tensor<100x100xf32> {
-  // expected-error@+1 {{'tosa.const' op failed to verify that all of {value, output} have same shape}}
-  %0 = "tosa.const"() {value = dense<0.000000e+00> : tensor<1x1xf32>} : () -> tensor<100x100xf32>
-  return %0 : tensor<100x100xf32>
-}
-
-// -----
-
 func.func @test_reshape_static_zero_dim_input(%arg0 : tensor<13x0x3xf32>) -> () {
   // expected-error@+1 {{'tosa.reshape' op tensor has a dimension with size zero. Each dimension of a tensor must have size >= 1}}
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 13, 21, 3>} : (tensor<13x0x3xf32>) -> tensor<13x0x3xf32>
@@ -228,6 +255,54 @@ func.func @test_reshape_zero_dim_input(%arg0 : tensor<?x0x3xf32>) -> () {
   // expected-error@+1 {{'tosa.reshape' op tensor has a dimension with size zero. Each dimension of a tensor must have size >= 1}}
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 13, 21, 3>} : (tensor<?x0x3xf32>) -> tensor<13x0x3xf32>
   return
+}
+
+// -----
+
+func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op new shape does not match result rank}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 4>} : (tensor<?xf32>) -> tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @test_reshape_inconsistent_result_type(%arg0 : tensor<?xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op new shape is inconsistent with result shape}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, 4, -1>} : (tensor<?xf32>) -> tensor<?x3x5xf32>
+  return
+}
+
+// -----
+
+func.func @test_reshape_invalid_size(%arg0 : tensor<2x4xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 15}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 3, 5>} : (tensor<2x4xf32>) -> tensor<3x5xf32>
+  return
+}
+
+// -----
+
+func.func @test_reshape_invalid_placeholders(%arg0 : tensor<?xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op expected at most one target dimension to be -1}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1, -1>} : (tensor<?xf32>) -> tensor<2x?x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_reverse_axis_out_of_range(%arg0 : tensor<13x21x3xf32>) -> () {
+  // expected-error@+1 {{'tosa.reverse' op expect input tensor rank (3) to be larger than reverse axis (5)}}
+  %0 = tosa.reverse %arg0 {axis = 5 : i32} : (tensor<13x21x3xf32>) -> tensor<?x?x?xi32>
+  return
+}
+
+// -----
+
+func.func @test_const_attribute_type_mismatch() -> tensor<100x100xf32> {
+  // expected-error@+1 {{'tosa.const' op failed to verify that all of {value, output} have same shape}}
+  %0 = "tosa.const"() {value = dense<0.000000e+00> : tensor<1x1xf32>} : () -> tensor<100x100xf32>
+  return %0 : tensor<100x100xf32>
 }
 
 // -----

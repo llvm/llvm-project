@@ -26,15 +26,15 @@ define void @sum_of_array(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I87:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I87:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 4
 ; IR-NEXT:    [[I9:%.*]] = addrspacecast ptr addrspace(3) [[I87]] to ptr
 ; IR-NEXT:    [[I10:%.*]] = load float, ptr [[I9]], align 4
 ; IR-NEXT:    [[I11:%.*]] = fadd float [[I5]], [[I10]]
-; IR-NEXT:    [[I1412:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I1412:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 128
 ; IR-NEXT:    [[I15:%.*]] = addrspacecast ptr addrspace(3) [[I1412]] to ptr
 ; IR-NEXT:    [[I16:%.*]] = load float, ptr [[I15]], align 4
 ; IR-NEXT:    [[I17:%.*]] = fadd float [[I11]], [[I16]]
-; IR-NEXT:    [[I1818:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I1818:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 132
 ; IR-NEXT:    [[I19:%.*]] = addrspacecast ptr addrspace(3) [[I1818]] to ptr
 ; IR-NEXT:    [[I20:%.*]] = load float, ptr [[I19]], align 4
 ; IR-NEXT:    [[I21:%.*]] = fadd float [[I17]], [[I20]]
@@ -88,15 +88,15 @@ define void @sum_of_array2(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I77:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I77:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 4
 ; IR-NEXT:    [[I8:%.*]] = addrspacecast ptr addrspace(3) [[I77]] to ptr
 ; IR-NEXT:    [[I9:%.*]] = load float, ptr [[I8]], align 4
 ; IR-NEXT:    [[I10:%.*]] = fadd float [[I5]], [[I9]]
-; IR-NEXT:    [[I1212:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I1212:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 128
 ; IR-NEXT:    [[I13:%.*]] = addrspacecast ptr addrspace(3) [[I1212]] to ptr
 ; IR-NEXT:    [[I14:%.*]] = load float, ptr [[I13]], align 4
 ; IR-NEXT:    [[I15:%.*]] = fadd float [[I10]], [[I14]]
-; IR-NEXT:    [[I1618:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I1618:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 132
 ; IR-NEXT:    [[I17:%.*]] = addrspacecast ptr addrspace(3) [[I1618]] to ptr
 ; IR-NEXT:    [[I18:%.*]] = load float, ptr [[I17]], align 4
 ; IR-NEXT:    [[I19:%.*]] = fadd float [[I15]], [[I18]]
@@ -149,15 +149,15 @@ define void @sum_of_array3(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I87:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I87:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 4
 ; IR-NEXT:    [[I9:%.*]] = addrspacecast ptr addrspace(3) [[I87]] to ptr
 ; IR-NEXT:    [[I10:%.*]] = load float, ptr [[I9]], align 4
 ; IR-NEXT:    [[I11:%.*]] = fadd float [[I5]], [[I10]]
-; IR-NEXT:    [[I1412:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I1412:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 128
 ; IR-NEXT:    [[I15:%.*]] = addrspacecast ptr addrspace(3) [[I1412]] to ptr
 ; IR-NEXT:    [[I16:%.*]] = load float, ptr [[I15]], align 4
 ; IR-NEXT:    [[I17:%.*]] = fadd float [[I11]], [[I16]]
-; IR-NEXT:    [[I1818:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I1818:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 132
 ; IR-NEXT:    [[I19:%.*]] = addrspacecast ptr addrspace(3) [[I1818]] to ptr
 ; IR-NEXT:    [[I20:%.*]] = load float, ptr [[I19]], align 4
 ; IR-NEXT:    [[I21:%.*]] = fadd float [[I17]], [[I20]]
@@ -209,15 +209,15 @@ define void @sum_of_array4(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I77:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I77:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 4
 ; IR-NEXT:    [[I8:%.*]] = addrspacecast ptr addrspace(3) [[I77]] to ptr
 ; IR-NEXT:    [[I9:%.*]] = load float, ptr [[I8]], align 4
 ; IR-NEXT:    [[I10:%.*]] = fadd float [[I5]], [[I9]]
-; IR-NEXT:    [[I1212:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I1212:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 128
 ; IR-NEXT:    [[I13:%.*]] = addrspacecast ptr addrspace(3) [[I1212]] to ptr
 ; IR-NEXT:    [[I14:%.*]] = load float, ptr [[I13]], align 4
 ; IR-NEXT:    [[I15:%.*]] = fadd float [[I10]], [[I14]]
-; IR-NEXT:    [[I1618:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I1618:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[I2]], i32 132
 ; IR-NEXT:    [[I17:%.*]] = addrspacecast ptr addrspace(3) [[I1618]] to ptr
 ; IR-NEXT:    [[I18:%.*]] = load float, ptr [[I17]], align 4
 ; IR-NEXT:    [[I19:%.*]] = fadd float [[I15]], [[I18]]
@@ -270,7 +270,7 @@ define void @reunion(i32 %x, i32 %y, ptr %input) {
 ; IR-NEXT:    [[P0:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[I]]
 ; IR-NEXT:    [[V0:%.*]] = load float, ptr [[P0]], align 4
 ; IR-NEXT:    call void @use(float [[V0]])
-; IR-NEXT:    [[P13:%.*]] = getelementptr inbounds float, ptr [[P0]], i64 5
+; IR-NEXT:    [[P13:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 20
 ; IR-NEXT:    [[V1:%.*]] = load float, ptr [[P13]], align 4
 ; IR-NEXT:    call void @use(float [[V1]])
 ; IR-NEXT:    ret void

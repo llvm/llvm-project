@@ -17,8 +17,8 @@ The LLDB test suite consists of three different kinds of test:
   the output.
 * **API tests**: Integration tests that interact with the debugger through the
   SB API. These are written in Python and use LLDB's ``dotest.py`` testing
-  framework on top of Python's `unittest2
-  <https://docs.python.org/2/library/unittest.html>`_.
+  framework on top of Python's `unittest
+  <https://docs.python.org/3/library/unittest.html>`_.
 
 All three test suites use ``lit`` (`LLVM Integrated Tester
 <https://llvm.org/docs/CommandGuide/lit.html>`_ ) as the test driver. The test
@@ -94,7 +94,7 @@ programs from source, run them, and debug the processes.
 As mentioned before, ``dotest.py`` is LLDB's testing framework. The
 implementation is located under ``lldb/packages/Python/lldbsuite``. We have
 several extensions and custom test primitives on top of what's offered by
-`unittest2 <https://docs.python.org/2/library/unittest.html>`_. Those can be
+`unittest <https://docs.python.org/3/library/unittest.html>`_. Those can be
 found  in
 `lldbtest.py <https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/lldbtest.py>`_.
 
@@ -146,7 +146,7 @@ the test should be run or not.
 
 ::
 
-  @expectedFailure(checking_function_name)
+  @skipTestIfFn(checking_function_name)
 
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
@@ -441,22 +441,39 @@ Running the Full Test Suite
 The easiest way to run the LLDB test suite is to use the ``check-lldb`` build
 target.
 
+::
+
+   $ ninja check-lldb
+
+Changing Test Suite Options
+```````````````````````````
+
 By default, the ``check-lldb`` target builds the test programs with the same
 compiler that was used to build LLDB. To build the tests with a different
 compiler, you can set the ``LLDB_TEST_COMPILER`` CMake variable.
 
+You can also add to the test runner options by setting the
+``LLDB_TEST_USER_ARGS`` CMake variable. This variable uses ``;`` to separate
+items which must be separate parts of the runner's command line.
+
 It is possible to customize the architecture of the test binaries and compiler
-used by appending ``-A`` and ``-C`` options respectively to the CMake variable
-``LLDB_TEST_USER_ARGS``. For example, to test LLDB against 32-bit binaries
-built with a custom version of clang, do:
+used by appending ``-A`` and ``-C`` options respectively. For example, to test
+LLDB against 32-bit binaries built with a custom version of clang, do:
 
 ::
 
-   $ cmake -DLLDB_TEST_USER_ARGS="-A i386 -C /path/to/custom/clang" -G Ninja
+   $ cmake -DLLDB_TEST_USER_ARGS="-A;i386;-C;/path/to/custom/clang" -G Ninja
    $ ninja check-lldb
 
 Note that multiple ``-A`` and ``-C`` flags can be specified to
 ``LLDB_TEST_USER_ARGS``.
+
+If you want to change the LLDB settings that tests run with then you can set
+the ``--setting`` option of the test runner via this same variable. For example
+``--setting;target.disable-aslr=true``.
+
+For a full list of test runner options, see
+``<build-dir>/bin/lldb-dotest --help``.
 
 Running a Single Test Suite
 ```````````````````````````
@@ -601,9 +618,9 @@ On non-Windows platforms, you can use the ``-d`` option to ``dotest.py`` which
 will cause the script to print out the pid of the test and wait for a while
 until a debugger is attached. Then run ``lldb -p <pid>`` to attach.
 
-To instead debug a test's python source, edit the test and insert
-``import pdb; pdb.set_trace()`` at the point you want to start debugging. In
-addition to pdb's debugging facilities, lldb commands can be executed with the
+To instead debug a test's python source, edit the test and insert ``import pdb; pdb.set_trace()`` or ``breakpoint()`` (Python 3 only) at the point you want to start debugging. The ``breakpoint()`` command can be used for any LLDB Python script, not just for API tests.
+
+In addition to pdb's debugging facilities, lldb commands can be executed with the
 help of a pdb alias. For example ``lldb bt`` and ``lldb v some_var``. Add this
 line to your ``~/.pdbrc``:
 

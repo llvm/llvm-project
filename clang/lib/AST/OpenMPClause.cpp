@@ -1957,6 +1957,8 @@ void OMPClausePrinter::VisitOMPRelaxedClause(OMPRelaxedClause *) {
   OS << "relaxed";
 }
 
+void OMPClausePrinter::VisitOMPWeakClause(OMPWeakClause *) { OS << "weak"; }
+
 void OMPClausePrinter::VisitOMPThreadsClause(OMPThreadsClause *) {
   OS << "threads";
 }

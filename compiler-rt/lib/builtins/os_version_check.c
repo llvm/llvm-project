@@ -316,8 +316,8 @@ int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
   static pthread_once_t once = PTHREAD_ONCE_INIT;
   pthread_once(&once, readSystemProperties);
 
-  return SdkVersion >= Major ||
-         (IsPreRelease && Major == __ANDROID_API_FUTURE__);
+  // Allow all on pre-release. Note that we still rely on compile-time checks.
+  return SdkVersion >= Major || IsPreRelease;
 }
 
 #else

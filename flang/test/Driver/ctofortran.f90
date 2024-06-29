@@ -1,8 +1,7 @@
-! MacOS needs -isysroot <osx_sysroot> with clang and flang to build binaries.
-! UNSUPPORTED: system-windows, system-darwin
+! UNSUPPORTED: system-windows
 ! RUN: split-file %s %t
 ! RUN: chmod +x %t/runtest.sh
-! RUN: %t/runtest.sh %t %flang $t/ffile.f90 $t/cfile.c
+! RUN: %t/runtest.sh %t %t/ffile.f90 %t/cfile.c %flang | FileCheck %s
 
 !--- ffile.f90
 program fmain
@@ -68,15 +67,21 @@ void csub() {
 }
 !--- runtest.sh
 #!/bin/bash
-export BINDIR=`dirname $2`
-export CCOMP=$BINDIR/clang
+TMPDIR=$1
+FFILE=$2
+CFILE=$3
+FLANG=$4
+shift 4
+FLAGS="$*"
+BINDIR=`dirname $FLANG`
+LIBDIR=$BINDIR/../lib
+CCOMP=$BINDIR/clang
 if [ -x $CCOMP ]
 then
-  export LIBDIR=$BINDIR/../lib
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBDIR
-  $CCOMP -c $1/$4 -o $1/cfile.o
-  $2 $1/$3 $1/cfile.o -o $1/ctofortran
-  $1/ctofortran # should print "PASS"
+  $CCOMP $FLAGS -c $CFILE -o $TMPDIR/cfile.o
+  $FLANG $FLAGS $FFILE $TMPDIR/cfile.o -o $TMPDIR/ctofortran
+  $TMPDIR/ctofortran # should print "PASS"
 else
   # No clang compiler, just pass by default
   echo "PASS"
