@@ -935,6 +935,7 @@ Bug Fixes to C++ Support
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
+- Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly instantiated. (#GH95735).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

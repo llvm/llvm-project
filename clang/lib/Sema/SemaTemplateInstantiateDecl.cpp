@@ -4719,6 +4719,12 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
     return;
   }
 
+  // The noexcept specification could reference any lambda captures. Ensure
+  // those are added to the LocalInstantiationScope.
+  LambdaScopeForCallOperatorInstantiationRAII PushLambdaCaptures(
+      *this, Decl, TemplateArgs, Scope,
+      /*ShouldAddDeclsFromParentScope=*/false);
+
   SubstExceptionSpec(Decl, Template->getType()->castAs<FunctionProtoType>(),
                      TemplateArgs);
 }
