@@ -290,9 +290,10 @@ static void ReExecIfNeeded(bool ignore_heap) {
       CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
       reexec = true;
     } else {
-      Printf("FATAL: ThreadSanitizer: memory layout is incompatible, "
-             "even though ASLR is disabled.\n"
-             "Please file a bug.\n");
+      Printf(
+          "FATAL: ThreadSanitizer: memory layout is incompatible, "
+          "even though ASLR is disabled.\n"
+          "Please file a bug.\n");
       DumpProcessMap();
       Die();
     }
@@ -401,10 +402,10 @@ void InitializePlatform() {
   // 2) Intervening allocations happen
   // 3) InitializePlatform(): memory layout is incompatible and fails
   //    CheckAndProtect()
-#  if !SANITIZER_GO
+#    if !SANITIZER_GO
   // Heap has already been allocated
   ReExecIfNeeded(true);
-#  endif
+#    endif
 
   // Earlier initialization steps already re-exec'ed until we got a compatible
   // memory layout, so we don't expect any more issues here.
