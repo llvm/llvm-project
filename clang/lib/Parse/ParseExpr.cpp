@@ -3838,7 +3838,8 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   StmtResult Stmt(ParseCompoundStatementBody());
   BlockScope.Exit();
   if (!Stmt.isInvalid())
-    Result = Actions.ObjC().ActOnBlockStmtExpr(CaretLoc, Stmt.get(), getCurScope());
+    Result =
+        Actions.ObjC().ActOnBlockStmtExpr(CaretLoc, Stmt.get(), getCurScope());
   else
     Actions.ObjC().ActOnBlockError(CaretLoc, getCurScope());
   return Result;

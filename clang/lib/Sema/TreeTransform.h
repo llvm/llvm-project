@@ -15891,7 +15891,7 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
 #endif
 
   return SemaRef.ObjC().ActOnBlockStmtExpr(E->getCaretLocation(), body.get(),
-                                    /*Scope=*/nullptr);
+                                           /*Scope=*/nullptr);
 }
 
 template<typename Derived>

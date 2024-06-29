@@ -1110,15 +1110,13 @@ public:
   void handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL);
 
   void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
-                        RetainOwnershipKind K,
-                        bool IsTemplateInstantiation);
+                        RetainOwnershipKind K, bool IsTemplateInstantiation);
 
   /// \return whether the parameter is a pointer to OSObject pointer.
   bool isValidOSObjectOutParameter(const Decl *D);
   bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
 
-  RetainOwnershipKind
-  parsedAttrToRetainOwnershipKind(const ParsedAttr &AL);
+  RetainOwnershipKind parsedAttrToRetainOwnershipKind(const ParsedAttr &AL);
 
   ///@}
 };

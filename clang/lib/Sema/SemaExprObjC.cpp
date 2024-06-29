@@ -5253,7 +5253,8 @@ void SemaObjC::maybeExtendBlockObject(ExprResult &E) {
   assert(E.get()->isPRValue());
 
   // Only do this in an r-value context.
-  if (!getLangOpts().ObjCAutoRefCount) return;
+  if (!getLangOpts().ObjCAutoRefCount)
+    return;
 
   E = ImplicitCastExpr::Create(
       getASTContext(), E.get()->getType(), CK_ARCExtendBlockObject, E.get(),
@@ -5292,8 +5293,8 @@ void SemaObjC::ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope) {
       Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 }
 
-void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
-                               Scope *CurScope) {
+void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc,
+                                   Declarator &ParamInfo, Scope *CurScope) {
   assert(ParamInfo.getIdentifier() == nullptr &&
          "block-id should have no identifier!");
   assert(ParamInfo.getContext() == DeclaratorContext::BlockLiteral);
@@ -5305,7 +5306,8 @@ void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInf
 
   // FIXME: We should allow unexpanded parameter packs here, but that would,
   // in turn, make the block expression contain unexpanded parameter packs.
-  if (SemaRef.DiagnoseUnexpandedParameterPack(CaretLoc, Sig, Sema::UPPC_Block)) {
+  if (SemaRef.DiagnoseUnexpandedParameterPack(CaretLoc, Sig,
+                                              Sema::UPPC_Block)) {
     // Drop the parameters.
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.HasTrailingReturn = false;
@@ -5323,8 +5325,8 @@ void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInf
   // Look for an explicit signature in that function type.
   FunctionProtoTypeLoc ExplicitSignature;
 
-  if ((ExplicitSignature = Sig->getTypeLoc()
-                               .getAsAdjusted<FunctionProtoTypeLoc>())) {
+  if ((ExplicitSignature =
+           Sig->getTypeLoc().getAsAdjusted<FunctionProtoTypeLoc>())) {
 
     // Check whether that explicit signature was synthesized by
     // GetTypeForDeclarator.  If so, don't save that as part of the
@@ -5363,7 +5365,7 @@ void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInf
   }
 
   // Push block parameters from the declarator if we had them.
-  SmallVector<ParmVarDecl*, 8> Params;
+  SmallVector<ParmVarDecl *, 8> Params;
   if (ExplicitSignature) {
     for (unsigned I = 0, E = ExplicitSignature.getNumParams(); I != E; ++I) {
       ParmVarDecl *Param = ExplicitSignature.getParam(I);
@@ -5376,8 +5378,8 @@ void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInf
       Params.push_back(Param);
     }
 
-  // Fake up parameter variables if we have a typedef, like
-  //   ^ fntype { ... }
+    // Fake up parameter variables if we have a typedef, like
+    //   ^ fntype { ... }
   } else if (const FunctionProtoType *Fn = T->getAs<FunctionProtoType>()) {
     for (const auto &I : Fn->param_types()) {
       ParmVarDecl *Param = SemaRef.BuildParmVarDeclForTypedef(
@@ -5390,7 +5392,7 @@ void SemaObjC::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInf
   if (!Params.empty()) {
     CurBlock->TheDecl->setParams(Params);
     SemaRef.CheckParmsForFunctionDef(CurBlock->TheDecl->parameters(),
-                             /*CheckParameterNames=*/false);
+                                     /*CheckParameterNames=*/false);
   }
 
   // Finally we can process decl attributes.
@@ -5426,8 +5428,8 @@ void SemaObjC::ActOnBlockError(SourceLocation CaretLoc, Scope *CurScope) {
 
 /// ActOnBlockStmtExpr - This is called when the body of a block statement
 /// literal was successfully completed.  ^(int x){...}
-ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
-                                    Stmt *Body, Scope *CurScope) {
+ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc, Stmt *Body,
+                                        Scope *CurScope) {
   // If blocks are disabled, emit an error.
   if (!getLangOpts().Blocks)
     Diag(CaretLoc, diag::err_blocks_disable) << getLangOpts().OpenCL;
@@ -5459,7 +5461,8 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     const FunctionType *FTy = BSI->FunctionType->castAs<FunctionType>();
 
     FunctionType::ExtInfo Ext = FTy->getExtInfo();
-    if (NoReturn && !Ext.getNoReturn()) Ext = Ext.withNoReturn(true);
+    if (NoReturn && !Ext.getNoReturn())
+      Ext = Ext.withNoReturn(true);
 
     // Turn protoless block types into nullary block types.
     if (isa<FunctionNoProtoType>(FTy)) {
@@ -5473,7 +5476,7 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
                (!NoReturn || FTy->getNoReturnAttr())) {
       BlockTy = BSI->FunctionType;
 
-    // Otherwise, make the minimal modifications to the function type.
+      // Otherwise, make the minimal modifications to the function type.
     } else {
       const FunctionProtoType *FPT = cast<FunctionProtoType>(FTy);
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
@@ -5482,7 +5485,7 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
       BlockTy = Context.getFunctionType(RetTy, FPT->getParamTypes(), EPI);
     }
 
-  // If we don't have a function type, just build one from nothing.
+    // If we don't have a function type, just build one from nothing.
   } else {
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.ExtInfo = FunctionType::ExtInfo().withNoReturn(NoReturn);
@@ -5511,8 +5514,9 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   if (RetTy.hasNonTrivialToPrimitiveDestructCUnion() ||
       RetTy.hasNonTrivialToPrimitiveCopyCUnion())
-    SemaRef.checkNonTrivialCUnion(RetTy, BD->getCaretLocation(), Sema::NTCUC_FunctionReturn,
-                          Sema::NTCUK_Destruct|Sema::NTCUK_Copy);
+    SemaRef.checkNonTrivialCUnion(RetTy, BD->getCaretLocation(),
+                                  Sema::NTCUC_FunctionReturn,
+                                  Sema::NTCUK_Destruct | Sema::NTCUK_Copy);
 
   SemaRef.PopDeclContext();
 
@@ -5554,9 +5558,9 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
         // of the copy/move done to move a __block variable to the heap.
         if (!Result.isInvalid() &&
             !Result.get()->getType().isConstQualified()) {
-          Result = SemaRef.ImpCastExprToType(Result.get(),
-                                     Result.get()->getType().withConst(),
-                                     CK_NoOp, VK_LValue);
+          Result = SemaRef.ImpCastExprToType(
+              Result.get(), Result.get()->getType().withConst(), CK_NoOp,
+              VK_LValue);
         }
 
         if (!Result.isInvalid()) {
@@ -5569,9 +5573,9 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
         // Build a full-expression copy expression if initialization
         // succeeded and used a non-trivial constructor.  Recover from
         // errors by pretending that the copy isn't necessary.
-        if (!Result.isInvalid() &&
-            !cast<CXXConstructExpr>(Result.get())->getConstructor()
-                ->isTrivial()) {
+        if (!Result.isInvalid() && !cast<CXXConstructExpr>(Result.get())
+                                        ->getConstructor()
+                                        ->isTrivial()) {
           Result = SemaRef.MaybeCreateExprWithCleanups(Result);
           CopyExpr = Result.get();
         }
@@ -5585,8 +5589,10 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   BD->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
 
   // Pop the block scope now but keep it alive to the end of this function.
-  AnalysisBasedWarnings::Policy WP = SemaRef.AnalysisWarnings.getDefaultPolicy();
-  Sema::PoppedFunctionScopePtr ScopeRAII = SemaRef.PopFunctionScopeInfo(&WP, BD, BlockTy);
+  AnalysisBasedWarnings::Policy WP =
+      SemaRef.AnalysisWarnings.getDefaultPolicy();
+  Sema::PoppedFunctionScopePtr ScopeRAII =
+      SemaRef.PopFunctionScopeInfo(&WP, BD, BlockTy);
 
   BlockExpr *Result = new (Context) BlockExpr(BD, BlockTy);
 
@@ -5612,7 +5618,8 @@ ExprResult SemaObjC::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     SemaRef.getCurFunction()->addBlock(BD);
 
   if (BD->isInvalidDecl())
-    return SemaRef.CreateRecoveryExpr(Result->getBeginLoc(), Result->getEndLoc(),
-                              {Result}, Result->getType());
+    return SemaRef.CreateRecoveryExpr(Result->getBeginLoc(),
+                                      Result->getEndLoc(), {Result},
+                                      Result->getType());
   return Result;
 }

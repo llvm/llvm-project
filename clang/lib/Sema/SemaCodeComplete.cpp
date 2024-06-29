@@ -2475,7 +2475,8 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       ReturnType = Method->getReturnType();
     else if (SemaRef.ObjC().getCurBlock() &&
              !SemaRef.ObjC().getCurBlock()->ReturnType.isNull())
-      ReturnType = SemaRef.ObjC().getCurBlock()->ReturnType;;
+      ReturnType = SemaRef.ObjC().getCurBlock()->ReturnType;
+    ;
     if (ReturnType.isNull() || ReturnType->isVoidType()) {
       Builder.AddTypedTextChunk("return");
       Builder.AddChunk(CodeCompletionString::CK_SemiColon);

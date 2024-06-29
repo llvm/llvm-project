@@ -2420,8 +2420,8 @@ sema::BlockScopeInfo *SemaObjC::getCurBlock() {
   return CurBSI;
 }
 
-static bool checkUnsafeAssignLiteral(Sema &S, SourceLocation Loc,
-                                     Expr *RHS, bool isProperty) {
+static bool checkUnsafeAssignLiteral(Sema &S, SourceLocation Loc, Expr *RHS,
+                                     bool isProperty) {
   // Check if RHS is an Objective-C object literal, which also can get
   // immediately zapped in a weak reference.  Note that we explicitly
   // allow ObjCStringLiterals, since those are designed to never really die.
@@ -2434,23 +2434,20 @@ static bool checkUnsafeAssignLiteral(Sema &S, SourceLocation Loc,
     return false;
 
   S.Diag(Loc, diag::warn_arc_literal_assign)
-    << (unsigned) Kind
-    << (isProperty ? 0 : 1)
-    << RHS->getSourceRange();
+      << (unsigned)Kind << (isProperty ? 0 : 1) << RHS->getSourceRange();
 
   return true;
 }
 
 static bool checkUnsafeAssignObject(Sema &S, SourceLocation Loc,
-                                    Qualifiers::ObjCLifetime LT,
-                                    Expr *RHS, bool isProperty) {
+                                    Qualifiers::ObjCLifetime LT, Expr *RHS,
+                                    bool isProperty) {
   // Strip off any implicit cast added to get to the one ARC-specific.
   while (ImplicitCastExpr *cast = dyn_cast<ImplicitCastExpr>(RHS)) {
     if (cast->getCastKind() == CK_ARCConsumeObject) {
       S.Diag(Loc, diag::warn_arc_retained_assign)
-        << (LT == Qualifiers::OCL_ExplicitNone)
-        << (isProperty ? 0 : 1)
-        << RHS->getSourceRange();
+          << (LT == Qualifiers::OCL_ExplicitNone) << (isProperty ? 0 : 1)
+          << RHS->getSourceRange();
       return true;
     }
     RHS = cast->getSubExpr();
@@ -2463,8 +2460,7 @@ static bool checkUnsafeAssignObject(Sema &S, SourceLocation Loc,
   return false;
 }
 
-bool SemaObjC::checkUnsafeAssigns(SourceLocation Loc,
-                              QualType LHS, Expr *RHS) {
+bool SemaObjC::checkUnsafeAssigns(SourceLocation Loc, QualType LHS, Expr *RHS) {
   Qualifiers::ObjCLifetime LT = LHS.getObjCLifetime();
 
   if (LT != Qualifiers::OCL_Weak && LT != Qualifiers::OCL_ExplicitNone)
@@ -2476,13 +2472,12 @@ bool SemaObjC::checkUnsafeAssigns(SourceLocation Loc,
   return false;
 }
 
-void SemaObjC::checkUnsafeExprAssigns(SourceLocation Loc,
-                              Expr *LHS, Expr *RHS) {
+void SemaObjC::checkUnsafeExprAssigns(SourceLocation Loc, Expr *LHS,
+                                      Expr *RHS) {
   QualType LHSType;
   // PropertyRef on LHS type need be directly obtained from
   // its declaration as it has a PseudoType.
-  ObjCPropertyRefExpr *PRE
-    = dyn_cast<ObjCPropertyRefExpr>(LHS->IgnoreParens());
+  ObjCPropertyRefExpr *PRE = dyn_cast<ObjCPropertyRefExpr>(LHS->IgnoreParens());
   if (PRE && !PRE->isImplicitProperty()) {
     const ObjCPropertyDecl *PD = PRE->getExplicitProperty();
     if (PD)
@@ -2526,13 +2521,14 @@ void SemaObjC::checkUnsafeExprAssigns(SourceLocation Loc,
       while (ImplicitCastExpr *cast = dyn_cast<ImplicitCastExpr>(RHS)) {
         if (cast->getCastKind() == CK_ARCConsumeObject) {
           Diag(Loc, diag::warn_arc_retained_property_assign)
-          << RHS->getSourceRange();
+              << RHS->getSourceRange();
           return;
         }
         RHS = cast->getSubExpr();
       }
     } else if (Attributes & ObjCPropertyAttribute::kind_weak) {
-      if (checkUnsafeAssignObject(SemaRef, Loc, Qualifiers::OCL_Weak, RHS, true))
+      if (checkUnsafeAssignObject(SemaRef, Loc, Qualifiers::OCL_Weak, RHS,
+                                  true))
         return;
     }
   }
@@ -2568,8 +2564,8 @@ void SemaObjC::diagnoseImplicitlyRetainedSelf() {
 }
 
 void SemaObjC::PushBlockScope(Scope *BlockScope, BlockDecl *Block) {
-  SemaRef.FunctionScopes.push_back(new sema::BlockScopeInfo(getDiagnostics(),
-                                              BlockScope, Block));
+  SemaRef.FunctionScopes.push_back(
+      new sema::BlockScopeInfo(getDiagnostics(), BlockScope, Block));
   SemaRef.CapturingFunctionScopes++;
 }
 

@@ -725,8 +725,7 @@ void Sema::InstantiateAttrsForDecl(
   }
 }
 
-static SemaObjC::RetainOwnershipKind
-attrToRetainOwnershipKind(const Attr *A) {
+static SemaObjC::RetainOwnershipKind attrToRetainOwnershipKind(const Attr *A) {
   switch (A->getKind()) {
   case clang::attr::CFConsumed:
     return SemaObjC::RetainOwnershipKind::CF;
