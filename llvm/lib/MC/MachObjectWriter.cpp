@@ -662,18 +662,6 @@ void MachObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 }
 
 bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &A, const MCSymbol &B,
-    bool InSet) const {
-  // FIXME: We don't handle things like
-  // foo = .
-  // creating atoms.
-  if (A.isVariable() || B.isVariable())
-    return false;
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, A, B,
-                                                                InSet);
-}
-
-bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
     bool InSet, bool IsPCRel) const {
   if (InSet)
