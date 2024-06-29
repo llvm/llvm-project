@@ -30,7 +30,6 @@ class PointerAuthSchema;
 class QualType;
 
 namespace CodeGen {
-
 class CodeGenModule;
 
 /// A convenience builder class for complex constant initializers,
@@ -204,9 +203,9 @@ public:
   }
 
   /// Add a signed pointer using the given pointer authentication schema.
-  void addSignedPointer(llvm::Constant *pointer,
-                        const PointerAuthSchema &schema, GlobalDecl calleeDecl,
-                        QualType calleeType);
+  void addSignedPointer(llvm::Constant *Pointer,
+                        const PointerAuthSchema &Schema, GlobalDecl CalleeDecl,
+                        QualType CalleeType);
 
   /// Add a signed pointer using the given pointer authentication schema.
   void addSignedPointer(llvm::Constant *pointer,

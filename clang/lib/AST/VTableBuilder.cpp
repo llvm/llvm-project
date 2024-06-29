@@ -1169,8 +1169,11 @@ void ItaniumVTableBuilder::ComputeThisAdjustments() {
       //
       // Do not set ThunkInfo::Method if Idx is already in VTableThunks. This
       // can happen when covariant return adjustment is required too.
-      if (!VTableThunks.count(Idx))
-        VTableThunks[Idx].Method = VTables.findOriginalMethodInMap(MD);
+      if (!VTableThunks.count(Idx)) {
+        const CXXMethodDecl *Method = VTables.findOriginalMethodInMap(MD);
+        VTableThunks[Idx].Method = Method;
+        VTableThunks[Idx].ThisType = Method->getThisType().getTypePtr();
+      }
       VTableThunks[Idx].This = ThisAdjustment;
     };
 
@@ -1576,7 +1579,8 @@ void ItaniumVTableBuilder::AddMethods(
 
             // This is a virtual thunk for the most derived class, add it.
             AddThunk(Overrider.Method,
-                     ThunkInfo(ThisAdjustment, ReturnAdjustment));
+                     ThunkInfo(ThisAdjustment, ReturnAdjustment,
+                               OverriddenMD->getThisType().getTypePtr()));
           }
         }
 
@@ -1648,8 +1652,10 @@ void ItaniumVTableBuilder::AddMethods(
     // vtable entry. We need to record the method because we cannot call
     // findOriginalMethod to find the method that created the entry if the
     // method in the entry requires adjustment.
-    if (!ReturnAdjustment.isEmpty())
+    if (!ReturnAdjustment.isEmpty()) {
       VTableThunks[Components.size()].Method = MD;
+      VTableThunks[Components.size()].ThisType = MD->getThisType().getTypePtr();
+    }
 
     AddMethod(Overrider.Method, ReturnAdjustment);
   }
@@ -1927,11 +1933,11 @@ void ItaniumVTableBuilder::LayoutVTablesForVirtualBases(
 }
 
 static void printThunkMethod(const ThunkInfo &Info, raw_ostream &Out) {
-  if (Info.Method) {
-    std::string Str = PredefinedExpr::ComputeName(
-        PredefinedIdentKind::PrettyFunctionNoVirtual, Info.Method);
-    Out << " method: " << Str;
-  }
+  if (!Info.Method)
+    return;
+  std::string Str = PredefinedExpr::ComputeName(
+      PredefinedIdentKind::PrettyFunctionNoVirtual, Info.Method);
+  Out << " method: " << Str;
 }
 
 /// dumpLayout - Dump the vtable layout.
@@ -1942,10 +1948,12 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
   Out << "Original map\n";
 
   for (const auto &P : VTables.getOriginalMethodMap()) {
-    std::string Str0 = PredefinedExpr::ComputeName(
-        PredefinedIdentKind::PrettyFunctionNoVirtual, P.first);
-    std::string Str1 = PredefinedExpr::ComputeName(
-        PredefinedIdentKind::PrettyFunctionNoVirtual, P.second);
+    std::string Str0 =
+        PredefinedExpr::ComputeName(PredefinedIdentKind::PrettyFunctionNoVirtual,
+                                    P.first);
+    std::string Str1 =
+        PredefinedExpr::ComputeName(PredefinedIdentKind::PrettyFunctionNoVirtual,
+                                    P.second);
     Out << " " << Str0 << " -> " << Str1 << "\n";
   }
 
@@ -2373,7 +2381,7 @@ ItaniumVTableContext::getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
 GlobalDecl ItaniumVTableContext::findOriginalMethod(GlobalDecl GD) {
   const auto *MD = cast<CXXMethodDecl>(GD.getDecl());
   computeVTableRelatedInformation(MD->getParent());
-  const auto *OriginalMD = findOriginalMethodInMap(MD);
+  const CXXMethodDecl *OriginalMD = findOriginalMethodInMap(MD);
 
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(OriginalMD))
     return GlobalDecl(DD, GD.getDtorType());
@@ -3179,9 +3187,9 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
                                     ReturnAdjustmentOffset.VirtualBase);
       }
     }
-
+    auto ThisType = (OverriddenMD ? OverriddenMD : MD)->getThisType().getTypePtr();
     AddMethod(FinalOverriderMD,
-              ThunkInfo(ThisAdjustmentOffset, ReturnAdjustment,
+              ThunkInfo(ThisAdjustmentOffset, ReturnAdjustment, ThisType,
                         ForceReturnAdjustmentMangling ? MD : nullptr));
   }
 }

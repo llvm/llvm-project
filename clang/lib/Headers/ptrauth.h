@@ -59,7 +59,7 @@ typedef enum {
 
   /* The key used to sign C++ v-table pointers.
      The extra data is always 0. */
-  ptrauth_key_cxx_vtable_pointer = ptrauth_key_asda,
+  ptrauth_key_cxx_vtable_pointer = ptrauth_key_process_independent_data,
 
   /* Other pointers signed under the ABI use private ABI rules. */
 
@@ -301,6 +301,12 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define __ptrauth_swift_value_witness_function_pointer(__key) \
   __ptrauth(ptrauth_key_function_pointer,1,__key)
 
+/* C++ vtable pointer signing class attribute */
+#define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
+                                   extra_discrimination...)                    \
+  [[clang::ptrauth_vtable_pointer(key, address_discrimination,                 \
+                                  extra_discrimination)]]
+
 #else
 
 #define ptrauth_strip(__value, __key)                                          \
@@ -386,6 +392,9 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define __ptrauth_swift_class_method_pointer(__declkey)
 #define __ptrauth_swift_protocol_witness_function_pointer(__declkey)
 #define __ptrauth_swift_value_witness_function_pointer(__key)
+
+#define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
+                                   extra_discrimination...)
 
 #endif /* __has_feature(ptrauth_intrinsics) */
 

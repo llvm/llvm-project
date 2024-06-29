@@ -90,9 +90,9 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
      llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
          VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
 
-     if (auto &schema =
+     if (const auto &Schema =
              CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers)
-       Init = CGM.getConstantSignedPointer(Init, schema, nullptr, GlobalDecl(),
+       Init = CGM.getConstantSignedPointer(Init, Schema, nullptr, GlobalDecl(),
                                            QualType());
 
      VTTComponents.push_back(Init);
