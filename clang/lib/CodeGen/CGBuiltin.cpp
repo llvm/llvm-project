@@ -3505,6 +3505,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_trap:
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
+  case Builtin::BI__builtin_verbose_trap: {
+    llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+    if (getDebugInfo()) {
+      TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+          TrapLocation, *E->getArg(0)->tryEvaluateString(getContext()),
+          *E->getArg(1)->tryEvaluateString(getContext()));
+    }
+    ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
+    // Currently no attempt is made to prevent traps from being merged.
+    EmitTrapCall(Intrinsic::trap);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__debugbreak:
     EmitTrapCall(Intrinsic::debugtrap);
     return RValue::get(nullptr);
