@@ -76,11 +76,6 @@ public:
       llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
       const mlir::DataLayout &dl);
 
-  static std::unique_ptr<CodeGenSpecifics>
-  get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
-      llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-      const mlir::DataLayout &dl, llvm::StringRef tuneCPU);
-
   static TypeAndAttr getTypeAndAttr(mlir::Type t) { return TypeAndAttr{t, {}}; }
 
   CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
@@ -88,17 +83,7 @@ public:
                    mlir::LLVM::TargetFeaturesAttr targetFeatures,
                    const mlir::DataLayout &dl)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
-        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
-        tuneCPU{""} {}
-
-  CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
-                   KindMapping &&kindMap, llvm::StringRef targetCPU,
-                   mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                   const mlir::DataLayout &dl, llvm::StringRef tuneCPU)
-      : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
-        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
-        tuneCPU{tuneCPU} {}
-
+        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl} {}
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
 
@@ -180,7 +165,6 @@ public:
   virtual unsigned char getCIntTypeWidth() const = 0;
 
   llvm::StringRef getTargetCPU() const { return targetCPU; }
-  llvm::StringRef getTuneCPU() const { return tuneCPU; }
 
   mlir::LLVM::TargetFeaturesAttr getTargetFeatures() const {
     return targetFeatures;
@@ -198,7 +182,6 @@ protected:
   llvm::StringRef targetCPU;
   mlir::LLVM::TargetFeaturesAttr targetFeatures;
   const mlir::DataLayout *dataLayout = nullptr;
-  llvm::StringRef tuneCPU;
 };
 
 } // namespace fir
