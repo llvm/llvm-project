@@ -992,3 +992,20 @@ define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
   %r = and <4 x i32> %a, <i32 131071, i32 131071, i32 131071, i32 131071>
   ret <4 x i32> %r
 }
+
+; Transforming `(mul x, -(2^(N-M) - 1) * 2^M)` to `(sub (shl x, M), (shl x, N))`
+; will cause overflow when N is 32 and M is 31.
+define i32 @shift_overflow(i32 %x) {
+; CHECK-LABEL: shift_overflow:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: shift_overflow:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #-2147483648 // =0x80000000
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+  %const = bitcast i32 2147483648 to i32
+  %r = mul i32 %x, %const
+  ret i32 %r
+}
