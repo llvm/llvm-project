@@ -837,7 +837,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     II.setIsFutureCompatKeyword(false);
   }
 
-  if (II.isReusableBuiltinName() && !isNextPPTokenLParen()) {
+  if (II.isReusableBuiltinName() && !isNextPPTokenLParen() && !EvaluatingHasBuiltinMacro) {
     Identifier.setKind(tok::identifier);
     Diag(Identifier, diag::warn_deprecated_builtin_replacement) << II.getName();
   }
