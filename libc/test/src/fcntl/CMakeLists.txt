@@ -29,6 +29,7 @@ add_libc_unittest(
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.unistd.close
+    libc.src.unistd.getpid
     libc.hdr.types.struct_flock
     libc.hdr.fcntl_macros
     libc.test.UnitTest.ErrnoSetterMatcher
