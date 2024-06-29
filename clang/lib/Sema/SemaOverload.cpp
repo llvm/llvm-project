@@ -1877,6 +1877,27 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       FromFn = QT->getAs<FunctionType>();
       Changed = true;
     }
+
+    // For C, when called from checkPointerTypesForAssignment,
+    // we need to not alter FromFn, or else even an innocuous cast
+    // like dropping effects will fail. In C++ however we do want to
+    // alter FromFn (because of the way PerformImplicitConversion works).
+    if (getLangOpts().CPlusPlus) {
+      FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
+
+      // Transparently add/drop effects; here we are concerned with
+      // language rules/canonicalization. Adding/dropping effects is a warning.
+      const auto FromFX = FromFPT->getFunctionEffects();
+      const auto ToFX = ToFPT->getFunctionEffects();
+      if (FromFX != ToFX) {
+        FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
+        ExtInfo.FunctionEffects = ToFX;
+        QualType QT = Context.getFunctionType(
+            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
+        FromFn = QT->getAs<FunctionType>();
+        Changed = true;
+      }
+    }
   }
 
   if (!Changed)

@@ -12,7 +12,7 @@
 
 // const error_category& system_category();
 
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 #include <system_error>
 #include <cassert>

@@ -12912,6 +12912,15 @@ TEST_F(FormatTest, FormatsAccessModifiers) {
                "  int j;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  Style.AttributeMacros.push_back("BAR");
+  verifyFormat("struct foo {\n"
+               "FOO private:\n"
+               "  int i;\n"
+               "BAR(x) protected:\n"
+               "  int j;\n"
+               "};",
+               Style);
 
   FormatStyle NoEmptyLines = getLLVMStyle();
   NoEmptyLines.MaxEmptyLinesToKeep = 0;
@@ -26130,6 +26139,12 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "      int i;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  verifyFormat("class C {\n"
+               "   FOO public:\n"
+               "      int i;\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, LimitlessStringsAndComments) {
@@ -26992,6 +27007,9 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "; int bar;",
                Style);
 #endif
+
+  Style.TypenameMacros.push_back("STRUCT");
+  verifyFormat("STRUCT(T, B) { int i; };", Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {

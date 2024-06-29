@@ -177,21 +177,21 @@ bool RISCVISAInfo::addExtension(StringRef ExtName,
 }
 
 static StringRef getExtensionTypeDesc(StringRef Ext) {
-  if (Ext.starts_with("s"))
+  if (Ext.starts_with('s'))
     return "standard supervisor-level extension";
-  if (Ext.starts_with("x"))
+  if (Ext.starts_with('x'))
     return "non-standard user-level extension";
-  if (Ext.starts_with("z"))
+  if (Ext.starts_with('z'))
     return "standard user-level extension";
   return StringRef();
 }
 
 static StringRef getExtensionType(StringRef Ext) {
-  if (Ext.starts_with("s"))
+  if (Ext.starts_with('s'))
     return "s";
-  if (Ext.starts_with("x"))
+  if (Ext.starts_with('x'))
     return "x";
-  if (Ext.starts_with("z"))
+  if (Ext.starts_with('z'))
     return "z";
   return StringRef();
 }
@@ -287,7 +287,7 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
   return Features;
 }
 
-static Error getStringErrorForInvalidExt(std::string_view ExtName) {
+static Error getStringErrorForInvalidExt(StringRef ExtName) {
   if (ExtName.size() == 1) {
     return createStringError(errc::invalid_argument,
                              "unsupported standard user-level extension '" +
@@ -757,7 +757,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                 Ext, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
           return std::move(E);
-        // Multi-letter extension must be seperate following extension with
+        // Multi-letter extension must be separate following extension with
         // underscore
         break;
       } else {

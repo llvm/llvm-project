@@ -214,7 +214,8 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : " << "(";
+  p << " : "
+    << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -955,7 +956,9 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
+  ss << " $" << (regCnt) << ","
+     << " $" << (regCnt + 1) << ","
+     << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -1053,9 +1056,13 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   StringAttr attrName = attr.getName();
   // Kernel function attribute should be attached to functions.
   if (attrName == NVVMDialect::getKernelFuncAttrName()) {
-    if (!isa<LLVM::LLVMFuncOp>(op)) {
+    auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op);
+    if (!funcOp) {
       return op->emitError() << "'" << NVVMDialect::getKernelFuncAttrName()
                              << "' attribute attached to unexpected op";
+    }
+    if (!funcOp.getResultTypes().empty()) {
+      return op->emitError() << "kernel function cannot have results";
     }
   }
   // If maxntid and reqntid exist, it must be an array with max 3 dim

@@ -1,3 +1,4 @@
+; XFAIL: target={{.*}}-aix{{.*}}
 ; REQUIRES: object-emission
 ; RUN: llc -filetype=obj -o %t %s
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s

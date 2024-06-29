@@ -657,13 +657,17 @@ define double @test_resinking_required(ptr %p, ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT]], i32 3
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI6:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT4]], i32 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT5:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI10:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT9:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
 ; CHECK-NEXT:    br i1 true, label %End, label %scalar.ph
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    phi double [ 0.000000e+00, %Entry ], [ [[VECTOR_RECUR_EXTRACT9]], %middle.block ]
+; CHECK-NEXT:    phi double [ 0.000000e+00, %Entry ], [ [[TMP3]], %middle.block ]
+; CHECK-NEXT:    phi double [ 0.000000e+00, %Entry ], [ [[TMP0]], %middle.block ]
+; CHECK:      End:
+; CHECK-NEXT:    = phi double [ {{.+}}, %Loop ], [ [[TMP0]], %middle.block ]
+; CHECK-NEXT:    = phi double [ {{.+}}, %Loop ], [ [[TMP3]], %middle.block ]
+; CHECK-NEXT:    = phi double [ {{.+}}, %Loop ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI10]], %middle.block ]
 ;
 Entry:
   br label %Loop

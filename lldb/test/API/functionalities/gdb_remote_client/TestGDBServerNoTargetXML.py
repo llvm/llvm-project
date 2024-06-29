@@ -1,3 +1,12 @@
+"""
+Check that lldb falls back to default register layouts when the remote provides
+no target XML.
+
+GPRS are passed to the responder to create register data to send back to lldb.
+Registers in SUPPL are virtual registers based on those general ones. The tests
+pass __file__ to FileCheck so any prefixes in this Python file will be checked.
+"""
+
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -6,14 +15,29 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 import binascii
 
-
-class TestGDBServerTargetXML(GDBRemoteTestBase):
+class MyResponder(MockGDBServerResponder):
     @staticmethod
     def filecheck_to_blob(fc):
         for l in fc.strip().splitlines():
             val = l.split("0x")[1]
             yield binascii.b2a_hex(bytes(reversed(binascii.a2b_hex(val)))).decode()
 
+    def __init__(self, reg_data, halt_reason):
+        super().__init__()
+        self.reg_data = "".join(self.filecheck_to_blob(reg_data))
+        self.halt_reason = halt_reason
+
+    def readRegister(self, regnum):
+        return ""
+
+    def readRegisters(self):
+        return self.reg_data
+
+    def haltReason(self):
+        return self.halt_reason
+
+
+class TestGDBServerTargetXML(GDBRemoteTestBase):
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_regs(self):
@@ -100,19 +124,10 @@ CHECK-AMD64-DAG: r14l = 0xe1
 CHECK-AMD64-DAG: r15l = 0xf1
 """
 
-        class MyResponder(MockGDBServerResponder):
-            reg_data = "".join(self.filecheck_to_blob(GPRS))
-
-            def readRegister(self, regnum):
-                return ""
-
-            def readRegisters(self):
-                return self.reg_data
-
-            def haltReason(self):
-                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;"
-
-        self.server.responder = MyResponder()
+        self.server.responder = MyResponder(
+            GPRS,
+            "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;",
+        )
 
         target = self.createTarget("basic_eh_frame.yaml")
         process = self.connect(target)
@@ -216,19 +231,10 @@ CHECK-AARCH64-DAG: w30 = 0x22232425
 CHECK-AARCH64-DAG: w31 = 0x23242526
 """
 
-        class MyResponder(MockGDBServerResponder):
-            reg_data = "".join(self.filecheck_to_blob(GPRS))
-
-            def readRegister(self, regnum):
-                return ""
-
-            def readRegisters(self):
-                return self.reg_data
-
-            def haltReason(self):
-                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;"
-
-        self.server.responder = MyResponder()
+        self.server.responder = MyResponder(
+            GPRS,
+            "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;",
+        )
 
         target = self.createTarget("basic_eh_frame-aarch64.yaml")
         process = self.connect(target)
@@ -300,19 +306,10 @@ CHECK-I386-DAG: sil = 0x61
 CHECK-I386-DAG: dil = 0x71
 """
 
-        class MyResponder(MockGDBServerResponder):
-            reg_data = "".join(self.filecheck_to_blob(GPRS))
-
-            def readRegister(self, regnum):
-                return ""
-
-            def readRegisters(self):
-                return self.reg_data
-
-            def haltReason(self):
-                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;"
-
-        self.server.responder = MyResponder()
+        self.server.responder = MyResponder(
+            GPRS,
+            "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;",
+        )
 
         target = self.createTarget("basic_eh_frame-i386.yaml")
         process = self.connect(target)

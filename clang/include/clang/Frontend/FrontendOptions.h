@@ -520,7 +520,7 @@ public:
   std::string ProductName;
 
   // Currently this is only used as part of the `-extract-api` action.
-  // A comma seperated list of files providing a list of APIs to
+  // A comma separated list of files providing a list of APIs to
   // ignore when extracting documentation.
   std::vector<std::string> ExtractAPIIgnoresFileList;
 

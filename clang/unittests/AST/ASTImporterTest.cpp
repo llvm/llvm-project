@@ -7851,7 +7851,7 @@ TEST_P(ImportAttributes, ImportAcquireCapability) {
 TEST_P(ImportAttributes, ImportTryAcquireCapability) {
   TryAcquireCapabilityAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((try_acquire_capability(1, A1, "
+      "bool test(int A1, int A2) __attribute__((try_acquire_capability(1, A1, "
       "A2)));",
       FromAttr, ToAttr);
   checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
@@ -7948,7 +7948,7 @@ TEST_P(ImportAttributes, ImportAssertSharedLock) {
 TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
   ExclusiveTrylockFunctionAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
+      "bool test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
       "A1, A2)));",
       FromAttr, ToAttr);
   checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
@@ -7958,7 +7958,7 @@ TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
 TEST_P(ImportAttributes, ImportSharedTrylockFunction) {
   SharedTrylockFunctionAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
+      "bool test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
       "A2)));",
       FromAttr, ToAttr);
   checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());

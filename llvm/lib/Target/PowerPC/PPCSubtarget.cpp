@@ -38,11 +38,6 @@ using namespace llvm;
 #include "PPCGenSubtargetInfo.inc"
 
 static cl::opt<bool>
-    UseSubRegLiveness("ppc-track-subreg-liveness",
-                      cl::desc("Enable subregister liveness tracking for PPC"),
-                      cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",
                            cl::desc("Enable Machine Pipeliner for PPC"),
                            cl::init(false), cl::Hidden);
@@ -186,9 +181,7 @@ bool PPCSubtarget::useAA() const {
   return true;
 }
 
-bool PPCSubtarget::enableSubRegLiveness() const {
-  return UseSubRegLiveness;
-}
+bool PPCSubtarget::enableSubRegLiveness() const { return true; }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   if (isAIXABI()) {

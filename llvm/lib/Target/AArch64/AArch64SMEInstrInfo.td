@@ -31,6 +31,27 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
+def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
+                           [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+
+def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
+                              [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+
+def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
+                              [SDTCisInt<0>, SDTCisInt<1>]>,
+                              [SDNPHasChain, SDNPSideEffect]>;
+let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
+  def AllocateZABuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
+}
+def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
+          (AllocateZABuffer $size)>;
+
+def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 1,
+                              [SDTCisInt<0>]>, [SDNPHasChain, SDNPMayStore]>;
+let usesCustomInserter = 1 in {
+  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
@@ -50,15 +71,17 @@ def AArch64CoalescerBarrier
 def SDT_AArch64RDSVL  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
 def AArch64rdsvl : SDNode<"AArch64ISD::RDSVL", SDT_AArch64RDSVL>;
 
-let Predicates = [HasSME] in {
+let Predicates = [HasSMEandIsNonStreamingSafe] in {
 def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>;
 def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
 def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
 
+def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
+}
+
+let Predicates = [HasSME] in {
 defm ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha", int_aarch64_sme_addha>;
 defm ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva", int_aarch64_sme_addva>;
-
-def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }
 
 let Predicates = [HasSMEI16I64] in {
@@ -117,18 +140,20 @@ defm LD1_MXIPXX : sme_mem_ld_ss<"ld1">;
 defm ST1_MXIPXX : sme_mem_st_ss<"st1">;
 
 //===----------------------------------------------------------------------===//
-// Spill + fill
-//===----------------------------------------------------------------------===//
-
-defm LDR_ZA : sme_fill<"ldr">;
-defm STR_ZA : sme_spill<"str">;
-
-//===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//
 
 defm INSERT_MXIPZ  : sme_vector_to_tile<"mova">;
 defm EXTRACT_ZPMXI : sme_tile_to_vector<"mova">;
+} // End let Predicates = [HasSME]
+
+let Predicates = [HasSMEandIsNonStreamingSafe] in {
+//===----------------------------------------------------------------------===//
+// Spill + fill
+//===----------------------------------------------------------------------===//
+
+defm LDR_ZA : sme_fill<"ldr">;
+defm STR_ZA : sme_spill<"str">;
 
 //===----------------------------------------------------------------------===//
 // Zero instruction
@@ -164,7 +189,7 @@ def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
 def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
           (MRS 0xde85)>;
 
-} // End let Predicates = [HasSME]
+} // End let Predicates = [HasSMEandIsNonStreamingSafe]
 
 multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {
   def NAME : Pseudo<(outs rc:$dst), (ins rc:$src), []>, Sched<[]> {
@@ -220,6 +245,15 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0))
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
 
+
+// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
+// the streaming value of VG around streaming-mode changes in locally-streaming
+// functions.
+def VGSavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+def : Pat<(AArch64VGSave), (VGSavePseudo)>;
+
+def VGRestorePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+def : Pat<(AArch64VGRestore), (VGRestorePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions
@@ -550,11 +584,6 @@ defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001, int_aarch64_sme_smops
 defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100, int_aarch64_sme_umopa_za32>;
 defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101, int_aarch64_sme_umops_za32>;
 
-defm ZERO_T : sme2_zero_zt<"zero", 0b0001>;
-
-defm LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100, AArch64_restore_zt>;
-defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, AArch64_save_zt>;
-
 def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
 def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
 
@@ -680,7 +709,15 @@ def  STNT1D_2Z_STRIDED     : sme2_st_vector_vg2_multi_scalar_scalar<0b11, 0b1,  
 def  STNT1D_4Z_STRIDED     : sme2_st_vector_vg4_multi_scalar_scalar<0b11, 0b1,    ZZZZ_d_strided, GPR64shifted64, "stnt1d">;
 defm STNT1D_2Z_STRIDED_IMM : sme2_st_vector_vg2_multi_scalar_immediate<0b11, 0b1, ZZ_d_strided,   simm4s2, "stnt1d">;
 defm STNT1D_4Z_STRIDED_IMM : sme2_st_vector_vg4_multi_scalar_immediate<0b11, 0b1, ZZZZ_d_strided, simm4s4, "stnt1d">;
-}
+} // End let Predicates = [HasSME2]
+
+
+let Predicates = [HasSME2andIsNonStreamingSafe] in {
+defm ZERO_T : sme2_zero_zt<"zero", 0b0001>;
+
+defm LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100, AArch64_restore_zt>;
+defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, AArch64_save_zt>;
+} // End let Predicates = [HasSME2andIsNonStreamingSafe]
 
 let Predicates = [HasSME2, HasSMEI16I64] in {
 defm ADD_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg2_single<"add", 0b1011010, MatrixOp64, ZZ_d, ZPR4b64, nxv2i64, int_aarch64_sme_add_write_single_za_vg1x2>;

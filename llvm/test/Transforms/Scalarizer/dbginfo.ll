@@ -21,9 +21,9 @@ define void @f1(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture reado
 ; CHECK: %b.i1 = getelementptr i32, ptr %b, i32 1
 ; CHECK: %b.i2 = getelementptr i32, ptr %b, i32 2
 ; CHECK: %b.i3 = getelementptr i32, ptr %b, i32 3
-; CHECK: tail call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
-; CHECK: tail call void @llvm.dbg.value(metadata ptr %b, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
-; CHECK: tail call void @llvm.dbg.value(metadata ptr %c, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
+; CHECK: #dbg_value(ptr %a, !{{[0-9]+}}, {{.*}},  !{{[0-9]+}}
+; CHECK: #dbg_value(ptr %b, !{{[0-9]+}}, {{.*}},  !{{[0-9]+}}
+; CHECK: #dbg_value(ptr %c, !{{[0-9]+}}, {{.*}},  !{{[0-9]+}}
 ; CHECK: %bval.i0 = load i32, ptr %b, align 16, !dbg ![[TAG1:[0-9]+]], !tbaa ![[TAG2:[0-9]+]]
 ; CHECK: %bval.i1 = load i32, ptr %b.i1, align 4, !dbg ![[TAG1]], !tbaa ![[TAG2]]
 ; CHECK: %bval.i2 = load i32, ptr %b.i2, align 8, !dbg ![[TAG1]], !tbaa ![[TAG2]]

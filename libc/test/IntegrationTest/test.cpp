@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/common.h"
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include "src/sys/auxv/getauxval.h"
+#endif
 
 // Integration tests rely on the following memory functions. This is because the
 // compiler code generation can emit calls to them. We want to map the external
@@ -80,9 +85,11 @@ void *realloc(void *ptr, size_t s) {
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
-// On some platform (aarch64 fedora tested) full build integration test
-// objects need to link against libgcc, which may expect a __getauxval
-// function. For now, it is fine to provide a weak definition that always
-// returns false.
-[[gnu::weak]] bool __getauxval(uint64_t, uint64_t *) { return false; }
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+// Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
+// defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
+unsigned long __getauxval(unsigned long id) {
+  return LIBC_NAMESPACE::getauxval(id);
+}
+#endif
 } // extern "C"

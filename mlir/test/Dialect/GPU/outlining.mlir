@@ -40,8 +40,8 @@ func.func @launch() {
 // CHECK-LABEL: gpu.module @launch_kernel
 // CHECK-NEXT: gpu.func @launch_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
-// CHECK-SAME: gpu.known_block_size = array<i32: 20, 24, 28>
-// CHECK-SAME: gpu.known_grid_size = array<i32: 8, 12, 16>
+// CHECK-SAME: known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y
 // CHECK-NEXT: = gpu.block_id z
@@ -108,8 +108,8 @@ llvm.func @launch_from_llvm_func() {
   // CHECK-NEXT: llvm.return
 
   // CHECK: gpu.func {{.*}} kernel attributes
-  // CHECK-SAME: gpu.known_block_size = array<i32: 1, 1, 1>
-  // CHECK-SAME: gpu.known_grid_size = array<i32: 1, 1, 1>
+  // CHECK-SAME: known_block_size = array<i32: 1, 1, 1>
+  // CHECK-SAME: known_grid_size = array<i32: 1, 1, 1>
   // CHECK: gpu.return
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %dim, %grid_y = %dim,
                                        %grid_z = %dim)
@@ -362,8 +362,8 @@ func.func @recursive_device_function() {
 
 // CHECK-LABEL: @non_constant_launches
 func.func @non_constant_launches(%arg0 : index) {
-  // CHECK-NOT: gpu.known_block_size
-  // CHECK-NOT: gpu.known_grid_size
+  // CHECK-NOT: known_block_size
+  // CHECK-NOT: known_grid_size
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %arg0, %grid_y = %arg0,
                                        %grid_z = %arg0)
              threads(%tx, %ty, %tz) in (%block_x = %arg0, %block_y = %arg0,
@@ -484,8 +484,8 @@ func.func @launch_cluster() {
 // CHECK-LABEL: gpu.module @launch_cluster_kernel
 // CHECK-NEXT: gpu.func @launch_cluster_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
-// CHECK-SAME: gpu.known_block_size = array<i32: 20, 24, 28>
-// CHECK-SAME: gpu.known_grid_size = array<i32: 8, 12, 16>
+// CHECK-SAME: known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y
 // CHECK-NEXT: = gpu.block_id z

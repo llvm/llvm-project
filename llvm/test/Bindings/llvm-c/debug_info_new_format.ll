@@ -1,4 +1,4 @@
-; RUN: llvm-c-test --test-dibuilder-new-debuginfo-format | FileCheck %s
+; RUN: llvm-c-test --test-dibuilder-debuginfo-format | FileCheck %s
 ;; Duplicate of debug_info.ll using debug records instead of intrinsics.
 
 ; CHECK: ; ModuleID = 'debuginfo.c'

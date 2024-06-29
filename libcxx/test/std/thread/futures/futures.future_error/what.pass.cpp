@@ -11,7 +11,7 @@
 // LWG 2056 changed the values of future_errc, so if we're using new headers
 // with an old library we'll get incorrect messages.
 //
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // VC Runtime's std::exception::what() method is not marked as noexcept, so
 // this fails.

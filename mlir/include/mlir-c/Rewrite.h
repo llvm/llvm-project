@@ -19,6 +19,10 @@
 #include "mlir-c/Support.h"
 #include "mlir/Config/mlir-config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //===----------------------------------------------------------------------===//
 /// Opaque type declarations (see mlir-c/IR.h for more details).
 //===----------------------------------------------------------------------===//
@@ -56,5 +60,9 @@ mlirRewritePatternSetFromPDLPatternModule(MlirPDLPatternModule op);
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 #undef DEFINE_C_API_STRUCT
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // MLIR_C_REWRITE_H

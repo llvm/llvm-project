@@ -207,12 +207,12 @@ void WebAssemblyExceptionInfo::recalculate(
     auto *SrcWE = P.first;
     auto *DstWE = P.second;
 
-    for (auto *MBB : SrcWE->getBlocksSet()) {
+    SrcWE->getBlocksSet().remove_if([&](MachineBasicBlock *MBB){
       if (MBB->isEHPad()) {
         assert(!isReachableAmongDominated(DstWE->getEHPad(), MBB,
                                           SrcWE->getEHPad(), MDT) &&
                "We already handled EH pads above");
-        continue;
+        return false;
       }
       if (isReachableAmongDominated(DstWE->getEHPad(), MBB, SrcWE->getEHPad(),
                                     MDT)) {
@@ -227,15 +227,16 @@ void WebAssemblyExceptionInfo::recalculate(
           InnerWE->removeFromBlocksSet(MBB);
           InnerWE = InnerWE->getParentException();
         }
-        SrcWE->removeFromBlocksSet(MBB);
         LLVM_DEBUG(dbgs() << "  removed from " << SrcWE->getEHPad()->getNumber()
                           << "." << SrcWE->getEHPad()->getName()
                           << "'s exception\n");
         changeExceptionFor(MBB, SrcWE->getParentException());
         if (SrcWE->getParentException())
           SrcWE->getParentException()->addToBlocksSet(MBB);
+        return true;
       }
-    }
+      return false;
+    });
   }
 
   // Add BBs to exceptions' block vector

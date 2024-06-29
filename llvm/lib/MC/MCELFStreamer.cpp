@@ -50,44 +50,6 @@ bool MCELFStreamer::isBundleLocked() const {
   return getCurrentSectionOnly()->isBundleLocked();
 }
 
-void MCELFStreamer::mergeFragment(MCDataFragment *DF,
-                                  MCDataFragment *EF) {
-  MCAssembler &Assembler = getAssembler();
-
-  if (Assembler.isBundlingEnabled() && Assembler.getRelaxAll()) {
-    uint64_t FSize = EF->getContents().size();
-
-    if (FSize > Assembler.getBundleAlignSize())
-      report_fatal_error("Fragment can't be larger than a bundle size");
-
-    uint64_t RequiredBundlePadding = computeBundlePadding(
-        Assembler, EF, DF->getContents().size(), FSize);
-
-    if (RequiredBundlePadding > UINT8_MAX)
-      report_fatal_error("Padding cannot exceed 255 bytes");
-
-    if (RequiredBundlePadding > 0) {
-      SmallString<256> Code;
-      raw_svector_ostream VecOS(Code);
-      EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
-      Assembler.writeFragmentPadding(VecOS, *EF, FSize);
-
-      DF->getContents().append(Code.begin(), Code.end());
-    }
-  }
-
-  flushPendingLabels(DF, DF->getContents().size());
-
-  for (unsigned i = 0, e = EF->getFixups().size(); i != e; ++i) {
-    EF->getFixups()[i].setOffset(EF->getFixups()[i].getOffset() +
-                                 DF->getContents().size());
-    DF->getFixups().push_back(EF->getFixups()[i]);
-  }
-  if (DF->getSubtargetInfo() == nullptr && EF->getSubtargetInfo())
-    DF->setHasInstructions(*EF->getSubtargetInfo());
-  DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
-}
-
 void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
@@ -108,7 +70,7 @@ void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setType(ELF::STT_TLS);
 }
 
-void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment *F,
+void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
                                    uint64_t Offset) {
   auto *Symbol = cast<MCSymbolELF>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
@@ -144,8 +106,7 @@ static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
     Section->ensureMinAlignment(Align(Assembler.getBundleAlignSize()));
 }
 
-void MCELFStreamer::changeSection(MCSection *Section,
-                                  const MCExpr *Subsection) {
+void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCSection *CurSection = getCurrentSectionOnly();
   if (CurSection && isBundleLocked())
     report_fatal_error("Unterminated .bundle_lock when changing a section");
@@ -575,34 +536,23 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
 
   if (Assembler.isBundlingEnabled()) {
     MCSection &Sec = *getCurrentSectionOnly();
-    if (Assembler.getRelaxAll() && isBundleLocked()) {
-      // If the -mc-relax-all flag is used and we are bundle-locked, we re-use
-      // the current bundle group.
-      DF = BundleGroups.back();
-      CheckBundleSubtargets(DF->getSubtargetInfo(), &STI);
-    }
-    else if (Assembler.getRelaxAll() && !isBundleLocked())
-      // When not in a bundle-locked group and the -mc-relax-all flag is used,
-      // we create a new temporary fragment which will be later merged into
-      // the current fragment.
-      DF = new MCDataFragment();
-    else if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst()) {
+    if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst()) {
       // If we are bundle-locked, we re-use the current fragment.
       // The bundle-locking directive ensures this is a new data fragment.
       DF = cast<MCDataFragment>(getCurrentFragment());
       CheckBundleSubtargets(DF->getSubtargetInfo(), &STI);
-    }
-    else if (!isBundleLocked() && Fixups.size() == 0) {
+    } else if (!isBundleLocked() && Fixups.size() == 0) {
       // Optimize memory usage by emitting the instruction to a
       // MCCompactEncodedInstFragment when not in a bundle-locked group and
       // there are no fixups registered.
-      MCCompactEncodedInstFragment *CEIF = new MCCompactEncodedInstFragment();
+      MCCompactEncodedInstFragment *CEIF =
+          getContext().allocFragment<MCCompactEncodedInstFragment>();
       insert(CEIF);
       CEIF->getContents().append(Code.begin(), Code.end());
       CEIF->setHasInstructions(STI);
       return;
     } else {
-      DF = new MCDataFragment();
+      DF = getContext().allocFragment<MCDataFragment>();
       insert(DF);
     }
     if (Sec.getBundleLockState() == MCSection::BundleLockedAlignToEnd) {
@@ -631,13 +581,6 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
                              getAssembler().getBackend().RelaxFixupKind)
     DF->setLinkerRelaxable();
   DF->getContents().append(Code.begin(), Code.end());
-
-  if (Assembler.isBundlingEnabled() && Assembler.getRelaxAll()) {
-    if (!isBundleLocked()) {
-      mergeFragment(getOrCreateDataFragment(&STI), DF);
-      delete DF;
-    }
-  }
 }
 
 void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
@@ -659,12 +602,6 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd) {
   if (!isBundleLocked())
     Sec.setBundleGroupBeforeFirstInst(true);
 
-  if (getAssembler().getRelaxAll() && !isBundleLocked()) {
-    // TODO: drop the lock state and set directly in the fragment
-    MCDataFragment *DF = new MCDataFragment();
-    BundleGroups.push_back(DF);
-  }
-
   Sec.setBundleLockState(AlignToEnd ? MCSection::BundleLockedAlignToEnd
                                     : MCSection::BundleLocked);
 }
@@ -679,27 +616,7 @@ void MCELFStreamer::emitBundleUnlock() {
   else if (Sec.isBundleGroupBeforeFirstInst())
     report_fatal_error("Empty bundle-locked group is forbidden");
 
-  // When the -mc-relax-all flag is used, we emit instructions to fragments
-  // stored on a stack. When the bundle unlock is emitted, we pop a fragment
-  // from the stack a merge it to the one below.
-  if (getAssembler().getRelaxAll()) {
-    assert(!BundleGroups.empty() && "There are no bundle groups");
-    MCDataFragment *DF = BundleGroups.back();
-
-    // FIXME: Use BundleGroups to track the lock state instead.
-    Sec.setBundleLockState(MCSection::NotBundleLocked);
-
-    // FIXME: Use more separate fragments for nested groups.
-    if (!isBundleLocked()) {
-      mergeFragment(getOrCreateDataFragment(DF->getSubtargetInfo()), DF);
-      BundleGroups.pop_back();
-      delete DF;
-    }
-
-    if (Sec.getBundleLockState() != MCSection::BundleLockedAlignToEnd)
-      getOrCreateDataFragment()->setAlignToBundleEnd(false);
-  } else
-    Sec.setBundleLockState(MCSection::NotBundleLocked);
+  Sec.setBundleLockState(MCSection::NotBundleLocked);
 }
 
 void MCELFStreamer::finishImpl() {

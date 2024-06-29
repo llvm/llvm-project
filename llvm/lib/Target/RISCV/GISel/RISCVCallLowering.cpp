@@ -341,10 +341,8 @@ static bool isLegalElementTypeForRVV(Type *EltTy,
 // TODO: Remove IsLowerArgs argument by adding support for vectors in lowerCall.
 static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
                                     bool IsLowerArgs = false) {
-  // TODO: Integers larger than 2*XLen are passed indirectly which is not
-  // supported yet.
   if (T->isIntegerTy())
-    return T->getIntegerBitWidth() <= Subtarget.getXLen() * 2;
+    return true;
   if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())

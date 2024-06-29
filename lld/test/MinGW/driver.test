@@ -60,6 +60,8 @@ RUN: ld.lld -### foo.o -m i386pep --entry bar 2>&1 | FileCheck -check-prefix=ENT
 RUN: ld.lld -### foo.o -m i386pep -entry=bar 2>&1 | FileCheck -check-prefix=ENTRY %s
 RUN: ld.lld -### foo.o -m i386pep --entry=bar 2>&1 | FileCheck -check-prefix=ENTRY %s
 ENTRY: -entry:bar
+RUN: ld.lld -### foo.o -m i386pep -e bar -entry= 2>&1 | FileCheck -check-prefix=NOENTRY --implicit-check-not=-entry %s
+NOENTRY: -noentry
 
 RUN: ld.lld -### foo.o -m i386pep -mllvm bar -mllvm baz 2>&1 | FileCheck -check-prefix=MLLVM %s
 MLLVM: -mllvm:bar -mllvm:baz

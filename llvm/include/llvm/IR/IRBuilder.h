@@ -63,10 +63,9 @@ public:
   virtual ~IRBuilderDefaultInserter();
 
   virtual void InsertHelper(Instruction *I, const Twine &Name,
-                            BasicBlock *BB,
                             BasicBlock::iterator InsertPt) const {
-    if (BB)
-      I->insertInto(BB, InsertPt);
+    if (InsertPt.isValid())
+      I->insertInto(InsertPt.getNodeParent(), InsertPt);
     I->setName(Name);
   }
 };
@@ -83,9 +82,8 @@ public:
       : Callback(std::move(Callback)) {}
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const override {
-    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+    IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     Callback(I);
   }
 };
@@ -143,7 +141,7 @@ public:
   /// Insert and return the specified instruction.
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
-    Inserter.InsertHelper(I, Name, BB, InsertPt);
+    Inserter.InsertHelper(I, Name, InsertPt);
     AddMetadataToInst(I);
     return I;
   }

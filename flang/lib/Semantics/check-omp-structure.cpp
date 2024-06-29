@@ -2781,7 +2781,7 @@ void OmpStructureChecker::CheckIsLoopIvPartOfClause(
     }
   }
 }
-// Following clauses have a seperate node in parse-tree.h.
+// Following clauses have a separate node in parse-tree.h.
 // Atomic-clause
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicRead, OMPC_read)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicWrite, OMPC_write)
@@ -2887,18 +2887,18 @@ void OmpStructureChecker::CheckAllowedMapTypes(
     const parser::OmpMapType::Type &type,
     const std::list<parser::OmpMapType::Type> &allowedMapTypeList) {
   if (!llvm::is_contained(allowedMapTypeList, type)) {
-    std::string commaSeperatedMapTypes;
+    std::string commaSeparatedMapTypes;
     llvm::interleave(
         allowedMapTypeList.begin(), allowedMapTypeList.end(),
         [&](const parser::OmpMapType::Type &mapType) {
-          commaSeperatedMapTypes.append(parser::ToUpperCaseLetters(
+          commaSeparatedMapTypes.append(parser::ToUpperCaseLetters(
               parser::OmpMapType::EnumToString(mapType)));
         },
-        [&] { commaSeperatedMapTypes.append(", "); });
+        [&] { commaSeparatedMapTypes.append(", "); });
     context_.Say(GetContext().clauseSource,
         "Only the %s map types are permitted "
         "for MAP clauses on the %s directive"_err_en_US,
-        commaSeperatedMapTypes, ContextDirectiveAsFortran());
+        commaSeparatedMapTypes, ContextDirectiveAsFortran());
   }
 }
 

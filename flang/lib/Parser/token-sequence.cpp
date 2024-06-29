@@ -378,9 +378,7 @@ const TokenSequence &TokenSequence::CheckBadFortranCharacters(
   return *this;
 }
 
-const TokenSequence &TokenSequence::CheckBadParentheses(
-    Messages &messages) const {
-  // First, a quick pass with no allocation for the common case
+bool TokenSequence::BadlyNestedParentheses() const {
   int nesting{0};
   std::size_t tokens{SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
@@ -394,8 +392,14 @@ const TokenSequence &TokenSequence::CheckBadParentheses(
       }
     }
   }
-  if (nesting != 0) {
+  return nesting != 0;
+}
+
+const TokenSequence &TokenSequence::CheckBadParentheses(
+    Messages &messages) const {
+  if (BadlyNestedParentheses()) {
     // There's an error; diagnose it
+    std::size_t tokens{SizeInTokens()};
     std::vector<std::size_t> stack;
     for (std::size_t j{0}; j < tokens; ++j) {
       CharBlock token{TokenAt(j)};

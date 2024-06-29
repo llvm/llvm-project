@@ -212,3 +212,14 @@ namespace VoidCast {
   static_assert(q == nullptr); // ref-error {{not an integral constant expression}} \
                                // ref-note {{initializer of 'q' is not a constant expression}}
 }
+
+namespace ExplicitLambdaInstancePointer {
+  struct C {
+      constexpr C(auto) { }
+  };
+  void foo() {
+      constexpr auto b = [](this C) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+      constexpr int (*fp)(C) = b;
+      static_assert(fp(1) == 1, "");
+  }
+}

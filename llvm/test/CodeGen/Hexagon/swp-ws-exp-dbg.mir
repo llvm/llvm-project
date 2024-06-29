@@ -1,11 +1,12 @@
 # REQUIRES: asserts
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -o - 2>&1 | FileCheck %s
-#
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
+
 # The Window Scheduling algorithm will discard the debug IR, just like the SMS
 # algorithm does. Additionally, the MMO information in the IR is also preserved
 # to ensure that no barrier dependencies are generated within the loop body.
-#
+
 # CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
 # CHECK-LABEL: name: exp_approx
 # CHECK: bb.5.for.body:

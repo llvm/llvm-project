@@ -790,14 +790,12 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
   uint32_t NumVals = 0;
   uint64_t TotalCount = 0;
-  std::unique_ptr<InstrProfValueData[]> ValueData =
-      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
-  bool Valid =
+  auto ValueData =
       getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueData.get(), NumVals, TotalCount, true);
+                               NumVals, TotalCount, true);
   // No valid value profile so no promoted targets have been recorded
   // before. Ok to do ICP.
-  if (!Valid)
+  if (!ValueData)
     return true;
 
   unsigned NumPromoted = 0;
@@ -837,11 +835,8 @@ updateIDTMetaData(Instruction &Inst,
   uint32_t NumVals = 0;
   // OldSum is the existing total count in the value profile data.
   uint64_t OldSum = 0;
-  std::unique_ptr<InstrProfValueData[]> ValueData =
-      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
-  bool Valid =
-      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueData.get(), NumVals, OldSum, true);
+  auto ValueData = getValueProfDataFromInst(
+      Inst, IPVK_IndirectCallTarget, MaxNumPromotions, NumVals, OldSum, true);
 
   DenseMap<uint64_t, uint64_t> ValueCountMap;
   if (Sum == 0) {
@@ -850,7 +845,7 @@ updateIDTMetaData(Instruction &Inst,
            "If sum is 0, assume only one element in CallTargets "
            "with count being NOMORE_ICP_MAGICNUM");
     // Initialize ValueCountMap with existing value profile data.
-    if (Valid) {
+    if (ValueData) {
       for (uint32_t I = 0; I < NumVals; I++)
         ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
     }
@@ -866,7 +861,7 @@ updateIDTMetaData(Instruction &Inst,
   } else {
     // Initialize ValueCountMap with existing NOMORE_ICP_MAGICNUM
     // counts in the value profile.
-    if (Valid) {
+    if (ValueData) {
       for (uint32_t I = 0; I < NumVals; I++) {
         if (ValueData[I].Count == NOMORE_ICP_MAGICNUM)
           ValueCountMap[ValueData[I].Value] = ValueData[I].Count;

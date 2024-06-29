@@ -188,7 +188,7 @@ Example usage for a project using a compile commands database:
     llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
     llvm::SmallString<128> AssetsPath;
     AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
-    llvm::sys::path::append(AssetsPath, "..", "share", "clang");
+    llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
     llvm::SmallString<128> DefaultStylesheet;
     llvm::sys::path::native(AssetsPath, DefaultStylesheet);
     llvm::sys::path::append(DefaultStylesheet,
@@ -299,8 +299,7 @@ Example usage for a project using a compile commands database:
   llvm::outs() << "Generating assets for docs...\n";
   Err = G->get()->createResources(CDCtx);
   if (Err) {
-    llvm::errs() << toString(std::move(Err)) << "\n";
-    return 1;
+    llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
   }
 
   return 0;

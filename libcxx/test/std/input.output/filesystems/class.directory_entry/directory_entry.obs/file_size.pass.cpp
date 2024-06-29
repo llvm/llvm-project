@@ -11,7 +11,7 @@
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
 // creating a FIFO file.

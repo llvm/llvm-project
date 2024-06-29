@@ -10,7 +10,7 @@
 // CHECK-NEXT:   [[param_addr_storage:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:   store
 // CHECK-NEXT:   store ptr [[param]], ptr [[param_addr_storage]], align 8
-// CHECK-NEXT:   call void @llvm.dbg.declare(metadata ptr [[param_addr_storage]], metadata ![[F:[0-9]+]], metadata !DIExpression(DW_OP_deref))
+// CHECK-NEXT:   #dbg_declare(ptr [[param_addr_storage]], ![[F:[0-9]+]], !DIExpression(DW_OP_deref),
 
 // !llvm.dbg.cu pulls in globals and their types first.
 // CHECK-NOT: !DIGlobalVariable(name: "c"

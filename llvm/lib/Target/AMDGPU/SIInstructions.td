@@ -237,15 +237,21 @@ def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
 // restoring it after we're done.
 let Defs = [SCC], isConvergent = 1 in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VSrc_b32: $src, VSrc_b32:$inactive),
-  [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
-}
+  (ins VSrc_b32: $src, VSrc_b32:$inactive), []>;
 
 def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VSrc_b64: $src, VSrc_b64:$inactive),
-  [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
-}
+  (ins VSrc_b64: $src, VSrc_b64:$inactive), []>;
 } // End Defs = [SCC]
+
+foreach vt = Reg32Types.types in {
+def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
+     (V_SET_INACTIVE_B32 VSrc_b32:$src, VSrc_b32:$inactive)>;
+}
+
+foreach vt = Reg64Types.types in {
+def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
+     (V_SET_INACTIVE_B64 VSrc_b64:$src, VSrc_b64:$inactive)>;
+}
 
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 VGPR_32:$src, VGPR_32:$inactive)>;
@@ -3383,7 +3389,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 
@@ -3857,11 +3863,6 @@ def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
-let Namespace = "AMDGPU" in {
-def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
-def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
-}
-
 class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
@@ -3886,7 +3887,6 @@ def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
-def G_AMDGPU_BUFFER_ATOMIC_FADD_BF16 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 

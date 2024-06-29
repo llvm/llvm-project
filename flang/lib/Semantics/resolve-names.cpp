@@ -661,8 +661,8 @@ public:
   void MakeExternal(Symbol &);
 
   // C815 duplicated attribute checking; returns false on error
-  bool CheckDuplicatedAttr(SourceName, const Symbol &, Attr);
-  bool CheckDuplicatedAttrs(SourceName, const Symbol &, Attrs);
+  bool CheckDuplicatedAttr(SourceName, Symbol &, Attr);
+  bool CheckDuplicatedAttrs(SourceName, Symbol &, Attrs);
 
   void SetExplicitAttr(Symbol &symbol, Attr attr) const {
     symbol.attrs().set(attr);
@@ -1087,6 +1087,58 @@ protected:
   void NoteScalarSpecificationArgument(const Symbol &symbol) {
     mustBeScalar_.emplace(symbol);
   }
+  // Declare an object or procedure entity.
+  // T is one of: EntityDetails, ObjectEntityDetails, ProcEntityDetails
+  template <typename T>
+  Symbol &DeclareEntity(const parser::Name &name, Attrs attrs) {
+    Symbol &symbol{MakeSymbol(name, attrs)};
+    if (context().HasError(symbol) || symbol.has<T>()) {
+      return symbol; // OK or error already reported
+    } else if (symbol.has<UnknownDetails>()) {
+      symbol.set_details(T{});
+      return symbol;
+    } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
+      symbol.set_details(T{std::move(*details)});
+      return symbol;
+    } else if (std::is_same_v<EntityDetails, T> &&
+        (symbol.has<ObjectEntityDetails>() ||
+            symbol.has<ProcEntityDetails>())) {
+      return symbol; // OK
+    } else if (auto *details{symbol.detailsIf<UseDetails>()}) {
+      Say(name.source,
+          "'%s' is use-associated from module '%s' and cannot be re-declared"_err_en_US,
+          name.source, GetUsedModule(*details).name());
+    } else if (auto *details{symbol.detailsIf<SubprogramNameDetails>()}) {
+      if (details->kind() == SubprogramKind::Module) {
+        Say2(name,
+            "Declaration of '%s' conflicts with its use as module procedure"_err_en_US,
+            symbol, "Module procedure definition"_en_US);
+      } else if (details->kind() == SubprogramKind::Internal) {
+        Say2(name,
+            "Declaration of '%s' conflicts with its use as internal procedure"_err_en_US,
+            symbol, "Internal procedure definition"_en_US);
+      } else {
+        DIE("unexpected kind");
+      }
+    } else if (std::is_same_v<ObjectEntityDetails, T> &&
+        symbol.has<ProcEntityDetails>()) {
+      SayWithDecl(
+          name, symbol, "'%s' is already declared as a procedure"_err_en_US);
+    } else if (std::is_same_v<ProcEntityDetails, T> &&
+        symbol.has<ObjectEntityDetails>()) {
+      if (FindCommonBlockContaining(symbol)) {
+        SayWithDecl(name, symbol,
+            "'%s' may not be a procedure as it is in a COMMON block"_err_en_US);
+      } else {
+        SayWithDecl(
+            name, symbol, "'%s' is already declared as an object"_err_en_US);
+      }
+    } else if (!CheckPossibleBadForwardRef(symbol)) {
+      SayAlreadyDeclared(name, symbol);
+    }
+    context().SetError(symbol);
+    return symbol;
+  }
 
 private:
   // The attribute corresponding to the statement containing an ObjectDecl
@@ -1151,59 +1203,6 @@ private:
   bool PassesLocalityChecks(
       const parser::Name &name, Symbol &symbol, Symbol::Flag flag);
   bool CheckForHostAssociatedImplicit(const parser::Name &);
-
-  // Declare an object or procedure entity.
-  // T is one of: EntityDetails, ObjectEntityDetails, ProcEntityDetails
-  template <typename T>
-  Symbol &DeclareEntity(const parser::Name &name, Attrs attrs) {
-    Symbol &symbol{MakeSymbol(name, attrs)};
-    if (context().HasError(symbol) || symbol.has<T>()) {
-      return symbol; // OK or error already reported
-    } else if (symbol.has<UnknownDetails>()) {
-      symbol.set_details(T{});
-      return symbol;
-    } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
-      symbol.set_details(T{std::move(*details)});
-      return symbol;
-    } else if (std::is_same_v<EntityDetails, T> &&
-        (symbol.has<ObjectEntityDetails>() ||
-            symbol.has<ProcEntityDetails>())) {
-      return symbol; // OK
-    } else if (auto *details{symbol.detailsIf<UseDetails>()}) {
-      Say(name.source,
-          "'%s' is use-associated from module '%s' and cannot be re-declared"_err_en_US,
-          name.source, GetUsedModule(*details).name());
-    } else if (auto *details{symbol.detailsIf<SubprogramNameDetails>()}) {
-      if (details->kind() == SubprogramKind::Module) {
-        Say2(name,
-            "Declaration of '%s' conflicts with its use as module procedure"_err_en_US,
-            symbol, "Module procedure definition"_en_US);
-      } else if (details->kind() == SubprogramKind::Internal) {
-        Say2(name,
-            "Declaration of '%s' conflicts with its use as internal procedure"_err_en_US,
-            symbol, "Internal procedure definition"_en_US);
-      } else {
-        DIE("unexpected kind");
-      }
-    } else if (std::is_same_v<ObjectEntityDetails, T> &&
-        symbol.has<ProcEntityDetails>()) {
-      SayWithDecl(
-          name, symbol, "'%s' is already declared as a procedure"_err_en_US);
-    } else if (std::is_same_v<ProcEntityDetails, T> &&
-        symbol.has<ObjectEntityDetails>()) {
-      if (FindCommonBlockContaining(symbol)) {
-        SayWithDecl(name, symbol,
-            "'%s' may not be a procedure as it is in a COMMON block"_err_en_US);
-      } else {
-        SayWithDecl(
-            name, symbol, "'%s' is already declared as an object"_err_en_US);
-      }
-    } else if (!CheckPossibleBadForwardRef(symbol)) {
-      SayAlreadyDeclared(name, symbol);
-    }
-    context().SetError(symbol);
-    return symbol;
-  }
   bool HasCycle(const Symbol &, const Symbol *interface);
   bool MustBeScalar(const Symbol &symbol) const {
     return mustBeScalar_.find(symbol) != mustBeScalar_.end();
@@ -1624,6 +1623,7 @@ private:
 
   void PreSpecificationConstruct(const parser::SpecificationConstruct &);
   void CreateCommonBlockSymbols(const parser::CommonStmt &);
+  void CreateObjectSymbols(const std::list<parser::ObjectDecl> &, Attr);
   void CreateGeneric(const parser::GenericSpec &);
   void FinishSpecificationPart(const std::list<parser::DeclarationConstruct> &);
   void AnalyzeStmtFunctionStmt(const parser::StmtFunctionStmt &);
@@ -2806,12 +2806,13 @@ void ScopeHandler::MakeExternal(Symbol &symbol) {
 }
 
 bool ScopeHandler::CheckDuplicatedAttr(
-    SourceName name, const Symbol &symbol, Attr attr) {
+    SourceName name, Symbol &symbol, Attr attr) {
   if (attr == Attr::SAVE) {
     // checked elsewhere
   } else if (symbol.attrs().test(attr)) { // C815
     if (symbol.implicitAttrs().test(attr)) {
       // Implied attribute is now confirmed explicitly
+      symbol.implicitAttrs().reset(attr);
     } else {
       Say(name, "%s attribute was already specified on '%s'"_err_en_US,
           EnumToString(attr), name);
@@ -2822,7 +2823,7 @@ bool ScopeHandler::CheckDuplicatedAttr(
 }
 
 bool ScopeHandler::CheckDuplicatedAttrs(
-    SourceName name, const Symbol &symbol, Attrs attrs) {
+    SourceName name, Symbol &symbol, Attrs attrs) {
   bool ok{true};
   attrs.IterateOverMembers(
       [&](Attr x) { ok &= CheckDuplicatedAttr(name, symbol, x); });
@@ -5032,6 +5033,10 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
     charInfo_.length.reset();
     if (symbol.attrs().test(Attr::EXTERNAL)) {
       ConvertToProcEntity(symbol);
+    } else if (symbol.attrs().HasAny(Attrs{Attr::ALLOCATABLE,
+                   Attr::ASYNCHRONOUS, Attr::CONTIGUOUS, Attr::PARAMETER,
+                   Attr::SAVE, Attr::TARGET, Attr::VALUE, Attr::VOLATILE})) {
+      ConvertToObjectEntity(symbol);
     }
     if (attrs.test(Attr::BIND_C)) {
       SetBindNameOn(symbol);
@@ -8551,11 +8556,19 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
             }
           },
           [&](const parser::Statement<parser::OtherSpecificationStmt> &y) {
-            if (const auto *commonStmt{parser::Unwrap<parser::CommonStmt>(y)}) {
-              CreateCommonBlockSymbols(*commonStmt);
-            }
+            common::visit(
+                common::visitors{
+                    [&](const common::Indirection<parser::CommonStmt> &z) {
+                      CreateCommonBlockSymbols(z.value());
+                    },
+                    [&](const common::Indirection<parser::TargetStmt> &z) {
+                      CreateObjectSymbols(z.value().v, Attr::TARGET);
+                    },
+                    [](const auto &) {},
+                },
+                y.statement.u);
           },
-          [&](const auto &) {},
+          [](const auto &) {},
       },
       spec.u);
 }
@@ -8572,6 +8585,15 @@ void ResolveNamesVisitor::CreateCommonBlockSymbols(
         commonBlock.get<CommonBlockDetails>().add_object(obj);
       }
     }
+  }
+}
+
+void ResolveNamesVisitor::CreateObjectSymbols(
+    const std::list<parser::ObjectDecl> &decls, Attr attr) {
+  for (const parser::ObjectDecl &decl : decls) {
+    SetImplicitAttr(DeclareEntity<ObjectEntityDetails>(
+                        std::get<parser::ObjectName>(decl.t), Attrs{}),
+        attr);
   }
 }
 
@@ -8899,6 +8921,9 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 }
 
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
+  if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u)) {
+    return;
+  }
   if (const auto *tkr{
           std::get_if<std::list<parser::CompilerDirective::IgnoreTKR>>(&x.u)}) {
     if (currScope().IsTopLevel() ||

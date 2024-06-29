@@ -308,8 +308,8 @@ def compilerMacros(config, flags=""):
         with open(test.getSourcePath(), "w") as sourceFile:
             sourceFile.write(
                 """
-      #if __has_include(<__config_site>)
-      #  include <__config_site>
+      #if __has_include(<__config>)
+      #  include <__config>
       #endif
       """
             )

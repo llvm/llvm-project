@@ -51,13 +51,20 @@ static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
 
 bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
                                            Function *RestrictToFunc,
-                                           bool RemoveDeadConstants) {
+                                           bool RemoveDeadConstants,
+                                           bool IncludeSelf) {
   // Find all expandable direct users of Consts.
   SmallVector<Constant *> Stack;
-  for (Constant *C : Consts)
-    for (User *U : C->users())
-      if (isExpandableUser(U))
-        Stack.push_back(cast<Constant>(U));
+  for (Constant *C : Consts) {
+    if (IncludeSelf) {
+      assert(isExpandableUser(C) && "One of the constants is not expandable");
+      Stack.push_back(C);
+    } else {
+      for (User *U : C->users())
+        if (isExpandableUser(U))
+          Stack.push_back(cast<Constant>(U));
+    }
+  }
 
   // Include transitive users.
   SetVector<Constant *> ExpandableUsers;

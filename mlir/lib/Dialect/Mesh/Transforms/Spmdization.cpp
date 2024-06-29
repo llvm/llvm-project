@@ -266,7 +266,7 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
   builder.setInsertionPointAfterValue(sourceShard);
 
   MeshShardingAttr targetSharding =
-      targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitMeshAxis);
+      targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitTensorAxis);
   ShapedType allGatherResultShape = allGatherResultShapeInUnsplitLastAxis(
       sourceShard.getType(), mesh.getShape()[splitMeshAxis], splitTensorAxis);
   Value allGatherResult = builder.create<AllGatherOp>(

@@ -104,9 +104,9 @@ public:
   ///
   /// \param die The struct/class DWARFDIE containing template parameters.
   /// \return A string, including surrounding '<>', of the template parameters.
-  /// If the DIE's name already has '<>', returns an empty ConstString because
+  /// If the DIE's name already has '<>', returns an empty string because
   /// it's assumed that the caller is using the DIE name anyway.
-  lldb_private::ConstString GetDIEClassTemplateParams(
+  std::string GetDIEClassTemplateParams(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override;
 
 protected:

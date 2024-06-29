@@ -18,6 +18,8 @@
 #include "src/__support/common.h"
 #include "src/__support/uint128.h"
 
+#include "hdr/fenv_macros.h"
+
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
@@ -64,40 +66,50 @@ LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
 
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
-template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
-
-  if constexpr (internal::SpecialLongDouble<T>::VALUE) {
+template <typename OutType, typename InType>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                 cpp::is_floating_point_v<InType> &&
+                                 sizeof(OutType) <= sizeof(InType),
+                             OutType>
+sqrt(InType x) {
+  if constexpr (internal::SpecialLongDouble<OutType>::VALUE &&
+                internal::SpecialLongDouble<InType>::VALUE) {
     // Special 80-bit long double.
     return x86::sqrt(x);
   } else {
     // IEEE floating points formats.
-    using FPBits_t = typename fputil::FPBits<T>;
-    using StorageType = typename FPBits_t::StorageType;
-    constexpr StorageType ONE = StorageType(1) << FPBits_t::FRACTION_LEN;
-    constexpr auto FLT_NAN = FPBits_t::quiet_nan().get_val();
+    using OutFPBits = typename fputil::FPBits<OutType>;
+    using OutStorageType = typename OutFPBits::StorageType;
+    using InFPBits = typename fputil::FPBits<InType>;
+    using InStorageType = typename InFPBits::StorageType;
+    constexpr InStorageType ONE = InStorageType(1) << InFPBits::FRACTION_LEN;
+    constexpr auto FLT_NAN = OutFPBits::quiet_nan().get_val();
+    constexpr int EXTRA_FRACTION_LEN =
+        InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+    constexpr InStorageType EXTRA_FRACTION_MASK =
+        (InStorageType(1) << EXTRA_FRACTION_LEN) - 1;
 
-    FPBits_t bits(x);
+    InFPBits bits(x);
 
-    if (bits == FPBits_t::inf(Sign::POS) || bits.is_zero() || bits.is_nan()) {
+    if (bits == InFPBits::inf(Sign::POS) || bits.is_zero() || bits.is_nan()) {
       // sqrt(+Inf) = +Inf
       // sqrt(+0) = +0
       // sqrt(-0) = -0
       // sqrt(NaN) = NaN
       // sqrt(-NaN) = -NaN
-      return x;
+      return static_cast<OutType>(x);
     } else if (bits.is_neg()) {
       // sqrt(-Inf) = NaN
       // sqrt(-x) = NaN
       return FLT_NAN;
     } else {
       int x_exp = bits.get_exponent();
-      StorageType x_mant = bits.get_mantissa();
+      InStorageType x_mant = bits.get_mantissa();
 
       // Step 1a: Normalize denormal input and append hidden bit to the mantissa
       if (bits.is_subnormal()) {
         ++x_exp; // let x_exp be the correct exponent of ONE bit.
-        internal::normalize<T>(x_exp, x_mant);
+        internal::normalize<InType>(x_exp, x_mant);
       } else {
         x_mant |= ONE;
       }
@@ -120,12 +132,13 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       // So the nth digit y_n of the mantissa of sqrt(x) can be found by:
       //   y_n = 1 if 2*r(n-1) >= 2*y(n - 1) + 2^(-n-1)
       //         0 otherwise.
-      StorageType y = ONE;
-      StorageType r = x_mant - ONE;
+      InStorageType y = ONE;
+      InStorageType r = x_mant - ONE;
 
-      for (StorageType current_bit = ONE >> 1; current_bit; current_bit >>= 1) {
+      for (InStorageType current_bit = ONE >> 1; current_bit;
+           current_bit >>= 1) {
         r <<= 1;
-        StorageType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
+        InStorageType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
         if (r >= tmp) {
           r -= tmp;
           y += current_bit;
@@ -133,34 +146,91 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       }
 
       // We compute one more iteration in order to round correctly.
-      bool lsb = static_cast<bool>(y & 1); // Least significant bit
-      bool rb = false;                     // Round bit
+      bool lsb = (y & (InStorageType(1) << EXTRA_FRACTION_LEN)) !=
+                 0;    // Least significant bit
+      bool rb = false; // Round bit
       r <<= 2;
-      StorageType tmp = (y << 2) + 1;
+      InStorageType tmp = (y << 2) + 1;
       if (r >= tmp) {
         r -= tmp;
         rb = true;
       }
 
-      // Remove hidden bit and append the exponent field.
-      x_exp = ((x_exp >> 1) + FPBits_t::EXP_BIAS);
+      bool sticky = false;
 
-      y = (y - ONE) |
-          (static_cast<StorageType>(x_exp) << FPBits_t::FRACTION_LEN);
+      if constexpr (EXTRA_FRACTION_LEN > 0) {
+        sticky = rb || (y & EXTRA_FRACTION_MASK) != 0;
+        rb = (y & (InStorageType(1) << (EXTRA_FRACTION_LEN - 1))) != 0;
+      }
+
+      // Remove hidden bit and append the exponent field.
+      x_exp = ((x_exp >> 1) + OutFPBits::EXP_BIAS);
+
+      OutStorageType y_out = static_cast<OutStorageType>(
+          ((y - ONE) >> EXTRA_FRACTION_LEN) |
+          (static_cast<OutStorageType>(x_exp) << OutFPBits::FRACTION_LEN));
+
+      if constexpr (EXTRA_FRACTION_LEN > 0) {
+        if (x_exp >= OutFPBits::MAX_BIASED_EXPONENT) {
+          switch (quick_get_round()) {
+          case FE_TONEAREST:
+          case FE_UPWARD:
+            return OutFPBits::inf().get_val();
+          default:
+            return OutFPBits::max_normal().get_val();
+          }
+        }
+
+        if (x_exp <
+            -OutFPBits::EXP_BIAS - OutFPBits::SIG_LEN + EXTRA_FRACTION_LEN) {
+          switch (quick_get_round()) {
+          case FE_UPWARD:
+            return OutFPBits::min_subnormal().get_val();
+          default:
+            return OutType(0.0);
+          }
+        }
+
+        if (x_exp <= 0) {
+          int underflow_extra_fraction_len = EXTRA_FRACTION_LEN - x_exp + 1;
+          InStorageType underflow_extra_fraction_mask =
+              (InStorageType(1) << underflow_extra_fraction_len) - 1;
+
+          rb = (y & (InStorageType(1) << (underflow_extra_fraction_len - 1))) !=
+               0;
+          OutStorageType subnormal_mant =
+              static_cast<OutStorageType>(y >> underflow_extra_fraction_len);
+          lsb = (subnormal_mant & 1) != 0;
+          sticky = sticky || (y & underflow_extra_fraction_mask) != 0;
+
+          switch (quick_get_round()) {
+          case FE_TONEAREST:
+            if (rb && (lsb || sticky))
+              ++subnormal_mant;
+            break;
+          case FE_UPWARD:
+            if (rb || sticky)
+              ++subnormal_mant;
+            break;
+          }
+
+          return cpp::bit_cast<OutType>(subnormal_mant);
+        }
+      }
 
       switch (quick_get_round()) {
       case FE_TONEAREST:
         // Round to nearest, ties to even
         if (rb && (lsb || (r != 0)))
-          ++y;
+          ++y_out;
         break;
       case FE_UPWARD:
-        if (rb || (r != 0))
-          ++y;
+        if (rb || (r != 0) || sticky)
+          ++y_out;
         break;
       }
 
-      return cpp::bit_cast<T>(y);
+      return cpp::bit_cast<OutType>(y_out);
     }
   }
 }

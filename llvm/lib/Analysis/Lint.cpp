@@ -647,7 +647,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
                            SmallPtrSetImpl<Value *> &Visited) const {
   // Detect self-referential values.
   if (!Visited.insert(V).second)
-    return UndefValue::get(V->getType());
+    return PoisonValue::get(V->getType());
 
   // TODO: Look through sext or zext cast, when the result is known to
   // be interpreted as signed or unsigned, respectively.

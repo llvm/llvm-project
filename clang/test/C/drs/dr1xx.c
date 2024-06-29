@@ -296,7 +296,6 @@ void dr126(void) {
    */
   *object = 12; /* ok */
   ++object; /* expected-error {{cannot assign to variable 'object' with const-qualified type 'const IP' (aka 'int *const')}} */
-  /* expected-note@-1 {{add '*' to dereference it}} */
 }
 
 /* WG14 DR128: yes

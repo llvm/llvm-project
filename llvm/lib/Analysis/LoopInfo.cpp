@@ -663,6 +663,17 @@ Loop::LocRange Loop::getLocRange() const {
   return LocRange();
 }
 
+std::string Loop::getLocStr() const {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  if (const DebugLoc LoopDbgLoc = getStartLoc())
+    LoopDbgLoc.print(OS);
+  else
+    // Just print the module name.
+    OS << getHeader()->getParent()->getParent()->getModuleIdentifier();
+  return Result;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Loop::dump() const { print(dbgs()); }
 

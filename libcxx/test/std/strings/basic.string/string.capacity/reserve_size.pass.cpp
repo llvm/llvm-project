@@ -12,7 +12,7 @@
 
 // This test relies on https://llvm.org/PR45368 being fixed, which isn't in
 // older Apple dylibs
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
 
 #include <string>
 #include <stdexcept>
