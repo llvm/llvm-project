@@ -29,17 +29,11 @@ bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(
   const MCSymbol &SA = A->getSymbol();
   const MCSymbol &SB = B->getSymbol();
   assert(!SA.isUndefined() && !SB.isUndefined());
-  if (!SA.getFragment() || !SB.getFragment())
+  MCFragment *FB = SB.getFragment();
+  if (!FB || !SA.getFragment())
     return false;
 
-  return isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, SB, InSet);
-}
-
-bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &A, const MCSymbol &B,
-    bool InSet) const {
-  return isSymbolRefDifferenceFullyResolvedImpl(Asm, A, *B.getFragment(), InSet,
-                                                false);
+  return isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *FB, InSet, /*IsPCRel=*/false);
 }
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
