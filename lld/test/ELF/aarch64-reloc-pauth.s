@@ -180,8 +180,8 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 empty-rela.s -o empty-rela.o
 # RUN: ld.lld -pie -z pack-relative-relocs empty-rela.o -o empty-rela
 # RUN: llvm-readelf -S -d -r empty-rela | FileCheck --check-prefixes=EMPTY-RELA %s
-# RUN: ld.lld -r -z pack-relative-relocs empty-rela.o -o empty-rela-relocatable
-# RUN: llvm-readelf -S empty-rela-relocatable | FileCheck --check-prefixes=EMPTY-RELA-RELOCATABLE %s
+# RUN: ld.lld -r -z pack-relative-relocs empty-rela.o -o empty-rela.ro
+# RUN: llvm-readelf -S empty-rela.ro | FileCheck --check-prefixes=EMPTY-RELA-RO %s
 
 # EMPTY-RELA:      Section Headers:
 # EMPTY-RELA-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
@@ -203,7 +203,7 @@
 # EMPTY-RELA-NEXT: Index: Entry Address Symbolic Address
 # EMPTY-RELA-NEXT: 0000: 0000000000030310 0000000000030310 $d.0
 
-# EMPTY-RELA-RELOCATABLE-NOT: .rela.dyn
+# EMPTY-RELA-RO-NOT: .rela.dyn
 
 .section .test, "aw"
 .p2align 3
