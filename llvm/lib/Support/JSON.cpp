@@ -242,7 +242,7 @@ Error Path::Root::getError() const {
   return createStringError(llvm::inconvertibleErrorCode(), OS.str());
 }
 
-static std::vector<const Object::value_type *> sortedElements(const Object &O) {
+std::vector<const Object::value_type *> sortedElements(const Object &O) {
   std::vector<const Object::value_type *> Elements;
   for (const auto &E : O)
     Elements.push_back(&E);
