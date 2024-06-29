@@ -3,7 +3,7 @@
 
 // REQURIES: gpu
 // UNSUPPORTED: nvidiagpu
-// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgpu
 
 #include <cstdio>
 

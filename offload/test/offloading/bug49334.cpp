@@ -6,9 +6,8 @@
 // RUN: %libomptarget-run-generic
 
 // REQUIRES: gpu
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// UNSUPPORTED: nvidiagpu
+// UNSUPPORTED: amdgpu
 
 #include <cassert>
 #include <cmath>
