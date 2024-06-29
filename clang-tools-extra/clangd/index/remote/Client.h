@@ -9,14 +9,13 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_REMOTE_CLIENT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_REMOTE_CLIENT_H
 
+#include "index/Index.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <memory>
 
 namespace clang {
 namespace clangd {
-
-class SymbolIndex;
 
 namespace remote {
 
