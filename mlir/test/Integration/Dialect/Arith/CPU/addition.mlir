@@ -8,50 +8,83 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @zero_plus_one_on_i1() {
+func.func @add_i1(%v1 : i1, %v2 : i1) -> (i1) {
+  %res = arith.addi %v1, %v2 : i1
+  return %res : i1
+}
+
+func.func @additions_i1() {
   // addi on i1
   // addi(0, 1) : i1 = 1 : i1; addi(0, -1) : i1 = 1
-  // CHECK:      1
-  // CHECK-NEXT: 1
-  // CHECK-NEXT: 1
   %false = arith.constant 0 : i1
   %true = arith.constant 1 : i1
-  %true_0 = arith.constant -1 : i1
-  vector.print %true_0 : i1
-  %0 = arith.addi %false, %true : i1
+
+  // CHECK:      1
+  %0 = func.call @add_i1(%false, %true) : (i1, i1) -> i1
   vector.print %0 : i1
-  %1 = arith.addi %false, %true_0 : i1
+
+  // CHECK-NEXT: 1
+  %true_based_on_non_zero_val = arith.constant -1 : i1
+  %1 = func.call @add_i1(%false, %true_based_on_non_zero_val) : (i1, i1) -> i1
   vector.print %1 : i1
   return
 }
 
-func.func @addui_extended_i1() {
+func.func @addui_extended_i1(%v1 : i1, %v2 : i1) -> (i1, i1) {
+  %res, %overflow = arith.addui_extended %v1, %v2 : i1, i1
+  return %res, %overflow : i1, i1
+}
+
+func.func @additions_extended_i1() {
   // addui_extended on i1
   // addui_extended 1 1 : i1 = 0, 1
+  %true = arith.constant 1 : i1
+  %false = arith.constant 0 : i1
+  
   // CHECK-NEXT: 0
   // CHECK-NEXT: 1
-  %true = arith.constant 1 : i1
-  %sum, %overflow = arith.addui_extended %true, %true : i1, i1
-  vector.print %sum : i1
-  vector.print %overflow : i1
+  %sum_tt, %overflow_tt = func.call @addui_extended_i1(%true, %true) : (i1, i1) -> (i1, i1)
+  vector.print %sum_tt : i1
+  vector.print %overflow_tt : i1
+
+  // CHECK-NEXT: 1
+  // CHECK-NEXT: 0
+  %sum_tf, %overflow_tf = func.call @addui_extended_i1(%true, %false) : (i1, i1) -> (i1, i1)
+  vector.print %sum_tf : i1
+  vector.print %overflow_tf : i1
+
+  // CHECK-NEXT: 1
+  // CHECK-NEXT: 0
+  %sum_ft, %overflow_ft = func.call @addui_extended_i1(%false, %true) : (i1, i1) -> (i1, i1)
+  vector.print %sum_ft : i1
+  vector.print %overflow_ft : i1
+
+  // CHECK-NEXT: 0
+  // CHECK-NEXT: 0
+  %sum_ff, %overflow_ff = func.call @addui_extended_i1(%false, %false) : (i1, i1) -> (i1, i1)
+  vector.print %sum_ff : i1
+  vector.print %overflow_ff : i1
   return
 }
 
-func.func @addui_extended_overflow_bit_is_n1() {
-  // addui_extended overflow bit is treated as -1
-  // addui_extended -1633386 -1643386 = ... 1 (overflow because negative numbers are large positive numbers)
-  // CHECK-NEXT: 0
-  %c-16433886_i64 = arith.constant -16433886 : i64
-  %sum, %overflow = arith.addui_extended %c-16433886_i64, %c-16433886_i64 : i64, i1
+func.func @addui_extended_overflow_bit_is_treated_as_n1_in_comparisons() {
+  // check that addui_extended overflow bit is treated as -1 in comparison operations
+  //  in the case of an overflow
+  // addui_extended -1 -1 = (..., overflow_bit) 
+  // assert(overflow_bit <= 0)
+  %1 = arith.constant -1 : i64
+  %sum, %overflow = arith.addui_extended %1, %1 : i64, i1
   %false = arith.constant false
   %0 = arith.cmpi sge, %overflow, %false : i1
-  vector.print %0 : i1 // but prints as "1"
+
+  // CHECK-NEXT: 0
+  vector.print %0 : i1
   return
 }
 
 func.func @entry() {
-  func.call @zero_plus_one_on_i1() : () -> ()
-  func.call @addui_extended_i1() : () -> ()
-  func.call @addui_extended_overflow_bit_is_n1() : () -> ()
+  func.call @additions_i1() : () -> ()
+  func.call @additions_extended_i1() : () -> ()
+  func.call @addui_extended_overflow_bit_is_treated_as_n1_in_comparisons() : () -> ()
   return
 }
