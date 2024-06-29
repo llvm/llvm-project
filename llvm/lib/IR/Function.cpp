@@ -397,6 +397,12 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   }
   if (M->getModuleFlag("function_return_thunk_extern"))
     B.addAttribute(Attribute::FnRetThunkExtern);
+  StringRef DefaultCPU = F->getContext().getDefaultTargetCPU();
+  if (!DefaultCPU.empty())
+    B.addAttribute("target-cpu", DefaultCPU);
+  StringRef DefaultFeatures = F->getContext().getDefaultTargetFeatures();
+  if (!DefaultFeatures.empty())
+    B.addAttribute("target-features", DefaultFeatures);
   F->addFnAttrs(B);
   return F;
 }
