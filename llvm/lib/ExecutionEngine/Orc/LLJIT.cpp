@@ -612,9 +612,16 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
+  StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
+  if (ES.getTargetTriple().isOSBinFormatMachO()) {
+    if (InitializedDylib.contains(&JD))
+      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
+    else
+      InitializedDylib.insert(&JD);
+  }
 
   if (auto WrapperAddr = ES.lookup(
-          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
+          MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),
                                            int32_t(ORC_RT_RTLD_LAZY));
