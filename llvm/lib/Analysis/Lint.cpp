@@ -709,7 +709,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
 PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
+  auto *DL = &F.getDataLayout();
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);

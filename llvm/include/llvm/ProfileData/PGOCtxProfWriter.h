@@ -68,7 +68,7 @@ class PGOCtxProfileWriter final {
                  const ctx_profile::ContextNode &Node);
 
 public:
-  PGOCtxProfileWriter(raw_fd_stream &Out,
+  PGOCtxProfileWriter(raw_fd_stream &Out, 
                       std::optional<unsigned> VersionOverride = std::nullopt)
       : Writer(Buff, &Out, 0) {
     Writer.EnterSubblock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID,

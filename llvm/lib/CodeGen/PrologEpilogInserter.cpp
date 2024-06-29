@@ -1382,7 +1382,8 @@ bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const DataLayout &DL = MF.getDataLayout();
-  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  const Function &F = MF.getFunction();
+  LLVMContext &Context = F.getContext();
 
   if (MI.isDebugDef()) {
     MachineOperand &Op = MI.getOperand(OpIdx);

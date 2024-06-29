@@ -1276,6 +1276,10 @@ Error BinaryFunction::disassemble() {
       }
     }
 
+    bool IsUnsupported = BC.MIB->isUnsupportedInstruction(Instruction);
+    if (IsUnsupported)
+      setIgnored();
+
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
       uint64_t TargetAddress = 0;
       if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
@@ -1289,12 +1293,10 @@ Error BinaryFunction::disassemble() {
         const bool IsCondBranch = MIB->isConditionalBranch(Instruction);
         MCSymbol *TargetSymbol = nullptr;
 
-        if (!BC.MIB->isReversibleBranch(Instruction)) {
-          setIgnored();
-          if (BinaryFunction *TargetFunc =
+        if (IsUnsupported)
+          if (auto *TargetFunc =
                   BC.getBinaryFunctionContainingAddress(TargetAddress))
             TargetFunc->setIgnored();
-        }
 
         if (IsCall && containsAddress(TargetAddress)) {
           if (TargetAddress == getAddress()) {

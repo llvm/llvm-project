@@ -888,6 +888,11 @@ def err_requires_expr_in_simple_requirement : Error<
   "you intend to place it in a nested requirement? (add another 'requires' "
   "before the expression)">;
 
+def missing_template_arg_list_after_template_kw : Extension<
+  "a template argument list is expected after a name prefixed by the template "
+  "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
+  DefaultError;
+
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 def warn_missing_dependent_template_keyword : ExtWarn<

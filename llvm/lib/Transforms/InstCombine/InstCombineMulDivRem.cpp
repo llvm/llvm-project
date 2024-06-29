@@ -365,6 +365,28 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(NegOp0, X);
   }
 
+  if (Op0->hasOneUse()) {
+    // (mul (div exact X, C0), C1)
+    //    -> (div exact X, C0 / C1)
+    // iff C0 % C1 == 0 and X / (C0 / C1) doesn't create UB.
+    const APInt *C1;
+    auto UDivCheck = [&C1](const APInt &C) { return C.urem(*C1).isZero(); };
+    auto SDivCheck = [&C1](const APInt &C) {
+      APInt Quot, Rem;
+      APInt::sdivrem(C, *C1, Quot, Rem);
+      return Rem.isZero() && !Quot.isAllOnes();
+    };
+    if (match(Op1, m_APInt(C1)) &&
+        (match(Op0, m_Exact(m_UDiv(m_Value(X), m_CheckedInt(UDivCheck)))) ||
+         match(Op0, m_Exact(m_SDiv(m_Value(X), m_CheckedInt(SDivCheck)))))) {
+      auto BOpc = cast<BinaryOperator>(Op0)->getOpcode();
+      return BinaryOperator::CreateExact(
+          BOpc, X,
+          Builder.CreateBinOp(BOpc, cast<BinaryOperator>(Op0)->getOperand(1),
+                              Op1));
+    }
+  }
+
   // (X / Y) *  Y = X - (X % Y)
   // (X / Y) * -Y = (X % Y) - X
   {

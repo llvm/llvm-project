@@ -502,6 +502,60 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   return Builder.CreateTrunc(Shuffle, ResTy);
 }
 
+static Value *simplifyX86pmadd(IntrinsicInst &II,
+                               InstCombiner::BuilderTy &Builder,
+                               bool IsPMADDWD) {
+  Value *Arg0 = II.getArgOperand(0);
+  Value *Arg1 = II.getArgOperand(1);
+  auto *ResTy = cast<FixedVectorType>(II.getType());
+  [[maybe_unused]] auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
+
+  unsigned NumDstElts = ResTy->getNumElements();
+  assert(ArgTy->getNumElements() == (2 * NumDstElts) &&
+         ResTy->getScalarSizeInBits() == (2 * ArgTy->getScalarSizeInBits()) &&
+         "Unexpected PMADD types");
+
+  // Multiply by undef -> zero (NOT undef!) as other arg could still be zero.
+  if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
+  // Multiply by zero.
+  if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
+  // Constant folding.
+  if (!isa<Constant>(Arg0) || !isa<Constant>(Arg1))
+    return nullptr;
+
+  // Split Lo/Hi elements pairs, extend and add together.
+  // PMADDWD(X,Y) =
+  // add(mul(sext(lhs[0]),sext(rhs[0])),mul(sext(lhs[1]),sext(rhs[1])))
+  // PMADDUBSW(X,Y) =
+  // sadd_sat(mul(zext(lhs[0]),sext(rhs[0])),mul(zext(lhs[1]),sext(rhs[1])))
+  SmallVector<int> LoMask, HiMask;
+  for (unsigned I = 0; I != NumDstElts; ++I) {
+    LoMask.push_back(2 * I + 0);
+    HiMask.push_back(2 * I + 1);
+  }
+
+  auto *LHSLo = Builder.CreateShuffleVector(Arg0, LoMask);
+  auto *LHSHi = Builder.CreateShuffleVector(Arg0, HiMask);
+  auto *RHSLo = Builder.CreateShuffleVector(Arg1, LoMask);
+  auto *RHSHi = Builder.CreateShuffleVector(Arg1, HiMask);
+
+  auto LHSCast =
+      IsPMADDWD ? Instruction::CastOps::SExt : Instruction::CastOps::ZExt;
+  LHSLo = Builder.CreateCast(LHSCast, LHSLo, ResTy);
+  LHSHi = Builder.CreateCast(LHSCast, LHSHi, ResTy);
+  RHSLo = Builder.CreateCast(Instruction::CastOps::SExt, RHSLo, ResTy);
+  RHSHi = Builder.CreateCast(Instruction::CastOps::SExt, RHSHi, ResTy);
+  Value *Lo = Builder.CreateMul(LHSLo, RHSLo);
+  Value *Hi = Builder.CreateMul(LHSHi, RHSHi);
+  return IsPMADDWD
+             ? Builder.CreateAdd(Lo, Hi)
+             : Builder.CreateIntrinsic(ResTy, Intrinsic::sadd_sat, {Lo, Hi});
+}
+
 static Value *simplifyX86movmsk(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
   Value *Arg = II.getArgOperand(0);
@@ -2478,6 +2532,22 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
+  case Intrinsic::x86_sse2_pmadd_wd:
+  case Intrinsic::x86_avx2_pmadd_wd:
+  case Intrinsic::x86_avx512_pmaddw_d_512:
+    if (Value *V = simplifyX86pmadd(II, IC.Builder, true)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
+  case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+  case Intrinsic::x86_avx2_pmadd_ub_sw:
+  case Intrinsic::x86_avx512_pmaddubs_w_512:
+    if (Value *V = simplifyX86pmadd(II, IC.Builder, false)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
   case Intrinsic::x86_pclmulqdq:
   case Intrinsic::x86_pclmulqdq_256:
   case Intrinsic::x86_pclmulqdq_512: {
@@ -3076,6 +3146,24 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
         UndefElts |= LaneElts;
       }
     }
+    break;
+  }
+
+  case Intrinsic::x86_sse2_pmadd_wd:
+  case Intrinsic::x86_avx2_pmadd_wd:
+  case Intrinsic::x86_avx512_pmaddw_d_512:
+  case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+  case Intrinsic::x86_avx2_pmadd_ub_sw:
+  case Intrinsic::x86_avx512_pmaddubs_w_512: {
+    // PMADD - demand both src elements that map to each dst element.
+    auto *ArgTy = II.getArgOperand(0)->getType();
+    unsigned InnerVWidth = cast<FixedVectorType>(ArgTy)->getNumElements();
+    assert((VWidth * 2) == InnerVWidth && "Unexpected input size");
+    APInt OpDemandedElts = APIntOps::ScaleBitMask(DemandedElts, InnerVWidth);
+    APInt Op0UndefElts(InnerVWidth, 0);
+    APInt Op1UndefElts(InnerVWidth, 0);
+    simplifyAndSetOp(&II, 0, OpDemandedElts, Op0UndefElts);
+    simplifyAndSetOp(&II, 1, OpDemandedElts, Op1UndefElts);
     break;
   }
 

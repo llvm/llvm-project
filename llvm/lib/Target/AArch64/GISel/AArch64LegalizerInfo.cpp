@@ -648,6 +648,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(
           {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .libcallFor({{s16, s128}, {s32, s128}, {s64, s128}})
       .clampNumElements(0, v4s16, v4s16)
       .clampNumElements(0, v2s32, v2s32)
       .scalarize(0);

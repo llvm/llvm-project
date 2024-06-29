@@ -10,6 +10,7 @@
 #include "AArch64TargetMachine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"

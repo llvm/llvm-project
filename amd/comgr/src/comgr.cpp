@@ -51,6 +51,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include <fstream>
 #include <mutex>
 #include <string>

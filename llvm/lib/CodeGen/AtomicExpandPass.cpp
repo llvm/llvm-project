@@ -208,7 +208,7 @@ bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
   if (!Subtarget->enableAtomicExpand())
     return false;
   TLI = Subtarget->getTargetLowering();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   SmallVector<Instruction *, 1> AtomicInsts;
 
@@ -1205,7 +1205,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   Function *F = BB->getParent();
 
   assert(AddrAlign >=
-             F->getParent()->getDataLayout().getTypeStoreSize(ResultTy) &&
+             F->getDataLayout().getTypeStoreSize(ResultTy) &&
          "Expected at least natural alignment at this point.");
 
   // Given: atomicrmw some_op iN* %addr, iN %incr ordering

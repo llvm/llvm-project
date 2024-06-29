@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/CodeGen.h"     
 #include "llvm/IR/PassManager.h"
 
 #ifndef LLVM_IR_HETEROGENEOUSDEBUGVERIFYPASS_H
@@ -23,17 +24,17 @@ class ModulePass;
 /// Create and return a pass for the legacy pass manager that strips
 /// heterogeneous debug info from modules compiled above -O0.
 ModulePass *
-createHeterogeneousDebugVerifyLegacyPass(CodeGenOptLevel OptLevel);
+createHeterogeneousDebugVerifyLegacyPass(llvm::CodeGenOptLevel OptLevel);
 
 /// Pass for the new pass manager that strips
 /// heterogeneous debug info from modules compiled above -O0. It should be added
 /// to pipelines when compiling above -O0.
 class HeterogeneousDebugVerify
     : public PassInfoMixin<HeterogeneousDebugVerify> {
-  const CodeGenOptLevel OptLevel;
+  const llvm::CodeGenOptLevel OptLevel;
 
 public:
-  HeterogeneousDebugVerify(CodeGenOptLevel OptLevel);
+  HeterogeneousDebugVerify(llvm::CodeGenOptLevel OptLevel);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

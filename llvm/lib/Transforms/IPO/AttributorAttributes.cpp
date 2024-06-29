@@ -7470,7 +7470,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     assert(PrivType && "Expected privatizable type!");
 
     IRBuilder<NoFolder> IRB(IP->getParent(), IP);
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
 
     // Traverse the type, build GEPs and stores.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
