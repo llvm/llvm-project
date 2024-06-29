@@ -2549,7 +2549,7 @@ DiagnoseCStringFormatDirectiveInObjCAPI(Sema &S,
   }
   else if (Method) {
     for (const auto *I : Method->specific_attrs<FormatAttr>()) {
-      if (S.GetFormatNSStringIdx(I, Idx)) {
+      if (S.ObjC().GetFormatNSStringIdx(I, Idx)) {
         Format = true;
         break;
       }
