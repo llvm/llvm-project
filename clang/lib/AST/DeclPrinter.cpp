@@ -1189,6 +1189,13 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
   }
 
   Out << '>';
+
+  if (const Expr *RequiresClause = Params->getRequiresClause()) {
+    Out << " requires ";
+    RequiresClause->printPretty(Out, nullptr, Policy, Indentation, "\n",
+                                &Context);
+  }
+
   if (!OmitTemplateKW)
     Out << ' ';
 }
