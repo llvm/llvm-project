@@ -1806,7 +1806,6 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
         if (GVB->getSection() == "llvm.ptrauth") {
           auto PAI = GlobalPtrAuthInfo::analyze(GVB);
           return DAG.getNode(ISD::PtrAuthGlobalAddress, getCurSDLoc(), VT,
-                             DAG.getGlobalAddress(GV, getCurSDLoc(), VT),
                              getValue(PAI->getPointer()),
                              getValue(PAI->getKey()),
                              getValue(PAI->getAddrDiscriminator()),
@@ -1814,6 +1813,13 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
         }
       }
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
+    }
+
+    if (const ConstantPtrAuth *CPA = dyn_cast<ConstantPtrAuth>(C)) {
+      return DAG.getNode(ISD::PtrAuthGlobalAddress, getCurSDLoc(), VT,
+                         getValue(CPA->getPointer()), getValue(CPA->getKey()),
+                         getValue(CPA->getAddrDiscriminator()),
+                         getValue(CPA->getDiscriminator()));
     }
 
     if (isa<ConstantPointerNull>(C)) {

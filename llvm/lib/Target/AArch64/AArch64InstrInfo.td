@@ -1813,16 +1813,36 @@ let Predicates = [HasPAuth] in {
     let Size = 28;
   }
 
-  // Materialize a signed global address.
+  // Materialize a signed global address, with adrp+add and PAC.
   def MOVaddrPAC : Pseudo<(outs),
-                          (ins i64imm:$Addr, i64imm:$Offset, i32imm:$Key,
-                               GPR64:$AddrDisc, i64imm:$Disc), []>,
+                          (ins i64imm:$Addr, i32imm:$Key,
+                               GPR64noip:$AddrDisc, i64imm:$Disc), []>,
                Sched<[WriteI, ReadI]> {
     let isReMaterializable = 1;
     let isCodeGenOnly = 1;
-    let Size = 28; // ranges from 12 to 28
+    let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
     let Defs = [X16,X17];
-    let Uses = [X16,X17];
+  }
+
+  // Materialize a signed global address, using a GOT load and PAC.
+  def LOADgotPAC : Pseudo<(outs),
+                          (ins i64imm:$Addr, i32imm:$Key,
+                               GPR64noip:$AddrDisc, i64imm:$Disc), []>,
+               Sched<[WriteI, ReadI]> {
+    let isReMaterializable = 1;
+    let isCodeGenOnly = 1;
+    let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
+    let Defs = [X16,X17];
+  }
+
+  // Load a signed global address from a special $auth_ptr$ stub slot.
+  def LOADauthptrstatic : Pseudo<(outs GPR64:$dst),
+                              (ins i64imm:$Addr, i32imm:$Key,
+                                   i64imm:$Disc), []>,
+               Sched<[WriteI, ReadI]> {
+    let isReMaterializable = 1;
+    let isCodeGenOnly = 1;
+    let Size = 8;
   }
 
   // Size 16: 4 fixed + 8 variable, to compute discriminator.

@@ -90,10 +90,10 @@ static MCSymbol *getAuthGVStub(const GlobalVariable *GVB, AsmPrinter &Printer) {
   MachineModuleInfoMachO &MMIMachO =
       Printer.MMI->getObjFileInfo<MachineModuleInfoMachO>();
   MachineModuleInfoMachO::AuthStubInfo &StubInfo =
-      MMIMachO.getAuthGVStubEntry(MCSym);
+      MMIMachO.getAuthPtrStubEntry(MCSym);
 
-  if (!StubInfo.Pointer)
-    StubInfo.Pointer = Printer.lowerPtrAuthGlobalConstant(PAI);
+  if (!StubInfo.AuthPtrRef)
+    StubInfo.AuthPtrRef = Printer.lowerPtrAuthGlobalConstant(PAI);
   return MCSym;
 }
 

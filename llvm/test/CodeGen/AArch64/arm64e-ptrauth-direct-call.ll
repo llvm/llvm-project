@@ -34,9 +34,7 @@ define i32 @test_direct_call() #0 {
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT:   pacibsp
 ; CHECK-NEXT:   stp x29, x30, [sp, #-16]!
-; CHECK-NEXT: Lloh{{.*}}:
 ; CHECK-NEXT:   adrp x16, _f@GOTPAGE
-; CHECK-NEXT: Lloh{{.*}}:
 ; CHECK-NEXT:   ldr x16, [x16, _f@GOTPAGEOFF]
 ; CHECK-NEXT:   mov x17, #42
 ; CHECK-NEXT:   pacia x16, x17

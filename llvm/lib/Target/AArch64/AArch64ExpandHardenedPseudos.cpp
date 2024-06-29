@@ -71,168 +71,98 @@ bool AArch64ExpandHardenedPseudos::expandMI(MachineInstr &MI) {
   const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
   const AArch64InstrInfo *TII = STI.getInstrInfo();
 
-  if (MI.getOpcode() == AArch64::BR_JumpTable) {
-    LLVM_DEBUG(dbgs() << "Expanding: " << MI << "\n");
-    const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
-    assert(MJTI && "Can't lower jump-table dispatch without JTI");
-
-    const std::vector<MachineJumpTableEntry> &JTs = MJTI->getJumpTables();
-    assert(!JTs.empty() && "Invalid JT index for jump-table dispatch");
-
-    // Emit:
-    //     adrp xTable, Ltable@PAGE
-    //     add xTable, Ltable@PAGEOFF
-    //     mov xEntry, #<size of table> ; depending on table size, with MOVKs
-    //     cmp xEntry, #<size of table> ; if table size fits in 12-bit immediate
-    //     csel xEntry, xEntry, xzr, ls
-    //     ldrsw xScratch, [xTable, xEntry, lsl #2] ; kill xEntry, xScratch = xEntry
-    //   Ltmp:
-    //     adr xTable, Ltmp
-    //     add xDest, xTable, xScratch ; kill xTable, xDest = xTable
-    //     br xDest
-
-    MachineOperand JTOp = MI.getOperand(0);
-
-    unsigned JTI = JTOp.getIndex();
-    const uint64_t NumTableEntries = JTs[JTI].MBBs.size();
-
-    // cmp only supports a 12-bit immediate.  If we need more, materialize the
-    // immediate, using TableReg as a scratch register.
-    uint64_t MaxTableEntry = NumTableEntries - 1;
-    if (isUInt<12>(MaxTableEntry)) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SUBSXri), AArch64::XZR)
-        .addReg(AArch64::X16)
-        .addImm(MaxTableEntry)
-        .addImm(0);
-    } else {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVZXi), AArch64::X17)
-        .addImm(static_cast<uint16_t>(MaxTableEntry))
-        .addImm(0);
-      // It's sad that we have to manually materialize instructions, but we can't
-      // trivially reuse the main pseudo expansion logic.
-      // A MOVK sequence is easy enough to generate and handles the general case.
-      for (int Offset = 16; Offset < 64; Offset += 16) {
-        if ((MaxTableEntry >> Offset) == 0)
-          break;
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), AArch64::X17)
-          .addReg(AArch64::X17)
-          .addImm(static_cast<uint16_t>(MaxTableEntry >> Offset))
-          .addImm(Offset);
-      }
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
-        .addReg(AArch64::X16)
-        .addReg(AArch64::X17)
-        .addImm(0);
-    }
-
-    // This picks entry #0 on failure.
-    // We might want to trap instead.
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::CSELXr), AArch64::X16)
-      .addReg(AArch64::X16)
-      .addReg(AArch64::XZR)
-      .addImm(AArch64CC::LS);
-
-    MachineOperand JTHiOp(JTOp);
-    MachineOperand JTLoOp(JTOp);
-    JTHiOp.setTargetFlags(AArch64II::MO_PAGE);
-    JTLoOp.setTargetFlags(AArch64II::MO_PAGEOFF);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X17)
-      .add(JTHiOp);
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X17)
-      .addReg(AArch64::X17)
-      .add(JTLoOp)
-      .addImm(0);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRSWroX), AArch64::X16)
-      .addReg(AArch64::X17)
-      .addReg(AArch64::X16)
-      .addImm(0)
-      .addImm(1);
-
-    // Really an ADR with a label attached.
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::JumpTableAnchor), AArch64::X17)
-      .addJumpTableIndex(JTI);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXrs), AArch64::X16)
-      .addReg(AArch64::X17)
-      .addReg(AArch64::X16)
-      .addImm(0);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::BR))
-      .addReg(AArch64::X16);
-
-    MI.eraseFromParent();
-    return true;
-  }
-
-  if (MI.getOpcode() != AArch64::MOVaddrPAC)
+  if (MI.getOpcode() != AArch64::BR_JumpTable)
     return false;
 
   LLVM_DEBUG(dbgs() << "Expanding: " << MI << "\n");
+  const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+  assert(MJTI && "Can't lower jump-table dispatch without JTI");
 
-
-  MachineOperand GAOp = MI.getOperand(0);
-  uint64_t Offset = MI.getOperand(1).getImm();
-  auto Key = (AArch64PACKey::ID)MI.getOperand(2).getImm();
-  unsigned AddrDisc = MI.getOperand(3).getReg();
-  uint64_t Disc = MI.getOperand(4).getImm();
+  const std::vector<MachineJumpTableEntry> &JTs = MJTI->getJumpTables();
+  assert(!JTs.empty() && "Invalid JT index for jump-table dispatch");
 
   // Emit:
-  // target materialization:
-  //     adrp x16, _target@GOTPAGE
-  //     ldr x16, [x16, _target@GOTPAGEOFF]
-  //     add x16, x16, #<offset> ; if offset != 0; up to 3 depending on width
-  //
-  // signing:
-  // - 0 discriminator:
-  //     paciza x16
-  // - Non-0 discriminator, no address discriminator:
-  //     mov x17, #Disc
-  //     pacia x16, x17
-  // - address discriminator (with potentially folded immediate discriminator):
-  //     pacia x16, xAddrDisc
+  //     adrp xTable, Ltable@PAGE
+  //     add xTable, Ltable@PAGEOFF
+  //     mov xEntry, #<size of table> ; depending on table size, with MOVKs
+  //     cmp xEntry, #<size of table> ; if table size fits in 12-bit immediate
+  //     csel xEntry, xEntry, xzr, ls
+  //     ldrsw xScratch, [xTable, xEntry, lsl #2] ; kill xEntry, xScratch = xEntry
+  //   Ltmp:
+  //     adr xTable, Ltmp
+  //     add xDest, xTable, xScratch ; kill xTable, xDest = xTable
+  //     br xDest
 
-  MachineOperand GAHiOp(GAOp);
-  MachineOperand GALoOp(GAOp);
-  GAHiOp.setTargetFlags(AArch64II::MO_GOT | AArch64II::MO_PAGE);
-  GALoOp.setTargetFlags(AArch64II::MO_GOT | AArch64II::MO_PAGEOFF);
+  MachineOperand JTOp = MI.getOperand(0);
 
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X16)
-    .add(GAHiOp);
+  unsigned JTI = JTOp.getIndex();
+  const uint64_t NumTableEntries = JTs[JTI].MBBs.size();
 
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), AArch64::X16)
-    .addReg(AArch64::X16)
-    .add(GALoOp);
-
-  if (Offset) {
-    if (!isUInt<32>(Offset))
-      report_fatal_error("ptrauth global offset too large, 32bit max encoding");
-
-    for (int BitPos = 0; BitPos < 32 && (Offset >> BitPos); BitPos += 12) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X16)
-        .addReg(AArch64::X16)
-        .addImm((Offset >> BitPos) & 0xfff)
-        .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos));
-    }
-  }
-
-  unsigned DiscReg = AArch64::XZR;
-  if (Disc) {
-    DiscReg = AArch64::X17;
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVZXi), AArch64::X17)
-      .addImm(Disc)
+  // cmp only supports a 12-bit immediate.  If we need more, materialize the
+  // immediate, using TableReg as a scratch register.
+  uint64_t MaxTableEntry = NumTableEntries - 1;
+  if (isUInt<12>(MaxTableEntry)) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::SUBSXri), AArch64::XZR)
+      .addReg(AArch64::X16)
+      .addImm(MaxTableEntry)
       .addImm(0);
-  } else if (AddrDisc != AArch64::XZR) {
-    assert(Disc == 0 && "Non-0 discriminators should be folded into addr-disc");
-    DiscReg = AddrDisc;
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVZXi), AArch64::X17)
+      .addImm(static_cast<uint16_t>(MaxTableEntry))
+      .addImm(0);
+    // It's sad that we have to manually materialize instructions, but we can't
+    // trivially reuse the main pseudo expansion logic.
+    // A MOVK sequence is easy enough to generate and handles the general case.
+    for (int Offset = 16; Offset < 64; Offset += 16) {
+      if ((MaxTableEntry >> Offset) == 0)
+        break;
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), AArch64::X17)
+        .addReg(AArch64::X17)
+        .addImm(static_cast<uint16_t>(MaxTableEntry >> Offset))
+        .addImm(Offset);
+    }
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+      .addReg(AArch64::X16)
+      .addReg(AArch64::X17)
+      .addImm(0);
   }
 
-  unsigned PACOpc = getPACOpcodeForKey(Key, DiscReg == AArch64::XZR);
-  auto MIB = BuildMI(MBB, MBBI, DL, TII->get(PACOpc), AArch64::X16)
-      .addReg(AArch64::X16);
-  if (DiscReg != AArch64::XZR)
-    MIB.addReg(DiscReg);
+  // This picks entry #0 on failure.
+  // We might want to trap instead.
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::CSELXr), AArch64::X16)
+    .addReg(AArch64::X16)
+    .addReg(AArch64::XZR)
+    .addImm(AArch64CC::LS);
+
+  MachineOperand JTHiOp(JTOp);
+  MachineOperand JTLoOp(JTOp);
+  JTHiOp.setTargetFlags(AArch64II::MO_PAGE);
+  JTLoOp.setTargetFlags(AArch64II::MO_PAGEOFF);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X17)
+    .add(JTHiOp);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X17)
+    .addReg(AArch64::X17)
+    .add(JTLoOp)
+    .addImm(0);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRSWroX), AArch64::X16)
+    .addReg(AArch64::X17)
+    .addReg(AArch64::X16)
+    .addImm(0)
+    .addImm(1);
+
+  // Really an ADR with a label attached.
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::JumpTableAnchor), AArch64::X17)
+    .addJumpTableIndex(JTI);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXrs), AArch64::X16)
+    .addReg(AArch64::X17)
+    .addReg(AArch64::X16)
+    .addImm(0);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::BR))
+    .addReg(AArch64::X16);
 
   MI.eraseFromParent();
   return true;
