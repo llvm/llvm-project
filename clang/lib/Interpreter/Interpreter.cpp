@@ -677,7 +677,7 @@ private:
   // reduce the number of overloads of `__clang_Interpreter_SetValueNoAlloc`.
   void HandleIntegralOrEnumType(const Type *Ty) {
     uint64_t PtrBits = Ctx.getTypeSize(Ctx.VoidPtrTy);
-    QualType UIntTy = Ctx.getBitIntType(true, PtrBits);
+    QualType UIntTy = Ctx.getBitIntType(/*Unsigned=*/true, PtrBits);
     TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(UIntTy);
     ExprResult CastedExpr =
         S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
