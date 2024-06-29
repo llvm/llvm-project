@@ -8,37 +8,76 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
+func.func @mulsi_extended_i1(%v1 : i1, %v2 : i1) -> (i1, i1) {
+  %low, %high = arith.mulsi_extended %v1, %v2 : i1
+  vector.print %low : i1
+  vector.print %high : i1
+  func.return %low, %high : i1, i1
+}
+
 func.func @mulsi_extended_on_i1() {
   // mulsi_extended on i1, tests for overflow bit
   // mulsi_extended 1, 1 : i1 = (1, 0)
+  %true = arith.constant true
+  %false = arith.constant false
+
   // CHECK:      1
   // CHECK-NEXT: 0
-  %true = arith.constant true
-  %low, %high = arith.mulsi_extended %true, %true : i1
-  vector.print %low : i1
-  vector.print %high : i1
+  func.call @mulsi_extended_i1(%true, %true) : (i1, i1) -> (i1, i1)
+
+  // CHECK-NEXT: 0
+  // CHECK-NEXT: 0
+  func.call @mulsi_extended_i1(%true, %false) : (i1, i1) -> (i1, i1)
+
+  // CHECK-NEXT: 0
+  // CHECK-NEXT: 0
+  func.call @mulsi_extended_i1(%false, %true) : (i1, i1) -> (i1, i1)
+
+  // CHECK-NEXT: 0
+  // CHECK-NEXT: 0
+  func.call @mulsi_extended_i1(%false, %false) : (i1, i1) -> (i1, i1)
+
   return
 }
 
-func.func @mulsi_mului_extended_overflows() {
-  // mulsi and mului extended versions, with overflow
-  // mulsi_extended -100, -100 : i8 = (16, 39); mului_extended -100, -100 : i8 = (16, 95)
-  // CHECK-NEXT:  16
-  // CHECK-NEXT:  39
-  // CHECK-NEXT:  16
-  // CHECK-NEXT:  95
-  %c-100_i8 = arith.constant -100 : i8
-  %low, %high = arith.mulsi_extended %c-100_i8, %c-100_i8 : i8
+func.func @mulsi_extended_i8(%v1 : i8, %v2 : i8) -> (i8, i8) {
+  %low, %high = arith.mulsi_extended %v1, %v2 : i8
   vector.print %low : i8
   vector.print %high : i8
-  %low_0, %high_1 = arith.mului_extended %c-100_i8, %c-100_i8 : i8
-  vector.print %low_0 : i8
-  vector.print %high_1 : i8
+  func.return %low, %high : i8, i8
+}
+
+func.func @mulsi_extended_overflows() {
+  // mulsi extended versions, with overflow
+  %c_100_i8 = arith.constant -100 : i8
+
+  // mulsi_extended -100, -100 : i8 = (16, 39)
+  // CHECK-NEXT:  16
+  // CHECK-NEXT:  39
+  func.call @mulsi_extended_i8(%c_100_i8, %c_100_i8) : (i8, i8) -> (i8, i8)
+  return
+}
+
+func.func @mului_extended_i8(%v1 : i8, %v2 : i8) -> (i8, i8) {
+  %low, %high = arith.mului_extended %v1, %v2 : i8
+  vector.print %low : i8
+  vector.print %high : i8
+  func.return %low, %high : i8, i8
+}
+
+func.func @mului_extended_overflows() -> () {
+  %c_100_i8 = arith.constant -100 : i8
+
+  // mului_extended -100, -100 : i8 = (16, 95)
+  // CHECK-NEXT:  16
+  // CHECK-NEXT:  95
+  func.call @mului_extended_i8(%c_100_i8, %c_100_i8) : (i8, i8) -> (i8, i8)
   return
 }
 
 func.func @entry() {
   func.call @mulsi_extended_on_i1() : () -> ()
-  func.call @mulsi_mului_extended_overflows() : () -> ()
+  func.call @mulsi_extended_overflows() : () -> ()
+  func.call @mului_extended_overflows() : () -> ()
   return
 }
