@@ -987,6 +987,13 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     }
   }
   if (def_die) {
+    if (auto [it, inserted] = dwarf->GetDIEToType().try_emplace(
+            def_die.GetDIE(), DIE_IS_BEING_PARSED);
+        !inserted) {
+      if (it->getSecond() == nullptr || it->getSecond() == DIE_IS_BEING_PARSED)
+        return nullptr;
+      return it->getSecond()->shared_from_this();
+    }
     attrs = ParsedDWARFTypeAttributes(def_die);
   } else {
     // No definition found. Proceed with the declaration die. We can use it to
@@ -1961,6 +1968,13 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   }
 
   if (def_die) {
+    if (auto [it, inserted] = dwarf->GetDIEToType().try_emplace(
+            def_die.GetDIE(), DIE_IS_BEING_PARSED);
+        !inserted) {
+      if (it->getSecond() == nullptr || it->getSecond() == DIE_IS_BEING_PARSED)
+        return nullptr;
+      return it->getSecond()->shared_from_this();
+    }
     attrs = ParsedDWARFTypeAttributes(def_die);
     containing_decl_ctx = GetClangDeclContextContainingDIE(def_die, nullptr);
   } else {
