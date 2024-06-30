@@ -134,18 +134,18 @@ struct A {
 
 } // namespace cwg2858
 
-namespace cwg2877 { // cwg2877: 19 ready 2024-05-31
+namespace cwg2877 { // cwg2877: 19 ready 2024-06-26
 #if __cplusplus >= 202002L
 enum E { x };
 void f() {
   int E;
-  using enum E;   // OK, names ::E
+  using enum E;   // OK
 }
 using F = E;
-using enum F;     // OK, designates ::E
+using enum F;     // OK
 template<class T> using EE = T;
 void g() {
-  using enum EE<E>;  // OK, designates ::E
+  using enum EE<E>;  // OK
 }
 #endif
 } // namespace cwg2877
