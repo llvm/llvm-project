@@ -1648,6 +1648,52 @@ define i32 @sdiv_mul_nsw_sub_nsw(i32 %x, i32 %y) {
   ret i32 %d
 }
 
+define i32 @sdiv_neg_divisor_known_non_min(i32 %x, i32 %z) {
+; CHECK-LABEL: @sdiv_neg_divisor_known_non_min(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[OR]], [[DIV:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = sub nsw i32 0, [[DIV2]]
+; CHECK-NEXT:    ret i32 [[DIV1]]
+;
+entry:
+  %or = or i32 %x, 1
+  %sub = sub nsw i32 0, %z
+  %div = sdiv i32 %or, %sub
+  ret i32 %div
+}
+
+define i32 @double_negative_division_known_non_int_min(i32 %x, i32 %z) {
+; CHECK-LABEL: @double_negative_division_known_non_int_min(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Z:%.*]] = or i32 [[Z1:%.*]], 1
+; CHECK-NEXT:    [[DIV21:%.*]] = sdiv i32 [[Z]], [[SUB1:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV21]]
+;
+entry:
+  %notMin = or i32 %x, 1
+  %sub2 = sub nsw i32 0, %notMin
+  %sub1 = sub nsw i32 0, %z
+  %div2 = sdiv i32 %sub2, %sub1
+  ret i32 %div2
+}
+
+; Negative test
+
+define i32 @negative_divisior_only(i32 %x, i32 %z) {
+; CHECK-LABEL: @negative_divisior_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 0, [[Z:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[X:%.*]], [[SUB1]]
+; CHECK-NEXT:    ret i32 [[DIV2]]
+;
+entry:
+  %sub1 = sub nsw i32 0, %z
+  %div2 = sdiv i32 %x, %sub1
+  ret i32 %div2
+}
+
+
 ; exact propagates
 
 define i8 @sdiv_sdiv_mul_nsw_exact_exact(i8 %x, i8 %y, i8 %z) {
