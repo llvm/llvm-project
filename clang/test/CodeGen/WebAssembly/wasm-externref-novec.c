@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -O2 -triple wasm32-unknown-unknown-wasm -target-feature +reference-types -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang -O2 --target=wasm32 -S -emit-llvm -mreference-types -o - %s | FileCheck %s
 
-// From issue 69894. Reftypes need to be marked as not valid as vector elements.
+// Issue: https://github.com/llvm/llvm-project/issues/69894
 
 __externref_t foo(void);
 // CHECK: declare ptr addrspace(10) @foo()
