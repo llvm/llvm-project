@@ -55,9 +55,9 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
                 Serialized.substr(0, Serialized.size() - DefaultsStringLength));
 }
 
-const CXXMethodDecl *findAlternative(const CXXRecordDecl *MatchedParent,
-                                     const CXXMethodDecl *MatchedOperator) {
-  for (const CXXMethodDecl *Method : MatchedParent->methods()) {
+const CXXMethodDecl *findAlternative(const CXXMethodDecl *MatchedOperator) {
+  const CXXRecordDecl *Parent = MatchedOperator->getParent();
+  for (const CXXMethodDecl *Method : Parent->methods()) {
     const bool CorrectName = Method->getNameInfo().getAsString() == "at";
     if (!CorrectName)
       continue;
@@ -90,13 +90,13 @@ void ProBoundsAvoidUncheckedContainerAccesses::registerMatchers(
   // Need a callExpr here to match CXXOperatorCallExpr ``(&a)->operator[](0)``
   // and CXXMemberCallExpr ``a[0]``.
   Finder->addMatcher(
-      callExpr(
-          callee(
-              cxxMethodDecl(hasOverloadedOperatorName("[]")).bind("operator")),
-          callee(cxxMethodDecl(
-              ofClass(cxxRecordDecl(hasMethod(hasName("at"))).bind("parent")),
-              unless(
-                  matchers::matchesAnyListedName(SubscriptExcludedClasses)))))
+      mapAnyOf(cxxOperatorCallExpr, cxxMemberCallExpr)
+          .with(callee(cxxMethodDecl(hasOverloadedOperatorName("[]"),
+                                     ofClass(cxxRecordDecl(hasMethod(
+                                         cxxMethodDecl(hasName("at"))))),
+                                     unless(matchers::matchesAnyListedName(
+                                         SubscriptExcludedClasses)))
+                           .bind("operator")))
           .bind("caller"),
       this);
 }
@@ -106,10 +106,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
   const auto *MatchedOperator =
       Result.Nodes.getNodeAs<CXXMethodDecl>("operator");
-  const auto *MatchedParent = Result.Nodes.getNodeAs<CXXRecordDecl>("parent");
 
-  const CXXMethodDecl *Alternative =
-      findAlternative(MatchedParent, MatchedOperator);
+  const CXXMethodDecl *Alternative = findAlternative(MatchedOperator);
   if (!Alternative)
     return;
 
