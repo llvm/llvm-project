@@ -311,15 +311,6 @@ namespace llvm {
 
 } // end namespace llvm
 
-// EmitInstrWithCustomInserter - This method should be implemented by targets
-// that mark instructions with the 'usesCustomInserter' flag.  These
-// instructions are special in various ways, which require special support to
-// insert.  The specified MachineInstr is created but not inserted into any
-// basic blocks, and this method is called to expand it into a sequence of
-// instructions, potentially also creating new basic blocks and control flow.
-// When new basic blocks are inserted and the edges from MBB to its successors
-// are modified, the method should insert pairs of <OldSucc, NewSucc> into the
-// DenseMap.
 MachineBasicBlock *
 TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const {
@@ -756,16 +747,16 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       // that COPY instructions also need DBG_VALUE, if it is the only
       // user of LDI->second.
       MachineInstr *CopyUseMI = nullptr;
-      for (MachineRegisterInfo::use_instr_iterator
-           UI = RegInfo->use_instr_begin(LDI->second),
-           E = RegInfo->use_instr_end(); UI != E; ) {
-        MachineInstr *UseMI = &*(UI++);
-        if (UseMI->isDebugValue()) continue;
-        if (UseMI->isCopy() && !CopyUseMI && UseMI->getParent() == EntryMBB) {
-          CopyUseMI = UseMI; continue;
+      for (MachineInstr &UseMI : RegInfo->use_instructions(LDI->second)) {
+        if (UseMI.isDebugValue())
+          continue;
+        if (UseMI.isCopy() && !CopyUseMI && UseMI.getParent() == EntryMBB) {
+          CopyUseMI = &UseMI;
+          continue;
         }
         // Otherwise this is another use or second copy use.
-        CopyUseMI = nullptr; break;
+        CopyUseMI = nullptr;
+        break;
       }
       if (CopyUseMI &&
           TRI.getRegSizeInBits(LDI->second, MRI) ==
