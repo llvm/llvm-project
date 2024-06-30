@@ -16,7 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Derived1_bar with count 600 out of 1600, sink 2 instruction(s) and compare 1 vtable(s): {Derived1}
 ; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Derived2_bar with count 500 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {Derived2}
-; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Base1_bar with count 400 out of 500, sink 2 instruction(s) and compare 2 vtable(s): {Base1, Derived3}
+; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Base1_bar with count 400 out of 500, sink 2 instruction(s) and compare 2 vtable(s): {Derived3, Base1}
 
 define void @test(ptr %d) {
 ; VTABLE-CMP-LABEL: define void @test(

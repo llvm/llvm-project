@@ -114,7 +114,7 @@
 // - In real world settings, ICP pass is disabled in prelink pipeline. In
 //   the postlink pipeline, ICP is enabled after whole-program-devirtualization
 //   pass. Do the same thing in this test.
-// - Enable `-fwhole-program-vtables` generate type metadata and intrincis.
+// - Enable `-fwhole-program-vtables` generate type metadata and intrinsics.
 // - Enable `-fno-split-lto-unit` and `-Wl,-lto-whole-program-visibility` to
 //   preserve type intrinsics for ICP pass.
 // RUN: %clangxx -m64  -fprofile-use=test.profdata -Wl,--lto-whole-program-visibility \

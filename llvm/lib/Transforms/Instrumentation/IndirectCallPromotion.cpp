@@ -43,6 +43,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -117,7 +118,7 @@ static cl::opt<bool>
 static cl::opt<float> ICPVTablePercentageThreshold(
     "icp-vtable-percentage-threshold", cl::init(0.99), cl::Hidden,
     cl::desc("The percentage threshold of vtable-count / function-count for "
-             "cost-benefit analysis. "));
+             "cost-benefit analysis."));
 
 // Although comparing vtables can save a vtable load, we may need to compare
 // vtable pointer with multiple vtable address points due to class inheritance.
@@ -155,7 +156,7 @@ using VirtualCallSiteTypeInfoMap =
 // The key is vtable GUID, and value is its value profile count.
 using VTableGUIDCountsMap = SmallDenseMap<uint64_t, uint64_t, 16>;
 
-// Returns the address point offset of the given compatible type.
+// Return the address point offset of the given compatible type.
 //
 // Type metadata of a vtable specifies the types that can contain a pointer to
 // this vtable, for example, `Base*` can be a pointer to an derived type
@@ -176,7 +177,7 @@ getAddressPointOffset(const GlobalVariable &VTableVar,
   return std::nullopt;
 }
 
-// Returns a constant representing the vtable's address point specified by the
+// Return a constant representing the vtable's address point specified by the
 // offset.
 static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
                                              uint32_t AddressPointOffset) {
@@ -191,7 +192,7 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 
-// Returns the basic block in which Use `U` is used via its `UserInst`.
+// Return the basic block in which Use `U` is used via its `UserInst`.
 static BasicBlock *getUserBasicBlock(Use &U, Instruction *UserInst) {
   if (PHINode *PN = dyn_cast<PHINode>(UserInst))
     return PN->getIncomingBlock(U);
@@ -199,22 +200,18 @@ static BasicBlock *getUserBasicBlock(Use &U, Instruction *UserInst) {
   return UserInst->getParent();
 }
 
-// `DestBB` is a suitable basic block to sink `Inst` into when the following
-// conditions are true:
-// 1) `Inst->getParent()` is the sole predecessor of `DestBB`. This way `DestBB`
-//    is dominated by `Inst->getParent()` and we don't need to sink across a
-//    critical edge.
-// 2) `Inst` have users and all users are in `DestBB`.
+// `DestBB` is a suitable basic block to sink `Inst` into when `Inst` have users
+// and all users are in `DestBB`. The caller guarantees that `Inst->getParent()`
+// is the sole predecessor of `DestBB` and `DestBB` is dominated by
+// `Inst->getParent()`.
 static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
   // 'BB' is used only by assert.
   [[maybe_unused]] BasicBlock *BB = Inst->getParent();
 
-  assert(Inst->getParent() != DestBB &&
-         BB->getTerminator()->getNumSuccessors() == 2 &&
+  assert(BB != DestBB && BB->getTerminator()->getNumSuccessors() == 2 &&
          DestBB->getUniquePredecessor() == BB &&
          "Guaranteed by ICP transformation");
 
-  // Now we know BB dominates DestBB.
   BasicBlock *UserBB = nullptr;
   for (Use &Use : Inst->uses()) {
     User *User = Use.getUser();
@@ -282,7 +279,7 @@ static bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 }
 
 // Try to sink instructions after VPtr to the indirect call fallback.
-// Returns the number of sunk IR instructions.
+// Return the number of sunk IR instructions.
 static int tryToSinkInstructions(BasicBlock *OriginalBB,
                                  BasicBlock *IndirectCallBB) {
   int SinkCount = 0;
@@ -348,7 +345,7 @@ private:
       uint64_t TotalCount, uint32_t NumCandidates);
 
   // Promote a list of targets for one indirect-call callsite by comparing
-  // indirect callee with functions. Returns true if there are IR
+  // indirect callee with functions. Return true if there are IR
   // transformations and false otherwise.
   bool tryToPromoteWithFuncCmp(
       CallBase &CB, Instruction *VPtr,
@@ -357,7 +354,7 @@ private:
       VTableGUIDCountsMap &VTableGUIDCounts);
 
   // Promote a list of targets for one indirect call by comparing vtables with
-  // functions. Returns true if there are IR transformations and false
+  // functions. Return true if there are IR transformations and false
   // otherwise.
   bool tryToPromoteWithVTableCmp(
       CallBase &CB, Instruction *VPtr,
@@ -366,13 +363,13 @@ private:
       MutableArrayRef<InstrProfValueData> ICallProfDataRef,
       VTableGUIDCountsMap &VTableGUIDCounts);
 
-  // Returns true if it's profitable to compare vtables for the callsite.
+  // Return true if it's profitable to compare vtables for the callsite.
   bool isProfitableToCompareVTables(
       const CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
       uint64_t TotalCount);
 
   // Given an indirect callsite and the list of function candidates, compute
-  // the following vtable information in output parameters and returns vtable
+  // the following vtable information in output parameters and return vtable
   // pointer if type profiles exist.
   // - Populate `VTableGUIDCounts` with <vtable-guid, count> using !prof
   // metadata attached on the vtable pointer.
@@ -493,7 +490,6 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
     Ret.push_back(PromotionCandidate(TargetFunction, Count));
     TotalCount -= Count;
   }
-
   return Ret;
 }
 
@@ -586,8 +582,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
       continue;
 
     auto &Candidate = Candidates[CalleeIndexIter->second];
-    // There shouldn't be duplicate GUIDs in one !prof metadata, so assign
-    // counters directly won't cause overwrite or counter loss.
+    // There shouldn't be duplicate GUIDs in one !prof metadata (except
+    // duplicated zeros), so assign counters directly won't cause overwrite or
+    // counter loss.
     Candidate.VTableGUIDAndCounts[VTableVal] = VTableValueDataArray[j].Count;
     Candidate.AddressPoints.push_back(
         getOrCreateVTableAddressPointVar(VTableVar, AddressPointOffset));
@@ -749,11 +746,14 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
              << ore::NV("VTable", VTableGUIDAndCounts.size())
              << " vtable(s): {";
 
-      for (auto Iter = VTableGUIDAndCounts.begin();
-           Iter != VTableGUIDAndCounts.end(); Iter++) {
-        if (Iter != VTableGUIDAndCounts.begin())
+      // Sort GUIDs so remark message is deterministic.
+      std::set<uint64_t> GUIDSet;
+      for (auto [GUID, Count] : VTableGUIDAndCounts)
+        GUIDSet.insert(GUID);
+      for (auto Iter = GUIDSet.begin(); Iter != GUIDSet.end(); Iter++) {
+        if (Iter != GUIDSet.begin())
           Remark << ", ";
-        Remark << ore::NV("VTable", Symtab->getGlobalVariable(Iter->first));
+        Remark << ore::NV("VTable", Symtab->getGlobalVariable(*Iter));
       }
 
       Remark << "}";
