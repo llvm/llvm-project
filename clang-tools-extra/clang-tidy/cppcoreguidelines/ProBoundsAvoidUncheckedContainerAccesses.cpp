@@ -119,13 +119,14 @@ void ProBoundsAvoidUncheckedContainerAccesses::registerMatchers(
 
 void ProBoundsAvoidUncheckedContainerAccesses::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
   const auto *MatchedOperator =
       Result.Nodes.getNodeAs<CXXMethodDecl>("operator");
-
   const CXXMethodDecl *Alternative = findAlternative(MatchedOperator);
+
   if (!Alternative)
     return;
+
+  const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
 
   diag(MatchedExpr->getBeginLoc(),
        "found possibly unsafe 'operator[]', consider using 'at()' instead")
