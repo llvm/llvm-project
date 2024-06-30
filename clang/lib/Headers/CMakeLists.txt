@@ -79,6 +79,7 @@ set(hip_files
   __clang_hip_math.h
   __clang_hip_stdlib.h
   __clang_hip_runtime_wrapper.h
+  __clang_hip_device_macro_guards.h
   )
 
 set(hlsl_h
