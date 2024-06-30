@@ -77,7 +77,7 @@ public:
     std::lock_guard<std::mutex> Lock(TPMutex);
     if (AvailableTrampolines.empty()) {
       if (auto Err = grow())
-        return std::move(Err);
+        return Err;
     }
     assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
     auto TrampolineAddr = AvailableTrampolines.back();
