@@ -136,6 +136,41 @@ std::string getNamespaceScope(const Decl *D) {
   return "";
 }
 
+void printDeclAndWrappers(const TypedefNameDecl *TND,
+                          llvm::raw_string_ostream &OS, PrintingPolicy PP) {
+  TND->print(OS, PP);
+  const Decl *LastPrintedDecl = TND;
+
+  auto PrintDeclForType = [&](QualType T) {
+    Decl *D = nullptr;
+    if (const auto *TT = dyn_cast<TagType>(T.getTypePtr())) {
+      D = TT->getDecl();
+    } else if (const auto *TT = dyn_cast<TypedefType>(T.getTypePtr())) {
+      D = TT->getDecl();
+    }
+    if (D == LastPrintedDecl) {
+      return false;
+    }
+    if (D) {
+      OS << ";\n";
+      D->print(OS, PP);
+      LastPrintedDecl = D;
+    }
+    // In case of D == nullptr, return true. We might have a layer of type
+    // sugar like ElaboratedType that doesn't itself have a distinct Decl,
+    // but a subsequent layer of type sugar might.
+    return true;
+  };
+
+  QualType Type = TND->getUnderlyingType();
+  while (PrintDeclForType(Type)) {
+    QualType Desugared = Type->getLocallyUnqualifiedSingleStepDesugaredType();
+    if (Desugared == Type)
+      break;
+    Type = Desugared;
+  }
+}
+
 std::string printDefinition(const Decl *D, PrintingPolicy PP,
                             const syntax::TokenBuffer &TB) {
   if (auto *VD = llvm::dyn_cast<VarDecl>(D)) {
@@ -149,7 +184,13 @@ std::string printDefinition(const Decl *D, PrintingPolicy PP,
   }
   std::string Definition;
   llvm::raw_string_ostream OS(Definition);
-  D->print(OS, PP);
+
+  if (const auto *TND = dyn_cast<TypedefNameDecl>(D)) {
+    printDeclAndWrappers(TND, OS, PP);
+  } else {
+    D->print(OS, PP);
+  }
+
   OS.flush();
   return Definition;
 }

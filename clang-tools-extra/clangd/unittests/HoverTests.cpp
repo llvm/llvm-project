@@ -1670,6 +1670,35 @@ TEST(Hover, All) {
             HI.NamespaceScope = "ns1::";
             HI.Definition = "struct MyClass {}";
           }},
+          {
+            R"cpp(// Typedef to struct
+              struct Point { int x; int y; };
+              typedef Point TPoint;
+              [[TP^oint]] tp;
+            )cpp",
+            [](HoverInfo &HI) {
+              HI.Name = "TPoint";
+              HI.Kind = index::SymbolKind::TypeAlias;
+              HI.NamespaceScope = "";
+              HI.Type = "struct Point";
+              HI.Definition = "typedef Point TPoint;\nstruct Point {}";
+            }
+          },
+          {
+            R"cpp(// Two layers of typedef
+              struct Point { int x; int y; };
+              typedef Point TPoint;
+              typedef TPoint TTPoint;
+              [[TTP^oint]] tp;
+            )cpp",
+            [](HoverInfo &HI) {
+              HI.Name = "TTPoint";
+              HI.Kind = index::SymbolKind::TypeAlias;
+              HI.NamespaceScope = "";
+              HI.Type = "struct Point";
+              HI.Definition = "typedef TPoint TTPoint;\ntypedef Point TPoint;\nstruct Point {}";
+            }
+          },
       {
           R"cpp(// Class
             namespace ns1 {
@@ -1893,7 +1922,7 @@ TEST(Hover, All) {
             HI.Name = "Foo";
             HI.Kind = index::SymbolKind::TypeAlias;
             HI.NamespaceScope = "";
-            HI.Definition = "typedef struct Bar Foo";
+            HI.Definition = "typedef struct Bar Foo;\nstruct Bar {}";
             HI.Type = "struct Bar";
             HI.Documentation = "Typedef with embedded definition";
           }},
@@ -3141,6 +3170,75 @@ TEST(Hover, All) {
   }
 }
 
+TEST(Hover, CLanguage) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+    {
+      R"cpp(// Typedef to struct
+        struct Point { int x; int y; };
+        typedef struct Point TPoint;
+        [[TP^oint]] tp;
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Name = "TPoint";
+        HI.Kind = index::SymbolKind::TypeAlias;
+        HI.NamespaceScope = "";
+        HI.Type = "struct Point";
+        HI.Definition = "typedef struct Point TPoint;\nstruct Point {}";
+      }
+    },
+    {
+      R"cpp(// Two layers of typedef
+        struct Point { int x; int y; };
+        typedef struct Point TPoint;
+        typedef TPoint TTPoint;
+        [[TTP^oint]] tp;
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Name = "TTPoint";
+        HI.Kind = index::SymbolKind::TypeAlias;
+        HI.NamespaceScope = "";
+        HI.Type = "struct Point";
+        HI.Definition = "typedef TPoint TTPoint;\ntypedef struct Point TPoint;\nstruct Point {}";
+      }
+    },
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c99");
+    TU.ExtraArgs.push_back("-xc");
+
+    // Types might be different depending on the target triplet, we chose a
+    // fixed one to make sure tests passes on different platform.
+    TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Expected.SymRange = T.range();
+    Case.ExpectedBuilder(Expected);
+
+    SCOPED_TRACE(H->present().asPlainText());
+    EXPECT_EQ(H->NamespaceScope, Expected.NamespaceScope);
+    EXPECT_EQ(H->LocalScope, Expected.LocalScope);
+    EXPECT_EQ(H->Name, Expected.Name);
+    EXPECT_EQ(H->Kind, Expected.Kind);
+    EXPECT_EQ(H->Documentation, Expected.Documentation);
+    EXPECT_EQ(H->Definition, Expected.Definition);
+    EXPECT_EQ(H->Type, Expected.Type);
+    EXPECT_EQ(H->ReturnType, Expected.ReturnType);
+    EXPECT_EQ(H->Parameters, Expected.Parameters);
+    EXPECT_EQ(H->TemplateParameters, Expected.TemplateParameters);
+    EXPECT_EQ(H->SymRange, Expected.SymRange);
+    EXPECT_EQ(H->Value, Expected.Value);
+  }
+}
+
 TEST(Hover, Providers) {
   struct {
     const char *Code;
@@ -4036,7 +4134,7 @@ TEST(Hover, Typedefs) {
 
   ASSERT_TRUE(H && H->Type);
   EXPECT_EQ(H->Type->Type, "int");
-  EXPECT_EQ(H->Definition, "using foo = type<true, int, double>");
+  EXPECT_EQ(H->Definition, "using foo = type<true, int, double>;\nusing type = int");
 }
 
 TEST(Hover, EvaluateMacros) {
