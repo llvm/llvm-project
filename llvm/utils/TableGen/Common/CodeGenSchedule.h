@@ -239,8 +239,13 @@ struct CodeGenProcModel {
   // This list is empty if the Processor has no UnsupportedFeatures.
   RecVec UnsupportedFeaturesDefs;
 
-  // All read/write resources associated with this processor.
+  // All WriteRes records associated with this processor. Does not contain
+  // SchedWriteRes records (unless a custom class that inherits both was used).
   RecVec WriteResDefs;
+
+  // All ReadAdvance records associated with this processor. Does not contain
+  // SchedReadAdvance records (unless a custom class that inherits both was
+  // used).
   RecVec ReadAdvanceDefs;
 
   // Per-operand machine model resources associated with this processor.
@@ -644,9 +649,14 @@ private:
   void addProcResource(Record *ProcResourceKind, CodeGenProcModel &PM,
                        ArrayRef<SMLoc> Loc);
 
-  void addWriteRes(Record *ProcWriteResDef, unsigned PIdx);
+  // Add resources for a SchedWrite to this processor if they don't exist.
+  // IsWriteRes is true if ProcWriteResDef isSubClassOf("WriteRes").
+  void addWriteRes(Record *ProcWriteResDef, unsigned PIdx, bool IsWriteRes);
 
-  void addReadAdvance(Record *ProcReadAdvanceDef, unsigned PIdx);
+  // Add resources for a ReadAdvance to this processor if they don't exist.
+  // IsReadAdvance is true if ProcReadAdvanceDef->isSubClassOf("ReadAdvance").
+  void addReadAdvance(Record *ProcReadAdvanceDef, unsigned PIdx,
+                      bool IsReadAdvance);
 };
 
 } // namespace llvm
