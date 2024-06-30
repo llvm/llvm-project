@@ -984,9 +984,10 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   if (llvm::sys::path::is_relative(RootPath)) {
     llvm::sys::fs::make_absolute(RootPath);
   }
-  // replace escape character with forward slash it shouldn't matter
-  // when viewing from the browser this helps with preventing javascript
-  // from escaping unwanted characters leading to bad paths
+  // Replace the escaped characters with a forward slash. It shouldn't matter
+  // when rendering the webpage in a web browser. This helps to prevent the
+  // JavaScript from escaping characters incorrectly, and introducing  bad paths
+  // in the URLs.
   std::string RootPathEscaped = RootPath.str().str();
   std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
   OS << "var RootPath = \"" << RootPathEscaped << "\";\n";

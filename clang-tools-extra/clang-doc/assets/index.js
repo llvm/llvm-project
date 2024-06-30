@@ -1,21 +1,16 @@
 function genLink(Ref) {
-  var Path = `${window.location.protocol}//${window.location.host}/${Ref.Path}`;
-  var isFileProtocol = window.location.protocol.startsWith("file");
   // we treat the file paths different depending on if we're
   // serving via a http server or viewing from a local
-  if (isFileProtocol) {
-    Path = `${window.location.protocol}//${RootPath}/${Ref.Path}`;
-  }
-  if (Ref.RefType !== "namespace") {
-    if (Ref.Path === "") {
-      Path = `${Path}${Ref.Name}.html`;
-    } else {
-      Path = `${Path}/${Ref.Name}.html`;
-    }
-  } else {
+  var Path = window.location.protocol.startsWith("file") ?
+      `${window.location.protocol}//${window.location.host}/${Ref.Path}` :
+      `${window.location.protocol}//${RootPath}/${Ref.Path}`;
+  if (Ref.RefType === "namespace") {
     Path = `${Path}/index.html`
+  } else if (Ref.Path === "") {
+      Path = `${Path}${Ref.Name}.html`;
+  } else {
+    Path = `${Path}/${Ref.Name}.html`;
   }
-
   ANode = document.createElement("a");
   ANode.setAttribute("href", Path);
   var TextNode = document.createTextNode(Ref.Name);
