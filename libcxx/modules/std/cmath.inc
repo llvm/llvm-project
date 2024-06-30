@@ -268,12 +268,14 @@ export namespace std {
   using std::assoc_laguerre;
   using std::assoc_laguerref;
   using std::assoc_laguerrel;
+#endif
 
   // [sf.cmath.assoc.legendre], associated Legendre functions
   using std::assoc_legendre;
   using std::assoc_legendref;
   using std::assoc_legendrel;
 
+#if 0
   // [sf.cmath.beta], beta function
   using std::beta;
   using std::betaf;
