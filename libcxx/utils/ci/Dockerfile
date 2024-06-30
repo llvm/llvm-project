@@ -142,7 +142,6 @@ EOF
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 RUN <<EOF
-  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
   sudo apt-get update
   sudo apt-get install -y \
     gcc-$((GCC_LATEST_VERSION - 1)) \
