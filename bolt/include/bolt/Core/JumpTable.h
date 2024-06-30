@@ -120,7 +120,7 @@ public:
                           MCSymbol *NewDest);
 
   /// Update jump table at its original location.
-  void updateOriginal();
+  void updateOriginal(bool Zero);
 
   /// Print for debugging purposes.
   void print(raw_ostream &OS) const override;

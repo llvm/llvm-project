@@ -79,7 +79,7 @@ bool bolt::JumpTable::replaceDestination(uint64_t JTAddress,
   return Patched;
 }
 
-void bolt::JumpTable::updateOriginal() {
+void bolt::JumpTable::updateOriginal(bool Zero) {
   BinaryContext &BC = getSection().getBinaryContext();
   const uint64_t BaseOffset = getAddress() - getSection().getAddress();
   uint64_t EntryOffset = BaseOffset;
@@ -92,6 +92,8 @@ void bolt::JumpTable::updateOriginal() {
     // to the original jump table.
     if (BC.HasRelocations)
       getOutputSection().removeRelocationAt(EntryOffset);
+    if (Zero)
+      Entry = BC.registerNameAtAddress("Zero", 0, 0, 0);
     getOutputSection().addRelocation(EntryOffset, Entry, RelType, RelAddend);
     EntryOffset += EntrySize;
   }
