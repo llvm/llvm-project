@@ -1187,13 +1187,11 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
 
   if (Converted) {
     ConvertedInstructions.push_back(SDWAInst);
-    auto &MRI = SDWAInst->getParent()->getParent()->getRegInfo();
     for (MachineOperand &MO : SDWAInst->uses()) {
       if (!MO.isReg())
         continue;
-    
-      if (!MRI.hasOneUse(MO.getReg()))
-        MRI.clearKillFlags(MO.getReg());
+
+      MRI->clearKillFlags(MO.getReg());
     }
   } else {
     SDWAInst->eraseFromParent();
