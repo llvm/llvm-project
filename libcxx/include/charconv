@@ -73,6 +73,7 @@ namespace std {
 
 #if _LIBCPP_STD_VER >= 17
 #  include <__charconv/chars_format.h>
+#  include <__charconv/from_chars_floating_point.h>
 #  include <__charconv/from_chars_integral.h>
 #  include <__charconv/from_chars_result.h>
 #  include <__charconv/tables.h>
