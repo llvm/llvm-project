@@ -299,6 +299,9 @@ LogicalResult detail::PassOptions::parseFromString(StringRef options,
       return failure();
   }
 
+  if (!llvm::cl::CheckRequiredValues(OptionsMap))
+    return failure();
+
   return success();
 }
 
