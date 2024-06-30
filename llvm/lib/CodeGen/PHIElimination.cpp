@@ -140,7 +140,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SlotIndexes>();
   AU.addPreserved<LiveIntervals>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -182,7 +182,9 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 
-    MachineLoopInfo *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+    MachineLoopInfoWrapperPass *MLIWrapper =
+        getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     for (auto &MBB : MF)
       Changed |= SplitPHIEdges(MF, MBB, MLI, (LV ? &LiveInSets : nullptr));
   }
