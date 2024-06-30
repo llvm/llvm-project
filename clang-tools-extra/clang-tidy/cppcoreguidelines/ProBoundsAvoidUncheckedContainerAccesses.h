@@ -13,7 +13,7 @@
 
 namespace clang::tidy::cppcoreguidelines {
 
-/// Enforce CPP core guidelines SL.con.3
+/// Flags the unsafe ``operator[]`` and suggests replacing it with ``at()``.
 ///
 /// See
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
