@@ -205,8 +205,6 @@ LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp, FuncOp funcOp) {
           .failed())
     return failure();
 
-  // Erase original ABI-agnostic call.
-  rewriter.eraseOp(callOp);
   return success();
 }
 

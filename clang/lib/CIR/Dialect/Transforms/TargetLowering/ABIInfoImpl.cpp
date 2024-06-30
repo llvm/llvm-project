@@ -30,5 +30,13 @@ bool classifyReturnType(const CIRCXXABI &CXXABI, LowerFunctionInfo &FI,
   return CXXABI.classifyReturnType(FI);
 }
 
+Type useFirstFieldIfTransparentUnion(Type Ty) {
+  if (auto RT = dyn_cast<StructType>(Ty)) {
+    if (RT.isUnion())
+      llvm_unreachable("NYI");
+  }
+  return Ty;
+}
+
 } // namespace cir
 } // namespace mlir

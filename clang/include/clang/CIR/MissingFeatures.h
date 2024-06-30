@@ -201,17 +201,31 @@ struct MissingFeatures {
   static bool funcDeclIsInlineBuiltinDeclaration() { return false; }
   static bool funcDeclIsReplaceableGlobalAllocationFunction() { return false; }
   static bool qualTypeIsReferenceType() { return false; }
+  static bool typeGetAsEnumType() { return false; }
+  static bool typeGetAsBuiltinType() { return false; }
+  static bool varDeclIsKNRPromoted() { return false; }
 
   //-- Missing types
 
+  static bool fixedWidthIntegers() { return false; }
   static bool vectorType() { return false; }
 
   //-- Missing LLVM attributes
 
   static bool noReturn() { return false; }
   static bool csmeCall() { return false; }
+  static bool undef() { return false; }
+  static bool noFPClass() { return false; }
 
   //-- Other missing features
+
+  // Empty values might be passed as arguments to serve as padding, ensuring
+  // alignment and compliance (e.g. MIPS). We do not yet support this.
+  static bool argumentPadding() { return false; }
+
+  // Clang has evaluation kinds which determines how code is emitted for certain
+  // group of type classes. We don't have a way to identify type classes.
+  static bool evaluationKind() { return false; }
 
   // Calls with a static chain pointer argument may be optimized (p.e. freeing
   // up argument registers), but we do not yet track such cases.
@@ -247,6 +261,10 @@ struct MissingFeatures {
   // Despite carrying some information about variadics, we are currently
   // ignoring this to focus only on the code necessary to lower non-variadics.
   static bool variadicFunctions() { return false; }
+
+  // If a store op is guaranteed to execute before the retun value load op, we
+  // can optimize away the store and load ops. Seems like an early optimization.
+  static bool returnValueDominatingStoreOptmiization() { return false; }
 };
 
 } // namespace cir

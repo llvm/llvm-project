@@ -21,6 +21,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/TypeEvaluationKind.h"
 
 namespace mlir {
 namespace cir {
@@ -53,6 +54,8 @@ public:
 
   LowerModule &LM; // Per-module state.
 
+  PatternRewriter &getRewriter() const { return rewriter; }
+
   const clang::TargetInfo &getTarget() const { return Target; }
 
   // Build ABI/Target-specific function prologue.
@@ -80,6 +83,9 @@ public:
 
   /// Get an appropriate 'undef' value for the given type.
   Value getUndefRValue(Type Ty);
+
+  /// Return the TypeEvaluationKind of Type \c T.
+  static ::cir::TypeEvaluationKind getEvaluationKind(Type T);
 };
 
 } // namespace cir

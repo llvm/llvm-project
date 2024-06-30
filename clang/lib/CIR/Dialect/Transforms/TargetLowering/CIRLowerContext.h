@@ -16,6 +16,8 @@
 
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -29,6 +31,8 @@ class CIRLowerContext : public llvm::RefCountedBase<CIRLowerContext> {
 
 private:
   mutable SmallVector<Type, 0> Types;
+
+  clang::TypeInfo getTypeInfoImpl(const Type T) const;
 
   const clang::TargetInfo *Target = nullptr;
   const clang::TargetInfo *AuxTarget = nullptr;
@@ -47,7 +51,7 @@ private:
   Type CharTy;
 
 public:
-  CIRLowerContext(MLIRContext *MLIRCtx, clang::LangOptions &LOpts);
+  CIRLowerContext(ModuleOp module, clang::LangOptions &LOpts);
   CIRLowerContext(const CIRLowerContext &) = delete;
   CIRLowerContext &operator=(const CIRLowerContext &) = delete;
   ~CIRLowerContext();
@@ -66,6 +70,38 @@ private:
 
 public:
   MLIRContext *getMLIRContext() const { return MLIRCtx; }
+
+  //===--------------------------------------------------------------------===//
+  //                         Type Sizing and Analysis
+  //===--------------------------------------------------------------------===//
+
+  /// Get the size and alignment of the specified complete type in bits.
+  clang::TypeInfo getTypeInfo(Type T) const;
+
+  /// Return the size of the specified (complete) type \p T, in bits.
+  uint64_t getTypeSize(Type T) const { return getTypeInfo(T).Width; }
+
+  /// Return the size of the character type, in bits.
+  // FIXME(cir): Refactor types and properly implement DataLayout interface in
+  // CIR so that this can be queried from the module.
+  uint64_t getCharWidth() const { return 8; }
+
+  /// Convert a size in bits to a size in characters.
+  clang::CharUnits toCharUnitsFromBits(int64_t BitSize) const;
+
+  clang::CharUnits getTypeSizeInChars(Type T) const {
+    // FIXME(cir): We should query MLIR's Datalayout here instead.
+    return getTypeInfoInChars(T).Width;
+  }
+
+  /// Return the ABI-specified alignment of a (complete) type \p T, in
+  /// bits.
+  unsigned getTypeAlign(Type T) const { return getTypeInfo(T).Align; }
+
+  clang::TypeInfoChars getTypeInfoInChars(Type T) const;
+
+  /// More type predicates useful for type checking/promotion
+  bool isPromotableIntegerType(Type T) const; // C99 6.3.1.1p2
 };
 
 } // namespace cir

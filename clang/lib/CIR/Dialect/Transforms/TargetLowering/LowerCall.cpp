@@ -3,6 +3,7 @@
 #include "LowerFunctionInfo.h"
 #include "LowerModule.h"
 #include "LowerTypes.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/FnInfoOpts.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -135,6 +136,20 @@ void LowerModule::constructAttributeList(StringRef Name,
   // ABI-specific information. Maybe we should include it here.
 
   switch (RetAI.getKind()) {
+  case ABIArgInfo::Extend:
+    if (RetAI.isSignExt())
+      newFn.setResultAttr(0, CIRDialect::getSExtAttrName(),
+                          rewriter.getUnitAttr());
+    else
+      // FIXME(cir): Add a proper abstraction to create attributes.
+      newFn.setResultAttr(0, CIRDialect::getZExtAttrName(),
+                          rewriter.getUnitAttr());
+    [[fallthrough]];
+  case ABIArgInfo::Direct:
+    if (RetAI.getInReg())
+      llvm_unreachable("InReg attribute is NYI");
+    assert(!::cir::MissingFeatures::noFPClass());
+    break;
   case ABIArgInfo::Ignore:
     break;
   default:
@@ -169,7 +184,57 @@ void LowerModule::constructAttributeList(StringRef Name,
   for (LowerFunctionInfo::const_arg_iterator I = FI.arg_begin(),
                                              E = FI.arg_end();
        I != E; ++I, ++ArgNo) {
-    llvm_unreachable("NYI");
+    // Type ParamType = I->type;
+    const ABIArgInfo &AI = I->info;
+    SmallVector<NamedAttribute> Attrs;
+
+    // Add attribute for padding argument, if necessary.
+    if (IRFunctionArgs.hasPaddingArg(ArgNo)) {
+      llvm_unreachable("Padding argument is NYI");
+    }
+
+    // TODO(cir): Mark noundef arguments and return values. Although this
+    // attribute is not a part of the call conve, it uses it to determine if a
+    // value is noundef (e.g. if an argument is passed direct, indirectly, etc).
+
+    // 'restrict' -> 'noalias' is done in EmitFunctionProlog when we
+    // have the corresponding parameter variable.  It doesn't make
+    // sense to do it here because parameters are so messed up.
+    switch (AI.getKind()) {
+    case ABIArgInfo::Extend:
+      if (AI.isSignExt())
+        Attrs.push_back(
+            rewriter.getNamedAttr("cir.signext", rewriter.getUnitAttr()));
+      else
+        // FIXME(cir): Add a proper abstraction to create attributes.
+        Attrs.push_back(
+            rewriter.getNamedAttr("cir.zeroext", rewriter.getUnitAttr()));
+      [[fallthrough]];
+    case ABIArgInfo::Direct:
+      if (ArgNo == 0 && ::cir::MissingFeatures::chainCall())
+        llvm_unreachable("ChainCall is NYI");
+      else if (AI.getInReg())
+        llvm_unreachable("InReg attribute is NYI");
+      // Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
+      assert(!::cir::MissingFeatures::noFPClass());
+      break;
+    default:
+      llvm_unreachable("Missing ABIArgInfo::Kind");
+    }
+
+    if (::cir::MissingFeatures::qualTypeIsReferenceType()) {
+      llvm_unreachable("Reference handling is NYI");
+    }
+
+    // TODO(cir): Missing some swift and nocapture stuff here.
+    assert(!::cir::MissingFeatures::extParamInfo());
+
+    if (!Attrs.empty()) {
+      unsigned FirstIRArg, NumIRArgs;
+      std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
+      for (unsigned i = 0; i < NumIRArgs; i++)
+        newFn.setArgAttrs(FirstIRArg + i, Attrs);
+    }
   }
   assert(ArgNo == FI.arg_size());
 }
@@ -264,10 +329,11 @@ LowerTypes::arrangeLLVMFunctionInfo(Type resultType, FnInfoOpts opts,
   // default now.
   ::cir::ABIArgInfo &retInfo = FI->getReturnInfo();
   if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
-    llvm_unreachable("NYI");
+    retInfo.setCoerceToType(convertType(FI->getReturnType()));
 
-  for (auto &_ : FI->arguments())
-    llvm_unreachable("NYI");
+  for (auto &I : FI->arguments())
+    if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
+      I.info.setCoerceToType(convertType(I.type));
 
   return *FI;
 }

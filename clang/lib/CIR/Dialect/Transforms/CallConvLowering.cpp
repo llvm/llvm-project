@@ -46,7 +46,7 @@ LowerModule createLowerModule(FuncOp op, PatternRewriter &rewriter) {
   // Create context.
   assert(!::cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
-  auto context = CIRLowerContext(module.getContext(), langOpts);
+  auto context = CIRLowerContext(module, langOpts);
   context.initBuiltinTypes(*targetInfo);
 
   return LowerModule(context, module, dataLayoutStr, *targetInfo, rewriter);
