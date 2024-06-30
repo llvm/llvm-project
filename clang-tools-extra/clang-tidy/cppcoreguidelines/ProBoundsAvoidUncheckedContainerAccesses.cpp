@@ -82,7 +82,7 @@ const CXXMethodDecl *findAlternative(const CXXRecordDecl *MatchedParent,
 
     return Method;
   }
-  return static_cast<CXXMethodDecl *>(nullptr);
+  return nullptr;
 }
 
 void ProBoundsAvoidUncheckedContainerAccesses::registerMatchers(
