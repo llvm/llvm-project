@@ -263,10 +263,10 @@ bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
       return true;
   }
 
-  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
-  // Non-constant size => unsafe. FIXME: try SCEV getRange.
-  if (!Len) return false;
-  return IsAccessSafe(U, Len->getZExtValue(), AllocaPtr, AllocaSize);
+  const SCEV *LenSCEV = SE.getSCEV(MI->getLength());
+  ConstantRange LenRange = SE.getUnsignedRange(LenSCEV);
+  APInt element = LenRange.getUnsignedMax();
+  return IsAccessSafe(U, element.getZExtValue(), AllocaPtr, AllocaSize);
 }
 
 /// Check whether a given allocation must be put on the safe
