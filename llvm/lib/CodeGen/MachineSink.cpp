@@ -1958,27 +1958,37 @@ static bool hasRegisterDependency(MachineInstr *MI,
                                   SmallVectorImpl<unsigned> &UsedOpsInCopy,
                                   SmallVectorImpl<unsigned> &DefedRegsInCopy,
                                   LiveRegUnits &ModifiedRegUnits,
-                                  LiveRegUnits &UsedRegUnits) {
+                                  LiveRegUnits &UsedRegUnits,
+                                  const TargetRegisterInfo *TRI) {
   bool HasRegDependency = false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI->getOperand(i);
+    if (MO.isRegMask()) {
+      for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+        for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid();
+             ++RootReg) {
+          if (MO.clobbersPhysReg(*RootReg) &&
+              !UsedRegUnits.available(*RootReg)) {
+            return true;
+          }
+          DefedRegsInCopy.push_back(*RootReg);
+        }
+      }
+    }
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
     if (!Reg)
       continue;
     if (MO.isDef()) {
-      if (!ModifiedRegUnits.available(Reg) || !UsedRegUnits.available(Reg)) {
+      if (!UsedRegUnits.available(Reg)) {
         HasRegDependency = true;
         break;
       }
       DefedRegsInCopy.push_back(Reg);
 
-      // FIXME: instead of isUse(), readsReg() would be a better fix here,
-      // For example, we can ignore modifications in reg with undef. However,
-      // it's not perfectly clear if skipping the internal read is safe in all
-      // other targets.
-    } else if (MO.isUse()) {
+      // Ignore undef uses and internal reads.
+    } else if (MO.readsReg()) {
       if (!ModifiedRegUnits.available(Reg)) {
         HasRegDependency = true;
         break;
@@ -2028,7 +2038,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
           // Bail if we can already tell the sink would be rejected, rather
           // than needlessly accumulating lots of DBG_VALUEs.
           if (hasRegisterDependency(&MI, UsedOpsInCopy, DefedRegsInCopy,
-                                    ModifiedRegUnits, UsedRegUnits)) {
+                                    ModifiedRegUnits, UsedRegUnits, TRI)) {
             IsValid = false;
             break;
           }
@@ -2061,7 +2071,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
 
     // Don't sink the COPY if it would violate a register dependency.
     if (hasRegisterDependency(&MI, UsedOpsInCopy, DefedRegsInCopy,
-                              ModifiedRegUnits, UsedRegUnits)) {
+                              ModifiedRegUnits, UsedRegUnits, TRI)) {
       LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
                                         TRI);
       continue;
