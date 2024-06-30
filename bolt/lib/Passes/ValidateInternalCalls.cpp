@@ -309,15 +309,10 @@ Error ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
   std::set<BinaryFunction *> NeedsValidation;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
-    for (BinaryBasicBlock &BB : Function) {
-      for (MCInst &Inst : BB) {
-        if (getInternalCallTarget(Function, Inst)) {
-          NeedsValidation.insert(&Function);
-          Function.setSimple(false);
-          break;
-        }
-      }
-    }
+    if (!Function.hasInternalCalls())
+      continue;
+    NeedsValidation.insert(&Function);
+    Function.setSimple(false);
   }
 
   // Skip validation for non-relocation mode
