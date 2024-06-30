@@ -8203,7 +8203,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 Range);
   if (ShouldUseVectorIntrinsic)
     return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()), ID,
-                                 CI->getDebugLoc());
+                                 CI->getType(), CI->getDebugLoc());
 
   Function *Variant = nullptr;
   std::optional<unsigned> MaskPos;
@@ -8256,8 +8256,8 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     }
 
     return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()),
-                                 Intrinsic::not_intrinsic, CI->getDebugLoc(),
-                                 Variant);
+                                 Intrinsic::not_intrinsic, CI->getType(),
+                                 CI->getDebugLoc(), Variant);
   }
 
   return nullptr;
