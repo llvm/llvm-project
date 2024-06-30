@@ -439,12 +439,6 @@ public:
 
   MCSymbol *endSection(MCSection *Section);
 
-  /// Sets the symbol's section.
-  ///
-  /// Each emitted symbol will be tracked in the ordering table,
-  /// so we can sort on them later.
-  void assignFragment(MCSymbol *Symbol, MCFragment *Fragment);
-
   /// Returns the mnemonic for \p MI, if the streamer has access to a
   /// instruction printer and returns an empty string otherwise.
   virtual StringRef getMnemonic(MCInst &MI) { return ""; }
