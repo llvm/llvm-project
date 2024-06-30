@@ -686,21 +686,43 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
       matmulRetValue = matmulOp.getResult(0);
     }
 
-    // Multiply scalar factor.
-    Value scalarFactor = builder.create<arith::ConstantOp>(
-        loc, FloatAttr::get(elementType, leftScalarFactor * rightScalarFactor));
-    auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
-    auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                elementType);
-    Value broadcastedScalar =
-        builder.create<tensor::FromElementsOp>(loc, matmulType, scalarFactor);
-    auto scaledMatmul = builder.create<linalg::MulOp>(
-        loc, matmulType, ValueRange{broadcastedScalar, matmulRetValue},
-        ValueRange{init});
+    if (leftScalarFactor * rightScalarFactor != 1) {
+      // Multiply scalar factor.
+      Value scalarFactor = builder.create<arith::ConstantOp>(
+          loc,
+          FloatAttr::get(elementType, leftScalarFactor * rightScalarFactor));
+      auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
+      auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                  elementType);
+
+      auto identityAffineMap = rewriter.getMultiDimIdentityMap(2);
+      SmallVector<AffineMap> affineMaps = {
+          AffineMap::get(2, 0, init.getContext()), identityAffineMap};
+      auto broadcastedScalar =
+          rewriter
+              .create<linalg::GenericOp>(
+                  loc, matmulType, ValueRange{scalarFactor}, ValueRange{init},
+                  affineMaps,
+                  llvm::ArrayRef<utils::IteratorType>{
+                      utils::IteratorType::parallel,
+                      utils::IteratorType::parallel},
+                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                      ValueRange args) {
+                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+                  })
+              .getResult(0);
+
+      matmulRetValue = builder
+                           .create<linalg::MulOp>(
+                               loc, matmulType,
+                               ValueRange{broadcastedScalar, matmulRetValue},
+                               ValueRange{init})
+                           .getResult(0);
+    }
 
     // Insert (H, W) to (N, H, W, F).
-    Value combinedVal = insert2DData(builder, loc, scaledMatmul.getResult(0),
-                                     args[0], NIter, FIter, retRows, retCols,
+    Value combinedVal = insert2DData(builder, loc, matmulRetValue, args[0],
+                                     NIter, FIter, retRows, retCols,
                                      /*outLoopIdx=*/0,
                                      /*inLoopIdx=*/3, /*heightIdx=*/1,
                                      /*widthIdx=*/2, /*destSize=*/4);
