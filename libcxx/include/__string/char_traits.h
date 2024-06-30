@@ -318,7 +318,9 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t> {
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t> {
   using char_type  = char16_t;
+private:
   using int_type   = uint_least16_t;
+public:
   using off_type   = streamoff;
   using pos_type   = u16streampos;
   using state_type = mbstate_t;
@@ -368,6 +370,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t> {
     return __s;
   }
 
+private:
   static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int_type not_eof(int_type __c) _NOEXCEPT {
     return eq_int_type(__c, eof()) ? ~eof() : __c;
   }
