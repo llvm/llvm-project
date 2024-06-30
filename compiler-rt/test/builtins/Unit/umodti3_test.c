@@ -41,6 +41,10 @@ int main()
         return 1;
     if (test__umodti3(2, 1, 0))
         return 1;
+    if (test__umodti3(123, 1000, 123))
+        return 1;
+    if (test__umodti3(123, 77, 46))
+        return 1;
     if (test__umodti3(make_tu(0x8000000000000000uLL, 0), 1, 0x0uLL))
         return 1;
     if (test__umodti3(make_tu(0x8000000000000000uLL, 0), 2, 0x0uLL))
