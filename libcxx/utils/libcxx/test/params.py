@@ -173,11 +173,28 @@ DEFAULT_PARAMETERS = [
         default=lambda cfg: next(
             s for s in reversed(_allStandards) if getStdFlag(cfg, s)
         ),
-        actions=lambda std: [
+        actions=lambda std: filter(None, [
             AddFeature(std),
+
+            AddFeature("<=c++03") if std <= "c++03" else None,
+            AddFeature("<=c++11") if std <= "c++11" else None,
+            AddFeature("<=c++14") if std <= "c++14" else None,
+            AddFeature("<=c++17") if std <= "c++17" else None,
+            AddFeature("<=c++20") if std <= "c++20" else None,
+            AddFeature("<=c++23") if std <= "c++23" else None,
+            AddFeature("<=c++26") if std <= "c++26" else None,
+
+            AddFeature(">=c++03") if std >= "c++03" else None,
+            AddFeature(">=c++11") if std >= "c++11" else None,
+            AddFeature(">=c++14") if std >= "c++14" else None,
+            AddFeature(">=c++17") if std >= "c++17" else None,
+            AddFeature(">=c++20") if std >= "c++20" else None,
+            AddFeature(">=c++23") if std >= "c++23" else None,
+            AddFeature(">=c++26") if std >= "c++26" else None,
+
             AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
-        ],
+        ]),
     ),
     Parameter(
         name="optimization",

@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: >=c++23
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 

@@ -47,7 +47,7 @@ class BooleanExpression:
 
     # Tokenization pattern.
     Pattern = re.compile(
-        r"\A\s*([()]|&&|\|\||!|(?:[-+=._a-zA-Z0-9]+|\{\{.+?\}\})+)\s*(.*)\Z"
+        r"\A\s*([()]|&&|\|\||!|(?:[-+<=>._a-zA-Z0-9]+|\{\{.+?\}\})+)\s*(.*)\Z"
     )
 
     @staticmethod
