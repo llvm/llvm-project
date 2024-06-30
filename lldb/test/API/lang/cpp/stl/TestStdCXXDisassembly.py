@@ -44,7 +44,7 @@ class StdCXXDisassembleTestCase(TestBase):
         # module is the corresponding SBModule.
 
         self.expect(
-            lib_stdcxx, "Libraray StdC++ is located", exe=False, substrs=["lib"]
+            lib_stdcxx, "Library StdC++ is located", exe=False, substrs=["lib"]
         )
 
         self.runCmd("image dump symtab '%s'" % lib_stdcxx)
