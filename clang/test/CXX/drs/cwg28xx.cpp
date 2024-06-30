@@ -257,7 +257,7 @@ void g() {
 #endif
 } // namespace cwg2883
 
-namespace cwg2885 { // cwg2885: 16 review 2024-05-31
+namespace cwg2885 { // cwg2885: 16 review 2024-06-28
 #if __cplusplus >= 202002L
 template <class T>
 struct A {
