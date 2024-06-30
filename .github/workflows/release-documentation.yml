@@ -78,9 +78,9 @@ jobs:
         env:
           WWW_RELEASES_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
         run: |
-          mkdir -p ../www-releases/${{ inputs.release-version }}
-          mv ./docs-build/html-export/* ../www-releases/${{ inputs.release-version }}
-          cd ../www-releases
+          mkdir -p www-releases/${{ inputs.release-version }}
+          mv ./docs-build/html-export/* www-releases/${{ inputs.release-version }}
+          cd www-releases
           git add ${{ inputs.release-version }}
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
