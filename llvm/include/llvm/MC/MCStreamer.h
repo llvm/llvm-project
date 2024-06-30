@@ -228,10 +228,6 @@ class MCStreamer {
   WinEH::FrameInfo *CurrentWinFrameInfo;
   size_t CurrentProcWinFrameInfoStartIndex;
 
-  /// Tracks an index to represent the order a symbol was emitted in.
-  /// Zero means we did not emit that symbol.
-  DenseMap<const MCSymbol *, unsigned> SymbolOrdering;
-
   /// This is stack of current and previous section values saved by
   /// pushSection.
   SmallVector<std::pair<MCSectionSubPair, MCSectionSubPair>, 4> SectionStack;
@@ -414,12 +410,6 @@ public:
     assert(!getCurrentSection().first ||
            CurFrag->getParent() == getCurrentSection().first);
     return CurFrag;
-  }
-
-  /// Returns an index to represent the order a symbol was emitted in.
-  /// (zero if we did not emit that symbol)
-  unsigned getSymbolOrder(const MCSymbol *Sym) const {
-    return SymbolOrdering.lookup(Sym);
   }
 
   /// Save the current and previous section on the section stack.
