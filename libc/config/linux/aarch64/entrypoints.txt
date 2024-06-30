@@ -308,6 +308,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
     libc.src.unistd.write
+
+    # XXX
+    libc.src.assert.__assert_fail
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
