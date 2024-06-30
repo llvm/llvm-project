@@ -65,9 +65,10 @@
 #define crt_copysign(x, y) __builtin_copysign((x), (y))
 #define crt_copysignf(x, y) __builtin_copysignf((x), (y))
 #define crt_copysignl(x, y) __builtin_copysignl((x), (y))
-#if __has_builtin(__builtin_copysignf128)
+#if __has_builtin(__builtin_copysignf128) ||                                   \
+    (defined(__GNUC__) && __GNUC__ >= 7)
 #define crt_copysignf128(x, y) __builtin_copysignf128((x), (y))
-#elif __has_builtin(__builtin_copysignq) || (defined(__GNUC__) && __GNUC__ >= 7)
+#elif __has_builtin(__builtin_copysignq)
 #define crt_copysignf128(x, y) __builtin_copysignq((x), (y))
 #endif
 #endif
