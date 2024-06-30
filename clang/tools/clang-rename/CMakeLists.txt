@@ -3,8 +3,15 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ClangRenameOptsTableGen)
+
 add_clang_tool(clang-rename
   ClangRename.cpp
+
+  DEPENDS
+  ClangRenameOptsTableGen
   )
 
 clang_target_link_libraries(clang-rename

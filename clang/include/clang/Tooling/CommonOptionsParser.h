@@ -91,6 +91,24 @@ public:
          llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
          const char *Overview = nullptr);
 
+  struct Args {
+    std::string BuildPath;
+    std::vector<std::string> SourcePaths;
+    std::vector<std::string> ArgsAfter;
+    std::vector<std::string> ArgsBefore;
+  };
+
+  using ArgParserCallback =
+      std::function<llvm::Expected<Args>(int &argc, const char **argv)>;
+
+  /// A factory method that is similar to the above factory method, except
+  /// this does not force use of cl::opt argument parsing. The function passed
+  /// in is expected to handle argument parsing, and must return values needed
+  /// by CommonOptionsParser.
+  static llvm::Expected<CommonOptionsParser>
+  create(int &argc, const char **argv, ArgParserCallback ArgsCallback,
+         llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore);
+
   /// Returns a reference to the loaded compilations database.
   CompilationDatabase &getCompilations() {
     return *Compilations;
@@ -110,10 +128,9 @@ public:
 private:
   CommonOptionsParser() = default;
 
-  llvm::Error init(int &argc, const char **argv,
-                   llvm::cl::OptionCategory &Category,
-                   llvm::cl::NumOccurrencesFlag OccurrencesFlag,
-                   const char *Overview);
+  llvm::Error
+  init(int &argc, const char **argv, ArgParserCallback ArgsCallback,
+       llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore);
 
   std::unique_ptr<CompilationDatabase> Compilations;
   std::vector<std::string> SourcePathList;

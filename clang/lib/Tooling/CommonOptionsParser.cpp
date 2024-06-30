@@ -57,13 +57,12 @@ void ArgumentsAdjustingCompilations::appendArgumentsAdjuster(
   Adjusters.push_back(std::move(Adjuster));
 }
 
-std::vector<CompileCommand> ArgumentsAdjustingCompilations::getCompileCommands(
-    StringRef FilePath) const {
+std::vector<CompileCommand>
+ArgumentsAdjustingCompilations::getCompileCommands(StringRef FilePath) const {
   return adjustCommands(Compilations->getCompileCommands(FilePath));
 }
 
-std::vector<std::string>
-ArgumentsAdjustingCompilations::getAllFiles() const {
+std::vector<std::string> ArgumentsAdjustingCompilations::getAllFiles() const {
   return Compilations->getAllFiles();
 }
 
@@ -80,58 +79,32 @@ std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
   return Commands;
 }
 
-llvm::Error CommonOptionsParser::init(
-    int &argc, const char **argv, cl::OptionCategory &Category,
-    llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
-
-  static cl::opt<std::string> BuildPath("p", cl::desc("Build path"),
-                                        cl::Optional, cl::cat(Category),
-                                        cl::sub(cl::SubCommand::getAll()));
-
-  static cl::list<std::string> SourcePaths(
-      cl::Positional, cl::desc("<source0> [... <sourceN>]"), OccurrencesFlag,
-      cl::cat(Category), cl::sub(cl::SubCommand::getAll()));
-
-  static cl::list<std::string> ArgsAfter(
-      "extra-arg",
-      cl::desc("Additional argument to append to the compiler command line"),
-      cl::cat(Category), cl::sub(cl::SubCommand::getAll()));
-
-  static cl::list<std::string> ArgsBefore(
-      "extra-arg-before",
-      cl::desc("Additional argument to prepend to the compiler command line"),
-      cl::cat(Category), cl::sub(cl::SubCommand::getAll()));
-
-  cl::ResetAllOptionOccurrences();
-
-  cl::HideUnrelatedOptions(Category);
-
+llvm::Error
+CommonOptionsParser::init(int &argc, const char **argv,
+                          ArgParserCallback ArgsCallback,
+                          llvm::cl::NumOccurrencesFlag OccurrencesFlag) {
   std::string ErrorMessage;
   Compilations =
       FixedCompilationDatabase::loadFromCommandLine(argc, argv, ErrorMessage);
   if (!ErrorMessage.empty())
     ErrorMessage.append("\n");
-  llvm::raw_string_ostream OS(ErrorMessage);
+
   // Stop initializing if command-line option parsing failed.
-  if (!cl::ParseCommandLineOptions(argc, argv, Overview, &OS)) {
-    OS.flush();
-    return llvm::make_error<llvm::StringError>(ErrorMessage,
-                                               llvm::inconvertibleErrorCode());
-  }
+  auto Args = ArgsCallback(argc, argv);
+  if (!Args)
+    return Args.takeError();
 
-  cl::PrintOptionValues();
-
-  SourcePathList = SourcePaths;
+  SourcePathList = Args->SourcePaths;
   if ((OccurrencesFlag == cl::ZeroOrMore || OccurrencesFlag == cl::Optional) &&
       SourcePathList.empty())
     return llvm::Error::success();
   if (!Compilations) {
-    if (!BuildPath.empty()) {
-      Compilations =
-          CompilationDatabase::autoDetectFromDirectory(BuildPath, ErrorMessage);
+    if (!Args->BuildPath.empty()) {
+      Compilations = CompilationDatabase::autoDetectFromDirectory(
+          Args->BuildPath, ErrorMessage);
     } else {
-      Compilations = CompilationDatabase::autoDetectFromSource(SourcePaths[0],
-                                                               ErrorMessage);
+      Compilations = CompilationDatabase::autoDetectFromSource(
+          Args->SourcePaths[0], ErrorMessage);
     }
     if (!Compilations) {
       llvm::errs() << "Error while trying to load a compilation database:\n"
@@ -141,24 +114,72 @@ llvm::Error CommonOptionsParser::init(
     }
   }
   auto AdjustingCompilations =
-      std::make_unique<ArgumentsAdjustingCompilations>(
-          std::move(Compilations));
-  Adjuster =
-      getInsertArgumentAdjuster(ArgsBefore, ArgumentInsertPosition::BEGIN);
+      std::make_unique<ArgumentsAdjustingCompilations>(std::move(Compilations));
+  Adjuster = getInsertArgumentAdjuster(Args->ArgsBefore,
+                                       ArgumentInsertPosition::BEGIN);
   Adjuster = combineAdjusters(
       std::move(Adjuster),
-      getInsertArgumentAdjuster(ArgsAfter, ArgumentInsertPosition::END));
+      getInsertArgumentAdjuster(Args->ArgsAfter, ArgumentInsertPosition::END));
   AdjustingCompilations->appendArgumentsAdjuster(Adjuster);
   Compilations = std::move(AdjustingCompilations);
   return llvm::Error::success();
 }
 
+CommonOptionsParser::ArgParserCallback
+makeClOptParserCallback(llvm::cl::OptionCategory &Category,
+                        llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+                        const char *Overview) {
+  return [&Category, OccurrencesFlag, Overview](
+             int &argc,
+             const char **argv) -> llvm::Expected<CommonOptionsParser::Args> {
+    static cl::opt<std::string> BuildPath("p", cl::desc("Build path"),
+                                          cl::Optional, cl::cat(Category),
+                                          cl::sub(cl::SubCommand::getAll()));
+
+    static cl::list<std::string> SourcePaths(
+        cl::Positional, cl::desc("<source0> [... <sourceN>]"), OccurrencesFlag,
+        cl::cat(Category), cl::sub(cl::SubCommand::getAll()));
+
+    static cl::list<std::string> ArgsAfter(
+        "extra-arg",
+        cl::desc("Additional argument to append to the compiler command line"),
+        cl::cat(Category), cl::sub(cl::SubCommand::getAll()));
+
+    static cl::list<std::string> ArgsBefore(
+        "extra-arg-before",
+        cl::desc("Additional argument to prepend to the compiler command line"),
+        cl::cat(Category), cl::sub(cl::SubCommand::getAll()));
+
+    cl::ResetAllOptionOccurrences();
+
+    cl::HideUnrelatedOptions(Category);
+
+    std::string ErrorMessage;
+    llvm::raw_string_ostream OS(ErrorMessage);
+    if (!cl::ParseCommandLineOptions(argc, argv, Overview, &OS)) {
+      OS.flush();
+      return llvm::make_error<llvm::StringError>(
+          ErrorMessage, llvm::inconvertibleErrorCode());
+    }
+    return CommonOptionsParser::Args{BuildPath, SourcePaths, ArgsAfter,
+                                     ArgsBefore};
+  };
+}
+
 llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
     int &argc, const char **argv, llvm::cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
+  return create(argc, argv,
+                makeClOptParserCallback(Category, OccurrencesFlag, Overview),
+                OccurrencesFlag);
+}
+
+llvm::Expected<CommonOptionsParser>
+CommonOptionsParser::create(int &argc, const char **argv,
+                            ArgParserCallback ArgsCallback,
+                            llvm::cl::NumOccurrencesFlag OccurrencesFlag) {
   CommonOptionsParser Parser;
-  llvm::Error Err =
-      Parser.init(argc, argv, Category, OccurrencesFlag, Overview);
+  llvm::Error Err = Parser.init(argc, argv, ArgsCallback, OccurrencesFlag);
   if (Err)
     return std::move(Err);
   return std::move(Parser);
@@ -167,7 +188,9 @@ llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
 CommonOptionsParser::CommonOptionsParser(
     int &argc, const char **argv, cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
-  llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
+  llvm::Error Err = init(
+      argc, argv, makeClOptParserCallback(Category, OccurrencesFlag, Overview),
+      OccurrencesFlag);
   if (Err) {
     llvm::report_fatal_error(
         Twine("CommonOptionsParser: failed to parse command-line arguments. ") +

@@ -28,12 +28,19 @@
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
+
+#include "Opts.inc"
 
 using namespace llvm;
 using namespace clang;
@@ -63,45 +70,123 @@ template <> struct MappingTraits<RenameAllInfo> {
 } // end namespace yaml
 } // end namespace llvm
 
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
+
+using namespace llvm::opt;
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
+
+class ClangRenameOptTable : public opt::GenericOptTable {
+public:
+  ClangRenameOptTable() : GenericOptTable(InfoTable) {}
+};
+} // end anonymous namespace
+
 static cl::OptionCategory ClangRenameOptions("clang-rename common options");
 
-static cl::list<unsigned> SymbolOffsets(
-    "offset",
-    cl::desc("Locates the symbol by offset as opposed to <line>:<column>."),
-    cl::cat(ClangRenameOptions));
-static cl::opt<bool> Inplace("i", cl::desc("Overwrite edited <file>s."),
-                             cl::cat(ClangRenameOptions));
-static cl::list<std::string>
-    QualifiedNames("qualified-name",
-                   cl::desc("The fully qualified name of the symbol."),
-                   cl::cat(ClangRenameOptions));
+static std::vector<unsigned> SymbolOffsets;
+static bool Inplace;
+static std::vector<std::string> QualifiedNames;
+static std::vector<std::string> NewNames;
+static bool PrintName;
+static bool PrintLocations;
+static std::string ExportFixes;
+static std::string Input;
+static bool Force;
 
-static cl::list<std::string>
-    NewNames("new-name", cl::desc("The new name to change the symbol to."),
-             cl::cat(ClangRenameOptions));
-static cl::opt<bool> PrintName(
-    "pn",
-    cl::desc("Print the found symbol's name prior to renaming to stderr."),
-    cl::cat(ClangRenameOptions));
-static cl::opt<bool> PrintLocations(
-    "pl", cl::desc("Print the locations affected by renaming to stderr."),
-    cl::cat(ClangRenameOptions));
-static cl::opt<std::string>
-    ExportFixes("export-fixes",
-                cl::desc("YAML file to store suggested fixes in."),
-                cl::value_desc("filename"), cl::cat(ClangRenameOptions));
-static cl::opt<std::string>
-    Input("input", cl::desc("YAML file to load oldname-newname pairs from."),
-          cl::Optional, cl::cat(ClangRenameOptions));
-static cl::opt<bool> Force("force",
-                           cl::desc("Ignore nonexistent qualified names."),
-                           cl::cat(ClangRenameOptions));
+static tooling::CommonOptionsParser::Args ParseArgs(int argc,
+                                                    const char **argv) {
+  ClangRenameOptTable Tbl;
+  llvm::StringRef ToolName = argv[0];
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  llvm::opt::InputArgList Args = Tbl.parseArgs(
+      argc, const_cast<char **>(argv), OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        WithColor::error() << Msg << "\n";
+        std::exit(1);
+      });
+
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "clang-rename [options]", "clang-rename");
+    std::exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    llvm::outs() << ToolName << '\n';
+    llvm::cl::PrintVersionMessage();
+    std::exit(0);
+  }
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_offset_EQ)) {
+    StringRef S{A->getValue()};
+    unsigned Value;
+    if (!llvm::to_integer(S, Value, 0)) {
+      WithColor::error() << ToolName << ": for the --offset option: '" << S
+                         << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+    SymbolOffsets.emplace_back(Value);
+  }
+
+  Inplace = Args.hasArg(OPT_inplace);
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_qualified_name_EQ))
+    QualifiedNames.emplace_back(A->getValue());
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_new_name_EQ))
+    NewNames.emplace_back(A->getValue());
+
+  PrintName = Args.hasArg(OPT_print_name);
+  PrintLocations = Args.hasArg(OPT_print_locations);
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_export_fixes_EQ))
+    ExportFixes = A->getValue();
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_input_EQ))
+    Input = A->getValue();
+
+  Force = Args.hasArg(OPT_force);
+
+  tooling::CommonOptionsParser::Args args;
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_build_path_EQ))
+    args.BuildPath = A->getValue();
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_extra_arg_EQ))
+    args.ArgsAfter.emplace_back(A->getValue());
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_extra_arg_before_EQ))
+    args.ArgsBefore.emplace_back(A->getValue());
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_INPUT))
+    args.SourcePaths.emplace_back(A->getValue());
+  if (args.SourcePaths.empty()) {
+    WithColor::error() << ToolName
+                       << ": must set at least one source path (-p).\n";
+    std::exit(1);
+  }
+  return args;
+}
 
 int main(int argc, const char **argv) {
-  auto ExpectedParser =
-      tooling::CommonOptionsParser::create(argc, argv, ClangRenameOptions);
+  auto callback = [&](int &argc, const char **argv)
+      -> llvm::Expected<tooling::CommonOptionsParser::Args> {
+    return ParseArgs(argc, argv);
+  };
+
+  auto ExpectedParser = tooling::CommonOptionsParser::create(
+      argc, const_cast<const char **>(argv), callback);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    WithColor::error() << ExpectedParser.takeError();
     return 1;
   }
   tooling::CommonOptionsParser &OP = ExpectedParser.get();
@@ -111,8 +196,8 @@ int main(int argc, const char **argv) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
         llvm::MemoryBuffer::getFile(Input);
     if (!Buffer) {
-      errs() << "clang-rename: failed to read " << Input << ": "
-             << Buffer.getError().message() << "\n";
+      WithColor::error() << "clang-rename: failed to read " << Input << ": "
+                         << Buffer.getError().message() << "\n";
       return 1;
     }
 
@@ -130,13 +215,14 @@ int main(int argc, const char **argv) {
 
   // Check the arguments for correctness.
   if (NewNames.empty()) {
-    errs() << "clang-rename: -new-name must be specified.\n\n";
+    WithColor::error() << "clang-rename: -new-name must be specified.\n\n";
     return 1;
   }
 
   if (SymbolOffsets.empty() == QualifiedNames.empty()) {
-    errs() << "clang-rename: -offset and -qualified-name can't be present at "
-              "the same time.\n";
+    WithColor::error()
+        << "clang-rename: -offset and -qualified-name can't be present at "
+           "the same time.\n";
     return 1;
   }
 
@@ -148,16 +234,19 @@ int main(int argc, const char **argv) {
   for (const auto &NewName : NewNames) {
     auto NewNameTokKind = Table.get(NewName).getTokenID();
     if (!tok::isAnyIdentifier(NewNameTokKind)) {
-      errs() << "ERROR: new name is not a valid identifier in C++17.\n\n";
+      WithColor::error()
+          << "ERROR: new name is not a valid identifier in C++17.\n\n";
       return 1;
     }
   }
 
   if (SymbolOffsets.size() + QualifiedNames.size() != NewNames.size()) {
-    errs() << "clang-rename: number of symbol offsets(" << SymbolOffsets.size()
-           << ") + number of qualified names (" << QualifiedNames.size()
-           << ") must be equal to number of new names(" << NewNames.size()
-           << ").\n\n";
+    WithColor::error() << "clang-rename: number of symbol offsets("
+                       << SymbolOffsets.size()
+                       << ") + number of qualified names ("
+                       << QualifiedNames.size()
+                       << ") must be equal to number of new names("
+                       << NewNames.size() << ").\n\n";
     cl::PrintHelpMessage();
     return 1;
   }
@@ -196,7 +285,8 @@ int main(int argc, const char **argv) {
       std::error_code EC;
       llvm::raw_fd_ostream OS(ExportFixes, EC, llvm::sys::fs::OF_None);
       if (EC) {
-        llvm::errs() << "Error opening output file: " << EC.message() << '\n';
+        WithColor::error() << "Error opening output file: " << EC.message()
+                           << '\n';
         return 1;
       }
 
@@ -230,7 +320,7 @@ int main(int argc, const char **argv) {
     for (const auto &File : Files) {
       auto Entry = FileMgr.getOptionalFileRef(File);
       if (!Entry) {
-        errs() << "clang-rename: " << File << " does not exist.\n";
+        WithColor::error() << "clang-rename: " << File << " does not exist.\n";
         return 1;
       }
       const auto ID = Sources.getOrCreateFileID(*Entry, SrcMgr::C_User);
