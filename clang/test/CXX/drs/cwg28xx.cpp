@@ -225,7 +225,7 @@ int main() {
     using Lambda::operator();
     friend Lambda;
   } d(lambda);
-  d(); // expected-error {{invalid explicit object parameter type 'D' in lambda with capture; the type must derive publicly from the lambda}}
+  d(); // expected-error {{must derive publicly from the lambda}}
 }
 
 #endif
