@@ -157,11 +157,8 @@ std::tuple<Decl *, Decl *> ASTImporterTestBase::getImportedDecl(
   assert(ImportedII && "Declaration with the given identifier "
                        "should be specified in test!");
   DeclarationName ImportDeclName(ImportedII);
-  SmallVector<NamedDecl *, 1> FoundDecls;
-  FromCtx.getTranslationUnitDecl()->localUncachedLookup(ImportDeclName,
-                                                        FoundDecls);
-
-  assert(FoundDecls.size() == 1);
+  DeclContext::lookup_result FoundDecls =
+      FromCtx.getTranslationUnitDecl()->noload_lookup(ImportDeclName);
 
   Decl *Imported =
       FromTU.import(SharedStatePtr, ToAST.get(), FoundDecls.front());
