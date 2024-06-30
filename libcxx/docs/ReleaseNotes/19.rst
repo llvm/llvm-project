@@ -53,6 +53,7 @@ Implemented Papers
 - P2713R1 - Escaping improvements in ``std::format``
 - P2231R1 - Missing ``constexpr`` in ``std::optional`` and ``std::variant``
 - P0019R8 - ``std::atomic_ref``
+- P2602R2 - Poison Pills are Too Toxic (as DR against C++20)
 
 Improvements and New Features
 -----------------------------
