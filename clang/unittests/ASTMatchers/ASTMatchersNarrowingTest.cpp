@@ -1850,6 +1850,33 @@ TEST_P(ASTMatchersTest, IsDeleted) {
                       functionDecl(hasName("Func"), isDeleted())));
 }
 
+TEST_P(ASTMatchersTest, IsTrivial) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(notMatches("class A { A(); };",
+                         cxxRecordDecl(hasName("A"), isTrivial())));
+  EXPECT_TRUE(matches("class B { B() = default; };",
+                      cxxRecordDecl(hasName("B"), isTrivial())));
+
+  EXPECT_TRUE(notMatches("class A { ~A(); }; A::~A() = default;",
+                         cxxMethodDecl(hasName("~A"), isTrivial())));
+  EXPECT_TRUE(matches("class B { ~B() = default; };",
+                      cxxMethodDecl(hasName("~B"), isTrivial())));
+}
+
+TEST_P(ASTMatchersTest, IsTriviallyCopyable) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(notMatches("class A { ~A(); }; A::~A() = default;",
+                         cxxRecordDecl(hasName("A"), isTriviallyCopyable())));
+  EXPECT_TRUE(matches("class B { ~B() = default; };",
+                      cxxRecordDecl(hasName("B"), isTriviallyCopyable())));
+}
+
 TEST_P(ASTMatchersTest, IsNoThrow_DynamicExceptionSpec) {
   if (!GetParam().supportsCXXDynamicExceptionSpecification()) {
     return;

@@ -5444,6 +5444,43 @@ AST_MATCHER(FunctionDecl, isDefaulted) {
   return Node.isDefaulted();
 }
 
+/// Matches trivial methods and types.
+///
+/// Given:
+/// \code
+///   class A { A(); };
+///   A::A() = default;
+///   class B { B() = default; };
+/// \endcode
+/// cxxMethodDecl(isTrivial())
+///   matches the declaration of B, but not A.
+AST_POLYMORPHIC_MATCHER(isTrivial,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(CXXMethodDecl,
+                                                        CXXRecordDecl)) {
+  if (const auto *E = dyn_cast<CXXMethodDecl>(&Node))
+    return E->isTrivial();
+  if (const auto *E = dyn_cast<CXXRecordDecl>(&Node)) {
+    const auto *Def = Node.getDefinition();
+    return Def && Def->isTrivial();
+  }
+  return false;
+}
+
+/// Matches trivially copyable types.
+///
+/// Given:
+/// \code
+///   class A { A(const A &); };
+///   A::A(const A &) = default;
+///   class B { B(const B &) = default; };
+/// \endcode
+/// cxxMethodDecl(isTriviallyCopyable())
+///   matches the declaration of B, but not A.
+AST_MATCHER(CXXRecordDecl, isTriviallyCopyable) {
+  CXXRecordDecl *Def = Node.getDefinition();
+  return Def && Def->isTriviallyCopyable();
+}
+
 /// Matches weak function declarations.
 ///
 /// Given:
