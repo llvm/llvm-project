@@ -30,7 +30,7 @@ using U2 = decltype(&main);
 #endif
 } // namespace cwg2811
 
-namespace cwg2819 { // cwg2819: 19 ready 2023-12-01
+namespace cwg2819 { // cwg2819: 19 ready 2024-06-26
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
   constexpr int* q = static_cast<int*>(p);
