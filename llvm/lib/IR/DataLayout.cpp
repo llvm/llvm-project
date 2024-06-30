@@ -216,6 +216,8 @@ void DataLayout::reset(StringRef Desc) {
   if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
     return report_fatal_error(std::move(Err));
 
+  setSentinelPointerValue(INT_MAX, 0);
+
   if (Error Err = parseSpecifier(Desc))
     return report_fatal_error(std::move(Err));
 }
@@ -248,6 +250,22 @@ template <typename IntTy> static Error getInt(StringRef R, IntTy &Result) {
   bool error = R.getAsInteger(10, Result); (void)error;
   if (error)
     return reportError("not a number, or does not fit in an unsigned int");
+  return Error::success();
+}
+
+template <typename IntTy>
+static Error getIntForAddrSpace(StringRef R, IntTy &Result) {
+  if (R.starts_with("neg")) {
+    StringRef AfterNeg = R.slice(3, R.size());
+    bool error = AfterNeg.getAsInteger(10, Result);
+    (void)error;
+    if (error || Result <= 0)
+      return reportError("not a number, or does not fit in an unsigned int");
+    Result *= -1;
+  } else if (R.contains("neg"))
+    return reportError("not a valid value for address space");
+  else
+    return getInt<IntTy>(R, Result);
   return Error::success();
 }
 
@@ -502,6 +520,33 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return Err;
       break;
     }
+    case 'z': {
+      sentinelValueDefined = true;
+      unsigned AddrSpace = 0;
+      int64_t Value;
+      // for unlisted address spaces e.g., z:0
+      if (Tok.empty()) {
+        if (Error Err = getIntForAddrSpace(Rest, Value))
+          return Err;
+        setSentinelPointerValue(INT_MAX, Value);
+        break;
+      } else {
+        if (Error Err = getInt(Tok, AddrSpace))
+          return Err;
+        if (!isUInt<24>(AddrSpace))
+          return reportError("Invalid address space, must be a 24-bit integer");
+      }
+      if (Rest.empty())
+        return reportError(
+            "Missing address space value specification for pointer in "
+            "datalayout string");
+      if (Error Err = ::split(Rest, ':', Split))
+        return Err;
+      if (Error Err = getIntForAddrSpace(Tok, Value))
+        return Err;
+      setSentinelPointerValue(AddrSpace, Value);
+      break;
+    }
     case 'G': { // Default address space for global variables.
       if (Error Err = getAddrSpace(Tok, DefaultGlobalsAddrSpace))
         return Err;
@@ -704,6 +749,7 @@ public:
 } // end anonymous namespace
 
 void DataLayout::clear() {
+
   LegalIntWidths.clear();
   IntAlignments.clear();
   FloatAlignments.clear();

@@ -3113,6 +3113,15 @@ as follows:
     ``n32:64`` for PowerPC 64, or ``n8:16:32:64`` for X86-64. Elements of
     this set are considered to support most general arithmetic operations
     efficiently.
+``z[n]:<value>``
+    This specifies the sentinel pointer value for an address space. Sentinel
+    pointer value is the default non zero null value for a given address
+    space. ``n`` denotes the address space number, and if not specified, it
+    is considered to be for the unlisted address space. For unlisted address
+    space, the sentinel pointer value is ``0``. ``value`` denotes the sentinel
+    pointer value for an address space ``n``. To represent negatives values,
+    prefix ``neg`` is added to ``value``. for e.g., ``z0:neg1`` represents for
+    ``0`` address space ``-1`` is the sentinel pointer value.
 ``ni:<address space0>:<address space1>:<address space2>...``
     This specifies pointer types with the specified address spaces
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
@@ -3145,6 +3154,7 @@ specifications are given in this list:
 -  ``v64:64:64`` - 64-bit vector is 64-bit aligned
 -  ``v128:128:128`` - 128-bit vector is 128-bit aligned
 -  ``a:0:64`` - aggregates are 64-bit aligned
+-  ``z:0`` - default null value of 0 for unlisted(INT_MAX) address space
 
 When LLVM is determining the alignment for a given type, it uses the
 following rules:
