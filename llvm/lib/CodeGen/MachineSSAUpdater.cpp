@@ -196,7 +196,7 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB,
       InsertNewDef(TargetOpcode::PHI, BB, Loc, RegAttrs, MRI, TII);
 
   // Fill in all the predecessors of the PHI.
-  for (const auto &[SrcBB, SrcReg]: PredValues)
+  for (const auto &[SrcBB, SrcReg] : PredValues)
     InsertedPHI.addReg(SrcReg).addMBB(SrcBB);
 
   // See if the PHI node can be merged to a single value.  This can happen in
