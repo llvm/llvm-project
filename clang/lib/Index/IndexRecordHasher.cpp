@@ -367,6 +367,10 @@ static hash_code computeHash(const TemplateArgument &Arg,
   case TemplateArgument::Integral:
     COMBINE_HASH('V', Hasher.hash(Arg.getIntegralType()), Arg.getAsIntegral());
     break;
+
+  case TemplateArgument::StructuralValue:
+    // FIXME: Hash structural values
+    break;
   }
 
   return Hash;
