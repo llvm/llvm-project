@@ -550,6 +550,7 @@ class TargetRegisterClass;
                         bool HasExtractInsert) const;
     SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
                         bool HasExtractInsert) const;
+    SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
