@@ -72,6 +72,10 @@ define void @test_brace_escapes(ptr noundef %arr) {
 ; CHECK-NEXT:    loop.2:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8 ->
+; CHECK-NEXT:            store ptr %l.1, ptr %gep.iv.2, align 8
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP4:0x[0-9a-f]+]]):
