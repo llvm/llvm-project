@@ -1120,6 +1120,14 @@ struct ConversionConfig {
   // already been modified) and iterators into past IR state cannot be
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
+
+  /// If set to "true", the dialect conversion driver attempts to fold
+  /// operations throughout the conversion. This is problematic because op
+  /// folders may assume that the IR is in a valid state at the beginning of
+  /// the folding process. However, the dialect conversion does not guarantee
+  /// that because some IR modifications are delayed until the end of the
+  /// conversion.
+  bool foldOps = true;
 };
 
 //===----------------------------------------------------------------------===//
