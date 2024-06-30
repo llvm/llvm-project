@@ -77,4 +77,29 @@ TEST(Rewriter, ReplaceTextRangeTypes) {
   EXPECT_EQ(T.Rewrite.getRewrittenText(T.makeCharRange(42, 47)), "0;");
 }
 
+TEST(Rewriter, RemoveTextRangeTypes) {
+  // Check that the correct text is removed for CharSourceRange and SourceRange.
+  // Ranges remain in terms of the original text, but include any inserted text
+  // within the range.
+  StringRef Code = "int main(int argc, char *argv[]) { return argc; }";
+  //                                             insert "foo" ^
+  //                                                      get ^~~~~ = "fooargc;"
+  //                                        remove char range ^~
+  //                                                      get ^~~~~ = "gc;"
+  //                                            insert "bar " ^
+  //                                                      get ^~~~~ = "bargc;"
+  //                                      remove source range ^~
+  //                                                      get ^~~~~ = ";"
+  RangeTypeTest T(Code, 42, 44);
+  SourceLocation InsertSloc = T.makeLoc(42);
+  T.Rewrite.InsertText(InsertSloc, "foo");
+  T.Rewrite.RemoveText(T.CRange);
+  EXPECT_EQ(T.Rewrite.getRewrittenText(T.makeCharRange(42, 47)), "gc;");
+
+  T.Rewrite.InsertText(InsertSloc, "bar ");
+  EXPECT_EQ(T.Rewrite.getRewrittenText(T.makeCharRange(42, 47)), "bar gc;");
+  T.Rewrite.RemoveText(T.SRange);
+  EXPECT_EQ(T.Rewrite.getRewrittenText(T.makeCharRange(42, 47)), ";");
+}
+
 } // anonymous namespace
