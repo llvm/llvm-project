@@ -52,7 +52,7 @@
 # POSTCHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
 # POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x0000000c)
 # POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x0000000c)
-# POSTCHECK-EMPTY
+# POSTCHECK-EMPTY:
 # POSTCHECK: DW_TAG_subprogram
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
 # POSTCHECK-SAME: indexed (0x1)
@@ -75,7 +75,7 @@
 # POSTCHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000030)
 # POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x00000045)
 # POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x00000035)
-# POSTCHECK-EMPTY
+# POSTCHECK-EMPTY:
 
 # POSTCHECK: DW_TAG_subprogram
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
