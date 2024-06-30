@@ -596,9 +596,7 @@ void MCMachOStreamer::createAddrSigSection() {
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
   changeSection(AddrSigSection);
-  auto *Frag = getContext().allocFragment<MCDataFragment>();
-  Frag->setParent(AddrSigSection);
-  AddrSigSection->addFragment(*Frag);
+  auto *Frag = cast<MCDataFragment>(AddrSigSection->curFragList()->Head);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are
