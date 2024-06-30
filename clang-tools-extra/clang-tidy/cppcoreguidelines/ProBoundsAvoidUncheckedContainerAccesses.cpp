@@ -55,7 +55,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
                 Serialized.substr(0, Serialized.size() - DefaultsStringLength));
 }
 
-const CXXMethodDecl *findAlternative(const CXXMethodDecl *MatchedOperator) {
+static const CXXMethodDecl *
+findAlternative(const CXXMethodDecl *MatchedOperator) {
   const CXXRecordDecl *Parent = MatchedOperator->getParent();
   const QualType SubscriptThisObjType =
       MatchedOperator->getFunctionObjectParameterReferenceType();
