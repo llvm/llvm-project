@@ -3208,7 +3208,7 @@ ExprResult SemaObjC::BuildInstanceMessage(
       const ObjCMethodDecl *InitMethod = nullptr;
       auto *CurMD = SemaRef.getCurMethodDecl();
       if (!CurMD)
-        return ExprResult((Expr*)nullptr);
+        return ExprResult((Expr *)nullptr);
       bool isDesignated =
           CurMD->isDesignatedInitializerForTheInterface(&InitMethod);
       assert(isDesignated && InitMethod);
