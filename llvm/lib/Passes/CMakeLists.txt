@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMPasses
   CodeGen
   Core
   Coroutines
+  Demangle
   HipStdPar
   IPO
   InstCombine
