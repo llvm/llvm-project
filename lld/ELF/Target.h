@@ -246,6 +246,8 @@ TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
+std::string getDefinedLocation(const Symbol &sym);
+
 void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
                       int64_t min, uint64_t max);
 void reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,

@@ -762,6 +762,26 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val);
 
+static void warnIfRelocToLargeSection(uint8_t *loc, const Relocation &rel) {
+  if (!rel.sym || !rel.sym->getOutputSection())
+    return;
+  Symbol &sym = *rel.sym;
+  if (sym.getOutputSection()->flags & SHF_X86_64_LARGE) {
+    ErrorPlace errPlace = getErrorPlace(loc);
+    std::string hint;
+    if (!sym.isSection())
+      hint = "; references '" + lld::toString(sym) + '\'';
+    else if (auto *d = dyn_cast<Defined>(&sym))
+      hint = ("; references section '" + d->section->name + "'").str();
+    if (!errPlace.srcLoc.empty())
+      hint += "\n>>> referenced by " + errPlace.srcLoc;
+    if (!sym.isSection())
+      hint += getDefinedLocation(sym);
+    warn(errPlace.loc +
+         "Large section should not be addressed with PC32 relocation" + hint);
+  }
+}
+
 void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
   case R_X86_64_8:
@@ -784,11 +804,14 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkUInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
+  case R_X86_64_PC32:
+    if (config->warnLarge && ctx.hasLargeSection)
+      warnIfRelocToLargeSection(loc, rel);
+    [[fallthrough]];
   case R_X86_64_32S:
   case R_X86_64_GOT32:
   case R_X86_64_GOTPC32:
   case R_X86_64_GOTPCREL:
-  case R_X86_64_PC32:
   case R_X86_64_PLT32:
   case R_X86_64_DTPOFF32:
   case R_X86_64_SIZE32:
