@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 #include <string>
 
@@ -979,6 +980,18 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
                                    "error creating index file: " +
                                        FileErr.message());
   }
+  llvm::SmallString<128> RootPath(CDCtx.OutDirectory);
+  if (llvm::sys::path::is_relative(RootPath)) {
+    llvm::sys::fs::make_absolute(RootPath);
+  }
+  // Replace the escaped characters with a forward slash. It shouldn't matter
+  // when rendering the webpage in a web browser. This helps to prevent the
+  // JavaScript from escaping characters incorrectly, and introducing  bad paths
+  // in the URLs.
+  std::string RootPathEscaped = RootPath.str().str();
+  std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
+  OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
+
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);
   std::function<void(Index)> IndexToJSON = [&](const Index &I) {
