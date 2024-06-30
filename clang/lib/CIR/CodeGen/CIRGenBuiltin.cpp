@@ -267,7 +267,6 @@ static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
 
   auto intType = builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
   auto cmpVal = cgf.buildScalarExpr(expr->getArg(1));
-  auto valueType = cmpVal.getType();
   cmpVal = buildToInt(cgf, cmpVal, typ, intType);
   auto newVal =
       buildToInt(cgf, cgf.buildScalarExpr(expr->getArg(2)), typ, intType);

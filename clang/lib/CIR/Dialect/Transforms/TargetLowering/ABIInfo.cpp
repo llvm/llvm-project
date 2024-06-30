@@ -13,6 +13,7 @@
 
 #include "ABIInfo.h"
 #include "CIRCXXABI.h"
+#include "CIRLowerContext.h"
 #include "LowerTypes.h"
 
 namespace mlir {
@@ -22,6 +23,17 @@ namespace cir {
 ABIInfo::~ABIInfo() = default;
 
 CIRCXXABI &ABIInfo::getCXXABI() const { return LT.getCXXABI(); }
+
+CIRLowerContext &ABIInfo::getContext() const { return LT.getContext(); }
+
+bool ABIInfo::isPromotableIntegerTypeForABI(Type Ty) const {
+  if (getContext().isPromotableIntegerType(Ty))
+    return true;
+
+  assert(!::cir::MissingFeatures::fixedWidthIntegers());
+
+  return false;
+}
 
 } // namespace cir
 } // namespace mlir

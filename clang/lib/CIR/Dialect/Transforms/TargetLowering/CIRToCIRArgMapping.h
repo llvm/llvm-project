@@ -57,9 +57,15 @@ public:
 
   unsigned totalIRArgs() const { return TotalIRArgs; }
 
+  bool hasPaddingArg(unsigned ArgNo) const {
+    assert(ArgNo < ArgInfo.size());
+    return ArgInfo[ArgNo].PaddingArgIndex != InvalidIndex;
+  }
+
   void construct(const CIRLowerContext &context, const LowerFunctionInfo &FI,
                  bool onlyRequiredArgs = false) {
     unsigned IRArgNo = 0;
+    bool SwapThisWithSRet = false;
     const ::cir::ABIArgInfo &RetAI = FI.getReturnInfo();
 
     if (RetAI.getKind() == ::cir::ABIArgInfo::Indirect) {
@@ -69,9 +75,44 @@ public:
     unsigned ArgNo = 0;
     unsigned NumArgs =
         onlyRequiredArgs ? FI.getNumRequiredArgs() : FI.arg_size();
-    for (LowerFunctionInfo::const_arg_iterator _ = FI.arg_begin();
-         ArgNo < NumArgs; ++_, ++ArgNo) {
-      llvm_unreachable("NYI");
+    for (LowerFunctionInfo::const_arg_iterator I = FI.arg_begin();
+         ArgNo < NumArgs; ++I, ++ArgNo) {
+      assert(I != FI.arg_end());
+      // Type ArgType = I->type;
+      const ::cir::ABIArgInfo &AI = I->info;
+      // Collect data about IR arguments corresponding to Clang argument ArgNo.
+      auto &IRArgs = ArgInfo[ArgNo];
+
+      if (::cir::MissingFeatures::argumentPadding()) {
+        llvm_unreachable("NYI");
+      }
+
+      switch (AI.getKind()) {
+      case ::cir::ABIArgInfo::Extend:
+      case ::cir::ABIArgInfo::Direct: {
+        // FIXME(cir): handle sseregparm someday...
+        assert(AI.getCoerceToType() && "Missing coerced type!!");
+        StructType STy = dyn_cast<StructType>(AI.getCoerceToType());
+        if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
+          llvm_unreachable("NYI");
+        } else {
+          IRArgs.NumberOfArgs = 1;
+        }
+        break;
+      }
+      default:
+        llvm_unreachable("Missing ABIArgInfo::Kind");
+      }
+
+      if (IRArgs.NumberOfArgs > 0) {
+        IRArgs.FirstArgIndex = IRArgNo;
+        IRArgNo += IRArgs.NumberOfArgs;
+      }
+
+      // Skip over the sret parameter when it comes second.  We already handled
+      // it above.
+      if (IRArgNo == 1 && SwapThisWithSRet)
+        IRArgNo++;
     }
     assert(ArgNo == ArgInfo.size());
 
@@ -80,6 +121,14 @@ public:
     }
 
     TotalIRArgs = IRArgNo;
+  }
+
+  /// Returns index of first IR argument corresponding to ArgNo, and their
+  /// quantity.
+  std::pair<unsigned, unsigned> getIRArgs(unsigned ArgNo) const {
+    assert(ArgNo < ArgInfo.size());
+    return std::make_pair(ArgInfo[ArgNo].FirstArgIndex,
+                          ArgInfo[ArgNo].NumberOfArgs);
   }
 };
 

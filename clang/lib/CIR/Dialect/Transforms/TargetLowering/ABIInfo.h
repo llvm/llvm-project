@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_ABIINFO_H
 
 #include "CIRCXXABI.h"
+#include "CIRLowerContext.h"
 #include "LowerFunctionInfo.h"
 #include "llvm/IR/CallingConv.h"
 
@@ -37,7 +38,13 @@ public:
 
   CIRCXXABI &getCXXABI() const;
 
+  CIRLowerContext &getContext() const;
+
   virtual void computeInfo(LowerFunctionInfo &FI) const = 0;
+
+  // Implement the Type::IsPromotableIntegerType for ABI specific needs. The
+  // only difference is that this considers bit-precise integer types as well.
+  bool isPromotableIntegerTypeForABI(Type Ty) const;
 };
 
 } // namespace cir
