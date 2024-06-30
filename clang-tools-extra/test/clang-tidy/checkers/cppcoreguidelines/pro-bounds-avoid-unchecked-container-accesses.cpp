@@ -72,22 +72,22 @@ class ExcludedClass2 {
 std::array<int, 3> a;
 
 auto b = a[0];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 auto c = a[1+1];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 constexpr int Index = 1;
 auto d = a[Index];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 int e(int Ind) {
   return a[Ind];
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 }
 
 auto f = (&a)->operator[](1);
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 auto g = a.at(0);
 
@@ -102,16 +102,16 @@ auto m = n[0];
 
 SubClass Sub;
 auto r = Sub[0];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 typedef std::array<int, 3> ar;
 ar BehindDef;
 auto u = BehindDef[0];
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 template<typename T> int TestTemplate(T t){
   return t[0];
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 }
 
@@ -133,10 +133,10 @@ auto y = TestMap[0];
 #define OBJECT_BEHIND_MACRO a
 
 auto m1 = SUBSCRIPT_BEHIND_MARCO(0);
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 auto m2 = a[ARG_BEHIND_MACRO];
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 
 auto m3 = OBJECT_BEHIND_MACRO[0];
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: found possibly unsafe operator[], consider using at() instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: found possibly unsafe 'operator[]', consider using 'at()' instead [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]

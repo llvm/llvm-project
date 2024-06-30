@@ -127,9 +127,9 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
     return;
 
   diag(MatchedExpr->getBeginLoc(),
-       "found possibly unsafe operator[], consider using at() instead")
+       "found possibly unsafe 'operator[]', consider using 'at()' instead")
       << MatchedExpr->getSourceRange();
-  diag(Alternative->getBeginLoc(), "alternative at() defined here",
+  diag(Alternative->getBeginLoc(), "alternative 'at()' defined here",
        DiagnosticIDs::Note)
       << Alternative->getSourceRange();
 }
