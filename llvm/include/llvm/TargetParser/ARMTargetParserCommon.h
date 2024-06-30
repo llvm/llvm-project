@@ -43,6 +43,7 @@ struct ParsedBranchProtection {
   bool BranchTargetEnforcement;
   bool BranchProtectionPAuthLR;
   bool GuardedControlStack;
+  bool HasPauthABI;
 };
 
 bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,

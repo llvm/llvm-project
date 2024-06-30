@@ -140,7 +140,7 @@ ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
 // an erroneous part of the spec.
 bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
                                 StringRef &Err, bool EnablePAuthLR) {
-  PBP = {"none", "a_key", false, false, false};
+  PBP = {"none", "a_key", false, false, false, false};
   if (Spec == "none")
     return true; // defaults are ok
 
@@ -158,6 +158,10 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
     StringRef Opt = Opts[I].trim();
     if (Opt == "bti") {
       PBP.BranchTargetEnforcement = true;
+      continue;
+    }
+    if (Opt == "pauthabi") {
+      PBP.HasPauthABI = true;
       continue;
     }
     if (Opt == "pac-ret") {
