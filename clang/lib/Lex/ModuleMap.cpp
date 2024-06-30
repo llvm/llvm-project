@@ -3130,7 +3130,10 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
   if (ID.isInvalid()) {
     auto FileCharacter =
         IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
-    ID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+    if (ExternModuleLoc.isValid())
+      ID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+    else // avoid creating redundant FileIDs, they take sloc space in PCMs.
+      ID = SourceMgr.getOrCreateFileID(File, FileCharacter);
   }
 
   assert(Target && "Missing target information");
