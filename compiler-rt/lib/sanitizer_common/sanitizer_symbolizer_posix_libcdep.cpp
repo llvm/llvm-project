@@ -25,6 +25,7 @@
 #  include "sanitizer_common.h"
 #  include "sanitizer_file.h"
 #  include "sanitizer_flags.h"
+#  include "sanitizer_getauxval.h"
 #  include "sanitizer_internal_defs.h"
 #  include "sanitizer_linux.h"
 #  include "sanitizer_placement_new.h"
@@ -408,7 +409,13 @@ const char *Symbolizer::PlatformDemangle(const char *name) {
 
 static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
   const char *path = common_flags()->external_symbolizer_path;
-
+  // This is so we can use the weak definition from sanitizer_getauxval.h
+  if (&getauxval && getauxval(/* AT_SECURE */ 23) != 0) {
+    Report(
+        "ERROR: external_symbolizer_path cannot be used for AT_SECURE "
+        "(e.g. setuid binaries).\n");
+    Die();
+  }
   if (path && internal_strchr(path, '%')) {
     char *new_path = (char *)InternalAlloc(kMaxPathLength);
     SubstituteForFlagValue(path, new_path, kMaxPathLength);
