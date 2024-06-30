@@ -86,10 +86,21 @@ static bool SkipToToken(StringRef &Str) {
     }
 
     // If this is the start of a comment, remove the rest of the line.
+    StringRef Line = Str.substr(0, Str.find_first_of('\n'));
     if (Str[0] == '#') {
-        Str = Str.substr(Str.find_first_of('\n'));
+      Str = Str.substr(Line.size());
       continue;
     }
+
+    // If an encoding comment is present on the line, use the atomic
+    // block in it as the source bytes.
+    constexpr StringLiteral EncodingComment = "encoding: [";
+    size_t Pos = Line.rfind(EncodingComment);
+    if (Pos != StringRef::npos) {
+      // Parse from the opening bracket.
+      Str = Str.substr(Pos + EncodingComment.size() - 1);
+    }
+
     return true;
   }
 }
