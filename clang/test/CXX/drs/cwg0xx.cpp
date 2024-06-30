@@ -1180,13 +1180,7 @@ namespace cwg77 { // cwg77: yes
   };
 }
 
-namespace cwg78 { // cwg78: sup ????
-  // Under CWG78, this is valid, because 'k' has static storage duration, so is
-  // zero-initialized.
-  const int k;
-  // expected-error@-1 {{default initialization of an object of const type 'const int'}}
-}
-
+// cwg78 is in cwg78.cpp
 // cwg79: na
 
 namespace cwg80 { // cwg80: 2.9
