@@ -2,6 +2,7 @@ include(GNUInstallPackageDir)
 include(ExtendPath)
 include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
+include(GetClangResourceDir)
 
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
@@ -29,6 +30,10 @@ set(CLANG_CONFIG_INCLUDE_DIRS
   "${CLANG_SOURCE_DIR}/include"
   "${CLANG_BINARY_DIR}/include"
   )
+
+get_clang_resource_dir(resource_builddir PREFIX ${CLANG_BINARY_DIR})
+set(CLANG_CONFIG_RESOURCE_DIR ${resource_builddir})
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${clang_cmake_builddir}/ClangConfig.cmake
@@ -60,6 +65,10 @@ extend_path(base_includedir "\${CLANG_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDED
 set(CLANG_CONFIG_INCLUDE_DIRS
   "${base_includedir}"
   )
+
+get_clang_resource_dir(resource_installdir PREFIX ${CLANG_INSTALL_PREFIX})
+set(CLANG_CONFIG_RESOURCE_DIR "${resource_installdir}")
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake
