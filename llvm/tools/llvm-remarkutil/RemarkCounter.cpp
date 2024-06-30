@@ -24,6 +24,7 @@ static cl::SubCommand CountSub("count",
 
 INPUT_FORMAT_COMMAND_LINE_OPTIONS(CountSub)
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(CountSub)
+FILTER_COMMAND_LINE_OPTIONS(CountSub)
 
 static cl::list<std::string>
     Keys("args", cl::desc("Specify remark argument/s to count by."),
@@ -33,45 +34,6 @@ static cl::list<std::string> RKeys(
     cl::desc(
         "Specify remark argument/s to count (accepts regular expressions)."),
     cl::value_desc("arguments"), cl::sub(CountSub), cl::ValueOptional);
-static cl::opt<std::string>
-    RemarkNameOpt("remark-name",
-                  cl::desc("Optional remark name to filter collection by."),
-                  cl::ValueOptional, cl::sub(CountSub));
-static cl::opt<std::string>
-    PassNameOpt("pass-name", cl::ValueOptional,
-                cl::desc("Optional remark pass name to filter collection by."),
-                cl::sub(CountSub));
-
-static cl::opt<std::string> RemarkFilterArgByOpt(
-    "filter-arg-by", cl::desc("Optional remark arg to filter collection by."),
-    cl::ValueOptional, cl::sub(CountSub));
-static cl::opt<std::string>
-    RemarkNameOptRE("rremark-name",
-                    cl::desc("Optional remark name to filter collection by "
-                             "(accepts regular expressions)."),
-                    cl::ValueOptional, cl::sub(CountSub));
-static cl::opt<std::string>
-    RemarkArgFilterOptRE("rfilter-arg-by",
-                         cl::desc("Optional remark arg to filter collection by "
-                                  "(accepts regular expressions)."),
-                         cl::sub(CountSub), cl::ValueOptional);
-static cl::opt<std::string>
-    PassNameOptRE("rpass-name", cl::ValueOptional,
-                  cl::desc("Optional remark pass name to filter collection "
-                           "by (accepts regular expressions)."),
-                  cl::sub(CountSub));
-static cl::opt<Type> RemarkTypeOpt(
-    "remark-type", cl::desc("Optional remark type to filter collection by."),
-    cl::values(clEnumValN(Type::Unknown, "unknown", "UNKOWN"),
-               clEnumValN(Type::Passed, "passed", "PASSED"),
-               clEnumValN(Type::Missed, "missed", "MISSED"),
-               clEnumValN(Type::Analysis, "analysis", "ANALYSIS"),
-               clEnumValN(Type::AnalysisFPCommute, "analysis-fp-commute",
-                          "ANALYSIS_FP_COMMUTE"),
-               clEnumValN(Type::AnalysisAliasing, "analysis-aliasing",
-                          "ANALYSIS_ALIASING"),
-               clEnumValN(Type::Failure, "failure", "FAILURE")),
-    cl::init(Type::Failure), cl::sub(CountSub));
 static cl::opt<CountBy> CountByOpt(
     "count-by", cl::desc("Specify the property to collect remarks by."),
     cl::values(
@@ -109,34 +71,6 @@ static unsigned getValForKey(StringRef Key, const Remark &Remark) {
   if (RemarkArg == Remark.Args.end())
     return 0;
   return *RemarkArg->getValAsInt();
-}
-
-Error Filters::regexArgumentsValid() {
-  if (RemarkNameFilter && RemarkNameFilter->IsRegex)
-    if (auto E = checkRegex(RemarkNameFilter->FilterRE))
-      return E;
-  if (PassNameFilter && PassNameFilter->IsRegex)
-    if (auto E = checkRegex(PassNameFilter->FilterRE))
-      return E;
-  if (ArgFilter && ArgFilter->IsRegex)
-    if (auto E = checkRegex(ArgFilter->FilterRE))
-      return E;
-  return Error::success();
-}
-
-bool Filters::filterRemark(const Remark &Remark) {
-  if (RemarkNameFilter && !RemarkNameFilter->match(Remark.RemarkName))
-    return false;
-  if (PassNameFilter && !PassNameFilter->match(Remark.PassName))
-    return false;
-  if (RemarkTypeFilter)
-    return *RemarkTypeFilter == Remark.RemarkType;
-  if (ArgFilter) {
-    if (!any_of(Remark.Args,
-                [this](Argument Arg) { return ArgFilter->match(Arg.Val); }))
-      return false;
-  }
-  return true;
 }
 
 Error ArgumentCounter::getAllMatchingArgumentsInRemark(

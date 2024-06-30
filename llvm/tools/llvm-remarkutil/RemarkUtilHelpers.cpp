@@ -13,6 +13,70 @@
 
 namespace llvm {
 namespace remarks {
+/// taking the command line options for filtering the remark based on name, pass
+/// name, type and argumetns using string matching or regular expressions and
+/// construct a Remark Filter object which can filter the remarks based on the
+/// specified properties.
+Expected<Filters> getRemarkFilter(cl::opt<std::string> &RemarkNameOpt,
+                                  cl::opt<std::string> &RemarkNameOptRE,
+                                  cl::opt<std::string> &PassNameOpt,
+                                  cl::opt<std::string> &PassNameOptRE,
+                                  cl::opt<Type> &RemarkTypeOpt,
+                                  cl::opt<std::string> &RemarkFilterArgByOpt,
+                                  cl::opt<std::string> &RemarkArgFilterOptRE) {
+  // Create Filter properties.
+  std::optional<FilterMatcher> RemarkNameFilter;
+  std::optional<FilterMatcher> PassNameFilter;
+  std::optional<FilterMatcher> RemarkArgFilter;
+  std::optional<Type> RemarkType;
+  if (!RemarkNameOpt.empty())
+    RemarkNameFilter = {RemarkNameOpt, false};
+  else if (!RemarkNameOptRE.empty())
+    RemarkNameFilter = {RemarkNameOptRE, true};
+  if (!PassNameOpt.empty())
+    PassNameFilter = {PassNameOpt, false};
+  else if (!PassNameOptRE.empty())
+    PassNameFilter = {PassNameOptRE, true};
+  if (RemarkTypeOpt != Type::Failure)
+    RemarkType = RemarkTypeOpt;
+  if (!RemarkFilterArgByOpt.empty())
+    RemarkArgFilter = {RemarkFilterArgByOpt, false};
+  else if (!RemarkArgFilterOptRE.empty())
+    RemarkArgFilter = {RemarkArgFilterOptRE, true};
+  // Create RemarkFilter.
+  return Filters::createRemarkFilter(std::move(RemarkNameFilter),
+                                     std::move(PassNameFilter),
+                                     std::move(RemarkArgFilter), RemarkType);
+}
+
+Error Filters::regexArgumentsValid() {
+  if (RemarkNameFilter && RemarkNameFilter->IsRegex)
+    if (auto E = checkRegex(RemarkNameFilter->FilterRE))
+      return E;
+  if (PassNameFilter && PassNameFilter->IsRegex)
+    if (auto E = checkRegex(PassNameFilter->FilterRE))
+      return E;
+  if (ArgFilter && ArgFilter->IsRegex)
+    if (auto E = checkRegex(ArgFilter->FilterRE))
+      return E;
+  return Error::success();
+}
+
+bool Filters::filterRemark(const Remark &Remark) {
+  if (RemarkNameFilter && !RemarkNameFilter->match(Remark.RemarkName))
+    return false;
+  if (PassNameFilter && !PassNameFilter->match(Remark.PassName))
+    return false;
+  if (RemarkTypeFilter)
+    return *RemarkTypeFilter == Remark.RemarkType;
+  if (ArgFilter) {
+    if (!any_of(Remark.Args,
+                [this](Argument Arg) { return ArgFilter->match(Arg.Val); }))
+      return false;
+  }
+  return true;
+}
+
 /// \returns A MemoryBuffer for the input file on success, and an Error
 /// otherwise.
 Expected<std::unique_ptr<MemoryBuffer>>
