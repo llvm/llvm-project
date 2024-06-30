@@ -258,6 +258,10 @@ class MCStreamer {
   /// Generate debug info that is Cas Friendly
   bool GenerateCasFriendlyDebugInfo = false;
 
+  /// This is called by popSection and switchSection, if the current
+  /// section changes.
+  virtual void changeSection(MCSection *, uint32_t);
+
 protected:
   MCFragment *CurFrag = nullptr;
 
@@ -419,12 +423,6 @@ public:
   unsigned getSymbolOrder(const MCSymbol *Sym) const {
     return SymbolOrdering.lookup(Sym);
   }
-
-  /// Update streamer for a new active section.
-  ///
-  /// This is called by popSection and switchSection, if the current
-  /// section changes.
-  virtual void changeSection(MCSection *, uint32_t);
 
   /// Save the current and previous section on the section stack.
   void pushSection() {
