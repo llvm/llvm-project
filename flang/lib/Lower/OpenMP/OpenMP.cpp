@@ -1146,7 +1146,7 @@ static void genTargetClauses(
     llvm::SmallVectorImpl<mlir::Location> &devicePtrLocs,
     llvm::SmallVectorImpl<mlir::Type> &devicePtrTypes) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processDepend(clauseOps);
+  cp.processTargetDepend(loc, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(clauseOps, deviceAddrTypes, deviceAddrLocs,
                           deviceAddrSyms);
@@ -1206,7 +1206,7 @@ static void genTargetEnterExitUpdateDataClauses(
     mlir::Location loc, llvm::omp::Directive directive,
     mlir::omp::TargetEnterExitUpdateDataClauseOps &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processDepend(clauseOps);
+  cp.processTargetDepend(loc, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(directive, clauseOps);
   cp.processNowait(clauseOps);

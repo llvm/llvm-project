@@ -28,9 +28,10 @@ subroutine omp_target_enter_depend
    !$omp task depend(out: a)
    call foo(a)
    !$omp end task
+   !CHECK: omp.task if(%false) depend(taskdependin -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>) {
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target_enter_data   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>) depend(taskdependin -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>)
+   !CHECK: omp.target_enter_data   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target enter data map(to: a) depend(in: a)
     return
 end subroutine omp_target_enter_depend
@@ -167,9 +168,11 @@ subroutine omp_target_exit_depend
    !$omp task depend(out: a)
    call foo(a)
    !$omp end task
+
+   !CHECK: omp.task if(%false) depend(taskdependout -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target_exit_data   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>) depend(taskdependout -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>)
+   !CHECK: omp.target_exit_data   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target exit data map(from: a) depend(out: a)
 end subroutine omp_target_exit_depend
 
@@ -188,9 +191,10 @@ subroutine omp_target_update_depend
    call foo(a)
    !$omp end task
 
+   !CHECK: omp.task if(%false) depend(taskdependin -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>) {
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#0 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target_update motion_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>) depend(taskdependin -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>)
+   !CHECK: omp.target_update motion_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target update to(a) depend(in:a)
 end subroutine omp_target_update_depend
 
@@ -368,18 +372,48 @@ subroutine omp_target_depend
    !$omp task depend(out: a)
    call foo(a)
    !$omp end task
+
+   !CHECK: omp.task if(%false) depend(taskdependin -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>) {
    !CHECK: %[[STRIDE_A:.*]] = arith.constant 1 : index
    !CHECK: %[[LBOUND_A:.*]] = arith.constant 0 : index
    !CHECK: %[[UBOUND_A:.*]] = arith.subi %c1024, %c1 : index
    !CHECK: %[[BOUNDS_A:.*]] = omp.map.bounds lower_bound(%[[LBOUND_A]] : index) upper_bound(%[[UBOUND_A]] : index) extent(%[[EXTENT_A]] : index) stride(%[[STRIDE_A]] : index) start_idx(%[[STRIDE_A]] : index)
    !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#0 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target map_entries(%[[MAP_A]] -> %[[BB0_ARG:.*]] : !fir.ref<!fir.array<1024xi32>>) depend(taskdependin -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: omp.target map_entries(%[[MAP_A]] -> %[[BB0_ARG:.*]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target map(tofrom: a) depend(in: a)
       a(1) = 10
       !CHECK: omp.terminator
    !$omp end target
    !CHECK: }
  end subroutine omp_target_depend
+
+!===============================================================================
+! Target with region `depend` clause and nowait
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_depend_nowait() {
+subroutine omp_target_depend_nowait
+   !CHECK: %[[EXTENT_A:.*]] = arith.constant 1024 : index
+   !CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFomp_target_depend_nowaitEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
+   integer :: a(1024)
+   !CHECK: omp.task depend(taskdependout -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>) {
+   !$omp task depend(out: a)
+   call foo(a)
+   !$omp end task
+
+   !CHECK: omp.task if(%true) depend(taskdependin -> %[[A]]#1 : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: %[[STRIDE_A:.*]] = arith.constant 1 : index
+   !CHECK: %[[LBOUND_A:.*]] = arith.constant 0 : index
+   !CHECK: %[[UBOUND_A:.*]] = arith.subi %c1024, %c1 : index
+   !CHECK: %[[BOUNDS_A:.*]] = omp.map.bounds lower_bound(%[[LBOUND_A]] : index) upper_bound(%[[UBOUND_A]] : index) extent(%[[EXTENT_A]] : index) stride(%[[STRIDE_A]] : index) start_idx(%[[STRIDE_A]] : index)
+   !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#0 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: omp.target nowait map_entries(%[[MAP_A]] -> %[[BB0_ARG:.*]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target map(tofrom: a) depend(in: a) nowait
+      a(1) = 10
+      !CHECK: omp.terminator
+   !$omp end target
+   !CHECK: }
+ end subroutine omp_target_depend_nowait
 
 !===============================================================================
 ! Target implicit capture
