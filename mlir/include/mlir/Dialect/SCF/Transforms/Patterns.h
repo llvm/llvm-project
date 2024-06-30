@@ -79,6 +79,10 @@ void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
 /// loop bounds and loop steps are canonicalized.
 void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 
+/// Populate patterns to prepare scf.while loops for upliting, e.g. for before
+/// block cleanup.
+void populatePrepareUpliftWhileToForPatterns(RewritePatternSet &patterns);
+
 /// Populate patterns to uplift `scf.while` ops to `scf.for`.
 /// Uplifitng expects a specific ops pattern:
 ///  * `before` block consisting of single arith.cmp op
