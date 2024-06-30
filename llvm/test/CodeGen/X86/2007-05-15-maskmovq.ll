@@ -6,22 +6,11 @@ define void @test(<1 x i64> %c64, <1 x i64> %mask1, ptr %P) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    .cfi_offset %edi, -8
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, (%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    movq (%esp), %mm0
+; CHECK-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; CHECK-NEXT:    movq {{[0-9]+}}(%esp), %mm1
-; CHECK-NEXT:    maskmovq %mm0, %mm1
-; CHECK-NEXT:    addl $16, %esp
+; CHECK-NEXT:    maskmovq %mm1, %mm0
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 entry:

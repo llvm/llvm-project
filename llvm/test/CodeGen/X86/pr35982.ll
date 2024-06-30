@@ -6,8 +6,8 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 ; NO-POSTRA-LABEL: PR35982_emms:
 ; NO-POSTRA:       # %bb.0:
 ; NO-POSTRA-NEXT:    subl $8, %esp
-; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NO-POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
+; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NO-POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
 ; NO-POSTRA-NEXT:    movd %mm0, %ecx
 ; NO-POSTRA-NEXT:    emms
@@ -50,8 +50,8 @@ define float @PR35982_femms(<1 x i64>) nounwind {
 ; NO-POSTRA-LABEL: PR35982_femms:
 ; NO-POSTRA:       # %bb.0:
 ; NO-POSTRA-NEXT:    subl $8, %esp
-; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NO-POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
+; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NO-POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
 ; NO-POSTRA-NEXT:    movd %mm0, %ecx
 ; NO-POSTRA-NEXT:    femms
