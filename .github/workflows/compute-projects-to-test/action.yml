@@ -1,0 +1,44 @@
+name: 'Compute Projects To Test'
+inputs:
+  projects:
+    required: false
+    type: 'string'
+  
+  os-list:
+    description: >-
+      A space delimited list of operating systems that will be tested.  The
+      operating system values should match those used for GitHub's runner.os
+      context value: Linux, Windows, macOS.
+    required: false
+    default: "Linux Windows macOS"
+
+outputs:
+  Linux-check-targets:
+    description: "A space delimited list of check-targets to pass to ninja."
+    value: ${{ steps.compute-projects.outputs.Linux-check-targets }}
+  Linux-projects:
+    description: "A semi-colon delimited list of projects to pass to -DLLVM_ENABLE_PROJECTS."
+    value: ${{ steps.compute-projects.outputs.Linux-projects }}
+  Windows-check-targets:
+    description: "A space delimited list of check-targets to pass to ninja."
+    value: ${{ steps.compute-projects.outputs.Windows-check-targets }}
+  Windows-projects:
+    description: "A semi-colon delimited list of projects to pass to -DLLVM_ENABLE_PROJECTS."
+    value: ${{ steps.compute-projects.outputs.Windows-projects }}
+  macOS-check-targets:
+    description: "A space delimited list of check-targets to pass to ninja."
+    value: ${{ steps.compute-projects.outputs.macOS-check-targets }}
+  macOS-projects:
+    description: "A semi-colon delimited list of projects to pass to -DLLVM_ENABLE_PROJECTS."
+    value: ${{ steps.compute-projects.outputs.macOS-projects }}
+
+
+runs:
+  using: "composite"
+  steps:
+    - id: compute-projects
+      shell: bash
+      run: |
+        for os in ${{ inputs.os-list }}; do
+          RUNNER_OS=$os .github/workflows/compute-projects-to-test/compute-projects-to-test.sh ${{ inputs.projects }}
+        done
