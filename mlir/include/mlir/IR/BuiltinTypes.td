@@ -837,6 +837,33 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
     using ShapedType::Trait<RankedTensorType>::getDimSize;
     using ShapedType::Trait<RankedTensorType>::getDynamicDimIndex;
 
+    /// Return whether this type is a refinement of `source` with
+    /// respect to only the shape, meaning they ave the same element type
+    /// and the shape of this type is the same as source, except
+    /// zero or more dynamic extents from source have been replaced with
+    /// static extents.
+    /// This method is conservative with respect to the encoding. If the
+    /// encodings are not the same, then false is returned.
+    bool isRefinementOf(RankedTensorType source) {
+
+      return getEncoding() == source.getEncoding() &&
+        ShapedType::Trait<RankedTensorType>::isRefinementOf(
+          llvm::cast<ShapedType>(source));
+    }
+
+    /// Return whether this type is a generalization of `source` with
+    /// respect to only the shape, meaning they have the same element
+    /// type and the shape of this type is the same as source, except
+    /// zero or more static extents have been replaced with unknown
+    /// extents.
+    /// This method is conservative with respect to the encoding. If the
+    /// encodings are not the same, then false is returned.
+    bool isGeneralizationOf(RankedTensorType source) {
+      return getEncoding() == source.getEncoding() &&
+        ShapedType::Trait<RankedTensorType>::isGeneralizationOf(
+          llvm::cast<ShapedType>(source));
+    }
+
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;

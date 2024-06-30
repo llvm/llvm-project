@@ -228,3 +228,56 @@ mlir::getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs) {
   }
   return attrs;
 }
+
+LogicalResult mlir::foldCastProducers(
+    RewriterBase &rewriter, DestinationStyleOpInterface op,
+    llvm::function_ref<bool(Operation *)> isPreservingCast,
+    llvm::function_ref<Value(RewriterBase &rewriter, Type originalType,
+                             Value replacement)>
+        createCast) {
+
+  auto canFoldIntoConsumerOp = [&isPreservingCast](Operation *castOp) {
+    return castOp && isPreservingCast(castOp);
+  };
+
+  // If no operand comes from a tensor::CastOp and can be folded then fail.
+  bool hasTensorCastOperand =
+      llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
+        if (llvm::isa<BlockArgument>(opOperand.get()))
+          return false;
+        Operation *castOp = opOperand.get().getDefiningOp();
+        return castOp && canFoldIntoConsumerOp(castOp);
+      });
+  if (!hasTensorCastOperand)
+    return failure();
+
+  SmallVector<Type, 4> newResultTypes;
+  newResultTypes.reserve(op->getNumResults());
+  SmallVector<Value, 4> newOperands;
+  newOperands.reserve(op->getNumOperands());
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    Operation *tensorCastOp = opOperand.get().getDefiningOp();
+    bool fold = canFoldIntoConsumerOp(tensorCastOp);
+    newOperands.push_back(fold ? tensorCastOp->getOperand(0) : opOperand.get());
+    if (op.isDpsInit(&opOperand) &&
+        !llvm::isa<MemRefType>(newOperands.back().getType()))
+      newResultTypes.push_back(newOperands.back().getType());
+  }
+
+  // Clone op.
+  Operation *newOp = clone(rewriter, op, newResultTypes, newOperands);
+  SmallVector<Value, 4> replacements;
+  replacements.reserve(newOp->getNumResults());
+  for (auto [oldResult, newResult] :
+       llvm::zip(op->getResults(), newOp->getResults())) {
+    if (newResult.getType() != oldResult.getType()) {
+      Value resultCast = createCast(rewriter, oldResult.getType(), newResult);
+      replacements.push_back(resultCast);
+    } else {
+      replacements.push_back(newResult);
+    }
+  }
+  rewriter.replaceOp(op, replacements);
+
+  return success();
+}

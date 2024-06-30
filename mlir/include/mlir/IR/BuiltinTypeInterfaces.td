@@ -116,6 +116,15 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     auto clone(::llvm::ArrayRef<int64_t> shape) {
       return cloneWith(shape, getElementType());
     }
+
+    /// Return whether the target shape is a refinement of the source shape.
+    static bool isShapeRefinementOf(
+      ArrayRef<int64_t> source, ArrayRef<int64_t> target);
+
+    /// Return whether the target shape is a generalization of the source
+    /// shape.
+    static bool isShapeGeneralizationOf(
+      ArrayRef<int64_t> source, ArrayRef<int64_t> target);
   }];
 
   let extraSharedClassDeclaration = [{
@@ -184,6 +193,16 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
       assert(::mlir::ShapedType::isDynamic(getDimSize(index)) && "invalid index");
       return llvm::count_if($_type.getShape().take_front(index),
                             ::mlir::ShapedType::isDynamic);
+    }
+
+    bool isRefinementOf(ShapedType source) {
+      return $_type.getElementType() == source.getElementType() &&
+        ShapedType::isShapeRefinementOf(source.getShape(), $_type.getShape());
+    }
+
+    bool isGeneralizationOf(ShapedType source) {
+      return $_type.getElementType() == source.getElementType() &&
+        ShapedType::isShapeGeneralizationOf(source.getShape(), $_type.getShape());
     }
   }];
 }

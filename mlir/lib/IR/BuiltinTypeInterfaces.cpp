@@ -33,3 +33,27 @@ int64_t ShapedType::getNumElements(ArrayRef<int64_t> shape) {
   }
   return num;
 }
+
+bool ShapedType::isShapeRefinementOf(ArrayRef<int64_t> source,
+                                     ArrayRef<int64_t> target) {
+  if (source.size() != target.size())
+    return false;
+  for (auto [srcDim, tgtDim] : llvm::zip_equal(source, target)) {
+    // If the source dimension is dynamic, then the target dimension can be
+    // dynamic or static.
+    if (isDynamic(srcDim))
+      continue;
+    // Static source dim and dynamic result dim -> not a refinement.
+    if (isDynamic(tgtDim))
+      return false;
+    // Static source dim != static result dim -> not a refinement.
+    if (srcDim != tgtDim)
+      return false;
+  }
+  return true;
+}
+
+bool ShapedType::isShapeGeneralizationOf(ArrayRef<int64_t> source,
+                                         ArrayRef<int64_t> target) {
+  return isShapeRefinementOf(target, source);
+}
