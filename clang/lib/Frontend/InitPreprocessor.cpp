@@ -1342,8 +1342,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       getLockFreeValue(TI.get##Type##Width(), TI));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
-    if (LangOpts.Char8)
-      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char); // Treat char8_t like char.
+    // char8_t has the same representation / width as unsigned
+    // char in C++ and is a typedef for unsigned char in C23
+    if (LangOpts.Char8 || LangOpts.C23)
+      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char);
     DEFINE_LOCK_FREE_MACRO(CHAR16_T, Char16);
     DEFINE_LOCK_FREE_MACRO(CHAR32_T, Char32);
     DEFINE_LOCK_FREE_MACRO(WCHAR_T, WChar);
