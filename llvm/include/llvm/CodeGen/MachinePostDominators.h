@@ -49,7 +49,7 @@ class MachinePostDominatorTree : public PostDomTreeBase<MachineBasicBlock> {
 public:
   MachinePostDominatorTree() = default;
 
-  MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
+  explicit MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
   /// Handle invalidation explicitly.
   bool invalidate(MachineFunction &, const PreservedAnalyses &PA,

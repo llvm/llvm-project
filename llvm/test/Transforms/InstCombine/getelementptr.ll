@@ -1014,8 +1014,8 @@ define i8 @test_gep_bitcast_as1(ptr addrspace(1) %arr, i16 %N) {
 ; The element size of the array matches the element size of the pointer
 define i64 @test_gep_bitcast_array_same_size_element(ptr %arr, i64 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element(
-; CHECK-NEXT:    [[V:%.*]] = shl i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr [[ARR:%.*]], i64 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i64 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr [[ARR:%.*]], i64 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1029,8 +1029,8 @@ define i64 @test_gep_bitcast_array_same_size_element(ptr %arr, i64 %N) {
 define i64 @test_gep_bitcast_array_same_size_element_addrspacecast(ptr %arr, i64 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element_addrspacecast(
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ARR:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[V:%.*]] = shl i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr addrspace(3) [[CAST]], i64 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i64 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(3) [[CAST]], i64 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr addrspace(3) [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1057,8 +1057,8 @@ define i8 @test_gep_bitcast_array_different_size_element(ptr %arr, i64 %N) {
 
 define i64 @test_gep_bitcast_array_same_size_element_as1(ptr addrspace(1) %arr, i16 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element_as1(
-; CHECK-NEXT:    [[V:%.*]] = shl i16 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr addrspace(1) [[ARR:%.*]], i16 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i16 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(1) [[ARR:%.*]], i16 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr addrspace(1) [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;

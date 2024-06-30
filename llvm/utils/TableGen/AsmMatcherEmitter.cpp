@@ -2367,10 +2367,10 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   OS << "};\n\n";
 
   // Spit out the conversion driver function.
-  OS << CvtOS.str();
+  OS << ConvertFnBody;
 
   // Spit out the operand number lookup function.
-  OS << OpOS.str();
+  OS << OperandFnBody;
 
   return ConversionTable.size();
 }
