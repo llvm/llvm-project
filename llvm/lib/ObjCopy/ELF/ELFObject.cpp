@@ -2206,8 +2206,15 @@ Error Object::removeSections(
   // Transfer removed sections into the Object RemovedSections container for use
   // later.
   std::move(Iter, Sections.end(), std::back_inserter(RemovedSections));
-  // Now finally get rid of them all together.
+  // Now get rid of them all together.
   Sections.erase(Iter, std::end(Sections));
+
+  // Finally iterate over all sections and erase empty SHT_GROUP sections.
+  for (auto Iter = Sections.begin(); Iter != Sections.end(); ++Iter)
+    if (auto GroupSec = dyn_cast<GroupSection>(Iter->get()))
+      if (GroupSec->getMembersCount() == 0)
+        Sections.erase(Iter);
+
   return Error::success();
 }
 

@@ -1,0 +1,31 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --strip-debug %t -o %t1
+# RUN: llvm-readelf --section-groups %t1 | FileCheck %s
+# RUN: llvm-strip --strip-unneeded %t -o %t2
+# RUN: llvm-readelf --section-groups %t2 | FileCheck %s
+# RUN: llvm-strip --remove-section=.debug_macro %t -o %t3
+# RUN: llvm-readelf --section-groups %t3 | FileCheck %s
+# RUN: llvm-strip --remove-section=.debug_* %t -o %t4
+# RUN: llvm-readelf --section-groups %t4 | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  Machine:    EM_X86_64
+Sections:
+  - Name:     .group
+    Type:     SHT_GROUP
+    Info:     foo_grp
+    Members:
+      - SectionOrType:  GRP_COMDAT
+      - SectionOrType:  .debug_macro
+  - Name:     .debug_macro
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_GROUP ]
+Symbols:
+  - Name:     foo_grp
+    Section:  .group
+
+# CHECK: There are no section groups in this file.
