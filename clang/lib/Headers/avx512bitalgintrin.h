@@ -29,9 +29,9 @@ _mm512_popcnt_epi16(__m512i __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_popcnt_epi16(__m512i __A, __mmask32 __U, __m512i __B)
 {
-  return (__m512i) __builtin_ia32_selectw_512((__mmask32) __U,
-              (__v32hi) _mm512_popcnt_epi16(__B),
-              (__v32hi) __A);
+  return (__m512i)__builtin_selectvector((__v32hi)_mm512_popcnt_epi16(__B),
+                                         (__v32hi)__A,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -51,9 +51,9 @@ _mm512_popcnt_epi8(__m512i __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_popcnt_epi8(__m512i __A, __mmask64 __U, __m512i __B)
 {
-  return (__m512i) __builtin_ia32_selectb_512((__mmask64) __U,
-              (__v64qi) _mm512_popcnt_epi8(__B),
-              (__v64qi) __A);
+  return (__m512i)__builtin_selectvector((__v64qi)_mm512_popcnt_epi8(__B),
+                                         (__v64qi)__A,
+                                         __builtin_bit_cast(__vecmask64, __U));
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

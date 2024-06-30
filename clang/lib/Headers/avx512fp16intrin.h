@@ -361,15 +361,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_add_ph(__m512h __A,
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_add_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)__U, (__v32hf)_mm512_add_ph(__A, __B), (__v32hf)__W);
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_add_ph(__A, __B),
+                                         (__v32hf)__W,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_add_ph(__mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
-                                              (__v32hf)_mm512_add_ph(__A, __B),
-                                              (__v32hf)_mm512_setzero_ph());
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_add_ph(__A, __B),
+                                         (__v32hf)_mm512_setzero_ph(),
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 #define _mm512_add_round_ph(A, B, R)                                           \
@@ -377,14 +378,14 @@ _mm512_maskz_add_ph(__mmask32 __U, __m512h __A, __m512h __B) {
                                     (__v32hf)(__m512h)(B), (int)(R)))
 
 #define _mm512_mask_add_round_ph(W, U, A, B, R)                                \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_add_round_ph((A), (B), (R)),             \
-      (__v32hf)(__m512h)(W)))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_add_round_ph((A), (B), (R)), (__v32hf)(__m512h)(W),      \
+      __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm512_maskz_add_round_ph(U, A, B, R)                                  \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_add_round_ph((A), (B), (R)),             \
-      (__v32hf)_mm512_setzero_ph()))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_add_round_ph((A), (B), (R)),                             \
+      (__v32hf)_mm512_setzero_ph(), __builtin_bit_cast(__vecmask32, (U))))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_sub_ph(__m512h __A,
                                                               __m512h __B) {
@@ -393,15 +394,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_sub_ph(__m512h __A,
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_sub_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)__U, (__v32hf)_mm512_sub_ph(__A, __B), (__v32hf)__W);
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_sub_ph(__A, __B),
+                                         (__v32hf)__W,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_sub_ph(__mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
-                                              (__v32hf)_mm512_sub_ph(__A, __B),
-                                              (__v32hf)_mm512_setzero_ph());
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_sub_ph(__A, __B),
+                                         (__v32hf)_mm512_setzero_ph(),
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 #define _mm512_sub_round_ph(A, B, R)                                           \
@@ -409,14 +411,14 @@ _mm512_maskz_sub_ph(__mmask32 __U, __m512h __A, __m512h __B) {
                                     (__v32hf)(__m512h)(B), (int)(R)))
 
 #define _mm512_mask_sub_round_ph(W, U, A, B, R)                                \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_sub_round_ph((A), (B), (R)),             \
-      (__v32hf)(__m512h)(W)))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_sub_round_ph((A), (B), (R)), (__v32hf)(__m512h)(W),      \
+      __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm512_maskz_sub_round_ph(U, A, B, R)                                  \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_sub_round_ph((A), (B), (R)),             \
-      (__v32hf)_mm512_setzero_ph()))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_sub_round_ph((A), (B), (R)),                             \
+      (__v32hf)_mm512_setzero_ph(), __builtin_bit_cast(__vecmask32, (U))))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_mul_ph(__m512h __A,
                                                               __m512h __B) {
@@ -425,15 +427,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_mul_ph(__m512h __A,
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_mul_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)__U, (__v32hf)_mm512_mul_ph(__A, __B), (__v32hf)__W);
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_mul_ph(__A, __B),
+                                         (__v32hf)__W,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_mul_ph(__mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
-                                              (__v32hf)_mm512_mul_ph(__A, __B),
-                                              (__v32hf)_mm512_setzero_ph());
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_mul_ph(__A, __B),
+                                         (__v32hf)_mm512_setzero_ph(),
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 #define _mm512_mul_round_ph(A, B, R)                                           \
@@ -441,14 +444,14 @@ _mm512_maskz_mul_ph(__mmask32 __U, __m512h __A, __m512h __B) {
                                     (__v32hf)(__m512h)(B), (int)(R)))
 
 #define _mm512_mask_mul_round_ph(W, U, A, B, R)                                \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_mul_round_ph((A), (B), (R)),             \
-      (__v32hf)(__m512h)(W)))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_mul_round_ph((A), (B), (R)), (__v32hf)(__m512h)(W),      \
+      __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm512_maskz_mul_round_ph(U, A, B, R)                                  \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_mul_round_ph((A), (B), (R)),             \
-      (__v32hf)_mm512_setzero_ph()))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_mul_round_ph((A), (B), (R)),                             \
+      (__v32hf)_mm512_setzero_ph(), __builtin_bit_cast(__vecmask32, (U))))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_div_ph(__m512h __A,
                                                               __m512h __B) {
@@ -457,15 +460,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_div_ph(__m512h __A,
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_div_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)__U, (__v32hf)_mm512_div_ph(__A, __B), (__v32hf)__W);
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_div_ph(__A, __B),
+                                         (__v32hf)__W,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_div_ph(__mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
-                                              (__v32hf)_mm512_div_ph(__A, __B),
-                                              (__v32hf)_mm512_setzero_ph());
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_div_ph(__A, __B),
+                                         (__v32hf)_mm512_setzero_ph(),
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 #define _mm512_div_round_ph(A, B, R)                                           \
@@ -473,14 +477,14 @@ _mm512_maskz_div_ph(__mmask32 __U, __m512h __A, __m512h __B) {
                                     (__v32hf)(__m512h)(B), (int)(R)))
 
 #define _mm512_mask_div_round_ph(W, U, A, B, R)                                \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_div_round_ph((A), (B), (R)),             \
-      (__v32hf)(__m512h)(W)))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_div_round_ph((A), (B), (R)), (__v32hf)(__m512h)(W),      \
+      __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm512_maskz_div_round_ph(U, A, B, R)                                  \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_div_round_ph((A), (B), (R)),             \
-      (__v32hf)_mm512_setzero_ph()))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_div_round_ph((A), (B), (R)),                             \
+      (__v32hf)_mm512_setzero_ph(), __builtin_bit_cast(__vecmask32, (U))))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_min_ph(__m512h __A,
                                                               __m512h __B) {
@@ -490,15 +494,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_min_ph(__m512h __A,
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_min_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)__U, (__v32hf)_mm512_min_ph(__A, __B), (__v32hf)__W);
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_min_ph(__A, __B),
+                                         (__v32hf)__W,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_min_ph(__mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
-                                              (__v32hf)_mm512_min_ph(__A, __B),
-                                              (__v32hf)_mm512_setzero_ph());
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_min_ph(__A, __B),
+                                         (__v32hf)_mm512_setzero_ph(),
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 #define _mm512_min_round_ph(A, B, R)                                           \
@@ -506,14 +511,14 @@ _mm512_maskz_min_ph(__mmask32 __U, __m512h __A, __m512h __B) {
                                     (__v32hf)(__m512h)(B), (int)(R)))
 
 #define _mm512_mask_min_round_ph(W, U, A, B, R)                                \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_min_round_ph((A), (B), (R)),             \
-      (__v32hf)(__m512h)(W)))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_min_round_ph((A), (B), (R)), (__v32hf)(__m512h)(W),      \
+      __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm512_maskz_min_round_ph(U, A, B, R)                                  \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_min_round_ph((A), (B), (R)),             \
-      (__v32hf)_mm512_setzero_ph()))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_min_round_ph((A), (B), (R)),                             \
+      (__v32hf)_mm512_setzero_ph(), __builtin_bit_cast(__vecmask32, (U))))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_max_ph(__m512h __A,
                                                               __m512h __B) {
@@ -523,15 +528,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_max_ph(__m512h __A,
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_max_ph(__m512h __W, __mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)__U, (__v32hf)_mm512_max_ph(__A, __B), (__v32hf)__W);
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_max_ph(__A, __B),
+                                         (__v32hf)__W,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_max_ph(__mmask32 __U, __m512h __A, __m512h __B) {
-  return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U,
-                                              (__v32hf)_mm512_max_ph(__A, __B),
-                                              (__v32hf)_mm512_setzero_ph());
+  return (__m512h)__builtin_selectvector((__v32hf)_mm512_max_ph(__A, __B),
+                                         (__v32hf)_mm512_setzero_ph(),
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 #define _mm512_max_round_ph(A, B, R)                                           \
@@ -539,14 +545,14 @@ _mm512_maskz_max_ph(__mmask32 __U, __m512h __A, __m512h __B) {
                                     (__v32hf)(__m512h)(B), (int)(R)))
 
 #define _mm512_mask_max_round_ph(W, U, A, B, R)                                \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_max_round_ph((A), (B), (R)),             \
-      (__v32hf)(__m512h)(W)))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_max_round_ph((A), (B), (R)), (__v32hf)(__m512h)(W),      \
+      __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm512_maskz_max_round_ph(U, A, B, R)                                  \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_max_round_ph((A), (B), (R)),             \
-      (__v32hf)_mm512_setzero_ph()))
+  ((__m512h)__builtin_selectvector(                                            \
+      (__v32hf)_mm512_max_round_ph((A), (B), (R)),                             \
+      (__v32hf)_mm512_setzero_ph(), __builtin_bit_cast(__vecmask32, (U))))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_abs_ph(__m512h __A) {
   return (__m512h)_mm512_and_epi32(_mm512_set1_epi32(0x7FFF7FFF), (__m512i)__A);
@@ -558,15 +564,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_conj_pch(__m512h __A) {
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_conj_pch(__m512h __W, __mmask16 __U, __m512h __A) {
-  return (__m512h)__builtin_ia32_selectps_512(
-      (__mmask16)__U, (__v16sf)_mm512_conj_pch(__A), (__v16sf)__W);
+  return (__m512h)__builtin_selectvector((__v16sf)_mm512_conj_pch(__A),
+                                         (__v16sf)__W,
+                                         __builtin_bit_cast(__vecmask16, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_conj_pch(__mmask16 __U, __m512h __A) {
-  return (__m512h)__builtin_ia32_selectps_512((__mmask16)__U,
-                                              (__v16sf)_mm512_conj_pch(__A),
-                                              (__v16sf)_mm512_setzero_ps());
+  return (__m512h)__builtin_selectvector((__v16sf)_mm512_conj_pch(__A),
+                                         (__v16sf)_mm512_setzero_ps(),
+                                         __builtin_bit_cast(__vecmask16, __U));
 }
 
 static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_add_sh(__m128h __A,
@@ -1372,14 +1379,14 @@ _mm_maskz_scalef_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   ((__m512h)__builtin_ia32_sqrtph512((__v32hf)(__m512h)(A), (int)(R)))
 
 #define _mm512_mask_sqrt_round_ph(W, U, A, R)                                  \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_sqrt_round_ph((A), (R)),                 \
-      (__v32hf)(__m512h)(W)))
+  ((__m512h)__builtin_selectvector((__v32hf)_mm512_sqrt_round_ph((A), (R)),    \
+                                   (__v32hf)(__m512h)(W),                      \
+                                   __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm512_maskz_sqrt_round_ph(U, A, R)                                    \
-  ((__m512h)__builtin_ia32_selectph_512(                                       \
-      (__mmask32)(U), (__v32hf)_mm512_sqrt_round_ph((A), (R)),                 \
-      (__v32hf)_mm512_setzero_ph()))
+  ((__m512h)__builtin_selectvector((__v32hf)_mm512_sqrt_round_ph((A), (R)),    \
+                                   (__v32hf)_mm512_setzero_ph(),               \
+                                   __builtin_bit_cast(__vecmask32, (U))))
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_sqrt_ph(__m512h __A) {
   return (__m512h)__builtin_ia32_sqrtph512((__v32hf)__A,
@@ -1388,18 +1395,16 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_sqrt_ph(__m512h __A) {
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_sqrt_ph(__m512h __W, __mmask32 __U, __m512h __A) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)(__U),
+  return (__m512h)__builtin_selectvector(
       (__v32hf)__builtin_ia32_sqrtph512((__A), (_MM_FROUND_CUR_DIRECTION)),
-      (__v32hf)(__m512h)(__W));
+      (__v32hf)(__m512h)(__W), __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_maskz_sqrt_ph(__mmask32 __U, __m512h __A) {
-  return (__m512h)__builtin_ia32_selectph_512(
-      (__mmask32)(__U),
+  return (__m512h)__builtin_selectvector(
       (__v32hf)__builtin_ia32_sqrtph512((__A), (_MM_FROUND_CUR_DIRECTION)),
-      (__v32hf)_mm512_setzero_ph());
+      (__v32hf)_mm512_setzero_ph(), __builtin_bit_cast(__vecmask32, __U));
 }
 
 #define _mm_sqrt_round_sh(A, B, R)                                             \
@@ -3293,8 +3298,8 @@ _mm512_reduce_min_ph(__m512h __V) {
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_blend_ph(__mmask32 __U, __m512h __A, __m512h __W) {
-  return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U, (__v32hf)__W,
-                                              (__v32hf)__A);
+  return (__m512h)__builtin_selectvector((__v32hf)__W, (__v32hf)__A,
+                                         __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512

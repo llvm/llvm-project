@@ -88,10 +88,10 @@ _mm256_gf2p8mul_epi8(__m256i __A, __m256i __B)
                                                    (__v64qi)(__m512i)(B), \
                                                    (char)(I)))
 
-#define _mm512_mask_gf2p8affineinv_epi64_epi8(S, U, A, B, I) \
-  ((__m512i)__builtin_ia32_selectb_512((__mmask64)(U), \
-         (__v64qi)_mm512_gf2p8affineinv_epi64_epi8(A, B, I), \
-         (__v64qi)(__m512i)(S)))
+#define _mm512_mask_gf2p8affineinv_epi64_epi8(S, U, A, B, I)                   \
+  ((__m512i)__builtin_selectvector(                                            \
+      (__v64qi)_mm512_gf2p8affineinv_epi64_epi8(A, B, I),                      \
+      (__v64qi)(__m512i)(S), __builtin_bit_cast(__vecmask64, (U))))
 
 #define _mm512_maskz_gf2p8affineinv_epi64_epi8(U, A, B, I) \
   _mm512_mask_gf2p8affineinv_epi64_epi8((__m512i)_mm512_setzero_si512(), \
@@ -102,10 +102,10 @@ _mm256_gf2p8mul_epi8(__m256i __A, __m256i __B)
                                                    (__v64qi)(__m512i)(B), \
                                                    (char)(I)))
 
-#define _mm512_mask_gf2p8affine_epi64_epi8(S, U, A, B, I) \
-  ((__m512i)__builtin_ia32_selectb_512((__mmask64)(U), \
-         (__v64qi)_mm512_gf2p8affine_epi64_epi8((A), (B), (I)), \
-         (__v64qi)(__m512i)(S)))
+#define _mm512_mask_gf2p8affine_epi64_epi8(S, U, A, B, I)                      \
+  ((__m512i)__builtin_selectvector(                                            \
+      (__v64qi)_mm512_gf2p8affine_epi64_epi8((A), (B), (I)),                   \
+      (__v64qi)(__m512i)(S), __builtin_bit_cast(__vecmask64, (U))))
 
 #define _mm512_maskz_gf2p8affine_epi64_epi8(U, A, B, I) \
   _mm512_mask_gf2p8affine_epi64_epi8((__m512i)_mm512_setzero_si512(), \
@@ -121,9 +121,9 @@ _mm512_gf2p8mul_epi8(__m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS_Z_MASK
 _mm512_mask_gf2p8mul_epi8(__m512i __S, __mmask64 __U, __m512i __A, __m512i __B)
 {
-  return (__m512i) __builtin_ia32_selectb_512(__U,
-              (__v64qi) _mm512_gf2p8mul_epi8(__A, __B),
-              (__v64qi) __S);
+  return (__m512i)__builtin_selectvector(
+      (__v64qi)_mm512_gf2p8mul_epi8(__A, __B), (__v64qi)__S,
+      __builtin_bit_cast(__vecmask64, __U));
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS_Z_MASK
@@ -135,36 +135,36 @@ _mm512_maskz_gf2p8mul_epi8(__mmask64 __U, __m512i __A, __m512i __B)
 #endif /* __AVX512BWINTRIN_H */
 
 #ifdef __AVX512VLBWINTRIN_H
-#define _mm_mask_gf2p8affineinv_epi64_epi8(S, U, A, B, I) \
-  ((__m128i)__builtin_ia32_selectb_128((__mmask16)(U), \
-         (__v16qi)_mm_gf2p8affineinv_epi64_epi8(A, B, I), \
-         (__v16qi)(__m128i)(S)))
+#define _mm_mask_gf2p8affineinv_epi64_epi8(S, U, A, B, I)                      \
+  ((__m128i)__builtin_selectvector(                                            \
+      (__v16qi)_mm_gf2p8affineinv_epi64_epi8(A, B, I), (__v16qi)(__m128i)(S),  \
+      __builtin_bit_cast(__vecmask16, (U))))
 
 #define _mm_maskz_gf2p8affineinv_epi64_epi8(U, A, B, I) \
   _mm_mask_gf2p8affineinv_epi64_epi8((__m128i)_mm_setzero_si128(), \
          U, A, B, I)
 
-#define _mm256_mask_gf2p8affineinv_epi64_epi8(S, U, A, B, I) \
-  ((__m256i)__builtin_ia32_selectb_256((__mmask32)(U), \
-         (__v32qi)_mm256_gf2p8affineinv_epi64_epi8(A, B, I), \
-         (__v32qi)(__m256i)(S)))
+#define _mm256_mask_gf2p8affineinv_epi64_epi8(S, U, A, B, I)                   \
+  ((__m256i)__builtin_selectvector(                                            \
+      (__v32qi)_mm256_gf2p8affineinv_epi64_epi8(A, B, I),                      \
+      (__v32qi)(__m256i)(S), __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm256_maskz_gf2p8affineinv_epi64_epi8(U, A, B, I) \
   _mm256_mask_gf2p8affineinv_epi64_epi8((__m256i)_mm256_setzero_si256(), \
          U, A, B, I)
 
-#define _mm_mask_gf2p8affine_epi64_epi8(S, U, A, B, I) \
-  ((__m128i)__builtin_ia32_selectb_128((__mmask16)(U), \
-         (__v16qi)_mm_gf2p8affine_epi64_epi8(A, B, I), \
-         (__v16qi)(__m128i)(S)))
+#define _mm_mask_gf2p8affine_epi64_epi8(S, U, A, B, I)                         \
+  ((__m128i)__builtin_selectvector(                                            \
+      (__v16qi)_mm_gf2p8affine_epi64_epi8(A, B, I), (__v16qi)(__m128i)(S),     \
+      __builtin_bit_cast(__vecmask16, (U))))
 
 #define _mm_maskz_gf2p8affine_epi64_epi8(U, A, B, I) \
   _mm_mask_gf2p8affine_epi64_epi8((__m128i)_mm_setzero_si128(), U, A, B, I)
 
-#define _mm256_mask_gf2p8affine_epi64_epi8(S, U, A, B, I) \
-  ((__m256i)__builtin_ia32_selectb_256((__mmask32)(U), \
-         (__v32qi)_mm256_gf2p8affine_epi64_epi8(A, B, I), \
-         (__v32qi)(__m256i)(S)))
+#define _mm256_mask_gf2p8affine_epi64_epi8(S, U, A, B, I)                      \
+  ((__m256i)__builtin_selectvector(                                            \
+      (__v32qi)_mm256_gf2p8affine_epi64_epi8(A, B, I), (__v32qi)(__m256i)(S),  \
+      __builtin_bit_cast(__vecmask32, (U))))
 
 #define _mm256_maskz_gf2p8affine_epi64_epi8(U, A, B, I) \
   _mm256_mask_gf2p8affine_epi64_epi8((__m256i)_mm256_setzero_si256(), \
@@ -173,9 +173,9 @@ _mm512_maskz_gf2p8mul_epi8(__mmask64 __U, __m512i __A, __m512i __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS_VL128
 _mm_mask_gf2p8mul_epi8(__m128i __S, __mmask16 __U, __m128i __A, __m128i __B)
 {
-  return (__m128i) __builtin_ia32_selectb_128(__U,
-              (__v16qi) _mm_gf2p8mul_epi8(__A, __B),
-              (__v16qi) __S);
+  return (__m128i)__builtin_selectvector((__v16qi)_mm_gf2p8mul_epi8(__A, __B),
+                                         (__v16qi)__S,
+                                         __builtin_bit_cast(__vecmask16, __U));
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS_VL128
@@ -188,9 +188,9 @@ _mm_maskz_gf2p8mul_epi8(__mmask16 __U, __m128i __A, __m128i __B)
 static __inline__ __m256i __DEFAULT_FN_ATTRS_VL256
 _mm256_mask_gf2p8mul_epi8(__m256i __S, __mmask32 __U, __m256i __A, __m256i __B)
 {
-  return (__m256i) __builtin_ia32_selectb_256(__U,
-              (__v32qi) _mm256_gf2p8mul_epi8(__A, __B),
-              (__v32qi) __S);
+  return (__m256i)__builtin_selectvector(
+      (__v32qi)_mm256_gf2p8mul_epi8(__A, __B), (__v32qi)__S,
+      __builtin_bit_cast(__vecmask32, __U));
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS_VL256
@@ -208,4 +208,3 @@ _mm256_maskz_gf2p8mul_epi8(__mmask32 __U, __m256i __A, __m256i __B)
 #undef __DEFAULT_FN_ATTRS_VL256
 
 #endif /* __GFNIINTRIN_H */
-
