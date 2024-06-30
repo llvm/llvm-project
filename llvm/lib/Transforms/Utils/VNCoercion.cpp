@@ -370,10 +370,13 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
     // memset(P, 'x', 1234) -> splat('x'), even if x is a variable, and
     // independently of what the offset is.
     Value *Val = MSI->getValue();
+    Value *FrozenVal = Val;
+    if (!isGuaranteedNotToBeUndef(Val))
+      FrozenVal = Builder.CreateFreeze(Val, Val->getName() + ".frozen");
     if (LoadSize != 1)
-      Val =
-          Builder.CreateZExtOrBitCast(Val, IntegerType::get(Ctx, LoadSize * 8));
-    Value *OneElt = Val;
+      Val = Builder.CreateZExtOrBitCast(FrozenVal,
+                                        IntegerType::get(Ctx, LoadSize * 8));
+    Value *OneElt = FrozenVal;
 
     // Splat the value out to the right number of bits.
     for (unsigned NumBytesSet = 1; NumBytesSet != LoadSize;) {
