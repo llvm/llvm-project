@@ -502,7 +502,7 @@ int GetNumCPUsImpl() {
     PrintErrorAndDie("sysconf(_SC_NPROCESSORS_ONLN) failed with error: ",
                      strerror(errno));
   }
-  return (int)num_cpu;
+  return static_cast<int>(num_cpu);
 #elif defined(BENCHMARK_OS_QNX)
   return static_cast<int>(_syspage_ptr->num_cpu);
 #elif defined(BENCHMARK_OS_QURT)
@@ -779,8 +779,8 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
     std::cerr << "failed to read from /dev/kstat\n";
     return -1;
   }
-  kstat_named_t* knp = (kstat_named_t*)kstat_data_lookup(
-      ksp, const_cast<char*>("current_clock_Hz"));
+  kstat_named_t* knp = reinterpret_cast<kstat_named_t*>(kstat_data_lookup(
+      ksp, const_cast<char*>("current_clock_Hz")));
   if (!knp) {
     std::cerr << "failed to lookup data in /dev/kstat\n";
     return -1;
