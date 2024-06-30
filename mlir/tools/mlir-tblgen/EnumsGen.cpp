@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatGen.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -23,18 +25,32 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+using namespace mlir;
+using namespace mlir::tblgen;
+
 using llvm::formatv;
 using llvm::isDigit;
 using llvm::PrintFatalError;
 using llvm::raw_ostream;
 using llvm::Record;
 using llvm::RecordKeeper;
-using llvm::StringRef;
-using mlir::tblgen::Attribute;
-using mlir::tblgen::EnumAttr;
-using mlir::tblgen::EnumAttrCase;
-using mlir::tblgen::FmtContext;
-using mlir::tblgen::tgfmt;
+
+/// Returns true if 'subNamespace' is a sub-namespace of 'parentNamespace'.
+/// I.e. 'subNamespace' is contained within 'parentNamespace'.
+static bool isSubNamespace(ArrayRef<StringRef> subNamespace,
+                           StringRef parentNamespace) {
+  SmallVector<StringRef> parentNamespaces;
+  llvm::SplitString(parentNamespace, parentNamespaces, "::");
+  // If the parent namespace has more components than the sub-namespace it
+  // cannot possibly be a parent namespace.
+  if (parentNamespaces.size() > subNamespace.size())
+    return false;
+
+  // Otherwise, make sure all components of the parent namespace match in the
+  // sub-namespace.
+  return llvm::equal(parentNamespaces,
+                     subNamespace.take_front(parentNamespaces.size()));
+}
 
 static std::string makeIdentifier(StringRef str) {
   if (!str.empty() && isDigit(static_cast<unsigned char>(str.front()))) {
@@ -553,7 +569,8 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
   os << "}\n";
 }
 
-static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
+static void emitEnumDecl(const Record &enumDef, raw_ostream &os,
+                         StringRef namespacePrefix) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
   StringRef cppNamespace = enumAttr.getCppNamespace();
@@ -567,6 +584,9 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
 
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(cppNamespace, namespaces, "::");
+
+  if (!isSubNamespace(namespaces, namespacePrefix))
+    return;
 
   for (auto ns : namespaces)
     os << "namespace " << ns << " {\n";
@@ -642,22 +662,27 @@ public:
   emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
 }
 
-static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os,
+                          StringRef namespacePrefix) {
   llvm::emitSourceFileHeader("Enum Utility Declarations", os, recordKeeper);
 
   auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
   for (const auto *def : defs)
-    emitEnumDecl(*def, os);
+    emitEnumDecl(*def, os, namespacePrefix);
 
   return false;
 }
 
-static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
+static void emitEnumDef(const Record &enumDef, raw_ostream &os,
+                        StringRef namespacePrefix) {
   EnumAttr enumAttr(enumDef);
   StringRef cppNamespace = enumAttr.getCppNamespace();
 
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(cppNamespace, namespaces, "::");
+
+  if (!isSubNamespace(namespaces, namespacePrefix))
+    return;
 
   for (auto ns : namespaces)
     os << "namespace " << ns << " {\n";
@@ -680,26 +705,33 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   os << "\n";
 }
 
-static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os,
+                         StringRef namespacePrefix) {
   llvm::emitSourceFileHeader("Enum Utility Definitions", os, recordKeeper);
 
   auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
   for (const auto *def : defs)
-    emitEnumDef(*def, os);
+    emitEnumDef(*def, os, namespacePrefix);
 
   return false;
 }
+
+static llvm::cl::OptionCategory enumGenCat("Options for -gen-enum-*");
+static llvm::cl::opt<std::string>
+    enumNamespace("enum-namespace",
+                  llvm::cl::desc("Generate enums within this namespace"),
+                  llvm::cl::cat(enumGenCat));
 
 // Registers the enum utility generator to mlir-tblgen.
 static mlir::GenRegistration
     genEnumDecls("gen-enum-decls", "Generate enum utility declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
-                   return emitEnumDecls(records, os);
+                   return emitEnumDecls(records, os, enumNamespace);
                  });
 
 // Registers the enum utility generator to mlir-tblgen.
 static mlir::GenRegistration
     genEnumDefs("gen-enum-defs", "Generate enum utility definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
-                  return emitEnumDefs(records, os);
+                  return emitEnumDefs(records, os, enumNamespace);
                 });
