@@ -6,6 +6,5 @@ float func_01(int x, float y) {
   if (x)
     return y + 2;
   #pragma STDC FENV_ROUND FE_DOWNWARD // expected-error{{'#pragma STDC FENV_ROUND' can only appear at file scope or at the start of a compound statement}}
-                                      // expected-warning@-1{{pragma STDC FENV_ROUND is not supported}}
   return x + y;
 }

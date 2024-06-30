@@ -147,6 +147,9 @@ CodeGenFunction::CGFPOptionsRAII::CGFPOptionsRAII(CodeGenFunction &CGF,
 void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
   OldFPFeatures = CGF.CurFPFeatures;
   CGF.CurFPFeatures = FPFeatures;
+  OldDynamicRM = CGF.DynamicRoundingMode;
+  OldStaticRM = CGF.StaticRoundingMode;
+  OldCurrentRoundingIsStatic = CGF.CurrentRoundingIsStatic;
 
   OldExcept = CGF.Builder.getDefaultConstrainedExcept();
   OldRounding = CGF.Builder.getDefaultConstrainedRounding();
@@ -191,6 +194,9 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
 
 CodeGenFunction::CGFPOptionsRAII::~CGFPOptionsRAII() {
   CGF.CurFPFeatures = OldFPFeatures;
+  CGF.DynamicRoundingMode = OldDynamicRM;
+  CGF.StaticRoundingMode = OldStaticRM;
+  CGF.CurrentRoundingIsStatic = OldCurrentRoundingIsStatic;
   CGF.Builder.setDefaultConstrainedExcept(OldExcept);
   CGF.Builder.setDefaultConstrainedRounding(OldRounding);
 }
