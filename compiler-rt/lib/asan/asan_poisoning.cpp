@@ -576,6 +576,134 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
+// This function moves annotation from one buffer to another.
+// Old buffer is unpoisoned at the end.
+void __sanitizer_move_contiguous_container_annotations(
+    const void *old_storage_beg_p, const void *old_storage_end_p,
+    const void *new_storage_beg_p, const void *new_storage_end_p) {
+  if (!flags()->detect_container_overflow)
+    return;
+
+  VPrintf(2, "contiguous_container_old: %p %p\n", old_storage_beg_p,
+          old_storage_end_p);
+  VPrintf(2, "contiguous_container_new: %p %p\n", new_storage_beg_p,
+          new_storage_end_p);
+
+  uptr old_storage_beg = reinterpret_cast<uptr>(old_storage_beg_p);
+  uptr old_storage_end = reinterpret_cast<uptr>(old_storage_end_p);
+  uptr new_storage_beg = reinterpret_cast<uptr>(new_storage_beg_p);
+  uptr new_storage_end = reinterpret_cast<uptr>(new_storage_end_p);
+
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+
+  if (!(old_storage_beg <= old_storage_end) ||
+      !(new_storage_beg <= new_storage_end) ||
+      (old_storage_end - old_storage_beg) !=
+          (new_storage_end - new_storage_beg)) {
+    GET_STACK_TRACE_FATAL_HERE;
+    ReportBadParamsToMoveContiguousContainerAnnotations(
+        old_storage_beg, old_storage_end, new_storage_beg, new_storage_end,
+        &stack);
+  }
+
+  uptr new_internal_beg = RoundUpTo(new_storage_beg, granularity);
+  uptr old_internal_beg = RoundUpTo(old_storage_beg, granularity);
+  uptr new_external_beg = RoundDownTo(new_storage_beg, granularity);
+  uptr old_external_beg = RoundDownTo(old_storage_beg, granularity);
+  uptr new_internal_end = RoundDownTo(new_storage_end, granularity);
+  uptr old_internal_end = RoundDownTo(old_storage_end, granularity);
+
+  // At the very beginning we poison the whole buffer.
+  // Later we unpoison what is necessary.
+  PoisonShadow(new_internal_beg, new_internal_end - new_internal_beg,
+               kAsanContiguousContainerOOBMagic);
+  if (new_internal_beg != new_storage_beg) {
+    uptr new_unpoisoned = *(u8 *)MemToShadow(new_external_beg);
+    if (new_unpoisoned > (new_storage_beg - new_external_beg)) {
+      *(u8 *)MemToShadow(new_external_beg) =
+          static_cast<u8>(new_storage_beg - new_external_beg);
+    }
+  }
+  if (new_internal_end != new_storage_end) {
+    uptr new_unpoisoned = *(u8 *)MemToShadow(new_internal_end);
+    if (new_unpoisoned <= (new_storage_end - new_internal_end)) {
+      *(u8 *)MemToShadow(new_external_beg) =
+          static_cast<u8>(kAsanContiguousContainerOOBMagic);
+    }
+  }
+
+  // There are two cases.
+  // 1) Distance between buffers is granule-aligned.
+  // 2) It's not aligned, that case is slower.
+  if (old_storage_beg % granularity == new_storage_beg % granularity) {
+    // When buffers are aligned in the same way, we can just copy shadow memory,
+    // except first and last granule.
+    __builtin_memcpy((u8 *)MemToShadow(new_internal_beg),
+                     (u8 *)MemToShadow(old_internal_beg),
+                     (new_internal_end - new_internal_beg) / granularity);
+    // In first granule we cannot poison anything before beginning of the
+    // container.
+    if (new_internal_beg != new_storage_beg) {
+      uptr old_unpoisoned = *(u8 *)MemToShadow(old_external_beg);
+      uptr new_unpoisoned = *(u8 *)MemToShadow(new_external_beg);
+
+      if (old_unpoisoned > old_storage_beg - old_external_beg) {
+        *(u8 *)MemToShadow(new_external_beg) = old_unpoisoned;
+      } else if (new_unpoisoned > new_storage_beg - new_external_beg) {
+        *(u8 *)MemToShadow(new_external_beg) =
+            new_storage_beg - new_external_beg;
+      }
+    }
+    // In last granule we cannot poison anything after the end of the container.
+    if (new_internal_end != new_storage_end) {
+      uptr old_unpoisoned = *(u8 *)MemToShadow(old_internal_end);
+      uptr new_unpoisoned = *(u8 *)MemToShadow(new_internal_end);
+      if (new_unpoisoned <= new_storage_end - new_internal_end &&
+          old_unpoisoned < new_unpoisoned) {
+        *(u8 *)MemToShadow(new_internal_end) = old_unpoisoned;
+      }
+    }
+  } else {
+    // If buffers are not aligned, we have to go byte by byte.
+    uptr old_ptr = old_storage_beg;
+    uptr new_ptr = new_storage_beg;
+    uptr next_new;
+    for (; new_ptr + granularity <= new_storage_end;) {
+      next_new = RoundUpTo(new_ptr + 1, granularity);
+      uptr unpoison_to = 0;
+      for (; new_ptr != next_new; ++new_ptr, ++old_ptr) {
+        if (!AddressIsPoisoned(old_ptr)) {
+          unpoison_to = new_ptr + 1;
+        }
+      }
+      if (unpoison_to != 0) {
+        uptr granule_beg = new_ptr - granularity;
+        uptr value = unpoison_to - granule_beg;
+        *(u8 *)MemToShadow(granule_beg) = static_cast<u8>(value);
+      }
+    }
+    // Only case left is the end of the container in the middle of a granule.
+    // If memory after the end is unpoisoned, we cannot change anything.
+    // But if it's poisoned, we should unpoison as little as possible.
+    if (new_ptr != new_storage_end && AddressIsPoisoned(new_storage_end)) {
+      uptr unpoison_to = 0;
+      for (; new_ptr != new_storage_end; ++new_ptr, ++old_ptr) {
+        if (!AddressIsPoisoned(old_ptr)) {
+          unpoison_to = new_ptr + 1;
+        }
+      }
+      if (unpoison_to != 0) {
+        uptr granule_beg = RoundDownTo(new_storage_end, granularity);
+        uptr value = unpoison_to - granule_beg;
+        *(u8 *)MemToShadow(granule_beg) = static_cast<u8>(value);
+      }
+    }
+  }
+
+  __asan_unpoison_memory_region((void *)old_storage_beg,
+                                old_storage_end - old_storage_beg);
+}
+
 static const void *FindBadAddress(uptr begin, uptr end, bool poisoned) {
   CHECK_LE(begin, end);
   constexpr uptr kMaxRangeToCheck = 32;
