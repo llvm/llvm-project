@@ -164,11 +164,6 @@ static cl::opt<bool> OptComputeFullInlineCost(
     cl::desc("Compute the full inline cost of a call site even when the cost "
              "exceeds the threshold."));
 
-static cl::opt<bool> InlineCallerSupersetNoBuiltin(
-    "inline-caller-superset-nobuiltin", cl::Hidden, cl::init(true),
-    cl::desc("Allow inlining when caller has a superset of callee's nobuiltin "
-             "attributes."));
-
 static cl::opt<bool> DisableGEPConstOperand(
     "disable-gep-const-evaluation", cl::Hidden, cl::init(false),
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
@@ -2890,8 +2885,6 @@ static bool functionsHaveCompatibleAttributes(
   auto CalleeTLI = GetTLI(*Callee);
   return (IgnoreTTIInlineCompatible ||
           TTI.areInlineCompatible(Caller, Callee)) &&
-         GetTLI(*Caller).areInlineCompatible(CalleeTLI,
-                                             InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
 
