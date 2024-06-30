@@ -85,9 +85,7 @@ MCAssembler::MCAssembler(MCContext &Context,
                          std::unique_ptr<MCCodeEmitter> Emitter,
                          std::unique_ptr<MCObjectWriter> Writer)
     : Context(Context), Backend(std::move(Backend)),
-      Emitter(std::move(Emitter)), Writer(std::move(Writer)),
-      BundleAlignSize(0), RelaxAll(false), SubsectionsViaSymbols(false),
-      IncrementalLinkerCompatible(false), ELFHeaderEFlags(0) {
+      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {
   VersionInfo.Major = 0; // Major version == 0 for "none specified"
   DarwinTargetVariantVersionInfo.Major = 0;
 }
@@ -95,6 +93,9 @@ MCAssembler::MCAssembler(MCContext &Context,
 MCAssembler::~MCAssembler() = default;
 
 void MCAssembler::reset() {
+  RelaxAll = false;
+  SubsectionsViaSymbols = false;
+  IncrementalLinkerCompatible = false;
   Sections.clear();
   Symbols.clear();
   IndirectSymbols.clear();
@@ -103,9 +104,6 @@ void MCAssembler::reset() {
   FileNames.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
-  RelaxAll = false;
-  SubsectionsViaSymbols = false;
-  IncrementalLinkerCompatible = false;
   ELFHeaderEFlags = 0;
   LOHContainer.reset();
   VersionInfo.Major = 0;
