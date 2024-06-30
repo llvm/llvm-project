@@ -57,7 +57,22 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
 
 const CXXMethodDecl *findAlternative(const CXXMethodDecl *MatchedOperator) {
   const CXXRecordDecl *Parent = MatchedOperator->getParent();
+  const QualType SubscriptThisObjType =
+      MatchedOperator->getFunctionObjectParameterReferenceType();
+
   for (const CXXMethodDecl *Method : Parent->methods()) {
+    // Require 'Method' to be as accessible as 'MatchedOperator' or more
+    if (MatchedOperator->getAccess() < Method->getAccess())
+      continue;
+
+    if (MatchedOperator->isConst() != Method->isConst())
+      continue;
+
+    const QualType AtThisObjType =
+        Method->getFunctionObjectParameterReferenceType();
+    if (SubscriptThisObjType != AtThisObjType)
+      continue;
+
     const bool CorrectName = Method->getNameInfo().getAsString() == "at";
     if (!CorrectName)
       continue;
