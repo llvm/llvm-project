@@ -627,6 +627,8 @@ Improvements to Clang's diagnostics
   used rather than when they are needed for constant evaluation or when code is generated for them.
   The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
 
+- Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
