@@ -1,0 +1,17 @@
+name: Write Timeout File
+inputs:
+  job-name:
+    required: false
+    type: 'string'
+
+runs:
+  using: "composite"
+  steps:
+      - uses: ./.github/workflows/get-job-id
+        id: job-id
+        with:
+          job-name: ${{ inputs.job-name }}
+
+      - shell: bash
+        run: |
+          echo '{"job_id": "${{ steps.job-id.outputs.job-id }}"}' > timeout

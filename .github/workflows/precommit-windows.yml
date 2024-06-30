@@ -1,0 +1,153 @@
+name: "Windows Precommit Tests"
+
+permissions:
+  contents: read
+  actions: write
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: True
+
+jobs:
+  compute-projects:
+    name: "Compute Projects to Test"
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-22.04
+    outputs:
+      projects: ${{ steps.vars.outputs.projects }}
+      check-targets: ${{ steps.vars.outputs.check-targets }}
+      test-build: ${{ steps.vars.outputs.check-targets != '' }}
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Compute projects to test
+        id: vars
+        uses: ./.github/workflows/compute-projects-to-test
+
+  build-windows:
+    # If this job name is chagned, then we need to update the job-name
+    # paramater for the write-timeout-file step below.
+    name: "Build"
+    runs-on: windows-2022
+    permissions:
+      actions: write #pr-sccache-save may delete artifacts.
+    outputs:
+      build-timeout: ${{ steps.build.outputs.timeout }}
+      build-failed: ${{ steps.build.outputs.failed }}
+    needs:
+      - compute-projects
+    if: ${{ needs.compute-projects.outputs.test-build == 'true' }}
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        with:
+          pattern: timeout-build
+          merge-multiple: true
+
+      - name: Unpack Artifact
+        id: timeout-artifact
+        shell: bash
+        run: |
+          if [ -e llvm-project.tar.zst ]; then
+            tar --zstd -xf llvm-project.tar.zst
+            rm llvm-project.tar.zst
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Windows
+        uses: llvm/actions/setup-windows@main
+        with:
+          arch: amd64
+
+      - name: Fetch LLVM sources
+        if: ${{ steps.timeout-artifact.outputs.exists != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          max-size: 2G
+          variant: sccache
+          key: precommit-windows
+      
+      - name: Restore sccache from previous PR run
+        uses: ./.github/workflows/pr-sccache-restore
+
+      - name: Configure
+        if: ${{ steps.timeout-artifact.outputs.exists != 'true' }}
+        shell: bash
+        run: |
+          cmake -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_PROJECTS="${{ needs.compute-projects.outputs.projects }}" \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DLLVM_LIT_ARGS="-v --no-progress-bar" \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -S llvm
+
+      - name: Write Timeout File
+        uses: ./.github/workflows/write-timeout-file
+        with:
+          job-name: "Build"
+
+      - name: Build
+        shell: bash
+        id: build
+        timeout-minutes: 330
+        run: |
+          touch timeout
+          ninja -C build -k 0 ${{ needs.compute-projects.outputs.check-targets }} && pass=1
+          rm timeout
+          [ $pass ] || false
+
+      - name: Upload Timeout Message
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        id: timeout
+        if: always()
+        with:
+          name: timeout
+          path: timeout
+          retention-days: 2
+
+      - name: Save sccache for next PR run
+        if: always()
+        uses: ./.github/workflows/pr-sccache-save
+
+      - name: Package Build Directory
+        shell: bash
+        if: always() && steps.timeout.outputs.artifact-id != ''
+        run: |
+          # Remove the timeout file, so the next build isn't categorized
+          # as a timeout.
+          rm -f timeout
+          # Dereference symlinks so that this works on Windows.
+          tar -h -c . | zstd -T0 -c > ../llvm-project.tar.zst
+          mv ../llvm-project.tar.zst .
+
+      - name: Upload Build
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always() && steps.timeout.outputs.artifact-id != ''
+        with:
+          name: timeout-build
+          path: llvm-project.tar.zst
+          retention-days: 2

@@ -1,0 +1,18 @@
+name: PR sccache restore
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/workflows/unprivileged-download-artifact
+      id: download-artifact
+      with:
+        run-id: ${{ github.run_id }}
+        artifact-name: sccache-pr${{ github.event.pull_request.number }}
+
+    - shell: bash
+      if: steps.download-artifact.outputs.filename != ''
+      run: |
+        # Is this the best way to clear the cache?
+        rm -Rf .sccache/
+        unzip ${{ steps.download-artifact.outputs.filename }}
+        rm ${{ steps.download-artifact.outputs.filename }}
