@@ -25,7 +25,7 @@
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
       __##name##_impl__ __asm__(#name);                                        \
-  decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
+  decltype(LIBC_NAMESPACE::name) name asm(#name);                              \
   type __##name##_impl__ arglist
 #else
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist) type name arglist
