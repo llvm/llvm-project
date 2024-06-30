@@ -662,18 +662,6 @@ void MachObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 }
 
 bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &A, const MCSymbol &B,
-    bool InSet) const {
-  // FIXME: We don't handle things like
-  // foo = .
-  // creating atoms.
-  if (A.isVariable() || B.isVariable())
-    return false;
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, A, B,
-                                                                InSet);
-}
-
-bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
     bool InSet, bool IsPCRel) const {
   if (InSet)
@@ -716,18 +704,8 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   if (&SecA != &SecB)
     return false;
 
-  const MCFragment *FA = SA.getFragment();
-
-  // Bail if the symbol has no fragment.
-  if (!FA)
-    return false;
-
   // If the atoms are the same, they are guaranteed to have the same address.
-  if (FA->getAtom() == FB.getAtom())
-    return true;
-
-  // Otherwise, we can't prove this is fully resolved.
-  return false;
+  return SA.getFragment()->getAtom() == FB.getAtom();
 }
 
 static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
