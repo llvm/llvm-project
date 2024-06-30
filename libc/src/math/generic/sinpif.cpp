@@ -10,6 +10,7 @@
 #include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
@@ -93,6 +94,9 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   double sin_k, cos_k, sin_y, cosm1_y;
 
   sincospif_eval(xd, sin_k, cos_k, sin_y, cosm1_y);
+
+  if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
+    return fputil::copysign(0.0f, x);
 
   return static_cast<float>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));

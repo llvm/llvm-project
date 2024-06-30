@@ -109,3 +109,18 @@ TEST_F(LlvmLibcSinpifTest, SDCOMP_26094) {
                                    LIBC_NAMESPACE::sinpif(x), 0.5);
   }
 }
+
+// sinpi(-n) = -0.0
+// sinpi(+n) = +0.0
+TEST_F(LlvmLibcSinpifTest, SignedZeros) {
+  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif(-0x99));
+  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif(-0x1p+43));
+  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif(-0x1.4p+64));
+  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif(-0x1.cp+106));
+  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif(-0x1.cp+21));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif(0x99));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif(0x1p+43));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif(0x1.4p+64));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif(0x1.cp+106));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif(0x1.cp+21));
+}
