@@ -12,6 +12,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -87,7 +88,7 @@ private:
 
   bool areTypesIsomorphic(Type *DstTy, Type *SrcTy);
 };
-}
+} // namespace
 
 void TypeMapTy::addTypeMapping(Type *DstTy, Type *SrcTy) {
   assert(SpeculativeTypes.empty());
@@ -399,6 +400,9 @@ class IRLinker {
   /// A metadata map that's shared between IRLinker instances.
   MDMapT &SharedMDs;
 
+  /// A list of libcalls that the current target may call.
+  IRMover::LibcallHandler &Libcalls;
+
   /// Mapping of values from what they used to be in Src, to what they are now
   /// in DstM.  ValueToValueMapTy is a ValueMap, which involves some overhead
   /// due to the use of Value handles which the Linker doesn't actually need,
@@ -408,7 +412,7 @@ class IRLinker {
 
   DenseSet<GlobalValue *> ValuesToLink;
   std::vector<GlobalValue *> Worklist;
-  std::vector<std::pair<GlobalValue *, Value*>> RAUWWorklist;
+  std::vector<std::pair<GlobalValue *, Value *>> RAUWWorklist;
 
   /// Set of globals with eagerly copied metadata that may require remapping.
   /// This remapping is performed after metadata linking.
@@ -540,10 +544,12 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport)
+           IRMover::LibcallHandler &Libcalls, IRMover::LazyCallback AddLazyFor,
+           bool IsPerformingImport)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
         TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
-        SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
+        SharedMDs(SharedMDs), Libcalls(Libcalls),
+        IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
@@ -559,6 +565,13 @@ public:
   Error run();
   Value *materialize(Value *V, bool ForIndirectSymbol);
 };
+} // namespace
+
+static void addNoBuiltinAttributes(Function &F) {
+  F.setAttributes(
+      F.getAttributes().addFnAttribute(F.getContext(), "no-builtins"));
+  F.setAttributes(
+      F.getAttributes().addFnAttribute(F.getContext(), Attribute::NoBuiltin));
 }
 
 /// The LLVM SymbolTable class autorenames globals that conflict in the symbol
@@ -632,8 +645,8 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   }
 
   // If the global is being linked for an indirect symbol, it may have already
-  // been scheduled to satisfy a regular symbol. Similarly, a global being linked
-  // for a regular symbol may have already been scheduled for an indirect
+  // been scheduled to satisfy a regular symbol. Similarly, a global being
+  // linked for a regular symbol may have already been scheduled for an indirect
   // symbol. Check for these cases by looking in the other value map and
   // confirming the same value has been scheduled.  If there is an entry in the
   // ValueMap but the value is different, it means that the value already had a
@@ -755,7 +768,8 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
     NewGV->setLinkage(GlobalValue::ExternalWeakLinkage);
 
   if (auto *NewGO = dyn_cast<GlobalObject>(NewGV)) {
-    // Metadata for global variables and function declarations is copied eagerly.
+    // Metadata for global variables and function declarations is copied
+    // eagerly.
     if (isa<GlobalVariable>(SGV) || SGV->isDeclaration()) {
       NewGO->copyMetadata(cast<GlobalObject>(SGV), 0);
       if (SGV->isDeclaration() && NewGO->hasMetadata())
@@ -922,8 +936,8 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   if (SrcGV->isDeclaration())
     return DstGV;
 
-  Type *EltTy = cast<ArrayType>(TypeMap.get(SrcGV->getValueType()))
-                    ->getElementType();
+  Type *EltTy =
+      cast<ArrayType>(TypeMap.get(SrcGV->getValueType()))->getElementType();
 
   // FIXME: This upgrade is done during linking to support the C API.  Once the
   // old form is deprecated, we should move this upgrade to
@@ -1097,7 +1111,7 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   // assumes it is being invoked on a type in the source module.
   if (DGV && NewGV != SGV) {
     C = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      NewGV, TypeMap.get(SGV->getType()));
+        NewGV, TypeMap.get(SGV->getType()));
   }
 
   if (DGV && NewGV != DGV) {
@@ -1471,7 +1485,6 @@ Error IRLinker::linkModuleFlagsMetadata() {
       break;
     }
     }
-
   }
 
   // For the Min behavior, set the value to 0 if either module does not have the
@@ -1605,13 +1618,28 @@ Error IRLinker::run() {
 
   DstM.setTargetTriple(SrcTriple.merge(DstTriple));
 
+  // Update the target triple's libcall information if it was changed.
+  Libcalls.updateLibcalls(Triple(DstM.getTargetTriple()));
+
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
 
+  bool AddsLibcalls = SrcM->getModuleFlag("llvm-libcalls") &&
+                      !DstM.getModuleFlag("llvm-libcalls");
+  if (AddsLibcalls)
+    Libcalls.HasLibcalls = true;
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
     GlobalValue *GV = Worklist.back();
     Worklist.pop_back();
+
+    // If the module already contains libcall functions we need every function
+    // linked in to have `nobuiltin` attributes. Otherwise check if this is a
+    // libcall definition.
+    if (Function *F = dyn_cast<Function>(GV); F && Libcalls.HasLibcalls)
+      addNoBuiltinAttributes(*F);
+    else
+      AddsLibcalls = Libcalls.checkLibcalls(*GV);
 
     // Already mapped.
     if (ValueMap.find(GV) != ValueMap.end() ||
@@ -1644,20 +1672,20 @@ Error IRLinker::run() {
 
   if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
     // Append the module inline asm string.
-    DstM.appendModuleInlineAsm(adjustInlineAsm(SrcM->getModuleInlineAsm(),
-                                               SrcTriple));
+    DstM.appendModuleInlineAsm(
+        adjustInlineAsm(SrcM->getModuleInlineAsm(), SrcTriple));
   } else if (IsPerformingImport) {
     // Import any symver directives for symbols in DstM.
     ModuleSymbolTable::CollectAsmSymvers(*SrcM,
                                          [&](StringRef Name, StringRef Alias) {
-      if (DstM.getNamedValue(Name)) {
-        SmallString<256> S(".symver ");
-        S += Name;
-        S += ", ";
-        S += Alias;
-        DstM.appendModuleInlineAsm(S);
-      }
-    });
+                                           if (DstM.getNamedValue(Name)) {
+                                             SmallString<256> S(".symver ");
+                                             S += Name;
+                                             S += ", ";
+                                             S += Alias;
+                                             DstM.appendModuleInlineAsm(S);
+                                           }
+                                         });
   }
 
   // Reorder the globals just added to the destination module to match their
@@ -1673,6 +1701,17 @@ Error IRLinker::run() {
         DstM.insertGlobalVariable(NewGV);
       }
     }
+  }
+
+  // If we have imported a recognized libcall function we can no longer make any
+  // reasonable optimizations based off of its semantics. Add the 'nobuiltin'
+  // attribute to every function to suppress libcall detection.
+  if (AddsLibcalls) {
+    Metadata *MD = DstM.getModuleFlag("llvm-libcalls");
+    if (!MD)
+      DstM.addModuleFlag(llvm::Module::Override, "llvm-libcalls", 1);
+    for (Function &F : DstM.functions())
+      addNoBuiltinAttributes(F);
   }
 
   // Merge the module flags into the DstM module.
@@ -1757,6 +1796,29 @@ bool IRMover::IdentifiedStructTypeSet::hasType(StructType *Ty) {
   return I == NonOpaqueStructTypes.end() ? false : *I == Ty;
 }
 
+void IRMover::LibcallHandler::updateLibcalls(const Triple &TheTriple) {
+  if (Triples.count(TheTriple.getTriple()))
+    return;
+  Triples.insert(Saver.save(TheTriple.getTriple()));
+
+  // Collect the names of runtime functions that the target may want to call.
+  TargetLibraryInfoImpl TLII(TheTriple);
+  TargetLibraryInfo TLI(TLII);
+  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
+       ++I) {
+    LibFunc F = static_cast<LibFunc>(I);
+    if (TLI.has(F))
+      Libcalls.insert(TLI.getName(F));
+  }
+}
+
+bool IRMover::LibcallHandler::checkLibcalls(GlobalValue &GV) {
+  if (HasLibcalls)
+    return false;
+  return HasLibcalls = (isa<Function>(&GV) && !GV.isDeclaration() &&
+                        Libcalls.count(GV.getName()));
+}
+
 IRMover::IRMover(Module &M) : Composite(M) {
   TypeFinder StructTypes;
   StructTypes.run(M, /* OnlyNamed */ false);
@@ -1772,14 +1834,25 @@ IRMover::IRMover(Module &M) : Composite(M) {
   for (const auto *MD : StructTypes.getVisitedMetadata()) {
     SharedMDs[MD].reset(const_cast<MDNode *>(MD));
   }
+
+  // Check the composite module for any already present libcalls. If we define
+  // these then it is important to mark any imported functions as 'nobuiltin'.
+  Libcalls.updateLibcalls(Triple(Composite.getTargetTriple()));
+  for (Function &F : Composite.functions())
+    if (Libcalls.checkLibcalls(F))
+      break;
+
+  if (Libcalls.HasLibcalls)
+    for (Function &F : Composite.functions())
+      addNoBuiltinAttributes(F);
 }
 
 Error IRMover::move(std::unique_ptr<Module> Src,
                     ArrayRef<GlobalValue *> ValuesToLink,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
-                       std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       IsPerformingImport);
+                       std::move(Src), ValuesToLink, Libcalls,
+                       std::move(AddLazyFor), IsPerformingImport);
   Error E = TheIRLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
   return E;
