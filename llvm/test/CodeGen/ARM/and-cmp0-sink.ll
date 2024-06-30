@@ -265,49 +265,85 @@ X:
 }
 
 ; Test with a mask that can be encoded both with T32 and A32 instruction sets.
-define i32 @f1(i1 %c0, i32 %v) {
+define i32 @f1(i1 %c0, i32 %v, ptr %p) {
 ; V7M-LABEL: f1:
 ; V7M:       @ %bb.0: @ %E
-; V7M-NEXT:    and r1, r1, #100663296
-; V7M-NEXT:    clz r1, r1
-; V7M-NEXT:    lsrs r1, r1, #5
-; V7M-NEXT:    eors r0, r1
-; V7M-NEXT:    and r0, r0, #1
+; V7M-NEXT:    lsls r0, r0, #31
+; V7M-NEXT:    beq .LBB2_2
+; V7M-NEXT:  @ %bb.1: @ %A
+; V7M-NEXT:    tst.w r1, #100663296
+; V7M-NEXT:    itt eq
+; V7M-NEXT:    moveq r0, #0
+; V7M-NEXT:    bxeq lr
+; V7M-NEXT:    b .LBB2_3
+; V7M-NEXT:  .LBB2_2: @ %B
+; V7M-NEXT:    movs r0, #1
+; V7M-NEXT:    tst.w r1, #100663296
+; V7M-NEXT:    str r0, [r2]
+; V7M-NEXT:    itt ne
+; V7M-NEXT:    movne r0, #0
+; V7M-NEXT:    bxne lr
+; V7M-NEXT:  .LBB2_3: @ %D
+; V7M-NEXT:    movs r0, #1
 ; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: f1:
 ; V7A:       @ %bb.0: @ %E
-; V7A-NEXT:    and r1, r1, #100663296
-; V7A-NEXT:    clz r1, r1
-; V7A-NEXT:    lsr r1, r1, #5
-; V7A-NEXT:    eor r0, r0, r1
-; V7A-NEXT:    and r0, r0, #1
+; V7A-NEXT:    tst r0, #1
+; V7A-NEXT:    beq .LBB2_3
+; V7A-NEXT:  @ %bb.1: @ %A
+; V7A-NEXT:    tst r1, #100663296
+; V7A-NEXT:    moveq r0, #0
+; V7A-NEXT:    bxeq lr
+; V7A-NEXT:  .LBB2_2: @ %D
+; V7A-NEXT:    mov r0, #1
+; V7A-NEXT:    bx lr
+; V7A-NEXT:  .LBB2_3: @ %B
+; V7A-NEXT:    mov r0, #1
+; V7A-NEXT:    tst r1, #100663296
+; V7A-NEXT:    str r0, [r2]
+; V7A-NEXT:    mov r0, #0
+; V7A-NEXT:    moveq r0, #1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: f1:
 ; V7A-T:       @ %bb.0: @ %E
-; V7A-T-NEXT:    and r1, r1, #100663296
-; V7A-T-NEXT:    clz r1, r1
-; V7A-T-NEXT:    lsrs r1, r1, #5
-; V7A-T-NEXT:    eors r0, r1
-; V7A-T-NEXT:    and r0, r0, #1
+; V7A-T-NEXT:    lsls r0, r0, #31
+; V7A-T-NEXT:    beq .LBB2_2
+; V7A-T-NEXT:  @ %bb.1: @ %A
+; V7A-T-NEXT:    tst.w r1, #100663296
+; V7A-T-NEXT:    itt eq
+; V7A-T-NEXT:    moveq r0, #0
+; V7A-T-NEXT:    bxeq lr
+; V7A-T-NEXT:    b .LBB2_3
+; V7A-T-NEXT:  .LBB2_2: @ %B
+; V7A-T-NEXT:    movs r0, #1
+; V7A-T-NEXT:    tst.w r1, #100663296
+; V7A-T-NEXT:    str r0, [r2]
+; V7A-T-NEXT:    itt ne
+; V7A-T-NEXT:    movne r0, #0
+; V7A-T-NEXT:    bxne lr
+; V7A-T-NEXT:  .LBB2_3: @ %D
+; V7A-T-NEXT:    movs r0, #1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: f1:
 ; V6M:       @ %bb.0: @ %E
-; V6M-NEXT:    movs r2, #3
-; V6M-NEXT:    lsls r2, r2, #25
-; V6M-NEXT:    ands r2, r1
+; V6M-NEXT:    movs r3, #3
+; V6M-NEXT:    lsls r3, r3, #25
+; V6M-NEXT:    ands r3, r1
 ; V6M-NEXT:    lsls r0, r0, #31
 ; V6M-NEXT:    beq .LBB2_3
 ; V6M-NEXT:  @ %bb.1: @ %A
-; V6M-NEXT:    cmp r2, #0
+; V6M-NEXT:    cmp r3, #0
 ; V6M-NEXT:    bne .LBB2_5
 ; V6M-NEXT:  @ %bb.2:
 ; V6M-NEXT:    movs r0, #0
 ; V6M-NEXT:    bx lr
 ; V6M-NEXT:  .LBB2_3: @ %B
-; V6M-NEXT:    cmp r2, #0
+; V6M-NEXT:    movs r0, #1
+; V6M-NEXT:    str r0, [r2]
+; V6M-NEXT:    cmp r3, #0
 ; V6M-NEXT:    beq .LBB2_5
 ; V6M-NEXT:  @ %bb.4:
 ; V6M-NEXT:    movs r0, #0
@@ -325,6 +361,7 @@ A:
 
 B:
   %c2 = icmp eq i32 %a, 0
+  store i32 1, ptr %p, align 4
   br i1 %c2, label %D, label %C
 
 C:
