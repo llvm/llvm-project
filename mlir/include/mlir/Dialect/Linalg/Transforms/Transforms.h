@@ -1395,8 +1395,7 @@ struct LinalgGeneralizationPattern
   }
 };
 
-struct LinalgSpecializationPattern
-    : public OpRewritePattern<GenericOp> {
+struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
 
   FailureOr<GenericOp>

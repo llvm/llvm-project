@@ -86,10 +86,11 @@ func.func @op_batch_matmul(%A: tensor<2x16x8xf32>, %B: tensor<2x8x16xf32>, %Out:
 #mapA = affine_map<(m, n, k1, k2) -> (m, k1, k2)>
 #mapB = affine_map<(m, n, k1, k2) -> (k2, k1, n)>
 #mapC = affine_map<(m, n, k1, k2) -> (m, n)>
-func.func @op_multi_reduction(%A: tensor<10x20x30xf32>, %B: tensor<30x20x40xf32>, 
-                              %C: tensor<10x40xf32>) -> tensor<10x40xf32> {
-  %0 = linalg.generic 
-           {indexing_maps = [#mapA, #mapB, #mapC], 
+func.func @negative_op_multi_reduction(%A: tensor<10x20x30xf32>,
+                                       %B: tensor<30x20x40xf32>,
+                                       %C: tensor<10x40xf32>) -> tensor<10x40xf32> {
+  %0 = linalg.generic
+           {indexing_maps = [#mapA, #mapB, #mapC],
             iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
   ins(%A, %B : tensor<10x20x30xf32>, tensor<30x20x40xf32>)
   outs(%C : tensor<10x40xf32>) {
@@ -101,7 +102,7 @@ func.func @op_multi_reduction(%A: tensor<10x20x30xf32>, %B: tensor<30x20x40xf32>
   return %0 : tensor<10x40xf32>
 }
 
-// CHECK-LABEL: op_multi_reduction
+// CHECK-LABEL: negative_op_multi_reduction
 // CHECK: linalg.generic
 
 // -----
