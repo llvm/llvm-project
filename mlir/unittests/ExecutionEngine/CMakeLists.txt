@@ -11,6 +11,7 @@ target_link_libraries(MLIRExecutionEngineTests
   MLIRExecutionEngine
   MLIRMemRefToLLVM
   MLIRReconcileUnrealizedCasts
+  MLIRJitRunner
   ${dialect_libs}
 
 )

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/ExecutionEngine/MemRefUtils.h"
 #include "mlir/ExecutionEngine/RunnerUtils.h"
 #include "mlir/IR/MLIRContext.h"
@@ -293,6 +294,68 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
   count = 1;
   for (float elt : *a)
     ASSERT_EQ(elt, coefficient * count++);
+}
+
+namespace {
+struct TestFile {
+  SmallString<256> filename;
+  std::error_code ec;
+  TestFile(StringRef filename, StringRef contents) : filename{filename} {
+    llvm::raw_fd_ostream outf{filename, ec, llvm::sys::fs::OF_None};
+    if (!ec) {
+      outf << contents;
+    }
+  }
+  ~TestFile() {
+    if (!ec) {
+      llvm::sys::fs::remove(filename);
+    }
+  }
+};
+static int32_t callbackval = 0;
+static void intcallback(int32_t v) { callbackval = v; }
+} // namespace
+
+TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(JitRunnerSymbol)) {
+  std::string moduleStr = R"mlir(
+module {
+  llvm.func @callback(i32) attributes {sym_visibility = "private"}
+  llvm.func @caller_for_callback() attributes {llvm.emit_c_interface} {
+    %0 = llvm.mlir.constant(114514 : i32) : i32
+    llvm.call @callback(%0) : (i32) -> ()
+    llvm.return
+  }
+  llvm.func @_mlir_ciface_caller_for_callback() attributes {llvm.emit_c_interface} {
+    llvm.call @caller_for_callback() : () -> ()
+    llvm.return
+  }
+}
+  )mlir";
+  char path[] = "mlir_executionengine_jitrunnertest.mlir";
+  TestFile testfile{path, moduleStr};
+  ASSERT_TRUE(!testfile.ec);
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerBuiltinDialectTranslation(registry);
+  registerLLVMDialectTranslation(registry);
+  mlir::JitRunnerConfig config;
+  config.runtimesymbolMap = [](llvm::orc::MangleAndInterner interner) {
+    llvm::orc::SymbolMap symbolMap;
+    symbolMap[interner("callback")] = {
+        llvm::orc::ExecutorAddr::fromPtr(intcallback),
+        llvm::JITSymbolFlags::Exported};
+    return symbolMap;
+  };
+
+  char S_toolname[] = "test-runner";
+  char S_e[] = "-e";
+  char S_main[] = "caller_for_callback";
+  char S_entryPoint[] = "-entry-point-result=void";
+  char *argv[] = {S_toolname, path, S_e, S_main, S_entryPoint};
+  int exitcode = mlir::JitRunnerMain(sizeof(argv) / sizeof(argv[0]), argv,
+                                     registry, config);
+  ASSERT_EQ(exitcode, 0);
+  ASSERT_EQ(callbackval, 114514);
 }
 
 #endif // _WIN32

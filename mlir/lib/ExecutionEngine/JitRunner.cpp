@@ -201,6 +201,8 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
     return expectedEngine.takeError();
 
   auto engine = std::move(*expectedEngine);
+  if (config.runtimeSymbolMap)
+    engine->registerSymbols(config.runtimeSymbolMap);
 
   auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
