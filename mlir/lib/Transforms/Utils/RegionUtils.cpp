@@ -896,17 +896,22 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
 /// %cond = llvm.call @rand() : () -> i1
 /// %val0 = llvm.mlir.constant(1 : i64) : i64
 /// %val1 = llvm.mlir.constant(2 : i64) : i64
-/// %val2 = llvm.mlir.constant(2 : i64) : i64
+/// %val2 = llvm.mlir.constant(3 : i64) : i64
 /// llvm.cond_br %cond, ^bb1(%val0 : i64, %val1 : i64), ^bb2(%val0 : i64, %val2
-/// : i64) ^bb1(%arg0 : i64, %arg1 : i64):
+/// : i64)
+///
+/// ^bb1(%arg0 : i64, %arg1 : i64):
 ///    llvm.call @foo(%arg0, %arg1)
 ///
 /// The previous IR can be rewritten as:
 /// %cond = llvm.call @rand() : () -> i1
-/// %val = llvm.mlir.constant(1 : i64) : i64
+/// %val0 = llvm.mlir.constant(1 : i64) : i64
+/// %val1 = llvm.mlir.constant(2 : i64) : i64
+/// %val2 = llvm.mlir.constant(3 : i64) : i64
 /// llvm.cond_br %cond, ^bb1(%val1 : i64), ^bb2(%val2 : i64)
+///
 /// ^bb1(%arg0 : i64):
-///    llvm.call @foo(%val0, %arg1)
+///    llvm.call @foo(%val0, %arg0)
 ///
 static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
                                             MutableArrayRef<Region> regions) {
