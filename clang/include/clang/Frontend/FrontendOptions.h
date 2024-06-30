@@ -411,6 +411,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned EmitPrettySymbolGraphs : 1;
 
+  /// Connect to module build daemon.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModuleBuildDaemon : 1;
+
   /// Whether to generate reduced BMI for C++20 named modules.
   LLVM_PREFERRED_TYPE(bool)
   unsigned GenReducedBMI : 1;
@@ -503,6 +507,10 @@ public:
 
   /// The output file, if any.
   std::string OutputFile;
+
+  /// If given, the path to the module build daemon's output files and socket
+  /// address
+  std::string ModuleBuildDaemonPath;
 
   /// If given, the new suffix for fix-it rewritten files.
   std::string FixItSuffix;
