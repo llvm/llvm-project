@@ -1830,6 +1830,23 @@ private:
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __assign_with_sentinel(_Iterator __first, _Sentinel __last);
 
+  // Copy [__first, __last) into [__dest, __dest + (__last - __first)). Assumes that the range don't overlap.
+  template <class _ForwardIter, class _Sent>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static value_type*
+  __copy_non_overlapping_range(_ForwardIter __first, _Sent __last, value_type* __dest) {
+#ifndef _LIBCPP_CXX03_LANG
+    if constexpr (__libcpp_is_contiguous_iterator<_ForwardIter>::value &&
+                  is_same<value_type, __iter_value_type<_ForwardIter>>::value && is_same<_ForwardIter, _Sent>::value) {
+      traits_type::copy(__dest, std::__to_address(__first), __last - __first);
+      return __dest + (__last - __first);
+    }
+#endif
+
+    for (; __first != __last; ++__first)
+      traits_type::assign(*__dest++, *__first);
+    return __dest;
+  }
+
   template <class _ForwardIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 iterator
   __insert_from_safe_copy(size_type __n, size_type __ip, _ForwardIterator __first, _Sentinel __last) {
@@ -1849,8 +1866,7 @@ private:
     __sz += __n;
     __set_size(__sz);
     traits_type::assign(__p[__sz], value_type());
-    for (__p += __ip; __first != __last; ++__p, ++__first)
-      traits_type::assign(*__p, *__first);
+    __copy_non_overlapping_range(__first, __last, __p + __ip);
 
     return begin() + __ip;
   }
@@ -2361,9 +2377,8 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __fir
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-    for (; __first != __last; ++__first, (void)++__p)
-      traits_type::assign(*__p, *__first);
-    traits_type::assign(*__p, value_type());
+    auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__p));
+    traits_type::assign(*__end, value_type());
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     if (__is_long())
@@ -2829,10 +2844,8 @@ basic_string<_CharT, _Traits, _Allocator>::append(_ForwardIterator __first, _For
       if (__cap - __sz < __n)
         __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
       __annotate_increase(__n);
-      pointer __p = __get_pointer() + __sz;
-      for (; __first != __last; ++__p, (void)++__first)
-        traits_type::assign(*__p, *__first);
-      traits_type::assign(*__p, value_type());
+      auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__get_pointer() + __sz));
+      traits_type::assign(*__end, value_type());
       __set_size(__sz + __n);
     } else {
       const basic_string __temp(__first, __last, __alloc());
