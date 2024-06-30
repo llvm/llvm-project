@@ -12,13 +12,13 @@ fat.out: fat.x86_64h.out fat.x86_64.out
 	lipo -fat64 -create -o $@ $^
 
 fat.x86_64.out: fat.x86_64.o
-	$(CC) -isysroot $(SDKROOT) -target x86_64-apple-macosx10.9 -o $@ $<
+	$(CC) -isysroot $(SDKROOT) -target x86_64-apple-macosx10.9 -o $@ $(call path_wrapper,$<)
 
 fat.x86_64h.out: fat.x86_64h.o
-	$(CC) -isysroot $(SDKROOT) -target x86_64h-apple-macosx10.9 -o $@ $<
+	$(CC) -isysroot $(SDKROOT) -target x86_64h-apple-macosx10.9 -o $@ $(call path_wrapper,$<)
 
 fat.x86_64.o: main.c
-	$(CC) -isysroot $(SDKROOT) -g -O0 -target x86_64-apple-macosx10.9 -c -o $@ $<
+	$(CC) -isysroot $(SDKROOT) -g -O0 -target x86_64-apple-macosx10.9 -c -o $@ $(call path_wrapper,$<)
 
 fat.x86_64h.o: main.c
-	$(CC) -isysroot $(SDKROOT) -g -O0 -target x86_64h-apple-macosx10.9 -c -o $@ $<
+	$(CC) -isysroot $(SDKROOT) -g -O0 -target x86_64h-apple-macosx10.9 -c -o $@ $(call path_wrapper,$<)
