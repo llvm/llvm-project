@@ -679,6 +679,64 @@ static bool ableToUpdatePredOperands(Block *block) {
   return true;
 }
 
+/// Prunes the redundant list of arguments. E.g., if we are passing an argument
+/// list like [x, y, z, x] this would return [x, y, z] and it would update the
+/// `block` (to whom the argument are passed to) accordingly
+static void
+pruneRedundantArguments(SmallVector<SmallVector<Value, 8>, 2> &newArguments,
+                        RewriterBase &rewriter, Block *block) {
+  SmallVector<SmallVector<Value, 8>, 2> newArgumentsPruned(
+      newArguments.size(), SmallVector<Value, 8>());
+
+  if (!newArguments.empty()) {
+    llvm::DenseMap<unsigned, unsigned> toReplace;
+    // Go through the first list of arguments (list 0)
+    for (unsigned j = 0; j < newArguments[0].size(); j++) {
+      bool shouldReplaceJ = false;
+      unsigned replacement = 0;
+      // Look back to see if there are possible redundancies in
+      // list 0
+      for (unsigned k = 0; k < j; k++) {
+        if (newArguments[0][k] == newArguments[0][j]) {
+          shouldReplaceJ = true;
+          replacement = k;
+          // If a possible redundancy is found, then scan the other lists: we
+          // can prune the arguments if and only if they are redundant in every
+          // list
+          for (unsigned i = 1; i < newArguments.size(); i++)
+            shouldReplaceJ =
+                shouldReplaceJ && (newArguments[i][k] == newArguments[i][j]);
+        }
+      }
+      // Save the replacement
+      if (shouldReplaceJ)
+        toReplace[j] = replacement;
+    }
+
+    // Populate the pruned argument list
+    for (unsigned i = 0; i < newArguments.size(); i++)
+      for (unsigned j = 0; j < newArguments[i].size(); j++)
+        if (!toReplace.contains(j))
+          newArgumentsPruned[i].push_back(newArguments[i][j]);
+
+    // Replace the block's redundant arguments
+    SmallVector<unsigned> toErase;
+    for (auto [idx, arg] : llvm::enumerate(block->getArguments())) {
+      if (toReplace.contains(idx)) {
+        Value oldArg = block->getArgument(idx);
+        Value newArg = block->getArgument(toReplace[idx]);
+        rewriter.replaceAllUsesWith(oldArg, newArg);
+        toErase.push_back(idx);
+      }
+    }
+
+    // Erase the block's redundant arguments
+    for (auto idxToErase : llvm::reverse(toErase))
+      block->eraseArgument(idxToErase);
+    newArguments = newArgumentsPruned;
+  }
+}
+
 LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
   // Don't consider clusters that don't have blocks to merge.
   if (blocksToMerge.empty())
@@ -704,8 +762,9 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
       blockIterators.push_back(mergeBlock->begin());
 
     // Update each of the predecessor terminators with the new arguments.
-    SmallVector<SmallVector<Value, 8>, 2> newArguments(1 + blocksToMerge.size(),
-                                                       SmallVector<Value, 8>());
+    SmallVector<SmallVector<Value, 8>, 2> newArguments(
+        1 + blocksToMerge.size(),
+        SmallVector<Value, 8>(operandsToMerge.size()));
     unsigned curOpIndex = 0;
     for (const auto &it : llvm::enumerate(operandsToMerge)) {
       unsigned nextOpOffset = it.value().first - curOpIndex;
@@ -716,25 +775,20 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
         Block::iterator &blockIter = blockIterators[i];
         std::advance(blockIter, nextOpOffset);
         auto &operand = blockIter->getOpOperand(it.value().second);
-        Value operandVal = operand.get();
-        Value *it = std::find(newArguments[i].begin(), newArguments[i].end(),
-                              operandVal);
-        if (it == newArguments[i].end()) {
-          newArguments[i].push_back(operandVal);
-          // Update the operand and insert an argument if this is the leader.
-          if (i == 0) {
-            operand.set(leaderBlock->addArgument(operandVal.getType(),
-                                                 operandVal.getLoc()));
-          }
-        } else if (i == 0) {
-          // If this is the leader, update the operand but do not insert a new
-          // argument. Instead, the opearand should point to one of the
-          // arguments we already passed (and that contained `operandVal`)
-          operand.set(leaderBlock->getArgument(
-              std::distance(newArguments[i].begin(), it)));
+        newArguments[i][it.index()] = operand.get();
+
+        // Update the operand and insert an argument if this is the leader.
+        if (i == 0) {
+          Value operandVal = operand.get();
+          operand.set(leaderBlock->addArgument(operandVal.getType(),
+                                               operandVal.getLoc()));
         }
       }
     }
+
+    // Prune redundant arguments and update the leader block argument list
+    pruneRedundantArguments(newArguments, rewriter, leaderBlock);
+
     // Update the predecessors for each of the blocks.
     auto updatePredecessors = [&](Block *block, unsigned clusterIndex) {
       for (auto predIt = block->pred_begin(), predE = block->pred_end();
@@ -896,17 +950,22 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
 /// %cond = llvm.call @rand() : () -> i1
 /// %val0 = llvm.mlir.constant(1 : i64) : i64
 /// %val1 = llvm.mlir.constant(2 : i64) : i64
-/// %val2 = llvm.mlir.constant(2 : i64) : i64
+/// %val2 = llvm.mlir.constant(3 : i64) : i64
 /// llvm.cond_br %cond, ^bb1(%val0 : i64, %val1 : i64), ^bb2(%val0 : i64, %val2
-/// : i64) ^bb1(%arg0 : i64, %arg1 : i64):
+/// : i64)
+///
+/// ^bb1(%arg0 : i64, %arg1 : i64):
 ///    llvm.call @foo(%arg0, %arg1)
 ///
 /// The previous IR can be rewritten as:
 /// %cond = llvm.call @rand() : () -> i1
-/// %val = llvm.mlir.constant(1 : i64) : i64
+/// %val0 = llvm.mlir.constant(1 : i64) : i64
+/// %val1 = llvm.mlir.constant(2 : i64) : i64
+/// %val2 = llvm.mlir.constant(3 : i64) : i64
 /// llvm.cond_br %cond, ^bb1(%val1 : i64), ^bb2(%val2 : i64)
+///
 /// ^bb1(%arg0 : i64):
-///    llvm.call @foo(%val0, %arg1)
+///    llvm.call @foo(%val0, %arg0)
 ///
 static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
                                             MutableArrayRef<Region> regions) {

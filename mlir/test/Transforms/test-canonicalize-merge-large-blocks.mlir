@@ -74,3 +74,89 @@ llvm.func @large_merge_block(%arg0: i64) {
 ^bb27:  // 2 preds: ^bb13, ^bb26
   llvm.return
 }
+
+llvm.func @redundant_args0(%cond : i1) {
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.mlir.constant(2 : i64) : i64
+  // CHECK  %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK  %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK  %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
+
+  llvm.cond_br %cond, ^bb1, ^bb2
+
+  // CHECK: llvm.cond_br %{{.*}}, ^bb{{.*}}(%[[C0]], %[[C0]] : i64, i64), ^bb{{.*}}(%[[C1]], %[[C2]] : i64, i64)
+  // CHECK: ^bb{{.*}}(%{{.*}}: i64, %{{.*}}: i64)
+^bb1:
+  llvm.call @foo(%0) : (i64) -> ()
+  llvm.call @foo(%0) : (i64) -> ()
+  llvm.br ^bb3
+^bb2:
+  llvm.call @foo(%2) : (i64) -> ()
+  llvm.call @foo(%3) : (i64) -> ()
+  llvm.br ^bb3
+^bb3:
+  llvm.return
+}
+
+llvm.func @redundant_args1(%cond : i1) {
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.mlir.constant(2 : i64) : i64
+  // CHECK  %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK  %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK  %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
+
+  llvm.cond_br %cond, ^bb1, ^bb2
+
+  // CHECK: llvm.cond_br %{{.*}}, ^bb{{.*}}(%[[C1]], %[[C2]] : i64, i64), ^bb{{.*}}(%[[C0]], %[[C0]] : i64, i64)
+  // CHECK: ^bb{{.*}}(%{{.*}}: i64, %{{.*}}: i64)
+^bb1:
+  llvm.call @foo(%2) : (i64) -> ()
+  llvm.call @foo(%3) : (i64) -> ()
+  llvm.br ^bb3
+^bb2:
+  llvm.call @foo(%0) : (i64) -> ()
+  llvm.call @foo(%0) : (i64) -> ()
+  llvm.br ^bb3
+^bb3:
+  llvm.return
+}
+
+llvm.func @redundant_args_complex(%cond : i1) {
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.mlir.constant(2 : i64) : i64
+  %3 = llvm.mlir.constant(3 : i64) : i64
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK: %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
+
+  llvm.cond_br %cond, ^bb1, ^bb2
+
+  // CHECK: llvm.cond_br %{{.*}}, ^bb{{.*}}(%[[C2]], %[[C1]], %[[C3]] : i64, i64, i64), ^bb{{.*}}(%[[C0]], %[[C3]], %[[C2]] : i64, i64, i64)
+  // CHECK: ^bb{{.*}}(%[[arg0:.*]]: i64, %[[arg1:.*]]: i64, %[[arg2:.*]]: i64):
+  // CHECK: llvm.call @foo(%[[arg0]])
+  // CHECK: llvm.call @foo(%[[arg0]])
+  // CHECK: llvm.call @foo(%[[arg1]])
+  // CHECK: llvm.call @foo(%[[C2]])
+  // CHECK: llvm.call @foo(%[[arg2]])
+
+^bb1:
+  llvm.call @foo(%2) : (i64) -> ()
+  llvm.call @foo(%2) : (i64) -> ()
+  llvm.call @foo(%1) : (i64) -> ()
+  llvm.call @foo(%2) : (i64) -> ()
+  llvm.call @foo(%3) : (i64) -> ()
+  llvm.br ^bb3
+^bb2:
+  llvm.call @foo(%0) : (i64) -> ()
+  llvm.call @foo(%0) : (i64) -> ()
+  llvm.call @foo(%3) : (i64) -> ()
+  llvm.call @foo(%2) : (i64) -> ()
+  llvm.call @foo(%2) : (i64) -> ()
+  llvm.br ^bb3
+^bb3:
+  llvm.return
+}
