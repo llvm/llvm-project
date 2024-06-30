@@ -1204,8 +1204,7 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
   if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
     return false;
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
-                                                                InSet, IsPCRel);
+  return &SymA.getSection() == FB.getParent();
 }
 
 void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
