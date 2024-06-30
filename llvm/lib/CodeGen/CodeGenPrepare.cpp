@@ -4337,6 +4337,8 @@ static bool MightBeFoldableInst(Instruction *I) {
   case Instruction::IntToPtr:
     // We know the input is intptr_t, so this is foldable.
     return true;
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(I)->isDisjoint();
   case Instruction::Add:
     return true;
   case Instruction::Mul:
@@ -4849,6 +4851,11 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }
+  case Instruction::Or:
+    // We can handle OR iff it can be treated as an add.
+    if (!cast<PossiblyDisjointInst>(AddrInst)->isDisjoint())
+      break;
+    [[fallthrough]];
   case Instruction::Add: {
     // Check to see if we can merge in one operand, then the other.  If so, we
     // win.
@@ -4889,9 +4896,6 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     TPT.rollback(LastKnownGood);
     break;
   }
-  // case Instruction::Or:
-  //  TODO: We can handle "Or Val, Imm" iff this OR is equivalent to an ADD.
-  // break;
   case Instruction::Mul:
   case Instruction::Shl: {
     // Can only handle X*C and X << C.
