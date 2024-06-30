@@ -33,6 +33,8 @@ public:
                             MachinePostDominatorTree>;
   using Base::Base;
 
+  ~MachineDomTreeUpdater() { flush(); }
+
   ///@{
   /// \name Mutation APIs
   ///

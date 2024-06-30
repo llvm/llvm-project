@@ -226,3 +226,21 @@ define i32 @combine_pmaddubsw_constant_sat() {
   %3 = sext i16 %2 to i32
   ret i32 %3
 }
+
+; Constant folding PMADDWD was causing an infinite loop in the PCMPGT commuting between 2 constant values.
+define i1 @pmaddwd_pcmpgt_infinite_loop() {
+; CHECK-LABEL: pmaddwd_pcmpgt_infinite_loop:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    retq
+  %1 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>, <8 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>)
+  %2 = icmp eq <4 x i32> %1, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %3 = select <4 x i1> %2, <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>, <4 x i32> zeroinitializer
+  %4 = add <4 x i32> %3, <i32 -8, i32 -9, i32 -10, i32 -11>
+  %.not = trunc <4 x i32> %3 to <4 x i1>
+  %5 = icmp sgt <4 x i32> %4, <i32 2147483640, i32 2147483639, i32 2147483638, i32 2147483637>
+  %6 = select <4 x i1> %.not, <4 x i1> %5, <4 x i1> zeroinitializer
+  %7 = bitcast <4 x i1> %6 to i4
+  %8 = icmp eq i4 %7, 0
+  ret i1 %8
+}

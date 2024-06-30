@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 
+#include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <string>
 
@@ -93,6 +94,9 @@ MCSubtargetInfo *createX86MCSubtargetInfo(const Triple &TT, StringRef CPU,
 
 void emitInstruction(MCObjectStreamer &, const MCInst &Inst,
                      const MCSubtargetInfo &STI);
+
+void emitPrefix(MCCodeEmitter &MCE, const MCInst &MI, SmallVectorImpl<char> &CB,
+                const MCSubtargetInfo &STI);
 }
 
 MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
