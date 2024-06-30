@@ -1321,7 +1321,7 @@ DenseMap<Attribute, MemorySlot> TestMultiSlotAlloca::destructure(
   DenseMap<Attribute, MemorySlot> slotMap;
 
   for (Attribute usedIndex : usedIndices) {
-    Type elemType = slot.elementPtrs.lookup(usedIndex);
+    Type elemType = slot.subelementTypes.lookup(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
     auto subAlloca = builder.create<TestMultiSlotAlloca>(getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);
