@@ -341,17 +341,18 @@ private:
   // TotalCount is the total profiled count of call executions, and
   // NumCandidates is the number of candidate entries in ValueDataRef.
   std::vector<PromotionCandidate> getPromotionCandidatesForCallSite(
-      const CallBase &CB, const ArrayRef<InstrProfValueData> &ValueDataRef,
+      const CallBase &CB, ArrayRef<InstrProfValueData> ValueDataRef,
       uint64_t TotalCount, uint32_t NumCandidates);
 
   // Promote a list of targets for one indirect-call callsite by comparing
   // indirect callee with functions. Return true if there are IR
   // transformations and false otherwise.
-  bool tryToPromoteWithFuncCmp(
-      CallBase &CB, Instruction *VPtr,
-      const std::vector<PromotionCandidate> &Candidates, uint64_t TotalCount,
-      ArrayRef<InstrProfValueData> ICallProfDataRef, uint32_t NumCandidates,
-      VTableGUIDCountsMap &VTableGUIDCounts);
+  bool tryToPromoteWithFuncCmp(CallBase &CB, Instruction *VPtr,
+                               ArrayRef<PromotionCandidate> Candidates,
+                               uint64_t TotalCount,
+                               ArrayRef<InstrProfValueData> ICallProfDataRef,
+                               uint32_t NumCandidates,
+                               VTableGUIDCountsMap &VTableGUIDCounts);
 
   // Promote a list of targets for one indirect call by comparing vtables with
   // functions. Return true if there are IR transformations and false
@@ -410,7 +411,7 @@ public:
 // the count. Stop at the first target that is not promoted.
 std::vector<IndirectCallPromoter::PromotionCandidate>
 IndirectCallPromoter::getPromotionCandidatesForCallSite(
-    const CallBase &CB, const ArrayRef<InstrProfValueData> &ValueDataRef,
+    const CallBase &CB, ArrayRef<InstrProfValueData> ValueDataRef,
     uint64_t TotalCount, uint32_t NumCandidates) {
   std::vector<PromotionCandidate> Ret;
 
@@ -629,10 +630,9 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
 
 // Promote indirect-call to conditional direct-call for one callsite.
 bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
-    CallBase &CB, Instruction *VPtr,
-    const std::vector<PromotionCandidate> &Candidates, uint64_t TotalCount,
-    ArrayRef<InstrProfValueData> ICallProfDataRef, uint32_t NumCandidates,
-    VTableGUIDCountsMap &VTableGUIDCounts) {
+    CallBase &CB, Instruction *VPtr, ArrayRef<PromotionCandidate> Candidates,
+    uint64_t TotalCount, ArrayRef<InstrProfValueData> ICallProfDataRef,
+    uint32_t NumCandidates, VTableGUIDCountsMap &VTableGUIDCounts) {
   uint32_t NumPromoted = 0;
 
   for (const auto &C : Candidates) {

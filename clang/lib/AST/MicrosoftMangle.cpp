@@ -159,9 +159,9 @@ public:
                                 const MethodVFTableLocation &ML,
                                 raw_ostream &Out) override;
   void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
-                   raw_ostream &) override;
+                   bool ElideOverrideInfo, raw_ostream &) override;
   void mangleCXXDtorThunk(const CXXDestructorDecl *DD, CXXDtorType Type,
-                          const ThisAdjustment &ThisAdjustment,
+                          const ThunkInfo &Thunk, bool ElideOverrideInfo,
                           raw_ostream &) override;
   void mangleCXXVFTable(const CXXRecordDecl *Derived,
                         ArrayRef<const CXXRecordDecl *> BasePath,
@@ -169,6 +169,8 @@ public:
   void mangleCXXVBTable(const CXXRecordDecl *Derived,
                         ArrayRef<const CXXRecordDecl *> BasePath,
                         raw_ostream &Out) override;
+
+  void mangleCXXVTable(const CXXRecordDecl *, raw_ostream &) override;
   void mangleCXXVirtualDisplacementMap(const CXXRecordDecl *SrcRD,
                                        const CXXRecordDecl *DstRD,
                                        raw_ostream &Out) override;
@@ -3747,6 +3749,7 @@ void MicrosoftMangleContextImpl::mangleVirtualMemPtrThunk(
 
 void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
                                              const ThunkInfo &Thunk,
+                                             bool /*ElideOverrideInfo*/,
                                              raw_ostream &Out) {
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
@@ -3768,9 +3771,11 @@ void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
       DeclForFPT->getType()->castAs<FunctionProtoType>(), MD);
 }
 
-void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
-    const CXXDestructorDecl *DD, CXXDtorType Type,
-    const ThisAdjustment &Adjustment, raw_ostream &Out) {
+void MicrosoftMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
+                                                    CXXDtorType Type,
+                                                    const ThunkInfo &Thunk,
+                                                    bool /*ElideOverrideInfo*/,
+                                                    raw_ostream &Out) {
   // FIXME: Actually, the dtor thunk should be emitted for vector deleting
   // dtors rather than scalar deleting dtors. Just use the vector deleting dtor
   // mangling manually until we support both deleting dtor types.
@@ -3779,6 +3784,7 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
   MicrosoftCXXNameMangler Mangler(*this, MHO, DD, Type);
   Mangler.getStream() << "??_E";
   Mangler.mangleName(DD->getParent());
+  auto &Adjustment = Thunk.This;
   mangleThunkThisAdjustment(DD->getAccess(), Adjustment, Mangler, MHO);
   Mangler.mangleFunctionType(DD->getType()->castAs<FunctionProtoType>(), DD);
 }
@@ -3801,6 +3807,12 @@ void MicrosoftMangleContextImpl::mangleCXXVFTable(
   for (const CXXRecordDecl *RD : BasePath)
     Mangler.mangleName(RD);
   Mangler.getStream() << '@';
+}
+
+void MicrosoftMangleContextImpl::mangleCXXVTable(const CXXRecordDecl *Derived,
+                                                 raw_ostream &Out) {
+  // TODO: Determine appropriate mangling for MSABI
+  mangleCXXVFTable(Derived, {}, Out);
 }
 
 void MicrosoftMangleContextImpl::mangleCXXVBTable(

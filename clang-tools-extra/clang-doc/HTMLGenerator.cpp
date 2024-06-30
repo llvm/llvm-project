@@ -55,7 +55,7 @@ public:
   operator TagType() const { return Value; }
   operator bool() = delete;
 
-  bool IsSelfClosing() const;
+  bool isSelfClosing() const;
   llvm::SmallString<16> ToString() const;
 
 private:
@@ -71,7 +71,7 @@ struct HTMLNode {
   HTMLNode(NodeType Type) : Type(Type) {}
   virtual ~HTMLNode() = default;
 
-  virtual void Render(llvm::raw_ostream &OS, int IndentationLevel) = 0;
+  virtual void render(llvm::raw_ostream &OS, int IndentationLevel) = 0;
   NodeType Type; // Type of node
 };
 
@@ -80,7 +80,7 @@ struct TextNode : public HTMLNode {
       : HTMLNode(NodeType::NODE_TEXT), Text(Text.str()) {}
 
   std::string Text; // Content of node
-  void Render(llvm::raw_ostream &OS, int IndentationLevel) override;
+  void render(llvm::raw_ostream &OS, int IndentationLevel) override;
 };
 
 struct TagNode : public HTMLNode {
@@ -94,17 +94,17 @@ struct TagNode : public HTMLNode {
   std::vector<std::pair<std::string, std::string>>
       Attributes; // List of key-value attributes for tag
 
-  void Render(llvm::raw_ostream &OS, int IndentationLevel) override;
+  void render(llvm::raw_ostream &OS, int IndentationLevel) override;
 };
 
 constexpr const char *kDoctypeDecl = "<!DOCTYPE html>";
 
 struct HTMLFile {
   std::vector<std::unique_ptr<HTMLNode>> Children; // List of child nodes
-  void Render(llvm::raw_ostream &OS) {
+  void render(llvm::raw_ostream &OS) {
     OS << kDoctypeDecl << "\n";
     for (const auto &C : Children) {
-      C->Render(OS, 0);
+      C->render(OS, 0);
       OS << "\n";
     }
   }
@@ -112,7 +112,7 @@ struct HTMLFile {
 
 } // namespace
 
-bool HTMLTag::IsSelfClosing() const {
+bool HTMLTag::isSelfClosing() const {
   switch (Value) {
   case HTMLTag::TAG_META:
   case HTMLTag::TAG_LINK:
@@ -177,12 +177,12 @@ llvm::SmallString<16> HTMLTag::ToString() const {
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
-void TextNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
+void TextNode::render(llvm::raw_ostream &OS, int IndentationLevel) {
   OS.indent(IndentationLevel * 2);
   printHTMLEscaped(Text, OS);
 }
 
-void TagNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
+void TagNode::render(llvm::raw_ostream &OS, int IndentationLevel) {
   // Children nodes are rendered in the same line if all of them are text nodes
   bool InlineChildren = true;
   for (const auto &C : Children)
@@ -194,7 +194,7 @@ void TagNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
   OS << "<" << Tag.ToString();
   for (const auto &A : Attributes)
     OS << " " << A.first << "=\"" << A.second << "\"";
-  if (Tag.IsSelfClosing()) {
+  if (Tag.isSelfClosing()) {
     OS << "/>";
     return;
   }
@@ -205,7 +205,7 @@ void TagNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
   for (const auto &C : Children) {
     int ChildrenIndentation =
         InlineChildren || !NewLineRendered ? 0 : IndentationLevel + 1;
-    C->Render(OS, ChildrenIndentation);
+    C->render(OS, ChildrenIndentation);
     if (!InlineChildren && (C == Children.back() ||
                             (C->Type != NodeType::NODE_TEXT ||
                              (&C + 1)->get()->Type != NodeType::NODE_TEXT))) {
@@ -221,7 +221,7 @@ void TagNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
 
 template <typename Derived, typename Base,
           typename = std::enable_if<std::is_base_of<Derived, Base>::value>>
-static void AppendVector(std::vector<Derived> &&New,
+static void appendVector(std::vector<Derived> &&New,
                          std::vector<Base> &Original) {
   std::move(New.begin(), New.end(), std::back_inserter(Original));
 }
@@ -289,9 +289,18 @@ genStylesheetsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
 static std::vector<std::unique_ptr<TagNode>>
 genJsScriptsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
+
+  // index_json.js is part of every generated HTML file
+  SmallString<128> IndexJSONPath = computeRelativePath("", InfoPath);
+  auto IndexJSONNode = std::make_unique<TagNode>(HTMLTag::TAG_SCRIPT);
+  llvm::sys::path::append(IndexJSONPath, "index_json.js");
+  llvm::sys::path::native(IndexJSONPath, llvm::sys::path::Style::posix);
+  IndexJSONNode->Attributes.emplace_back("src", std::string(IndexJSONPath));
+  Out.emplace_back(std::move(IndexJSONNode));
+
   for (const auto &FilePath : CDCtx.JsScripts) {
-    auto ScriptNode = std::make_unique<TagNode>(HTMLTag::TAG_SCRIPT);
     SmallString<128> ScriptPath = computeRelativePath("", InfoPath);
+    auto ScriptNode = std::make_unique<TagNode>(HTMLTag::TAG_SCRIPT);
     llvm::sys::path::append(ScriptPath, llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(ScriptPath, llvm::sys::path::Style::posix);
@@ -313,8 +322,7 @@ genReference(const Reference &Type, StringRef CurrentDirectory,
   if (Type.Path.empty()) {
     if (!JumpToSection)
       return std::make_unique<TextNode>(Type.Name);
-    else
-      return genLink(Type.Name, "#" + *JumpToSection);
+    return genLink(Type.Name, "#" + *JumpToSection);
   }
   llvm::SmallString<64> Path = Type.getRelativeFilePath(CurrentDirectory);
   llvm::sys::path::append(Path, Type.getFileBaseName() + ".html");
@@ -357,7 +365,7 @@ genEnumsBlock(const std::vector<EnumInfo> &Enums,
   auto &DivBody = Out.back();
   for (const auto &E : Enums) {
     std::vector<std::unique_ptr<TagNode>> Nodes = genHTML(E, CDCtx);
-    AppendVector(std::move(Nodes), DivBody->Children);
+    appendVector(std::move(Nodes), DivBody->Children);
   }
   return Out;
 }
@@ -388,7 +396,7 @@ genFunctionsBlock(const std::vector<FunctionInfo> &Functions,
   for (const auto &F : Functions) {
     std::vector<std::unique_ptr<TagNode>> Nodes =
         genHTML(F, CDCtx, ParentInfoDir);
-    AppendVector(std::move(Nodes), DivBody->Children);
+    appendVector(std::move(Nodes), DivBody->Children);
   }
   return Out;
 }
@@ -478,10 +486,10 @@ genFileHeadNodes(StringRef Title, StringRef InfoPath,
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_TITLE, Title));
   std::vector<std::unique_ptr<TagNode>> StylesheetsNodes =
       genStylesheetsHTML(InfoPath, CDCtx);
-  AppendVector(std::move(StylesheetsNodes), Out);
+  appendVector(std::move(StylesheetsNodes), Out);
   std::vector<std::unique_ptr<TagNode>> JsNodes =
       genJsScriptsHTML(InfoPath, CDCtx);
-  AppendVector(std::move(JsNodes), Out);
+  appendVector(std::move(JsNodes), Out);
   return Out;
 }
 
@@ -513,7 +521,7 @@ static std::unique_ptr<TagNode> genInfoFileMainNode(
   MainContentNode->Attributes.emplace_back("id", "main-content");
   MainContentNode->Attributes.emplace_back(
       "class", "col-xs-12 col-sm-9 col-md-8 main-content");
-  AppendVector(std::move(MainContentInnerNodes), MainContentNode->Children);
+  appendVector(std::move(MainContentInnerNodes), MainContentNode->Children);
 
   auto RightSidebarNode = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
   RightSidebarNode->Attributes.emplace_back("id", "sidebar-right");
@@ -521,7 +529,7 @@ static std::unique_ptr<TagNode> genInfoFileMainNode(
       "class", "col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right");
   std::vector<std::unique_ptr<TagNode>> InfoIndexHTML =
       genHTML(InfoIndex, InfoPath, true);
-  AppendVector(std::move(InfoIndexHTML), RightSidebarNode->Children);
+  appendVector(std::move(InfoIndexHTML), RightSidebarNode->Children);
 
   MainNode->Children.emplace_back(std::move(LeftSidebarNode));
   MainNode->Children.emplace_back(std::move(MainContentNode));
@@ -555,7 +563,7 @@ genInfoFile(StringRef Title, StringRef InfoPath,
       genInfoFileMainNode(InfoPath, MainContentNodes, InfoIndex);
   std::unique_ptr<TagNode> FooterNode = genFileFooterNode();
 
-  AppendVector(std::move(HeadNodes), F.Children);
+  appendVector(std::move(HeadNodes), F.Children);
   F.Children.emplace_back(std::move(HeaderNode));
   F.Children.emplace_back(std::move(MainNode));
   F.Children.emplace_back(std::move(FooterNode));
@@ -594,7 +602,7 @@ genHTML(const Index &Index, StringRef InfoPath, bool IsOutermostList) {
   for (const auto &C : Index.Children) {
     auto LiBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
     std::vector<std::unique_ptr<TagNode>> Nodes = genHTML(C, InfoPath, false);
-    AppendVector(std::move(Nodes), LiBody->Children);
+    appendVector(std::move(Nodes), LiBody->Children);
     UlBody->Children.emplace_back(std::move(LiBody));
   }
   return Out;
@@ -609,7 +617,9 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
         FullComment->Children.emplace_back(std::move(Node));
     }
     return std::move(FullComment);
-  } else if (I.Kind == "ParagraphComment") {
+  }
+ 
+  if (I.Kind == "ParagraphComment") {
     auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
     for (const auto &Child : I.Children) {
       std::unique_ptr<HTMLNode> Node = genHTML(*Child);
@@ -619,7 +629,9 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     if (ParagraphComment->Children.empty())
       return nullptr;
     return std::move(ParagraphComment);
-  } else if (I.Kind == "TextComment") {
+  }
+
+  if (I.Kind == "TextComment") {
     if (I.Text == "")
       return nullptr;
     return std::make_unique<TextNode>(I.Text);
@@ -639,11 +651,7 @@ static std::unique_ptr<TagNode> genHTML(const std::vector<CommentInfo> &C) {
 static std::vector<std::unique_ptr<TagNode>>
 genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
-  std::string EnumType;
-  if (I.Scoped)
-    EnumType = "enum class ";
-  else
-    EnumType = "enum ";
+  std::string EnumType = I.Scoped ? "enum class " : "enum ";
 
   Out.emplace_back(
       std::make_unique<TagNode>(HTMLTag::TAG_H3, EnumType + I.Name));
@@ -737,17 +745,17 @@ genHTML(const NamespaceInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   std::vector<std::unique_ptr<TagNode>> ChildNamespaces =
       genReferencesBlock(I.Children.Namespaces, "Namespaces", BasePath);
-  AppendVector(std::move(ChildNamespaces), Out);
+  appendVector(std::move(ChildNamespaces), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
       genReferencesBlock(I.Children.Records, "Records", BasePath);
-  AppendVector(std::move(ChildRecords), Out);
+  appendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
       genFunctionsBlock(I.Children.Functions, CDCtx, BasePath);
-  AppendVector(std::move(ChildFunctions), Out);
+  appendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
       genEnumsBlock(I.Children.Enums, CDCtx);
-  AppendVector(std::move(ChildEnums), Out);
+  appendVector(std::move(ChildEnums), Out);
 
   if (!I.Children.Namespaces.empty())
     InfoIndex.Children.emplace_back("Namespaces", "Namespaces");
@@ -791,29 +799,29 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
     auto &PBody = Out.back();
     PBody->Children.emplace_back(std::make_unique<TextNode>("Inherits from "));
     if (Parents.empty())
-      AppendVector(std::move(VParents), PBody->Children);
+      appendVector(std::move(VParents), PBody->Children);
     else if (VParents.empty())
-      AppendVector(std::move(Parents), PBody->Children);
+      appendVector(std::move(Parents), PBody->Children);
     else {
-      AppendVector(std::move(Parents), PBody->Children);
+      appendVector(std::move(Parents), PBody->Children);
       PBody->Children.emplace_back(std::make_unique<TextNode>(", "));
-      AppendVector(std::move(VParents), PBody->Children);
+      appendVector(std::move(VParents), PBody->Children);
     }
   }
 
   std::vector<std::unique_ptr<TagNode>> Members =
       genRecordMembersBlock(I.Members, I.Path);
-  AppendVector(std::move(Members), Out);
+  appendVector(std::move(Members), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
       genReferencesBlock(I.Children.Records, "Records", I.Path);
-  AppendVector(std::move(ChildRecords), Out);
+  appendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
       genFunctionsBlock(I.Children.Functions, CDCtx, I.Path);
-  AppendVector(std::move(ChildFunctions), Out);
+  appendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
       genEnumsBlock(I.Children.Enums, CDCtx);
-  AppendVector(std::move(ChildEnums), Out);
+  appendVector(std::move(ChildEnums), Out);
 
   if (!I.Members.empty())
     InfoIndex.Children.emplace_back("Members", "Members");
@@ -936,7 +944,7 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
 
   HTMLFile F = genInfoFile(InfoTitle, I->getRelativeFilePath(""),
                            MainContentNodes, InfoIndex, CDCtx);
-  F.Render(OS);
+  F.render(OS);
 
   return llvm::Error::success();
 }
@@ -959,7 +967,7 @@ static std::string getRefType(InfoType IT) {
   llvm_unreachable("Unknown InfoType");
 }
 
-static llvm::Error SerializeIndex(ClangDocContext &CDCtx) {
+static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   std::error_code OK;
   std::error_code FileErr;
   llvm::SmallString<128> FilePath;
@@ -1009,7 +1017,7 @@ static std::unique_ptr<TagNode> genIndexFileMainNode() {
   return MainNode;
 }
 
-static llvm::Error GenIndex(const ClangDocContext &CDCtx) {
+static llvm::Error genIndex(const ClangDocContext &CDCtx) {
   std::error_code FileErr, OK;
   llvm::SmallString<128> IndexPath;
   llvm::sys::path::native(CDCtx.OutDirectory, IndexPath);
@@ -1029,17 +1037,17 @@ static llvm::Error GenIndex(const ClangDocContext &CDCtx) {
   std::unique_ptr<TagNode> MainNode = genIndexFileMainNode();
   std::unique_ptr<TagNode> FooterNode = genFileFooterNode();
 
-  AppendVector(std::move(HeadNodes), F.Children);
+  appendVector(std::move(HeadNodes), F.Children);
   F.Children.emplace_back(std::move(HeaderNode));
   F.Children.emplace_back(std::move(MainNode));
   F.Children.emplace_back(std::move(FooterNode));
 
-  F.Render(IndexOS);
+  F.render(IndexOS);
 
   return llvm::Error::success();
 }
 
-static llvm::Error CopyFile(StringRef FilePath, StringRef OutDirectory) {
+static llvm::Error copyFile(StringRef FilePath, StringRef OutDirectory) {
   llvm::SmallString<128> PathWrite;
   llvm::sys::path::native(OutDirectory, PathWrite);
   llvm::sys::path::append(PathWrite, llvm::sys::path::filename(FilePath));
@@ -1057,20 +1065,20 @@ static llvm::Error CopyFile(StringRef FilePath, StringRef OutDirectory) {
 }
 
 llvm::Error HTMLGenerator::createResources(ClangDocContext &CDCtx) {
-  auto Err = SerializeIndex(CDCtx);
+  auto Err = serializeIndex(CDCtx);
   if (Err)
     return Err;
-  Err = GenIndex(CDCtx);
+  Err = genIndex(CDCtx);
   if (Err)
     return Err;
 
   for (const auto &FilePath : CDCtx.UserStylesheets) {
-    Err = CopyFile(FilePath, CDCtx.OutDirectory);
+    Err = copyFile(FilePath, CDCtx.OutDirectory);
     if (Err)
       return Err;
   }
-  for (const auto &FilePath : CDCtx.FilesToCopy) {
-    Err = CopyFile(FilePath, CDCtx.OutDirectory);
+  for (const auto &FilePath : CDCtx.JsScripts) {
+    Err = copyFile(FilePath, CDCtx.OutDirectory);
     if (Err)
       return Err;
   }

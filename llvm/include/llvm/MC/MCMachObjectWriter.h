@@ -255,11 +255,6 @@ public:
                                 const MCAsmLayout &Layout) override;
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &A,
-                                              const MCSymbol &B,
-                                              bool InSet) const override;
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;

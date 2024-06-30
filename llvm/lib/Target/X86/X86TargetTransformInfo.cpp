@@ -176,6 +176,27 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
+bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
+  if (!ST->hasCF())
+    return false;
+  if (!Ty)
+    return true;
+  // Conditional faulting is supported by CFCMOV, which only accepts
+  // 16/32/64-bit operands.
+  // TODO: Support f32/f64 with VMOVSS/VMOVSD with zero mask when it's
+  // profitable.
+  if (!Ty->isIntegerTy())
+    return false;
+  switch (cast<IntegerType>(Ty)->getBitWidth()) {
+  default:
+    return false;
+  case 16:
+  case 32:
+  case 64:
+    return true;
+  }
+}
+
 TypeSize
 X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   unsigned PreferVectorWidth = ST->getPreferVectorWidth();
@@ -5070,7 +5091,12 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcVTy);
   auto VT = TLI->getValueType(DL, SrcVTy);
   InstructionCost Cost = 0;
-  if (VT.isSimple() && LT.second != VT.getSimpleVT() &&
+  MVT Ty = LT.second;
+  if (Ty == MVT::i16 || Ty == MVT::i32 || Ty == MVT::i64)
+    // APX masked load/store for scalar is cheap.
+    return Cost + LT.first;
+
+  if (VT.isSimple() && Ty != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires extend/truncate for data and a shuffle for mask.
     Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, std::nullopt,
@@ -5078,9 +5104,9 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
             getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, std::nullopt,
                            CostKind, 0, nullptr);
 
-  else if (LT.first * LT.second.getVectorNumElements() > NumElem) {
+  else if (LT.first * Ty.getVectorNumElements() > NumElem) {
     auto *NewMaskTy = FixedVectorType::get(MaskTy->getElementType(),
-                                           LT.second.getVectorNumElements());
+                                           Ty.getVectorNumElements());
     // Expanding requires fill mask with zeroes
     Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, std::nullopt,
                            CostKind, 0, MaskTy);
@@ -5899,14 +5925,14 @@ bool X86TTIImpl::canMacroFuseCmp() {
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+  Type *ScalarTy = DataTy->getScalarType();
+
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) && cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() && hasConditionalLoadStoreForType(ScalarTy);
+
   if (!ST->hasAVX())
     return false;
-
-  // The backend can't handle a single element vector.
-  if (isa<VectorType>(DataTy) &&
-      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
-    return false;
-  Type *ScalarTy = DataTy->getScalarType();
 
   if (ScalarTy->isPointerTy())
     return true;

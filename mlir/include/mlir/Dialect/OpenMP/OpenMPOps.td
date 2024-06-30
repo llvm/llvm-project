@@ -250,6 +250,7 @@ def TeamsOp : OpenMP_Op<"teams", [
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars,
                        Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
                        OptionalAttr<SymbolRefArrayAttr>:$reductions);
 
   let regions = (region AnyRegion:$region);
@@ -266,8 +267,8 @@ def TeamsOp : OpenMP_Op<"teams", [
     | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
     | `reduction` `(`
         custom<ReductionVarList>(
-          $reduction_vars, type($reduction_vars), $reductions
-        ) `)`
+          $reduction_vars, type($reduction_vars), $reduction_vars_byref,
+          $reductions ) `)`
     | `allocate` `(`
         custom<AllocateAndAllocator>(
           $allocate_vars, type($allocate_vars),
@@ -310,7 +311,9 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
     by the accumulator it uses and accumulators must not be repeated in the same
     reduction. The reduction declaration specifies how to combine the values
     from each section into the final value, which is available in the
-    accumulator after all the sections complete.
+    accumulator after all the sections complete. True values in
+    reduction_vars_byref indicate that the reduction variable should be passed
+    by reference.
 
     The $allocators_vars and $allocate_vars parameters are a variadic list of values
     that specify the memory allocator to be used to obtain storage for private values.
@@ -319,6 +322,7 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
     implicit barrier at the end of the construct.
   }];
   let arguments = (ins Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
                        OptionalAttr<SymbolRefArrayAttr>:$reductions,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars,
@@ -333,7 +337,8 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
   let assemblyFormat = [{
     oilist( `reduction` `(`
               custom<ReductionVarList>(
-                $reduction_vars, type($reduction_vars), $reductions
+                $reduction_vars, type($reduction_vars), $reduction_vars_byref,
+                $reductions
               ) `)`
           | `allocate` `(`
               custom<AllocateAndAllocator>(
@@ -793,6 +798,8 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
 
     The `in_reduction` clause specifies that this particular task (among all the
     tasks in current taskgroup, if any) participates in a reduction.
+    `in_reduction_vars_byref` indicates whether each reduction variable should
+    be passed by value or by reference.
 
     The `priority` clause is a hint for the priority of the generated task.
     The `priority` is a non-negative integer expression that provides a hint for
@@ -818,6 +825,7 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        UnitAttr:$untied,
                        UnitAttr:$mergeable,
                        Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
+                       OptionalAttr<DenseBoolArrayAttr>:$in_reduction_vars_byref,
                        OptionalAttr<SymbolRefArrayAttr>:$in_reductions,
                        Optional<I32>:$priority,
                        OptionalAttr<TaskDependArrayAttr>:$depends,
@@ -835,7 +843,8 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
           |`mergeable` $mergeable
           |`in_reduction` `(`
               custom<ReductionVarList>(
-                $in_reduction_vars, type($in_reduction_vars), $in_reductions
+                $in_reduction_vars, type($in_reduction_vars),
+                $in_reduction_vars_byref, $in_reductions
               ) `)`
           |`priority` `(` $priority `)`
           |`allocate` `(`
@@ -962,8 +971,10 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
                        UnitAttr:$untied,
                        UnitAttr:$mergeable,
                        Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
+                       OptionalAttr<DenseBoolArrayAttr>:$in_reduction_vars_byref,
                        OptionalAttr<SymbolRefArrayAttr>:$in_reductions,
                        Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
                        OptionalAttr<SymbolRefArrayAttr>:$reductions,
                        Optional<IntLikeType>:$priority,
                        Variadic<AnyType>:$allocate_vars,
@@ -985,11 +996,13 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
           |`mergeable` $mergeable
           |`in_reduction` `(`
               custom<ReductionVarList>(
-                $in_reduction_vars, type($in_reduction_vars), $in_reductions
+                $in_reduction_vars, type($in_reduction_vars),
+                $in_reduction_vars_byref, $in_reductions
               ) `)`
           |`reduction` `(`
               custom<ReductionVarList>(
-                $reduction_vars, type($reduction_vars), $reductions
+                $reduction_vars, type($reduction_vars), $reduction_vars_byref,
+                $reductions
               ) `)`
           |`priority` `(` $priority `:` type($priority) `)`
           |`allocate` `(`
@@ -1040,6 +1053,7 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
   }];
 
   let arguments = (ins Variadic<OpenMP_PointerLikeType>:$task_reduction_vars,
+                       OptionalAttr<DenseBoolArrayAttr>:$task_reduction_vars_byref,
                        OptionalAttr<SymbolRefArrayAttr>:$task_reductions,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars);
@@ -1053,7 +1067,8 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
   let assemblyFormat = [{
     oilist(`task_reduction` `(`
               custom<ReductionVarList>(
-                $task_reduction_vars, type($task_reduction_vars), $task_reductions
+                $task_reduction_vars, type($task_reduction_vars),
+                $task_reduction_vars_byref, $task_reductions
               ) `)`
           |`allocate` `(`
               custom<AllocateAndAllocator>(

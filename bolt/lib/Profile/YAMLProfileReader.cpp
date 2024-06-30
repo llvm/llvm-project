@@ -22,11 +22,17 @@ namespace opts {
 extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
+extern cl::opt<bool> Lite;
 
 static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
+
+llvm::cl::opt<bool>
+    MatchProfileWithFunctionHash("match-profile-with-function-hash",
+                                 cl::desc("Match profile with function hash"),
+                                 cl::Hidden, cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
@@ -329,6 +335,8 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
+  if (opts::MatchProfileWithFunctionHash)
+    return true;
   for (StringRef Name : BF.getNames())
     if (ProfileFunctionNames.contains(Name))
       return true;
@@ -363,9 +371,24 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     return Profile.Hash == static_cast<uint64_t>(BF.getHash());
   };
 
-  // We have to do 2 passes since LTO introduces an ambiguity in function
-  // names. The first pass assigns profiles that match 100% by name and
-  // by hash. The second pass allows name ambiguity for LTO private functions.
+  uint64_t MatchedWithExactName = 0;
+  uint64_t MatchedWithHash = 0;
+  uint64_t MatchedWithLTOCommonName = 0;
+
+  // Computes hash for binary functions.
+  if (opts::MatchProfileWithFunctionHash) {
+    for (auto &[_, BF] : BC.getBinaryFunctions()) {
+      BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
+    }
+  } else if (!opts::IgnoreHash) {
+    for (BinaryFunction *BF : ProfileBFs) {
+      if (!BF)
+        continue;
+      BF->computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
+    }
+  }
+
+  // This first pass assigns profiles that match 100% by name and by hash.
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
     if (!BF)
       continue;
@@ -374,15 +397,35 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     // the profile.
     Function.setExecutionCount(BinaryFunction::COUNT_NO_PROFILE);
 
-    // Recompute hash once per function.
-    if (!opts::IgnoreHash)
-      Function.computeHash(YamlBP.Header.IsDFSOrder,
-                           YamlBP.Header.HashFunction);
-
-    if (profileMatches(YamlBF, Function))
+    if (profileMatches(YamlBF, Function)) {
       matchProfileToFunction(YamlBF, Function);
+      ++MatchedWithExactName;
+    }
   }
 
+  // Iterates through profiled functions to match the first binary function with
+  // the same exact hash. Serves to match identical, renamed functions.
+  // Collisions are possible where multiple functions share the same exact hash.
+  if (opts::MatchProfileWithFunctionHash) {
+    DenseMap<size_t, BinaryFunction *> StrictHashToBF;
+    StrictHashToBF.reserve(BC.getBinaryFunctions().size());
+
+    for (auto &[_, BF] : BC.getBinaryFunctions())
+      StrictHashToBF[BF.getHash()] = &BF;
+
+    for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
+      if (YamlBF.Used)
+        continue;
+      auto It = StrictHashToBF.find(YamlBF.Hash);
+      if (It != StrictHashToBF.end() && !ProfiledFunctions.count(It->second)) {
+        BinaryFunction *BF = It->second;
+        matchProfileToFunction(YamlBF, *BF);
+        ++MatchedWithHash;
+      }
+    }
+  }
+
+  // This second pass allows name ambiguity for LTO private functions.
   for (const auto &[CommonName, LTOProfiles] : LTOCommonNameMap) {
     if (!LTOCommonNameFunctionMap.contains(CommonName))
       continue;
@@ -396,6 +439,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       for (BinaryFunction *BF : Functions) {
         if (!ProfiledFunctions.count(BF) && profileMatches(*YamlBF, *BF)) {
           matchProfileToFunction(*YamlBF, *BF);
+          ++MatchedWithLTOCommonName;
           return true;
         }
       }
@@ -407,8 +451,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     // partially.
     if (!ProfileMatched && LTOProfiles.size() == 1 && Functions.size() == 1 &&
         !LTOProfiles.front()->Used &&
-        !ProfiledFunctions.count(*Functions.begin()))
+        !ProfiledFunctions.count(*Functions.begin())) {
       matchProfileToFunction(*LTOProfiles.front(), **Functions.begin());
+      ++MatchedWithLTOCommonName;
+    }
   }
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
@@ -419,6 +465,15 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
+
+  if (opts::Verbosity >= 1) {
+    outs() << "BOLT-INFO: matched " << MatchedWithExactName
+           << " functions with identical names\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithHash
+           << " functions with hash\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithLTOCommonName
+           << " functions with matching LTO common names\n";
+  }
 
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
@@ -438,6 +493,12 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   }
 
   BC.setNumUnusedProfiledObjects(NumUnused);
+
+  if (opts::Lite && opts::MatchProfileWithFunctionHash) {
+    for (BinaryFunction *BF : BC.getAllBinaryFunctions())
+      if (!BF->hasProfile())
+        BF->setIgnored();
+  }
 
   return Error::success();
 }
