@@ -17,18 +17,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 
-// Take an expression returning llvm::Error and forward the error if it exists.
-#define RETURN_IF_ERROR(Expr)                                                  \
-  if (auto Err = (Expr))                                                       \
-    return std::move(Err);
-
-// Take an expression returning llvm::Expected<T> and assign it to Var or
-// forward the error out of the function.
-#define ASSIGN_OR_RETURN(Var, Expr)                                            \
-  auto Var = (Expr);                                                           \
-  if (!Var)                                                                    \
-    return Var.takeError();
-
 namespace llvm {
 namespace rc {
 
