@@ -198,18 +198,6 @@ public:
   iterator end() const { return {}; }
   bool empty() const { return !CurFragList->Head; }
 
-  void addFragment(MCFragment &F) {
-    // The formal layout order will be finalized in MCAssembler::layout.
-    if (CurFragList->Tail) {
-      CurFragList->Tail->Next = &F;
-      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
-    } else {
-      CurFragList->Head = &F;
-      assert(F.getLayoutOrder() == 0);
-    }
-    CurFragList->Tail = &F;
-  }
-
   void dump() const;
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
