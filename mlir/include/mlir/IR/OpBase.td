@@ -133,7 +133,7 @@ class SingleBlockImplicitTerminator<string op>
 // Op's regions don't have terminator.
 def NoTerminator : NativeOpTrait<"NoTerminator">, StructuralOpTrait;
 
-// Op's parent operation is the provided one.
+// Op's parent operation or op interface is the provided one.
 class HasParent<string op>
     : ParamNativeOpTrait<"HasParent", op>, StructuralOpTrait;
 
