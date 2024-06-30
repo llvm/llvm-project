@@ -18,6 +18,18 @@
 # RUN: ls %/t/.cache/clangd/index/foo.cpp.*.idx
 # RUN: ls %/t/sub_dir/.cache/clangd/index/foo.h.*.idx
 
+# Test that the index directories also have a .gitignore file present.
+# RUN: ls %/t/.cache/clangd/index/.gitignore
+# RUN: ls %/t/sub_dir/.cache/clangd/index/.gitignore
+
+# Delete .gitignore files to test that they're not recreated when loading an existing index directory.
+# RUN: rm %/t/.cache/clangd/index/.gitignore
+# RUN: rm %/t/sub_dir/.cache/clangd/index/.gitignore
+
 # Test the index is read from disk: delete code and restart clangd.
 # RUN: rm %/t/foo.cpp
 # RUN: clangd -background-index -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc --check-prefixes=CHECK,USE
+
+# Test that the existing index directories do not have recreated .gitignore files.
+# RUN: test ! -e %/t/.cache/clangd/index/.gitignore
+# RUN: test ! -e %/t/sub_dir/.cache/clangd/index/.gitignore
