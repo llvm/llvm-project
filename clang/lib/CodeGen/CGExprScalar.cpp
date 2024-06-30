@@ -1441,7 +1441,10 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
     return Builder.CreateFPToUI(Src, DstTy, "conv");
   }
 
-  if (DstElementTy->getTypeID() < SrcElementTy->getTypeID())
+  if ((DstElementTy->is16bitFPTy() && SrcElementTy->is16bitFPTy())) {
+    Value *FloatVal = Builder.CreateFPExt(Src, Builder.getFloatTy(), "fpext");
+    return Builder.CreateFPTrunc(FloatVal, DstTy, "fptrunc");
+  } else if (DstElementTy->getTypeID() < SrcElementTy->getTypeID())
     return Builder.CreateFPTrunc(Src, DstTy, "conv");
   return Builder.CreateFPExt(Src, DstTy, "conv");
 }
@@ -1922,7 +1925,15 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   } else {
     assert(SrcEltTy->isFloatingPointTy() && DstEltTy->isFloatingPointTy() &&
            "Unknown real conversion");
-    if (DstEltTy->getTypeID() < SrcEltTy->getTypeID())
+    if ((DstEltTy->is16bitFPTy() && SrcEltTy->is16bitFPTy())) {
+      auto *ScrVecTy = cast<llvm::VectorType>(SrcTy);
+      Value *FloatVal = Builder.CreateFPExt(
+          Src,
+          llvm::VectorType::get(Builder.getFloatTy(),
+                                ScrVecTy->getElementCount()),
+          "fpext");
+      Res = Builder.CreateFPTrunc(FloatVal, DstTy, "fptrunc");
+    } else if (DstEltTy->getTypeID() < SrcEltTy->getTypeID())
       Res = Builder.CreateFPTrunc(Src, DstTy, "conv");
     else
       Res = Builder.CreateFPExt(Src, DstTy, "conv");
