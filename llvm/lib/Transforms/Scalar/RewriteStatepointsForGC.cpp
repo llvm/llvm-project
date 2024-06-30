@@ -1422,12 +1422,12 @@ static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
 // starting one of the successor blocks.  We also need to be able to insert the
 // gc.relocates only on the path which goes through the statepoint.  We might
 // need to split an edge to make this possible.
-static BasicBlock *
-normalizeForInvokeSafepoint(BasicBlock *BB, BasicBlock *InvokeParent,
-                            DominatorTree &DT) {
+static BasicBlock *normalizeForInvokeSafepoint(BasicBlock *BB,
+                                               BasicBlock *InvokeParent,
+                                               DomTreeUpdater &DTU) {
   BasicBlock *Ret = BB;
   if (!BB->getUniquePredecessor())
-    Ret = SplitBlockPredecessors(BB, InvokeParent, "", &DT);
+    Ret = SplitBlockPredecessors(BB, InvokeParent, "", &DTU);
 
   // Now that 'Ret' has unique predecessor we can safely remove all phi nodes
   // from it
@@ -2665,12 +2665,13 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // the top of the successor blocks.  See the comment on
   // normalForInvokeSafepoint on exactly what is needed.  Note that this step
   // may restructure the CFG.
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   for (CallBase *Call : ToUpdate) {
     auto *II = dyn_cast<InvokeInst>(Call);
     if (!II)
       continue;
-    normalizeForInvokeSafepoint(II->getNormalDest(), II->getParent(), DT);
-    normalizeForInvokeSafepoint(II->getUnwindDest(), II->getParent(), DT);
+    normalizeForInvokeSafepoint(II->getNormalDest(), II->getParent(), DTU);
+    normalizeForInvokeSafepoint(II->getUnwindDest(), II->getParent(), DTU);
   }
 
   // A list of dummy calls added to the IR to keep various values obviously
