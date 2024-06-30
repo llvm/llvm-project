@@ -437,7 +437,7 @@ public:
   MPFRNumber sinpi() const {
     MPFRNumber result(*this);
 
-#if MPFR_VERSION_MAJOR > 4 ||                                                 \
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
 
     mpfr_sinpi(result.value, value, mpfr_rounding);
