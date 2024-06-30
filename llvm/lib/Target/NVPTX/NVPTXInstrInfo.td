@@ -1946,7 +1946,7 @@ def : Pat<(i16 (sext_inreg (trunc (srl (i64 Int64Regs:$s),  (i32 imm:$o))), i8))
 // FIXME: This doesn't cover versions of set and setp that combine with a
 // boolean predicate, e.g. setp.eq.and.b16.
 
-let hasSideEffects = false in {
+let hasSideEffects = false, isCompare = true in {
   multiclass SETP<string TypeStr, RegisterClass RC, Operand ImmCls> {
     def rr :
       NVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, RC:$b, CmpMode:$cmp),
@@ -2088,7 +2088,7 @@ let hasSideEffects = false in {
 
 
 // copyPhysreg is hard-coded in NVPTXInstrInfo.cpp
-let IsSimpleMove=1, hasSideEffects=0 in {
+let IsSimpleMove = true, hasSideEffects = false, isAsCheapAsAMove = true in {
   def IMOV1rr :  NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$sss),
                            "mov.pred \t$dst, $sss;", []>;
   def IMOV16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$sss),
@@ -2112,34 +2112,34 @@ let IsSimpleMove=1, hasSideEffects=0 in {
                            "mov.f32 \t$dst, $src;", []>;
   def FMOV64rr : NVPTXInst<(outs Float64Regs:$dst), (ins Float64Regs:$src),
                            "mov.f64 \t$dst, $src;", []>;
+
+  def IMOV1ri : NVPTXInst<(outs Int1Regs:$dst), (ins i1imm:$src),
+                          "mov.pred \t$dst, $src;",
+                          [(set Int1Regs:$dst, imm:$src)]>;
+  def IMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
+                           "mov.u16 \t$dst, $src;",
+                           [(set Int16Regs:$dst, imm:$src)]>;
+  def IMOV32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
+                           "mov.u32 \t$dst, $src;",
+                           [(set (i32 Int32Regs:$dst), imm:$src)]>;
+  def IMOV64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
+                          "mov.u64 \t$dst, $src;",
+                          [(set Int64Regs:$dst, imm:$src)]>;
+
+  def IMOVB16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
+                           "mov.b16 \t$dst, $src;", []>;
+  def IMOVB32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
+                           "mov.b32 \t$dst, $src;", []>;
+  def IMOVB64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
+                          "mov.b64 \t$dst, $src;", []>;
+
+  def FMOV32ri : NVPTXInst<(outs Float32Regs:$dst), (ins f32imm:$src),
+                           "mov.f32 \t$dst, $src;",
+                           [(set Float32Regs:$dst, fpimm:$src)]>;
+  def FMOV64ri : NVPTXInst<(outs Float64Regs:$dst), (ins f64imm:$src),
+                           "mov.f64 \t$dst, $src;",
+                           [(set Float64Regs:$dst, fpimm:$src)]>;
 }
-
-def IMOV1ri : NVPTXInst<(outs Int1Regs:$dst), (ins i1imm:$src),
-                        "mov.pred \t$dst, $src;",
-                        [(set Int1Regs:$dst, imm:$src)]>;
-def IMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
-                         "mov.u16 \t$dst, $src;",
-                         [(set Int16Regs:$dst, imm:$src)]>;
-def IMOV32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
-                         "mov.u32 \t$dst, $src;",
-                         [(set (i32 Int32Regs:$dst), imm:$src)]>;
-def IMOV64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
-                        "mov.u64 \t$dst, $src;",
-                        [(set Int64Regs:$dst, imm:$src)]>;
-
-def IMOVB16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
-                         "mov.b16 \t$dst, $src;", []>;
-def IMOVB32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
-                         "mov.b32 \t$dst, $src;", []>;
-def IMOVB64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
-                        "mov.b64 \t$dst, $src;", []>;
-
-def FMOV32ri : NVPTXInst<(outs Float32Regs:$dst), (ins f32imm:$src),
-                         "mov.f32 \t$dst, $src;",
-                         [(set Float32Regs:$dst, fpimm:$src)]>;
-def FMOV64ri : NVPTXInst<(outs Float64Regs:$dst), (ins f64imm:$src),
-                         "mov.f64 \t$dst, $src;",
-                         [(set Float64Regs:$dst, fpimm:$src)]>;
 
 def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32ri texternalsym:$dst)>;
 def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64ri texternalsym:$dst)>;
