@@ -34,4 +34,12 @@ group("compiler-rt") {
       deps += [ "//compiler-rt/lib/builtins(//llvm/utils/gn/build/toolchain:stage2_iossim_x64)" ]
     }
   }
+
+  action("lipo") {
+    script = "lipo"
+    outputs = [ "$target_gen_dir/libcompiler_rt.a" ]
+    args = [ "-create" ] + rebase_path(deps) + [ "-output", "$target_gen_dir/libcompiler_rt.a" ]
+  }
+
+  deps += [ ":lipo" ]
 }
