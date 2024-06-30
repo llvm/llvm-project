@@ -2956,10 +2956,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
 
   let hasVerifier = 1;
 
-  let regions = (region
-    MaxSizedRegion<1>:$dispatch_table,
-    MaxSizedRegion<1>:$component_info
-  );
+  let regions = (region MaxSizedRegion<1>:$dispatch_table);
 
   let builders = [
     OpBuilder<(ins "fir::RecordType":$type, "fir::RecordType":$parent_type,
@@ -2970,7 +2967,6 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     $sym_name (`noinit` $no_init^)? (`nodestroy` $no_destroy^)?
     (`nofinal` $no_final^)? (`extends` $parent_type^)? attr-dict `:` $type
     (`dispatch_table` $dispatch_table^)?
-    (`component_info` $component_info^)?
   }];
 
   let extraClassDeclaration = [{
@@ -3012,24 +3008,6 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
-}
-
-def fir_DTComponentOp : fir_Op<"dt_component", [HasParent<"TypeInfoOp">]> {
-  let summary = "define extra information about a component inside fir.type_info";
-
-  let description = [{
-    ```
-      fir.dt_component i lbs [-1,2] init @init_val
-    ```
-  }];
-
-  let arguments = (ins
-    StrAttr:$name,
-    OptionalAttr<DenseI64ArrayAttr>:$lower_bounds,
-    OptionalAttr<FlatSymbolRefAttr>:$init_val
-  );
-
-  let assemblyFormat = "$name (`lbs` $lower_bounds^)? (`init` $init_val^)? attr-dict";
 }
 
 def fir_AbsentOp : fir_OneResultOp<"absent", [NoMemoryEffect]> {
