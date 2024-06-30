@@ -2379,23 +2379,32 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
 
   SemaRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
 
-  FunctionDecl *Pattern = getPatternFunctionDecl(FD);
-  if (Pattern) {
-    SemaRef.addInstantiatedCapturesToScope(FD, Pattern, Scope, MLTAL);
+  FunctionDecl *FDPattern = getPatternFunctionDecl(FD);
+  if (!FDPattern)
+    return;
 
-    FunctionDecl *ParentFD = FD;
-    while (ShouldAddDeclsFromParentScope) {
+  SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
 
-      ParentFD =
-          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(ParentFD));
-      Pattern =
-          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(Pattern));
+  if (!ShouldAddDeclsFromParentScope)
+    return;
 
-      if (!ParentFD || !Pattern)
-        break;
+  llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
+      ParentInstantiations;
+  std::pair<FunctionDecl *, FunctionDecl *> Current = {FDPattern, FD};
+  while (true) {
+    Current.first = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(Current.first));
+    Current.second = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(Current.second));
 
-      SemaRef.addInstantiatedParametersToScope(ParentFD, Pattern, Scope, MLTAL);
-      SemaRef.addInstantiatedLocalVarsToScope(ParentFD, Pattern, Scope);
-    }
+    if (!Current.first || !Current.second)
+      break;
+
+    ParentInstantiations.push_back(Current);
+  }
+
+  for (const auto &[Pattern, Inst] : llvm::reverse(ParentInstantiations)) {
+    SemaRef.addInstantiatedParametersToScope(Inst, Pattern, Scope, MLTAL);
+    SemaRef.addInstantiatedLocalVarsToScope(Inst, Pattern, Scope);
   }
 }
