@@ -30,14 +30,20 @@ class partial_ordering;
 class weak_ordering;
 class strong_ordering;
 
-template <class _Tp, class... _Args>
-inline constexpr bool __one_of_v = (is_same_v<_Tp, _Args> || ...);
-
 struct _CmpUnspecifiedParam {
-  _LIBCPP_HIDE_FROM_ABI constexpr _CmpUnspecifiedParam(int _CmpUnspecifiedParam::*) noexcept {}
-
-  template <class _Tp, class = enable_if_t<!__one_of_v<_Tp, int, partial_ordering, weak_ordering, strong_ordering>>>
-  _CmpUnspecifiedParam(_Tp) = delete;
+  // If anything other than a literal 0 is provided, the behavior is undefined by the Standard.
+  //
+  // The alternative to the `__enable_if__` attribute would be to use the fact that a pointer
+  // can be constructed from literal 0, but this conflicts with `-Wzero-as-null-pointer-constant`.
+  template <class _Tp, class = __enable_if_t<is_same_v<_Tp, int> > >
+  _LIBCPP_HIDE_FROM_ABI consteval _CmpUnspecifiedParam(_Tp __zero) noexcept
+#  if __has_attribute(__enable_if__)
+      __attribute__((__enable_if__(
+          __zero == 0, "Only literal 0 is allowed as the operand of a comparison with one of the ordering types")))
+#  endif
+  {
+    (void)__zero;
+  }
 };
 
 class partial_ordering {
@@ -269,7 +275,8 @@ inline constexpr strong_ordering strong_ordering::greater(_OrdResult::__greater)
 /// The types partial_ordering, weak_ordering, and strong_ordering are
 /// collectively termed the comparison category types.
 template <class _Tp>
-concept __comparison_category = __one_of_v<_Tp, partial_ordering, weak_ordering, strong_ordering>;
+concept __comparison_category =
+    is_same_v<_Tp, partial_ordering> || is_same_v<_Tp, weak_ordering> || is_same_v<_Tp, strong_ordering>;
 
 #endif // _LIBCPP_STD_VER >= 20
 
