@@ -34,6 +34,51 @@ bb4:
   ret void
 }
 
+define void @fold_nested_branch_extra_predecessors(i1 %cond0, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: define void @fold_nested_branch_extra_predecessors(
+; CHECK-SAME: i1 [[COND0:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[COND0]], label %[[BB0:.*]], label %[[BB1_PRED:.*]]
+; CHECK:       [[BB1_PRED]]:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br i1 [[COND2]], label %[[BB3:.*]], label %[[BB4:.*]]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[BB4]], label %[[BB3]]
+; CHECK:       [[COMMON_RET:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK:       [[BB4]]:
+; CHECK-NEXT:    call void @sideeffect2()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+;
+entry:
+  br i1 %cond0, label %bb0, label %bb1_pred
+
+bb1_pred:
+  call void @sideeffect1()
+  br label %bb1
+
+bb0:
+  br i1 %cond1, label %bb1, label %bb2
+
+bb1:
+  br i1 %cond2, label %bb3, label %bb4
+
+bb2:
+  br i1 %cond2, label %bb4, label %bb3
+
+bb3:
+  call void @sideeffect1()
+  ret void
+
+bb4:
+  call void @sideeffect2()
+  ret void
+}
+
 ; Negative tests
 
 define void @fold_nested_branch_cfg_mismatch(i1 %cond1, i1 %cond2) {
