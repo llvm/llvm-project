@@ -189,4 +189,13 @@ module attributes {gpu.container_module} {
     gpu.wait
     return
   }
+
+  // CHECK-LABEL:func @alloc_host_shared()
+  func.func @alloc_host_shared() {
+    // CHECK: %[[m:.*]] = gpu.alloc  host_shared () : memref<7xf32>
+    %0 = gpu.alloc host_shared() : memref<7xf32>
+    // CHECK: gpu.dealloc  %[[m]] : memref<7xf32>
+    gpu.dealloc %0 : memref<7xf32>
+    return
+  }
 }
