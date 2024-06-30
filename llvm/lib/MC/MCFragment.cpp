@@ -40,10 +40,6 @@ MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
       SectionOrder.push_back(&Sec);
 }
 
-void MCAsmLayout::invalidateFragmentsFrom(MCFragment *F) {
-  F->getParent()->setHasLayout(false);
-}
-
 // Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAsmLayout &Layout, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
