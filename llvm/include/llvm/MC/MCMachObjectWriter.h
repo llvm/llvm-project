@@ -162,6 +162,8 @@ public:
 
   uint64_t getPaddingSize(const MCSection *SD, const MCAsmLayout &Layout) const;
 
+  const MCSymbol *getAtom(const MCSymbol &S) const;
+
   bool doesSymbolRequireExternRelocation(const MCSymbol &S);
 
   /// @}
