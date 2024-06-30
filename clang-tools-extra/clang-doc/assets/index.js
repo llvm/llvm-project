@@ -80,8 +80,8 @@ function createIndex(Index) {
 
 // Runs after DOM loads
 document.addEventListener("DOMContentLoaded", function() {
-  // LoadIndex is an asynchronous function that will be generated clang-doc
-  // it ensures that the function call will not blocked as soon the page loads
-  // since the index object are often huge and can contain thousands of lines
+  // LoadIndex is an asynchronous function that will be generated clang-doc.
+  // It ensures that the function call will not block as soon the page loads,
+  // since the index object are often huge and can contain thousands of lines.
   LoadIndex().then((Index) => { createIndex(Index); });
 });
