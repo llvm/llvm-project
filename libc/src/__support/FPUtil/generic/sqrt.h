@@ -133,6 +133,7 @@ sqrt(InType x) {
       InStorageType y = ONE;
       InStorageType r = x_mant - ONE;
 
+      // TODO: Reduce iteration count to OutFPBits::FRACTION_LEN + 2 or + 3.
       for (InStorageType current_bit = ONE >> 1; current_bit;
            current_bit >>= 1) {
         r <<= 1;
@@ -150,7 +151,7 @@ sqrt(InType x) {
       if (r >= tmp) {
         r -= tmp;
         // Rounding bit.
-        y |= 1 << 1;
+        y |= 2;
       }
       // Sticky bit.
       y |= static_cast<unsigned int>(r != 0);
