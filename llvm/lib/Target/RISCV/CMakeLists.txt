@@ -37,6 +37,7 @@ add_llvm_target(RISCVCodeGen
   RISCVFoldMasks.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
+  RISCVIndirectBranchTracking.cpp
   RISCVInsertVSETVLI.cpp
   RISCVInsertReadWriteCSR.cpp
   RISCVInsertWriteVXRM.cpp
