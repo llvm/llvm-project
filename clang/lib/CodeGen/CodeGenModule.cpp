@@ -1399,17 +1399,25 @@ void CodeGenModule::Release() {
 void CodeGenModule::EmitOpenCLMetadata() {
   // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
   // opencl.ocl.version named metadata node.
-  // C++ for OpenCL has a distinct mapping for versions compatibile with OpenCL.
-  auto Version = LangOpts.getOpenCLCompatibleVersion();
-  llvm::Metadata *OCLVerElts[] = {
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, Version / 100)),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, (Version % 100) / 10))};
-  llvm::NamedMDNode *OCLVerMD =
-      TheModule.getOrInsertNamedMetadata("opencl.ocl.version");
-  llvm::LLVMContext &Ctx = TheModule.getContext();
-  OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
+  // C++ for OpenCL has a distinct mapping for versions compatible with OpenCL.
+  auto CLVersion = LangOpts.getOpenCLCompatibleVersion();
+
+  auto EmitVersion = [this](StringRef MDName, int Version) {
+    llvm::Metadata *OCLVerElts[] = {
+        llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(Int32Ty, Version / 100)),
+        llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(Int32Ty, (Version % 100) / 10))};
+    llvm::NamedMDNode *OCLVerMD = TheModule.getOrInsertNamedMetadata(MDName);
+    llvm::LLVMContext &Ctx = TheModule.getContext();
+    OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
+  };
+
+  EmitVersion("opencl.ocl.version", CLVersion);
+  if (LangOpts.OpenCLCPlusPlus) {
+    // In addition to the OpenCL compatible version, emit the C++ version.
+    EmitVersion("opencl.cxx.version", LangOpts.OpenCLCPlusPlusVersion);
+  }
 }
 
 void CodeGenModule::EmitBackendOptionsMetadata(
