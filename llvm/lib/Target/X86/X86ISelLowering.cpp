@@ -41358,6 +41358,18 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                       DAG.getBitcast(NVT, V1.getOperand(0))),
           DAG.getIntPtrConstant(0, DL));
     }
+    SmallVector<int, 16> Mask, WidenedMask;
+    SmallVector<SDValue, 2> Ops;
+    if ((EVT == MVT::i8 || EVT == MVT::i16) &&
+        getTargetShuffleMask(N, false, Ops, Mask) &&
+        scaleShuffleElements(Mask, VT.getFixedSizeInBits() / 32, WidenedMask)) {
+      NVT = MVT::getVectorVT(MVT::i32, VT.getFixedSizeInBits() / 32);
+      SDValue V1 = DAG.getBitcast(NVT, N.getOperand(0));
+      SDValue V2 = DAG.getBitcast(NVT, N.getOperand(2));
+      SDValue Mask = getConstVector(WidenedMask, NVT, DAG, DL, true);
+      return DAG.getBitcast(
+          VT, DAG.getNode(X86ISD::VPERMV3, DL, NVT, V1, Mask, V2));
+    }
 
     return SDValue();
   }
