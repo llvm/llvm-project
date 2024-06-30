@@ -150,7 +150,7 @@ void g() {
 #endif
 } // namespace cwg2877
 
-namespace cwg2881 { // cwg2881: 19 ready 2024-04-19
+namespace cwg2881 { // cwg2881: 19 ready 2024-06-26
 
 #if __cplusplus >= 202302L
 
@@ -214,6 +214,18 @@ void f() {
   o.decltype(L1)::operator()(); // expected-error {{must derive publicly from the lambda}}
   o.decltype(L1)::operator()(); // No error here because we've already diagnosed this method.
   o.decltype(L2)::operator()();
+}
+
+int main() {
+  int x = 0;
+  auto lambda = [x] (this auto self) { return x; };
+  using Lambda = decltype(lambda);
+  struct D : private Lambda { // expected-note {{declared private here}}
+    D(Lambda l) : Lambda(l) {}
+    using Lambda::operator();
+    friend Lambda;
+  } d(lambda);
+  d(); // expected-error {{invalid explicit object parameter type 'D' in lambda with capture; the type must derive publicly from the lambda}}
 }
 
 #endif
