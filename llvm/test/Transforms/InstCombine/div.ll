@@ -380,7 +380,7 @@ define i32 @test26(i32 %a) {
 
 define i32 @test27(i32 %a) {
 ; CHECK-LABEL: @test27(
-; CHECK-NEXT:    [[DIV:%.*]] = shl nuw i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[DIV:%.*]] = shl nuw nsw i32 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %shl = shl nuw i32 %a, 2
