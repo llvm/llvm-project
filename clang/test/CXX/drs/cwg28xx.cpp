@@ -220,7 +220,7 @@ void f() {
 
 } // namespace cwg2881
 
-namespace cwg2882 { // cwg2882: 2.7 ready 2024-05-31
+namespace cwg2882 { // cwg2882: 2.7 ready 2024-06-27
 struct C {
   operator void() = delete;
   // expected-warning@-1 {{conversion function converting 'cwg2882::C' to 'void' will never be used}}
@@ -232,7 +232,7 @@ void f(C c) {
 }
 } // namespace cwg2882
 
-namespace cwg2883 { // cwg2883: no ready 2024-05-31
+namespace cwg2883 { // cwg2883: no ready 2024-06-27
 #if __cplusplus >= 201103L
 void f() {
   int x;
@@ -271,7 +271,7 @@ static_assert(!__is_trivially_constructible(B));
 #endif
 } // namespace cwg2885
 
-namespace cwg2886 { // cwg2886: 9 ready 2024-05-31
+namespace cwg2886 { // cwg2886: 9 ready 2024-06-27
 #if __cplusplus >= 201103L
 struct C {
   C() = default;
