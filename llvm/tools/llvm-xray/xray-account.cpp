@@ -198,6 +198,7 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
       break;
     }
 
+    // A sibling call, need to be deduced
     if (!DeduceSiblingCalls)
       return false;
 
@@ -207,6 +208,8 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
                       [&](const std::pair<const int32_t, uint64_t> &E) {
                         return E.first == Record.FuncId;
                       });
+    // Gracefully return when an exit doesn't match any entry on a non empty stack, 
+    // e.g. it can happen on a fork()
     if (Parent == ThreadStack.Stack.rend())
       return false;
 
