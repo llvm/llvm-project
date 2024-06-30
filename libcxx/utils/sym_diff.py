@@ -60,6 +60,22 @@ def main():
         "--demangle", dest="demangle", action="store_true", default=False
     )
     parser.add_argument(
+        "--mapfile-old_syms",
+        dest="mapfile_old_syms",
+        help="The name of the mapfile that contains supplementary information about old symbols. (optional, macOS-only feature)",
+        type=str,
+        action="store",
+        default=None,
+    )
+    parser.add_argument(
+        "--mapfile-new_syms",
+        dest="mapfile_new_syms",
+        help="The name of the mapfile that contains supplementary information about new symbols. (optional, macOS-only feature)",
+        type=str,
+        action="store",
+        default=None,
+    )
+    parser.add_argument(
         "old_syms",
         metavar="old-syms",
         type=str,
@@ -71,10 +87,46 @@ def main():
         type=str,
         help="The file containing the new symbol list or a library",
     )
+
     args = parser.parse_args()
 
+    old_syms_supplemental_info = {}
+    new_syms_supplemental_info = {}
+    if args.mapfile_old_syms != None:
+        (
+            map_extract_success,
+            old_syms_supplemental_info,
+        ) = util.extract_object_sizes_from_map(args.mapfile_old_syms)
+        if not map_extract_success:
+            print(
+                f"ERROR: Request to check the ABI with the help of a mapfile, but the specified mapfile ({args.mapfile}) could not be found."
+            )
+            return 1
+
+    if args.mapfile_new_syms != None:
+        (
+            map_extract_success,
+            new_syms_supplemental_info,
+        ) = util.extract_object_sizes_from_map(args.mapfile_new_syms)
+        if not map_extract_success:
+            print(
+                f"ERROR: Request to check the ABI with the help of a mapfile, but the specified mapfile ({args.mapfile}) could not be found."
+            )
+            return 1
+
     old_syms_list = util.extract_or_load(args.old_syms)
+    # If there is a mapfile, update the symbols with its supplemental information.
+    if len(old_syms_supplemental_info) != 0:
+        util.update_symbols_with_supplemental_information(
+            old_syms_list, old_syms_supplemental_info
+        )
+
     new_syms_list = util.extract_or_load(args.new_syms)
+    # If there is a mapfile, update the symbols with its supplemental information.
+    if len(new_syms_supplemental_info) != 0:
+        util.update_symbols_with_supplemental_information(
+            new_syms_list, new_syms_supplemental_info
+        )
 
     if args.only_stdlib:
         old_syms_list, _ = util.filter_stdlib_symbols(old_syms_list)

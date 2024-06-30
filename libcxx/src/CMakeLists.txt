@@ -1,3 +1,5 @@
+include(CMakePrintHelpers)
+
 set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
 
 # Get sources
@@ -226,6 +228,12 @@ if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
   else()
     target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
+  endif()
+
+  if (APPLE)
+    # If we are on an Apple platform, let's ask the linker to generate a map
+    # that we can use to determine the size of the abi symbols (see generate-cxx-abilist target).
+    target_link_libraries(cxx_shared PRIVATE "-Wl,-map,${CMAKE_CURRENT_BINARY_DIR}/../lib/abi/linker.map")
   endif()
 
   # Maybe re-export symbols from libc++abi

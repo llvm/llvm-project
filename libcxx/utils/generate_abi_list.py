@@ -30,6 +30,13 @@ def main(argv):
         "library", metavar="LIB", type=str, help="The library to extract symbols from."
     )
     parser.add_argument(
+        "-m",
+        "--mapfile",
+        dest="mapfile",
+        default=None,
+        help="The name of the mapfile that contains supplementary information about symbols. (optional, macOS-only feature)",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         dest="output",
@@ -43,9 +50,29 @@ def main(argv):
     symbols = libcxx.sym_check.extract.extract_symbols(args.library)
     symbols, _ = libcxx.sym_check.util.filter_stdlib_symbols(symbols)
 
+    supplemental_info = {}
+    if args.mapfile != None:
+        (
+            map_extract_success,
+            supplemental_info,
+        ) = libcxx.sym_check.util.extract_object_sizes_from_map(args.mapfile)
+        if not map_extract_success:
+            print(
+                f"ERROR: Request to build the ABI list with the help of a mapfile, but the specified mapfile ({args.mapfile}) could not be found."
+            )
+            return 1
+
+    # Specific to the case where there is supplemental symbol information from a mapfile ...
+    if len(supplemental_info) != 0:
+        libcxx.sym_check.util.update_symbols_with_supplemental_information(
+            symbols, supplemental_info
+        )
+
     lines = [pprint.pformat(sym, width=99999) for sym in symbols]
     args.output.writelines("\n".join(sorted(lines)))
+    return 0
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    result = main(sys.argv[1:])
+    sys.exit(result)
