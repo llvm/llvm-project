@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: echo "CHECK: var RootPath = \"%t\";" > %t/check.txt
+// RUN: echo "CHECK: var RootPath = \"%/t\";" > %t/check.txt
 // RUN: cp "%s" "%t/test.cpp"
 // RUN: clang-doc --format=html --executor=standalone -p %t %t/test.cpp --output=%t/docs
 // RUN: FileCheck %t/check.txt -input-file=%t/docs/index_json.js
