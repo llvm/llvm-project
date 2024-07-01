@@ -940,6 +940,10 @@ Bug Fixes to C++ Support
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 
+- Emit an error when the same identifier appears with both internal and
+  external linkage in a translation unit Fixes:
+  (`#54215 <https://github.com/llvm/llvm-project/issues/54215>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
