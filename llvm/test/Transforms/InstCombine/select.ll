@@ -4666,3 +4666,50 @@ define i8 @test_replace_freeze_oneuse(i1 %x, i8 %y) {
   %sel = select i1 %x, i8 0, i8 %shl.fr
   ret i8 %sel
 }
+
+define i8 @select_knownbits_simplify(i8 noundef %x)  {
+; CHECK-LABEL: @select_knownbits_simplify(
+; CHECK-NEXT:    [[X_LO:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X_LO]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -2
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[AND]], i8 0
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %x.lo = and i8 %x, 1
+  %cmp = icmp eq i8 %x.lo, 0
+  %and = and i8 %x, -2
+  %res = select i1 %cmp, i8 %and, i8 0
+  ret i8 %res
+}
+
+define i8 @select_knownbits_simplify_nested(i8 noundef %x)  {
+; CHECK-LABEL: @select_knownbits_simplify_nested(
+; CHECK-NEXT:    [[X_LO:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X_LO]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -2
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[AND]], [[AND]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[MUL]], i8 0
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %x.lo = and i8 %x, 1
+  %cmp = icmp eq i8 %x.lo, 0
+  %and = and i8 %x, -2
+  %mul = mul i8 %and, %and
+  %res = select i1 %cmp, i8 %mul, i8 0
+  ret i8 %res
+}
+
+define i8 @select_knownbits_simplify_missing_noundef(i8 %x)  {
+; CHECK-LABEL: @select_knownbits_simplify_missing_noundef(
+; CHECK-NEXT:    [[X_LO:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X_LO]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -2
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[AND]], i8 0
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %x.lo = and i8 %x, 1
+  %cmp = icmp eq i8 %x.lo, 0
+  %and = and i8 %x, -2
+  %res = select i1 %cmp, i8 %and, i8 0
+  ret i8 %res
+}
