@@ -112,7 +112,7 @@ def parse_function_details(details):
     Returns:
         Function: An instance of Function initialized with the details.
     """
-    name, standards, return_type, arguments, guard, attributes = details
+    return_type, name, arguments, standards, guard, attributes = details
     standards = standards.split(",") if standards != "null" else []
     arguments = [arg.strip() for arg in arguments.split(",")]
     attributes = attributes.split(",") if attributes != "null" else []
@@ -133,7 +133,7 @@ def add_function_to_yaml(yaml_file, function_details):
 
     Args:
         yaml_file: The path to the YAML file.
-        function_details: A list containing function details (name, standards, return_type, arguments, guard, attributes).
+        function_details: A list containing function details (return_type, name, arguments, standards, guard, attributes).
     """
     new_function = parse_function_details(function_details)
 
@@ -222,10 +222,10 @@ if __name__ == "__main__":
         "--add_function",
         nargs=6,
         metavar=(
-            "NAME",
-            "STANDARDS",
             "RETURN_TYPE",
+            "NAME",
             "ARGUMENTS",
+            "STANDARDS",
             "GUARD",
             "ATTRIBUTES",
         ),
