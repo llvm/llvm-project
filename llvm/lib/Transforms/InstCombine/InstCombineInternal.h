@@ -727,6 +727,10 @@ public:
   Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
                                    Value *Op1, ICmpInst &CxtI);
 
+  Instruction *foldICmpPHIWithMinMaxHelper(PHINode &PN, Instruction &I,
+                                           Value *Z, ICmpInst::Predicate Pred);
+  Instruction *foldICmpPHIWithMinMax(ICmpInst &Cmp);
+
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
