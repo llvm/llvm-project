@@ -1877,7 +1877,8 @@ static std::string findOperandDecoderMethod(Record *Record) {
   }
 
   if (Record->isSubClassOf("RegisterOperand"))
-    Record = Record->getValueAsDef("RegClass");
+    // Allows use of a DecoderMethod in referenced RegisterClass if set.
+    return findOperandDecoderMethod(Record->getValueAsDef("RegClass"));
 
   if (Record->isSubClassOf("RegisterClass")) {
     Decoder = "Decode" + Record->getName().str() + "RegisterClass";
