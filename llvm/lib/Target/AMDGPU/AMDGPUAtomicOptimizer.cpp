@@ -886,12 +886,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // lane) to all other lanes in the wavefront. We use an intrinsic for this,
     // but have to handle 64-bit broadcasts with two calls to this intrinsic.
     Value *BroadcastI = nullptr;
-
-    if (TyBitWidth == 32 || TyBitWidth == 64) {
-      BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
-    } else {
-      llvm_unreachable("Unhandled atomic bit width");
-    }
+    BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
 
     // Now that we have the result of our single atomic operation, we need to
     // get our individual lane's slice into the result. We use the lane offset
