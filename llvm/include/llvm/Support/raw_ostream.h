@@ -82,10 +82,6 @@ private:
   char *OutBufStart, *OutBufEnd, *OutBufCur;
   bool ColorEnabled = false;
 
-  /// Optional stream this stream is tied to. If this stream is written to, the
-  /// tied-to stream will be flushed first.
-  raw_ostream *TiedStream = nullptr;
-
   enum class BufferKind {
     Unbuffered = 0,
     InternalBuffer,
@@ -360,10 +356,6 @@ public:
 
   bool colors_enabled() const { return ColorEnabled; }
 
-  /// Tie this stream to the specified stream. Replaces any existing tied-to
-  /// stream. Specifying a nullptr unties the stream.
-  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
-
   //===--------------------------------------------------------------------===//
   // Subclass Interface
   //===--------------------------------------------------------------------===//
@@ -421,9 +413,6 @@ private:
   /// Compute whether colors should be used and do the necessary work such as
   /// flushing. The result is affected by calls to enable_color().
   bool prepare_colors();
-
-  /// Flush the tied-to stream (if present) and then write the required data.
-  void flush_tied_then_write(const char *Ptr, size_t Size);
 
   virtual void anchor();
 };
