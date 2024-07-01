@@ -118,6 +118,7 @@ private:
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCObjectWriter> Writer;
 
+  MCAsmLayout *Layout = nullptr;
   bool RelaxAll = false;
   bool SubsectionsViaSymbols = false;
   bool IncrementalLinkerCompatible = false;
@@ -171,7 +172,6 @@ private:
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
   ///
-  /// \param Layout The layout to use for evaluation.
   /// \param Fixup The fixup to evaluate.
   /// \param DF The fragment the fixup is inside.
   /// \param Target [out] On return, the relocatable expression the fixup
@@ -183,45 +183,38 @@ private:
   /// \return Whether the fixup value was fully resolved. This is true if the
   /// \p Value result is fixed, otherwise the value may change due to
   /// relocation.
-  bool evaluateFixup(const MCAsmLayout &Layout, const MCFixup &Fixup,
-                     const MCFragment *DF, MCValue &Target,
-                     const MCSubtargetInfo *STI, uint64_t &Value,
-                     bool &WasForced) const;
+  bool evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
+                     MCValue &Target, const MCSubtargetInfo *STI,
+                     uint64_t &Value, bool &WasForced) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup, const MCRelaxableFragment *DF) const;
 
   /// Check whether the given fragment needs relaxation.
-  bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF,
-                               const MCAsmLayout &Layout) const;
+  bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF) const;
 
   /// Perform one layout iteration and return true if any offsets
   /// were adjusted.
-  bool layoutOnce(MCAsmLayout &Layout);
+  bool layoutOnce();
 
   /// Perform relaxation on a single fragment - returns true if the fragment
   /// changes as a result of relaxation.
-  bool relaxFragment(MCAsmLayout &Layout, MCFragment &F);
-  bool relaxInstruction(MCAsmLayout &Layout, MCRelaxableFragment &IF);
-  bool relaxLEB(MCAsmLayout &Layout, MCLEBFragment &IF);
-  bool relaxBoundaryAlign(MCAsmLayout &Layout, MCBoundaryAlignFragment &BF);
-  bool relaxDwarfLineAddr(MCAsmLayout &Layout, MCDwarfLineAddrFragment &DF);
-  bool relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
-                                   MCDwarfCallFrameFragment &DF);
-  bool relaxCVInlineLineTable(MCAsmLayout &Layout,
-                              MCCVInlineLineTableFragment &DF);
-  bool relaxCVDefRange(MCAsmLayout &Layout, MCCVDefRangeFragment &DF);
-  bool relaxPseudoProbeAddr(MCAsmLayout &Layout, MCPseudoProbeAddrFragment &DF);
+  bool relaxFragment(MCFragment &F);
+  bool relaxInstruction(MCRelaxableFragment &IF);
+  bool relaxLEB(MCLEBFragment &IF);
+  bool relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF);
+  bool relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF);
+  bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
+  bool relaxCVDefRange(MCCVDefRangeFragment &DF);
+  bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
   /// finishLayout - Finalize a layout, including fragment lowering.
   void finishLayout(MCAsmLayout &Layout);
 
-  std::tuple<MCValue, uint64_t, bool> handleFixup(const MCAsmLayout &Layout,
-                                                  MCFragment &F,
-                                                  const MCFixup &Fixup,
-                                                  const MCSubtargetInfo *STI);
+  std::tuple<MCValue, uint64_t, bool>
+  handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
 public:
   struct Symver {
@@ -246,10 +239,28 @@ public:
   MCAssembler &operator=(const MCAssembler &) = delete;
   ~MCAssembler();
 
-  /// Compute the effective fragment size assuming it is laid out at the given
-  /// \p SectionAddress and \p FragmentOffset.
-  uint64_t computeFragmentSize(const MCAsmLayout &Layout,
-                               const MCFragment &F) const;
+  /// Compute the effective fragment size.
+  uint64_t computeFragmentSize(const MCFragment &F) const;
+
+  void layoutBundle(MCFragment *Prev, MCFragment *F) const;
+  void ensureValid(MCSection &Sec) const;
+
+  // Get the offset of the given fragment inside its containing section.
+  uint64_t getFragmentOffset(const MCFragment &F) const;
+
+  uint64_t getSectionAddressSize(const MCSection &Sec) const;
+  uint64_t getSectionFileSize(const MCSection &Sec) const;
+
+  // Get the offset of the given symbol, as computed in the current
+  // layout.
+  // \return True on success.
+  bool getSymbolOffset(const MCSymbol &S, uint64_t &Val) const;
+
+  // Variant that reports a fatal error if the offset is not computable.
+  uint64_t getSymbolOffset(const MCSymbol &S) const;
+
+  // If this symbol is equivalent to A + Constant, return A.
+  const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
 
   /// Check whether a particular symbol is visible to the linker and is required
   /// in the symbol table, or whether it can be discarded by the assembler. This
@@ -349,6 +360,8 @@ public:
     IncrementalLinkerCompatible = Value;
   }
 
+  MCAsmLayout *getLayout() const { return Layout; }
+  bool hasLayout() const { return Layout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 
