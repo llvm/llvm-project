@@ -745,7 +745,7 @@ void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
-  assert(isOpenMPCapturingDirective(DKind));
+  assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
 
   switch (DKind) {
   case OMPD_metadirective:
