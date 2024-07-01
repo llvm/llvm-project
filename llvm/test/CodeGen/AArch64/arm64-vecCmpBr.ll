@@ -199,8 +199,8 @@ declare i32 @llvm.aarch64.neon.uminv.i32.v16i8(<16 x i8>) #2
 
 declare i32 @llvm.aarch64.neon.uminv.i32.v8i8(<8 x i8>) #2
 
-attributes #0 = { nounwind ssp "target-cpu"="cyclone" }
-attributes #1 = { "target-cpu"="cyclone" }
+attributes #0 = { nounwind ssp "target-cpu"="apple-a7" }
+attributes #1 = { "target-cpu"="apple-a7" }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }
 attributes #4 = { nobuiltin nounwind }
