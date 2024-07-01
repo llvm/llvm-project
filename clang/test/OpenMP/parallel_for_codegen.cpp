@@ -808,6 +808,7 @@ void range_for_collapsed() {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -910,6 +911,7 @@ void range_for_collapsed() {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1065,6 +1067,9 @@ void range_for_collapsed() {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 4
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP36]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    ret void
@@ -1186,6 +1191,7 @@ void range_for_collapsed() {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1292,7 +1298,7 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add i32 131071, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef i32 @_Z3foov()
-// CHECK1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
+// CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[CALL]] to float
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
@@ -1337,7 +1343,7 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    ret void
 // CHECK1:       terminate.lpad:
 // CHECK1-NEXT:    [[TMP25:%.*]] = landingpad { ptr, i32 }
-// CHECK1-NEXT:    catch ptr null
+// CHECK1-NEXT:            catch ptr null
 // CHECK1-NEXT:    [[TMP26:%.*]] = extractvalue { ptr, i32 } [[TMP25]], 0
 // CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP26]]) #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    unreachable
@@ -1918,6 +1924,7 @@ void range_for_collapsed() {
 // CHECK2:       omp.dispatch.inc:
 // CHECK2-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK2:       omp.dispatch.end:
+// CHECK2-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2020,6 +2027,7 @@ void range_for_collapsed() {
 // CHECK2:       omp.dispatch.inc:
 // CHECK2-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK2:       omp.dispatch.end:
+// CHECK2-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2175,6 +2183,9 @@ void range_for_collapsed() {
 // CHECK2:       omp.dispatch.inc:
 // CHECK2-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK2:       omp.dispatch.end:
+// CHECK2-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK2-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 4
+// CHECK2-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP36]])
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    ret void
@@ -2296,6 +2307,7 @@ void range_for_collapsed() {
 // CHECK2:       omp.dispatch.inc:
 // CHECK2-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK2:       omp.dispatch.end:
+// CHECK2-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2402,7 +2414,7 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    [[ADD:%.*]] = add i32 131071, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK2-NEXT:    [[CALL:%.*]] = invoke noundef i32 @_Z3foov()
-// CHECK2-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
+// CHECK2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK2:       invoke.cont:
 // CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[CALL]] to float
 // CHECK2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
@@ -2447,7 +2459,7 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    ret void
 // CHECK2:       terminate.lpad:
 // CHECK2-NEXT:    [[TMP25:%.*]] = landingpad { ptr, i32 }
-// CHECK2-NEXT:    catch ptr null
+// CHECK2-NEXT:            catch ptr null
 // CHECK2-NEXT:    [[TMP26:%.*]] = extractvalue { ptr, i32 } [[TMP25]], 0
 // CHECK2-NEXT:    call void @__clang_call_terminate(ptr [[TMP26]]) #[[ATTR7:[0-9]+]]
 // CHECK2-NEXT:    unreachable
@@ -3028,6 +3040,7 @@ void range_for_collapsed() {
 // CHECK5:       omp.dispatch.inc:
 // CHECK5-NEXT:    br label [[OMP_DISPATCH_COND]], !dbg [[DBG53]], !llvm.loop [[LOOP60:![0-9]+]]
 // CHECK5:       omp.dispatch.end:
+// CHECK5-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB21]], i32 [[TMP5]]), !dbg [[DBG53]]
 // CHECK5-NEXT:    ret void, !dbg [[DBG57]]
 //
 //
@@ -3130,6 +3143,7 @@ void range_for_collapsed() {
 // CHECK5:       omp.dispatch.inc:
 // CHECK5-NEXT:    br label [[OMP_DISPATCH_COND]], !dbg [[DBG65]], !llvm.loop [[LOOP72:![0-9]+]]
 // CHECK5:       omp.dispatch.end:
+// CHECK5-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB23]], i32 [[TMP5]]), !dbg [[DBG65]]
 // CHECK5-NEXT:    ret void, !dbg [[DBG69]]
 //
 //
@@ -3285,6 +3299,9 @@ void range_for_collapsed() {
 // CHECK5:       omp.dispatch.inc:
 // CHECK5-NEXT:    br label [[OMP_DISPATCH_COND]], !dbg [[DBG79]], !llvm.loop [[LOOP87:![0-9]+]]
 // CHECK5:       omp.dispatch.end:
+// CHECK5-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG79]]
+// CHECK5-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 4, !dbg [[DBG79]]
+// CHECK5-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB25]], i32 [[TMP36]]), !dbg [[DBG79]]
 // CHECK5-NEXT:    br label [[OMP_PRECOND_END]], !dbg [[DBG79]]
 // CHECK5:       omp.precond.end:
 // CHECK5-NEXT:    ret void, !dbg [[DBG84]]
@@ -3406,6 +3423,7 @@ void range_for_collapsed() {
 // CHECK5:       omp.dispatch.inc:
 // CHECK5-NEXT:    br label [[OMP_DISPATCH_COND]], !dbg [[DBG93]], !llvm.loop [[LOOP101:![0-9]+]]
 // CHECK5:       omp.dispatch.end:
+// CHECK5-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB27]], i32 [[TMP5]]), !dbg [[DBG93]]
 // CHECK5-NEXT:    ret void, !dbg [[DBG98]]
 //
 //
@@ -3512,7 +3530,7 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    [[ADD:%.*]] = add i32 131071, [[MUL]], !dbg [[DBG110]]
 // CHECK5-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !dbg [[DBG110]]
 // CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef i32 @_Z3foov()
-// CHECK5-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG111:![0-9]+]]
+// CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG111:![0-9]+]]
 // CHECK5:       invoke.cont:
 // CHECK5-NEXT:    [[CONV:%.*]] = sitofp i32 [[CALL]] to float, !dbg [[DBG111]]
 // CHECK5-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !dbg [[DBG111]]
@@ -3557,7 +3575,7 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    ret void, !dbg [[DBG111]]
 // CHECK5:       terminate.lpad:
 // CHECK5-NEXT:    [[TMP25:%.*]] = landingpad { ptr, i32 }
-// CHECK5-NEXT:    catch ptr null, !dbg [[DBG111]]
+// CHECK5-NEXT:            catch ptr null, !dbg [[DBG111]]
 // CHECK5-NEXT:    [[TMP26:%.*]] = extractvalue { ptr, i32 } [[TMP25]], 0, !dbg [[DBG111]]
 // CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP26]]) #[[ATTR7:[0-9]+]], !dbg [[DBG111]]
 // CHECK5-NEXT:    unreachable, !dbg [[DBG111]]
@@ -4138,6 +4156,7 @@ void range_for_collapsed() {
 // CHECK6:       omp.dispatch.inc:
 // CHECK6-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK6:       omp.dispatch.end:
+// CHECK6-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK6-NEXT:    ret void
 //
 //
@@ -4240,6 +4259,7 @@ void range_for_collapsed() {
 // CHECK6:       omp.dispatch.inc:
 // CHECK6-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK6:       omp.dispatch.end:
+// CHECK6-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK6-NEXT:    ret void
 //
 //
@@ -4395,6 +4415,9 @@ void range_for_collapsed() {
 // CHECK6:       omp.dispatch.inc:
 // CHECK6-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK6:       omp.dispatch.end:
+// CHECK6-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK6-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 4
+// CHECK6-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP36]])
 // CHECK6-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK6:       omp.precond.end:
 // CHECK6-NEXT:    ret void
@@ -4516,6 +4539,7 @@ void range_for_collapsed() {
 // CHECK6:       omp.dispatch.inc:
 // CHECK6-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK6:       omp.dispatch.end:
+// CHECK6-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK6-NEXT:    ret void
 //
 //

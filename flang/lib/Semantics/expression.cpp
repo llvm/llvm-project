@@ -141,7 +141,7 @@ public:
   }
   void Analyze(const parser::Variable &);
   void Analyze(const parser::ActualArgSpec &, bool isSubroutine);
-  void ConvertBOZ(std::optional<DynamicType> &thisType, std::size_t i,
+  void ConvertBOZ(std::optional<DynamicType> *thisType, std::size_t,
       std::optional<DynamicType> otherType);
 
   bool IsIntrinsicRelational(
@@ -153,6 +153,7 @@ public:
   bool CheckConformance();
   bool CheckAssignmentConformance();
   bool CheckForNullPointer(const char *where = "as an operand here");
+  bool CheckForAssumedRank(const char *where = "as an operand here");
 
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
@@ -3200,6 +3201,7 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
       if (!procRef) {
         analyzer.CheckForNullPointer(
             "in a non-pointer intrinsic assignment statement");
+        analyzer.CheckForAssumedRank("in an assignment statement");
         const Expr<SomeType> &lhs{analyzer.GetExpr(0)};
         if (auto dyType{lhs.GetType()};
             dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
@@ -3394,6 +3396,7 @@ static MaybeExpr NumericUnaryHelper(ExpressionAnalyzer &context,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicNumeric(opr)) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       if (opr == NumericOperator::Add) {
         return analyzer.MoveExpr(0);
       } else {
@@ -3428,6 +3431,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::NOT &x) {
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicLogical()) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       return AsGenericExpr(
           LogicalNegation(std::get<Expr<SomeLogical>>(analyzer.MoveExpr(0).u)));
     } else {
@@ -3476,6 +3480,7 @@ MaybeExpr NumericBinaryHelper(ExpressionAnalyzer &context, NumericOperator opr,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicNumeric(opr)) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       analyzer.CheckConformance();
       return NumericOperation<OPR>(context.GetContextualMessages(),
           analyzer.MoveExpr(0), analyzer.MoveExpr(1),
@@ -3525,6 +3530,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicConcat()) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       return common::visit(
           [&](auto &&x, auto &&y) -> MaybeExpr {
             using T = ResultType<decltype(x)>;
@@ -3567,11 +3573,12 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
   if (!analyzer.fatalErrors()) {
     std::optional<DynamicType> leftType{analyzer.GetType(0)};
     std::optional<DynamicType> rightType{analyzer.GetType(1)};
-    analyzer.ConvertBOZ(leftType, 0, rightType);
-    analyzer.ConvertBOZ(rightType, 1, leftType);
+    analyzer.ConvertBOZ(&leftType, 0, rightType);
+    analyzer.ConvertBOZ(&rightType, 1, leftType);
     if (leftType && rightType &&
         analyzer.IsIntrinsicRelational(opr, *leftType, *rightType)) {
       analyzer.CheckForNullPointer("as a relational operand");
+      analyzer.CheckForAssumedRank("as a relational operand");
       return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
           analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
     } else {
@@ -3617,6 +3624,7 @@ MaybeExpr LogicalBinaryHelper(ExpressionAnalyzer &context, LogicalOperator opr,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicLogical()) {
       analyzer.CheckForNullPointer("as a logical operand");
+      analyzer.CheckForAssumedRank("as a logical operand");
       return AsGenericExpr(BinaryLogicalOperation(opr,
           std::get<Expr<SomeLogical>>(analyzer.MoveExpr(0).u),
           std::get<Expr<SomeLogical>>(analyzer.MoveExpr(1).u)));
@@ -4330,6 +4338,18 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
   return true;
 }
 
+bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
+  for (const std::optional<ActualArgument> &arg : actuals_) {
+    if (arg && IsAssumedRank(arg->UnwrapExpr())) {
+      context_.Say(source_,
+          "An assumed-rank dummy argument is not allowed %s"_err_en_US, where);
+      fatalErrors_ = true;
+      return false;
+    }
+  }
+  return true;
+}
+
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     const char *opr, parser::MessageFixedText error, bool isUserOp) {
   if (AnyUntypedOrMissingOperand()) {
@@ -4404,7 +4424,7 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     context_.Say(
         "Operands of %s are not conformable; have rank %d and rank %d"_err_en_US,
         ToUpperCase(opr), actuals_[0]->Rank(), actuals_[1]->Rank());
-  } else if (CheckForNullPointer()) {
+  } else if (CheckForNullPointer() && CheckForAssumedRank()) {
     context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
   }
   return result;
@@ -4468,9 +4488,22 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
     // allocatable (the explicit conversion would prevent the propagation of the
     // right hand side if it is a variable). Lowering will deal with the
     // conversion in this case.
-    if (lhsType && rhsType &&
-        (!IsAllocatableDesignator(lhs) || context_.inWhereBody())) {
-      AddAssignmentConversion(*lhsType, *rhsType);
+    if (lhsType) {
+      if (rhsType) {
+        if (!IsAllocatableDesignator(lhs) || context_.inWhereBody()) {
+          AddAssignmentConversion(*lhsType, *rhsType);
+        }
+      } else {
+        if (lhsType->category() == TypeCategory::Integer ||
+            lhsType->category() == TypeCategory::Real) {
+          ConvertBOZ(nullptr, 1, lhsType);
+        }
+        if (IsBOZLiteral(1)) {
+          context_.Say(
+              "Right-hand side of this assignment may not be BOZ"_err_en_US);
+          fatalErrors_ = true;
+        }
+      }
     }
     if (!fatalErrors_) {
       CheckAssignmentConformance();
@@ -4699,7 +4732,7 @@ int ArgumentAnalyzer::GetRank(std::size_t i) const {
 // otherType.  If it's REAL convert to REAL, otherwise convert to INTEGER.
 // Note that IBM supports comparing BOZ literals to CHARACTER operands.  That
 // is not currently supported.
-void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> &thisType,
+void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> *thisType,
     std::size_t i, std::optional<DynamicType> otherType) {
   if (IsBOZLiteral(i)) {
     Expr<SomeType> &&argExpr{MoveExpr(i)};
@@ -4709,13 +4742,17 @@ void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> &thisType,
       MaybeExpr realExpr{
           ConvertToKind<TypeCategory::Real>(kind, std::move(*boz))};
       actuals_[i] = std::move(*realExpr);
-      thisType.emplace(TypeCategory::Real, kind);
+      if (thisType) {
+        thisType->emplace(TypeCategory::Real, kind);
+      }
     } else {
       int kind{context_.context().GetDefaultKind(TypeCategory::Integer)};
       MaybeExpr intExpr{
           ConvertToKind<TypeCategory::Integer>(kind, std::move(*boz))};
       actuals_[i] = std::move(*intExpr);
-      thisType.emplace(TypeCategory::Integer, kind);
+      if (thisType) {
+        thisType->emplace(TypeCategory::Integer, kind);
+      }
     }
   }
 }

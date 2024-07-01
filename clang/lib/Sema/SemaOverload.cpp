@@ -4372,8 +4372,8 @@ HLSLCompareFloatingRank(QualType LHS, QualType RHS) {
   if (const auto *VT = RHS->getAs<VectorType>())
     RHS = VT->getElementType();
 
-  const auto L = LHS->getAs<BuiltinType>()->getKind();
-  const auto R = RHS->getAs<BuiltinType>()->getKind();
+  const auto L = LHS->castAs<BuiltinType>()->getKind();
+  const auto R = RHS->castAs<BuiltinType>()->getKind();
   if (L == R)
     return ImplicitConversionSequence::Indistinguishable;
   return L < R ? ImplicitConversionSequence::Better
@@ -12169,7 +12169,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_fail_bad_conversion: {
     unsigned I = (Cand->IgnoreObjectArgument ? 1 : 0);
     for (unsigned N = Cand->Conversions.size(); I != N; ++I)
-      if (Cand->Conversions[I].isBad())
+      if (Cand->Conversions[I].isInitialized() && Cand->Conversions[I].isBad())
         return DiagnoseBadConversion(S, Cand, I, TakingCandidateAddress);
 
     // FIXME: this currently happens when we're called from SemaInit

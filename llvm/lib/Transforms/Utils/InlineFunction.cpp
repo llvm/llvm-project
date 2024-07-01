@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
@@ -56,6 +57,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -1575,7 +1577,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
     return;
 
   AssumptionCache *AC = &IFI.GetAssumptionCache(*CB.getCaller());
-  auto &DL = CB.getCaller()->getParent()->getDataLayout();
+  auto &DL = CB.getDataLayout();
 
   // To avoid inserting redundant assumptions, we should check for assumptions
   // already in the caller. To do this, we might need a DT of the caller.
@@ -1638,7 +1640,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
                                   InlineFunctionInfo &IFI,
                                   MaybeAlign ByValAlignment) {
   Function *Caller = TheCall->getFunction();
-  const DataLayout &DL = Caller->getParent()->getDataLayout();
+  const DataLayout &DL = Caller->getDataLayout();
 
   // If the called function is readonly, then it could not mutate the caller's
   // copy of the byval'd memory.  In this case, it is safe to elide the copy and
@@ -1976,16 +1978,28 @@ void llvm::updateProfileCallee(
           ? 0
           : PriorEntryCount + EntryDelta;
 
+  auto updateVTableProfWeight = [](CallBase *CB, const uint64_t NewEntryCount,
+                                   const uint64_t PriorEntryCount) {
+    Instruction *VPtr = PGOIndirectCallVisitor::tryGetVTableInstruction(CB);
+    if (VPtr)
+      scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+  };
+
   // During inlining ?
   if (VMap) {
     uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
     for (auto Entry : *VMap) {
       if (isa<CallInst>(Entry.first))
-        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
+        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second)) {
           CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(CI, CloneEntryCount, PriorEntryCount);
+        }
+
       if (isa<InvokeInst>(Entry.first))
-        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second))
+        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second)) {
           II->updateProfWeight(CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(II, CloneEntryCount, PriorEntryCount);
+        }
     }
   }
 
@@ -1996,10 +2010,14 @@ void llvm::updateProfileCallee(
       // No need to update the callsite if it is pruned during inlining.
       if (!VMap || VMap->count(&BB))
         for (Instruction &I : BB) {
-          if (CallInst *CI = dyn_cast<CallInst>(&I))
+          if (CallInst *CI = dyn_cast<CallInst>(&I)) {
             CI->updateProfWeight(NewEntryCount, PriorEntryCount);
-          if (InvokeInst *II = dyn_cast<InvokeInst>(&I))
+            updateVTableProfWeight(CI, NewEntryCount, PriorEntryCount);
+          }
+          if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
             II->updateProfWeight(NewEntryCount, PriorEntryCount);
+            updateVTableProfWeight(II, NewEntryCount, PriorEntryCount);
+          }
         }
   }
 }
@@ -2293,7 +2311,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // callee.
     ScopedAliasMetadataDeepCloner SAMetadataCloner(CB.getCalledFunction());
 
-    auto &DL = Caller->getParent()->getDataLayout();
+    auto &DL = Caller->getDataLayout();
 
     // Calculate the vector of arguments to pass into the function cloner, which
     // matches up the formal to the actual argument values.
@@ -2627,7 +2645,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       ConstantInt *AllocaSize = nullptr;
       if (ConstantInt *AIArraySize =
           dyn_cast<ConstantInt>(AI->getArraySize())) {
-        auto &DL = Caller->getParent()->getDataLayout();
+        auto &DL = Caller->getDataLayout();
         Type *AllocaType = AI->getAllocatedType();
         TypeSize AllocaTypeSize = DL.getTypeAllocSize(AllocaType);
         uint64_t AllocaArraySize = AIArraySize->getLimitedValue();
@@ -3033,7 +3051,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   if (PHI) {
     AssumptionCache *AC =
         IFI.GetAssumptionCache ? &IFI.GetAssumptionCache(*Caller) : nullptr;
-    auto &DL = Caller->getParent()->getDataLayout();
+    auto &DL = Caller->getDataLayout();
     if (Value *V = simplifyInstruction(PHI, {DL, nullptr, nullptr, AC})) {
       PHI->replaceAllUsesWith(V);
       PHI->eraseFromParent();
