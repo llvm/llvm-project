@@ -10,7 +10,6 @@
 #include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
@@ -77,7 +76,7 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
         -0x1.32d2c0b62d41cp-1, 0x1.501ec4497cb7dp-4);
     return static_cast<float>(xd * result);
   }
-
+  
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
@@ -86,17 +85,21 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
     return x + FPBits::quiet_nan().get_val();
   }
 
+  // Numbers greater or equal to 2^23 are always integers => sinpi(x) = 0
+  if (LIBC_UNLIKELY(x_abs >= 0x4B00'0000))
+    return FPBits::zero(xbits.sign()).get_val();
+
+
   // Combine the results with the sine of sum formula:
   //   sin(x * pi) = sin((k + y)*pi/32)
   //          = sin(y*pi/32) * cos(k*pi/32) + cos(y*pi/32) * sin(k*pi/32)
   //          = sin_y * cos_k + (1 + cosm1_y) * sin_k
   //          = sin_y * cos_k + (cosm1_y * sin_k + sin_k)
   double sin_k, cos_k, sin_y, cosm1_y;
-
   sincospif_eval(xd, sin_k, cos_k, sin_y, cosm1_y);
 
   if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
-    return fputil::copysign(0.0f, x);
+    return FPBits::zero(xbits.sign()).get_val();
 
   return static_cast<float>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
