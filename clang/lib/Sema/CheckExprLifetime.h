@@ -15,7 +15,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
-#include <variant>
 
 namespace clang::sema {
 
@@ -25,16 +24,15 @@ struct AssignedEntity {
   Expr *LHS = nullptr;
 };
 
-using CheckingEntity =
-    std::variant<const InitializedEntity *, const AssignedEntity *>;
+/// Check that the lifetime of the given expr (and its subobjects) is
+/// sufficient for initializing the entity, and perform lifetime extension
+/// (when permitted) if not.
+void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
+                       Expr *Init);
 
 /// Check that the lifetime of the given expr (and its subobjects) is
-/// sufficient for initializing or assigning to the entity.
-///
-/// If the entity is being initialized and its lifetime is insufficient, perform
-/// lifetime extension (when permitted).
-void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
-                       Expr *Init);
+/// sufficient for assigning to the entity.
+void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity, Expr *Init);
 
 } // namespace clang::sema
 

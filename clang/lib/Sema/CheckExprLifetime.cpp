@@ -966,27 +966,27 @@ static bool pathOnlyInitializesGslPointer(IndirectLocalPath &Path) {
   return false;
 }
 
-void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
-                       Expr *Init) {
+static void checkExprLifetimeImpl(
+    Sema &SemaRef,
+    llvm::PointerUnion<const InitializedEntity *, const AssignedEntity *>
+        CEntity,
+    Expr *Init) {
   LifetimeKind LK = LK_FullExpression;
 
   const AssignedEntity *AEntity = nullptr;
   // Local variables for initialized entity.
   const InitializedEntity *InitEntity = nullptr;
   const InitializedEntity *ExtendingEntity = nullptr;
-  if (auto IEntityP = std::get_if<const InitializedEntity *>(&CEntity)) {
-    InitEntity = *IEntityP;
+  if (CEntity.is<const InitializedEntity *>()) {
+    InitEntity = CEntity.get<const InitializedEntity *>();
     auto LTResult = getEntityLifetime(InitEntity);
     LK = LTResult.getInt();
     ExtendingEntity = LTResult.getPointer();
-  } else if (auto AEntityP = std::get_if<const AssignedEntity *>(&CEntity)) {
-    AEntity = *AEntityP;
+  } else {
+    AEntity = CEntity.get<const AssignedEntity *>();
     if (AEntity->LHS->getType()->isPointerType()) // builtin pointer type
       LK = LK_Extended;
-  } else {
-    llvm_unreachable("unexpected kind");
   }
-
   // If this entity doesn't have an interesting lifetime, don't bother looking
   // for temporaries within its initializer.
   if (LK == LK_FullExpression)
@@ -1288,6 +1288,16 @@ void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
         Path, Init, TemporaryVisitor,
         // Don't revisit the sub inits for the intialization case.
         /*RevisitSubinits=*/!InitEntity, EnableLifetimeWarnings);
+}
+
+void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
+                       Expr *Init) {
+  checkExprLifetimeImpl(SemaRef, &Entity, Init);
+}
+
+void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
+                       Expr *Init) {
+  checkExprLifetimeImpl(SemaRef, &Entity, Init);
 }
 
 } // namespace clang::sema
