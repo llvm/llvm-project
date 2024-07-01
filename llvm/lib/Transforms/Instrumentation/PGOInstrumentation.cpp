@@ -320,6 +320,8 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
     cl::desc("Do not instrument functions with the number of critical edges "
              " greater than this threshold."));
 
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
@@ -332,6 +334,7 @@ extern cl::opt<std::string> ViewBlockFreqFuncName;
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
+extern cl::opt<bool> EnableVTableProfileUse;
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
@@ -883,10 +886,6 @@ static void instrumentOneFunc(
   auto Name = FuncInfo.FuncNameVar;
   auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                   FuncInfo.FunctionHash);
-  // Make sure that pointer to global is passed in with zero addrspace
-  // This is relevant during GPU profiling
-  auto *NormalizedNamePtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      Name, PointerType::get(M->getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
@@ -894,7 +893,7 @@ static void instrumentOneFunc(
     //                      i32 <index>)
     Builder.CreateCall(
         Intrinsic::getDeclaration(M, Intrinsic::instrprof_cover),
-        {NormalizedNamePtr, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
+        {Name, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
     return;
   }
 
@@ -949,8 +948,7 @@ static void instrumentOneFunc(
     //                          i32 <index>)
     Builder.CreateCall(
         Intrinsic::getDeclaration(M, Intrinsic::instrprof_timestamp),
-        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
-         Builder.getInt32(I)});
+        {Name, CFGHash, Builder.getInt32(NumCounters), Builder.getInt32(I)});
     I += PGOBlockCoverage ? 8 : 1;
   }
 
@@ -964,8 +962,7 @@ static void instrumentOneFunc(
         Intrinsic::getDeclaration(M, PGOBlockCoverage
                                          ? Intrinsic::instrprof_cover
                                          : Intrinsic::instrprof_increment),
-        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
-         Builder.getInt32(I++)});
+        {Name, CFGHash, Builder.getInt32(NumCounters), Builder.getInt32(I++)});
   }
 
   // Now instrument select instructions:
@@ -1008,14 +1005,11 @@ static void instrumentOneFunc(
         ToProfile = Builder.CreatePtrToInt(Cand.V, Builder.getInt64Ty());
       assert(ToProfile && "value profiling Value is of unexpected type");
 
-      auto *NormalizedNamePtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-          Name, PointerType::get(M->getContext(), 0));
-
       SmallVector<OperandBundleDef, 1> OpBundles;
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
           Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
-          {NormalizedNamePtr, Builder.getInt64(FuncInfo.FunctionHash),
+          {FuncInfo.FuncNameVar, Builder.getInt64(FuncInfo.FunctionHash),
            ToProfile, Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
           OpBundles);
     }
@@ -1690,13 +1684,10 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
   auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
-  auto *NormalizedFuncNameVarPtr =
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-          FuncNameVar, PointerType::get(M->getContext(), 0));
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
-      {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
-       Builder.getInt32(TotalNumCtrs), Builder.getInt32(*CurCtrIdx), Step});
+      {FuncNameVar, Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
+       Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
 
@@ -1740,6 +1731,14 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   llvm_unreachable("Unknown visiting mode");
 }
 
+static uint32_t getMaxNumAnnotations(InstrProfValueKind ValueProfKind) {
+  if (ValueProfKind == IPVK_MemOPSize)
+    return MaxNumMemOPAnnotations;
+  if (ValueProfKind == llvm::IPVK_VTableTarget)
+    return MaxNumVTableAnnotations;
+  return MaxNumAnnotations;
+}
+
 // Traverse all valuesites and annotate the instructions for all value kind.
 void PGOUseFunc::annotateValueSites() {
   if (isValueProfilingDisabled())
@@ -1774,10 +1773,10 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     LLVM_DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
                       << "): Index = " << ValueSiteIndex << " out of "
                       << NumValueSites << "\n");
-    annotateValueSite(*M, *I.AnnotatedInst, ProfileRecord,
-                      static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
-                      Kind == IPVK_MemOPSize ? MaxNumMemOPAnnotations
-                                             : MaxNumAnnotations);
+    annotateValueSite(
+        *M, *I.AnnotatedInst, ProfileRecord,
+        static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
+        getMaxNumAnnotations(static_cast<InstrProfValueKind>(Kind)));
     ValueSiteIndex++;
   }
 }
@@ -2066,6 +2065,16 @@ static bool annotateAllFunctions(
     return false;
   }
 
+  if (EnableVTableProfileUse) {
+    for (GlobalVariable &G : M.globals()) {
+      if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
+        continue;
+
+      // Create the PGOFuncName meta data.
+      createPGONameMetadata(G, getPGOName(G, false /* InLTO*/));
+    }
+  }
+
   // Add the profile summary (read from the header of the indexed summary) here
   // so that we can use it below when reading counters (which checks if the
   // function should be marked with a cold or inlinehint attribute).
@@ -2241,7 +2250,6 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-
   if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName, *FS,
                             LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
     return PreservedAnalyses::all();
@@ -2256,7 +2264,7 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
   std::string SimpleNodeName;
   raw_string_ostream OS(SimpleNodeName);
   Node->printAsOperand(OS, false);
-  return OS.str();
+  return SimpleNodeName;
 }
 
 void llvm::setProfMetadata(Module *M, Instruction *TI,

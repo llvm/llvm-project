@@ -917,15 +917,14 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       }
 
 #ifndef NDEBUG
-      const uint64_t OrigOffset = Layout.getFragmentOffset(&F);
+      const uint64_t OrigOffset = Asm.getFragmentOffset(F);
 #endif
-      const uint64_t OrigSize = Asm.computeFragmentSize(Layout, F);
+      const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
       // To keep the effects local, prefer to relax instructions closest to
       // the align directive.  This is purely about human understandability
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
-      MCFragment *FirstChangedFragment = nullptr;
       unsigned RemainingSize = OrigSize;
       while (!Relaxable.empty() && RemainingSize != 0) {
         auto &RF = *Relaxable.pop_back_val();
@@ -933,7 +932,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
         // the encoding size of the given instruction.  Target independent code
         // will try further relaxation, but target's may play further tricks.
         if (padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize))
-          FirstChangedFragment = &RF;
+          Sec.setHasLayout(false);
 
         // If we have an instruction which hasn't been fully relaxed, we can't
         // skip past it and insert bytes before it.  Changing its starting
@@ -946,20 +945,13 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       }
       Relaxable.clear();
 
-      if (FirstChangedFragment) {
-        // Make sure the offsets for any fragments in the effected range get
-        // updated.  Note that this (conservatively) invalidates the offsets of
-        // those following, but this is not required.
-        Layout.invalidateFragmentsFrom(FirstChangedFragment);
-      }
-
       // BoundaryAlign explicitly tracks it's size (unlike align)
       if (F.getKind() == MCFragment::FT_BoundaryAlign)
         cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
 
 #ifndef NDEBUG
-      const uint64_t FinalOffset = Layout.getFragmentOffset(&F);
-      const uint64_t FinalSize = Asm.computeFragmentSize(Layout, F);
+      const uint64_t FinalOffset = Asm.getFragmentOffset(F);
+      const uint64_t FinalSize = Asm.computeFragmentSize(F);
       assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
              "can't move start of next fragment!");
       assert(FinalSize == RemainingSize && "inconsistent size computation?");
@@ -981,8 +973,8 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   // The layout is done. Mark every fragment as valid.
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
     MCSection &Section = *Layout.getSectionOrder()[i];
-    Layout.getFragmentOffset(&*Section.curFragList()->Tail);
-    Asm.computeFragmentSize(Layout, *Section.curFragList()->Tail);
+    Asm.getFragmentOffset(*Section.curFragList()->Tail);
+    Asm.computeFragmentSize(*Section.curFragList()->Tail);
   }
 }
 

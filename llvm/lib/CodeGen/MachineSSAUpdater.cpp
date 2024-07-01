@@ -306,11 +306,11 @@ public:
     append_range(*Preds, BB->predecessors());
   }
 
-  /// GetUndefVal - Create an IMPLICIT_DEF instruction with a new register.
+  /// GetPoisonVal - Create an IMPLICIT_DEF instruction with a new register.
   /// Add it into the specified block and return the register.
-  static Register GetUndefVal(MachineBasicBlock *BB,
+  static Register GetPoisonVal(MachineBasicBlock *BB,
                               MachineSSAUpdater *Updater) {
-    // Insert an implicit_def to represent an undef value.
+    // Insert an implicit_def to represent a poison value.
     MachineInstr *NewDef =
         InsertNewDef(TargetOpcode::IMPLICIT_DEF, BB, BB->getFirstNonPHI(),
                      Updater->RegAttrs, Updater->MRI, Updater->TII);
