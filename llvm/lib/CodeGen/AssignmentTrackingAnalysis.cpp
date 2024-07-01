@@ -2184,7 +2184,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
       if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         ProcessDbgRecord(DII, InstDeclares);
       } else if (auto Info = getUntaggedStoreAssignmentInfo(
-                     I, Fn.getParent()->getDataLayout())) {
+                     I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
         auto HandleDbgAssignForStore = [&](auto *Assign) {
           std::optional<DIExpression::FragmentInfo> FragInfo;
@@ -2800,7 +2800,7 @@ DebugAssignmentTrackingAnalysis::run(Function &F,
   if (!isAssignmentTrackingEnabled(*F.getParent()))
     return FunctionVarLocs();
 
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   FunctionVarLocsBuilder Builder;
   analyzeFunction(F, DL, &Builder);
