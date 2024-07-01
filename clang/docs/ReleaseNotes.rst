@@ -629,6 +629,8 @@ Attribute Changes in Clang
   The attributes declare constraints about a function's behavior pertaining to blocking and
   heap memory allocation.
 
+- Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now emits an error instead of a warning for ``-Wundefined-internal``
