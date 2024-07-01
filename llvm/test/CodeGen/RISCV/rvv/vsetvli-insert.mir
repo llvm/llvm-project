@@ -539,8 +539,7 @@ body:             |
     ; CHECK-LABEL: name: coalesce_dead_avl_nonvolatile_load
     ; CHECK: liveins: $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:gpr = COPY $x1
-    ; CHECK-NEXT: dead %avl:gprnox0 = LW %ptr, 0 :: (dereferenceable load (s32))
+    ; CHECK-NEXT: dead %ptr:gpr = COPY $x1
     ; CHECK-NEXT: $x0 = PseudoVSETIVLI 3, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: dead %x:gpr = PseudoVMV_X_S $noreg, 6 /* e64 */, implicit $vtype
     ; CHECK-NEXT: $v0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
