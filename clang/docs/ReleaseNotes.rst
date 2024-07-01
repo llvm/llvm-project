@@ -641,6 +641,10 @@ Improvements to Clang's diagnostics
   used rather than when they are needed for constant evaluation or when code is generated for them.
   The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
 
+- Clang now diagnoses dangling cases where a pointer is assigned to a temporary
+  that will be destroyed at the end of the full expression.
+  Fixes #GH54492.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
