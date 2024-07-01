@@ -257,12 +257,6 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_GNULD YES CACHE INTERNAL "")
       message(STATUS "Linker detection: GNU ld")
-    elseif("${stderr}" MATCHES "(illumos)" OR
-           "${stdout}" MATCHES "(illumos)")
-      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_SOLARISLD YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_SOLARISLD_ILLUMOS YES CACHE INTERNAL "")
-      message(STATUS "Linker detection: Solaris ld (illumos)")
     elseif("${stderr}" MATCHES "Solaris Link Editors" OR
            "${stdout}" MATCHES "Solaris Link Editors")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -296,6 +290,7 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
 endif()
 
 function(add_link_opts target_name)
+  include(LLVMCheckLinkerFlag)
   get_llvm_distribution(${target_name} in_distribution in_distribution_var)
   if(NOT in_distribution)
     # Don't LTO optimize targets that aren't part of any distribution.
@@ -327,7 +322,6 @@ function(add_link_opts target_name)
       elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.  GNU ld ignores it, but warns every time.
-        include(LLVMCheckLinkerFlag)
         llvm_check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
@@ -354,6 +348,11 @@ function(add_link_opts target_name)
   if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-brtl")
+  endif()
+
+  if (NOT MINGW)
+    llvm_check_linker_flag(CXX "-Wl,-Bsymbolic-functions"
+                           LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
   endif()
 endfunction(add_link_opts)
 
