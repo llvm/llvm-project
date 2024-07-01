@@ -26,7 +26,7 @@ using namespace llvm;
 static cl::opt<bool> RiscvAbiAttr(
     "riscv-abi-attributes",
     cl::desc("Enable emitting RISC-V ELF attributes for ABI features"),
-    cl::init(false), cl::Hidden);
+    cl::Hidden);
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
