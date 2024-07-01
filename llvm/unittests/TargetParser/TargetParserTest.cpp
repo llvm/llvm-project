@@ -1085,6 +1085,8 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
   EXPECT_PRED_FORMAT2(
       AssertSameExtensionFlags<ARM::ISAKind::AARCH64>(params.CPUName),
       params.ExpectedFlags, Cpu->getImpliedExtensions());
+
+  EXPECT_EQ(llvm::StringRef(("armv" + params.CPUAttr).str()).lower(), Cpu->Arch.Name.lower());
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1657,7 +1659,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SSBS,    AArch64::AEK_CCDP,
                  AArch64::AEK_FRINT3264, AArch64::AEK_SPECRESTRICT,
                  AArch64::AEK_ALTERNATIVENZCV}),
-            "8.6-A"),
+            "8.4-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "apple-a15", "armv8.6-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset(
@@ -1690,7 +1692,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3,    AArch64::AEK_BF16,
                  AArch64::AEK_I8MM,    AArch64::AEK_JSCVT,   AArch64::AEK_FCMA,
                  AArch64::AEK_PAUTH,   AArch64::AEK_PERFMON, AArch64::AEK_HCX}),
-            "8.4-A"),
+            "8.6-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "apple-m3", "armv8.6-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset(
@@ -1728,7 +1730,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SME,       AArch64::AEK_SME2,
                  AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64,
                  AArch64::AEK_PERFMON}),
-            "8.3-A"),
+            "8.7-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset({AArch64::AEK_CRC, AArch64::AEK_AES,
