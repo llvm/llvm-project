@@ -138,7 +138,19 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   InlineAsm *Exit = InlineAsm::get(ExitFTy, "exit;", "", true);
 
   bool Changed = false;
-  for (auto &BB : F)
+
+  // In scenarios where a BasicBlock contains only one unreachable instruction,
+  // the joint action of nvptx-isel and unreachable-mbb-elimination
+  // effectively optimizes the BasicBlock out. However, adding an exit
+  // command to such a BasicBlock, as suggested by this pass, preserves it
+  // within the Control Flow Graph (CFG), thereby negatively impacting size and
+  // performance. To counteract this undesirable consequence, we choose to
+  // refrain from processing BasicBlocks with just one unreachable instruction
+  // in this pass.
+
+  for (auto &BB : F) {
+    if ((BB.size() == 1) && (isa<UnreachableInst>(BB.front())))
+      continue;
     for (auto &I : BB) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
         if (isLoweredToTrap(*unreachableInst))
@@ -147,6 +159,7 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
         Changed = true;
       }
     }
+  }
   return Changed;
 }
 
