@@ -3818,7 +3818,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+                          : builder.getBoolArrayAttr(
+                                SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         inBoundsAttr);
 }
@@ -3833,7 +3834,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+                          : builder.getBoolArrayAttr(
+                                SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         padding,
         /*mask=*/Value(), inBoundsAttr);
@@ -3951,17 +3953,15 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
            << inferredMaskType << ") and mask operand type (" << maskType
            << ") don't match";
 
-  if (inBounds) {
-    if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
-      return op->emitOpError("expects the optional in_bounds attr of same rank "
-                             "as permutation_map results: ")
-             << AffineMapAttr::get(permutationMap)
-             << " vs inBounds of size: " << inBounds.size();
-    for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
-      if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
-          !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
-        return op->emitOpError("requires broadcast dimensions to be in-bounds");
-  }
+  if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
+    return op->emitOpError("expects the in_bounds attr of same rank "
+                           "as permutation_map results: ")
+           << AffineMapAttr::get(permutationMap)
+           << " vs inBounds of size: " << inBounds.size();
+  for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
+    if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
+        !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
+      return op->emitOpError("requires broadcast dimensions to be in-bounds");
 
   return success();
 }
@@ -3971,9 +3971,6 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
   if (op.getPermutationMap().isMinorIdentity())
     elidedAttrs.push_back(op.getPermutationMapAttrName());
-  // Elide in_bounds attribute if all dims are out-of-bounds.
-  if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
-    elidedAttrs.push_back(op.getInBoundsAttrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
@@ -4081,8 +4078,7 @@ LogicalResult TransferReadOp::verify() {
 
   if (failed(verifyTransferOp(cast<VectorTransferOpInterface>(getOperation()),
                               shapedType, vectorType, maskType,
-                              inferredMaskType, permutationMap,
-                              getInBounds() ? *getInBounds() : ArrayAttr())))
+                              inferredMaskType, permutationMap, getInBounds())))
     return failure();
 
   if (auto sourceVectorElementType =
@@ -4355,9 +4351,11 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             AffineMap permutationMap,
                             std::optional<ArrayRef<bool>> inBounds) {
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+  auto inBoundsAttr =
+      (inBounds && !inBounds.value().empty())
+          ? builder.getBoolArrayAttr(inBounds.value())
+          : builder.getBoolArrayAttr(SmallVector<bool>(
+                llvm::cast<VectorType>(vector.getType()).getRank(), false));
   build(builder, result, vector, dest, indices, permutationMapAttr,
         /*mask=*/Value(), inBoundsAttr);
 }
@@ -4463,8 +4461,7 @@ LogicalResult TransferWriteOp::verify() {
 
   if (failed(verifyTransferOp(cast<VectorTransferOpInterface>(getOperation()),
                               shapedType, vectorType, maskType,
-                              inferredMaskType, permutationMap,
-                              getInBounds() ? *getInBounds() : ArrayAttr())))
+                              inferredMaskType, permutationMap, getInBounds())))
     return failure();
 
   return verifyPermutationMap(permutationMap,

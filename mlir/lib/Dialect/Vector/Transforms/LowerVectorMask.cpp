@@ -224,7 +224,7 @@ public:
     rewriter.replaceOpWithNewOp<TransferReadOp>(
         maskingOp.getOperation(), readOp.getVectorType(), readOp.getSource(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
-        maskingOp.getMask(), readOp.getInBounds().value_or(ArrayAttr()));
+        maskingOp.getMask(), readOp.getInBounds());
     return success();
   }
 };
@@ -246,7 +246,7 @@ public:
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
         writeOp.getSource(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        maskingOp.getMask(), writeOp.getInBounds().value_or(ArrayAttr()));
+        maskingOp.getMask(), writeOp.getInBounds());
     return success();
   }
 };
