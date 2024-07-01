@@ -1384,6 +1384,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
+  config->resolveGroups =
+      !args.hasArg(OPT_relocatable) || args.hasArg(OPT_force_group_allocation);
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.

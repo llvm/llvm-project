@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // REQUIRES: !system-windows
 
 // Test flush-denormals-to-zero enabled uses oclc_daz_opt_on

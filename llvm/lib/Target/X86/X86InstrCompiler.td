@@ -1125,7 +1125,9 @@ multiclass ATOMIC_LOAD_FP_BINOP_MI<string Name, SDNode op> {
             Requires<[HasAVX512]>;
 }
 defm : ATOMIC_LOAD_FP_BINOP_MI<"ADD", fadd>;
-// FIXME: Add fsub, fmul, fdiv, ...
+defm : ATOMIC_LOAD_FP_BINOP_MI<"SUB", fsub>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"MUL", fmul>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"DIV", fdiv>;
 
 multiclass RELEASE_UNOP<string Name, dag dag8, dag dag16, dag dag32,
                         dag dag64> {

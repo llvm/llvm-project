@@ -214,7 +214,7 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
-    const SCEV *Ex = PSE.getBackedgeTakenCount();
+    const SCEV *Ex = PSE.getSymbolicMaxBackedgeTakenCount();
 
     ScStart = AR->getStart();
     ScEnd = AR->evaluateAtIteration(Ex, *SE);
@@ -1796,28 +1796,28 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
 /// Given a dependence-distance \p Dist between two
 /// memory accesses, that have strides in the same direction whose absolute
 /// value of the maximum stride is given in \p MaxStride, and that have the same
-/// type size \p TypeByteSize, in a loop whose takenCount is \p
-/// BackedgeTakenCount, check if it is possible to prove statically that the
-/// dependence distance is larger than the range that the accesses will travel
-/// through the execution of the loop. If so, return true; false otherwise. This
-/// is useful for example in loops such as the following (PR31098):
+/// type size \p TypeByteSize, in a loop whose maximum backedge taken count is
+/// \p MaxBTC, check if it is possible to prove statically that the dependence
+/// distance is larger than the range that the accesses will travel through the
+/// execution of the loop. If so, return true; false otherwise. This is useful
+/// for example in loops such as the following (PR31098):
 ///     for (i = 0; i < D; ++i) {
 ///                = out[i];
 ///       out[i+D] =
 ///     }
 static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
-                                     const SCEV &BackedgeTakenCount,
-                                     const SCEV &Dist, uint64_t MaxStride,
+                                     const SCEV &MaxBTC, const SCEV &Dist,
+                                     uint64_t MaxStride,
                                      uint64_t TypeByteSize) {
 
   // If we can prove that
-  //      (**) |Dist| > BackedgeTakenCount * Step
+  //      (**) |Dist| > MaxBTC * Step
   // where Step is the absolute stride of the memory accesses in bytes,
   // then there is no dependence.
   //
   // Rationale:
   // We basically want to check if the absolute distance (|Dist/Step|)
-  // is >= the loop iteration count (or > BackedgeTakenCount).
+  // is >= the loop iteration count (or > MaxBTC).
   // This is equivalent to the Strong SIV Test (Practical Dependence Testing,
   // Section 4.2.1); Note, that for vectorization it is sufficient to prove
   // that the dependence distance is >= VF; This is checked elsewhere.
@@ -1828,8 +1828,8 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // also guarantees that distance >= VF.
   //
   const uint64_t ByteStride = MaxStride * TypeByteSize;
-  const SCEV *Step = SE.getConstant(BackedgeTakenCount.getType(), ByteStride);
-  const SCEV *Product = SE.getMulExpr(&BackedgeTakenCount, Step);
+  const SCEV *Step = SE.getConstant(MaxBTC.getType(), ByteStride);
+  const SCEV *Product = SE.getMulExpr(&MaxBTC, Step);
 
   const SCEV *CastedDist = &Dist;
   const SCEV *CastedProduct = Product;
@@ -1844,13 +1844,13 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   else
     CastedDist = SE.getNoopOrSignExtend(&Dist, Product->getType());
 
-  // Is  Dist - (BackedgeTakenCount * Step) > 0 ?
+  // Is  Dist - (MaxBTC * Step) > 0 ?
   // (If so, then we have proven (**) because |Dist| >= Dist)
   const SCEV *Minus = SE.getMinusSCEV(CastedDist, CastedProduct);
   if (SE.isKnownPositive(Minus))
     return true;
 
-  // Second try: Is  -Dist - (BackedgeTakenCount * Step) > 0 ?
+  // Second try: Is  -Dist - (MaxBTC * Step) > 0 ?
   // (If so, then we have proven (**) because |Dist| >= -1*Dist)
   const SCEV *NegDist = SE.getNegativeSCEV(CastedDist);
   Minus = SE.getMinusSCEV(NegDist, CastedProduct);
@@ -2034,12 +2034,13 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   uint64_t MaxStride = std::max(StrideA, StrideB);
 
   // If the distance between the acecsses is larger than their maximum absolute
-  // stride multiplied by the backedge taken count, the accesses are independet,
-  // i.e. they are far enough appart that accesses won't access the same
-  // location across all loop ierations.
-  if (HasSameSize &&
-      isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
-                               MaxStride, TypeByteSize))
+  // stride multiplied by the symbolic maximum backedge taken count (which is an
+  // upper bound of the number of iterations), the accesses are independet, i.e.
+  // they are far enough appart that accesses won't access the same location
+  // across all loop ierations.
+  if (HasSameSize && isSafeDependenceDistance(
+                         DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()),
+                         *Dist, MaxStride, TypeByteSize))
     return Dependence::NoDep;
 
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
@@ -2374,8 +2375,10 @@ bool LoopAccessInfo::canAnalyzeLoop() {
     return false;
   }
 
-  // ScalarEvolution needs to be able to find the exit count.
-  const SCEV *ExitCount = PSE->getBackedgeTakenCount();
+  // ScalarEvolution needs to be able to find the symbolic max backedge taken
+  // count, which is an upper bound on the number of loop iterations. The loop
+  // may execute fewer iterations, if it exits via an uncountable exit.
+  const SCEV *ExitCount = PSE->getSymbolicMaxBackedgeTakenCount();
   if (isa<SCEVCouldNotCompute>(ExitCount)) {
     recordAnalysis("CantComputeNumberOfIterations")
         << "could not determine number of loop iterations";
@@ -2984,25 +2987,25 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // of various possible stride specializations, considering the alternatives
   // of using gather/scatters (if available).
 
-  const SCEV *BETakenCount = PSE->getBackedgeTakenCount();
+  const SCEV *MaxBTC = PSE->getSymbolicMaxBackedgeTakenCount();
 
-  // Match the types so we can compare the stride and the BETakenCount.
+  // Match the types so we can compare the stride and the MaxBTC.
   // The Stride can be positive/negative, so we sign extend Stride;
-  // The backedgeTakenCount is non-negative, so we zero extend BETakenCount.
+  // The backedgeTakenCount is non-negative, so we zero extend MaxBTC.
   const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
   uint64_t StrideTypeSizeBits = DL.getTypeSizeInBits(StrideExpr->getType());
-  uint64_t BETypeSizeBits = DL.getTypeSizeInBits(BETakenCount->getType());
+  uint64_t BETypeSizeBits = DL.getTypeSizeInBits(MaxBTC->getType());
   const SCEV *CastedStride = StrideExpr;
-  const SCEV *CastedBECount = BETakenCount;
+  const SCEV *CastedBECount = MaxBTC;
   ScalarEvolution *SE = PSE->getSE();
   if (BETypeSizeBits >= StrideTypeSizeBits)
-    CastedStride = SE->getNoopOrSignExtend(StrideExpr, BETakenCount->getType());
+    CastedStride = SE->getNoopOrSignExtend(StrideExpr, MaxBTC->getType());
   else
-    CastedBECount = SE->getZeroExtendExpr(BETakenCount, StrideExpr->getType());
+    CastedBECount = SE->getZeroExtendExpr(MaxBTC, StrideExpr->getType());
   const SCEV *StrideMinusBETaken = SE->getMinusSCEV(CastedStride, CastedBECount);
   // Since TripCount == BackEdgeTakenCount + 1, checking:
   // "Stride >= TripCount" is equivalent to checking:
-  // Stride - BETakenCount > 0
+  // Stride - MaxBTC> 0
   if (SE->isKnownPositive(StrideMinusBETaken)) {
     LLVM_DEBUG(
         dbgs() << "LAA: Stride>=TripCount; No point in versioning as the "

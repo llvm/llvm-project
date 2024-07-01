@@ -784,7 +784,7 @@ let Command = "process save_core" in {
     EnumArg<"SaveCoreStyle">, Desc<"Request a specific style "
     "of corefile to be saved.">;
   def process_save_core_plugin_name : Option<"plugin-name", "p">,
-    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file."
+    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file. "
     "This allows core files to be saved in different formats.">;
 }
 
@@ -1425,4 +1425,8 @@ let Command = "statistics dump" in {
     Desc<"Dump the total possible debug info statistics. "
     "Force loading all the debug information if not yet loaded, and collect "
     "statistics with those.">;
+  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
+    Desc<"If the setting interpreter.save-transcript is enabled and this "
+    "option is specified, include a JSON array with all commands the user and/"
+    "or scripts executed during a debug session.">;
 }

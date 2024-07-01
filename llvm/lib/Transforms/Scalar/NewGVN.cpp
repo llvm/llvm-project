@@ -1199,7 +1199,7 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
   } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(I)) {
     Value *V = simplifyGEPInst(GEPI->getSourceElementType(), *E->op_begin(),
                                ArrayRef(std::next(E->op_begin()), E->op_end()),
-                               GEPI->isInBounds(), Q);
+                               GEPI->getNoWrapFlags(), Q);
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (AllConstant) {

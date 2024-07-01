@@ -1147,7 +1147,7 @@ void SBTarget::GetBreakpointNames(SBStringList &names) {
 
     std::vector<std::string> name_vec;
     target_sp->GetBreakpointNames(name_vec);
-    for (auto name : name_vec)
+    for (const auto &name : name_vec)
       names.AppendString(name.c_str());
   }
 }

@@ -498,7 +498,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                    R, LinkedToSym);
 
   auto *F = new MCDataFragment();
-  Ret->getFragmentList().insert(Ret->begin(), F);
+  Ret->addFragment(*F);
   F->setParent(Ret);
   R->setFragment(F);
 
@@ -772,7 +772,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   Entry.second = Result;
 
   auto *F = new MCDataFragment();
-  Result->getFragmentList().insert(Result->begin(), F);
+  Result->addFragment(*F);
   F->setParent(Result);
   Begin->setFragment(F);
 
@@ -838,7 +838,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   Entry.second = Result;
 
   auto *F = new MCDataFragment();
-  Result->getFragmentList().insert(Result->begin(), F);
+  Result->addFragment(*F);
   F->setParent(Result);
 
   if (Begin)
@@ -861,7 +861,7 @@ MCSectionSPIRV *MCContext::getSPIRVSection() {
       MCSectionSPIRV(SectionKind::getText(), Begin);
 
   auto *F = new MCDataFragment();
-  Result->getFragmentList().insert(Result->begin(), F);
+  Result->addFragment(*F);
   F->setParent(Result);
 
   return Result;
@@ -884,7 +884,7 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
 
   // The first fragment will store the header
   auto *F = new MCDataFragment();
-  MapIt->second->getFragmentList().insert(MapIt->second->begin(), F);
+  MapIt->second->addFragment(*F);
   F->setParent(MapIt->second);
 
   return MapIt->second;

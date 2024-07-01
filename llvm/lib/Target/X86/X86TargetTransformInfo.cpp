@@ -169,6 +169,8 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   if (ST->is64Bit()) {
     if (Vector && ST->hasAVX512())
       return 32;
+    if (!Vector && ST->hasEGPR())
+      return 32;
     return 16;
   }
   return 8;

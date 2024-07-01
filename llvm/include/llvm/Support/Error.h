@@ -1278,6 +1278,11 @@ inline Error createStringError(const Twine &S) {
 }
 
 template <typename... Ts>
+inline Error createStringError(char const *Fmt, const Ts &...Vals) {
+  return createStringError(llvm::inconvertibleErrorCode(), Fmt, Vals...);
+}
+
+template <typename... Ts>
 inline Error createStringError(std::errc EC, char const *Fmt,
                                const Ts &... Vals) {
   return createStringError(std::make_error_code(EC), Fmt, Vals...);

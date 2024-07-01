@@ -214,7 +214,7 @@ int main() {
 // CHECK1:       omp.inner.for.body:
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
 // CHECK1-NEXT:    switch i32 [[TMP8]], label [[DOTOMP_SECTIONS_EXIT:%.*]] [
-// CHECK1-NEXT:    i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
+// CHECK1-NEXT:      i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.sections.case:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[T_VAR]], align 4
@@ -263,7 +263,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK1-SAME: () #[[ATTR6:[0-9]+]] comdat {
+// CHECK1-SAME: () #[[ATTR1]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
@@ -403,8 +403,8 @@ int main() {
 // CHECK1:       omp.inner.for.body:
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
 // CHECK1-NEXT:    switch i32 [[TMP8]], label [[DOTOMP_SECTIONS_EXIT:%.*]] [
-// CHECK1-NEXT:    i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_SECTIONS_CASE1:%.*]]
+// CHECK1-NEXT:      i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_SECTIONS_CASE1:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.sections.case:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[T_VAR]], align 4
@@ -555,8 +555,8 @@ int main() {
 // CHECK4:       omp.inner.for.body:
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_]], align 4
 // CHECK4-NEXT:    switch i32 [[TMP8]], label [[DOTOMP_SECTIONS_EXIT:%.*]] [
-// CHECK4-NEXT:    i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
-// CHECK4-NEXT:    i32 1, label [[DOTOMP_SECTIONS_CASE1:%.*]]
+// CHECK4-NEXT:      i32 0, label [[DOTOMP_SECTIONS_CASE:%.*]]
+// CHECK4-NEXT:      i32 1, label [[DOTOMP_SECTIONS_CASE1:%.*]]
 // CHECK4-NEXT:    ]
 // CHECK4:       .omp.sections.case:
 // CHECK4-NEXT:    store double 1.000000e+00, ptr [[G]], align 8

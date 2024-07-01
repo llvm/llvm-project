@@ -12,6 +12,7 @@
 #include "bolt/Core/DIEBuilder.h"
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/DebugNames.h"
+#include "bolt/Core/GDBIndex.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWP/DWP.h"
@@ -131,7 +132,8 @@ private:
   makeFinalLocListsSection(DWARFVersion Version);
 
   /// Finalize type sections in the main binary.
-  CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer);
+  CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
+                                   GDBIndex &GDBIndexSection);
 
   /// Process and write out CUs that are passsed in.
   void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,

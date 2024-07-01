@@ -26,9 +26,6 @@ template <typename FnTy> void ForeachKnownBits(unsigned Bits, FnTy Fn) {
     for (unsigned One = 0; One < Max; ++One) {
       Known.Zero = Zero;
       Known.One = One;
-      if (Known.hasConflict())
-        continue;
-
       Fn(Known);
     }
   }

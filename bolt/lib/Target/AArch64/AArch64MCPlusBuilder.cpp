@@ -141,10 +141,6 @@ public:
                                  *AArch64ExprB.getSubExpr(), Comp);
   }
 
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    return false;
-  }
-
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
     return false;
   }
@@ -616,7 +612,7 @@ public:
     return getTargetAddend(Op.getExpr());
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
@@ -638,7 +634,6 @@ public:
 
     *OI = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   /// Matches indirect branch patterns in AArch64 related to a jump table (JT),
@@ -969,7 +964,7 @@ public:
     }
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     if (isTB(Inst) || isCB(Inst)) {
       Inst.setOpcode(getInvertedBranchOpcode(Inst.getOpcode()));
@@ -984,7 +979,7 @@ public:
       LLVM_DEBUG(Inst.dump());
       llvm_unreachable("Unrecognized branch instruction");
     }
-    return replaceBranchTarget(Inst, TBB, Ctx);
+    replaceBranchTarget(Inst, TBB, Ctx);
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {

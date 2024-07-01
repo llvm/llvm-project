@@ -3158,6 +3158,22 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
     // Match: logic (ext X), (ext Y) --> ext (logic X, Y)
     break;
   }
+  case TargetOpcode::G_TRUNC: {
+    // Match: logic (trunc X), (trunc Y) -> trunc (logic X, Y)
+    const MachineFunction *MF = MI.getMF();
+    const DataLayout &DL = MF->getDataLayout();
+    LLVMContext &Ctx = MF->getFunction().getContext();
+
+    LLT DstTy = MRI.getType(Dst);
+    const TargetLowering &TLI = getTargetLowering();
+
+    // Be extra careful sinking truncate. If it's free, there's no benefit in
+    // widening a binop.
+    if (TLI.isZExtFree(DstTy, XTy, DL, Ctx) &&
+        TLI.isTruncateFree(XTy, DstTy, DL, Ctx))
+      return false;
+    break;
+  }
   case TargetOpcode::G_AND:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -7402,6 +7418,27 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildZExt(Dst, Src, MachineInstr::MIFlag::NonNeg);
     };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
+                                     BuildFnTy &MatchInfo) {
+  GZext *Zext = cast<GZext>(MRI.getVRegDef(MO.getReg()));
+
+  Register Dst = Zext->getReg(0);
+  Register Src = Zext->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  const auto &TLI = getTargetLowering();
+
+  // Convert zext nneg to sext if sext is the preferred form for the target.
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}}) &&
+      TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy))) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
     return true;
   }
 

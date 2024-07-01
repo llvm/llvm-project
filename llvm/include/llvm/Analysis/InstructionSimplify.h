@@ -166,7 +166,7 @@ Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
 /// Given operands for a GetElementPtrInst, fold the result or return null.
 Value *simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
-                       bool InBounds, const SimplifyQuery &Q);
+                       GEPNoWrapFlags NW, const SimplifyQuery &Q);
 
 /// Given operands for an InsertValueInst, fold the result or return null.
 Value *simplifyInsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,

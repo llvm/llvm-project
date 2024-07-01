@@ -428,9 +428,6 @@ int FunctionComparator::cmpConstants(const Constant *L,
                                  cast<Constant>(RE->getOperand(i))))
         return Res;
     }
-    if (LE->isCompare())
-      if (int Res = cmpNumbers(LE->getPredicate(), RE->getPredicate()))
-        return Res;
     if (auto *GEPL = dyn_cast<GEPOperator>(LE)) {
       auto *GEPR = cast<GEPOperator>(RE);
       if (int Res = cmpTypes(GEPL->getSourceElementType(),

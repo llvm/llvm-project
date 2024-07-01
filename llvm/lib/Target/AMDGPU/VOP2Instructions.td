@@ -350,7 +350,7 @@ class VOP2eInstAlias <VOP2_Pseudo ps, Instruction inst, string opnd = ""> :
 class VOP2e64InstAlias <VOP3_Pseudo ps, Instruction inst> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm64,
              (inst ps.Pfl.DstRC:$vdst, VOPDstS64orS32:$sdst,
-                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, clampmod:$clamp),
+                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, Clamp:$clamp),
              1, inst.AsmVariantName>,
   PredicateControl;
 
@@ -451,7 +451,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
-                     clampmod:$clamp, omod:$omod,
+                     Clamp:$clamp, omod:$omod,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
   let Asm32 = getAsm32<1, 2, vt0>.ret;
@@ -586,7 +586,7 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1>
 
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     clampmod:$clamp,
+                     Clamp:$clamp,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 
@@ -637,7 +637,7 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let HasSrc1FloatMods = 1;
   let InsSDWA = (ins FP32SDWAInputMods:$src0_modifiers, SDWASrc_f32:$src0,
                      FP32SDWAInputMods:$src1_modifiers, SDWASrc_f32:$src1,
-                     clampmod:$clamp,
+                     Clamp:$clamp,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 

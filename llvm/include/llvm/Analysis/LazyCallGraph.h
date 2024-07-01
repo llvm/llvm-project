@@ -943,6 +943,11 @@ public:
   LazyCallGraph(LazyCallGraph &&G);
   LazyCallGraph &operator=(LazyCallGraph &&RHS);
 
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
+  /// Verify that every RefSCC is valid.
+  void verify();
+#endif
+
   bool invalidate(Module &, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &);
 
