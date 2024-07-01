@@ -349,7 +349,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 ///
 /// This uses the pointee type to determine how many bytes need to be safe to
 /// load from the pointer.
-bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
+bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
                                        const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        AssumptionCache *AC,

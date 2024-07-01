@@ -65,7 +65,6 @@ protected:
   }
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCAsmLayout *Layout,
                                  const MCFixup *Fixup,
                                  const SectionAddrMap *Addrs, bool InSet) const;
 
@@ -96,11 +95,8 @@ public:
   /// Try to evaluate the expression to an absolute value.
   ///
   /// \param Res - The absolute value, if evaluation succeeds.
-  /// \param Layout - The assembler layout object to use for evaluating symbol
-  /// values. If not given, then only non-symbolic expressions will be
-  /// evaluated.
   /// \return - True on success.
-  bool evaluateAsAbsolute(int64_t &Res, const MCAsmLayout &Layout,
+  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
                           const SectionAddrMap &Addrs) const;
   bool evaluateAsAbsolute(int64_t &Res) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
@@ -124,7 +120,7 @@ public:
   ///
   /// This is a more aggressive variant of evaluateAsRelocatable. The intended
   /// use is for when relocations are not available, like the .size directive.
-  bool evaluateAsValue(MCValue &Res, const MCAsmLayout &Layout) const;
+  bool evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const;
 
   /// Find the "associated section" for this expression, which is
   /// currently defined as the absolute section for constants, or

@@ -102,7 +102,6 @@ void MCStreamer::reset() {
   DwarfFrameInfos.clear();
   CurrentWinFrameInfo = nullptr;
   WinFrameInfos.clear();
-  SymbolOrdering.clear();
   SectionStack.clear();
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
   CurFrag = nullptr;
@@ -116,12 +115,6 @@ raw_ostream &MCStreamer::getCommentOS() {
 unsigned MCStreamer::getNumFrameInfos() { return DwarfFrameInfos.size(); }
 ArrayRef<MCDwarfFrameInfo> MCStreamer::getDwarfFrameInfos() const {
   return DwarfFrameInfos;
-}
-
-MCFragment *MCStreamer::getCurrentFragment() const {
-  assert(!getCurrentSection().first ||
-         CurFrag->getParent() == getCurrentSection().first);
-  return CurFrag;
 }
 
 void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
@@ -416,15 +409,6 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   switchSection(getContext().getObjectFileInfo()->getTextSection());
-}
-
-void MCStreamer::assignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
-  assert(Fragment);
-  Symbol->setFragment(Fragment);
-
-  // As we emit symbols into a section, track the order so that they can
-  // be sorted upon later. Zero is reserved to mean 'unemitted'.
-  SymbolOrdering[Symbol] = 1 + SymbolOrdering.size();
 }
 
 void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {

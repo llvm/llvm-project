@@ -3174,7 +3174,7 @@ multiclass VFLAT_Real_AllAddr_gfx12<bits<8> op,
 }
 
 multiclass VGLOBAL_Real_AllAddr_gfx1200<bits<8> op> {
-  let AssemblerPredicate = isGFX12Not1210 in {
+  let AssemblerPredicate = isGFX12Not12_10 in {
     defm "" : VFLAT_Real_gfx12<op>;
     defm _SADDR : VFLAT_Real_gfx12<op>;
   }
@@ -3372,7 +3372,7 @@ multiclass VFLAT_Real_gfx1210<bits<8> op,
   defvar ps = !cast<FLAT_Pseudo>(NAME);
   def _gfx1210 : VFLAT_Real<op, ps, name>,
                  SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1210> {
-    let AssemblerPredicate = isGFX1210Only;
+    let AssemblerPredicate = isGFX121xOnly;
     let DecoderNamespace = "GFX1210";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
@@ -3383,7 +3383,7 @@ multiclass VFLAT_Real_gfx1210<bits<8> op,
 multiclass VFLAT_Aliases_gfx1210<string name> {
   defvar ps = get_FLAT_ps<NAME>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1210Only]>;
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX121xOnly]>;
 }
 
 multiclass VFLAT_Real_Base_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :

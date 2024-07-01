@@ -3025,6 +3025,32 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
 }
 
+template <class Emitter>
+bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
+  BlockScope<Emitter> BS(this);
+
+  const CompoundStmt *CS = E->getSubStmt();
+  const Stmt *Result = CS->getStmtExprResult();
+  for (const Stmt *S : CS->body()) {
+    if (S != Result) {
+      if (!this->visitStmt(S))
+        return false;
+      continue;
+    }
+
+    assert(S == Result);
+    // This better produces a value (i.e. is an expression).
+    if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
+      if (DiscardResult)
+        return this->discard(ResultExpr);
+      return this->delegate(ResultExpr);
+    }
+    return false;
+  }
+
+  return true;
+}
+
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
@@ -4906,8 +4932,11 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       return this->emitGetLocal(PT_Ptr, Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
-    if (IsReference)
-      return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
+    if (IsReference) {
+      if (!Ctx.getLangOpts().CPlusPlus11)
+        return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
+      return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
+    }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {

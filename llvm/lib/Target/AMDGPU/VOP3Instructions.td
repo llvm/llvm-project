@@ -1503,7 +1503,7 @@ def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>
 def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
 }
 
-let SubtargetPredicate = isGFX1210Only in {
+let SubtargetPredicate = isGFX121xOnly in {
   let ReadsModeReg = 0 in {
     defm V_CVT_PK_F16_F32 : VOP3Inst<"v_cvt_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32>>;
     defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
@@ -1517,7 +1517,7 @@ let SubtargetPredicate = isGFX1210Only in {
   def : GCNPat<(v2f16 (build_vector (f16 (fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                     (f16 (fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_F16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
-} // End SubtargetPredicate = isGFX1210Only
+} // End SubtargetPredicate = isGFX121xOnly
 
 let SubtargetPredicate = isGFX1210Plus in {
   let ReadsModeReg = 0 in {
@@ -1864,7 +1864,7 @@ multiclass VOP3_Realtriple_with_name_gfx11_gfx12_gfx13<
   VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP3_Real_Base_gfx11_gfx12_not_gfx1210<bits<10> op> :
-  VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Not1210Gen, op>;
+  VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Not12_10Gen, op>;
 
 multiclass VOP3_Real_Base_gfx11_gfx12_not_gfx1210_gfx13<bits<10> op> :
   VOP3_Real_Base_gfx11_gfx12_not_gfx1210<op>, VOP3_Real_Base<GFX13Gen, op>;
@@ -1884,7 +1884,7 @@ multiclass VOP3be_Real_gfx11_gfx12_gfx13<
 
 multiclass VOP3be_Real_gfx11_gfx12_not_gfx1210_gfx13<bits<10> op, string opName, string asmName> :
   VOP3be_Real<GFX11Gen, op, opName, asmName>,
-  VOP3be_Real<GFX12Not1210Gen, op, opName, asmName>,
+  VOP3be_Real<GFX12Not12_10Gen, op, opName, asmName>,
   VOP3be_Real<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP3be_Realtriple_gfx1210<bits<10> op> :
