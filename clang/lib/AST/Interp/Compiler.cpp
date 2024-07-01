@@ -3460,7 +3460,7 @@ bool Compiler<Emitter>::visitDecl(const VarDecl *VD, bool ConstantContext) {
   }
 
   // Create and initialize the variable.
-  if (!this->visitVarDecl(VD))
+  if (!this->visitVarDecl(VD, /*Toplevel=*/true))
     return false;
 
   // Get a pointer to the variable
@@ -3507,7 +3507,7 @@ bool Compiler<Emitter>::visitDecl(const VarDecl *VD, bool ConstantContext) {
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
+VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Toplevel) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -3521,7 +3521,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
   std::optional<PrimType> VarT = classify(VD->getType());
 
   auto checkDecl = [&]() -> bool {
-    bool NeedsOp = VD->isLocalVarDecl() && VD->isStaticLocal();
+    bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
     return !NeedsOp || this->emitCheckDecl(VD, VD);
   };
 
@@ -4991,7 +4991,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
              VD->isStaticDataMember()) &&
             typeShouldBeVisited(VD->getType())) {
-          auto VarState = this->visitVarDecl(VD);
+          auto VarState = this->visitVarDecl(VD, true);
           if (VarState.notCreated())
             return true;
           if (!VarState)
@@ -5004,7 +5004,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       if (const auto *VD = dyn_cast<VarDecl>(D);
           VD && VD->getAnyInitializer() &&
           VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
-        auto VarState = this->visitVarDecl(VD);
+        auto VarState = this->visitVarDecl(VD, true);
         if (VarState.notCreated())
           return true;
         if (!VarState)
