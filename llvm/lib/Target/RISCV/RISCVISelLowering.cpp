@@ -3940,13 +3940,11 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
   for (unsigned i = 0; i < VT.getVectorNumElements(); i += 2) {
     SDValue A = Op.getOperand(i);
     SDValue B = Op.getOperand(i + 1);
-    if (ElemVT != XLenVT) {
-      // Bias the scheduling of the inserted operations to near the
-      // definition of the element - this tends to reduce register
-      // pressure overall.
-      A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
-      B = DAG.getNode(ISD::AND, SDLoc(B), XLenVT, B, Mask);
-    }
+    // Bias the scheduling of the inserted operations to near the
+    // definition of the element - this tends to reduce register
+    // pressure overall.
+    A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
+    B = DAG.getNode(ISD::AND, SDLoc(B), XLenVT, B, Mask);
     NewOperands.push_back(pack(A, B));
   }
   assert(NumElts == NewOperands.size() * 2);
