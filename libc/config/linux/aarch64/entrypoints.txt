@@ -311,6 +311,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # XXX
     libc.src.assert.__assert_fail
+    libc.src.sys_time.utimes
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

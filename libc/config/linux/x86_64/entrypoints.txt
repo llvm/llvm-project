@@ -330,6 +330,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.wctob
+
+    # XXX
+    libc.src.sys_time.utimes
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
