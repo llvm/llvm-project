@@ -75,7 +75,7 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-assume-threads-oversubscription -nogpulib \
+! RUN: -fopenmp-assume-threads-oversubscription  \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREADS-OVS
 ! CHECK-THREADS-OVS: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-threads-oversubscription" {{.*}}.f90"
 
@@ -86,7 +86,7 @@
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TEAMS-OVS
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
-! RUN: -fopenmp-targets=nvptx64-nvidia-cuda -nogpulib\
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-assume-teams-oversubscription  \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TEAMS-OVS
 ! CHECK-TEAMS-OVS: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-teams-oversubscription" {{.*}}.f90"
@@ -99,7 +99,7 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-assume-no-nested-parallelism  -nogpulib\
+! RUN: -fopenmp-assume-no-nested-parallelism  \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-NEST-PAR
 ! CHECK-NEST-PAR: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-no-nested-parallelism" {{.*}}.f90"
 
@@ -111,7 +111,7 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-assume-no-thread-state -nogpulib\
+! RUN: -fopenmp-assume-no-thread-state \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREAD-STATE
 ! CHECK-THREAD-STATE: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-no-thread-state" {{.*}}.f90"
 
@@ -123,7 +123,7 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-target-debug -nogpulib\
+! RUN: -fopenmp-target-debug \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
 ! CHECK-TARGET-DEBUG: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug" {{.*}}.f90"
 
@@ -135,7 +135,7 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-target-debug -nogpulib\
+! RUN: -fopenmp-target-debug \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
 ! CHECK-TARGET-DEBUG-EQ: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
 
@@ -151,7 +151,7 @@
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-target-debug -fopenmp-assume-threads-oversubscription \
 ! RUN: -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism \
-! RUN: -fopenmp-assume-no-thread-state -nogpulib\
+! RUN: -fopenmp-assume-no-thread-state \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-RTL-ALL
 ! CHECK-RTL-ALL: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug" "-fopenmp-assume-teams-oversubscription"
 ! CHECK-RTL-ALL: "-fopenmp-assume-threads-oversubscription" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
@@ -165,7 +165,7 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-version=45 -nogpulib\
+! RUN: -fopenmp-version=45 \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-OPENMP-VERSION
 ! CHECK-OPENMP-VERSION: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" "-fopenmp-version=45" {{.*}}.f90"
 
