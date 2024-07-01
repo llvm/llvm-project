@@ -789,10 +789,10 @@ void test() {
 // CHECK-NEXT:                  "valueCategory": "lvalue",
 // CHECK-NEXT:                  "extendingDecl": {
 // CHECK-NEXT:                   "id": "0x{{.*}}",
-// CHECK-NEXT:                   "kind": "FieldDecl",
-// CHECK-NEXT:                   "name": "a",
+// CHECK-NEXT:                   "kind": "VarDecl",
+// CHECK-NEXT:                   "name": "b",
 // CHECK-NEXT:                   "type": {
-// CHECK-NEXT:                    "qualType": "const A &"
+// CHECK-NEXT:                    "qualType": "B"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "storageDuration": "automatic",
