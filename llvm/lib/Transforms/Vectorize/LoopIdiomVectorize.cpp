@@ -507,10 +507,9 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
 
   auto *VectorLoadType = ScalableVectorType::get(LoadType, ByteCompareVF);
   auto *VF = ConstantInt::get(I32Type, ByteCompareVF);
-  auto *IsScalable = ConstantInt::getBool(Builder.getContext(), true);
 
   Value *VL = Builder.CreateIntrinsic(Intrinsic::experimental_get_vector_length,
-                                      {I64Type}, {AVL, VF, IsScalable});
+                                      {I64Type}, {AVL, VF, Builder.getTrue()});
   Value *GepOffset = VectorIndexPhi;
 
   Value *VectorLhsGep =
