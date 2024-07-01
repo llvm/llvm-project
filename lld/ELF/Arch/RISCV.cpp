@@ -70,7 +70,9 @@ enum Op {
 };
 
 enum Reg {
+  X_0 = 0,
   X_RA = 1,
+  X_2 = 2,
   X_GP = 3,
   X_TP = 4,
   X_T0 = 5,
@@ -789,25 +791,39 @@ static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
 
 static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
                           Relocation &r, uint32_t &remove) {
-  const Defined *gp = ElfSym::riscvGlobalPointer;
-  if (!gp)
+  if (const Defined *gp = ElfSym::riscvGlobalPointer;
+      gp && isInt<12>(r.sym->getVA(r.addend) - gp->getVA())) {
+    switch (r.type) {
+    case R_RISCV_RVC_LUI:
+      // Remove c.lui rd, %hi6(x).
+      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+      remove = 2;
+      break;
+    case R_RISCV_HI20:
+      // Remove lui rd, %hi20(x).
+      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+      remove = 4;
+      break;
+    case R_RISCV_LO12_I:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
+      break;
+    case R_RISCV_LO12_S:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_S;
+      break;
+    }
     return;
+  }
 
-  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
-    return;
-
-  switch (r.type) {
-  case R_RISCV_HI20:
-    // Remove lui rd, %hi20(x).
-    sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
-    remove = 4;
-    break;
-  case R_RISCV_LO12_I:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
-    break;
-  case R_RISCV_LO12_S:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_S;
-    break;
+  // Use c.lui instead of lui if compressed and range allows
+  const bool rvc = getEFlags(sec.file) & EF_RISCV_RVC;
+  if (rvc && r.type == R_RISCV_HI20 && isInt<6>(hi20(r.sym->getVA(r.addend)))) {
+    if (uint32_t rd = (read32le(sec.content().data() + r.offset) >> 7) & 31;
+        rd != X_0 && rd != X_2) {
+      sec.relaxAux->relocTypes[i] = R_RISCV_RVC_LUI;
+      sec.relaxAux->writes.push_back(0x6001 | rd << 7); // c.lui
+      remove = 2;
+      return;
+    }
   }
 }
 
@@ -993,6 +1009,7 @@ void RISCV::finalizeRelax(int passes) const {
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
+          case R_RISCV_RVC_LUI:
           case R_RISCV_RVC_JUMP:
             skip = 2;
             write16le(p, aux.writes[writesIdx++]);
