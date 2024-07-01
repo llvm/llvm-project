@@ -317,21 +317,13 @@ define %S @readd(ptr nocapture readonly %this, %S %arg.b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    addq (%rsi), %rdx
-; CHECK-NEXT:    movq 8(%rsi), %rdi
-; CHECK-NEXT:    adcq $0, %rdi
-; CHECK-NEXT:    setb %r10b
-; CHECK-NEXT:    movzbl %r10b, %r10d
-; CHECK-NEXT:    addq %rcx, %rdi
-; CHECK-NEXT:    adcq 16(%rsi), %r10
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    addq %r8, %r10
-; CHECK-NEXT:    adcq 24(%rsi), %rcx
-; CHECK-NEXT:    addq %r9, %rcx
-; CHECK-NEXT:    movq %rdx, (%rax)
-; CHECK-NEXT:    movq %rdi, 8(%rax)
-; CHECK-NEXT:    movq %r10, 16(%rax)
-; CHECK-NEXT:    movq %rcx, 24(%rax)
+; CHECK-NEXT:    adcq 8(%rsi), %rcx
+; CHECK-NEXT:    adcq 16(%rsi), %r8
+; CHECK-NEXT:    adcq 24(%rsi), %r9
+; CHECK-NEXT:    movq %rdx, (%rdi)
+; CHECK-NEXT:    movq %rcx, 8(%rdi)
+; CHECK-NEXT:    movq %r8, 16(%rdi)
+; CHECK-NEXT:    movq %r9, 24(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractvalue %S %arg.b, 0
@@ -422,14 +414,9 @@ define i128 @addcarry_to_subcarry(i64 %a, i64 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    notq %rsi
+; CHECK-NEXT:    sbbq %rsi, %rax
 ; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    addb $-1, %cl
-; CHECK-NEXT:    adcq $0, %rax
-; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movzbl %cl, %edx
-; CHECK-NEXT:    addq %rsi, %rax
-; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    retq
   %notb = xor i64 %b, -1
   %notb128 = zext i64 %notb to i128
