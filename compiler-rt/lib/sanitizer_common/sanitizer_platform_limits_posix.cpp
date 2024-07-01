@@ -85,6 +85,9 @@
 #include <linux/utsname.h>
 #include <linux/posix_types.h>
 #include <net/if_arp.h>
+#if !SANITIZER_ANDROID
+#include <sched.h>
+#endif
 #endif
 
 #if SANITIZER_IOS
@@ -301,6 +304,7 @@ namespace __sanitizer {
   unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
   unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
   unsigned struct_statvfs_sz = sizeof(struct statvfs);
+  unsigned struct_cpu_set_sz = sizeof(cpu_set_t);
 #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
 
   const uptr sig_ign = (uptr)SIG_IGN;
@@ -1349,6 +1353,10 @@ CHECK_TYPE_SIZE(sem_t);
 
 #if SANITIZER_LINUX && defined(__arm__)
 COMPILER_CHECK(ARM_VFPREGS_SIZE == ARM_VFPREGS_SIZE_ASAN);
+#endif
+
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+COMPILER_CHECK(sizeof(__sanitizer_cpu_set_t) == sizeof(cpu_set_t));
 #endif
 
 #endif // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_APPLE

@@ -209,6 +209,13 @@ struct __sanitizer_sem_t {
 extern unsigned struct_ustat_sz;
 extern unsigned struct_rlimit64_sz;
 extern unsigned struct_statvfs64_sz;
+extern unsigned struct_cpu_set_sz;
+
+struct __sanitizer_cpu_set {
+  unsigned long __bits[1024 / (8 * sizeof(unsigned long))];
+};
+
+typedef struct __sanitizer_cpu_set __sanitizer_cpu_set_t;
 
 struct __sanitizer_ipc_perm {
   int __key;

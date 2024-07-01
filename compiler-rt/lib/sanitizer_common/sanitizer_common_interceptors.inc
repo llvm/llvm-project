@@ -3876,7 +3876,7 @@ INTERCEPTOR(SIZE_T, confstr, int name, char *buf, SIZE_T len) {
 #endif
 
 #if SANITIZER_INTERCEPT_SCHED_GETAFFINITY
-INTERCEPTOR(int, sched_getaffinity, int pid, SIZE_T cpusetsize, void *mask) {
+INTERCEPTOR(int, sched_getaffinity, int pid, SIZE_T cpusetsize, __sanitizer_cpu_set_t *mask) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sched_getaffinity, pid, cpusetsize, mask);
   // FIXME: under ASan the call below may write to freed memory and corrupt
