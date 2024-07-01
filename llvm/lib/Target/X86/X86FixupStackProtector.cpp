@@ -78,7 +78,7 @@ X86FixupStackProtectorPass::getSecurityCheckerBasicBlock(MachineFunction &MF) {
   MachineBasicBlock::reverse_iterator RBegin, REnd;
 
   for (auto &MBB : llvm::reverse(MF)) {
-    for (RBegin = MBB.rbegin(), REnd = MBB.rend(); RBegin != REnd; RBegin++) {
+    for (RBegin = MBB.rbegin(), REnd = MBB.rend(); RBegin != REnd; ++RBegin) {
       auto &MI = *RBegin;
       if (MI.getOpcode() == X86::CALL64pcrel32 &&
           MI.getNumExplicitOperands() == 1) {
@@ -104,22 +104,22 @@ void X86FixupStackProtectorPass::getGuardCheckSequence(
   MachineBasicBlock::reverse_iterator DIt(CheckCall);
   // Seq From StackUp to Stack Down Is fixed.
   // ADJCALLSTACKUP64
-  UIt++;
+  ++UIt;
   SeqMI[4] = &*UIt;
 
   // CALL __security_check_cookie
   SeqMI[3] = CheckCall;
 
   // COPY function slot cookie
-  DIt++;
+  ++DIt;
   SeqMI[2] = &*DIt;
 
   // ADJCALLSTACKDOWN64
-  DIt++;
+  ++DIt;
   SeqMI[1] = &*DIt;
 
   MachineBasicBlock::reverse_iterator XIt(SeqMI[1]);
-  for (; XIt != CurMBB->rbegin(); XIt++) {
+  for (; XIt != CurMBB->rbegin(); ++XIt) {
     auto &CI = *XIt;
     if ((CI.getOpcode() == X86::XOR64_FP) || (CI.getOpcode() == X86::XOR32_FP))
       break;
@@ -142,7 +142,7 @@ X86FixupStackProtectorPass::CreateFailCheckSequence(MachineBasicBlock *CurMBB,
 
   MachineInstr *GuardXor = SeqMI[0];
   MachineBasicBlock::iterator InsertPt(GuardXor);
-  InsertPt++;
+  ++InsertPt;
 
   // Compare security_Cookie with XOR_Val, if not same, we have violation
   auto CMI = BuildMI(*CurMBB, InsertPt, DebugLoc(), TII->get(X86::CMP64rm))
@@ -216,13 +216,13 @@ bool X86FixupStackProtectorPass::runOnMachineFunction(MachineFunction &MF) {
   // After Inserting JMP_1, we can not have two terminators
   // in same block, split CurrentMBB after JMP_1
   MachineBasicBlock::iterator SplitIt(SeqMI[4]);
-  SplitIt++;
+  ++SplitIt;
   SplitBasicBlock(CurMBB, NewRetMBB, SplitIt);
 
   // Fill up Failure Routine, move Fail Check Squence from CurMBB to FailMBB
   MachineBasicBlock::iterator U1It(SeqMI[1]);
   MachineBasicBlock::iterator U2It(SeqMI[4]);
-  U2It++;
+  ++U2It;
   FailMBB->splice(FailMBB->end(), CurMBB, U1It, U2It);
   BuildMI(*FailMBB, FailMBB->end(), DebugLoc(), TII->get(X86::INT3));
 
@@ -230,7 +230,7 @@ bool X86FixupStackProtectorPass::runOnMachineFunction(MachineFunction &MF) {
   // from Current Basic BLocks into New Return Block
   JMI.addMBB(NewRetMBB);
   MachineBasicBlock::iterator SplicePt(JMI.getInstr());
-  SplicePt++;
+  ++SplicePt;
   if (SplicePt != CurMBB->end())
     NewRetMBB->splice(NewRetMBB->end(), CurMBB, SplicePt);
 
