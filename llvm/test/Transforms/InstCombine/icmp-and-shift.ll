@@ -404,11 +404,10 @@ define <2 x i32> @icmp_ne_and_pow2_lshr_pow2_vec(<2 x i32> %0) {
   ret <2 x i32> %conv
 }
 
-define i32 @icmp_eq_and1_lshr_pow2_negative1(i32 %0) {
-; CHECK-LABEL: @icmp_eq_and1_lshr_pow2_negative1(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 7, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 1
-; CHECK-NEXT:    [[CONV:%.*]] = xor i32 [[AND]], 1
+define i32 @icmp_eq_and1_lshr_pow2_minus_one(i32 %0) {
+; CHECK-LABEL: @icmp_eq_and1_lshr_pow2_minus_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP0:%.*]], 2
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
   %lshr = lshr i32 7, %0
@@ -622,8 +621,8 @@ define i1 @test_shr_and_1_ne_0(i32 %a, i32 %b) {
 
 define i1 @test_const_shr_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_and_1_ne_0(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP1]], 42
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -635,8 +634,8 @@ define i1 @test_const_shr_and_1_ne_0(i32 %b) {
 
 define i1 @test_not_const_shr_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_not_const_shr_and_1_ne_0(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP1]], 42
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP_NOT]]
 ;
@@ -648,8 +647,8 @@ define i1 @test_not_const_shr_and_1_ne_0(i32 %b) {
 
 define i1 @test_const_shr_exact_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_exact_and_1_ne_0(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i32 42, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP1]], 42
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
