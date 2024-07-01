@@ -165,8 +165,8 @@
 //
 // IR: [[MERGE0]]:
 // IR:    [[RES2:%.*]] = phi i32 [ [[RES1]], %[[MERGE1]] ], [ [[RESBB1]], %[[BB1]] ]
-#include <cstdio>
-#include <cstdlib>
+
+#include <stdlib.h>
 class Base {
 public:
   virtual int func(int a, int b) = 0;
@@ -195,8 +195,9 @@ __attribute__((noinline)) Base *createType(int a) {
     base = new Derived2();
   return base;
 }
+
+static volatile int sum = 0;
 int main(int argc, char **argv) {
-  int sum = 0;
   for (int i = 0; i < 1000; i++) {
     int a = rand();
     int b = rand();
@@ -206,6 +207,5 @@ int main(int argc, char **argv) {
 
     delete ptr;
   }
-  printf("sum is %d\n", sum);
   return 0;
 }
