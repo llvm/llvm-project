@@ -1077,15 +1077,7 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
       dyn_cast_or_null<SubRegion>(Call.getArgSVal(0).getAsRegion());
 
   const ASTContext &Ctx = C.getASTContext();
-
   QualType ElemTy = getPointeeType(Buffer);
-
-  // Consider pointer to void as a pointer to char buffer such that it has a
-  // non-zero type size.
-  if (!ElemTy.isNull() && ElemTy == Ctx.VoidTy) {
-    ElemTy = Ctx.CharTy;
-  }
-
   std::optional<SVal> StartElementIndex =
       getStartIndex(C.getSValBuilder(), Buffer);
 
@@ -1101,6 +1093,9 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
   if (!ElemTy.isNull() && CountVal && Size && StartIndexVal) {
     int64_t NumBytesRead = Size.value() * CountVal.value();
     int64_t ElemSizeInChars = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
+    if (ElemSizeInChars == 0)
+      return nullptr;
+
     bool IncompleteLastElement = (NumBytesRead % ElemSizeInChars) != 0;
     int64_t NumCompleteOrIncompleteElementsRead =
         NumBytesRead / ElemSizeInChars + IncompleteLastElement;
