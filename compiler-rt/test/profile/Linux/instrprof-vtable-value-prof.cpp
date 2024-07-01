@@ -1,4 +1,4 @@
-// REQUIRES: lld-available
+// REQUIRES: lld, lld-available
 
 // Building the instrumented binary will fail because lld doesn't support
 // big-endian ELF for PPC (aka ABI 1).
