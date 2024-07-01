@@ -1039,6 +1039,29 @@ public:
     return ConstStructBuilder::BuildStruct(Emitter, ILE, T);
   }
 
+  mlir::Attribute EmitVectorInitialization(InitListExpr *ILE, QualType T) {
+    mlir::cir::VectorType VecTy =
+        mlir::cast<mlir::cir::VectorType>(CGM.getTypes().ConvertType(T));
+    unsigned NumElements = VecTy.getSize();
+    unsigned NumInits = ILE->getNumInits();
+    assert(NumElements >= NumInits && "Too many initializers for a vector");
+    QualType EltTy = T->castAs<VectorType>()->getElementType();
+    SmallVector<mlir::Attribute, 8> Elts;
+    // Process the explicit initializers
+    for (unsigned i = 0; i < NumInits; ++i) {
+      auto Value = Emitter.tryEmitPrivateForMemory(ILE->getInit(i), EltTy);
+      if (!Value)
+        return {};
+      Elts.push_back(std::move(Value));
+    }
+    // Zero-fill the rest of the vector
+    for (unsigned i = NumInits; i < NumElements; ++i) {
+      Elts.push_back(CGM.getBuilder().getZeroInitAttr(VecTy.getEltType()));
+    }
+    return mlir::cir::ConstVectorAttr::get(
+        VecTy, mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Elts));
+  }
+
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *E,
                                              QualType T) {
     return CGM.getBuilder().getZeroInitAttr(CGM.getCIRType(T));
@@ -1053,6 +1076,9 @@ public:
 
     if (ILE->getType()->isRecordType())
       return EmitRecordInitialization(ILE, T);
+
+    if (ILE->getType()->isVectorType())
+      return EmitVectorInitialization(ILE, T);
 
     return nullptr;
   }
@@ -1772,6 +1798,23 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     return buildArrayConstant(CGM, Desired, CommonElementType, NumElements,
                               Elts, typedFiller);
   }
+  case APValue::Vector: {
+    const QualType ElementType =
+        DestType->castAs<VectorType>()->getElementType();
+    unsigned NumElements = Value.getVectorLength();
+    SmallVector<mlir::Attribute, 16> Elts;
+    Elts.reserve(NumElements);
+    for (int i = 0; i < NumElements; ++i) {
+      auto C = tryEmitPrivateForMemory(Value.getVectorElt(i), ElementType);
+      if (!C)
+        return {};
+      Elts.push_back(C);
+    }
+    auto Desired =
+        mlir::cast<mlir::cir::VectorType>(CGM.getTypes().ConvertType(DestType));
+    return mlir::cir::ConstVectorAttr::get(
+        Desired, mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Elts));
+  }
   case APValue::MemberPointer: {
     assert(!MissingFeatures::cxxABI());
 
@@ -1795,7 +1838,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
   case APValue::FixedPoint:
   case APValue::ComplexInt:
   case APValue::ComplexFloat:
-  case APValue::Vector:
   case APValue::AddrLabelDiff:
     assert(0 && "not implemented");
   }

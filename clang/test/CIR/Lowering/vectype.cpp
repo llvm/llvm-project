@@ -9,22 +9,9 @@ typedef unsigned short vus2 __attribute__((vector_size(4)));
 
 void vector_int_test(int x) {
 
-  // Vector constant. Not yet implemented. Expected results will change when
-  // fully implemented.
+  // Vector constant.
   vi4 a = { 1, 2, 3, 4 };
-  // CHECK: %[[#T30:]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[#T31:]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[#T32:]] = llvm.mlir.constant(3 : i32) : i32
-  // CHECK: %[[#T33:]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: %[[#T34:]] = llvm.mlir.undef : vector<4xi32>
-  // CHECK: %[[#T35:]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[#T36:]] = llvm.insertelement %[[#T30]], %[[#T34]][%[[#T35]] : i64] : vector<4xi32>
-  // CHECK: %[[#T37:]] = llvm.mlir.constant(1 : i64) : i64
-  // CHECK: %[[#T38:]] = llvm.insertelement %[[#T31]], %[[#T36]][%[[#T37]] : i64] : vector<4xi32>
-  // CHECK: %[[#T39:]] = llvm.mlir.constant(2 : i64) : i64
-  // CHECK: %[[#T40:]] = llvm.insertelement %[[#T32]], %[[#T38]][%[[#T39]] : i64] : vector<4xi32>
-  // CHECK: %[[#T41:]] = llvm.mlir.constant(3 : i64) : i64
-  // CHECK: %[[#T42:]] = llvm.insertelement %[[#T33]], %[[#T40]][%[[#T41]] : i64] : vector<4xi32>
+  // CHECK: %[[#T42:]] = llvm.mlir.constant(dense<[1, 2, 3, 4]> : vector<4xi32>) : vector<4xi32>
   // CHECK: llvm.store %[[#T42]], %[[#T3:]] {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr
 
   // Non-const vector initialization.
@@ -235,16 +222,9 @@ void vector_int_test(int x) {
 
 void vector_double_test(int x, double y) {
 
-  // Vector constant. Not yet implemented. Expected results will change when
-  // fully implemented.
+  // Vector constant.
   vd2 a = { 1.5, 2.5 };
-  // CHECK: %[[#T22:]] = llvm.mlir.constant(1.500000e+00 : f64) : f64
-  // CHECK: %[[#T23:]] = llvm.mlir.constant(2.500000e+00 : f64) : f64
-  // CHECK: %[[#T24:]] = llvm.mlir.undef : vector<2xf64>
-  // CHECK: %[[#T25:]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[#T26:]] = llvm.insertelement %[[#T22]], %[[#T24]][%[[#T25]] : i64] : vector<2xf64>
-  // CHECK: %[[#T27:]] = llvm.mlir.constant(1 : i64) : i64
-  // CHECK: %[[#T28:]] = llvm.insertelement %[[#T23]], %[[#T26]][%[[#T27]] : i64] : vector<2xf64>
+  // CHECK: %[[#T28:]] = llvm.mlir.constant(dense<[1.500000e+00, 2.500000e+00]> : vector<2xf64>) : vector<2xf64>
   // CHECK: llvm.store %[[#T28]], %[[#T5:]] {alignment = 16 : i64} : vector<2xf64>, !llvm.ptr
 
   // Non-const vector initialization.

@@ -315,6 +315,35 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return result;
 }
 
+// ConstVectorAttr visitor.
+mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
+                                mlir::cir::ConstVectorAttr constVec,
+                                mlir::ConversionPatternRewriter &rewriter,
+                                const mlir::TypeConverter *converter) {
+  auto llvmTy = converter->convertType(constVec.getType());
+  auto loc = parentOp->getLoc();
+  SmallVector<mlir::Attribute> mlirValues;
+  for (auto elementAttr : constVec.getElts()) {
+    mlir::Attribute mlirAttr;
+    if (auto intAttr = mlir::dyn_cast<mlir::cir::IntAttr>(elementAttr)) {
+      mlirAttr = rewriter.getIntegerAttr(
+          converter->convertType(intAttr.getType()), intAttr.getValue());
+    } else if (auto floatAttr =
+                   mlir::dyn_cast<mlir::cir::FPAttr>(elementAttr)) {
+      mlirAttr = rewriter.getFloatAttr(
+          converter->convertType(floatAttr.getType()), floatAttr.getValue());
+    } else {
+      llvm_unreachable(
+          "vector constant with an element that is neither an int nor a float");
+    }
+    mlirValues.push_back(mlirAttr);
+  }
+  return rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, llvmTy,
+      mlir::DenseElementsAttr::get(mlir::cast<mlir::ShapedType>(llvmTy),
+                                   mlirValues));
+}
+
 // GlobalViewAttr visitor.
 mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
                                 mlir::cir::GlobalViewAttr globalAttr,
@@ -385,6 +414,8 @@ lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
     return lowerCirAttrAsValue(parentOp, constStruct, rewriter, converter);
   if (const auto constArr = mlir::dyn_cast<mlir::cir::ConstArrayAttr>(attr))
     return lowerCirAttrAsValue(parentOp, constArr, rewriter, converter);
+  if (const auto constVec = mlir::dyn_cast<mlir::cir::ConstVectorAttr>(attr))
+    return lowerCirAttrAsValue(parentOp, constVec, rewriter, converter);
   if (const auto boolAttr = mlir::dyn_cast<mlir::cir::BoolAttr>(attr))
     return lowerCirAttrAsValue(parentOp, boolAttr, rewriter, converter);
   if (const auto zeroAttr = mlir::dyn_cast<mlir::cir::ZeroAttr>(attr))
@@ -1184,6 +1215,11 @@ public:
 
       return op.emitError() << "unsupported lowering for struct constant type "
                             << op.getType();
+    } else if (const auto vecTy =
+                   mlir::dyn_cast<mlir::cir::VectorType>(op.getType())) {
+      rewriter.replaceOp(op, lowerCirAttrAsValue(op, op.getValue(), rewriter,
+                                                 getTypeConverter()));
+      return mlir::success();
     } else
       return op.emitError() << "unsupported constant type " << op.getType();
 

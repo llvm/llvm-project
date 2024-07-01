@@ -28,20 +28,8 @@ void vector_int_test(int x) {
 
   vi4 a = { 1, 2, 3, 4 };
 
-  // CHECK: %[[C1:.*]] = arith.constant 1 : i32
-  // CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  // CHECK: %[[C3:.*]] = arith.constant 3 : i32
-  // CHECK: %[[C4:.*]] = arith.constant 4 : i32
-  // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<4xi32>
-  // CHECK: %[[C0_I64:.*]] = arith.constant 0 : i64
-  // CHECK: %[[VEC0:.*]] = vector.insertelement %[[C1]], %[[CST]][%[[C0_I64]] : i64] : vector<4xi32>
-  // CHECK: %[[C1_I64:.*]] = arith.constant 1 : i64
-  // CHECK: %[[VEC1:.*]] = vector.insertelement %[[C2]], %[[VEC0]][%[[C1_I64]] : i64] : vector<4xi32>
-  // CHECK: %[[C2_I64:.*]] = arith.constant 2 : i64
-  // CHECK: %[[VEC2:.*]] = vector.insertelement %[[C3]], %[[VEC1]][%[[C2_I64]] : i64] : vector<4xi32>
-  // CHECK: %[[C3_I64:.*]] = arith.constant 3 : i64
-  // CHECK: %[[VEC3:.*]] = vector.insertelement %[[C4]], %[[VEC2]][%[[C3_I64]] : i64] : vector<4xi32>
-  // CHECK: memref.store %[[VEC3]], %[[ALLOC2]][] : memref<vector<4xi32>>
+  // CHECK: %[[CST:.*]] = arith.constant dense<[1, 2, 3, 4]> : vector<4xi32>
+  // CHECK: memref.store %[[CST]], %[[ALLOC2]][] : memref<vector<4xi32>>
   
   vi4 b = {x, 5, 6, x + 1};
 

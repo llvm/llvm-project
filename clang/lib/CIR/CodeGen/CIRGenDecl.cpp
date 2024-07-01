@@ -66,15 +66,16 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
   if (getLangOpts().OpenMP && openMPLocalAddr.isValid()) {
     llvm_unreachable("NYI");
   } else if (Ty->isConstantSizeType()) {
-    // If this value is an array or struct with a statically determinable
-    // constant initializer, there are optimizations we can do.
+    // If this value is an array, struct, or vector with a statically
+    // determinable constant initializer, there are optimizations we can do.
     //
     // TODO: We should constant-evaluate the initializer of any variable,
     // as long as it is initialized by a constant expression. Currently,
     // isConstantInitializer produces wrong answers for structs with
     // reference or bitfield members, and a few other cases, and checking
     // for POD-ness protects us from some of these.
-    if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
+    if (D.getInit() &&
+        (Ty->isArrayType() || Ty->isRecordType() || Ty->isVectorType()) &&
         (D.isConstexpr() ||
          ((Ty.isPODType(getContext()) ||
            getContext().getBaseElementType(Ty)->isObjCObjectPointerType()) &&

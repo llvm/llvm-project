@@ -14,10 +14,9 @@ typedef unsigned short vus2 __attribute__((ext_vector_type(2)));
 // LLVM: define void {{@.*vector_int_test.*}}
 void vector_int_test(int x) {
 
-  // Vector constant. Not yet implemented. Expected results will change from
-  // cir.vec.create to cir.const.
+  // Vector constant.
   vi4 a = { 1, 2, 3, 4 };
-  // CIR: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<!s32i x 4>
+  // CIR: %{{[0-9]+}} = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<!s32i x 4>
   // LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %{{[0-9]+}}, align 16
 
   // Non-const vector initialization.
@@ -199,10 +198,9 @@ void vector_int_test(int x) {
 // CIR: cir.func {{@.*vector_double_test.*}}
 // LLVM: define void {{@.*vector_double_test.*}}
 void vector_double_test(int x, double y) {
-  // Vector constant. Not yet implemented. Expected results will change from
-  // cir.vec.create to cir.const.
+  // Vector constant.
   vd2 a = { 1.5, 2.5 };
-  // CIR: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : !cir.double, !cir.double) : !cir.vector<!cir.double x 2>
+  // CIR: %{{[0-9]+}} = cir.const #cir.const_vector<[#cir.fp<1.500000e+00> : !cir.double, #cir.fp<2.500000e+00> : !cir.double]> : !cir.vector<!cir.double x 2>
 
   // LLVM: store <2 x double> <double 1.500000e+00, double 2.500000e+00>, ptr %{{[0-9]+}}, align 16
 
@@ -491,13 +489,12 @@ void test_build_lvalue() {
 // LLVM: define void {{@.*test_vec3.*}}
 void test_vec3() {
   vi3 v = {};
-  // CIR-NEXT: %[[#PV:]] = cir.alloca !cir.vector<!s32i x 3>, !cir.ptr<!cir.vector<!s32i x 3>>, ["v", init] {alignment = 16 : i64}
-  // CIR:      %[[#VEC4:]] = cir.vec.shuffle(%{{[0-9]+}}, %{{[0-9]+}} : !cir.vector<!s32i x 3>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<-1> : !s32i] : !cir.vector<!s32i x 4>
-  // CIR-NEXT: %[[#PV4:]] = cir.cast(bitcast, %[[#PV]] : !cir.ptr<!cir.vector<!s32i x 3>>), !cir.ptr<!cir.vector<!s32i x 4>>
-  // CIR-NEXT: cir.store %[[#VEC4]], %[[#PV4]] : !cir.vector<!s32i x 4>, !cir.ptr<!cir.vector<!s32i x 4>>
+  // CIR-NEXT: %[[#PV:]] = cir.alloca !cir.vector<!s32i x 3>, !cir.ptr<!cir.vector<!s32i x 3>>, ["v"] {alignment = 16 : i64}
+  // CIR-NEXT: %[[#VVAL:]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<!s32i x 3>
+  // CIR-NEXT: cir.store %[[#VVAL]], %[[#PV]] : !cir.vector<!s32i x 3>, !cir.ptr<!cir.vector<!s32i x 3>>
 
   // LLVM-NEXT: %[[#PV:]] = alloca <3 x i32>, i64 1, align 16
-  // LLVM-NEXT: store <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, ptr %[[#PV]], align 16
+  // LLVM-NEXT: store <3 x i32> zeroinitializer, ptr %[[#PV]], align 16
 
   v + 1;
   // CIR-NEXT: %[[#PV4:]] = cir.cast(bitcast, %[[#PV]] : !cir.ptr<!cir.vector<!s32i x 3>>), !cir.ptr<!cir.vector<!s32i x 4>>

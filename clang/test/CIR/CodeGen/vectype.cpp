@@ -7,10 +7,9 @@ typedef unsigned short vus2 __attribute__((vector_size(4)));
 
 void vector_int_test(int x) {
 
-  // Vector constant. Not yet implemented. Expected results will change from
-  // cir.vec.create to cir.const.
+  // Vector constant.
   vi4 a = { 1, 2, 3, 4 };
-  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<!s32i x 4>
+  // CHECK: %{{[0-9]+}} = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<!s32i x 4>
 
   // Non-const vector initialization.
   vi4 b = { x, 5, 6, x + 1 };
@@ -106,10 +105,9 @@ void vector_int_test(int x) {
 }
 
 void vector_double_test(int x, double y) {
-  // Vector constant. Not yet implemented. Expected results will change from
-  // cir.vec.create to cir.const.
+  // Vector constant.
   vd2 a = { 1.5, 2.5 };
-  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : !cir.double, !cir.double) : !cir.vector<!cir.double x 2>
+  // CHECK: %{{[0-9]+}} = cir.const #cir.const_vector<[#cir.fp<1.500000e+00> : !cir.double, #cir.fp<2.500000e+00> : !cir.double]> : !cir.vector<!cir.double x 2>
 
   // Non-const vector initialization.
   vd2 b = { y, y + 1.0 };
