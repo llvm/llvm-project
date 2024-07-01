@@ -2787,6 +2787,18 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
   void print(raw_ostream &OS) const;
   void dump() const;
 
+  // Replace From in ExtAddrMode with To.
+  // E.g., SExt insts may be promoted and deleted. We should replace them with
+  // the promoted values.
+  void replaceWith(Value *From, Value *To) {
+    if (BaseReg == From)
+      BaseReg = To;
+    if (ScaledReg == From)
+      ScaledReg = To;
+    if (OriginalValue == From)
+      OriginalValue = To;
+  }
+
   FieldName compare(const ExtAddrMode &other) {
     // First check that the types are the same on each field, as differing types
     // is something we can't cope with later on.
@@ -5078,6 +5090,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       TPT.rollback(LastKnownGood);
       return false;
     }
+
+    // SExt has been deleted. Make sure it is not referenced by the AddrMode.
+    AddrMode.replaceWith(Ext, PromotedOperand);
     return true;
   }
   case Instruction::Call:
