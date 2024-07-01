@@ -1595,6 +1595,11 @@ private:
   bool isClassLayoutKnownStatically(const ObjCInterfaceDecl *ID) {
     // Test a class by checking its superclasses up to
     // its base class if it has one.
+
+    // Cannot check a null class
+    if (!ID)
+      return false;
+
     for (; ID; ID = ID->getSuperClass()) {
       // The layout of base class NSObject
       // is guaranteed to be statically known
@@ -1606,7 +1611,9 @@ private:
       if (!ID->getImplementation())
         return false;
     }
-    return false;
+
+    // We know the layout of all the intermediate classes and superclasses.
+    return true;
   }
 
 public:
