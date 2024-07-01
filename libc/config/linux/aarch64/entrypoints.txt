@@ -242,6 +242,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
 
+    # sys/time.h entrypoints
+    libc.src.sys.time.utimes
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 

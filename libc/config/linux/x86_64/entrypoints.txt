@@ -266,6 +266,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
+    # sys/time.h entrypoints
+    libc.src.sys.time.utimes
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 

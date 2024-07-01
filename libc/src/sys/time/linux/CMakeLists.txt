@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  utimes
+  SRCS
+    utimes.cpp
+  HDRS
+    ../utimes.h
+  DEPENDS
+    libc.include.sys_time
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
