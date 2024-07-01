@@ -176,6 +176,7 @@ const char kAsanAllocasUnpoison[] = "__asan_allocas_unpoison";
 const char kAMDGPUAddressSharedName[] = "llvm.amdgcn.is.shared";
 const char kAMDGPUAddressPrivateName[] = "llvm.amdgcn.is.private";
 const char kAMDGPUBallotName[] = "llvm.amdgcn.ballot.i64";
+const char kAMDGPULDSKernelId[] = "llvm.amdgcn.lds.kernel.id";
 const char kAMDGPUUnreachableName[] = "llvm.amdgcn.unreachable";
 
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
@@ -230,6 +231,11 @@ static cl::opt<bool>
     ClInstrumentByval("asan-instrument-byval",
                       cl::desc("instrument byval call arguments"), cl::Hidden,
                       cl::init(true));
+
+static cl::opt<bool>
+    ClInstrumentAMDGPULDS("asan-instrument-amdgpu-lds",
+                          cl::desc("instrument amdgpu LDS accesses"),
+                          cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClAlwaysSlowPath(
     "asan-always-slow-path",
@@ -628,12 +634,6 @@ ASanAccessInfo::ASanAccessInfo(bool IsWrite, bool CompileKernel,
 
 } // namespace llvm
 
-static uint64_t getRedzoneSizeForScale(int MappingScale) {
-  // Redzone used for stack and globals is at least 32 bytes.
-  // For scales 6 and 7, the redzone has to be 64 and 128 bytes respectively.
-  return std::max(32U, 1U << MappingScale);
-}
-
 static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
   if (TargetTriple.isOSEmscripten()) {
     return kAsanEmscriptenCtorAndDtorPriority;
@@ -939,10 +939,7 @@ private:
   StringRef getGlobalMetadataSection() const;
   void poisonOneInitializer(Function &GlobalInit, GlobalValue *ModuleName);
   void createInitializerPoisonCalls(Module &M, GlobalValue *ModuleName);
-  uint64_t getMinRedzoneSizeForGlobal() const {
-    return getRedzoneSizeForScale(Mapping.Scale);
-  }
-  uint64_t getRedzoneSizeForGlobal(uint64_t SizeInBytes) const;
+
   int GetAsanVersion(const Module &M) const;
 
   bool CompileKernel;
@@ -1241,6 +1238,237 @@ void AddressSanitizerPass::printPipeline(
   OS << '>';
 }
 
+static uint64_t getRedzoneSizeForScale(int MappingScale) {
+  // Redzone used for stack and globals is at least 32 bytes.
+  // For scales 6 and 7, the redzone has to be 64 and 128 bytes respectively.
+  return std::max(32U, 1U << MappingScale);
+}
+
+static uint64_t getMinRedzoneSizeForGlobal(int Scale) {
+  return getRedzoneSizeForScale(Scale);
+}
+
+static uint64_t getRedzoneSizeForGlobal(int Scale, uint64_t SizeInBytes) {
+  constexpr uint64_t kMaxRZ = 1 << 18;
+  const uint64_t MinRZ = getMinRedzoneSizeForGlobal(Scale);
+
+  uint64_t RZ = 0;
+  if (SizeInBytes <= MinRZ / 2) {
+    // Reduce redzone size for small size objects, e.g. int, char[1]. MinRZ is
+    // at least 32 bytes, optimize when SizeInBytes is less than or equal to
+    // half of MinRZ.
+    RZ = MinRZ - SizeInBytes;
+  } else {
+    // Calculate RZ, where MinRZ <= RZ <= MaxRZ, and RZ ~ 1/4 * SizeInBytes.
+    RZ = std::clamp((SizeInBytes / MinRZ / 4) * MinRZ, MinRZ, kMaxRZ);
+
+    // Round up to multiple of MinRZ.
+    if (SizeInBytes % MinRZ)
+      RZ += MinRZ - (SizeInBytes % MinRZ);
+  }
+
+  assert((RZ + SizeInBytes) % MinRZ == 0);
+
+  return RZ;
+}
+
+static GlobalVariable *getKernelSwLDSGlobal(Module &M, Function &F) {
+  SmallString<64> KernelLDSName("llvm.amdgcn.sw.lds.");
+  KernelLDSName += F.getName();
+  return M.getNamedGlobal(KernelLDSName);
+}
+
+static GlobalVariable *getKernelSwLDSMetadataGlobal(Module &M, Function &F) {
+  SmallString<64> KernelLDSName("llvm.amdgcn.sw.lds.");
+  KernelLDSName += F.getName();
+  KernelLDSName += ".md";
+  return M.getNamedGlobal(KernelLDSName);
+}
+
+static GlobalVariable *getKernelSwDynLDSGlobal(Module &M, Function &F) {
+  SmallString<64> KernelLDSName("llvm.amdgcn.");
+  KernelLDSName += F.getName();
+  KernelLDSName += ".dynlds";
+  return M.getNamedGlobal(KernelLDSName);
+}
+
+static GlobalVariable *getKernelSwLDSBaseGlobal(Module &M) {
+  SmallString<64> KernelLDSName("llvm.amdgcn.sw.lds.base.table");
+  return M.getNamedGlobal(KernelLDSName);
+}
+
+static void updateLDSSizeFnAttr(Function *Func, uint32_t Offset,
+                                bool UsesDynLDS) {
+  if (Offset != 0) {
+    SmallString<256> Buffer;
+    raw_svector_ostream SS(Buffer);
+    SS << format("%u", Offset);
+    if (UsesDynLDS)
+      SS << format(",%u", Offset);
+    Func->addFnAttr("amdgpu-lds-size", Buffer);
+  }
+}
+
+static void recordLDSAbsoluteAddress(Module &M, GlobalVariable *GV,
+                                     uint32_t Address) {
+  LLVMContext &Ctx = M.getContext();
+  auto *IntTy = M.getDataLayout().getIntPtrType(Ctx, 3);
+  auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address));
+  auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address + 1));
+  GV->setMetadata(LLVMContext::MD_absolute_symbol,
+                  MDNode::get(Ctx, {MinC, MaxC}));
+}
+
+/// Update SwLDS Metadata global initializer with redzone info.
+static SmallVector<std::pair<uint32_t, uint32_t>, 64>
+UpdateSwLDSMetadataWithRedzoneInfo(Function &F, int Scale) {
+  Module *M = F.getParent();
+  GlobalVariable *SwLDSMetadataGlobal = getKernelSwLDSMetadataGlobal(*M, F);
+  GlobalVariable *SwLDSGlobal = getKernelSwLDSGlobal(*M, F);
+  if (!SwLDSMetadataGlobal || !SwLDSGlobal)
+    return {};
+
+  LLVMContext &Ctx = M->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  SmallVector<std::pair<uint32_t, uint32_t>, 64> RedzoneOffsetAndSizeVector;
+  Constant *MdInit = SwLDSMetadataGlobal->getInitializer();
+  Align LDSAlign = Align(SwLDSGlobal->getAlign().valueOrOne());
+
+  StructType *MDStructType =
+      cast<StructType>(SwLDSMetadataGlobal->getValueType());
+  unsigned NumStructs = MDStructType->getNumElements();
+  std::vector<Constant *> Initializers;
+  uint32_t MallocSize = 0;
+  StructType *LDSItemTy =
+      cast<StructType>(MDStructType->getStructElementType(0));
+
+  for (unsigned i = 0; i < NumStructs; i++) {
+    ConstantStruct *member =
+        dyn_cast<ConstantStruct>(MdInit->getAggregateElement(i));
+    Constant *NewInitItem;
+    if (member) {
+      ConstantInt *GlobalSize =
+          cast<ConstantInt>(member->getAggregateElement(1U));
+      unsigned GlobalSizeValue = GlobalSize->getZExtValue();
+      Constant *NewItemStartOffset = ConstantInt::get(Int32Ty, MallocSize);
+      if (GlobalSizeValue) {
+        Constant *NewItemGlobalSizeConst =
+            ConstantInt::get(Int32Ty, GlobalSizeValue);
+        const uint64_t RightRedzoneSize =
+            getRedzoneSizeForGlobal(Scale, GlobalSizeValue);
+        MallocSize += GlobalSizeValue;
+        RedzoneOffsetAndSizeVector.emplace_back(MallocSize, RightRedzoneSize);
+        MallocSize += RightRedzoneSize;
+        unsigned NewItemAlignGlobalPlusRedzoneSize =
+            alignTo(GlobalSizeValue + RightRedzoneSize, LDSAlign);
+        Constant *NewItemAlignGlobalPlusRedzoneSizeConst =
+            ConstantInt::get(Int32Ty, NewItemAlignGlobalPlusRedzoneSize);
+        NewInitItem = ConstantStruct::get(
+            LDSItemTy, {NewItemStartOffset, NewItemGlobalSizeConst,
+                        NewItemAlignGlobalPlusRedzoneSizeConst});
+        MallocSize = alignTo(MallocSize, LDSAlign);
+      } else {
+        Constant *CurrMallocSize = ConstantInt::get(Int32Ty, MallocSize);
+        Constant *zero = ConstantInt::get(Int32Ty, 0);
+        NewInitItem =
+            ConstantStruct::get(LDSItemTy, {CurrMallocSize, zero, zero});
+        RedzoneOffsetAndSizeVector.emplace_back(0, 0);
+      }
+    } else {
+      Constant *CurrMallocSize = ConstantInt::get(Int32Ty, MallocSize);
+      Constant *zero = ConstantInt::get(Int32Ty, 0);
+      NewInitItem =
+          ConstantStruct::get(LDSItemTy, {CurrMallocSize, zero, zero});
+      RedzoneOffsetAndSizeVector.emplace_back(0, 0);
+    }
+    Initializers.push_back(NewInitItem);
+  }
+  GlobalVariable *SwDynLDS = getKernelSwDynLDSGlobal(*M, F);
+  bool usesDynLDS = SwDynLDS != nullptr;
+  updateLDSSizeFnAttr(&F, MallocSize, usesDynLDS);
+  if (usesDynLDS)
+    recordLDSAbsoluteAddress(*M, SwDynLDS, MallocSize);
+
+  Constant *Data = ConstantStruct::get(MDStructType, Initializers);
+  SwLDSMetadataGlobal->setInitializer(Data);
+  return RedzoneOffsetAndSizeVector;
+}
+
+/// Poison redzone regions using the redzone size and offset info.
+static void
+poisonRedzonesForSwLDS(Function &F,
+                       SmallVector<std::pair<uint32_t, uint32_t>, 64>
+                           &RedzoneOffsetAndSizeVector) {
+  Module *M = F.getParent();
+  GlobalVariable *SwLDSGlobal = getKernelSwLDSGlobal(*M, F);
+  GlobalVariable *SwLDSMetadataGlobal = getKernelSwLDSMetadataGlobal(*M, F);
+
+  if (!SwLDSGlobal || !SwLDSMetadataGlobal)
+    return;
+
+  LLVMContext &Ctx = M->getContext();
+  Type *Int64Ty = Type::getInt64Ty(Ctx);
+  Type *VoidTy = Type::getVoidTy(Ctx);
+  FunctionCallee AsanPoisonRegion = M->getOrInsertFunction(
+      StringRef("__asan_poison_region"),
+      FunctionType::get(VoidTy, {Int64Ty, Int64Ty}, false));
+  Constant *MdInit = SwLDSMetadataGlobal->getInitializer();
+
+  for (User *U : SwLDSGlobal->users()) {
+    StoreInst *SI = dyn_cast<StoreInst>(U);
+    if (!SI)
+      continue;
+
+    Type *PtrTy =
+        cast<PointerType>(SI->getValueOperand()->getType()->getScalarType());
+    unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
+    if (AddrSpace != 1)
+      report_fatal_error("AMDGPU illegal store to SW LDS");
+
+    StructType *MDStructType =
+        cast<StructType>(SwLDSMetadataGlobal->getValueType());
+    unsigned NumStructs = MDStructType->getNumElements();
+    Value *StoreMallocPointer = SI->getValueOperand();
+
+    assert(RedzoneOffsetAndSizeVector.size() == NumStructs);
+    for (unsigned i = 0; i < NumStructs; i++) {
+      ConstantStruct *member =
+          dyn_cast<ConstantStruct>(MdInit->getAggregateElement(i));
+      if (!member)
+        continue;
+
+      ConstantInt *GlobalSize =
+          cast<ConstantInt>(member->getAggregateElement(1U));
+      unsigned GlobalSizeValue = GlobalSize->getZExtValue();
+
+      if (!GlobalSizeValue)
+        continue;
+      IRBuilder<> IRB(SI);
+      IRB.SetInsertPoint(SI->getNextNode());
+      auto &RedzonePair = RedzoneOffsetAndSizeVector[i];
+      uint64_t RedzoneOffset = RedzonePair.first;
+      uint64_t RedzoneSize = RedzonePair.second;
+
+      Value *RedzoneAddrOffset = IRB.CreateInBoundsGEP(
+          IRB.getInt8Ty(), StoreMallocPointer, {IRB.getInt64(RedzoneOffset)});
+      Value *RedzoneAddress =
+          IRB.CreatePtrToInt(RedzoneAddrOffset, IRB.getInt64Ty());
+      IRB.CreateCall(AsanPoisonRegion,
+                     {RedzoneAddress, IRB.getInt64(RedzoneSize)});
+    }
+  }
+}
+
+/// Update SwLDS Metadata global initializer with redzone info.
+/// Poison redzone regions using the redzone size and offset info.
+static void preProcessAMDGPULDSAccesses(Module &M, int Scale) {
+  for (Function &F : M) {
+    auto RedzoneOffsetAndSizeVector =
+        UpdateSwLDSMetadataWithRedzoneInfo(F, Scale);
+    poisonRedzonesForSwLDS(F, RedzoneOffsetAndSizeVector);
+  }
+}
+
 AddressSanitizerPass::AddressSanitizerPass(
     const AddressSanitizerOptions &Options, bool UseGlobalGC,
     bool UseOdrIndicator, AsanDtorKind DestructorKind,
@@ -1251,6 +1479,13 @@ AddressSanitizerPass::AddressSanitizerPass(
 
 PreservedAnalyses AddressSanitizerPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
+  Triple TargetTriple = Triple(M.getTargetTriple());
+
+  if (TargetTriple.isAMDGPU() && ClInstrumentAMDGPULDS) {
+    unsigned LongSize = M.getDataLayout().getPointerSizeInBits();
+    ShadowMapping Mapping = getShadowMapping(TargetTriple, LongSize, false);
+    preProcessAMDGPULDSAccesses(M, Mapping.Scale);
+  }
   ModuleAddressSanitizer ModuleSanitizer(
       M, Options.InsertVersionCheck, Options.CompileKernel, Options.Recover,
       UseGlobalGC, UseOdrIndicator, DestructorKind, ConstructorKind);
@@ -1306,7 +1541,15 @@ static bool GlobalWasGeneratedByCompiler(GlobalVariable *G) {
 static bool isUnsupportedAMDGPUAddrspace(Value *Addr) {
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
   unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
-  if (AddrSpace == 3 || AddrSpace == 5)
+  if (AddrSpace == 5)
+    return true;
+  return false;
+}
+
+static bool isGlobalInAMDGPULdsAddrspace(Value *Addr) {
+  Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
+  unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
+  if (AddrSpace == 3)
     return true;
   return false;
 }
@@ -1797,10 +2040,8 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
     return InsertBefore;
   // Instrument generic addresses in supported addressspaces.
   IRBuilder<> IRB(InsertBefore);
-  Value *IsShared = IRB.CreateCall(AMDGPUAddressShared, {Addr});
   Value *IsPrivate = IRB.CreateCall(AMDGPUAddressPrivate, {Addr});
-  Value *IsSharedOrPrivate = IRB.CreateOr(IsShared, IsPrivate);
-  Value *Cmp = IRB.CreateNot(IsSharedOrPrivate);
+  Value *Cmp = IRB.CreateNot(IsPrivate);
   Value *AddrSpaceZeroLanding =
       SplitBlockAndInsertIfThen(Cmp, InsertBefore, false);
   InsertBefore = cast<Instruction>(AddrSpaceZeroLanding);
@@ -1859,7 +2100,39 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     return;
   }
 
-  Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
+  Value *AddrLong;
+  if (TargetTriple.isAMDGPU() && ClInstrumentAMDGPULDS) {
+    Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
+    if (PtrTy->getPointerAddressSpace() == 3) {
+      Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+      Function *Func = IRB.GetInsertBlock()->getParent();
+      Value *SwLDS;
+      if (Func->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
+        SwLDS = getKernelSwLDSGlobal(*M, *Func);
+      } else {
+        GlobalVariable *LDSBaseTable = getKernelSwLDSBaseGlobal(*M);
+        if (LDSBaseTable) {
+          auto *KernelId = IRB.CreateCall(
+              M->getOrInsertFunction(kAMDGPULDSKernelId, IRB.getInt32Ty()), {});
+          Value *BaseGEP =
+              IRB.CreateInBoundsGEP(LDSBaseTable->getValueType(), LDSBaseTable,
+                                    {IRB.getInt32(0), KernelId});
+          SwLDS = IRB.CreateLoad(IRB.getPtrTy(3), BaseGEP);
+        } else {
+          SwLDS = IRB.CreateIntToPtr(IRB.getInt32(0), IRB.getPtrTy(3));
+        }
+      }
+      assert(SwLDS && "Invalid AMDGPU Sw LDS base ptr");
+      Value *PtrToInt = IRB.CreatePtrToInt(Addr, IRB.getInt32Ty());
+      Value *LoadMallocPtr = IRB.CreateLoad(IRB.getPtrTy(1), SwLDS);
+      Value *GEP =
+          IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, {PtrToInt});
+      AddrLong = IRB.CreatePointerCast(GEP, IntptrTy);
+    } else
+      AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
+  } else
+    AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
+
   if (UseCalls) {
     if (Exp == 0)
       RTCI.createRuntimeCall(
@@ -2023,7 +2296,8 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   if (!G->hasInitializer()) return false;
   // Globals in address space 1 and 4 are supported for AMDGPU.
   if (G->getAddressSpace() &&
-      !(TargetTriple.isAMDGPU() && !isUnsupportedAMDGPUAddrspace(G)))
+      (!(TargetTriple.isAMDGPU() && !isUnsupportedAMDGPUAddrspace(G)) ||
+       !(TargetTriple.isAMDGPU() && !isGlobalInAMDGPULdsAddrspace(G))))
     return false;
   if (GlobalWasGeneratedByCompiler(G)) return false; // Our own globals.
   // Two problems with thread-locals:
@@ -2031,7 +2305,9 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   //   - Need to poison all copies, not just the main thread's one.
   if (G->isThreadLocal()) return false;
   // For now, just ignore this Global if the alignment is large.
-  if (G->getAlign() && *G->getAlign() > getMinRedzoneSizeForGlobal()) return false;
+  if (G->getAlign() &&
+      *G->getAlign() > getMinRedzoneSizeForGlobal(Mapping.Scale))
+    return false;
 
   // For non-COFF targets, only instrument globals known to be defined by this
   // TU.
@@ -2554,7 +2830,8 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
 
     Type *Ty = G->getValueType();
     const uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
-    const uint64_t RightRedzoneSize = getRedzoneSizeForGlobal(SizeInBytes);
+    const uint64_t RightRedzoneSize =
+        getRedzoneSizeForGlobal(Mapping.Scale, SizeInBytes);
     Type *RightRedZoneTy = ArrayType::get(IRB.getInt8Ty(), RightRedzoneSize);
 
     StructType *NewTy = StructType::get(Ty, RightRedZoneTy);
@@ -2570,7 +2847,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
         G->getThreadLocalMode(), G->getAddressSpace());
     NewGlobal->copyAttributesFrom(G);
     NewGlobal->setComdat(G->getComdat());
-    NewGlobal->setAlignment(Align(getMinRedzoneSizeForGlobal()));
+    NewGlobal->setAlignment(Align(getMinRedzoneSizeForGlobal(Mapping.Scale)));
     // Don't fold globals with redzones. ODR violation detector and redzone
     // poisoning implicitly creates a dependence on the global's address, so it
     // is no longer valid for it to be marked unnamed_addr.
@@ -2688,31 +2965,6 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
     createInitializerPoisonCalls(M, ModuleName);
 
   LLVM_DEBUG(dbgs() << M);
-}
-
-uint64_t
-ModuleAddressSanitizer::getRedzoneSizeForGlobal(uint64_t SizeInBytes) const {
-  constexpr uint64_t kMaxRZ = 1 << 18;
-  const uint64_t MinRZ = getMinRedzoneSizeForGlobal();
-
-  uint64_t RZ = 0;
-  if (SizeInBytes <= MinRZ / 2) {
-    // Reduce redzone size for small size objects, e.g. int, char[1]. MinRZ is
-    // at least 32 bytes, optimize when SizeInBytes is less than or equal to
-    // half of MinRZ.
-    RZ = MinRZ - SizeInBytes;
-  } else {
-    // Calculate RZ, where MinRZ <= RZ <= MaxRZ, and RZ ~ 1/4 * SizeInBytes.
-    RZ = std::clamp((SizeInBytes / MinRZ / 4) * MinRZ, MinRZ, kMaxRZ);
-
-    // Round up to multiple of MinRZ.
-    if (SizeInBytes % MinRZ)
-      RZ += MinRZ - (SizeInBytes % MinRZ);
-  }
-
-  assert((RZ + SizeInBytes) % MinRZ == 0);
-
-  return RZ;
 }
 
 int ModuleAddressSanitizer::GetAsanVersion(const Module &M) const {

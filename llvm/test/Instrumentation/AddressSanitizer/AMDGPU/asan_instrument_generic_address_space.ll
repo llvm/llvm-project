@@ -9,12 +9,10 @@ define protected amdgpu_kernel void @generic_store(ptr addrspace(1) %p, i32 %i) 
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP21:%.*]]
-; CHECK:       4:
+; CHECK:       2:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -31,15 +29,15 @@ define protected amdgpu_kernel void @generic_store(ptr addrspace(1) %p, i32 %i) 
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[ASAN_REPORT:%.*]], label [[TMP20:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[TMP18:%.*]], label [[TMP19:%.*]]
-; CHECK:       18:
+; CHECK:       16:
 ; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP5]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP19]]
-; CHECK:       19:
+; CHECK:       17:
 ; CHECK-NEXT:    br label [[TMP20]]
-; CHECK:       20:
+; CHECK:       18:
 ; CHECK-NEXT:    br label [[TMP21]]
-; CHECK:       21:
+; CHECK:       19:
 ; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -47,12 +45,10 @@ define protected amdgpu_kernel void @generic_store(ptr addrspace(1) %p, i32 %i) 
 ; RECOV-SAME: ptr addrspace(1) [[P:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RECOV-NEXT:  entry:
 ; RECOV-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; RECOV-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; RECOV-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; RECOV-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; RECOV-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP17:%.*]]
-; RECOV:       4:
+; RECOV:       2:
 ; RECOV-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; RECOV-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; RECOV-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -68,9 +64,9 @@ define protected amdgpu_kernel void @generic_store(ptr addrspace(1) %p, i32 %i) 
 ; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_store4_noabort(i64 [[TMP5]]) #[[ATTR3:[0-9]+]]
 ; RECOV-NEXT:    br label [[TMP16]]
-; RECOV:       16:
+; RECOV:       14:
 ; RECOV-NEXT:    br label [[TMP17]]
-; RECOV:       17:
+; RECOV:       15:
 ; RECOV-NEXT:    store i32 0, ptr [[Q]], align 4
 ; RECOV-NEXT:    ret void
 ;
@@ -86,12 +82,10 @@ define protected amdgpu_kernel void @generic_load(ptr addrspace(1) %p, i32 %i) s
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP21:%.*]]
-; CHECK:       4:
+; CHECK:       2:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -108,15 +102,15 @@ define protected amdgpu_kernel void @generic_load(ptr addrspace(1) %p, i32 %i) s
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[ASAN_REPORT:%.*]], label [[TMP20:%.*]], !prof [[PROF0]]
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[TMP18:%.*]], label [[TMP19:%.*]]
-; CHECK:       18:
+; CHECK:       16:
 ; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP5]]) #[[ATTR5]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP19]]
-; CHECK:       19:
+; CHECK:       17:
 ; CHECK-NEXT:    br label [[TMP20]]
-; CHECK:       20:
+; CHECK:       18:
 ; CHECK-NEXT:    br label [[TMP21]]
-; CHECK:       21:
+; CHECK:       19:
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -124,12 +118,10 @@ define protected amdgpu_kernel void @generic_load(ptr addrspace(1) %p, i32 %i) s
 ; RECOV-SAME: ptr addrspace(1) [[P:%.*]], i32 [[I:%.*]]) #[[ATTR0]] {
 ; RECOV-NEXT:  entry:
 ; RECOV-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; RECOV-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; RECOV-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; RECOV-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; RECOV-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP17:%.*]]
-; RECOV:       4:
+; RECOV:       2:
 ; RECOV-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; RECOV-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; RECOV-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -145,9 +137,9 @@ define protected amdgpu_kernel void @generic_load(ptr addrspace(1) %p, i32 %i) s
 ; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_load4_noabort(i64 [[TMP5]]) #[[ATTR3]]
 ; RECOV-NEXT:    br label [[TMP16]]
-; RECOV:       16:
+; RECOV:       14:
 ; RECOV-NEXT:    br label [[TMP17]]
-; RECOV:       17:
+; RECOV:       15:
 ; RECOV-NEXT:    [[R:%.*]] = load i32, ptr [[Q]], align 4
 ; RECOV-NEXT:    ret void
 ;
@@ -163,12 +155,10 @@ define protected amdgpu_kernel void @generic_store_8(ptr addrspace(1) %p) saniti
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP16:%.*]]
-; CHECK:       4:
+; CHECK:       2:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -180,15 +170,15 @@ define protected amdgpu_kernel void @generic_store_8(ptr addrspace(1) %p) saniti
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[ASAN_REPORT:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
-; CHECK:       13:
+; CHECK:       11:
 ; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP5]]) #[[ATTR5]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP14]]
-; CHECK:       14:
+; CHECK:       12:
 ; CHECK-NEXT:    br label [[TMP15]]
-; CHECK:       15:
+; CHECK:       13:
 ; CHECK-NEXT:    br label [[TMP16]]
-; CHECK:       16:
+; CHECK:       14:
 ; CHECK-NEXT:    store i64 0, ptr [[Q]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -196,12 +186,10 @@ define protected amdgpu_kernel void @generic_store_8(ptr addrspace(1) %p) saniti
 ; RECOV-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; RECOV-NEXT:  entry:
 ; RECOV-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; RECOV-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; RECOV-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; RECOV-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; RECOV-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
-; RECOV:       4:
+; RECOV:       2:
 ; RECOV-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; RECOV-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; RECOV-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -212,9 +200,9 @@ define protected amdgpu_kernel void @generic_store_8(ptr addrspace(1) %p) saniti
 ; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_store8_noabort(i64 [[TMP5]]) #[[ATTR3]]
 ; RECOV-NEXT:    br label [[TMP11]]
-; RECOV:       11:
+; RECOV:       9:
 ; RECOV-NEXT:    br label [[TMP12]]
-; RECOV:       12:
+; RECOV:       10:
 ; RECOV-NEXT:    store i64 0, ptr [[Q]], align 8
 ; RECOV-NEXT:    ret void
 ;
@@ -229,12 +217,10 @@ define protected amdgpu_kernel void @generic_load_8(ptr addrspace(1) %p) sanitiz
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP16:%.*]]
-; CHECK:       4:
+; CHECK:       2:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -246,15 +232,15 @@ define protected amdgpu_kernel void @generic_load_8(ptr addrspace(1) %p) sanitiz
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[ASAN_REPORT:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
-; CHECK:       13:
+; CHECK:       11:
 ; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP5]]) #[[ATTR5]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP14]]
-; CHECK:       14:
+; CHECK:       12:
 ; CHECK-NEXT:    br label [[TMP15]]
-; CHECK:       15:
+; CHECK:       13:
 ; CHECK-NEXT:    br label [[TMP16]]
-; CHECK:       16:
+; CHECK:       14:
 ; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[Q]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -262,12 +248,10 @@ define protected amdgpu_kernel void @generic_load_8(ptr addrspace(1) %p) sanitiz
 ; RECOV-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; RECOV-NEXT:  entry:
 ; RECOV-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
-; RECOV-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[Q]])
 ; RECOV-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[Q]])
-; RECOV-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
-; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; RECOV-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], true
 ; RECOV-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
-; RECOV:       4:
+; RECOV:       2:
 ; RECOV-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[Q]] to i64
 ; RECOV-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 3
 ; RECOV-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 2147450880
@@ -278,9 +262,9 @@ define protected amdgpu_kernel void @generic_load_8(ptr addrspace(1) %p) sanitiz
 ; RECOV:       asan.report:
 ; RECOV-NEXT:    call void @__asan_report_load8_noabort(i64 [[TMP5]]) #[[ATTR3]]
 ; RECOV-NEXT:    br label [[TMP11]]
-; RECOV:       11:
+; RECOV:       9:
 ; RECOV-NEXT:    br label [[TMP12]]
-; RECOV:       12:
+; RECOV:       10:
 ; RECOV-NEXT:    [[R:%.*]] = load i64, ptr [[Q]], align 8
 ; RECOV-NEXT:    ret void
 ;
