@@ -5921,6 +5921,36 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::BitCast: {
+    const Type *Ty = Op->getType();
+    const Value *Casted = Op->getOperand(0);
+    if (Ty->isVectorTy() || !Casted->getType()->isIntOrIntVectorTy())
+      break;
+
+    KnownBits Bits(Ty->getScalarSizeInBits());
+    computeKnownBits(Casted, Bits, Depth + 1, Q);
+
+    // Transfer information from the sign bit.
+    if (Bits.Zero.isSignBitSet())
+      Known.signBitMustBeZero();
+    else if (Bits.One.isSignBitSet())
+      Known.signBitMustBeOne();
+
+    if (Ty->isIEEE()) {
+      // IEEE floats are NaN when all bits of the exponent plus at least one of
+      // the fraction bits are 1. This means:
+      //   - If we assume unknown bits are 0 and the value is NaN, it will
+      //     always be NaN
+      //   - If we assume unknown bits are 1 and the value is not NaN, it can
+      //     never be NaN
+      if (APFloat(Ty->getFltSemantics(), Bits.One).isNaN())
+        Known.KnownFPClasses = fcNan;
+      else if (!APFloat(Ty->getFltSemantics(), ~Bits.Zero).isNaN())
+        Known.knownNot(fcNan);
+    }
+
+    break;
+  }
   default:
     break;
   }
