@@ -25,8 +25,12 @@
 # GNU-NEXT: Displaying notes found in: .note.bar
 # GNU-NEXT:   Owner                Data size 	Description
 # GNU-NEXT:   AMDGPU               0x00000003	NT_AMDGPU_METADATA (AMDGPU Metadata)
+# GNU-NEXT:   AMDGPU Metadata:
+# GNU-NEXT:   Invalid AMDGPU Metadata
 # GNU-NEXT:    description data: 12 34 56
 # GNU-NEXT:   AMDGPU               0x00000003	NT_AMDGPU_METADATA (AMDGPU Metadata)
+# GNU-NEXT:   AMDGPU Metadata:
+# GNU-NEXT:   Invalid Raw with insufficient payload
 # GNU-NEXT:    description data: ab cd ef
 # GNU-EMPTY:
 
@@ -64,6 +68,7 @@
 # LLVM-NEXT:      Owner: AMDGPU
 # LLVM-NEXT:      Data size: 0x3
 # LLVM-NEXT:      Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
+# LLVM-NEXT:      AMDGPU Metadata: Invalid AMDGPU Metadata
 # LLVM-NEXT:      Description data (
 # LLVM-NEXT:        0000: 123456                               |.4V|
 # LLVM-NEXT:      )
@@ -72,6 +77,7 @@
 # LLVM-NEXT:      Owner: AMDGPU
 # LLVM-NEXT:      Data size: 0x3
 # LLVM-NEXT:      Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
+# LLVM-NEXT:      AMDGPU Metadata: Invalid Raw with insufficient payload
 # LLVM-NEXT:      Description data (
 # LLVM-NEXT:        0000: ABCDEF                               |...|
 # LLVM-NEXT:      )
