@@ -54,10 +54,10 @@ def yaml_to_classes(yaml_data):
         standards = (function_data.get("standards", None),)
         header.add_function(
             Function(
-                standards,
                 function_data["return_type"],
                 function_data["name"],
                 arguments,
+                standards,
                 guard,
                 attributes,
             )
