@@ -1037,16 +1037,13 @@ void StreamChecker::preWrite(const FnDescription *Desc, const CallEvent &Call,
 static QualType getPointeeType(const MemRegion *R) {
   if (!R)
     return {};
-  QualType Ty = [R] {
-    if (const auto *ER = dyn_cast<ElementRegion>(R))
-      return ER->getElementType();
-    if (const auto *TR = dyn_cast<TypedValueRegion>(R))
-      return TR->getValueType();
-    if (const auto *SR = dyn_cast<SymbolicRegion>(R))
-      return SR->getPointeeStaticType();
-    return QualType{};
-  }();
-  return !Ty.isNull() ? Ty->getCanonicalTypeUnqualified() : QualType{};
+  if (const auto *ER = dyn_cast<ElementRegion>(R))
+    return ER->getElementType()->getCanonicalTypeUnqualified();
+  if (const auto *TR = dyn_cast<TypedValueRegion>(R))
+    return TR->getValueType()->getCanonicalTypeUnqualified();
+  if (const auto *SR = dyn_cast<SymbolicRegion>(R))
+    return SR->getPointeeStaticType()->getCanonicalTypeUnqualified();
+  return QualType{};
 }
 
 static std::optional<NonLoc> getStartIndex(SValBuilder &SVB,
