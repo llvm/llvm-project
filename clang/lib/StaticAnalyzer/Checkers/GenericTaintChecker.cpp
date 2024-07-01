@@ -16,6 +16,7 @@
 
 #include "Yaml.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
@@ -26,6 +27,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -76,6 +78,13 @@ static ArgIdxTy fromArgumentCount(unsigned Count) {
          "ArgIdxTy is not large enough to represent the number of arguments.");
   return Count;
 }
+
+/// Handles the resolution of indexes of type ArgIdxTy to Expr*-s.
+static const Expr *GetArgExpr(ArgIdxTy ArgIdx, const CallEvent &Call) {
+    return ArgIdx == ReturnValueIndex ? Call.getOriginExpr()
+                                      : Call.getArgExpr(ArgIdx);
+  };
+
 
 /// Check if the region the expression evaluates to is the standard input,
 /// and thus, is tainted.
@@ -854,6 +863,8 @@ void GenericTaintChecker::checkPreCall(const CallEvent &Call,
 
 void GenericTaintChecker::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
+
+
   // Set the marked values as tainted. The return value only accessible from
   // checkPostStmt.
   ProgramStateRef State = C.getState();
@@ -864,7 +875,58 @@ void GenericTaintChecker::checkPostCall(const CallEvent &Call,
   // stored in the state as TaintArgsOnPostVisit set.
   TaintArgsOnPostVisitTy TaintArgsMap = State->get<TaintArgsOnPostVisit>();
 
+
+  const ArgIdxTy CallNumArgs = fromArgumentCount(Call.getNumArgs());
+
+
   const ImmutableSet<ArgIdxTy> *TaintArgs = TaintArgsMap.lookup(CurrentFrame);
+  auto &F = State->getStateManager().get_context<ArgIdxFactory>();
+  ImmutableSet<ArgIdxTy> ApproxTaintedArgs = F.add(F.getEmptySet(), ReturnValueIndex);
+
+  if (!C.wasInlined && !TaintArgs) {
+    llvm::errs() << "PostCall<";
+    Call.dump(llvm::errs());
+    llvm::errs() << "Was not inlined.\n";
+    /// Check for taint sinks.
+    ProgramStateRef State = C.getState();
+    bool HasTaintedParam = false;
+    for (ArgIdxTy I = ReturnValueIndex; I < CallNumArgs; ++I) {
+      const Expr *E = GetArgExpr(I, Call);
+      if (!E)
+        continue;
+      HasTaintedParam =
+          HasTaintedParam || isTaintedOrPointsToTainted(State, C.getSVal(E));
+    }
+    llvm::errs() << "\nHasTaintedParam:" << HasTaintedParam << "\n";
+    bool AggressiveTaintPropagation =
+      C.getAnalysisManager().getAnalyzerOptions().getCheckerBooleanOption(
+          this, "AggressiveTaintPropagation");
+    if (HasTaintedParam && !TaintArgs && AggressiveTaintPropagation) {
+      llvm::errs() << "Making return value and writable params tainted.\n";
+      llvm::errs() << "Number of params:" << CallNumArgs;
+
+      for (ArgIdxTy I = ReturnValueIndex+1; I < CallNumArgs; ++I) {
+        const Expr *E = GetArgExpr(I, Call);
+        if (!E)
+          continue;
+        SVal ArgSVal = C.getSVal(E);
+        //checking if the argument is a non-const pointer
+        auto LValue = ArgSVal.getAs<Loc>();
+        if (!LValue)
+          continue;
+        const QualType ArgTy = LValue->getType(State->getStateManager().getContext());
+        if (ArgTy->isPointerType() && !ArgTy.isConstQualified()){
+          llvm::errs() << "Param "<< I;
+          llvm::errs() << "is a non const qualified pointer, so tainting it\n";
+          ArgTy->dump();
+          llvm::errs()<<"\n";
+          ApproxTaintedArgs = F.add(ApproxTaintedArgs, I);
+        }
+      }
+      TaintArgs = &ApproxTaintedArgs;
+    }
+  }
+
   if (!TaintArgs)
     return;
   assert(!TaintArgs->isEmpty());

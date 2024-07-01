@@ -33,6 +33,8 @@
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include <llvm/ADT/DepthFirstIterator.h>
+#include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
@@ -243,6 +245,11 @@ public:
   ExprEngine::InliningModes
     getInliningModeForFunction(const Decl *D, const SetOfConstDecls &Visited);
 
+
+  std::set<FunctionDecl*> getDeclsForTaintAnalysis(CallGraph &CG);
+  bool isTaintRelatedFunction(const FunctionDecl* FD);
+
+
   /// Build the call graph for all the top level decls of this TU and
   /// use it to define the order in which the functions should be visited.
   void HandleDeclsCallGraph(const unsigned LocalTUDeclsSize);
@@ -435,14 +442,73 @@ AnalysisConsumer::getInliningModeForFunction(const Decl *D,
   return ExprEngine::Inline_Regular;
 }
 
+bool AnalysisConsumer::isTaintRelatedFunction(const FunctionDecl* FD){
+  std::set<std::string> sources = {"scanf","gets","getch","read","fopen","fdopen","freopen","getchar",
+  "gets_s","scanf_s","getcwd","readlink","gethostname","getnameinfo","readlinkat","get_current_dir_name",
+  "getseuserbyname","getgroups","getlogin","getlogin_r","popen","getenv"};
+  std::set<std::string> sinks = {"system", "execv","popen","malloc","calloc","memcpy","strcpy","strncpy"};
+  if (!FD || !FD->getCanonicalDecl())
+    return false;
+  std::string FN = FD->getCanonicalDecl()->getNameAsString();
+  //llvm::errs()<<"Inspecting function if tainted " << FN << "\n";
+  return (sources.count(FN) || sinks.count(FN));
+}
+
+// returns functions declarations required for taint analysis
+std::set<FunctionDecl*> AnalysisConsumer::getDeclsForTaintAnalysis(CallGraph &CG) {
+  std::set<FunctionDecl*> TaintedFunctions;
+  for (auto N = llvm::df_begin(&CG), EI = llvm::df_end(&CG); N != EI; N++) {
+    Decl *D = N->getDecl();
+    // Skip the abstract root node.
+    if (!D)
+      continue;
+
+    auto *FD = dyn_cast<FunctionDecl>(D);
+    if (!FD)
+      continue;
+    if (FD->getDefinition()) {
+      llvm::errs() << "Visiting function: " << FD->getNameInfo().getAsString() << "\n";
+    }
+
+    for (auto Callee : N->callees()){
+      FunctionDecl *CFD = dyn_cast<FunctionDecl>(Callee.Callee->getDecl());
+      if (!CFD)
+        continue;
+      if (isTaintRelatedFunction(CFD))
+        TaintedFunctions.insert(FD);
+      if (TaintedFunctions.find(CFD)!=TaintedFunctions.end())//if child is tainted, the parent is also tainted
+        TaintedFunctions.insert(FD);
+    }
+
+
+    if (isTaintRelatedFunction(FD)){
+      llvm::errs()<<"Called Function "<<FD->getCanonicalDecl()->getNameAsString()<<" is tainted\n";
+      TaintedFunctions.insert(FD);
+    } else
+      llvm::errs()<<"Called Function "<<FD->getCanonicalDecl()->getNameAsString()<<" is NOT tainted\n";
+
+  }
+  return TaintedFunctions;
+}
+
 void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
   // Build the Call Graph by adding all the top level declarations to the graph.
   // Note: CallGraph can trigger deserialization of more items from a pch
   // (though HandleInterestingDecl); triggering additions to LocalTUDecls.
   // We rely on random access to add the initially processed Decls to CG.
+
   CallGraph CG;
   for (unsigned i = 0 ; i < LocalTUDeclsSize ; ++i) {
     CG.addToCallGraph(LocalTUDecls[i]);
+  }
+
+  std::set<FunctionDecl*> TaintedFunctions;
+  if (Opts.AnalyzerFocusedTaint){
+    TaintedFunctions = getDeclsForTaintAnalysis(CG);
+    llvm::errs()<<"Tainted functions:\n";
+    for (FunctionDecl* FD:TaintedFunctions){
+      llvm::errs()<<FD->getNameInfo().getAsString() << "\n";
+    }
   }
 
   // Walk over all of the call graph nodes in topological order, so that we
@@ -463,6 +529,7 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
     if (!D)
       continue;
 
+
     // Skip the functions which have been processed already or previously
     // inlined.
     if (shouldSkipFunction(D, Visited, VisitedAsTopLevel))
@@ -478,6 +545,17 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
       FD->hasBody(FD);
       if (CTU.isImportedAsNew(FD))
         continue;
+    }
+
+    if (Opts.AnalyzerFocusedTaint) {
+      // if the function is not taint related skip it.
+      auto *FD = dyn_cast<FunctionDecl>(D);
+      if (TaintedFunctions.find(FD) == TaintedFunctions.end()) {
+        llvm::errs()
+            << "Skipping not taint related function from the analysis:\n";
+        llvm::errs() << FD->getNameInfo().getAsString() << "\n";
+        continue;
+      }
     }
 
     // Analyze the function.
