@@ -51,9 +51,9 @@ bool AlwaysInlineImpl(
     for (User *U : F.users())
       if (auto *CB = dyn_cast<CallBase>(U))
         if (CB->getCalledFunction() == &F &&
-              CB->hasFnAttr(Attribute::AlwaysInline) &&
-              !CB->getAttributes().hasFnAttr(Attribute::NoInline))
-            Calls.insert(CB);
+            CB->hasFnAttr(Attribute::AlwaysInline) &&
+            !CB->getAttributes().hasFnAttr(Attribute::NoInline))
+          Calls.insert(CB);
 
     for (CallBase *CB : Calls) {
       Function *Caller = CB->getCaller();
@@ -62,18 +62,17 @@ bool AlwaysInlineImpl(
       BasicBlock *Block = CB->getParent();
 
       InlineFunctionInfo IFI(GetAssumptionCache, &PSI,
-                              GetBFI ? &GetBFI(*Caller) : nullptr,
-                              GetBFI ? &GetBFI(F) : nullptr);
+                             GetBFI ? &GetBFI(*Caller) : nullptr,
+                             GetBFI ? &GetBFI(F) : nullptr);
 
       InlineResult Res = InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
                                         &GetAAR(F), InsertLifetime);
       if (!Res.isSuccess()) {
         ORE.emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc,
-                                          Block)
-                  << "'" << ore::NV("Callee", &F) << "' is not inlined into '"
-                  << ore::NV("Caller", Caller)
-                  << "': " << ore::NV("Reason", Res.getFailureReason());
+          return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+                 << "'" << ore::NV("Callee", &F) << "' is not inlined into '"
+                 << ore::NV("Caller", Caller)
+                 << "': " << ore::NV("Reason", Res.getFailureReason());
         });
         continue;
       }
@@ -101,8 +100,8 @@ bool AlwaysInlineImpl(
   }
 
   // Delete the non-comdat ones from the module and also from our vector.
-  auto *NonComdatBegin = partition(
-      InlinedFunctions, [&](Function *F) { return F->hasComdat(); });
+  auto *NonComdatBegin =
+      partition(InlinedFunctions, [&](Function *F) { return F->hasComdat(); });
   for (Function *F : make_range(NonComdatBegin, InlinedFunctions.end())) {
     M.getFunctionList().erase(F);
     Changed = true;
