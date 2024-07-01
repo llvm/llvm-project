@@ -47,8 +47,6 @@
     (defined(__cplusplus) && __cplusplus >= 201103L) ||                        \
     (__STDC_HOSTED__ && defined(_AIX) && defined(_ALL_SOURCE))
 #    undef DECIMAL_DIG
-#    undef INFINITY
-#    undef NAN
 #  endif
 #  undef FLT_DIG
 #  undef DBL_DIG
@@ -88,6 +86,12 @@
 #    undef DBL_HAS_SUBNORM
 #    undef LDBL_HAS_SUBNORM
 #  endif
+#endif
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#  undef INFINITY
+#  undef NAN
 #endif
 
 /* Characteristics of floating point types, C99 5.2.4.2.2 */
