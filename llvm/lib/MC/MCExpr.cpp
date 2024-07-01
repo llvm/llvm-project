@@ -646,8 +646,8 @@ static void AttemptToFoldSymbolOffsetDifference(
     }
 
     // Eagerly evaluate when layout is finalized.
-    Addend += Layout->getSymbolOffset(A->getSymbol()) -
-              Layout->getSymbolOffset(B->getSymbol());
+    Addend += Asm->getSymbolOffset(A->getSymbol()) -
+              Asm->getSymbolOffset(B->getSymbol());
     if (Addrs && (&SecA != &SecB))
       Addend += (Addrs->lookup(&SecA) - Addrs->lookup(&SecB));
 
