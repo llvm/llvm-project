@@ -5116,12 +5116,12 @@ bool Sema::CheckRegparmAttr(const ParsedAttr &AL, unsigned &numParams) {
   return false;
 }
 
-// Helper to get CudaArch.
-static CudaArch getCudaArch(const TargetInfo &TI) {
+// Helper to get OffloadArch.
+static OffloadArch getOffloadArch(const TargetInfo &TI) {
   if (!TI.getTriple().isNVPTX())
-    llvm_unreachable("getCudaArch is only valid for NVPTX triple");
+    llvm_unreachable("getOffloadArch is only valid for NVPTX triple");
   auto &TO = TI.getTargetOpts();
-  return StringToCudaArch(TO.CPU);
+  return StringToOffloadArch(TO.CPU);
 }
 
 // Checks whether an argument of launch_bounds attribute is
@@ -5181,10 +5181,10 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
 
   if (MaxBlocks) {
     // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-    auto SM = getCudaArch(Context.getTargetInfo());
-    if (SM == CudaArch::UNKNOWN || SM < CudaArch::SM_90) {
+    auto SM = getOffloadArch(Context.getTargetInfo());
+    if (SM == OffloadArch::UNKNOWN || SM < OffloadArch::SM_90) {
       Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-          << CudaArchToString(SM) << CI << MaxBlocks->getSourceRange();
+          << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
       // Ignore it by setting MaxBlocks to null;
       MaxBlocks = nullptr;
     } else {
@@ -5303,9 +5303,9 @@ void Sema::addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
 
 static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto &TTI = S.Context.getTargetInfo();
-  auto Arch = StringToCudaArch(TTI.getTargetOpts().CPU);
-  if ((TTI.getTriple().isNVPTX() && Arch < clang::CudaArch::SM_90) ||
-      (TTI.getTriple().isAMDGPU() && Arch < clang::CudaArch::GFX1210)) {
+  auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
+  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
+      (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1210)) {
     S.Diag(AL.getLoc(), diag::err_cuda_cluster_dims_not_supported);
     return;
   }

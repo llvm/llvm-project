@@ -183,6 +183,7 @@ public:
   bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
+  bool VisitStmtExpr(const StmtExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
