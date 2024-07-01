@@ -70,12 +70,16 @@ private:
   std::vector<BinaryFunction *> ProfileBFs;
 
   /// Populate \p Function profile with the one supplied in YAML format.
-  bool parseFunctionProfile(BinaryFunction &Function,
-                            const yaml::bolt::BinaryFunctionProfile &YamlBF);
+  bool parseFunctionProfile(
+      const DenseMap<uint32_t, std::string *> &IdToFunctionName,
+      BinaryFunction &Function,
+      const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
   /// Infer function profile from stale data (collected on older binaries).
-  bool inferStaleProfile(BinaryFunction &Function,
-                         const yaml::bolt::BinaryFunctionProfile &YamlBF);
+  bool
+  inferStaleProfile(const DenseMap<uint32_t, std::string *> IdToFunctionName,
+                    BinaryFunction &Function,
+                    const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
   /// Initialize maps for profile matching.
   void buildNameMaps(BinaryContext &BC);

@@ -225,7 +225,6 @@ namespace bolt {
 struct BinaryProfile {
   BinaryProfileHeader Header;
   std::vector<BinaryFunctionProfile> Functions;
-  std::unordered_map<uint32_t, BinaryFunctionProfile *> IdToFunctionProfile;
 };
 } // namespace bolt
 

@@ -38,10 +38,9 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB);
 
 std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB);
 
-std::string hashBlockCalls(
-    const std::unordered_map<uint32_t, yaml::bolt::BinaryFunctionProfile *>
-        &IdsToProfiledFunctions,
-    const yaml::bolt::BinaryBasicBlockProfile &YamlBB);
+std::string
+hashBlockCalls(const DenseMap<uint32_t, std::string *> &IdsToProfiledFunctions,
+               const yaml::bolt::BinaryBasicBlockProfile &YamlBB);
 
 } // namespace bolt
 } // namespace llvm

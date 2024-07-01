@@ -155,10 +155,8 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
   return HashString;
 }
 
-/// An even looser  hash of a basic block to use with the stale profile
-/// matching. Hashing block function calls allows for broader relational
-/// matching, predicated on the assumption that called functions remain similar
-/// across revisions.
+/// An even looser hash of a basic block to use with stale profile matching,
+/// composed of the names of a block's called functions in lexicographic order.
 std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
   // The hash is computed by creating a string of all lexicographically ordered
   // called function names.
@@ -181,17 +179,16 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
 }
 
 /// The same as the above function, but for profiled functions.
-std::string hashBlockCalls(
-    const std::unordered_map<uint32_t, yaml::bolt::BinaryFunctionProfile *>
-        &IdsToProfiledFunctions,
-    const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+std::string
+hashBlockCalls(const DenseMap<uint32_t, std::string *> &IdsToProfiledFunctions,
+               const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
 
   std::multiset<std::string> FunctionNames;
   for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
     auto It = IdsToProfiledFunctions.find(CallSiteInfo.DestId);
     assert(It != IdsToProfiledFunctions.end() &&
            "All profiled functions should have ids");
-    StringRef Name = It->second->Name;
+    StringRef Name = *It->second;
     const size_t Pos = Name.find("(*");
     if (Pos != StringRef::npos)
       Name = Name.substr(0, Pos);

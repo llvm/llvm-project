@@ -79,6 +79,7 @@ bool YAMLProfileReader::hasLocalsWithFileName() const {
 }
 
 bool YAMLProfileReader::parseFunctionProfile(
+    const DenseMap<uint32_t, std::string *> &IdToFunctionName,
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
   BinaryContext &BC = BF.getBinaryContext();
 
@@ -270,7 +271,8 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (YamlBF.NumBasicBlocks != BF.size())
       ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
 
-    if (opts::InferStaleProfile && inferStaleProfile(BF, YamlBF))
+    if (opts::InferStaleProfile &&
+        inferStaleProfile(IdToFunctionName, BF, YamlBF))
       ProfileMatched = true;
   }
   if (ProfileMatched)
@@ -324,10 +326,6 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
       BF = nullptr;
     }
   }
-
-  // Map profiled function ids to names.
-  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
-    YamlBP.IdToFunctionProfile[YamlBF.Id] = &YamlBF;
 
   return Error::success();
 }
@@ -428,6 +426,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
   NormalizeByCalls = usesEvent("branches");
 
+  // Map profiled function ids to names.
+  DenseMap<uint32_t, std::string *> IdToFunctionName;
+  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
+    IdToFunctionName[YamlBF.Id] = &YamlBF.Name;
+
   uint64_t NumUnused = 0;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Id >= YamlProfileToFunction.size()) {
@@ -436,7 +439,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       continue;
     }
     if (BinaryFunction *BF = YamlProfileToFunction[YamlBF.Id])
-      parseFunctionProfile(*BF, YamlBF);
+      parseFunctionProfile(IdToFunctionName, *BF, YamlBF);
     else
       ++NumUnused;
   }

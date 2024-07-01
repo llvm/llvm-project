@@ -188,7 +188,7 @@ public:
   /// Initialize stale matcher.
   void init(const std::vector<FlowBlock *> &Blocks,
             const std::vector<BlendedBlockHash> &Hashes,
-            const std::vector<std::unique_ptr<uint64_t>> &CallHashes) {
+            const std::vector<uint64_t> &CallHashes) {
     assert(Blocks.size() == Hashes.size() &&
            Hashes.size() == CallHashes.size() &&
            "incorrect matcher initialization");
@@ -196,15 +196,15 @@ public:
       FlowBlock *Block = Blocks[I];
       uint16_t OpHash = Hashes[I].OpcodeHash;
       OpHashToBlocks[OpHash].push_back(std::make_pair(Hashes[I], Block));
-      if (CallHashes[I].get())
-        CallHashToBlocks[*CallHashes[I]].push_back(
+      if (CallHashes[I])
+        CallHashToBlocks[CallHashes[I]].push_back(
             std::make_pair(Hashes[I], Block));
     }
   }
 
   /// Find the most similar block for a given hash.
   const FlowBlock *matchBlock(BlendedBlockHash &BlendedHash,
-                              std::unique_ptr<uint64_t> &CallHash) const {
+                              uint64_t &CallHash) const {
     const FlowBlock *BestBlock = matchWithOpcodes(BlendedHash);
     return BestBlock ? BestBlock : matchWithCalls(BlendedHash, CallHash);
   }
@@ -239,10 +239,10 @@ private:
   }
 
   const FlowBlock *matchWithCalls(BlendedBlockHash &BlendedHash,
-                                  std::unique_ptr<uint64_t> &CallHash) const {
-    if (!CallHash.get())
+                                  uint64_t CallHash) const {
+    if (!CallHash)
       return nullptr;
-    auto BlockIt = CallHashToBlocks.find(*CallHash);
+    auto BlockIt = CallHashToBlocks.find(CallHash);
     if (BlockIt == CallHashToBlocks.end())
       return nullptr;
     FlowBlock *BestBlock = nullptr;
@@ -422,19 +422,18 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-void matchWeightsByHashes(BinaryContext &BC,
-                          const BinaryFunction::BasicBlockOrderType &BlockOrder,
-                          const yaml::bolt::BinaryProfile &YamlBP,
-                          const yaml::bolt::BinaryFunctionProfile &YamlBF,
-                          FlowFunction &Func) {
+void matchWeightsByHashes(
+    BinaryContext &BC,
+    const DenseMap<uint32_t, std::string *> &IdToFunctionName,
+    const BinaryFunction::BasicBlockOrderType &BlockOrder,
+    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
+    HashFunction HashFunction) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 1);
 
-  std::vector<std::unique_ptr<uint64_t>> CallHashes;
+  std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
-
-  HashFunction HashFunction = YamlBP.Header.HashFunction;
 
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     const BinaryBasicBlock *BB = BlockOrder[I];
@@ -442,13 +441,11 @@ void matchWeightsByHashes(BinaryContext &BC,
 
     std::string CallHashStr = hashBlockCalls(BC, *BB);
     if (CallHashStr.empty()) {
-      CallHashes.emplace_back(nullptr);
+      CallHashes.push_back(0);
     } else if (HashFunction == HashFunction::StdHash) {
-      CallHashes.emplace_back(
-          std::make_unique<uint64_t>(std::hash<std::string>{}(CallHashStr)));
+      CallHashes.push_back(std::hash<std::string>{}(CallHashStr));
     } else if (HashFunction == HashFunction::XXH3) {
-      CallHashes.emplace_back(
-          std::make_unique<uint64_t>(llvm::xxh3_64bits(CallHashStr)));
+      CallHashes.push_back(llvm::xxh3_64bits(CallHashStr));
     } else {
       llvm_unreachable("Unhandled HashFunction");
     }
@@ -471,14 +468,13 @@ void matchWeightsByHashes(BinaryContext &BC,
     BlendedBlockHash YamlHash(YamlBB.Hash);
 
     const FlowBlock *MatchedBlock = nullptr;
-    std::string CallHashStr =
-        hashBlockCalls(YamlBP.IdToFunctionProfile, YamlBB);
-    std::unique_ptr<uint64_t> CallHash = nullptr;
-    if (HashFunction == HashFunction::StdHash) {
-      CallHash =
-          std::make_unique<uint64_t>(std::hash<std::string>{}(CallHashStr));
+    std::string CallHashStr = hashBlockCalls(IdToFunctionName, YamlBB);
+    uint64_t CallHash = 0;
+    if (CallHashStr.empty()) { // Noop
+    } else if (HashFunction == HashFunction::StdHash) {
+      CallHash = std::hash<std::string>{}(CallHashStr);
     } else if (HashFunction == HashFunction::XXH3) {
-      CallHash = std::make_unique<uint64_t>(llvm::xxh3_64bits(CallHashStr));
+      CallHash = llvm::xxh3_64bits(CallHashStr);
     } else {
       llvm_unreachable("Unhandled HashFunction");
     }
@@ -773,6 +769,7 @@ void assignProfile(BinaryFunction &BF,
 }
 
 bool YAMLProfileReader::inferStaleProfile(
+    const DenseMap<uint32_t, std::string *> IdToFunctionName,
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
 
   NamedRegionTimer T("inferStaleProfile", "stale profile inference", "rewrite",
@@ -794,7 +791,8 @@ bool YAMLProfileReader::inferStaleProfile(
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBP, YamlBF, Func);
+  matchWeightsByHashes(BF.getBinaryContext(), IdToFunctionName, BlockOrder,
+                       YamlBF, Func, YamlBP.Header.HashFunction);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.
