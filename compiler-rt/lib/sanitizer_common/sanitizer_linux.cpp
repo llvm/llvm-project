@@ -2106,7 +2106,33 @@ bool SignalContext::IsTrueFaultingAddress() const {
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
+#  if SANITIZER_LINUX
+   ucontext_t *uc = static_cast<ucontext_t *>(context);
+   mcontext_t *mc = &uc->uc_mcontext;
+#    if defined(__x86_64__)
+   
+   Report(
+       "rax: %016lx rbx: %016lx rbp: %016lx rsp: %016lx\n"
+       "rdi: %016lx rsi: %016lx rdx: %016lx rcx: %016lx\n"
+       "r8: %016lx  r9: %016lx  r10: %016lx r11: %016lx\n"
+       "r12: %016lx r13: %016lx r14: %016lx r15: %016lx\n",
+       mc->gregs[REG_RAX], mc->gregs[REG_RBX], mc->gregs[REG_RBP], mc->gregs[REG_RSP],
+       mc->gregs[REG_RDI], mc->gregs[REG_RSI], mc->gregs[REG_RDX], mc->gregs[REG_RCX],
+       mc->gregs[REG_R8], mc->gregs[REG_R9], mc->gregs[REG_R10], mc->gregs[REG_R11],
+       mc->gregs[REG_R12], mc->gregs[REG_R13], mc->gregs[REG_R14], mc->gregs[REG_R15]
+   );
+#   elif defined(__aarch64__)
+   Report(
+      "x0: %016lx,  x1: %016lx,  x2: %016lx,  x3: %016lx\n"
+      "x4: %016lx,  x5: %016lx,  x6: %016lx,  x7: %016lx\n"
+      "x29: %016lx, x30: %016lx, x16: %016lx, x17: %016lx\n",
+      mc->regs[0], mc->regs[1], mc->regs[2], mc->regs[3],
+      mc->regs[4], mc->regs[5], mc->regs[6], mc->regs[7],
+      mc->regs[29], mc->regs[30], mc->regs[16], mc->regs[17]
+   );
+#   endif
+#  endif
+  // FIXME: Implement for other platforms/archs.
 }
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
