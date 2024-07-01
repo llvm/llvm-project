@@ -490,7 +490,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
-        LoadSize != StoreSize || !MFI->isSpillSlotObjectIndex(FirstSS))
+        !LoadSize || LoadSize != StoreSize ||
+        !MFI->isSpillSlotObjectIndex(FirstSS))
       continue;
 
     ++NumDead;
