@@ -51,6 +51,9 @@ static opt<bool> Disambiguate("disambiguate",
                               desc("Choose best tree from parse forest"));
 static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
+static opt<bool>
+    PrintTerminalTokens("print-terminal-tokens",
+                        desc("Print terminal tokens in parse forest"));
 static opt<bool> ForestAbbrev("forest-abbrev", desc("Abbreviate parse forest"),
                               init(true));
 static opt<std::string> HTMLForest("html-forest",
@@ -161,9 +164,14 @@ int main(int argc, char *argv[]) {
     auto &Root =
         glrParse(clang::pseudo::ParseParams{*ParseableStream, Arena, GSS},
                  *StartSymID, Lang);
+    std::optional<std::reference_wrapper<const TokenStream>> Code;
+    if (PrintTerminalTokens) {
+      Code = *ParseableStream;
+    }
     // If we're disambiguating, we'll print at the end instead.
     if (PrintForest && !Disambiguate)
-      llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/ForestAbbrev);
+      llvm::outs() << Root.dumpRecursive(Lang.G, Code,
+                                         /*Abbreviated=*/ForestAbbrev);
     clang::pseudo::Disambiguation Disambig;
     if (Disambiguate)
       Disambig = clang::pseudo::disambiguate(&Root, {});
@@ -234,7 +242,7 @@ int main(int argc, char *argv[]) {
       ForestNode *DisambigRoot = &Root;
       removeAmbiguities(DisambigRoot, Disambig);
       llvm::outs() << "Disambiguated tree:\n";
-      llvm::outs() << DisambigRoot->dumpRecursive(Lang.G,
+      llvm::outs() << DisambigRoot->dumpRecursive(Lang.G, Code,
                                                   /*Abbreviated=*/ForestAbbrev);
     }
   }
