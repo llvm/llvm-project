@@ -786,7 +786,7 @@ void clang::getOpenMPCaptureRegions(
           !llvm::is_contained(CaptureRegions, OMPD_parallel))
         CaptureRegions.push_back(OMPD_parallel);
       else
-        MayNeedUnknownRegion = true;
+        return true;
       break;
     case OMPD_dispatch:
     case OMPD_distribute:
