@@ -235,7 +235,7 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
   return allocated;
 }
 
-void MsanDeallocate(BufferedStackTrace *stack, void *p) {
+void MsanDeallocate(BufferedStackTrace *stack, void *p, bool zeroise) {
   CHECK(p);
   UnpoisonParam(1);
   RunFreeHooks(p);
@@ -253,6 +253,11 @@ void MsanDeallocate(BufferedStackTrace *stack, void *p) {
       Origin o = Origin::CreateHeapOrigin(stack);
       __msan_set_origin(p, size, o.raw_id());
     }
+  } else {
+    if (allocator.FromPrimary(p))
+      __msan_clear_and_unpoison(p, size);
+    else
+      __msan_unpoison(p, size);  // Mem is already zeroed.
   }
   MsanThread *t = GetCurrentThread();
   if (t) {
@@ -266,7 +271,7 @@ void MsanDeallocate(BufferedStackTrace *stack, void *p) {
 }
 
 static void *MsanReallocate(BufferedStackTrace *stack, void *old_p,
-                            uptr new_size, uptr alignment) {
+                            uptr new_size, uptr alignment, bool zeroise) {
   Metadata *meta = reinterpret_cast<Metadata*>(allocator.GetMetaData(old_p));
   uptr old_size = meta->requested_size;
   uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(old_p);
@@ -282,10 +287,10 @@ static void *MsanReallocate(BufferedStackTrace *stack, void *old_p,
     return old_p;
   }
   uptr memcpy_size = Min(new_size, old_size);
-  void *new_p = MsanAllocate(stack, new_size, alignment, false /*zeroise*/);
+  void *new_p = MsanAllocate(stack, new_size, alignment, zeroise);
   if (new_p) {
     CopyMemory(new_p, old_p, memcpy_size, stack);
-    MsanDeallocate(stack, old_p);
+    MsanDeallocate(stack, old_p, zeroise);
   }
   return new_p;
 }
@@ -327,22 +332,22 @@ static uptr AllocationSizeFast(const void *p) {
   return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
 }
 
-void *msan_malloc(uptr size, BufferedStackTrace *stack) {
-  return SetErrnoOnNull(MsanAllocate(stack, size, sizeof(u64), false));
+void *msan_malloc(uptr size, BufferedStackTrace *stack, bool zeroise) {
+  return SetErrnoOnNull(MsanAllocate(stack, size, sizeof(u64), zeroise));
 }
 
 void *msan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanCalloc(stack, nmemb, size));
 }
 
-void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack) {
+void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack, bool zeroise) {
   if (!ptr)
-    return SetErrnoOnNull(MsanAllocate(stack, size, sizeof(u64), false));
+    return SetErrnoOnNull(MsanAllocate(stack, size, sizeof(u64), zeroise));
   if (size == 0) {
-    MsanDeallocate(stack, ptr);
+    MsanDeallocate(stack, ptr, zeroise);
     return nullptr;
   }
-  return SetErrnoOnNull(MsanReallocate(stack, ptr, size, sizeof(u64)));
+  return SetErrnoOnNull(MsanReallocate(stack, ptr, size, sizeof(u64), zeroise));
 }
 
 void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
@@ -354,7 +359,7 @@ void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
     GET_FATAL_STACK_TRACE_IF_EMPTY(stack);
     ReportReallocArrayOverflow(nmemb, size, stack);
   }
-  return msan_realloc(ptr, nmemb * size, stack);
+  return msan_realloc(ptr, nmemb * size, stack, false);
 }
 
 void *msan_valloc(uptr size, BufferedStackTrace *stack) {
