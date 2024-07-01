@@ -56,7 +56,7 @@ public:
   operator bool() = delete;
 
   bool isSelfClosing() const;
-  const char *c_str() const;
+  StringRef toString() const;
 
 private:
   TagType Value;
@@ -137,7 +137,7 @@ bool HTMLTag::isSelfClosing() const {
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
-const char *HTMLTag::c_str() const {
+StringRef HTMLTag::toString() const {
   switch (Value) {
   case HTMLTag::TAG_A:
     return "a";
@@ -191,7 +191,7 @@ void TagNode::render(llvm::raw_ostream &OS, int IndentationLevel) {
       break;
     }
   OS.indent(IndentationLevel * 2);
-  OS << "<" << Tag.c_str();
+  OS << "<" << Tag.toString();
   for (const auto &A : Attributes)
     OS << " " << A.first << "=\"" << A.second << "\"";
   if (Tag.isSelfClosing()) {
@@ -216,7 +216,7 @@ void TagNode::render(llvm::raw_ostream &OS, int IndentationLevel) {
   }
   if (!InlineChildren)
     OS.indent(IndentationLevel * 2);
-  OS << "</" << Tag.c_str() << ">";
+  OS << "</" << Tag.toString() << ">";
 }
 
 template <typename Derived, typename Base,
@@ -993,9 +993,9 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
       });
     });
   };
-  OS << "var JsonIndex = `\n";
+  OS << "async function LoadIndex() {\nreturn";
   IndexToJSON(CDCtx.Idx);
-  OS << "`;\n";
+  OS << ";\n}";
   return llvm::Error::success();
 }
 

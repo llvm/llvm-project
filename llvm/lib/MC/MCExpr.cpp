@@ -553,12 +553,11 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res,
   return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, nullptr, false);
 }
 
-bool MCExpr::evaluateAsAbsolute(int64_t &Res,
-                                const MCAsmLayout &Layout,
+bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
                                 const SectionAddrMap &Addrs) const {
   // Setting InSet causes us to absolutize differences across sections and that
   // is what the MachO writer uses Addrs for.
-  return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, &Addrs, true);
+  return evaluateAsAbsolute(Res, &Asm, Asm.getLayout(), &Addrs, true);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const {
@@ -587,7 +586,7 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
   }
 
   bool IsRelocatable =
-      evaluateAsRelocatableImpl(Value, Asm, Layout, nullptr, Addrs, InSet);
+      evaluateAsRelocatableImpl(Value, Asm, nullptr, Addrs, InSet);
 
   // Record the current value.
   Res = Value.getConstant();
@@ -597,9 +596,8 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
 
 /// Helper method for \see EvaluateSymbolAdd().
 static void AttemptToFoldSymbolOffsetDifference(
-    const MCAssembler *Asm, const MCAsmLayout *Layout,
-    const SectionAddrMap *Addrs, bool InSet, const MCSymbolRefExpr *&A,
-    const MCSymbolRefExpr *&B, int64_t &Addend) {
+    const MCAssembler *Asm, const SectionAddrMap *Addrs, bool InSet,
+    const MCSymbolRefExpr *&A, const MCSymbolRefExpr *&B, int64_t &Addend) {
   if (!A || !B)
     return;
 
@@ -636,6 +634,7 @@ static void AttemptToFoldSymbolOffsetDifference(
   // separated by a linker-relaxable instruction. If the section contains
   // instructions and InSet is false (not expressions in directive like
   // .size/.fill), disable the fast path.
+  const MCAsmLayout *Layout = Asm->getLayout();
   if (Layout && (InSet || !SecA.hasInstructions() ||
                  !(Asm->getContext().getTargetTriple().isRISCV() ||
                    Asm->getContext().getTargetTriple().isLoongArch()))) {
@@ -711,7 +710,7 @@ static void AttemptToFoldSymbolOffsetDifference(
                  AF && Layout && AF->hasEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
                      *AF, Count)) {
-        Displacement += Asm->computeFragmentSize(*Layout, *AF);
+        Displacement += Asm->computeFragmentSize(*AF);
       } else if (auto *FF = dyn_cast<MCFillFragment>(FI);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();
@@ -741,8 +740,7 @@ static void AttemptToFoldSymbolOffsetDifference(
 /// They might look redundant, but this function can be used before layout
 /// is done (see the object streamer for example) and having the Asm argument
 /// lets us avoid relaxations early.
-static bool EvaluateSymbolicAdd(const MCAssembler *Asm,
-                                const MCAsmLayout *Layout,
+static bool evaluateSymbolicAdd(const MCAssembler *Asm,
                                 const SectionAddrMap *Addrs, bool InSet,
                                 const MCValue &LHS, const MCValue &RHS,
                                 MCValue &Res) {
@@ -762,9 +760,6 @@ static bool EvaluateSymbolicAdd(const MCAssembler *Asm,
   // Fold the result constant immediately.
   int64_t Result_Cst = LHS_Cst + RHS_Cst;
 
-  assert((!Layout || Asm) &&
-         "Must have an assembler object if layout is given!");
-
   // If we have a layout, we can fold resolved differences.
   if (Asm) {
     // First, fold out any differences which are fully resolved. By
@@ -777,13 +772,13 @@ static bool EvaluateSymbolicAdd(const MCAssembler *Asm,
     //   (RHS_A - RHS_B).
     // Since we are attempting to be as aggressive as possible about folding, we
     // attempt to evaluate each possible alternative.
-    AttemptToFoldSymbolOffsetDifference(Asm, Layout, Addrs, InSet, LHS_A, LHS_B,
+    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, LHS_A, LHS_B,
                                         Result_Cst);
-    AttemptToFoldSymbolOffsetDifference(Asm, Layout, Addrs, InSet, LHS_A, RHS_B,
+    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, LHS_A, RHS_B,
                                         Result_Cst);
-    AttemptToFoldSymbolOffsetDifference(Asm, Layout, Addrs, InSet, RHS_A, LHS_B,
+    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, RHS_A, LHS_B,
                                         Result_Cst);
-    AttemptToFoldSymbolOffsetDifference(Asm, Layout, Addrs, InSet, RHS_A, RHS_B,
+    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, RHS_A, RHS_B,
                                         Result_Cst);
   }
 
@@ -804,14 +799,11 @@ bool MCExpr::evaluateAsRelocatable(MCValue &Res,
                                    const MCAsmLayout *Layout,
                                    const MCFixup *Fixup) const {
   MCAssembler *Assembler = Layout ? &Layout->getAssembler() : nullptr;
-  return evaluateAsRelocatableImpl(Res, Assembler, Layout, Fixup, nullptr,
-                                   false);
+  return evaluateAsRelocatableImpl(Res, Assembler, Fixup, nullptr, false);
 }
 
-bool MCExpr::evaluateAsValue(MCValue &Res, const MCAsmLayout &Layout) const {
-  MCAssembler *Assembler = &Layout.getAssembler();
-  return evaluateAsRelocatableImpl(Res, Assembler, &Layout, nullptr, nullptr,
-                                   true);
+bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
+  return evaluateAsRelocatableImpl(Res, &Asm, nullptr, nullptr, true);
 }
 
 static bool canExpand(const MCSymbol &Sym, bool InSet) {
@@ -831,12 +823,11 @@ static bool canExpand(const MCSymbol &Sym, bool InSet) {
 }
 
 bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                       const MCAsmLayout *Layout,
                                        const MCFixup *Fixup,
                                        const SectionAddrMap *Addrs,
                                        bool InSet) const {
   ++stats::MCExprEvaluate;
-
+  MCAsmLayout *Layout = Asm ? Asm->getLayout() : nullptr;
   switch (getKind()) {
   case Target:
     return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Layout,
@@ -856,7 +847,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         canExpand(Sym, InSet)) {
       bool IsMachO = SRE->hasSubsectionsViaSymbols();
       if (Sym.getVariableValue()->evaluateAsRelocatableImpl(
-              Res, Asm, Layout, Fixup, Addrs, InSet || IsMachO)) {
+              Res, Asm, Fixup, Addrs, InSet || IsMachO)) {
         if (Kind != MCSymbolRefExpr::VK_None) {
           if (Res.isAbsolute()) {
             Res = MCValue::get(SRE, nullptr, 0);
@@ -901,8 +892,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     const MCUnaryExpr *AUE = cast<MCUnaryExpr>(this);
     MCValue Value;
 
-    if (!AUE->getSubExpr()->evaluateAsRelocatableImpl(Value, Asm, Layout, Fixup,
-                                                      Addrs, InSet))
+    if (!AUE->getSubExpr()->evaluateAsRelocatableImpl(Value, Asm, Fixup, Addrs,
+                                                      InSet))
       return false;
 
     switch (AUE->getOpcode()) {
@@ -937,10 +928,10 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     const MCBinaryExpr *ABE = cast<MCBinaryExpr>(this);
     MCValue LHSValue, RHSValue;
 
-    if (!ABE->getLHS()->evaluateAsRelocatableImpl(LHSValue, Asm, Layout, Fixup,
-                                                  Addrs, InSet) ||
-        !ABE->getRHS()->evaluateAsRelocatableImpl(RHSValue, Asm, Layout, Fixup,
-                                                  Addrs, InSet)) {
+    if (!ABE->getLHS()->evaluateAsRelocatableImpl(LHSValue, Asm, Fixup, Addrs,
+                                                  InSet) ||
+        !ABE->getRHS()->evaluateAsRelocatableImpl(RHSValue, Asm, Fixup, Addrs,
+                                                  InSet)) {
       // Check if both are Target Expressions, see if we can compare them.
       if (const MCTargetExpr *L = dyn_cast<MCTargetExpr>(ABE->getLHS())) {
         if (const MCTargetExpr *R = dyn_cast<MCTargetExpr>(ABE->getRHS())) {
@@ -968,16 +959,16 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       case MCBinaryExpr::Sub:
         // Negate RHS and add.
         // The cast avoids undefined behavior if the constant is INT64_MIN.
-        return EvaluateSymbolicAdd(
-            Asm, Layout, Addrs, InSet, LHSValue,
+        return evaluateSymbolicAdd(
+            Asm, Addrs, InSet, LHSValue,
             MCValue::get(RHSValue.getSymB(), RHSValue.getSymA(),
                          -(uint64_t)RHSValue.getConstant(),
                          RHSValue.getRefKind()),
             Res);
 
       case MCBinaryExpr::Add:
-        return EvaluateSymbolicAdd(
-            Asm, Layout, Addrs, InSet, LHSValue,
+        return evaluateSymbolicAdd(
+            Asm, Addrs, InSet, LHSValue,
             MCValue::get(RHSValue.getSymA(), RHSValue.getSymB(),
                          RHSValue.getConstant(), RHSValue.getRefKind()),
             Res);

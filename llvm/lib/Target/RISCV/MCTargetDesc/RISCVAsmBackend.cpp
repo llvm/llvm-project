@@ -139,12 +139,9 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   return STI->hasFeature(RISCV::FeatureRelax) || ForceRelocs;
 }
 
-bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
-                                                   bool Resolved,
-                                                   uint64_t Value,
-                                                   const MCRelaxableFragment *DF,
-                                                   const MCAsmLayout &Layout,
-                                                   const bool WasForced) const {
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
+    const MCAssembler &Asm, const MCFixup &Fixup, bool Resolved, uint64_t Value,
+    const MCRelaxableFragment *DF, const bool WasForced) const {
   if (!RelaxBranches)
     return false;
 
@@ -280,7 +277,7 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout.getAssembler()))
+  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
     return false;
   [[maybe_unused]] bool IsAbsolute =
       AddrDelta.evaluateKnownAbsolute(Value, Layout);
@@ -584,7 +581,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   return true;
 }
 
-bool RISCVAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
+bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFragment &F,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
@@ -623,9 +620,9 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
   auto FB = MCFixup::create(
       Fixup.getOffset(), nullptr,
       static_cast<MCFixupKind>(FirstLiteralRelocationKind + TB));
-  auto &Asm = Layout.getAssembler();
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FB, B, FixedValueB);
+  auto &Assembler = const_cast<MCAssembler &>(Asm);
+  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }
@@ -689,7 +686,6 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
 // The function insert fixup_riscv_align fixup which eventually will
 // transfer to R_RISCV_ALIGN relocation type.
 bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                                    const MCAsmLayout &Layout,
                                                     MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
   const MCSubtargetInfo *STI = AF.getSubtargetInfo();
@@ -711,8 +707,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
   uint64_t FixedValue = 0;
   MCValue NopBytes = MCValue::get(Count);
 
-  Asm.getWriter().recordRelocation(Asm, Layout, &AF, Fixup, NopBytes,
-                                   FixedValue);
+  Asm.getWriter().recordRelocation(Asm, &AF, Fixup, NopBytes, FixedValue);
 
   return true;
 }

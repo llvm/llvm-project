@@ -3777,11 +3777,50 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16div
+  SRCS
+    f16div.cpp
+  HDRS
+    ../f16div.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16divf
   SRCS
     f16divf.cpp
   HDRS
     ../f16divf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16divl
+  SRCS
+    f16divl.cpp
+  HDRS
+    ../f16divl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16divf128
+  SRCS
+    f16divf128.cpp
+  HDRS
+    ../f16divf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.div
@@ -3842,11 +3881,50 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16sqrt
+  SRCS
+    f16sqrt.cpp
+  HDRS
+    ../f16sqrt.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16sqrtf
   SRCS
     f16sqrtf.cpp
   HDRS
     ../f16sqrtf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16sqrtl
+  SRCS
+    f16sqrtl.cpp
+  HDRS
+    ../f16sqrtl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16sqrtf128
+  SRCS
+    f16sqrtf128.cpp
+  HDRS
+    ../f16sqrtf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.sqrt

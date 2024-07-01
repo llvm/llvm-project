@@ -14,7 +14,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -26,7 +25,6 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
-#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
@@ -67,13 +65,10 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/MC/MCSectionMachO.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <cassert>
 #include <optional>
 
 using namespace clang;
@@ -170,6 +165,13 @@ bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
   Str = Literal->getString();
   return checkStringLiteralArgumentAttr(AL, ArgExpr, Str, ArgLocation);
 }
+
+/// Check if the passed-in expression is of type int or bool.
+static bool isIntOrBool(Expr *Exp) {
+  QualType QT = Exp->getType();
+  return QT->isBooleanType() || QT->isIntegerType();
+}
+
 
 // Check to see if the type is a smart pointer of some kind.  We assume
 // it's a smart pointer if it defines both operator-> and operator*.
@@ -606,30 +608,14 @@ static bool checkTryLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   if (!AL.checkAtLeastNumArgs(S, 1))
     return false;
 
-  // The attribute's first argument defines the success value.
-  const Expr *SuccessArg = AL.getArgAsExpr(0);
-  if (!isa<CXXNullPtrLiteralExpr>(SuccessArg) &&
-      !isa<GNUNullExpr>(SuccessArg) && !isa<CXXBoolLiteralExpr>(SuccessArg) &&
-      !isa<IntegerLiteral>(SuccessArg) && !SuccessArg->getEnumConstantDecl()) {
+  if (!isIntOrBool(AL.getArgAsExpr(0))) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
-        << AL << 1 << AANT_ArgumentNullptrOrBoolIntOrEnumLiteral;
+        << AL << 1 << AANT_ArgumentIntOrBool;
     return false;
   }
 
-  // All remaining arguments must be lockable objects.
+  // check that all arguments are lockable objects
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 1);
-
-  // The function must return a pointer, boolean, integer, or enum.  We already
-  // know that `D` is a function because `ExclusiveTrylockFunction` and friends
-  // are defined in Attr.td with subject lists that only include functions.
-  QualType ReturnType = D->getAsFunction()->getReturnType();
-  if (!ReturnType->isPointerType() && !ReturnType->isBooleanType() &&
-      !ReturnType->isIntegerType() && !ReturnType->isEnumeralType()) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type)
-        << AL << AL.isRegularKeywordAttribute()
-        << ExpectedFunctionReturningPointerBoolIntOrEnum;
-    return false;
-  }
 
   return true;
 }
@@ -5116,12 +5102,12 @@ bool Sema::CheckRegparmAttr(const ParsedAttr &AL, unsigned &numParams) {
   return false;
 }
 
-// Helper to get CudaArch.
-static CudaArch getCudaArch(const TargetInfo &TI) {
+// Helper to get OffloadArch.
+static OffloadArch getOffloadArch(const TargetInfo &TI) {
   if (!TI.getTriple().isNVPTX())
-    llvm_unreachable("getCudaArch is only valid for NVPTX triple");
+    llvm_unreachable("getOffloadArch is only valid for NVPTX triple");
   auto &TO = TI.getTargetOpts();
-  return StringToCudaArch(TO.CPU);
+  return StringToOffloadArch(TO.CPU);
 }
 
 // Checks whether an argument of launch_bounds attribute is
@@ -5181,10 +5167,10 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
 
   if (MaxBlocks) {
     // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-    auto SM = getCudaArch(Context.getTargetInfo());
-    if (SM == CudaArch::UNKNOWN || SM < CudaArch::SM_90) {
+    auto SM = getOffloadArch(Context.getTargetInfo());
+    if (SM == OffloadArch::UNKNOWN || SM < OffloadArch::SM_90) {
       Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-          << CudaArchToString(SM) << CI << MaxBlocks->getSourceRange();
+          << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
       // Ignore it by setting MaxBlocks to null;
       MaxBlocks = nullptr;
     } else {

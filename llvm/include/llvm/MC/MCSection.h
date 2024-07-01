@@ -26,6 +26,7 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
+class MCObjectStreamer;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -35,6 +36,7 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
+  friend MCObjectStreamer;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -195,20 +197,6 @@ public:
   iterator begin() const { return iterator(CurFragList->Head); }
   iterator end() const { return {}; }
   bool empty() const { return !CurFragList->Head; }
-
-  void addFragment(MCFragment &F) {
-    // The formal layout order will be finalized in MCAssembler::layout.
-    if (CurFragList->Tail) {
-      CurFragList->Tail->Next = &F;
-      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
-    } else {
-      CurFragList->Head = &F;
-      assert(F.getLayoutOrder() == 0);
-    }
-    CurFragList->Tail = &F;
-  }
-
-  void switchSubsection(unsigned Subsection);
 
   void dump() const;
 
