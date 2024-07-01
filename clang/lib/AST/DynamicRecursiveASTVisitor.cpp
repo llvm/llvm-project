@@ -61,6 +61,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
     return Visitor.TraverseTemplateName(Template);
   }
 
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+    return Visitor.TraverseObjCProtocolLoc(ProtocolLoc);
+  }
+
   bool TraverseTypeConstraint(const TypeConstraint *C) {
     return Visitor.TraverseTypeConstraint(C);
   }
@@ -219,6 +223,10 @@ bool DynamicRecursiveASTVisitor::TraverseTypeConstraint(
     const TypeConstraint *C) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTypeConstraint(C);
 }
+bool DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseObjCProtocolLoc(ProtocolLoc);
+}
+
 bool DynamicRecursiveASTVisitor::TraverseConceptRequirement(
     concepts::Requirement *R) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConceptRequirement(R);

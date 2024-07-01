@@ -297,7 +297,7 @@ namespace {
 // Visitor that builds a map from record prvalues to result objects.
 // For each result object that it encounters, it propagates the storage location
 // of the result object to all record prvalues that can initialize it.
-class ResultObjectVisitor : public AnalysisASTVisitor<ResultObjectVisitor> {
+class ResultObjectVisitor : public AnalysisASTVisitor {
 public:
   // `ResultObjectMap` will be filled with a map from record prvalues to result
   // object. If this visitor will traverse a function that returns a record by
@@ -338,7 +338,7 @@ public:
     }
   }
 
-  bool VisitVarDecl(VarDecl *VD) {
+  bool VisitVarDecl(VarDecl *VD) override {
     if (VD->getType()->isRecordType() && VD->hasInit())
       PropagateResultObject(
           VD->getInit(),
@@ -346,7 +346,7 @@ public:
     return true;
   }
 
-  bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE) {
+  bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE) override {
     if (MTE->getType()->isRecordType())
       PropagateResultObject(
           MTE->getSubExpr(),
@@ -354,7 +354,7 @@ public:
     return true;
   }
 
-  bool VisitReturnStmt(ReturnStmt *Return) {
+  bool VisitReturnStmt(ReturnStmt *Return) override {
     Expr *RetValue = Return->getRetValue();
     if (RetValue != nullptr && RetValue->getType()->isRecordType() &&
         RetValue->isPRValue())
@@ -362,7 +362,7 @@ public:
     return true;
   }
 
-  bool VisitExpr(Expr *E) {
+  bool VisitExpr(Expr *E) override {
     // Clang's AST can have record-type prvalues without a result object -- for
     // example as full-expressions contained in a compound statement or as
     // arguments of call expressions. We notice this if we get here and a

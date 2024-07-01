@@ -14,6 +14,12 @@ class ASTContext;
 /// particular, it does not support overriding WalkUpFromX or post-order
 /// traversal.
 ///
+/// Features that are currently not supported:
+///
+///   - Visiting attributes
+///   - Post-order traversal
+///   - Overriding WalkUpFromX
+///
 /// \see RecursiveASTVisitor
 class DynamicRecursiveASTVisitor {
 public:
@@ -148,6 +154,12 @@ public:
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type location).
   virtual bool TraverseTypeLoc(TypeLoc TL);
+
+  /// Recursively visit an Objective-C protocol reference with location
+  /// information.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc);
 
   /// Traverse a concept (requirement).
   virtual bool TraverseTypeConstraint(const TypeConstraint *C);
