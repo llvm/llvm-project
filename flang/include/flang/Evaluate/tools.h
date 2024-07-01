@@ -98,6 +98,9 @@ template <typename T> bool IsAssumedRank(const Expr<T> &expr) {
 template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
   return x && IsAssumedRank(*x);
 }
+template <typename A> bool IsAssumedRank(const A *x) {
+  return x && IsAssumedRank(*x);
+}
 
 // Predicate: true when an expression is a coarray (corank > 0)
 bool IsCoarray(const ActualArgument &);

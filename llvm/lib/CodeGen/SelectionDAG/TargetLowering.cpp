@@ -9243,7 +9243,10 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
   unsigned Opc = N->getOpcode();
   bool IsFloor = Opc == ISD::AVGFLOORS || Opc == ISD::AVGFLOORU;
   bool IsSigned = Opc == ISD::AVGCEILS || Opc == ISD::AVGFLOORS;
+  unsigned SumOpc = IsFloor ? ISD::ADD : ISD::SUB;
+  unsigned SignOpc = IsFloor ? ISD::AND : ISD::OR;
   unsigned ShiftOpc = IsSigned ? ISD::SRA : ISD::SRL;
+  unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
   assert((Opc == ISD::AVGFLOORS || Opc == ISD::AVGCEILS ||
           Opc == ISD::AVGFLOORU || Opc == ISD::AVGCEILU) &&
          "Unknown AVG node");
@@ -9262,12 +9265,28 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getShiftAmountConstant(1, VT, dl));
   }
 
+  // For scalars, see if we can efficiently extend/truncate to use add+shift.
+  if (VT.isScalarInteger()) {
+    unsigned BW = VT.getScalarSizeInBits();
+    EVT ExtVT = VT.getIntegerVT(*DAG.getContext(), 2 * BW);
+    if (isTypeLegal(ExtVT) && isTruncateFree(ExtVT, VT)) {
+      LHS = DAG.getNode(ExtOpc, dl, ExtVT, LHS);
+      RHS = DAG.getNode(ExtOpc, dl, ExtVT, RHS);
+      SDValue Avg = DAG.getNode(ISD::ADD, dl, ExtVT, LHS, RHS);
+      if (!IsFloor)
+        Avg = DAG.getNode(ISD::ADD, dl, ExtVT, Avg,
+                          DAG.getConstant(1, dl, ExtVT));
+      // Just use SRL as we will be truncating away the extended sign bits.
+      Avg = DAG.getNode(ISD::SRL, dl, ExtVT, Avg,
+                        DAG.getShiftAmountConstant(1, ExtVT, dl));
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Avg);
+    }
+  }
+
   // avgceils(lhs, rhs) -> sub(or(lhs,rhs),ashr(xor(lhs,rhs),1))
   // avgceilu(lhs, rhs) -> sub(or(lhs,rhs),lshr(xor(lhs,rhs),1))
   // avgfloors(lhs, rhs) -> add(and(lhs,rhs),ashr(xor(lhs,rhs),1))
   // avgflooru(lhs, rhs) -> add(and(lhs,rhs),lshr(xor(lhs,rhs),1))
-  unsigned SumOpc = IsFloor ? ISD::ADD : ISD::SUB;
-  unsigned SignOpc = IsFloor ? ISD::AND : ISD::OR;
   LHS = DAG.getFreeze(LHS);
   RHS = DAG.getFreeze(RHS);
   SDValue Sign = DAG.getNode(SignOpc, dl, VT, LHS, RHS);

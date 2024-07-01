@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NoOwnershipChangeVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -74,6 +77,12 @@ struct StreamErrorState {
   /// Returns if the StreamErrorState is a valid object.
   operator bool() const { return NoError || FEof || FError; }
 
+  LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+  LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &os) const {
+    os << "NoError: " << NoError << ", FEof: " << FEof
+       << ", FError: " << FError;
+  }
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddBoolean(NoError);
     ID.AddBoolean(FEof);
@@ -97,6 +106,18 @@ struct StreamState {
     Closed, /// Closed stream (an invalid stream pointer after it was closed).
     OpenFailed /// The last open operation has failed.
   } State;
+
+  StringRef getKindStr() const {
+    switch (State) {
+    case Opened:
+      return "Opened";
+    case Closed:
+      return "Closed";
+    case OpenFailed:
+      return "OpenFailed";
+    }
+    llvm_unreachable("Unknown StreamState!");
+  }
 
   /// State of the error flags.
   /// Ignored in non-opened stream state but must be NoError.
@@ -146,6 +167,9 @@ struct StreamState {
     return StreamState{L, OpenFailed, {}, false};
   }
 
+  LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+  LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &os) const;
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(LastOperation);
     ID.AddInteger(State);
@@ -182,6 +206,14 @@ struct FnDescription {
   FnCheck EvalFn;
   ArgNoTy StreamArgNo;
 };
+
+LLVM_DUMP_METHOD void StreamState::dumpToStream(llvm::raw_ostream &os) const {
+  os << "{Kind: " << getKindStr() << ", Last operation: " << LastOperation
+     << ", ErrorState: ";
+  ErrorState.dumpToStream(os);
+  os << ", FilePos: " << (FilePositionIndeterminate ? "Indeterminate" : "OK")
+     << '}';
+}
 
 /// Get the value of the stream argument out of the passed call event.
 /// The call should contain a function that is described by Desc.
@@ -300,6 +332,8 @@ public:
   /// If true, generate failure branches for cases that are often not checked.
   bool PedanticMode = false;
 
+  const CallDescription FCloseDesc = {CDM::CLibrary, {"fclose"}, 1};
+
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
       {{CDM::CLibrary, {"fopen"}, 2},
@@ -310,8 +344,7 @@ private:
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
       {{CDM::CLibrary, {"tmpfile"}, 0},
        {nullptr, &StreamChecker::evalFopen, ArgNone}},
-      {{CDM::CLibrary, {"fclose"}, 1},
-       {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
+      {FCloseDesc, {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{CDM::CLibrary, {"fread"}, 4},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, true), 3}},
@@ -692,6 +725,62 @@ struct StreamOperationEvaluator {
       return Ch->constructSetEofOrErrorNoteTag(C, StreamSym);
     return nullptr;
   }
+};
+
+} // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// Definition of NoStreamStateChangeVisitor.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class NoStreamStateChangeVisitor final : public NoOwnershipChangeVisitor {
+protected:
+  /// Syntactically checks whether the callee is a closing function. Since
+  /// we have no path-sensitive information on this call (we would need a
+  /// CallEvent instead of a CallExpr for that), its possible that a
+  /// closing function was called indirectly through a function pointer,
+  /// but we are not able to tell, so this is a best effort analysis.
+  bool isClosingCallAsWritten(const CallExpr &Call) const {
+    const auto *StreamChk = static_cast<const StreamChecker *>(&Checker);
+    return StreamChk->FCloseDesc.matchesAsWritten(Call);
+  }
+
+  bool doesFnIntendToHandleOwnership(const Decl *Callee,
+                                     ASTContext &ACtx) final {
+    using namespace clang::ast_matchers;
+    const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
+
+    auto Matches =
+        match(findAll(callExpr().bind("call")), *FD->getBody(), ACtx);
+    for (BoundNodes Match : Matches) {
+      if (const auto *Call = Match.getNodeAs<CallExpr>("call"))
+        if (isClosingCallAsWritten(*Call))
+          return true;
+    }
+    // TODO: Ownership might change with an attempt to store stream object, not
+    // only through closing it. Check for attempted stores as well.
+    return false;
+  }
+
+  bool hasResourceStateChanged(ProgramStateRef CallEnterState,
+                               ProgramStateRef CallExitEndState) final {
+    return CallEnterState->get<StreamMap>(Sym) !=
+           CallExitEndState->get<StreamMap>(Sym);
+  }
+
+  PathDiagnosticPieceRef emitNote(const ExplodedNode *N) override {
+    PathDiagnosticLocation L = PathDiagnosticLocation::create(
+        N->getLocation(),
+        N->getState()->getStateManager().getContext().getSourceManager());
+    return std::make_shared<PathDiagnosticEventPiece>(
+        L, "Returning without closing stream object or storing it for later "
+           "release");
+  }
+
+public:
+  NoStreamStateChangeVisitor(SymbolRef Sym, const StreamChecker *Checker)
+      : NoOwnershipChangeVisitor(Sym, Checker) {}
 };
 
 } // end anonymous namespace
@@ -1872,6 +1961,7 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
             LocUsedForUniqueing,
             StreamOpenNode->getLocationContext()->getDecl());
     R->markInteresting(LeakSym);
+    R->addVisitor<NoStreamStateChangeVisitor>(LeakSym, this);
     C.emitReport(std::move(R));
   }
 

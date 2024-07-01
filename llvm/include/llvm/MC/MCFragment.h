@@ -24,6 +24,7 @@
 namespace llvm {
 
 class MCAssembler;
+class MCObjectStreamer;
 class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
@@ -31,6 +32,7 @@ class MCSymbol;
 class MCFragment {
   friend class MCAsmLayout;
   friend class MCAssembler;
+  friend class MCObjectStreamer;
   friend class MCSection;
 
 public:

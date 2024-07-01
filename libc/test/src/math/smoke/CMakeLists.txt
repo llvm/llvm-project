@@ -3631,6 +3631,74 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16div_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.f16div
+)
+
+add_fp_unittest(
+  f16divf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16divf_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.f16divf
+)
+
+add_fp_unittest(
+  f16divl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16divl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.f16divl
+)
+
+add_fp_unittest(
+  f16divf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16divf128_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.f16divf128
+)
+
+add_fp_unittest(
+  f16fma_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fma_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fma
+)
+
+add_fp_unittest(
   f16fmaf_test
   SUITE
     libc-math-smoke-tests
@@ -3643,6 +3711,42 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16fmal_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmal
+)
+
+add_fp_unittest(
+  f16fmaf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fmaf128_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmaf128
+)
+
+add_fp_unittest(
+  f16sqrt_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrt_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrt
+)
+
+add_fp_unittest(
   f16sqrtf_test
   SUITE
     libc-math-smoke-tests
@@ -3652,4 +3756,58 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.f16sqrtf
+)
+
+add_fp_unittest(
+  f16sqrtl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtl
+)
+
+add_fp_unittest(
+  f16sqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtf128
+)
+
+add_fp_unittest(
+  sin_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sin_test.cpp
+  DEPENDS
+    libc.src.math.sin
+)
+
+add_fp_unittest(
+  cos_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cos_test.cpp
+  DEPENDS
+    libc.src.math.cos
+)
+
+add_fp_unittest(
+  sincos_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sincos_test.cpp
+  DEPENDS
+    libc.src.math.sincos
 )

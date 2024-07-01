@@ -137,19 +137,6 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @fmv.ifunc = weak_odr alias i32 (), ptr @fmv
-// CHECK: @fmv_one.ifunc = weak_odr alias i32 (), ptr @fmv_one
-// CHECK: @fmv_two.ifunc = weak_odr alias i32 (), ptr @fmv_two
-// CHECK: @fmv_e.ifunc = weak_odr alias i32 (), ptr @fmv_e
-// CHECK: @fmv_d.ifunc = internal alias i32 (), ptr @fmv_d
-// CHECK: @fmv_c.ifunc = weak_odr alias void (), ptr @fmv_c
-// CHECK: @fmv_inline.ifunc = weak_odr alias i32 (), ptr @fmv_inline
-// CHECK: @unused_with_default_def.ifunc = weak_odr alias i32 (), ptr @unused_with_default_def
-// CHECK: @unused_with_implicit_default_def.ifunc = weak_odr alias i32 (), ptr @unused_with_implicit_default_def
-// CHECK: @unused_with_implicit_forward_default_def.ifunc = weak_odr alias i32 (), ptr @unused_with_implicit_forward_default_def
-// CHECK: @default_def_with_version_decls.ifunc = weak_odr alias i32 (), ptr @default_def_with_version_decls
-// CHECK: @used_def_without_default_decl.ifunc = weak_odr alias i32 (), ptr @used_def_without_default_decl
-// CHECK: @used_decl_without_default_decl.ifunc = weak_odr alias i32 (), ptr @used_decl_without_default_decl
 // CHECK: @fmv = weak_odr ifunc i32 (), ptr @fmv.resolver
 // CHECK: @fmv_one = weak_odr ifunc i32 (), ptr @fmv_one.resolver
 // CHECK: @fmv_two = weak_odr ifunc i32 (), ptr @fmv_two.resolver
