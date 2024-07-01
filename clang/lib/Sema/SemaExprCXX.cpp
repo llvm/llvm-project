@@ -55,10 +55,6 @@
 using namespace clang;
 using namespace sema;
 
-/// Handle the result of the special case name lookup for inheriting
-/// constructor declarations. 'NS::X::X' and 'NS::X<...>::X' are treated as
-/// constructor names in member using declarations, even if 'X' is not the
-/// name of the corresponding type.
 ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
@@ -544,7 +540,6 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   llvm_unreachable("unknown nested name specifier kind");
 }
 
-/// Build a C++ typeid expression with a type operand.
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
@@ -572,7 +567,6 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                      SourceRange(TypeidLoc, RParenLoc));
 }
 
-/// Build a C++ typeid expression with an expression operand.
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
@@ -747,7 +741,6 @@ getUuidAttrOfType(Sema &SemaRef, QualType QT,
   }
 }
 
-/// Build a Microsoft __uuidof expression with a type operand.
 ExprResult Sema::BuildCXXUuidof(QualType Type,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
@@ -767,7 +760,6 @@ ExprResult Sema::BuildCXXUuidof(QualType Type,
       CXXUuidofExpr(Type, Operand, Guid, SourceRange(TypeidLoc, RParenLoc));
 }
 
-/// Build a Microsoft __uuidof expression with an expression operand.
 ExprResult Sema::BuildCXXUuidof(QualType Type, SourceLocation TypeidLoc,
                                 Expr *E, SourceLocation RParenLoc) {
   MSGuidDecl *Guid = nullptr;
@@ -815,7 +807,6 @@ Sema::ActOnCXXUuidof(SourceLocation OpLoc, SourceLocation LParenLoc,
   return BuildCXXUuidof(GuidType, OpLoc, (Expr*)TyOrExpr, RParenLoc);
 }
 
-/// ActOnCXXBoolLiteral - Parse {true,false} literals.
 ExprResult
 Sema::ActOnCXXBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind) {
   assert((Kind == tok::kw_true || Kind == tok::kw_false) &&
@@ -824,13 +815,11 @@ Sema::ActOnCXXBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind) {
       CXXBoolLiteralExpr(Kind == tok::kw_true, Context.BoolTy, OpLoc);
 }
 
-/// ActOnCXXNullPtrLiteral - Parse 'nullptr'.
 ExprResult
 Sema::ActOnCXXNullPtrLiteral(SourceLocation Loc) {
   return new (Context) CXXNullPtrLiteralExpr(Context.NullPtrTy, Loc);
 }
 
-/// ActOnCXXThrow - Parse throw expressions.
 ExprResult
 Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
   bool IsThrownVarInScope = false;
@@ -987,7 +976,6 @@ static void getUnambiguousPublicSubobjects(
   }
 }
 
-/// CheckCXXThrowOperand - Validate the operand of a throw.
 bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
                                 QualType ExceptionObjectTy, Expr *E) {
   //   If the type of the exception would be an incomplete type or a pointer
@@ -1515,10 +1503,6 @@ bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
   return Class && Class->isBeingDefined();
 }
 
-/// Parse construction of a specified type.
-/// Can be interpreted either as function-style casting ("int(x)")
-/// or class type construction ("ClassType(x,y,z)")
-/// or creation of a value-initialized type ("int()").
 ExprResult
 Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
                                 SourceLocation LParenOrBraceLoc,
@@ -1555,6 +1539,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                 bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
+
+  assert((!ListInitialization || Exprs.size() == 1) &&
+         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -1917,22 +1904,6 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   return Best && Best.HasSizeT;
 }
 
-/// Parsed a C++ 'new' expression (C++ 5.3.4).
-///
-/// E.g.:
-/// @code new (memory) int[size][4] @endcode
-/// or
-/// @code ::new Foo(23, "hello") @endcode
-///
-/// \param StartLoc The first location of the expression.
-/// \param UseGlobal True if 'new' was prefixed with '::'.
-/// \param PlacementLParen Opening paren of the placement arguments.
-/// \param PlacementArgs Placement new arguments.
-/// \param PlacementRParen Closing paren of the placement arguments.
-/// \param TypeIdParens If the type is in parens, the source range.
-/// \param D The type to be allocated, as well as array dimensions.
-/// \param Initializer The initializing expression or initializer-list, or null
-///   if there is none.
 ExprResult
 Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                   SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
@@ -2071,7 +2042,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (DirectInitRange.isValid()) {
     assert(Initializer && "Have parens but no initializer.");
     InitStyle = CXXNewInitializationStyle::Parens;
-  } else if (Initializer && isa<InitListExpr>(Initializer))
+  } else if (isa_and_nonnull<InitListExpr>(Initializer))
     InitStyle = CXXNewInitializationStyle::Braces;
   else {
     assert((!Initializer || isa<ImplicitValueInitExpr>(Initializer) ||
@@ -2542,8 +2513,6 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                             DirectInitRange);
 }
 
-/// Checks that a type is suitable as the allocated type
-/// in a new-expression.
 bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                               SourceRange R) {
   // C++ 5.3.4p1: "[The] type shall be a complete object type, but not an
@@ -3037,29 +3006,6 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   return false;
 }
 
-/// DeclareGlobalNewDelete - Declare the global forms of operator new and
-/// delete. These are:
-/// @code
-///   // C++03:
-///   void* operator new(std::size_t) throw(std::bad_alloc);
-///   void* operator new[](std::size_t) throw(std::bad_alloc);
-///   void operator delete(void *) throw();
-///   void operator delete[](void *) throw();
-///   // C++11:
-///   void* operator new(std::size_t);
-///   void* operator new[](std::size_t);
-///   void operator delete(void *) noexcept;
-///   void operator delete[](void *) noexcept;
-///   // C++1y:
-///   void* operator new(std::size_t);
-///   void* operator new[](std::size_t);
-///   void operator delete(void *) noexcept;
-///   void operator delete[](void *) noexcept;
-///   void operator delete(void *, std::size_t) noexcept;
-///   void operator delete[](void *, std::size_t) noexcept;
-/// @endcode
-/// Note that the placement and nothrow forms of new are *not* implicitly
-/// declared. Their use requires including \<new\>.
 void Sema::DeclareGlobalNewDelete() {
   if (GlobalNewDeleteDeclared)
     return;
@@ -3673,10 +3619,6 @@ void Sema::AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
   }
 }
 
-/// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
-/// @code ::delete ptr; @endcode
-/// or
-/// @code delete [] ptr; @endcode
 ExprResult
 Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                      bool ArrayForm, Expr *ExE) {
@@ -3820,7 +3762,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
         // Otherwise, the usual operator delete[] should be the
         // function we just found.
-        else if (OperatorDelete && isa<CXXMethodDecl>(OperatorDelete))
+        else if (isa_and_nonnull<CXXMethodDecl>(OperatorDelete))
           UsualArrayDeleteWantsSize =
             UsualDeallocFnInfo(*this,
                                DeclAccessPair::make(OperatorDelete, AS_public))
@@ -4082,8 +4024,6 @@ Sema::ConditionResult Sema::ActOnConditionVariable(Decl *ConditionVar,
                          CK == ConditionKind::ConstexprIf);
 }
 
-/// Check the use of the given variable as a C++ condition in an if,
-/// while, do-while, or switch statement.
 ExprResult Sema::CheckConditionVariable(VarDecl *ConditionVar,
                                         SourceLocation StmtLoc,
                                         ConditionKind CK) {
@@ -4121,7 +4061,6 @@ ExprResult Sema::CheckConditionVariable(VarDecl *ConditionVar,
   llvm_unreachable("unexpected condition kind");
 }
 
-/// CheckCXXBooleanCondition - Returns true if a conversion to bool is invalid.
 ExprResult Sema::CheckCXXBooleanCondition(Expr *CondExpr, bool IsConstexpr) {
   // C++11 6.4p4:
   // The value of a condition that is an initialized declaration in a statement
@@ -4149,10 +4088,6 @@ ExprResult Sema::CheckCXXBooleanCondition(Expr *CondExpr, bool IsConstexpr) {
   return E;
 }
 
-/// Helper function to determine whether this is the (deprecated) C++
-/// conversion from a string literal to a pointer to non-const char or
-/// non-const wchar_t (for narrow and wide string literals,
-/// respectively).
 bool
 Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
   // Look inside the implicit cast, if it exists.
@@ -4254,11 +4189,6 @@ static ExprResult BuildCXXCastArgument(Sema &S,
   }
 }
 
-/// PerformImplicitConversion - Perform an implicit conversion of the
-/// expression From to the type ToType using the pre-computed implicit
-/// conversion sequence ICS. Returns the converted
-/// expression. Action is the kind of conversion we're performing,
-/// used in the error message.
 ExprResult
 Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const ImplicitConversionSequence &ICS,
@@ -4358,11 +4288,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
-/// PerformImplicitConversion - Perform an implicit conversion of the
-/// expression From to the type ToType by following the standard
-/// conversion sequence SCS. Returns the converted
-/// expression. Flavor is the context in which we're performing this
-/// conversion, for use in error messages.
 ExprResult
 Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const StandardConversionSequence& SCS,
@@ -5126,6 +5051,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsStandardLayout:
   case UTT_IsPOD:
   case UTT_IsLiteral:
+  case UTT_IsBitwiseCloneable:
   // By analogy, is_trivially_relocatable and is_trivially_equality_comparable
   // impose the same constraints.
   case UTT_IsTriviallyRelocatable:
@@ -5619,6 +5545,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return C.hasUniqueObjectRepresentations(T);
   case UTT_IsTriviallyRelocatable:
     return T.isTriviallyRelocatableType(C);
+  case UTT_IsBitwiseCloneable:
+    return T.isBitwiseCloneableType(C);
   case UTT_IsReferenceable:
     return T.isReferenceable();
   case UTT_CanPassInRegs:
@@ -6809,26 +6737,6 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
   return ResultType;
 }
 
-/// Check the operands of ?: under C++ semantics.
-///
-/// See C++ [expr.cond]. Note that LHS is never null, even for the GNU x ?: y
-/// extension. In this case, LHS == Cond. (But they're not aliases.)
-///
-/// This function also implements GCC's vector extension and the
-/// OpenCL/ext_vector_type extension for conditionals. The vector extensions
-/// permit the use of a?b:c where the type of a is that of a integer vector with
-/// the same number of elements and size as the vectors of b and c. If one of
-/// either b or c is a scalar it is implicitly converted to match the type of
-/// the vector. Otherwise the expression is ill-formed. If both b and c are
-/// scalars, then b and c are checked and converted to the type of a if
-/// possible.
-///
-/// The expressions are evaluated differently for GCC's and OpenCL's extensions.
-/// For the GCC extension, the ?: operator is evaluated as
-///   (a[0] != 0 ? b[0] : c[0], .. , a[n] != 0 ? b[n] : c[n]).
-/// For the OpenCL extensions, the ?: operator is evaluated as
-///   (most-significant-bit-set(a[0])  ? b[0] : c[0], .. ,
-///    most-significant-bit-set(a[n]) ? b[n] : c[n]).
 QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
                                            ExprResult &RHS, ExprValueKind &VK,
                                            ExprObjectKind &OK,
@@ -7129,17 +7037,6 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   return QualType();
 }
 
-/// Find a merged pointer type and convert the two expressions to it.
-///
-/// This finds the composite pointer type for \p E1 and \p E2 according to
-/// C++2a [expr.type]p3. It converts both expressions to this type and returns
-/// it.  It does not emit diagnostics (FIXME: that's not true if \p ConvertArgs
-/// is \c true).
-///
-/// \param Loc The location of the operator requiring these two expressions to
-/// be converted to the composite pointer type.
-///
-/// \param ConvertArgs If \c false, do not convert E1 and E2 to the target type.
 QualType Sema::FindCompositePointerType(SourceLocation Loc,
                                         Expr *&E1, Expr *&E2,
                                         bool ConvertArgs) {
@@ -7726,10 +7623,6 @@ Stmt *Sema::MaybeCreateStmtWithCleanups(Stmt *SubStmt) {
   return MaybeCreateExprWithCleanups(E);
 }
 
-/// Process the expression contained within a decltype. For such expressions,
-/// certain semantic checks on temporaries are delayed until this point, and
-/// are omitted for the 'topmost' call in the decltype expression. If the
-/// topmost call bound a temporary, strip that temporary off the expression.
 ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
   assert(ExprEvalContexts.back().ExprContext ==
              ExpressionEvaluationContextRecord::EK_Decltype &&
@@ -8589,7 +8482,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   assert(S.CurContext->isDependentContext());
 #ifndef NDEBUG
   DeclContext *DC = S.CurContext;
-  while (DC && isa<CapturedDecl>(DC))
+  while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   assert(
       CurrentLSI->CallOperator == DC &&
@@ -9166,7 +9059,7 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   //  - Teach the handful of places that iterate over FunctionScopes to
   //    stop at the outermost enclosing lexical scope."
   DeclContext *DC = CurContext;
-  while (DC && isa<CapturedDecl>(DC))
+  while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   const bool IsInLambdaDeclContext = isLambdaCallOperator(DC);
   if (IsInLambdaDeclContext && CurrentLSI &&

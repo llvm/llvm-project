@@ -887,6 +887,10 @@ def err_requires_expr_in_simple_requirement : Error<
   "requires expression in requirement body; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
   "before the expression)">;
+def missing_template_arg_list_after_template_kw : Extension<
+  "a template argument list is expected after a name prefixed by the template "
+  "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
+  DefaultError;
 
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
@@ -1504,6 +1508,8 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
+def err_omp_unknown_adjust_args_op : Error<
+  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;

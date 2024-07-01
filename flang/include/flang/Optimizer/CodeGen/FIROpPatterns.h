@@ -51,7 +51,9 @@ protected:
   /// appropriate reified structures.
   mlir::Value integerCast(mlir::Location loc,
                           mlir::ConversionPatternRewriter &rewriter,
-                          mlir::Type ty, mlir::Value val) const;
+                          mlir::Type ty, mlir::Value val,
+                          bool fold = false) const;
+
   struct TypePair {
     mlir::Type fir;
     mlir::Type llvm;
@@ -144,9 +146,12 @@ protected:
   // Find the Block in which the alloca should be inserted.
   // The order to recursively find the proper block:
   // 1. An OpenMP Op that will be outlined.
-  // 2. A LLVMFuncOp
-  // 3. The first ancestor that is an OpenMP Op or a LLVMFuncOp
-  mlir::Block *getBlockForAllocaInsert(mlir::Operation *op) const;
+  // 2. An OpenMP or OpenACC Op with one or more regions holding executable
+  // code.
+  // 3. A LLVMFuncOp
+  // 4. The first ancestor that is one of the above.
+  mlir::Block *getBlockForAllocaInsert(mlir::Operation *op,
+                                       mlir::Region *parentRegion) const;
 
   // Generate an alloca of size 1 for an object of type \p llvmObjectTy in the
   // allocation address space provided for the architecture in the DataLayout

@@ -11,6 +11,7 @@
 
 #include <__algorithm/min.h>
 #include <__bit/bit_cast.h>
+#include <__bit/countl.h>
 #include <__bit/countr.h>
 #include <__config>
 #include <__type_traits/is_arithmetic.h>
@@ -126,8 +127,13 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_T
 
   // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
   auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
+#  if defined(_LIBCPP_BIG_ENDIAN)
+    return std::min<size_t>(
+        _Np, std::__countl_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
+#  else
     return std::min<size_t>(
         _Np, std::__countr_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
+#  endif
   };
 
   if constexpr (sizeof(__mask_vec) == sizeof(uint8_t)) {

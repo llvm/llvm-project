@@ -27,5 +27,9 @@ void genCopyAndUpdateDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value newAttribute,
                                 mlir::Value newLowerBounds);
 
+/// Generate call to `IsAssumedSize` runtime routine.
+mlir::Value genIsAssumedSize(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value box);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_SUPPORT_H

@@ -21,13 +21,11 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
-AMDGPUVariadicMCExpr::AMDGPUVariadicMCExpr(VariadicKind Kind,
-                                           ArrayRef<const MCExpr *> Args,
-                                           MCContext &Ctx)
+AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
+                           MCContext &Ctx)
     : Kind(Kind), Ctx(Ctx) {
   assert(Args.size() >= 1 && "Needs a minimum of one expression.");
-  assert(Kind != AGVK_None &&
-         "Cannot construct AMDGPUVariadicMCExpr of kind none.");
+  assert(Kind != AGVK_None && "Cannot construct AMDGPUMCExpr of kind none.");
 
   // Allocating the variadic arguments through the same allocation mechanism
   // that the object itself is allocated with so they end up in the same memory.
@@ -40,25 +38,23 @@ AMDGPUVariadicMCExpr::AMDGPUVariadicMCExpr(VariadicKind Kind,
   this->Args = ArrayRef<const MCExpr *>(RawArgs, Args.size());
 }
 
-AMDGPUVariadicMCExpr::~AMDGPUVariadicMCExpr() { Ctx.deallocate(RawArgs); }
+AMDGPUMCExpr::~AMDGPUMCExpr() { Ctx.deallocate(RawArgs); }
 
-const AMDGPUVariadicMCExpr *
-AMDGPUVariadicMCExpr::create(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
-                             MCContext &Ctx) {
-  return new (Ctx) AMDGPUVariadicMCExpr(Kind, Args, Ctx);
+const AMDGPUMCExpr *AMDGPUMCExpr::create(VariantKind Kind,
+                                         ArrayRef<const MCExpr *> Args,
+                                         MCContext &Ctx) {
+  return new (Ctx) AMDGPUMCExpr(Kind, Args, Ctx);
 }
 
-const MCExpr *AMDGPUVariadicMCExpr::getSubExpr(size_t Index) const {
-  assert(Index < Args.size() &&
-         "Indexing out of bounds AMDGPUVariadicMCExpr sub-expr");
+const MCExpr *AMDGPUMCExpr::getSubExpr(size_t Index) const {
+  assert(Index < Args.size() && "Indexing out of bounds AMDGPUMCExpr sub-expr");
   return Args[Index];
 }
 
-void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
-                                     const MCAsmInfo *MAI) const {
+void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   switch (Kind) {
   default:
-    llvm_unreachable("Unknown AMDGPUVariadicMCExpr kind.");
+    llvm_unreachable("Unknown AMDGPUMCExpr kind.");
   case AGVK_Or:
     OS << "or(";
     break;
@@ -86,21 +82,19 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
   OS << ')';
 }
 
-static int64_t op(AMDGPUVariadicMCExpr::VariadicKind Kind, int64_t Arg1,
-                  int64_t Arg2) {
+static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
   switch (Kind) {
   default:
-    llvm_unreachable("Unknown AMDGPUVariadicMCExpr kind.");
-  case AMDGPUVariadicMCExpr::AGVK_Max:
+    llvm_unreachable("Unknown AMDGPUMCExpr kind.");
+  case AMDGPUMCExpr::AGVK_Max:
     return std::max(Arg1, Arg2);
-  case AMDGPUVariadicMCExpr::AGVK_Or:
+  case AMDGPUMCExpr::AGVK_Or:
     return Arg1 | Arg2;
   }
 }
 
-bool AMDGPUVariadicMCExpr::evaluateExtraSGPRs(MCValue &Res,
-                                              const MCAsmLayout *Layout,
-                                              const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
+                                      const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
     if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
@@ -112,7 +106,7 @@ bool AMDGPUVariadicMCExpr::evaluateExtraSGPRs(MCValue &Res,
   };
 
   assert(Args.size() == 3 &&
-         "AMDGPUVariadic Argument count incorrect for ExtraSGPRs");
+         "AMDGPUMCExpr Argument count incorrect for ExtraSGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   uint64_t VCCUsed = 0, FlatScrUsed = 0, XNACKUsed = 0;
 
@@ -129,9 +123,8 @@ bool AMDGPUVariadicMCExpr::evaluateExtraSGPRs(MCValue &Res,
   return true;
 }
 
-bool AMDGPUVariadicMCExpr::evaluateTotalNumVGPR(MCValue &Res,
-                                                const MCAsmLayout *Layout,
-                                                const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
+                                        const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
     if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
@@ -142,7 +135,7 @@ bool AMDGPUVariadicMCExpr::evaluateTotalNumVGPR(MCValue &Res,
     return true;
   };
   assert(Args.size() == 2 &&
-         "AMDGPUVariadic Argument count incorrect for TotalNumVGPRs");
+         "AMDGPUMCExpr Argument count incorrect for TotalNumVGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   uint64_t NumAGPR = 0, NumVGPR = 0;
 
@@ -158,9 +151,8 @@ bool AMDGPUVariadicMCExpr::evaluateTotalNumVGPR(MCValue &Res,
   return true;
 }
 
-bool AMDGPUVariadicMCExpr::evaluateAlignTo(MCValue &Res,
-                                           const MCAsmLayout *Layout,
-                                           const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
+                                   const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
     if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
@@ -172,7 +164,7 @@ bool AMDGPUVariadicMCExpr::evaluateAlignTo(MCValue &Res,
   };
 
   assert(Args.size() == 2 &&
-         "AMDGPUVariadic Argument count incorrect for AlignTo");
+         "AMDGPUMCExpr Argument count incorrect for AlignTo");
   uint64_t Value = 0, Align = 0;
   if (!TryGetMCExprValue(Args[0], Value) || !TryGetMCExprValue(Args[1], Align))
     return false;
@@ -181,9 +173,8 @@ bool AMDGPUVariadicMCExpr::evaluateAlignTo(MCValue &Res,
   return true;
 }
 
-bool AMDGPUVariadicMCExpr::evaluateOccupancy(MCValue &Res,
-                                             const MCAsmLayout *Layout,
-                                             const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAsmLayout *Layout,
+                                     const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
     if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
@@ -194,7 +185,7 @@ bool AMDGPUVariadicMCExpr::evaluateOccupancy(MCValue &Res,
     return true;
   };
   assert(Args.size() == 7 &&
-         "AMDGPUVariadic Argument count incorrect for Occupancy");
+         "AMDGPUMCExpr Argument count incorrect for Occupancy");
   uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
       NumSGPRs, NumVGPRs;
 
@@ -226,8 +217,9 @@ bool AMDGPUVariadicMCExpr::evaluateOccupancy(MCValue &Res,
   return true;
 }
 
-bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
-    MCValue &Res, const MCAsmLayout *Layout, const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                             const MCAsmLayout *Layout,
+                                             const MCFixup *Fixup) const {
   std::optional<int64_t> Total;
 
   switch (Kind) {
@@ -258,12 +250,12 @@ bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
   return true;
 }
 
-void AMDGPUVariadicMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
+void AMDGPUMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   for (const MCExpr *Arg : Args)
     Streamer.visitUsedExpr(*Arg);
 }
 
-MCFragment *AMDGPUVariadicMCExpr::findAssociatedFragment() const {
+MCFragment *AMDGPUMCExpr::findAssociatedFragment() const {
   for (const MCExpr *Arg : Args) {
     if (Arg->findAssociatedFragment())
       return Arg->findAssociatedFragment();
@@ -275,18 +267,19 @@ MCFragment *AMDGPUVariadicMCExpr::findAssociatedFragment() const {
 /// are unresolvable but needed for further MCExprs). Derived from
 /// implementation of IsaInfo::getNumExtraSGPRs in AMDGPUBaseInfo.cpp.
 ///
-const AMDGPUVariadicMCExpr *
-AMDGPUVariadicMCExpr::createExtraSGPRs(const MCExpr *VCCUsed,
-                                       const MCExpr *FlatScrUsed,
-                                       bool XNACKUsed, MCContext &Ctx) {
+const AMDGPUMCExpr *AMDGPUMCExpr::createExtraSGPRs(const MCExpr *VCCUsed,
+                                                   const MCExpr *FlatScrUsed,
+                                                   bool XNACKUsed,
+                                                   MCContext &Ctx) {
 
   return create(AGVK_ExtraSGPRs,
                 {VCCUsed, FlatScrUsed, MCConstantExpr::create(XNACKUsed, Ctx)},
                 Ctx);
 }
 
-const AMDGPUVariadicMCExpr *AMDGPUVariadicMCExpr::createTotalNumVGPR(
-    const MCExpr *NumAGPR, const MCExpr *NumVGPR, MCContext &Ctx) {
+const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
+                                                     const MCExpr *NumVGPR,
+                                                     MCContext &Ctx) {
   return create(AGVK_TotalNumVGPRs, {NumAGPR, NumVGPR}, Ctx);
 }
 
@@ -295,10 +288,11 @@ const AMDGPUVariadicMCExpr *AMDGPUVariadicMCExpr::createTotalNumVGPR(
 /// Remove dependency on GCNSubtarget and depend only only the necessary values
 /// for said occupancy computation. Should match computeOccupancy implementation
 /// without passing \p STM on.
-const AMDGPUVariadicMCExpr *
-AMDGPUVariadicMCExpr::createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
-                                      const MCExpr *NumVGPRs,
-                                      const GCNSubtarget &STM, MCContext &Ctx) {
+const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
+                                                  const MCExpr *NumSGPRs,
+                                                  const MCExpr *NumVGPRs,
+                                                  const GCNSubtarget &STM,
+                                                  MCContext &Ctx) {
   unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
   unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);

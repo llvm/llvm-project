@@ -167,8 +167,10 @@ public:
 
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
 
-  static VPLane getLastLaneForVF(const ElementCount &VF) {
-    unsigned LaneOffset = VF.getKnownMinValue() - 1;
+  static VPLane getLaneFromEnd(const ElementCount &VF, unsigned Offset) {
+    assert(Offset > 0 && Offset <= VF.getKnownMinValue() &&
+           "trying to extract with invalid offset");
+    unsigned LaneOffset = VF.getKnownMinValue() - Offset;
     Kind LaneKind;
     if (VF.isScalable())
       // In this case 'LaneOffset' refers to the offset from the start of the
@@ -177,6 +179,10 @@ public:
     else
       LaneKind = VPLane::Kind::First;
     return VPLane(LaneOffset, LaneKind);
+  }
+
+  static VPLane getLastLaneForVF(const ElementCount &VF) {
+    return getLaneFromEnd(VF, 1);
   }
 
   /// Returns a compile-time known value for the lane index and asserts if the
@@ -606,6 +612,15 @@ public:
     assert(Predecessors.empty() && "Block predecessors already set.");
     for (auto *Pred : NewPreds)
       appendPredecessor(Pred);
+  }
+
+  /// Set each VPBasicBlock in \p NewSuccss as successor of this VPBlockBase.
+  /// This VPBlockBase must have no successors. This VPBlockBase is not added
+  /// as predecessor of any VPBasicBlock in \p NewSuccs.
+  void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
+    assert(Successors.empty() && "Block successors already set.");
+    for (auto *Succ : NewSuccs)
+      appendSuccessor(Succ);
   }
 
   /// Remove all the predecessor of this block.
@@ -1182,6 +1197,12 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    // Takes the VPValue to extract from as first operand and the lane or part
+    // to extract as second operand, counting from the end starting with 1 for
+    // last. The second operand must be a positive constant and <= VF when
+    // extracting from a vector or <= UF when extracting from an unrolled
+    // scalar.
+    ExtractFromEnd,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
@@ -1313,20 +1334,11 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    if (getOperand(0) != Op)
-      return false;
-    switch (getOpcode()) {
-    default:
-      return false;
-    case VPInstruction::BranchOnCount:
-    case VPInstruction::CanonicalIVIncrementForPart:
-      return true;
-    };
-    llvm_unreachable("switch should return");
-  }
+  bool onlyFirstPartUsed(const VPValue *Op) const override;
+
+  /// Returns true if this VPInstruction produces a scalar value from a vector,
+  /// e.g. by performing a reduction or extracting a lane.
+  bool isVectorToScalar() const;
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
@@ -3150,7 +3162,9 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Values used outside the plan.
+  /// Values used outside the plan. It contains live-outs that need fixing. Any
+  /// live-out that is fixed outside VPlan needs to be removed. The remaining
+  /// live-outs are fixed via VPLiveOut::fixPhi.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
   /// Mapping from SCEVs to the VPValues representing their expansions.
@@ -3239,6 +3253,12 @@ public:
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
   bool hasScalableVF() {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
+  }
+
+  /// Returns an iterator range over all VFs of the plan.
+  iterator_range<SmallSetVector<ElementCount, 2>::iterator>
+  vectorFactors() const {
+    return {VFs.begin(), VFs.end()};
   }
 
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
@@ -3657,9 +3677,13 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+    return VPI->isVectorToScalar();
   return false;
 }
+
+/// Return true if \p V is a header mask in \p Plan.
+bool isHeaderMask(VPValue *V, VPlan &Plan);
+
 } // end namespace vputils
 
 } // end namespace llvm

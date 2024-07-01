@@ -7,8 +7,6 @@ set(LLVM_LINK_COMPONENTS
   AMDGPUCodeGen
   AMDGPUDesc
   AMDGPUInfo
-  CodeGen
-  Core
   MC
   Support
   TargetParser
@@ -16,5 +14,4 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(AMDGPUMCTests
   DwarfRegMappings.cpp
-  SIProgramInfoMCExprs.cpp
   )

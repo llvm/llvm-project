@@ -274,6 +274,13 @@ m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul,
+                             /* Commutative =*/true>
+m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::Mul, Op0_t, Op1_t, true>(Op0, Op1);
+}
+
 /// Match a binary OR operation. Note that while conceptually the operands can
 /// be matched commutatively, \p Commutative defaults to false in line with the
 /// IR-based pattern matching infrastructure. Use m_c_BinaryOr for a commutative
@@ -296,6 +303,46 @@ inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>
 m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1);
 }
+
+struct VPCanonicalIVPHI_match {
+  bool match(const VPValue *V) {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *R) { return isa<VPCanonicalIVPHIRecipe>(R); }
+};
+
+inline VPCanonicalIVPHI_match m_CanonicalIV() {
+  return VPCanonicalIVPHI_match();
+}
+
+template <typename Op0_t, typename Op1_t> struct VPScalarIVSteps_match {
+  Op0_t Op0;
+  Op1_t Op1;
+
+  VPScalarIVSteps_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
+
+  bool match(const VPValue *V) {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *R) {
+    if (!isa<VPScalarIVStepsRecipe>(R))
+      return false;
+    assert(R->getNumOperands() == 2 &&
+           "VPScalarIVSteps must have exactly 2 operands");
+    return Op0.match(R->getOperand(0)) && Op1.match(R->getOperand(1));
+  }
+};
+
+template <typename Op0_t, typename Op1_t>
+inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
+                                                           const Op1_t &Op1) {
+  return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

@@ -1,0 +1,125 @@
+# REQUIRES: asserts
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
+
+# CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
+
+--- |
+  define void @sqrt_approx(i32 noundef %N, ptr noalias %x, ptr noalias %y) #0 {
+  entry:
+    %isZeroLength = icmp eq i32 %N, 0
+    br i1 %isZeroLength, label %loop.exit, label %loop.preheader
+
+  loop.preheader:                                   ; preds = %entry
+    %half_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1056964608)
+    %one_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1065353216)
+    %two_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1073741824)
+    br label %loop.body
+
+  loop.exit:                                        ; preds = %loop.body, %entry
+    ret void
+
+  loop.body:                                        ; preds = %loop.body, %loop.preheader
+    %lsr.iv1 = phi ptr [ %cgep3, %loop.body ], [ %x, %loop.preheader ]
+    %lsr.iv = phi ptr [ %cgep, %loop.body ], [ %y, %loop.preheader ]
+    %index = phi i32 [ 0, %loop.preheader ], [ %index.next, %loop.body ]
+    %vec_x = load <32 x i32>, ptr %lsr.iv1, align 128
+    %vec_sqrt_1 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %one_splat, <32 x i32> %vec_x)
+    %vec_sqrt_2 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_1, <32 x i32> %half_splat)
+    %vec_recip_1 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_2, <32 x i32> %half_splat)
+    %vec_recip_2 = tail call <32 x i32> @llvm.hexagon.V6.vsubw.128B(<32 x i32> %two_splat, <32 x i32> %vec_recip_1)
+    %vec_y1 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_2, <32 x i32> %vec_recip_2)
+    %vec_recip_3 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_2, <32 x i32> %vec_y1)
+    %vec_recop_4 = tail call <32 x i32> @llvm.hexagon.V6.vsubw.128B(<32 x i32> %two_splat, <32 x i32> %vec_recip_3)
+    %vec_y2 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_y1, <32 x i32> %vec_recop_4)
+    %vec_sqrt_3 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_x, <32 x i32> %vec_y2)
+    %vec_sqrt_4 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %vec_y2, <32 x i32> %vec_sqrt_3)
+    %vec_sqrt_5 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_4, <32 x i32> %half_splat)
+    %vec_recip_5 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_5, <32 x i32> %half_splat)
+    %vec_recip_6 = tail call <32 x i32> @llvm.hexagon.V6.vsubw.128B(<32 x i32> %two_splat, <32 x i32> %vec_recip_5)
+    %vec_y3 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_5, <32 x i32> %vec_recip_6)
+    %vec_recip_7 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_5, <32 x i32> %vec_y3)
+    %vec_recop_8 = tail call <32 x i32> @llvm.hexagon.V6.vsubw.128B(<32 x i32> %two_splat, <32 x i32> %vec_recip_7)
+    %vec_y4 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_y3, <32 x i32> %vec_recop_8)
+    %vec_sqrt_7 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_x, <32 x i32> %vec_y4)
+    %vec_sqrt_8 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %vec_y4, <32 x i32> %vec_sqrt_7)
+    %vec_sqrt_9 = tail call <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32> %vec_sqrt_8, <32 x i32> %half_splat)
+    store <32 x i32> %vec_sqrt_9, ptr %lsr.iv, align 128
+    %index.next = add nuw i32 %index, 32
+    %continue = icmp ult i32 %index.next, %N
+    %cgep = getelementptr i8, ptr %lsr.iv, i32 128
+    %cgep3 = getelementptr i8, ptr %lsr.iv1, i32 128
+    br i1 %continue, label %loop.body, label %loop.exit
+  }
+
+  declare <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32)
+  declare <32 x i32> @llvm.hexagon.V6.vmpyowh.rnd.128B(<32 x i32>, <32 x i32>)
+  declare <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32>, <32 x i32>)
+  declare <32 x i32> @llvm.hexagon.V6.vsubw.128B(<32 x i32>, <32 x i32>)
+
+  attributes #0 = { "target-features"="+hvx-length128b,+hvxv69,+v66,-long-calls" }
+...
+---
+name:            sqrt_approx
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2
+
+    %0:intregs = COPY $r2
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r0
+    %3:predregs = C2_cmpeqi %2, 0
+    J2_jumpt killed %3, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1.loop.preheader:
+    successors: %bb.3(0x80000000)
+
+    %4:intregs = A2_tfrsi 1056964608
+    %5:hvxvr = V6_lvsplatw killed %4
+    %6:intregs = A2_tfrsi 1065353216
+    %7:hvxvr = V6_lvsplatw killed %6
+    %8:intregs = A2_tfrsi 1073741824
+    %9:hvxvr = V6_lvsplatw killed %8
+    %10:intregs = A2_addi %2, 31
+    %11:intregs = S2_lsr_i_r %10, 5
+    %12:intregs = COPY %11
+    J2_loop0r %bb.3, %12, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.2.loop.exit:
+    PS_jmpret $r31, implicit-def dead $pc
+
+  bb.3.loop.body (machine-block-address-taken):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+
+    %13:intregs = PHI %1, %bb.1, %14, %bb.3
+    %15:intregs = PHI %0, %bb.1, %16, %bb.3
+    %17:hvxvr, %14:intregs = V6_vL32b_pi %13, 128 :: (load (s1024) from %ir.lsr.iv1)
+    %18:hvxvr = V6_vaddw %7, %17
+    %19:hvxvr = V6_vmpyowh_rnd killed %18, %5
+    %20:hvxvr = V6_vmpyowh_rnd %19, %5
+    %21:hvxvr = V6_vsubw %9, killed %20
+    %22:hvxvr = V6_vmpyowh_rnd %19, killed %21
+    %23:hvxvr = V6_vmpyowh_rnd %19, %22
+    %24:hvxvr = V6_vsubw %9, killed %23
+    %25:hvxvr = V6_vmpyowh_rnd %22, killed %24
+    %26:hvxvr = V6_vmpyowh_rnd %17, %25
+    %27:hvxvr = V6_vaddw %25, killed %26
+    %28:hvxvr = V6_vmpyowh_rnd killed %27, %5
+    %29:hvxvr = V6_vmpyowh_rnd %28, %5
+    %30:hvxvr = V6_vsubw %9, killed %29
+    %31:hvxvr = V6_vmpyowh_rnd %28, killed %30
+    %32:hvxvr = V6_vmpyowh_rnd %28, %31
+    %33:hvxvr = V6_vsubw %9, killed %32
+    %34:hvxvr = V6_vmpyowh_rnd %31, killed %33
+    %35:hvxvr = V6_vmpyowh_rnd %17, %34
+    %36:hvxvr = V6_vaddw %34, killed %35
+    %37:hvxvr = V6_vmpyowh_rnd killed %36, %5
+    %16:intregs = V6_vS32b_pi %15, 128, killed %37 :: (store (s1024) into %ir.lsr.iv)
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+...

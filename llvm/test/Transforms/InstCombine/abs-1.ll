@@ -852,11 +852,8 @@ define i8 @abs_diff_signed_sgt_nuw_extra_use3(i8 %a, i8 %b) {
 
 define i32 @abs_diff_signed_slt_swap_wrong_pred1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_swap_wrong_pred1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB_BA]], i32 [[SUB_AB]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SUB_AB]]
 ;
   %cmp = icmp eq i32 %a, %b
   %sub_ba = sub nsw i32 %b, %a

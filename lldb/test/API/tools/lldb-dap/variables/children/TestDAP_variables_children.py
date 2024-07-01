@@ -31,7 +31,7 @@ class TestDAP_variables_children(lldbdap_testcase.DAPTestCaseBase):
         indexed = next(filter(lambda x: x["name"] == "indexed", local_vars))
         not_indexed = next(filter(lambda x: x["name"] == "not_indexed", local_vars))
         self.assertIn("indexedVariables", indexed)
-        self.assertEquals(indexed["indexedVariables"], 1)
+        self.assertEqual(indexed["indexedVariables"], 1)
         self.assertNotIn("indexedVariables", not_indexed)
 
         self.assertIn(

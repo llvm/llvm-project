@@ -421,9 +421,7 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
       team_info = &team->t.ompt_team_info;
       if (type) {
         if (taskdata->td_parent) {
-          *type = (taskdata->td_flags.tasktype ? ompt_task_explicit
-                                               : ompt_task_implicit) |
-                  TASK_TYPE_DETAILS_FORMAT(taskdata);
+          *type = TASK_TYPE_DETAILS_FORMAT(taskdata);
         } else {
           *type = ompt_task_initial;
         }

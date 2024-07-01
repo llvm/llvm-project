@@ -175,6 +175,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return R_AARCH64_GOT_PAGE_PC;
   case R_AARCH64_GOTPCREL32:
+  case R_AARCH64_GOT_LD_PREL19:
     return R_GOT_PC;
   case R_AARCH64_NONE:
     return R_NONE;
@@ -473,6 +474,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
+  case R_AARCH64_GOT_LD_PREL19:
     checkAlignment(loc, val, 4, rel);
     checkInt(loc, val, 21, rel);
     or32le(loc, (val & 0x1FFFFC) << 3);

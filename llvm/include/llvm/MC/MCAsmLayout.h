@@ -14,9 +14,7 @@
 
 namespace llvm {
 class MCAssembler;
-class MCFragment;
 class MCSection;
-class MCSymbol;
 
 /// Encapsulates the layout of an assembly file at a particular point in time.
 ///
@@ -31,37 +29,12 @@ class MCAsmLayout {
   /// List of sections in layout order.
   llvm::SmallVector<MCSection *, 16> SectionOrder;
 
-  /// The last fragment which was laid out, or 0 if nothing has been laid
-  /// out. Fragments are always laid out in order, so all fragments with a
-  /// lower ordinal will be valid.
-  mutable DenseMap<const MCSection *, MCFragment *> LastValidFragment;
-
-  /// Make sure that the layout for the given fragment is valid, lazily
-  /// computing it if necessary.
-  void ensureValid(const MCFragment *F) const;
-
-  /// Is the layout for this fragment valid?
-  bool isFragmentValid(const MCFragment *F) const;
-
 public:
   MCAsmLayout(MCAssembler &Assembler);
 
   /// Get the assembler object this is a layout for.
   MCAssembler &getAssembler() const { return Assembler; }
 
-  /// \returns whether the offset of fragment \p F can be obtained via
-  /// getFragmentOffset.
-  bool canGetFragmentOffset(const MCFragment *F) const;
-
-  /// Invalidate the fragments starting with F because it has been
-  /// resized. The fragment's size should have already been updated, but
-  /// its bundle padding will be recomputed.
-  void invalidateFragmentsFrom(MCFragment *F);
-
-  /// Perform layout for a single fragment, assuming that the previous
-  /// fragment has already been laid out correctly, and the parent section has
-  /// been initialized.
-  void layoutFragment(MCFragment *Fragment);
 
   /// \name Section Access (in layout order)
   /// @{
@@ -70,39 +43,6 @@ public:
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
-
-  /// @}
-  /// \name Fragment Layout Data
-  /// @{
-
-  /// Get the offset of the given fragment inside its containing section.
-  uint64_t getFragmentOffset(const MCFragment *F) const;
-
-  /// @}
-  /// \name Utility Functions
-  /// @{
-
-  /// Get the address space size of the given section, as it effects
-  /// layout. This may differ from the size reported by \see
-  /// getSectionFileSize() by not including section tail padding.
-  uint64_t getSectionAddressSize(const MCSection *Sec) const;
-
-  /// Get the data size of the given section, as emitted to the object
-  /// file. This may include additional padding, or be 0 for virtual sections.
-  uint64_t getSectionFileSize(const MCSection *Sec) const;
-
-  /// Get the offset of the given symbol, as computed in the current
-  /// layout.
-  /// \return True on success.
-  bool getSymbolOffset(const MCSymbol &S, uint64_t &Val) const;
-
-  /// Variant that reports a fatal error if the offset is not computable.
-  uint64_t getSymbolOffset(const MCSymbol &S) const;
-
-  /// If this symbol is equivalent to A + Constant, return A.
-  const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
-
-  /// @}
 };
 
 } // end namespace llvm

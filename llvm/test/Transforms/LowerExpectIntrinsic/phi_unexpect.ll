@@ -235,5 +235,5 @@ block5:
   ret void
 }
 
-; CHECK: !0 = !{!"branch_weights", i32 2147483647, i32 1}
-; CHECK: !1 = !{!"branch_weights", i32 1, i32 2147483647}
+; CHECK: !0 = !{!"branch_weights", !"expected", i32 2147483647, i32 1}
+; CHECK: !1 = !{!"branch_weights", !"expected", i32 1, i32 2147483647}

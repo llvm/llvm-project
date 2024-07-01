@@ -204,10 +204,6 @@ foreach(entry ${runtimes})
   if(canon_name STREQUAL "LIBC")
     list(APPEND prefixes "LLVM_LIBC")
     list(APPEND prefixes "LIBC_")
-    # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
-    if(LLVM_LIBC_GPU_BUILD)
-      list(APPEND prefixes "CUDA")
-    endif()
   endif()
 
   _get_runtime_name(${name} name)
@@ -261,6 +257,7 @@ function(runtime_default_target)
                                       ${ARG_CMAKE_ARGS}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
+                                                CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -430,11 +427,33 @@ function(runtime_register_target name)
   endforeach()
 endfunction()
 
+# Check if we have any runtimes to build.
 if(runtimes)
+  set(build_runtimes TRUE)
+endif()
+foreach(name ${LLVM_RUNTIME_TARGETS})
+  if(RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
+    set(build_runtimes TRUE)
+  endif()
+endforeach()
+
+if(build_runtimes)
   # Create a runtimes target that uses this file as its top-level CMake file.
   # The runtimes target is a configuration of all the runtime libraries
   # together in a single CMake invocation.
   set(extra_deps "")
+  set(extra_cmake_args "")
+
+  # Forward user-provived system configuration to runtimes for requirement introspection.
+  # CMAKE_PREFIX_PATH is the search path for CMake packages.
+  if(CMAKE_PREFIX_PATH)
+    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+  endif()
+  # CMAKE_PROGRAM_PATH is the search path for executables such as python.
+  if(CMAKE_PROGRAM_PATH)
+    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
+  endif()
+
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
@@ -468,49 +487,46 @@ if(runtimes)
     if(NOT hdrgen_exe)
       message(FATAL_ERROR "libc-hdrgen executable missing")
     endif()
-    list(APPEND libc_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
+    list(APPEND extra_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
     list(APPEND extra_deps ${hdrgen_deps})
   endif()
   if(LLVM_LIBC_GPU_BUILD)
-    list(APPEND libc_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
+    list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
     if("libc" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES)
       if(TARGET amdhsa-loader)
-        list(APPEND libc_cmake_args
+        list(APPEND extra_cmake_args
              "-DRUNTIMES_amdgcn-amd-amdhsa_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:amdhsa-loader>")
-        list(APPEND extra_deps amdhsa-loader amdgpu-arch)
+        list(APPEND extra_deps amdhsa-loader)
       endif()
-      list(APPEND libc_cmake_args "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_LIBC_FULL_BUILD=ON")
+      list(APPEND extra_cmake_args "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_LIBC_FULL_BUILD=ON")
     endif()
     if("libc" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
       if(TARGET nvptx-loader)
-        list(APPEND libc_cmake_args
+        list(APPEND extra_cmake_args
              "-DRUNTIMES_nvptx64-nvidia-cuda_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:nvptx-loader>")
-        list(APPEND extra_deps nvptx-loader nvptx-arch)
+        list(APPEND extra_deps nvptx-loader)
       endif()
-      list(APPEND libc_cmake_args "-DRUNTIMES_nvptx64-nvidia-cuda_LLVM_LIBC_FULL_BUILD=ON")
-    endif()
-    # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
-    if(CUDAToolkit_ROOT)
-      list(APPEND libc_cmake_args "-DCUDAToolkit_ROOT=${CUDAToolkit_ROOT}")
+      list(APPEND extra_cmake_args "-DRUNTIMES_nvptx64-nvidia-cuda_LLVM_LIBC_FULL_BUILD=ON")
     endif()
     if(TARGET clang-offload-packager)
       list(APPEND extra_deps clang-offload-packager)
     endif()
   endif()
   if(LLVM_LIBC_FULL_BUILD)
-    list(APPEND libc_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
+    list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
+
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
-      CMAKE_ARGS ${libc_cmake_args}
+      CMAKE_ARGS ${extra_cmake_args}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
-        CMAKE_ARGS ${libc_cmake_args}
+        CMAKE_ARGS ${extra_cmake_args}
         PREFIXES ${prefixes})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
@@ -557,7 +573,7 @@ if(runtimes)
 
       runtime_register_target(${name}
         DEPENDS ${builtins_dep_name} ${extra_deps}
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
+        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()
 
