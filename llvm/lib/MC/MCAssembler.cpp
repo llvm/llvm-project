@@ -874,8 +874,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       MCDummyFragment Dummy;
       MCFragment *Tail = &Dummy;
       for (auto &[_, List] : Sec->Subsections) {
-        if (!List.Head)
-          continue;
+        assert(List.Head);
         Tail->Next = List.Head;
         Tail = List.Tail;
       }
