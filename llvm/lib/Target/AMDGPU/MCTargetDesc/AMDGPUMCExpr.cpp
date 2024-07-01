@@ -10,6 +10,8 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -93,11 +95,12 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
   }
 }
 
-bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
                                       const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
+                                    Fixup) ||
         !MCVal.isAbsolute())
       return false;
 
@@ -123,11 +126,12 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
                                         const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
+                                    Fixup) ||
         !MCVal.isAbsolute())
       return false;
 
@@ -151,11 +155,12 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
                                    const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
+                                    Fixup) ||
         !MCVal.isAbsolute())
       return false;
 
@@ -173,11 +178,12 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
                                      const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
+                                    Fixup) ||
         !MCVal.isAbsolute())
       return false;
 
@@ -221,18 +227,19 @@ bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                              const MCAsmLayout *Layout,
                                              const MCFixup *Fixup) const {
   std::optional<int64_t> Total;
+  MCAssembler *Asm = Layout ? &Layout->getAssembler() : nullptr;
 
   switch (Kind) {
   default:
     break;
   case AGVK_ExtraSGPRs:
-    return evaluateExtraSGPRs(Res, Layout, Fixup);
+    return evaluateExtraSGPRs(Res, Asm, Fixup);
   case AGVK_AlignTo:
-    return evaluateAlignTo(Res, Layout, Fixup);
+    return evaluateAlignTo(Res, Asm, Fixup);
   case AGVK_TotalNumVGPRs:
-    return evaluateTotalNumVGPR(Res, Layout, Fixup);
+    return evaluateTotalNumVGPR(Res, Asm, Fixup);
   case AGVK_Occupancy:
-    return evaluateOccupancy(Res, Layout, Fixup);
+    return evaluateOccupancy(Res, Asm, Fixup);
   }
 
   for (const MCExpr *Arg : Args) {
