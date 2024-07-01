@@ -201,7 +201,8 @@ MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
   assert(!Sec.curFragList()->Head);
   auto *F = allocFragment<MCDataFragment>();
   F->setParent(&Sec);
-  Sec.addFragment(*F);
+  Sec.curFragList()->Head = F;
+  Sec.curFragList()->Tail = F;
   return F;
 }
 
@@ -745,22 +746,20 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
                                          unsigned Flags, const Twine &Group,
-                                         unsigned UniqueID,
-                                         const char *BeginSymName) {
+                                         unsigned UniqueID) {
   MCSymbolWasm *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
     GroupSym = cast<MCSymbolWasm>(getOrCreateSymbol(Group));
     GroupSym->setComdat(true);
   }
 
-  return getWasmSection(Section, K, Flags, GroupSym, UniqueID, BeginSymName);
+  return getWasmSection(Section, K, Flags, GroupSym, UniqueID);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
                                          unsigned Flags,
                                          const MCSymbolWasm *GroupSym,
-                                         unsigned UniqueID,
-                                         const char *BeginSymName) {
+                                         unsigned UniqueID) {
   StringRef Group = "";
   if (GroupSym)
     Group = GroupSym->getName();

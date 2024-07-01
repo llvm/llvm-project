@@ -7470,7 +7470,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     assert(PrivType && "Expected privatizable type!");
 
     IRBuilder<NoFolder> IRB(IP->getParent(), IP);
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
 
     // Traverse the type, build GEPs and stores.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -7502,7 +7502,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     Instruction *IP = ACS.getInstruction();
 
     IRBuilder<NoFolder> IRB(IP);
-    const DataLayout &DL = IP->getModule()->getDataLayout();
+    const DataLayout &DL = IP->getDataLayout();
 
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -7566,7 +7566,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
           BasicBlock &EntryBB = ReplacementFn.getEntryBlock();
           BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
-          const DataLayout &DL = IP->getModule()->getDataLayout();
+          const DataLayout &DL = IP->getDataLayout();
           unsigned AS = DL.getAllocaAddrSpace();
           Instruction *AI = new AllocaInst(*PrivatizableType, AS,
                                            Arg->getName() + ".priv", IP);
@@ -8866,7 +8866,7 @@ struct AADenormalFPMathImpl : public AADenormalFPMath {
     if (Known.ModeF32.isValid())
       OS << " denormal-fp-math-f32=" << Known.ModeF32;
     OS << ']';
-    return OS.str();
+    return Str;
   }
 };
 
@@ -8979,7 +8979,7 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     OS << " / ";
     getAssumed().print(OS);
     OS << ">";
-    return OS.str();
+    return Str;
   }
 
   /// Helper function to get a SCEV expr for the associated value at program
@@ -9656,7 +9656,7 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -10778,7 +10778,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   template <typename AAType>
@@ -11276,7 +11276,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
     auto *AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
 
-    const DataLayout &DL = I.getModule()->getDataLayout();
+    const DataLayout &DL = I.getDataLayout();
     SimplifyQuery Q(DL, TLI, DT, AC, &I);
     Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q);
     if (!NewV || NewV == &I)
