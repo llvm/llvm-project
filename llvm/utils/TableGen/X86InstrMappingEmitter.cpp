@@ -350,6 +350,9 @@ void X86InstrMappingEmitter::emitSSE2AVXTable(
       continue;
 
     std::string NewName = ("V" + Name).str();
+    // Handle instructions BLENDVPD, BLENDVPS ,PBLENDVB
+    if (Name.ends_with("rm0") || Name.ends_with("rr0"))
+      NewName.back() = 'r';
     auto *AVXRec = Records.getDef(NewName);
     if (!AVXRec)
       continue;

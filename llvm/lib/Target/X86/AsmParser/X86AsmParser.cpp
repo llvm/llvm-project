@@ -3755,6 +3755,12 @@ static void replaceSSE2AVXOpcode(MCInst &Inst) {
   const auto I = llvm::lower_bound(Table, Opcode);
   if (I != Table.end() && I->OldOpc == Opcode)
     Inst.setOpcode(I->NewOpc);
+
+  if (X86::isBLENDVPD(Opcode) || X86::isBLENDVPS(Opcode) ||
+      X86::isPBLENDVB(Opcode)) {
+    unsigned RegNo = Inst.getOperand(2).getReg();
+    Inst.addOperand(MCOperand::createReg(RegNo));
+  }
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
