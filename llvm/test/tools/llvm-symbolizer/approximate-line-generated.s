@@ -1,19 +1,38 @@
+## Test the --skip-line-zero option.
+##
+## This test illustrates the usage of generated assembly by clang to produce the following line table:
+## Address            Line   Column File   ISA Discriminator OpIndex Flags
+## ------------------ ------ ------ ------ --- ------------- ------- -------------
+## 0x0000000000000000      4      5      0   0             0       0  is_stmt prologue_end
+## 0x000000000000000a      0      5      0   0             0       0
+## 0x0000000000000010      8      2      0   0             0       0  is_stmt
+## 0x0000000000000011      8      2      0   0             0       0  is_stmt end_sequence
+
 # REQUIRES: x86-registered-target
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -g -filetype=obj -triple=x86_64-pc-linux --fdebug-prefix-map=%t="" %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux --fdebug-prefix-map=%t="" %s -o %t.o
+
+## Check that without '--skip-line-zero', line-zero is displayed for a line with no source correspondence.
 # RUN: llvm-symbolizer --obj=%t.o 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-DISABLE %s
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-ENABLE %s
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa 0x10 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=APPROX-ENABLE,NO-APPROX %s
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --verbose 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-VERBOSE %s
-# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --output-style=JSON 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-JSON %s
 
 # APPROX-DISABLE:main
 # APPROX-DISABLE-NEXT:main.c:0:5
+
+## Check that with '--skip-line-zero', the last non-zero line in the current sequence is displayed.
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-ENABLE %s
+
 # APPROX-ENABLE:main
 # APPROX-ENABLE-NEXT:main.c:4:5 (approximate)
+
+## Check to ensure that '--skip-line-zero' only affects addresses having line-zero when more than one address is specified.
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa 0x10 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=APPROX-ENABLE,NO-APPROX %s
+
 # NO-APPROX:main
 # NO-APPROX-NEXT:main.c:8:2
+
+## Check to ensure that '--skip-line-zero' with '--verbose' enabled displays correct approximate output.
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --verbose 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-VERBOSE %s
 
 # APPROX-VERBOSE:main
 # APPROX-VERBOSE-NEXT:  Filename: main.c
@@ -21,6 +40,9 @@
 # APPROX-VERBOSE-NEXT:  Line: 4
 # APPROX-VERBOSE-NEXT:  Column: 5
 # APPROX-VERBOSE-NEXT:  Approximate: true
+
+## Check to ensure that '--skip-line-zero' with '--output-style=JSON' displays correct approximate output(JSON).
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --output-style=JSON 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-JSON %s
 
 # APPROX-JSON:[{"Address":"0xa","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}approximate-line-generated.s.tmp.o","Symbol":[{"Approximate":true,"Column":5,"Discriminator":0,"FileName":"main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
 
