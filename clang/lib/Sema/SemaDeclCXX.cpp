@@ -11301,7 +11301,8 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
     D.setInvalidType();
   } else if (ConvType->isFunctionType()) {
     Diag(D.getIdentifierLoc(), diag::err_conv_function_to_function);
-    ConvType = Context.getPointerType(ConvType);
+    if (ConvType.isReferenceable())
+      ConvType = Context.getPointerType(ConvType);
     D.setInvalidType();
   }
 
@@ -16962,8 +16963,17 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   // Arrays and functions decay.
   if (ExDeclType->isArrayType())
     ExDeclType = Context.getArrayDecayedType(ExDeclType);
-  else if (ExDeclType->isFunctionType())
-    ExDeclType = Context.getPointerType(ExDeclType);
+  else if (ExDeclType->isFunctionType()) {
+    if (ExDeclType.isReferenceable())
+      ExDeclType = Context.getPointerType(ExDeclType);
+    else {
+      Diag(Loc, diag::err_compound_qualified_function_type)
+          << 1 << true << ExDeclType
+          << ExDeclType->castAs<FunctionProtoType>()
+                 ->getFunctionQualifiersAsString();
+      Invalid = true;
+    }
+  }
 
   // C++ 15.3p1: The exception-declaration shall not denote an incomplete type.
   // The exception-declaration shall not denote a pointer or reference to an

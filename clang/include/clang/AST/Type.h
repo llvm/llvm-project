@@ -5373,6 +5373,8 @@ public:
     return static_cast<RefQualifierKind>(FunctionTypeBits.RefQualifier);
   }
 
+  std::string getFunctionQualifiersAsString() const;
+
   using param_type_iterator = const QualType *;
 
   ArrayRef<QualType> param_types() const {
@@ -7761,7 +7763,7 @@ inline bool QualType::isReferenceable() const {
   if (const auto *F = Self.getAs<FunctionProtoType>())
     return F->getMethodQuals().empty() && F->getRefQualifier() == RQ_None;
 
-  return false;
+  return Self.isFunctionType();
 }
 
 inline SplitQualType QualType::split() const {

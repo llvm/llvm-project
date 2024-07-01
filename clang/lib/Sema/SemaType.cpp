@@ -1706,29 +1706,6 @@ static QualType inferARCLifetimeForPointee(Sema &S, QualType type,
   return S.Context.getQualifiedType(type, qs);
 }
 
-static std::string getFunctionQualifiersAsString(const FunctionProtoType *FnTy){
-  std::string Quals = FnTy->getMethodQuals().getAsString();
-
-  switch (FnTy->getRefQualifier()) {
-  case RQ_None:
-    break;
-
-  case RQ_LValue:
-    if (!Quals.empty())
-      Quals += ' ';
-    Quals += '&';
-    break;
-
-  case RQ_RValue:
-    if (!Quals.empty())
-      Quals += ' ';
-    Quals += "&&";
-    break;
-  }
-
-  return Quals;
-}
-
 namespace {
 /// Kinds of declarator that cannot contain a qualified function type.
 ///
@@ -1754,8 +1731,8 @@ static bool checkQualifiedFunction(Sema &S, QualType T, SourceLocation Loc,
     return false;
 
   S.Diag(Loc, diag::err_compound_qualified_function_type)
-    << QFK << isa<FunctionType>(T.IgnoreParens()) << T
-    << getFunctionQualifiersAsString(FPT);
+      << QFK << isa<FunctionType>(T.IgnoreParens()) << T
+      << FPT->getFunctionQualifiersAsString();
   return true;
 }
 
@@ -1766,7 +1743,7 @@ bool Sema::CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc) {
     return false;
 
   Diag(Loc, diag::err_qualified_function_typeid)
-      << T << getFunctionQualifiersAsString(FPT);
+      << T << FPT->getFunctionQualifiersAsString();
   return true;
 }
 
@@ -2679,7 +2656,16 @@ QualType Sema::BuildFunctionType(QualType T,
 
   for (unsigned Idx = 0, Cnt = ParamTypes.size(); Idx < Cnt; ++Idx) {
     // FIXME: Loc is too inprecise here, should use proper locations for args.
-    QualType ParamType = Context.getAdjustedParameterType(ParamTypes[Idx]);
+    QualType ParamType = ParamTypes[Idx];
+    if (ParamType->isFunctionType() && !ParamType.isReferenceable()) {
+      Diag(Loc, diag::err_compound_qualified_function_type)
+          << 1 << true << ParamType
+          << ParamType->castAs<FunctionProtoType>()
+                 ->getFunctionQualifiersAsString();
+      Invalid = true;
+    } else
+      ParamType = Context.getAdjustedParameterType(ParamType);
+
     if (ParamType->isVoidType()) {
       Diag(Loc, diag::err_param_with_void_type);
       Invalid = true;
@@ -5540,9 +5526,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       }
 
       S.Diag(Loc, diag::err_invalid_qualified_function_type)
-        << Kind << D.isFunctionDeclarator() << T
-        << getFunctionQualifiersAsString(FnTy)
-        << FixItHint::CreateRemoval(RemovalRange);
+          << Kind << D.isFunctionDeclarator() << T
+          << FnTy->getFunctionQualifiersAsString()
+          << FixItHint::CreateRemoval(RemovalRange);
 
       // Strip the cv-qualifiers and ref-qualifiers from the type.
       FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();

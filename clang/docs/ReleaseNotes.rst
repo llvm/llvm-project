@@ -759,6 +759,9 @@ Bug Fixes in This Version
   negatives where the analysis failed to detect unchecked access to guarded
   data.
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
