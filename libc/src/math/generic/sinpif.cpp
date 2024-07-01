@@ -26,13 +26,13 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   double xd = static_cast<double>(x);
 
   // Range reduction:
-  // For |x| > pi/32, we perform range reduction as follows:
+  // For |x| > 1/32, we perform range reduction as follows:
   // Find k and y such that:
   //   x = (k + y) * 1/32
   //   k is an integer
   //   |y| < 0.5
-  // For small range (|x| < 2^45 when FMA instructions are available, 2^22
-  // otherwise), this is done by performing:
+  //
+  // This is done by performing:
   //   k = round(x * 32)
   //   y = x * 32 - k
   //
