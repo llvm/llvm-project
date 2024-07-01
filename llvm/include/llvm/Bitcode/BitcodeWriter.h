@@ -103,7 +103,7 @@ public:
   void writeIndex(
       const ModuleSummaryIndex *Index,
       const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex,
-      const GVSummaryPtrSet* DecSummaries);
+      const GVSummaryPtrSet *DecSummaries);
 };
 
 /// Write the specified module to the specified raw output stream.

@@ -4583,7 +4583,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   auto shouldImportValueAsDecl = [&](GlobalValueSummary *GVS) -> bool {
     if (DecSummaries == nullptr)
       return false;
-    return DecSummaries->contains(GVS);
+    return DecSummaries->count(GVS);
   };
 
   // The aliases are emitted as a post-pass, and will point to the value
