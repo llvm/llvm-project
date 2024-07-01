@@ -17503,6 +17503,99 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, UADDLP);
 }
 
+static SDValue
+performVecReduceAddZextCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               const AArch64TargetLowering &TLI) {
+  if (N->getOperand(0).getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  SDNode *ZEXT = N->getOperand(0).getNode();
+  EVT VecVT = ZEXT->getOperand(0).getValueType();
+  SDLoc DL(N);
+
+  SDValue VecOp = ZEXT->getOperand(0);
+  VecVT = VecOp.getValueType();
+  bool IsScalableType = VecVT.isScalableVector();
+
+  if (TLI.isTypeLegal(VecVT)) {
+    if (!IsScalableType &&
+        !TLI.useSVEForFixedLengthVectorVT(
+            VecVT,
+            /*OverrideNEON=*/Subtarget.useSVEForFixedLengthVectors(VecVT)))
+      return SDValue();
+
+    if (!IsScalableType) {
+      EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecVT);
+      VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+    }
+    VecVT = VecOp.getValueType();
+    EVT RdxVT = N->getValueType(0);
+    RdxVT = getPackedSVEVectorVT(RdxVT);
+    SDValue Pg = getPredicateForVector(DAG, DL, VecVT);
+    SDValue Res = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getConstant(Intrinsic::aarch64_sve_uaddv, DL, MVT::i64), Pg, VecOp);
+    EVT ResVT = MVT::i64;
+    if (ResVT != N->getValueType(0))
+      Res = DAG.getAnyExtOrTrunc(Res, DL, N->getValueType(0));
+    return Res;
+  }
+
+  SmallVector<SDValue, 4> SplitVals;
+  SmallVector<SDValue, 4> PrevVals;
+  PrevVals.push_back(VecOp);
+  while (true) {
+
+    if (!VecVT.isScalableVector() &&
+        !PrevVals[0].getValueType().getVectorElementCount().isKnownEven())
+      return SDValue();
+
+    for (SDValue Vec : PrevVals) {
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
+      SplitVals.push_back(Lo);
+      SplitVals.push_back(Hi);
+    }
+    if (TLI.isTypeLegal(SplitVals[0].getValueType()))
+      break;
+    PrevVals.clear();
+    std::copy(SplitVals.begin(), SplitVals.end(), std::back_inserter(PrevVals));
+    SplitVals.clear();
+  }
+  SDNode *VecRed = N;
+  EVT ElemType = VecRed->getValueType(0);
+  SmallVector<SDValue, 4> Results;
+
+  if (!IsScalableType &&
+      !TLI.useSVEForFixedLengthVectorVT(
+          SplitVals[0].getValueType(),
+          /*OverrideNEON=*/Subtarget.useSVEForFixedLengthVectors(
+              SplitVals[0].getValueType())))
+    return SDValue();
+
+  for (unsigned Num = 0; Num < SplitVals.size(); ++Num) {
+    SDValue Reg = SplitVals[Num];
+    EVT RdxVT = Reg->getValueType(0);
+    SDValue Pg = getPredicateForVector(DAG, DL, RdxVT);
+    if (!IsScalableType) {
+      EVT ContainerVT = getContainerForFixedLengthVector(DAG, RdxVT);
+      Reg = convertToScalableVector(DAG, ContainerVT, Reg);
+    }
+    SDValue Res = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getConstant(Intrinsic::aarch64_sve_uaddv, DL, MVT::i64), Pg, Reg);
+    if (ElemType != MVT::i64)
+      Res = DAG.getAnyExtOrTrunc(Res, DL, ElemType);
+    Results.push_back(Res);
+  }
+  SDValue ToAdd = Results[0];
+  for (unsigned I = 1; I < SplitVals.size(); ++I)
+    ToAdd = DAG.getNode(ISD::ADD, DL, ElemType, ToAdd, Results[I]);
+  return ToAdd;
+}
+
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
 //   vecreduce.add(ext(A)) to vecreduce.add(DOT(zero, A, one))
 //   vecreduce.add(mul(ext(A), ext(B))) to vecreduce.add(DOT(zero, A, B))
@@ -25188,8 +25281,11 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI, Subtarget);
-  case ISD::VECREDUCE_ADD:
-    return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
+  case ISD::VECREDUCE_ADD: {
+    if (SDValue Val = performVecReduceAddCombine(N, DCI.DAG, Subtarget))
+      return Val;
+    return performVecReduceAddZextCombine(N, DCI, *this);
+  }
   case AArch64ISD::UADDV:
     return performUADDVCombine(N, DAG);
   case AArch64ISD::SMULL:
