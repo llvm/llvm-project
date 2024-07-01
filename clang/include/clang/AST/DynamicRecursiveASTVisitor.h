@@ -176,8 +176,11 @@ public:
 
   // Declare Traverse*() for and friends all concrete Decl classes.
 #define ABSTRACT_DECL(DECL)
+#define DECL(CLASS, BASE) \
+  virtual bool Traverse##CLASS##Decl(CLASS##Decl *D);
+#include "clang/AST/DeclNodes.inc"
+
 #define DECL(CLASS, BASE)                                                      \
-  virtual bool Traverse##CLASS##Decl(CLASS##Decl *D);                          \
   bool WalkUpFrom##CLASS##Decl(CLASS##Decl *D);                                \
   virtual bool Visit##CLASS##Decl(CLASS##Decl *D) { return true; }
 #include "clang/AST/DeclNodes.inc"
@@ -196,7 +199,10 @@ public:
   // Declare Traverse*() and friends for all concrete Type classes.
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
-  virtual bool Traverse##CLASS##Type(CLASS##Type *T);                          \
+  virtual bool Traverse##CLASS##Type(CLASS##Type *T);
+#include "clang/AST/TypeNodes.inc"
+
+#define TYPE(CLASS, BASE)                                                      \
   bool WalkUpFrom##CLASS##Type(CLASS##Type *T);                                \
   virtual bool Visit##CLASS##Type(CLASS##Type *T) { return true; }
 #include "clang/AST/TypeNodes.inc"
