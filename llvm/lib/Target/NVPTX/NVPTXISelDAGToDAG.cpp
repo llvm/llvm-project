@@ -18,6 +18,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/NVVMIntrinsicFlags.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -158,6 +159,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     break;
   case ISD::INTRINSIC_W_CHAIN:
     if (tryIntrinsicChain(N))
+      return;
+    break;
+  case ISD::INTRINSIC_VOID:
+    if (tryIntrinsicVoid(N))
       return;
     break;
   case NVPTXISD::Tex1DFloatS32:
@@ -3859,5 +3864,248 @@ unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
     case MVT::f64:
       return NVPTX::CVT_f64_f16;
     }
+  }
+}
+
+static size_t GetCpAsyncBulkTensorDimFromIntrinsic(unsigned IID) {
+  switch (IID) {
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_1d:
+    return 1;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_2d:
+    return 2;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_3d:
+    return 3;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_4d:
+    return 4;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_5d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_5d:
+    return 5;
+  default:
+    llvm_unreachable(
+        "Invalid Tensor dim in nvvm_cp_async_bulk_tensor intrinsic");
+  }
+}
+
+#define CP_ASYNC_BULK_TENSOR_OPCODE(dir, dim, mode, suffix)                    \
+  if (IsShared32) {                                                            \
+    return NVPTX::                                                             \
+        CP_ASYNC_BULK_TENSOR_##dir##_##dim##_SHARED32_##mode##suffix;          \
+  } else {                                                                     \
+    return NVPTX::CP_ASYNC_BULK_TENSOR_##dir##_##dim##_##mode##suffix;         \
+  }
+
+#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(dim, mode)                         \
+  do {                                                                         \
+    if (IsCacheHint) {                                                         \
+      CP_ASYNC_BULK_TENSOR_OPCODE(SMEM_TO_GMEM, dim, mode, _CH);               \
+    } else {                                                                   \
+      CP_ASYNC_BULK_TENSOR_OPCODE(SMEM_TO_GMEM, dim, mode, );                  \
+    }                                                                          \
+  } while (0)
+
+#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(dim, mode)                         \
+  do {                                                                         \
+    if (IsMultiCast && IsCacheHint) {                                          \
+      CP_ASYNC_BULK_TENSOR_OPCODE(GMEM_TO_SMEM, dim, mode, _MC_CH);            \
+    } else if (IsCacheHint) {                                                  \
+      CP_ASYNC_BULK_TENSOR_OPCODE(GMEM_TO_SMEM, dim, mode, _CH);               \
+    } else if (IsMultiCast) {                                                  \
+      CP_ASYNC_BULK_TENSOR_OPCODE(GMEM_TO_SMEM, dim, mode, _MC);               \
+    } else {                                                                   \
+      CP_ASYNC_BULK_TENSOR_OPCODE(GMEM_TO_SMEM, dim, mode, );                  \
+    }                                                                          \
+  } while (0)
+
+static unsigned GetCpAsyncBulkTensorS2GOpcode(size_t Dim, bool IsShared32,
+                                              bool IsCacheHint, bool IsIm2Col) {
+  if (IsIm2Col) {
+    switch (Dim) {
+    case 3:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, IM2COL);
+    case 4:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, IM2COL);
+    case 5:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, IM2COL);
+    default:
+      llvm_unreachable("Invalid Dimension in im2col mode for "
+                       "GetCpAsyncBulkTensorS2GOpcode.");
+    }
+  } else {
+    switch (Dim) {
+    case 1:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(1D, TILE);
+    case 2:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(2D, TILE);
+    case 3:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, TILE);
+    case 4:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, TILE);
+    case 5:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, TILE);
+    default:
+      llvm_unreachable(
+          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorS2GOpcode.");
+    }
+  }
+}
+
+static unsigned GetCpAsyncBulkTensorG2SOpcode(size_t Dim, bool IsShared32,
+                                              bool IsMultiCast,
+                                              bool IsCacheHint, bool IsIm2Col) {
+  if (IsIm2Col) {
+    switch (Dim) {
+    case 3:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, IM2COL);
+    case 4:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, IM2COL);
+    case 5:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, IM2COL);
+    default:
+      llvm_unreachable("Invalid Dimension in im2col mode for "
+                       "GetCpAsyncBulkTensorG2SOpcode.");
+    }
+  } else {
+    switch (Dim) {
+    case 1:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(1D, TILE);
+    case 2:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(2D, TILE);
+    case 3:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, TILE);
+    case 4:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, TILE);
+    case 5:
+      GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, TILE);
+    default:
+      llvm_unreachable(
+          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorG2SOpcode.");
+    }
+  }
+}
+
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorS2G(SDNode *N) {
+  unsigned int SharedPointerSize =
+      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED);
+  bool IsShared32 = (SharedPointerSize == 32);
+
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  size_t NumDims = GetCpAsyncBulkTensorDimFromIntrinsic(IID);
+
+  ConstantSDNode *FlagsNode = cast<ConstantSDNode>(N->getOperand(2));
+  nvvm::CpAsyncBulkTensorFlags Flags;
+  Flags.V = static_cast<unsigned>(FlagsNode->getZExtValue());
+  bool IsCacheHint = Flags.U.CacheHint == 1;
+  bool IsIm2Col = Flags.U.LoadMode == 1;
+
+  SDLoc DL(N);
+  // List of operands that are common to both variants
+  SmallVector<SDValue, 4> Ops{
+      N->getOperand(3), // Src pointer in smem
+      N->getOperand(4), // Dst tensor_map pointer in gmem
+  };
+
+  // Tensor Dims from [1-5] followed by the cache-hint operand
+  size_t TensorDimsStartIndex = 5;
+  size_t CacheHintIndex = TensorDimsStartIndex + NumDims;
+  for (size_t i = 0; i < NumDims; i++)
+    Ops.push_back(N->getOperand(TensorDimsStartIndex + i));
+
+  // Push the cache-hint operand, if available
+  if (IsCacheHint)
+    Ops.push_back(N->getOperand(CacheHintIndex));
+
+  // Finally, the chain operand
+  Ops.push_back(N->getOperand(0));
+
+  unsigned Opcode =
+      GetCpAsyncBulkTensorS2GOpcode(NumDims, IsShared32, IsCacheHint, IsIm2Col);
+
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2S(SDNode *N) {
+  unsigned int SharedPointerSize =
+      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED);
+  bool IsShared32 = (SharedPointerSize == 32);
+
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  size_t NumDims = GetCpAsyncBulkTensorDimFromIntrinsic(IID);
+
+  ConstantSDNode *FlagsNode = cast<ConstantSDNode>(N->getOperand(2));
+  nvvm::CpAsyncBulkTensorFlags Flags;
+  Flags.V = static_cast<unsigned>(FlagsNode->getZExtValue());
+  bool IsCacheHint = Flags.U.CacheHint == 1;
+  bool IsMultiCast = Flags.U.MultiCast == 1;
+  bool IsIm2Col = Flags.U.LoadMode == 1;
+
+  if (IsIm2Col && NumDims < 3)
+    report_fatal_error("NumDims should be at least 3 for Im2Col mode");
+
+  SDLoc DL(N);
+  // List of operands that are common to both tile and im2col variants
+  SmallVector<SDValue, 4> Ops{
+      N->getOperand(3), // Dst pointer in smem
+      N->getOperand(4), // Mbarrier pointer in smem
+      N->getOperand(5), // Src pointer (i.e. tensor_map) in gmem
+  };
+
+  // Tensor Dims from [1-5]
+  size_t TensorDimsStartIndex = 6;
+  for (size_t i = 0; i < NumDims; i++)
+    Ops.push_back(N->getOperand(TensorDimsStartIndex + i));
+
+  // Im2Col co-ordinates:
+  // These are always present in the input arguments for TensorDims{3,4,5}.
+  // Number of values is (NumDims - 2).
+  size_t Im2ColStartIndex = TensorDimsStartIndex + NumDims;
+  size_t NumDimsIm2Col = (NumDims > 2) ? (NumDims - 2) : 0;
+  size_t Im2ColEndIndex = Im2ColStartIndex + NumDimsIm2Col;
+  // ...However, passed down to the actual NVPTX only when
+  // this mode is enabled.
+  if (IsIm2Col) {
+    for (size_t i = 0; i < NumDimsIm2Col; i++)
+      Ops.push_back(N->getOperand(Im2ColStartIndex + i));
+  }
+
+  // Push MultiCast operand, if available
+  if (IsMultiCast)
+    Ops.push_back(N->getOperand(Im2ColEndIndex));
+
+  // Push CacheHint operand, if available
+  if (IsCacheHint)
+    Ops.push_back(N->getOperand(Im2ColEndIndex + 1));
+
+  // Finally, the chain operand
+  Ops.push_back(N->getOperand(0));
+
+  unsigned Opcode = GetCpAsyncBulkTensorG2SOpcode(
+      NumDims, IsShared32, IsMultiCast, IsCacheHint, IsIm2Col);
+
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
+bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
+  unsigned IID = N->getConstantOperandVal(1);
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_smem_to_gmem_5d:
+    SelectCpAsyncBulkTensorS2G(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_gmem_to_smem_5d:
+    SelectCpAsyncBulkTensorG2S(N);
+    return true;
   }
 }

@@ -434,6 +434,127 @@ def CP_ASYNC_BULK_WAIT_GROUP_READ :
   Requires<[hasPTX<80>, hasSM<90>]>;
 
 //-----------------------------------
+// TMA Async Tensor Copy Functions
+//-----------------------------------
+
+// From Shared to Global memory
+class S2G_STRINGS<int dim, string mode, bit ch> {
+  string prefix = "cp.async.bulk.tensor";
+  string dir = "global.shared::cta";
+  string completion = "bulk_group";
+  string name = prefix
+                # "." # dim # "d"
+                # "." # dir
+                # "." # mode
+                # "." # completion
+                # !if(ch, ".L2::cache_hint", "");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_S2G<int dim, NVPTXRegClass rc, string mode = "tile"> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
+
+  def "": NVPTXInst<(outs),
+          !con((ins rc:$src, Int64Regs:$tmap), dims_dag),
+          !strconcat(S2G_STRINGS<dim, mode, 0>.name, asm_str, ";"), []>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+  def _CH: NVPTXInst<(outs),
+           !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins Int64Regs:$ch)),
+           !strconcat(S2G_STRINGS<dim, mode, 1>.name, asm_str, ", $ch;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+}
+// Tile mode
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_1D_TILE : CP_ASYNC_BULK_TENSOR_S2G<1, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_2D_TILE : CP_ASYNC_BULK_TENSOR_S2G<2, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_3D_TILE : CP_ASYNC_BULK_TENSOR_S2G<3, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_4D_TILE : CP_ASYNC_BULK_TENSOR_S2G<4, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_5D_TILE : CP_ASYNC_BULK_TENSOR_S2G<5, Int64Regs>;
+
+// Tile mode with 32-bit shared-memory pointers
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_1D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_S2G<1, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_2D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_S2G<2, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_3D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_S2G<3, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_4D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_S2G<4, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_5D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_S2G<5, Int32Regs>;
+
+// Im2Col mode for 3/4/5d variants
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_3D_IM2COL : CP_ASYNC_BULK_TENSOR_S2G<3, Int64Regs, "im2col_no_offs">;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_4D_IM2COL : CP_ASYNC_BULK_TENSOR_S2G<4, Int64Regs, "im2col_no_offs">;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_5D_IM2COL : CP_ASYNC_BULK_TENSOR_S2G<5, Int64Regs, "im2col_no_offs">;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_3D_SHARED32_IM2COL : CP_ASYNC_BULK_TENSOR_S2G<3, Int32Regs, "im2col_no_offs">;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_4D_SHARED32_IM2COL : CP_ASYNC_BULK_TENSOR_S2G<4, Int32Regs, "im2col_no_offs">;
+defm CP_ASYNC_BULK_TENSOR_SMEM_TO_GMEM_5D_SHARED32_IM2COL : CP_ASYNC_BULK_TENSOR_S2G<5, Int32Regs, "im2col_no_offs">;
+
+// From Global to Shared memory
+class G2S_STRINGS<int dim, string mode, bit mc, bit ch> {
+  string prefix = "cp.async.bulk.tensor";
+  string dir = "shared::cluster.global";
+  string completion = "mbarrier::complete_tx::bytes";
+  string name = prefix
+                # "." # dim # "d"
+                # "." # dir
+                # "." # mode
+                # "." # completion
+                # !if(mc, ".multicast::cluster", "")
+                # !if(ch, ".L2::cache_hint", "");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_G2S<int dim, NVPTXRegClass rc, string mode = "tile"> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str_default = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
+
+  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
+  defvar im2col_dag = !if(!eq(mode, "im2col"), 
+    !dag(ins, !listsplat(Int16Regs, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
+    (ins));
+  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
+  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
+
+  defvar asm_str = !if(!eq(mode, "im2col"),
+    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
+
+  def "": NVPTXInst<(outs),
+          !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag),
+          !strconcat(G2S_STRINGS<dim, mode, 0, 0>.name, asm_str, ";"), []>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+  def _MC: NVPTXInst<(outs),
+           !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc)),
+           !strconcat(G2S_STRINGS<dim, mode, 1, 0>.name, asm_str, ", $mc;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+  def _CH: NVPTXInst<(outs),
+           !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+           !strconcat(G2S_STRINGS<dim, mode, 0, 1>.name, asm_str, ", $ch;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+  def _MC_CH: NVPTXInst<(outs),
+              !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc, Int64Regs:$ch)),
+              !strconcat(G2S_STRINGS<dim, mode, 1, 1>.name, asm_str, ", $mc, $ch;"), []>,
+              Requires<[hasPTX<80>, hasSM<90>]>;
+}
+// Tile mode
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_1D_TILE : CP_ASYNC_BULK_TENSOR_G2S<1, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_2D_TILE : CP_ASYNC_BULK_TENSOR_G2S<2, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_3D_TILE : CP_ASYNC_BULK_TENSOR_G2S<3, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_4D_TILE : CP_ASYNC_BULK_TENSOR_G2S<4, Int64Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_5D_TILE : CP_ASYNC_BULK_TENSOR_G2S<5, Int64Regs>;
+
+// Tile mode with 32-bit shared-memory pointers
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_1D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_G2S<1, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_2D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_G2S<2, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_3D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_G2S<3, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_4D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_G2S<4, Int32Regs>;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_5D_SHARED32_TILE : CP_ASYNC_BULK_TENSOR_G2S<5, Int32Regs>;
+
+// Im2Col mode for 3/4/5d variants
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_3D_IM2COL : CP_ASYNC_BULK_TENSOR_G2S<3, Int64Regs, "im2col">;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_4D_IM2COL : CP_ASYNC_BULK_TENSOR_G2S<4, Int64Regs, "im2col">;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_5D_IM2COL : CP_ASYNC_BULK_TENSOR_G2S<5, Int64Regs, "im2col">;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_3D_SHARED32_IM2COL : CP_ASYNC_BULK_TENSOR_G2S<3, Int32Regs, "im2col">;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_4D_SHARED32_IM2COL : CP_ASYNC_BULK_TENSOR_G2S<4, Int32Regs, "im2col">;
+defm CP_ASYNC_BULK_TENSOR_GMEM_TO_SMEM_5D_SHARED32_IM2COL : CP_ASYNC_BULK_TENSOR_G2S<5, Int32Regs, "im2col">;
+
+//-----------------------------------
 // MBarrier Functions
 //-----------------------------------
 
