@@ -762,7 +762,7 @@ define i32 @test14a(i32 %start, ptr %p, ptr %q, i1 %c) personality i1 1 {
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ; CHECK:       exception:
 ; CHECK-NEXT:    [[FOO_LCSSA1_WIDE:%.*]] = phi i64 [ [[TMP1]], [[BACKEDGE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = landingpad i1
+; CHECK-NEXT:    [[TMP3:%.*]] = landingpad { ptr, i1 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[FOO_LCSSA1_WIDE]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
@@ -790,7 +790,7 @@ exit:
   ret i32 %foo
 
 exception:
-  landingpad i1
+  landingpad { ptr, i1 }
   cleanup
   ret i32 %foo
 }

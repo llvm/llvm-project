@@ -12,7 +12,7 @@ define void @test() personality ptr null {
 ; CHECK:       success:
 ; CHECK-NEXT:    ret void
 ; CHECK:       failure:
-; CHECK-NEXT:    [[PAD:%.*]] = landingpad {}
+; CHECK-NEXT:    [[PAD:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    unreachable
 ;
@@ -23,7 +23,7 @@ success:
   ret void
 
 failure:
-  %pad = landingpad {}
+  %pad = landingpad { ptr, i32 }
   cleanup
   unreachable
 }

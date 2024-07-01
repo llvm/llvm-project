@@ -16,7 +16,7 @@ define void @function1() personality i8 3 {
 ; CHECK-NEXT:    invoke void @llvm.donothing()
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
-; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
+; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
@@ -29,7 +29,7 @@ entry:
   store i32 3, ptr %b, align 4
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -44,7 +44,7 @@ define void @function2() personality i8 3 {
 ; CHECK-NEXT:    invoke void @llvm.donothing()
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
-; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
+; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
@@ -57,7 +57,7 @@ entry:
   store i32 3, ptr %b, align 4
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void

@@ -15,7 +15,7 @@ define void @function1() personality i8 3 {
 ; CHECK-NEXT:    invoke void @llvm.donothing()
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
-; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
+; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
@@ -27,7 +27,7 @@ entry:
   %b = alloca i32, align 4
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   store i32 2, ptr %a, align 4
   store i32 3, ptr %b, align 4
   br label %normal
@@ -43,7 +43,7 @@ define void @function2() personality i8 3 {
 ; CHECK-NEXT:    invoke void @llvm.donothing()
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
-; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
+; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
@@ -55,7 +55,7 @@ entry:
   %b = alloca i32, align 4
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   store i32 2, ptr %a, align 4
   store i32 3, ptr %b, align 4
   br label %normal
