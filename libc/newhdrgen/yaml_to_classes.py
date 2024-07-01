@@ -47,7 +47,7 @@ def yaml_to_classes(yaml_data):
         )
 
     functions = yaml_data.get("functions", [])
-    sorted_functions = sorted(functions, key=lambda x: x['name'])
+    sorted_functions = sorted(functions, key=lambda x: x["name"])
     for function_data in sorted_functions:
         arguments = [arg["type"] for arg in function_data["arguments"]]
         guard = function_data.get("guard", None)
