@@ -1307,11 +1307,11 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 
   // If this is a simple linear addrec, emit it now as a special case.
   if (S->isAffine())    // {0,+,F} --> i*F
-    return
-      expand(SE.getTruncateOrNoop(
-        SE.getMulExpr(SE.getUnknown(CanonicalIV),
-                      SE.getNoopOrAnyExtend(S->getOperand(1),
-                                            CanonicalIV->getType())),
+    return expand(SE.getTruncateOrNoop(
+        SE.getMulExpr(
+            SE.getUnknown(CanonicalIV),
+            SE.getNoopOrAnyExtend(S->getOperand(1), CanonicalIV->getType()),
+            S->getNoWrapFlags(SCEV::FlagNW)),
         Ty));
 
   // If this is a chain of recurrences, turn it into a closed form, using the
