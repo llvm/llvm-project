@@ -14,7 +14,7 @@ build_llvm() {
         -DLLVM_PARALLEL_LINK_JOBS=16             \
         -DCMAKE_INSTALL_PREFIX="/home/lih/work/llvm-project/install_debug" \
         -DCMAKE_BUILD_TYPE=Debug                \
-        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt;lldb;mlir;openmp"              \
+        -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra;compiler-rt;lldb;mlir;openmp"              \
         -DLLVM_ENABLE_RUNTIMES=all              \
         -DLLVM_BUILD_EXAMPLES=ON                \
         -DLLVM_BUILD_TESTS=ON                   \
@@ -22,6 +22,7 @@ build_llvm() {
         -DLLVM_CCACHE_BUILD=ON                  \
         -DLLVM_INSTALL_UTILS=ON                 \
         -DLLVM_INCLUDE_TESTS=ON                 \
+#	-DLLVM_USE_LINKER=lld                   \
 	-DLLVM_TARGETS_TO_BUILD="X86;AMDGPU"    \
         -DCLANG_BUILD_EXAMPLES=ON               
         
