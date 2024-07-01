@@ -576,11 +576,14 @@ template <typename T> static bool isFirstInExternCContext(T *D) {
   return First->isInExternCContext();
 }
 
-static bool isSingleLineLanguageLinkage(const Decl &D) {
-  if (const auto *SD = dyn_cast<LinkageSpecDecl>(D.getDeclContext()))
-    if (!SD->hasBraces())
-      return true;
+static bool isUnbracedLanguageLinkage(const DeclContext *DC) {
+  if (const auto *SD = dyn_cast_if_present<LinkageSpecDecl>(DC))
+    return !SD->hasBraces();
   return false;
+}
+
+static bool hasUnbracedLanguageLinkage(const Decl &D) {
+  return isUnbracedLanguageLinkage(D.getDeclContext());
 }
 
 static bool isDeclaredInModuleInterfaceOrPartition(const NamedDecl *D) {
@@ -644,7 +647,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
       if (Var->getStorageClass() != SC_Extern &&
           Var->getStorageClass() != SC_PrivateExtern &&
-          !isSingleLineLanguageLinkage(*Var))
+          !hasUnbracedLanguageLinkage(*Var))
         return LinkageInfo::internal();
     }
 
@@ -2118,6 +2121,12 @@ VarDecl::VarDecl(Kind DK, ASTContext &C, DeclContext *DC,
                 "ParmVarDeclBitfields too large!");
   static_assert(sizeof(NonParmVarDeclBitfields) <= sizeof(unsigned),
                 "NonParmVarDeclBitfields too large!");
+
+  // The unbraced `extern "C"` invariant is that the storage class
+  // specifier is omitted in the source code, i.e. SC_None (but is,
+  // implicitly, `extern`).
+  assert(!isUnbracedLanguageLinkage(DC) || SC == SC_None);
+
   AllBits = 0;
   VarDeclBits.SClass = SC;
   // Everything else is implicitly initialized to false.
@@ -2301,7 +2310,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   //   A declaration directly contained in a linkage-specification is treated
   //   as if it contains the extern specifier for the purpose of determining
   //   the linkage of the declared name and whether it is a definition.
-  if (isSingleLineLanguageLinkage(*this))
+  if (hasUnbracedLanguageLinkage(*this))
     return DeclarationOnly;
 
   // C99 6.9.2p2:
@@ -3027,6 +3036,12 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
       DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
       EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
   assert(T.isNull() || T->isFunctionType());
+
+  // The unbraced `extern "C"` invariant is that the storage class
+  // specifier is omitted in the source code, i.e. SC_None (but is,
+  // implicitly, `extern`).
+  assert(!isUnbracedLanguageLinkage(DC) || S == SC_None);
+
   FunctionDeclBits.SClass = S;
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
