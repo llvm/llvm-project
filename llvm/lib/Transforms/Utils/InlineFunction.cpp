@@ -1675,7 +1675,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
     Alignment = std::max(Alignment, *ByValAlignment);
 
   AllocaInst *NewAlloca = new AllocaInst(
-      ByValType, cast<PointerType>(Arg->getType())->getAddressSpace(), nullptr,
+      ByValType, Arg->getType()->getPointerAddressSpace(), nullptr,
       Alignment, Arg->getName());
   NewAlloca->insertBefore(Caller->begin()->begin());
   IFI.StaticAllocas.push_back(NewAlloca);
