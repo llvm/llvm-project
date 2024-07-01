@@ -109,7 +109,8 @@ VarKind PresburgerSpace::getVarKindAt(unsigned pos) const {
   llvm_unreachable("`pos` should represent a valid var position");
 }
 
-unsigned PresburgerSpace::insertVar(VarKind kind, unsigned pos, unsigned num) {
+unsigned PresburgerSpace::insertVar(VarKind kind, unsigned pos, unsigned num,
+                                    Identifier id) {
   assert(pos <= getNumVarKind(kind));
 
   unsigned absolutePos = getVarKindOffset(kind) + pos;
@@ -123,10 +124,10 @@ unsigned PresburgerSpace::insertVar(VarKind kind, unsigned pos, unsigned num) {
   else
     numLocals += num;
 
-  // Insert NULL identifiers if `usingIds` and variables inserted are
+  // Insert id identifiers if `usingIds` and variables inserted are
   // not locals.
   if (usingIds && kind != VarKind::Local)
-    identifiers.insert(identifiers.begin() + absolutePos, num, Identifier());
+    identifiers.insert(identifiers.begin() + absolutePos, num, id);
 
   return absolutePos;
 }
