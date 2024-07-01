@@ -233,5 +233,4 @@
 ! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=MLINK-BUILTIN-BITCODE  %s
 ! MLINK-BUILTIN-BITCODE:      "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
-! MLINK-BUILTIN-BITCODE-SAME: "-fcuda-is-device"
 ! MLINK-BUILTIN-BITCODE-SAME: "-mlink-builtin-bitcode" {{.*Inputs.*rocm.*amdgcn.*bitcode.*}}oclc_isa_version_900.bc
