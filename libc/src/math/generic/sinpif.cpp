@@ -77,18 +77,21 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
     return static_cast<float>(xd * result);
   }
   
-  if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
-    if (x_abs == 0x7f80'0000U) {
-      fputil::set_errno_if_required(EDOM);
-      fputil::raise_except_if_required(FE_INVALID);
+  // Numbers greater or equal to 2^23 are always integers or NaN
+  if (LIBC_UNLIKELY(x_abs >= 0x4B00'0000)) {
+
+    // check for NaN values
+    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+      if (x_abs == 0x7f80'0000U) {
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
+      }
+
+      return x + FPBits::quiet_nan().get_val();
     }
-    return x + FPBits::quiet_nan().get_val();
-  }
-
-  // Numbers greater or equal to 2^23 are always integers => sinpi(x) = 0
-  if (LIBC_UNLIKELY(x_abs >= 0x4B00'0000))
+    
     return FPBits::zero(xbits.sign()).get_val();
-
+  }
 
   // Combine the results with the sine of sum formula:
   //   sin(x * pi) = sin((k + y)*pi/32)
