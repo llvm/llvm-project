@@ -1055,3 +1055,195 @@ func.func @test_vectorize_unpack_no_vector_sizes_permute(%source: tensor<4x7x4xf
     transform.yield
   } 
  }
+
+  // -----
+
+ // CHECK-LABEL: func @test_vectorize_collapseshape
+func.func @test_vectorize_collapseshape(%source: tensor<8x8x32x16xf32>, %dest: tensor<64x512xf32>) -> tensor<64x512xf32> {
+    // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[C0:.*]]= arith.constant 0 : index
+    // CHECK: %[[C8:.*]] = arith.constant 8 : index
+    // CHECK: %[[C80:.*]] = arith.constant 8 : index
+    // CHECK: %[[C32:.*]] = arith.constant 32 : index
+    // CHECK: %[[C16:.*]] = arith.constant 16 : index
+    // CHECK: %[[MSK0:.*]] = vector.create_mask %[[C8]], %[[C80]], %[[C32]], %[[C16]] : vector<8x8x32x32xi1>
+    // CHECK: %[[READ0:.*]] = vector.mask %[[MSK0]] {{.*}} : vector<8x8x32x32xi1> -> vector<8x8x32x32xf32>
+    // CHECK: %[[SHAPC:.*]] = vector.shape_cast %[[READ0]] : vector<8x8x32x32xf32> to vector<64x1024xf32>
+    // CHECK: %[[EMPT:.*]] = tensor.empty() : tensor<64x512xf32>
+    // CHECK: %[[C01:.*]] = arith.constant 0 : index
+    // CHECK: %[[C64:.*]] = arith.constant 64 : index
+    // CHECK: %[[C512:.*]] = arith.constant 512 : index
+    // CHECK: %[[WRITEMSK:.*]] = vector.create_mask %[[C64]], %[[C512]] : vector<64x1024xi1>
+    // CHECK: %[[WRIT:.*]] = vector.mask %[[WRITEMSK]] {{.*}} : vector<64x1024xi1> -> tensor<64x512xf32>
+    // CHECK: return %[[WRIT]] : tensor<64x512xf32>
+  %collapsed = tensor.collapse_shape %source [[0, 1], [2, 3]] : tensor<8x8x32x16xf32> into tensor<64x512xf32>
+   return %collapsed : tensor<64x512xf32>
+ }
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.collapse_shape"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [64, 1024] : !transform.any_op
+    transform.yield
+  } 
+}
+
+  // -----
+
+ // CHECK-LABEL: func @test_vectorize_collapseshape_no_vector_size
+func.func @test_vectorize_collapseshape_no_vector_size(%source: tensor<8x8x32x16xf32>, %dest: tensor<64x512xf32>) -> tensor<64x512xf32> {
+    // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[C0:.*]]= arith.constant 0 : index
+    // CHECK: %[[READ0:.*]] = vector.transfer_read {{.*}}, %[[CST]] {in_bounds = [true, true, true, true]} : tensor<8x8x32x16xf32>, vector<8x8x32x16xf32>
+    // CHECK: %[[SHAPC:.*]] = vector.shape_cast %[[READ0]] : vector<8x8x32x16xf32> to vector<64x512xf32>
+    // CHECK: %[[EMPT:.*]] = tensor.empty() : tensor<64x512xf32>
+    // CHECK: %[[C01:.*]] = arith.constant 0 : index
+    // CHECK: %[[WRIT:.*]] = vector.transfer_write {{.*}}, {{.*}} {in_bounds = [true, true]} : vector<64x512xf32>, tensor<64x512xf32>
+    // CHECK: return %[[WRIT]] : tensor<64x512xf32>
+  %collapsed = tensor.collapse_shape %source [[0, 1], [2, 3]] : tensor<8x8x32x16xf32> into tensor<64x512xf32>
+   return %collapsed : tensor<64x512xf32>
+ }
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.collapse_shape"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  } 
+}
+
+  // -----
+
+ // CHECK-LABEL: func @test_vectorize_expandshape
+func.func @test_vectorize_expandshape(%source: tensor<64x512xf32>, %dest: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
+    // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[C0:.*]]= arith.constant 0 : index
+    // CHECK: %[[C64:.*]] = arith.constant 64 : index
+    // CHECK: %[[C512:.*]] = arith.constant 512 : index
+    // CHECK: %[[MSK0:.*]] = vector.create_mask %[[C64]], %[[C512]] : vector<64x1024xi1>
+    // CHECK: %[[READ0:.*]] = vector.mask %[[MSK0]] {{.*}} : vector<64x1024xi1> -> vector<64x1024xf32>
+    // CHECK: %[[SHAPC:.*]] = vector.shape_cast %[[READ0]] : vector<64x1024xf32> to vector<8x8x32x32xf32>
+    // CHECK: %[[EMPT:.*]] = tensor.empty() : tensor<8x8x32x16xf32>
+    // CHECK: %[[C01:.*]]= arith.constant 0 : index
+    // CHECK: %[[C8:.*]] = arith.constant 8 : index
+    // CHECK: %[[C80:.*]] = arith.constant 8 : index
+    // CHECK: %[[C32:.*]] = arith.constant 32 : index
+    // CHECK: %[[C16:.*]] = arith.constant 16 : index
+    // CHECK: %[[WRITEMSK:.*]] = vector.create_mask %[[C8]], %[[C80]], %[[C32]], %[[C16]] : vector<8x8x32x32xi1>
+    // CHECK: %[[WRIT:.*]] = vector.mask %[[WRITEMSK]] {{.*}} : vector<8x8x32x32xi1> -> tensor<8x8x32x16xf32>
+    // CHECK: return %[[WRIT]] : tensor<8x8x32x16xf32>
+  %expanded = tensor.expand_shape %source [[0, 1], [2, 3]] output_shape [8, 8, 32, 16] : tensor<64x512xf32> into tensor<8x8x32x16xf32>
+   return %expanded : tensor<8x8x32x16xf32>
+ }
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.expand_shape"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 32] : !transform.any_op
+    transform.yield
+  } 
+}
+
+  // -----
+
+ // CHECK-LABEL: func @test_vectorize_collapseshape_no_vector_size
+func.func @test_vectorize_collapseshape_no_vector_size(%source: tensor<64x512xf32>, %dest: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32>{
+    // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[C0:.*]]= arith.constant 0 : index
+    // CHECK: %[[READ0:.*]] = vector.transfer_read {{.*}}, %[[CST]] {in_bounds = [true, true]} : tensor<64x512xf32>, vector<64x512xf32>
+    // CHECK: %[[SHAPC:.*]] = vector.shape_cast %[[READ0]] : vector<64x512xf32> to vector<8x8x32x16xf32>
+    // CHECK: %[[EMPT:.*]] = tensor.empty() :  tensor<8x8x32x16xf32>
+    // CHECK: %[[C01:.*]] = arith.constant 0 : index
+    // CHECK: %[[WRIT:.*]] = vector.transfer_write {{.*}}, {{.*}} {in_bounds = [true, true, true, true]} : vector<8x8x32x16xf32>, tensor<8x8x32x16xf32>
+    // CHECK: return %[[WRIT]] : tensor<8x8x32x16xf32>
+    %expanded = tensor.expand_shape %source [[0, 1], [2, 3]] output_shape [8, 8, 32, 16] : tensor<64x512xf32> into tensor<8x8x32x16xf32>
+   return %expanded : tensor<8x8x32x16xf32>
+ }
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.expand_shape"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  } 
+}
+
+  // -----
+
+ // CHECK-LABEL: func @test_vectorize_bitcast
+func.func @test_vectorize_bitcast(%source: tensor<64x512xi32>) -> tensor<64x512xf32> {
+    // CHECK: %[[C0i32:.*]] = arith.constant 0 : i32
+    // CHECK: %[[C0:.*]]= arith.constant 0 : index
+    // CHECK: %[[C64:.*]] = arith.constant 64 : index
+    // CHECK: %[[C512:.*]] = arith.constant 512 : index
+    // CHECK: %[[MSK0:.*]] = vector.create_mask %[[C64]], %[[C512]] : vector<64x1024xi1>
+    // CHECK: %[[READ0:.*]] = vector.mask %[[MSK0]] {{.*}} : vector<64x1024xi1> -> vector<64x1024xi32>
+    // CHECK: %[[CAST:.*]] = vector.bitcast %[[READ0]] : vector<64x1024xi32> to vector<64x1024xf32>
+    // CHECK: %[[EMPT:.*]] = tensor.empty() : tensor<64x512xf32>
+    // CHECK: %[[C00:.*]]= arith.constant 0 : index
+    // CHECK: %[[C641:.*]] = arith.constant 64 : index
+    // CHECK: %[[C5121:.*]] = arith.constant 512 : index
+    // CHECK: %[[WRITEMSK:.*]] = vector.create_mask %[[C641]], %[[C5121]] : vector<64x1024xi1>
+    // CHECK: %[[WRIT:.*]] = vector.mask %[[WRITEMSK]] {{.*}} : vector<64x1024xi1> -> tensor<64x512xf32>
+    // CHECK: return %[[WRIT]] : tensor<64x512xf32>
+  %0 = tensor.bitcast %source : tensor<64x512xi32> to tensor<64x512xf32>
+  return %0 : tensor<64x512xf32>
+ }
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.bitcast"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [64, 1024] : !transform.any_op
+    transform.yield
+  } 
+}
+
+  // -----
+
+ // CHECK-LABEL: func @test_vectorize_bitcast_no_vector_size
+func.func @test_vectorize_bitcast_no_vector_size(%source: tensor<64x512xi32>) -> tensor<64x512xf32> {
+    // CHECK: %[[C0i32:.*]] = arith.constant 0 : i32
+    // CHECK: %[[C0:.*]]= arith.constant 0 : index
+    // CHECK: %[[READ0:.*]] = vector.transfer_read {{.*}}, %[[C0i32]] {in_bounds = [true, true]} : tensor<64x512xi32>, vector<64x512xi32>
+    // CHECK: %[[CAST:.*]] = vector.bitcast %[[READ0]] : vector<64x512xi32> to vector<64x512xf32>
+    // CHECK: %[[EMPT:.*]] = tensor.empty() :  tensor<64x512xf32>
+    // CHECK: %[[C00:.*]] = arith.constant 0 : index
+    // CHECK: %[[WRIT:.*]] = vector.transfer_write {{.*}}, {{.*}} {in_bounds = [true, true]} : vector<64x512xf32>, tensor<64x512xf32>
+    // CHECK: return %[[WRIT]] : tensor<64x512xf32>
+  %0 = tensor.bitcast %source : tensor<64x512xi32> to tensor<64x512xf32>
+  return %0 : tensor<64x512xf32>
+ }
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.bitcast"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  } 
+}
+
+  // -----
+
+ // CHECK-LABEL: func @test_vectorize_concat_no_vector_size
+func.func @test_vectorize_concat_no_vector_size(%arg0: tensor<64x512xf32>, %arg1:tensor<64x512xf32>) -> tensor<64x1024xf32> {
+    // CHECK: %[[EMPT:.*]] = tensor.empty() : tensor<64x1024xf32>
+    // CHECK: %[[C1:.*]]= arith.constant 1 : index
+    // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[C0:.*]]= arith.constant 0 : index
+    // CHECK: %[[C0_0:.*]]= arith.constant 0 : index
+    // CHECK: %[[READ0:.*]] = vector.transfer_read {{.*}}, %[[CST]] {in_bounds = [true, true]} : tensor<64x512xf32>, vector<64x512xf32>
+    // CHECK: %[[C0_1:.*]]= arith.constant 0 : index
+    // CHECK: %[[WRIT0:.*]] = vector.transfer_write %[[READ0]], %[[EMPT]][{{.*}}, {{.*}}] : vector<64x512xf32>, tensor<64x1024xf32>
+    // CHECK: %[[DIM:.*]] = tensor.dim {{.*}}, {{.*}} : tensor<64x512xf32>
+    // CHECK: %[[ADD:.*]] = arith.addi %[[DIM]], {{.*}} : index
+    // CHECK: %[[C0_2:.*]]= arith.constant 0 : index
+    // CHECK: %[[READ1:.*]] = vector.transfer_read {{.*}}, %[[CST]] {in_bounds = [true, true]} : tensor<64x512xf32>, vector<64x512xf32>
+    // CHECK: %[[C0_3:.*]]= arith.constant 0 : index
+    // CHECK: %[[WRIT1:.*]] = vector.transfer_write %[[READ1]], %[[WRIT0]][{{.*}}, {{.*}}] : vector<64x512xf32>, tensor<64x1024xf32>
+    // CHECK: return %[[WRIT1]] : tensor<64x1024xf32>
+  %0 = tensor.concat dim(1) %arg0, %arg1
+             : (tensor<64x512xf32>, tensor<64x512xf32>) -> tensor<64x1024xf32>
+  return %0 : tensor<64x1024xf32>
+ }
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.concat"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  } 
+}
+
