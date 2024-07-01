@@ -9361,9 +9361,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     assert(Offset < NumElts && "Failed to find vector index offset");
 
     InstructionCost Cost = 0;
-    Cost -= TTI->getScalarizationOverhead(SrcVecTy, DemandedElts,
-                                          /*Insert*/ true, /*Extract*/ false,
-                                          CostKind);
+    Cost -= TTI->getBuildVectorCost(SrcVecTy, DemandedElts, CostKind);
 
     // First cost - resize to actual vector size if not identity shuffle or
     // need to shift the vector.
@@ -10542,9 +10540,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         MutableArrayRef(Vector.data(), Vector.size()), Base,
         [](const TreeEntry *E) { return E->getVectorFactor(); }, ResizeToVF,
         EstimateShufflesCost);
-    InstructionCost InsertCost = TTI->getScalarizationOverhead(
+    InstructionCost InsertCost = TTI->getBuildVectorCost(
         cast<FixedVectorType>(FirstUsers[I].first->getType()), DemandedElts[I],
-        /*Insert*/ true, /*Extract*/ false, TTI::TCK_RecipThroughput);
+        TTI::TCK_RecipThroughput);
     Cost -= InsertCost;
   }
 
@@ -11219,9 +11217,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffleMask[I] = Res.first->second;
   }
   if (ForPoisonSrc)
-    Cost =
-        TTI->getScalarizationOverhead(VecTy, ~ShuffledElements, /*Insert*/ true,
-                                      /*Extract*/ false, CostKind);
+    Cost = TTI->getBuildVectorCost(VecTy, ~ShuffledElements, CostKind);
   if (DuplicateNonConst)
     Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                 VecTy, ShuffleMask);
