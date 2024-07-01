@@ -20,14 +20,14 @@ define amdgpu_kernel void @add1(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX9-LABEL: add1:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -103,14 +103,14 @@ define amdgpu_kernel void @sub1(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX9-LABEL: sub1:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -450,15 +450,15 @@ define amdgpu_kernel void @add_and(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX9-LABEL: add_and:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_max_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -493,14 +493,14 @@ define amdgpu_kernel void @cmp_sub_sext(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX9-LABEL: cmp_sub_sext:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -533,14 +533,14 @@ define amdgpu_kernel void @cmp_sub_zext(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX9-LABEL: cmp_sub_zext:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()

@@ -289,28 +289,28 @@ define amdgpu_kernel void @lds_ds_fmin(ptr addrspace(5) %out, ptr addrspace(3) %
 ; G_GFX10-LABEL: lds_ds_fmin:
 ; G_GFX10:       ; %bb.0:
 ; G_GFX10-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; G_GFX10-NEXT:    s_mov_b32 s4, SCRATCH_RSRC_DWORD0
-; G_GFX10-NEXT:    s_mov_b32 s5, SCRATCH_RSRC_DWORD1
-; G_GFX10-NEXT:    s_mov_b32 s6, -1
-; G_GFX10-NEXT:    s_mov_b32 s7, 0x31c16000
-; G_GFX10-NEXT:    s_add_u32 s4, s4, s3
-; G_GFX10-NEXT:    s_addc_u32 s5, s5, 0
-; G_GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; G_GFX10-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
+; G_GFX10-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
+; G_GFX10-NEXT:    s_mov_b32 s10, -1
+; G_GFX10-NEXT:    s_mov_b32 s11, 0x31c16000
+; G_GFX10-NEXT:    s_add_u32 s8, s8, s3
+; G_GFX10-NEXT:    s_addc_u32 s9, s9, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, 0x42280000
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX10-NEXT:    s_add_i32 s2, s2, 4
-; G_GFX10-NEXT:    s_lshl_b32 s3, s2, 3
-; G_GFX10-NEXT:    s_lshl_b32 s2, s2, 4
-; G_GFX10-NEXT:    v_mov_b32_e32 v0, s3
-; G_GFX10-NEXT:    v_mov_b32_e32 v2, s2
-; G_GFX10-NEXT:    v_mov_b32_e32 v3, s1
+; G_GFX10-NEXT:    s_add_i32 s4, s2, 4
+; G_GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; G_GFX10-NEXT:    s_lshl_b32 s5, s4, 3
+; G_GFX10-NEXT:    s_lshl_b32 s0, s4, 4
+; G_GFX10-NEXT:    v_mov_b32_e32 v0, s5
+; G_GFX10-NEXT:    v_mov_b32_e32 v2, s0
 ; G_GFX10-NEXT:    ds_min_rtn_f32 v0, v0, v1
-; G_GFX10-NEXT:    ds_min_f32 v2, v1
-; G_GFX10-NEXT:    s_waitcnt lgkmcnt(1)
-; G_GFX10-NEXT:    ds_min_rtn_f32 v0, v3, v0
-; G_GFX10-NEXT:    v_mov_b32_e32 v1, s0
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX10-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; G_GFX10-NEXT:    v_mov_b32_e32 v3, s3
+; G_GFX10-NEXT:    ds_min_f32 v2, v1
+; G_GFX10-NEXT:    ds_min_rtn_f32 v0, v3, v0
+; G_GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX10-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen
 ; G_GFX10-NEXT:    s_endpgm
 ;
 ; G_GFX11-LABEL: lds_ds_fmin:
@@ -615,28 +615,28 @@ define amdgpu_kernel void @lds_ds_fmax(ptr addrspace(5) %out, ptr addrspace(3) %
 ; G_GFX10-LABEL: lds_ds_fmax:
 ; G_GFX10:       ; %bb.0:
 ; G_GFX10-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; G_GFX10-NEXT:    s_mov_b32 s4, SCRATCH_RSRC_DWORD0
-; G_GFX10-NEXT:    s_mov_b32 s5, SCRATCH_RSRC_DWORD1
-; G_GFX10-NEXT:    s_mov_b32 s6, -1
-; G_GFX10-NEXT:    s_mov_b32 s7, 0x31c16000
-; G_GFX10-NEXT:    s_add_u32 s4, s4, s3
-; G_GFX10-NEXT:    s_addc_u32 s5, s5, 0
-; G_GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; G_GFX10-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
+; G_GFX10-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
+; G_GFX10-NEXT:    s_mov_b32 s10, -1
+; G_GFX10-NEXT:    s_mov_b32 s11, 0x31c16000
+; G_GFX10-NEXT:    s_add_u32 s8, s8, s3
+; G_GFX10-NEXT:    s_addc_u32 s9, s9, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, 0x42280000
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX10-NEXT:    s_add_i32 s2, s2, 4
-; G_GFX10-NEXT:    s_lshl_b32 s3, s2, 3
-; G_GFX10-NEXT:    s_lshl_b32 s2, s2, 4
-; G_GFX10-NEXT:    v_mov_b32_e32 v0, s3
-; G_GFX10-NEXT:    v_mov_b32_e32 v2, s2
-; G_GFX10-NEXT:    v_mov_b32_e32 v3, s1
+; G_GFX10-NEXT:    s_add_i32 s4, s2, 4
+; G_GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; G_GFX10-NEXT:    s_lshl_b32 s5, s4, 3
+; G_GFX10-NEXT:    s_lshl_b32 s0, s4, 4
+; G_GFX10-NEXT:    v_mov_b32_e32 v0, s5
+; G_GFX10-NEXT:    v_mov_b32_e32 v2, s0
 ; G_GFX10-NEXT:    ds_max_rtn_f32 v0, v0, v1
-; G_GFX10-NEXT:    ds_max_f32 v2, v1
-; G_GFX10-NEXT:    s_waitcnt lgkmcnt(1)
-; G_GFX10-NEXT:    ds_max_rtn_f32 v0, v3, v0
-; G_GFX10-NEXT:    v_mov_b32_e32 v1, s0
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX10-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
+; G_GFX10-NEXT:    v_mov_b32_e32 v3, s3
+; G_GFX10-NEXT:    ds_max_f32 v2, v1
+; G_GFX10-NEXT:    ds_max_rtn_f32 v0, v3, v0
+; G_GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX10-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen
 ; G_GFX10-NEXT:    s_endpgm
 ;
 ; G_GFX11-LABEL: lds_ds_fmax:

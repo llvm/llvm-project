@@ -42,25 +42,25 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ;
 ; GFX9-LABEL: test_simple_indirect_call:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x4
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x4
 ; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX9-NEXT:    s_add_u32 s0, s0, s15
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b32 s4, s4, 16
-; GFX9-NEXT:    s_mul_i32 s4, s4, s5
+; GFX9-NEXT:    s_lshr_b32 s4, s6, 16
+; GFX9-NEXT:    s_mul_i32 s4, s4, s7
 ; GFX9-NEXT:    v_mul_lo_u32 v0, s4, v0
-; GFX9-NEXT:    s_getpc_b64 s[6:7]
-; GFX9-NEXT:    s_add_u32 s6, s6, indirect@rel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s7, s7, indirect@rel32@hi+12
-; GFX9-NEXT:    v_mov_b32_e32 v3, s6
-; GFX9-NEXT:    v_mov_b32_e32 v4, s7
-; GFX9-NEXT:    v_mad_u32_u24 v0, v1, s5, v0
+; GFX9-NEXT:    s_getpc_b64 s[4:5]
+; GFX9-NEXT:    s_add_u32 s4, s4, indirect@rel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s5, s5, indirect@rel32@hi+12
+; GFX9-NEXT:    v_mov_b32_e32 v3, s4
+; GFX9-NEXT:    v_mov_b32_e32 v4, s5
+; GFX9-NEXT:    v_mad_u32_u24 v0, v1, s7, v0
 ; GFX9-NEXT:    v_add_lshl_u32 v0, v0, v2, 3
 ; GFX9-NEXT:    s_mov_b32 s32, 0
 ; GFX9-NEXT:    ds_write_b64 v0, v[3:4]
-; GFX9-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %fptr = alloca ptr, addrspace(5)
   %fptr.cast = addrspacecast ptr addrspace(5) %fptr to ptr

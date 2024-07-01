@@ -519,11 +519,11 @@ define amdgpu_kernel void @byref_kernel_preload_arg(ptr addrspace(1) %out, ptr a
 ; GFX940-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
 ; GFX940-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
 ; GFX940-PRELOAD-2-NEXT:  ; %bb.0:
-; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x100
+; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x100
 ; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s0
-; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s1
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s4
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-2-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v2, s[2:3] sc0 sc1
@@ -534,11 +534,11 @@ define amdgpu_kernel void @byref_kernel_preload_arg(ptr addrspace(1) %out, ptr a
 ; GFX940-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
 ; GFX940-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
 ; GFX940-PRELOAD-8-NEXT:  ; %bb.0:
-; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x100
+; GFX940-PRELOAD-8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x100
 ; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s0
-; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s1
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s4
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-PRELOAD-8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v2, s[2:3] sc0 sc1

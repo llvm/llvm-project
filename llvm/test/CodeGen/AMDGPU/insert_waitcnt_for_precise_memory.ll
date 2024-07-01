@@ -907,12 +907,12 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:  .LBB7_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -936,12 +936,12 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:  .LBB7_2:
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX90A-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
-; GFX90A-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX90A-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX90A-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX90A-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_endpgm
 ;
@@ -966,12 +966,12 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX10-NEXT:  .LBB7_2:
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -995,12 +995,12 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX9-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-NEXT:  .LBB7_2:
 ; GFX9-FLATSCR-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX9-FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-FLATSCR-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLATSCR-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX9-FLATSCR-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX9-FLATSCR-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX9-FLATSCR-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:    s_endpgm
 ;
@@ -1095,12 +1095,12 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB8_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -1123,12 +1123,12 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:  .LBB8_2:
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX90A-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
-; GFX90A-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX90A-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX90A-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX90A-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_endpgm
 ;
@@ -1151,12 +1151,12 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX10-NEXT:  .LBB8_2:
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -1179,12 +1179,12 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:  .LBB8_2:
 ; GFX9-FLATSCR-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX9-FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-FLATSCR-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLATSCR-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX9-FLATSCR-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
-; GFX9-FLATSCR-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, v0, 5, s0
+; GFX9-FLATSCR-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:    s_endpgm
 ;

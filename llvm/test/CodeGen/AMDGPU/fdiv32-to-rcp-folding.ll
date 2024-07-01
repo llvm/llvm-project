@@ -5,28 +5,28 @@
 define amdgpu_kernel void @div_1_by_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_1_by_x_25ulp:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v0, s2
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v0, s0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s0
 ; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v2
 ; GCN-DENORM-NEXT:    v_ldexp_f32 v0, v0, v2
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_1_by_x_25ulp:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v0, s2
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v0, s0
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float 1.000000e+00, %load, !fpmath !0
@@ -37,28 +37,28 @@ define amdgpu_kernel void @div_1_by_x_25ulp(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_minus_1_by_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_minus_1_by_x_25ulp:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v0, -s2
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v0, -s0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s0
 ; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v2
 ; GCN-DENORM-NEXT:    v_ldexp_f32 v0, v0, v2
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_minus_1_by_x_25ulp:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_rcp_f32_e64 v0, -s2
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    v_rcp_f32_e64 v0, -s0
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float -1.000000e+00, %load, !fpmath !0
@@ -69,28 +69,28 @@ define amdgpu_kernel void @div_minus_1_by_x_25ulp(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_1_by_minus_x_25ulp:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v0, -s2
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v0, -s0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s0
 ; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v2
 ; GCN-DENORM-NEXT:    v_ldexp_f32 v0, v0, v2
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_1_by_minus_x_25ulp:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_rcp_f32_e64 v0, -s2
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    v_rcp_f32_e64 v0, -s0
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fneg float %load
@@ -102,28 +102,28 @@ define amdgpu_kernel void @div_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_minus_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_minus_1_by_minus_x_25ulp:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v0, s2
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v0, s0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s0
 ; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v2
 ; GCN-DENORM-NEXT:    v_ldexp_f32 v0, v0, v2
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_minus_1_by_minus_x_25ulp:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v0, s2
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v0, s0
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load
@@ -512,13 +512,13 @@ define amdgpu_kernel void @div_v_by_x_25ulp(ptr addrspace(1) %arg, float %num) {
 define amdgpu_kernel void @div_1_by_x_fast(ptr addrspace(1) %arg) {
 ; GCN-LABEL: div_1_by_x_fast:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_rcp_f32_e32 v0, s2
-; GCN-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-NEXT:    v_rcp_f32_e32 v0, s0
+; GCN-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv fast float 1.000000e+00, %load, !fpmath !0
@@ -529,25 +529,25 @@ define amdgpu_kernel void @div_1_by_x_fast(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_minus_1_by_x_fast(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_minus_1_by_x_fast:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_rcp_f32_e64 v0, -s2
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    v_rcp_f32_e64 v0, -s0
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_minus_1_by_x_fast:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v0, s2
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v0, s0
 ; GCN-FLUSH-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv fast float -1.000000e+00, %load, !fpmath !0
@@ -558,13 +558,13 @@ define amdgpu_kernel void @div_minus_1_by_x_fast(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_1_by_minus_x_fast(ptr addrspace(1) %arg) {
 ; GCN-LABEL: div_1_by_minus_x_fast:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_rcp_f32_e64 v0, -s2
-; GCN-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-NEXT:    v_rcp_f32_e64 v0, -s0
+; GCN-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fneg float %load, !fpmath !0
@@ -576,25 +576,25 @@ define amdgpu_kernel void @div_1_by_minus_x_fast(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_minus_1_by_minus_x_fast(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_minus_1_by_minus_x_fast:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v0, s2
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v0, s0
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_minus_1_by_minus_x_fast:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_rcp_f32_e64 v0, -s2
+; GCN-FLUSH-NEXT:    v_rcp_f32_e64 v0, -s0
 ; GCN-FLUSH-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load, !fpmath !0
@@ -606,11 +606,11 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_fast(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_1_by_x_correctly_rounded(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_1_by_x_correctly_rounded:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[2:3], s4, s4, 1.0
+; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, 1.0
 ; GCN-DENORM-NEXT:    v_div_scale_f32 v1, vcc, 1.0, s4, 1.0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-DENORM-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
@@ -622,16 +622,16 @@ define amdgpu_kernel void @div_1_by_x_correctly_rounded(ptr addrspace(1) %arg) {
 ; GCN-DENORM-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    v_div_fixup_f32 v0, v0, s4, 1.0
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_1_by_x_correctly_rounded:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[2:3], s4, s4, 1.0
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, 1.0
 ; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, vcc, 1.0, s4, 1.0
 ; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
@@ -645,7 +645,7 @@ define amdgpu_kernel void @div_1_by_x_correctly_rounded(ptr addrspace(1) %arg) {
 ; GCN-FLUSH-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v0, s4, 1.0
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float 1.000000e+00, %load
@@ -656,11 +656,11 @@ define amdgpu_kernel void @div_1_by_x_correctly_rounded(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_minus_1_by_x_correctly_rounded(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_minus_1_by_x_correctly_rounded:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[2:3], s4, s4, -1.0
+; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, -1.0
 ; GCN-DENORM-NEXT:    v_div_scale_f32 v1, vcc, -1.0, s4, -1.0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-DENORM-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
@@ -672,16 +672,16 @@ define amdgpu_kernel void @div_minus_1_by_x_correctly_rounded(ptr addrspace(1) %
 ; GCN-DENORM-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    v_div_fixup_f32 v0, v0, s4, -1.0
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_minus_1_by_x_correctly_rounded:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[2:3], s4, s4, -1.0
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, -1.0
 ; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, vcc, -1.0, s4, -1.0
 ; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
@@ -695,7 +695,7 @@ define amdgpu_kernel void @div_minus_1_by_x_correctly_rounded(ptr addrspace(1) %
 ; GCN-FLUSH-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v0, s4, -1.0
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float -1.000000e+00, %load
@@ -706,11 +706,11 @@ define amdgpu_kernel void @div_minus_1_by_x_correctly_rounded(ptr addrspace(1) %
 define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_1_by_minus_x_correctly_rounded:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[2:3], s4, s4, -1.0
+; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, -1.0
 ; GCN-DENORM-NEXT:    v_div_scale_f32 v1, vcc, -1.0, s4, -1.0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-DENORM-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
@@ -722,16 +722,16 @@ define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(ptr addrspace(1) %
 ; GCN-DENORM-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    v_div_fixup_f32 v0, v0, s4, -1.0
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_1_by_minus_x_correctly_rounded:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[2:3], -s4, -s4, 1.0
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[0:1], -s4, -s4, 1.0
 ; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, vcc, 1.0, -s4, 1.0
 ; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
@@ -745,7 +745,7 @@ define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(ptr addrspace(1) %
 ; GCN-FLUSH-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v0, -s4, 1.0
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load
@@ -757,11 +757,11 @@ define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(ptr addrspace(1) %
 define amdgpu_kernel void @div_minus_1_by_minus_x_correctly_rounded(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_minus_1_by_minus_x_correctly_rounded:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[2:3], s4, s4, 1.0
+; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, 1.0
 ; GCN-DENORM-NEXT:    v_div_scale_f32 v1, vcc, 1.0, s4, 1.0
 ; GCN-DENORM-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-DENORM-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
@@ -773,16 +773,16 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_correctly_rounded(ptr addrspac
 ; GCN-DENORM-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DENORM-NEXT:    v_div_fixup_f32 v0, v0, s4, 1.0
-; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-DENORM-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_minus_1_by_minus_x_correctly_rounded:
 ; GCN-FLUSH:       ; %bb.0:
-; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[2:3], -s4, -s4, -1.0
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[0:1], -s4, -s4, -1.0
 ; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, vcc, -1.0, -s4, -1.0
 ; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
@@ -796,7 +796,7 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_correctly_rounded(ptr addrspac
 ; GCN-FLUSH-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v0, -s4, -1.0
-; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load

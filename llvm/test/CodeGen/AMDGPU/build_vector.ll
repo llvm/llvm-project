@@ -52,12 +52,12 @@ define amdgpu_kernel void @build_vector2 (ptr addrspace(1) %out) {
 ;
 ; GFX940-LABEL: build_vector2:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX940-NEXT:    v_mov_b32_e32 v1, 6
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 entry:
   store <2 x i32> <i32 5, i32 6>, ptr addrspace(1) %out
@@ -119,14 +119,14 @@ define amdgpu_kernel void @build_vector4 (ptr addrspace(1) %out) {
 ;
 ; GFX940-LABEL: build_vector4:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX940-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX940-NEXT:    v_mov_b32_e32 v1, 6
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 7
 ; GFX940-NEXT:    v_mov_b32_e32 v3, 8
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX940-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 entry:
   store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr addrspace(1) %out
@@ -176,11 +176,11 @@ define amdgpu_kernel void @build_vector_v2i16 (ptr addrspace(1) %out) {
 ;
 ; GFX940-LABEL: build_vector_v2i16:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-NEXT:    v_mov_b32_e32 v1, 0x60005
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX940-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 entry:
   store <2 x i16> <i16 5, i16 6>, ptr addrspace(1) %out

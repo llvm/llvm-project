@@ -36,7 +36,7 @@ define amdgpu_kernel void @ds_combine_nodep(ptr addrspace(1) %out, ptr addrspace
 ; GCN-LABEL: {{^}}ds_combine_WAR
 
 ; GCN:      ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:7 offset1:27
-; GCN-NEXT: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
+; GCN: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 define amdgpu_kernel void @ds_combine_WAR(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
 
   %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 100

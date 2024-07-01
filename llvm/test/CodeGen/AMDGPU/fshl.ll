@@ -534,29 +534,29 @@ define amdgpu_kernel void @fshl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ;
 ; GFX10-LABEL: fshl_v4i32:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x34
 ; GFX10-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x54
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_alignbit_b32 v0, s7, s11, 1
 ; GFX10-NEXT:    v_alignbit_b32 v1, s6, s10, 1
 ; GFX10-NEXT:    v_alignbit_b32 v5, s5, s9, 1
 ; GFX10-NEXT:    v_alignbit_b32 v6, s4, s8, 1
-; GFX10-NEXT:    s_lshr_b32 s2, s7, 1
-; GFX10-NEXT:    s_not_b32 s3, s15
+; GFX10-NEXT:    s_lshr_b32 s0, s7, 1
+; GFX10-NEXT:    s_not_b32 s1, s15
 ; GFX10-NEXT:    s_lshr_b32 s6, s6, 1
 ; GFX10-NEXT:    s_not_b32 s7, s14
 ; GFX10-NEXT:    s_lshr_b32 s5, s5, 1
 ; GFX10-NEXT:    s_not_b32 s9, s13
 ; GFX10-NEXT:    s_lshr_b32 s4, s4, 1
 ; GFX10-NEXT:    s_not_b32 s8, s12
-; GFX10-NEXT:    v_alignbit_b32 v3, s2, v0, s3
+; GFX10-NEXT:    v_alignbit_b32 v3, s0, v0, s1
 ; GFX10-NEXT:    v_alignbit_b32 v2, s6, v1, s7
 ; GFX10-NEXT:    v_alignbit_b32 v1, s5, v5, s9
 ; GFX10-NEXT:    v_alignbit_b32 v0, s4, v6, s8
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fshl_v4i32:
@@ -633,8 +633,8 @@ define amdgpu_kernel void @fshl_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4
 ; GFX9-LABEL: fshl_v4i32_imm:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x34
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s11
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s10
@@ -644,7 +644,7 @@ define amdgpu_kernel void @fshl_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4
 ; GFX9-NEXT:    v_alignbit_b32 v1, s5, v0, 25
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX9-NEXT:    v_alignbit_b32 v0, s4, v0, 31
-; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
+; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; R600-LABEL: fshl_v4i32_imm:

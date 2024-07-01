@@ -113,9 +113,9 @@ bb1:
 define amdgpu_kernel void @brcond_sgpr_trunc_and(i32 %cond0, i32 %cond1) {
 ; WAVE64-LABEL: brcond_sgpr_trunc_and:
 ; WAVE64:       ; %bb.0: ; %entry
-; WAVE64-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; WAVE64-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; WAVE64-NEXT:    s_waitcnt lgkmcnt(0)
-; WAVE64-NEXT:    s_and_b32 s0, s0, s1
+; WAVE64-NEXT:    s_and_b32 s0, s2, s3
 ; WAVE64-NEXT:    s_xor_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_cmp_lg_u32 s0, 0

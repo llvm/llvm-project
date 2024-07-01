@@ -119,13 +119,13 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX9-LABEL: kernel_fpmode_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX9-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 24)
-; GFX9-NEXT:    s_and_b32 s2, 0x87f3ff, s2
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 24)
+; GFX9-NEXT:    s_and_b32 s0, 0x87f3ff, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: kernel_fpmode_i32:

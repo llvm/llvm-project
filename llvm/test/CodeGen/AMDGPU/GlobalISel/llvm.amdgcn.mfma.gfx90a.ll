@@ -353,8 +353,8 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GCN-LABEL: test_mfma_f64_16x16x4f64_splat_lit:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GCN-NEXT:    s_mov_b32 s4, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GCN-NEXT:    s_mov_b32 s5, 0x405ec000
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -369,7 +369,7 @@ define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_lit(ptr addrspace(1) %
 ; GCN-NEXT:    v_accvgpr_write_b32 a5, s9
 ; GCN-NEXT:    v_accvgpr_write_b32 a6, s10
 ; GCN-NEXT:    v_accvgpr_write_b32 a7, s11
-; GCN-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
+; GCN-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0

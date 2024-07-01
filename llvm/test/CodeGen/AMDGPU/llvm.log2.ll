@@ -111,17 +111,18 @@ define amdgpu_kernel void @s_log2_f32(ptr addrspace(1) %out, float %in) {
 ; GFX900-GISEL-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0x4f800000
-; GFX900-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v0, 1.0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_mul_f32_e32 v0, s2, v0
 ; GFX900-GISEL-NEXT:    v_log_f32_e32 v0, v0
+; GFX900-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0x42000000
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX900-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-GISEL-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GFX900-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1100-SDAG-LABEL: s_log2_f32:
