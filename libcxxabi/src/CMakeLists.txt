@@ -184,8 +184,7 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
 endif()
 target_compile_options(cxxabi_shared_objects PUBLIC "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
-if (LIBCXXABI_ENABLE_SHARED)
-  add_library(cxxabi_shared SHARED)
+  add_library(cxxabi_shared SHARED $<$<NOT:$<BOOL:LIBCXXABI_ENABLE_SHARED>>:EXCLUDE_FROM_ALL>)
   set_target_properties(cxxabi_shared
     PROPERTIES
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
@@ -208,10 +207,12 @@ if (LIBCXXABI_ENABLE_SHARED)
     PUBLIC cxxabi_shared_objects
     PRIVATE ${LIBCXXABI_LIBRARIES})
 
+if (LIBCXXABI_ENABLE_SHARED)
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
-  if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
-    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
-  endif()
+endif()
+if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
+  list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
+endif()
 
   add_library(cxxabi-reexports INTERFACE)
   function(reexport_symbols file)
@@ -244,7 +245,6 @@ if (LIBCXXABI_ENABLE_SHARED)
       reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
     endif()
   endif()
-endif()
 
 # Build the static library.
 add_library(cxxabi_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
@@ -284,8 +284,7 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
       _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
 endif()
 
-if (LIBCXXABI_ENABLE_STATIC)
-  add_library(cxxabi_static STATIC)
+  add_library(cxxabi_static STATIC $<$<NOT:$<BOOL:LIBCXXABI_ENABLE_STATIC>>:EXCLUDE_FROM_ALL>)
   if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
     target_link_libraries(cxxabi_static PUBLIC unwind_static)
   endif()
@@ -298,10 +297,11 @@ if (LIBCXXABI_ENABLE_STATIC)
     PUBLIC cxxabi_static_objects
     PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 
+if (LIBCXXABI_ENABLE_STATIC)
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
-  if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
-    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
-  endif()
+endif()
+if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
+  list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
 endif()
 
 # Add a meta-target for both libraries.
