@@ -2252,37 +2252,10 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
     // there wasn't an equivalent module in the list already, and if there was,
     // let's remove it.
     if (module_sp) {
-      ObjectFile *objfile = module_sp->GetObjectFile();
-      if (objfile) {
-        switch (objfile->GetType()) {
-        case ObjectFile::eTypeCoreFile: /// A core file that has a checkpoint of
-                                        /// a program's execution state
-        case ObjectFile::eTypeExecutable:    /// A normal executable
-        case ObjectFile::eTypeDynamicLinker: /// The platform's dynamic linker
-                                             /// executable
-        case ObjectFile::eTypeObjectFile:    /// An intermediate object file
-        case ObjectFile::eTypeSharedLibrary: /// A shared library that can be
-                                             /// used during execution
-          break;
-        case ObjectFile::eTypeDebugInfo: /// An object file that contains only
-                                         /// debug information
-          if (error_ptr)
-            error_ptr->SetErrorString("debug info files aren't valid target "
-                                      "modules, please specify an executable");
+      if (ObjectFile *objfile = module_sp->GetObjectFile()) {
+        if (!objfile->CanBeTargetModule(error_ptr))
           return ModuleSP();
-        case ObjectFile::eTypeStubLibrary: /// A library that can be linked
-                                           /// against but not used for
-                                           /// execution
-          if (error_ptr)
-            error_ptr->SetErrorString("stub libraries aren't valid target "
-                                      "modules, please specify an executable");
-          return ModuleSP();
-        default:
-          if (error_ptr)
-            error_ptr->SetErrorString(
-                "unsupported file type, please specify an executable");
-          return ModuleSP();
-        }
+
         // GetSharedModule is not guaranteed to find the old shared module, for
         // instance in the common case where you pass in the UUID, it is only
         // going to find the one module matching the UUID.  In fact, it has no

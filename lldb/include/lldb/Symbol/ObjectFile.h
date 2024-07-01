@@ -698,6 +698,10 @@ public:
   /// file to be complete.
   virtual bool CanTrustAddressRanges() { return false; }
 
+  /// Can this object file serve as a valid target module. If a Status is passed
+  /// and the answer is no, it will be populated with the reason.
+  virtual bool CanBeTargetModule(Status *status = nullptr);
+
   static lldb::SymbolType GetSymbolTypeFromName(
       llvm::StringRef name,
       lldb::SymbolType symbol_type_hint = lldb::eSymbolTypeUndefined);
