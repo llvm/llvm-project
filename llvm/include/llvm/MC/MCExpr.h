@@ -54,7 +54,6 @@ private:
   SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                          const MCAsmLayout *Layout,
                           const SectionAddrMap *Addrs, bool InSet) const;
 
 protected:
@@ -101,7 +100,6 @@ public:
   bool evaluateAsAbsolute(int64_t &Res) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
-  bool evaluateAsAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
 
   bool evaluateKnownAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
 

@@ -278,7 +278,7 @@ bool RISCVAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
   [[maybe_unused]] bool IsAbsolute =
       AddrDelta.evaluateKnownAbsolute(Value, Layout);
