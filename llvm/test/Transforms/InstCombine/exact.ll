@@ -82,8 +82,8 @@ define i32 @udiv1(i32 %x, i32 %w) {
 
 define i32 @udiv2(i32 %x, i32 %w) {
 ; CHECK-LABEL: @udiv2(
-; CHECK-NEXT:    [[Z1:%.*]] = lshr exact i32 [[X:%.*]], [[W:%.*]]
-; CHECK-NEXT:    ret i32 [[Z1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %y = shl i32 1, %w
   %z = udiv exact i32 %x, %y

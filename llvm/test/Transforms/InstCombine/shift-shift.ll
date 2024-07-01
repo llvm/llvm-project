@@ -345,8 +345,8 @@ define <3 x i8> @shl_shl_constants_vec(<3 x i8> %x) {
 ; PR9809
 define i32 @shl_shl_constants_div(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl_shl_constants_div(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], 2
-; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i32 [[DIV1]]
 ;
   %shl1 = shl i32 1, %b

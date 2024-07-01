@@ -51,8 +51,8 @@ define <4 x i32> @test_v4i32_negconst_undef(<4 x i32> %a0) {
 ; X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
 define <4 x i32> @test_v4i32_shl_splatconst_pow2(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @test_v4i32_shl_splatconst_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A1:%.*]], <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[A0:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = shl <4 x i32> <i32 4, i32 4, i32 4, i32 4>, %a1
@@ -62,8 +62,8 @@ define <4 x i32> @test_v4i32_shl_splatconst_pow2(<4 x i32> %a0, <4 x i32> %a1) {
 
 define <4 x i32> @test_v4i32_shl_const_pow2(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @test_v4i32_shl_const_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A1:%.*]], <i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[A0:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], <i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = shl <4 x i32> <i32 4, i32 8, i32 16, i32 32>, %a1
