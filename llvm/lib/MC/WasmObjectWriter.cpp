@@ -293,15 +293,15 @@ private:
 
   void writeHeader(const MCAssembler &Asm);
 
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override;
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
   void prepareImports(SmallVectorImpl<wasm::WasmImport> &Imports,
                       MCAssembler &Asm, const MCAsmLayout &Layout);
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 
   uint64_t writeOneObject(MCAssembler &Asm, const MCAsmLayout &Layout,
                           DwoMode Mode);
@@ -481,7 +481,6 @@ void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 }
 
 void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
@@ -491,7 +490,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
   const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
-  uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+  uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   MCContext &Ctx = Asm.getContext();
   bool IsLocRel = false;
 
@@ -499,7 +498,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
     const auto &SymB = cast<MCSymbolWasm>(RefB->getSymbol());
 
-    if (FixupSection.getKind().isText()) {
+    if (FixupSection.isText()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
                           "' unsupported subtraction expression used in "
@@ -521,7 +520,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
     IsLocRel = true;
-    C += FixupOffset - Layout.getSymbolOffset(SymB);
+    C += FixupOffset - Asm.getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -561,13 +560,13 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     // later gets changed again to a func symbol?] or it can be a real
     // function symbol, in which case it can be left as-is.
 
-    if (!FixupSection.getKind().isMetadata())
+    if (!FixupSection.isMetadata())
       report_fatal_error("relocations for function or section offsets are "
                          "only supported in metadata sections");
 
     const MCSymbol *SectionSymbol = nullptr;
     const MCSection &SecA = SymA->getSection();
-    if (SecA.getKind().isText()) {
+    if (SecA.isText()) {
       auto SecSymIt = SectionFunctions.find(&SecA);
       if (SecSymIt == SectionFunctions.end())
         report_fatal_error("section doesn\'t have defining symbol");
@@ -578,7 +577,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     if (!SectionSymbol)
       report_fatal_error("section symbol is required for relocation");
 
-    C += Layout.getSymbolOffset(*SymA);
+    C += Asm.getSymbolOffset(*SymA);
     SymA = cast<MCSymbolWasm>(SectionSymbol);
   }
 
@@ -627,9 +626,9 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
   if (FixupSection.isWasmData()) {
     DataRelocations.push_back(Rec);
-  } else if (FixupSection.getKind().isText()) {
+  } else if (FixupSection.isText()) {
     CodeRelocations.push_back(Rec);
-  } else if (FixupSection.getKind().isMetadata()) {
+  } else if (FixupSection.isMetadata()) {
     CustomSectionsRelocations[&FixupSection].push_back(Rec);
   } else {
     llvm_unreachable("unexpected section type");
@@ -1068,7 +1067,7 @@ uint32_t WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
     int64_t Size = Layout.getSectionAddressSize(FuncSection);
     encodeULEB128(Size, W->OS);
     FuncSection->setSectionOffset(W->OS.tell() - Section.ContentsOffset);
-    Asm.writeSectionData(W->OS, FuncSection, Layout);
+    Asm.writeSectionData(W->OS, FuncSection);
   }
 
   // Apply fixups.
@@ -1249,7 +1248,7 @@ void WasmObjectWriter::writeCustomSection(WasmCustomSection &CustomSection,
   startCustomSection(Section, CustomSection.Name);
 
   Sec->setSectionOffset(W->OS.tell() - Section.ContentsOffset);
-  Asm.writeSectionData(W->OS, Sec, Layout);
+  Asm.writeSectionData(W->OS, Sec);
 
   CustomSection.OutputContentsOffset = Section.ContentsOffset;
   CustomSection.OutputIndex = Section.Index;
@@ -1439,8 +1438,8 @@ void WasmObjectWriter::prepareImports(
   }
 }
 
-uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
+uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   support::endian::Writer MainWriter(*OS, llvm::endianness::little);
   W = &MainWriter;
   if (IsSplitDwarf) {
@@ -1498,7 +1497,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       continue;
 
     // Code is handled separately
-    if (Section.getKind().isText())
+    if (Section.isText())
       continue;
 
     if (Section.isWasmData()) {
@@ -1524,7 +1523,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       }
     } else {
       // Create custom sections
-      assert(Sec.getKind().isMetadata());
+      assert(Section.isMetadata());
 
       StringRef Name = SectionName;
 
@@ -1647,7 +1646,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         // For each data symbol, export it in the symtab as a reference to the
         // corresponding Wasm data segment.
         wasm::WasmDataReference Ref = wasm::WasmDataReference{
-            DataSection.getSegmentIndex(), Layout.getSymbolOffset(WS),
+            DataSection.getSegmentIndex(), Asm.getSymbolOffset(WS),
             static_cast<uint64_t>(Size)};
         assert(DataLocations.count(&WS) == 0);
         DataLocations[&WS] = Ref;
@@ -1749,7 +1748,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         LLVM_DEBUG(dbgs() << "  -> index:" << WasmIndex << "\n");
       } else if (Base->isData()) {
         auto &DataSection = static_cast<MCSectionWasm &>(WS.getSection());
-        uint64_t Offset = Layout.getSymbolOffset(S);
+        uint64_t Offset = Asm.getSymbolOffset(S);
         int64_t Size = 0;
         // For data symbol alias we use the size of the base symbol as the
         // size of the alias.  When an offset from the base is involved this
@@ -1763,7 +1762,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
             std::min(static_cast<uint64_t>(Size), Segment.Data.size() - Offset);
         wasm::WasmDataReference Ref = wasm::WasmDataReference{
             DataSection.getSegmentIndex(),
-            static_cast<uint32_t>(Layout.getSymbolOffset(S)),
+            static_cast<uint32_t>(Asm.getSymbolOffset(S)),
             static_cast<uint32_t>(Size)};
         DataLocations[&WS] = Ref;
         LLVM_DEBUG(dbgs() << "  -> index:" << Ref.Segment << "\n");

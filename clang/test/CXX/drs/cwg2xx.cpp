@@ -41,7 +41,7 @@ namespace cwg202 { // cwg202: 3.1
   template struct X<f>;
 }
 
-// FIXME (export) cwg204: no
+// cwg204: sup 820
 
 namespace cwg206 { // cwg206: yes
   struct S; // #cwg206-S

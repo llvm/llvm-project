@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -65,6 +66,16 @@ TEST(SetOperationsTest, SetIntersect) {
   // is empty as they are non-overlapping.
   EXPECT_THAT(Set1, IsEmpty());
   EXPECT_EQ(ExpectedSet2, Set2);
+
+  // Check that set_intersect works on SetVector via remove_if.
+  SmallSetVector<int, 4> SV;
+  SV.insert(3);
+  SV.insert(6);
+  SV.insert(4);
+  SV.insert(5);
+  set_intersect(SV, Set2);
+  // SV should contain only 6 and 5 now.
+  EXPECT_THAT(SV, testing::ElementsAre(6, 5));
 }
 
 TEST(SetOperationsTest, SetIntersection) {

@@ -1877,6 +1877,27 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       FromFn = QT->getAs<FunctionType>();
       Changed = true;
     }
+
+    // For C, when called from checkPointerTypesForAssignment,
+    // we need to not alter FromFn, or else even an innocuous cast
+    // like dropping effects will fail. In C++ however we do want to
+    // alter FromFn (because of the way PerformImplicitConversion works).
+    if (getLangOpts().CPlusPlus) {
+      FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
+
+      // Transparently add/drop effects; here we are concerned with
+      // language rules/canonicalization. Adding/dropping effects is a warning.
+      const auto FromFX = FromFPT->getFunctionEffects();
+      const auto ToFX = ToFPT->getFunctionEffects();
+      if (FromFX != ToFX) {
+        FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
+        ExtInfo.FunctionEffects = ToFX;
+        QualType QT = Context.getFunctionType(
+            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
+        FromFn = QT->getAs<FunctionType>();
+        Changed = true;
+      }
+    }
   }
 
   if (!Changed)
@@ -4351,8 +4372,8 @@ HLSLCompareFloatingRank(QualType LHS, QualType RHS) {
   if (const auto *VT = RHS->getAs<VectorType>())
     RHS = VT->getElementType();
 
-  const auto L = LHS->getAs<BuiltinType>()->getKind();
-  const auto R = RHS->getAs<BuiltinType>()->getKind();
+  const auto L = LHS->castAs<BuiltinType>()->getKind();
+  const auto R = RHS->castAs<BuiltinType>()->getKind();
   if (L == R)
     return ImplicitConversionSequence::Indistinguishable;
   return L < R ? ImplicitConversionSequence::Better
@@ -12148,7 +12169,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_fail_bad_conversion: {
     unsigned I = (Cand->IgnoreObjectArgument ? 1 : 0);
     for (unsigned N = Cand->Conversions.size(); I != N; ++I)
-      if (Cand->Conversions[I].isBad())
+      if (Cand->Conversions[I].isInitialized() && Cand->Conversions[I].isBad())
         return DiagnoseBadConversion(S, Cand, I, TakingCandidateAddress);
 
     // FIXME: this currently happens when we're called from SemaInit

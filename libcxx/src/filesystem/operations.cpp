@@ -934,7 +934,7 @@ path __weakly_canonical(const path& p, error_code* ec) {
   vector<string_view_t> DNEParts;
 
   error_code m_ec;
-  while (PP.State != PathParser::PS_BeforeBegin) {
+  while (PP.State_ != PathParser::PS_BeforeBegin) {
     tmp.assign(createView(p.native().data(), &PP.RawEntry.back()));
     file_status st = __status(tmp, &m_ec);
     if (!status_known(st)) {
@@ -949,7 +949,7 @@ path __weakly_canonical(const path& p, error_code* ec) {
     DNEParts.push_back(*PP);
     --PP;
   }
-  if (PP.State == PathParser::PS_BeforeBegin) {
+  if (PP.State_ == PathParser::PS_BeforeBegin) {
     result = __canonical("", &m_ec);
     if (m_ec) {
       return err.report(m_ec);

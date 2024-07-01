@@ -280,10 +280,11 @@ struct TypeBuilderImpl {
     if (ultimate.IsObjectArray()) {
       auto shapeExpr =
           Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
-      if (!shapeExpr)
-        TODO(loc, "assumed rank symbol type");
       fir::SequenceType::Shape shape;
-      translateShape(shape, std::move(*shapeExpr));
+      // If there is no shapExpr, this is an assumed-rank, and the empty shape
+      // will build the desired fir.array<*:T> type.
+      if (shapeExpr)
+        translateShape(shape, std::move(*shapeExpr));
       ty = fir::SequenceType::get(shape, ty);
     }
     if (Fortran::semantics::IsPointer(symbol))

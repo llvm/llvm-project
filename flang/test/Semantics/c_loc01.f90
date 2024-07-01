@@ -4,7 +4,10 @@ module m
   type haslen(L)
     integer, len :: L
   end type
+  integer, target :: targ
  contains
+  subroutine subr
+  end
   subroutine test(assumedType, poly, nclen)
     type(*), target :: assumedType
     class(*), target ::  poly
@@ -17,6 +20,8 @@ module m
     type(hasLen(1)), target :: clen
     type(hasLen(*)), target :: nclen
     character(2), target :: ch
+    real :: arr1(purefun1(c_loc(targ))) ! ok
+    real :: arr2(purefun2(c_funloc(subr))) ! ok
     !ERROR: C_LOC() argument must be a data pointer or target
     cp = c_loc(notATarget)
     !ERROR: C_LOC() argument must be a data pointer or target
@@ -43,5 +48,13 @@ module m
     cp = cfp
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types TYPE(c_funptr) and TYPE(c_ptr)
     cfp = cp
+  end
+  pure integer function purefun1(p)
+    type(c_ptr), intent(in) :: p
+    purefun1 = 1
+  end
+  pure integer function purefun2(p)
+    type(c_funptr), intent(in) :: p
+    purefun2 = 1
   end
 end module
