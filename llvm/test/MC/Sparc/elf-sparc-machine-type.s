@@ -8,5 +8,5 @@
 # RUN: llvm-mc -filetype=obj -triple sparcv9          %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=SPARCV9     %s
 
 # SPARC:       Machine: EM_SPARC (0x2)
-# SPARC32PLUS: Machine: EM_SPARC32PLUS(0x12)
+# SPARC32PLUS: Machine: EM_SPARC32PLUS (0x12)
 # SPARCV9:     Machine: EM_SPARCV9 (0x2B)
