@@ -437,13 +437,16 @@ void walkImmediateSubElementsImpl(T derived,
 /// values.
 template <typename T, typename... Ts>
 auto constructSubElementReplacement(MLIRContext *ctx, Ts &&...params) {
-  // Prefer a direct `get` method if one exists.
-  if constexpr (llvm::is_detected<has_get_method, T, Ts...>::value) {
+  // Prefer for default builder when possible. It ensures precise parameter
+  // type matching, thus avoiding potential implicit conversion failures. For
+  // instance, a custom builder expecting a StringRef could cause a segfault if
+  // the StringAttr, though a match, is nullptr.
+  if constexpr (llvm::is_detected<has_get_method, T, MLIRContext *,
+                                  Ts...>::value) {
+    return T::get(ctx, std::forward<Ts>(params)...);
+  } else if constexpr (llvm::is_detected<has_get_method, T, Ts...>::value) {
     (void)ctx;
     return T::get(std::forward<Ts>(params)...);
-  } else if constexpr (llvm::is_detected<has_get_method, T, MLIRContext *,
-                                         Ts...>::value) {
-    return T::get(ctx, std::forward<Ts>(params)...);
   } else {
     // Otherwise, pass to the base get.
     return T::Base::get(ctx, std::forward<Ts>(params)...);
