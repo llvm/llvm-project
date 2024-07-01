@@ -334,6 +334,12 @@ public:
 
   bool hasArmWideBranch(bool Thumb) const;
 
+  bool supportsTailCalls() const { return ST->supportsTailCall(); }
+
+  bool supportsTailCallFor(const CallBase *CB) const {
+    return supportsTailCalls();
+  }
+
   /// @}
 };
 
