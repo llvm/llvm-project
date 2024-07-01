@@ -10,8 +10,8 @@
 
 // Index iterator out of bounds.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
+// UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <string>
 #include <cassert>
@@ -23,9 +23,10 @@ template <class C>
 void test() {
   using T = decltype(std::uint8_t() - std::uint8_t());
   C c(1, '\0');
-  C::iterator i = c.begin();
+  typename C::iterator i = c.begin();
   assert(i[0] == 0);
-  TEST_LIBCPP_ASSERT_FAILURE(i[1], "Attempted to subscript an iterator outside its valid range");
+  TEST_LIBCPP_ASSERT_FAILURE(i[1], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
+  TEST_LIBCPP_ASSERT_FAILURE(i[-1], "__bounded_iter::operator[]: Attempt to index an iterator past the start");
 }
 
 int main(int, char**) {

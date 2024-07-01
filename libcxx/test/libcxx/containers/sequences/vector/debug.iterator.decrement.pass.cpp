@@ -10,8 +10,8 @@
 
 // Decrement iterator prior to begin.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
+// UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <vector>
 #include <cassert>
@@ -27,7 +27,7 @@ int main(int, char**) {
     C::iterator i = c.end();
     --i;
     assert(i == c.begin());
-    TEST_LIBCPP_ASSERT_FAILURE(--i, "Attempted to decrement a non-decrementable iterator");
+    TEST_LIBCPP_ASSERT_FAILURE(--i, "__bounded_iter::operator--: Attempt to rewind an iterator past the start");
   }
 
   {
@@ -37,7 +37,7 @@ int main(int, char**) {
     C::iterator i = c.end();
     --i;
     assert(i == c.begin());
-    TEST_LIBCPP_ASSERT_FAILURE(--i, "Attempted to decrement a non-decrementable iterator");
+    TEST_LIBCPP_ASSERT_FAILURE(--i, "__bounded_iter::operator--: Attempt to rewind an iterator past the start");
   }
 
   return 0;

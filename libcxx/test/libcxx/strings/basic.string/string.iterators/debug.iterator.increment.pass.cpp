@@ -10,8 +10,8 @@
 
 // Increment iterator past end.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
+// UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <string>
 #include <cassert>
@@ -25,7 +25,7 @@ void test() {
   typename C::iterator i = c.begin();
   ++i;
   assert(i == c.end());
-  TEST_LIBCPP_ASSERT_FAILURE(++i, "Attempted to increment a non-incrementable iterator");
+  TEST_LIBCPP_ASSERT_FAILURE(++i, "__bounded_iter::operator++: Attempt to advance an iterator past the end");
 }
 
 int main(int, char**) {
