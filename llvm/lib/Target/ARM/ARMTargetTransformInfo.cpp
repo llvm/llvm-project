@@ -1029,10 +1029,8 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (Opcode == Instruction::FCmp && !ST->hasMVEFloatOps()) {
       // One scalaization insert, one scalarization extract and the cost of the
       // fcmps.
-      return BaseT::getScalarizationOverhead(VecValTy, /*Insert*/ false,
-                                             /*Extract*/ true, CostKind) +
-             BaseT::getScalarizationOverhead(VecCondTy, /*Insert*/ true,
-                                             /*Extract*/ false, CostKind) +
+      return BaseT::getExplodeVectorCost(VecValTy, CostKind) +
+             BaseT::getBuildVectorCost(VecCondTy, CostKind) +
              VecValTy->getNumElements() *
                  getCmpSelInstrCost(Opcode, ValTy->getScalarType(),
                                     VecCondTy->getScalarType(), VecPred,
@@ -1049,8 +1047,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (LT.second.isVector() && LT.second.getVectorNumElements() > 2) {
       if (LT.first > 1)
         return LT.first * BaseCost +
-               BaseT::getScalarizationOverhead(VecCondTy, /*Insert*/ true,
-                                               /*Extract*/ false, CostKind);
+               BaseT::getBuildVectorCost(VecCondTy, CostKind);
       return BaseCost;
     }
   }
@@ -1604,10 +1601,8 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
   // greatly increasing the cost.
   InstructionCost ScalarCost =
       NumElems * LT.first + (VariableMask ? NumElems * 5 : 0) +
-      BaseT::getScalarizationOverhead(VTy, /*Insert*/ true, /*Extract*/ false,
-                                      CostKind) +
-      BaseT::getScalarizationOverhead(VTy, /*Insert*/ false, /*Extract*/ true,
-                                      CostKind);
+      BaseT::getBuildVectorCost(VTy, CostKind) +
+      BaseT::getExplodeVectorCost(VTy, CostKind);
 
   if (EltSize < 8 || Alignment < EltSize / 8)
     return ScalarCost;
