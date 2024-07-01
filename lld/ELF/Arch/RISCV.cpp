@@ -1116,9 +1116,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       return;
     case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
     case RISCVAttrs::RISCVAtomicAbiTag::A6C:
-      break;
+      return;
     };
-    break;
 
   case RISCVAtomicAbiTag::A6S:
     switch (newTag) {
@@ -1130,9 +1129,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       return;
     case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
     case RISCVAttrs::RISCVAtomicAbiTag::A6S:
-      break;
+      return;
     };
-    break;
 
   case RISCVAtomicAbiTag::A7:
     switch (newTag) {
@@ -1144,7 +1142,7 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       return;
     case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
     case RISCVAttrs::RISCVAtomicAbiTag::A7:
-      break;
+      return;
     };
   };
   llvm_unreachable("unknown AtomicABI");
