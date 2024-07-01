@@ -313,4 +313,25 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   op2->destroy();
 }
 
+TEST(WeakOpRefTest, Test1) {
+  MLIRContext context;
+  context.getOrLoadDialect<test::TestDialect>();
+
+  auto *op1 = createOp(&context);
+  EXPECT_EQ(op1->hasWeakReference(), false);
+  {
+    WeakOpRef weakRef1 = context.acquireWeakOpRef(op1);
+    EXPECT_EQ(weakRef1.use_count(), 1);
+    EXPECT_EQ(op1->hasWeakReference(), true);
+    {
+      WeakOpRef weakRef2 = context.acquireWeakOpRef(op1);
+      EXPECT_EQ(weakRef2.use_count(), 2);
+      EXPECT_EQ(op1->hasWeakReference(), true);
+    }
+    EXPECT_EQ(weakRef1.use_count(), 1);
+    EXPECT_EQ(op1->hasWeakReference(), true);
+  }
+  EXPECT_EQ(op1->hasWeakReference(), false);
+}
+
 } // namespace
