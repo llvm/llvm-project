@@ -56,16 +56,8 @@ BASE_OPTIONAL(const bool, MaySupportMemoryTagging, false)
 // SizeClassMap to use with the Primary.
 PRIMARY_REQUIRED_TYPE(SizeClassMap)
 
-// Defines the type and scale of a compact pointer. A compact pointer can
-// be understood as the offset of a pointer within the region it belongs
-// to, in increments of a power-of-2 scale. See `CompactPtrScale` also.
-PRIMARY_REQUIRED_TYPE(CompactPtrT)
-
 // PRIMARY_REQUIRED(TYPE, NAME)
 //
-// The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
-PRIMARY_REQUIRED(const uptr, CompactPtrScale)
-
 // Log2 of the size of a size class region, as used by the Primary.
 PRIMARY_REQUIRED(const uptr, RegionSizeLog)
 
@@ -86,6 +78,9 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 
 // PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)
 //
+// The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
+PRIMARY_OPTIONAL(const uptr, CompactPtrScale, SCUDO_MIN_ALIGNMENT_LOG)
+
 // Indicates support for offsetting the start of a region by a random number of
 // pages. This is only used if `EnableContiguousRegions` is enabled.
 PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
@@ -103,6 +98,11 @@ PRIMARY_OPTIONAL(const bool, EnableContiguousRegions, true)
 // variable on each platform and the performance may vary so that it does not
 // guarantee a performance benefit.
 PRIMARY_OPTIONAL_TYPE(ConditionVariableT, ConditionVariableDummy)
+
+// Defines the type and scale of a compact pointer. A compact pointer can
+// be understood as the offset of a pointer within the region it belongs
+// to, in increments of a power-of-2 scale. See `CompactPtrScale` also.
+PRIMARY_OPTIONAL_TYPE(CompactPtrT, uptr)
 
 // SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)
 //
