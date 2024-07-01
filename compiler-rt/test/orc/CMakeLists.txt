@@ -32,4 +32,3 @@ endif()
 add_lit_testsuite(check-orc-rt "Running the ORC runtime tests"
   ${ORC_TESTSUITES}
   DEPENDS ${ORC_TEST_DEPS})
-set_target_properties(check-orc-rt PROPERTIES FOLDER "Compiler-RT Misc")

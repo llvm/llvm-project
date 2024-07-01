@@ -11,6 +11,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -216,10 +217,10 @@ void AArch64MachObjectWriter::recordRelocation(
     }
   } else if (Target.getSymB()) { // A - B + constant
     const MCSymbol *A = &Target.getSymA()->getSymbol();
-    const MCSymbol *A_Base = Asm.getAtom(*A);
+    const MCSymbol *A_Base = Writer->getAtom(*A);
 
     const MCSymbol *B = &Target.getSymB()->getSymbol();
-    const MCSymbol *B_Base = Asm.getAtom(*B);
+    const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
@@ -313,11 +314,12 @@ void AArch64MachObjectWriter::recordRelocation(
         return;
       }
       const MCSection &Sec = Symbol->getSection();
-      if (!Asm.getContext().getAsmInfo()->isSectionAtomizableBySymbols(Sec))
+      if (!MCAsmInfoDarwin::isSectionAtomizableBySymbols(Sec))
         Symbol->setUsedInReloc();
     }
 
-    const MCSymbol *Base = Asm.getAtom(*Symbol);
+    const MCSymbol *Base = Writer->getAtom(*Symbol);
+
     // If the symbol is a variable it can either be in a section and
     // we have a base or it is absolute and should have been expanded.
     assert(!Symbol->isVariable() || Base);

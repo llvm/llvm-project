@@ -344,9 +344,10 @@ template <class ELFT> void OutputSection::maybeCompress() {
   (void)sizeof(Elf_Chdr);
 
   DebugCompressionType ctype = DebugCompressionType::None;
+  size_t compressedSize = sizeof(Elf_Chdr);
   unsigned level = 0; // default compression level
   if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
-      name.starts_with(".debug_") && size)
+      name.starts_with(".debug_"))
     ctype = *config->compressDebugSections;
   for (auto &[glob, t, l] : config->compressSections)
     if (glob.match(name))
@@ -360,7 +361,6 @@ template <class ELFT> void OutputSection::maybeCompress() {
   }
 
   llvm::TimeTraceScope timeScope("Compress sections");
-  compressed.uncompressedSize = size;
   auto buf = std::make_unique<uint8_t[]>(size);
   // Write uncompressed data to a temporary zero-initialized buffer.
   {
@@ -378,7 +378,6 @@ template <class ELFT> void OutputSection::maybeCompress() {
   [[maybe_unused]] constexpr size_t shardSize = 1 << 20;
   auto shardsIn = split(ArrayRef<uint8_t>(buf.get(), size), shardSize);
   const size_t numShards = shardsIn.size();
-  compressed.numShards = numShards;
   auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
 
 #if LLVM_ENABLE_ZSTD
@@ -409,9 +408,8 @@ template <class ELFT> void OutputSection::maybeCompress() {
       shardsOut[i] = std::move(out);
     });
     compressed.type = ELFCOMPRESS_ZSTD;
-    size = sizeof(Elf_Chdr);
     for (size_t i = 0; i != numShards; ++i)
-      size += shardsOut[i].size();
+      compressedSize += shardsOut[i].size();
   }
 #endif
 
@@ -434,18 +432,23 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
     // Update section size and combine Alder-32 checksums.
     uint32_t checksum = 1;       // Initial Adler-32 value
-    size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
+    compressedSize += 2;         // Elf_Chdir and zlib header
     for (size_t i = 0; i != numShards; ++i) {
-      size += shardsOut[i].size();
+      compressedSize += shardsOut[i].size();
       checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());
     }
-    size += 4; // checksum
+    compressedSize += 4; // checksum
     compressed.type = ELFCOMPRESS_ZLIB;
     compressed.checksum = checksum;
   }
 #endif
 
+  if (compressedSize >= size)
+    return;
+  compressed.uncompressedSize = size;
   compressed.shards = std::move(shardsOut);
+  compressed.numShards = numShards;
+  size = compressedSize;
   flags |= SHF_COMPRESSED;
 }
 

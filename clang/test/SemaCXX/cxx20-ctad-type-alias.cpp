@@ -173,6 +173,11 @@ template <typename... Ts>
 using AFoo = Foo<Ts...>;
 
 auto b = AFoo{};
+AFoo a(1, 2);
+
+template <typename T>
+using BFoo = Foo<T, T>;
+BFoo b2(1.0, 2.0);
 } // namespace test13
 
 namespace test14 {
@@ -279,7 +284,7 @@ class Foo {};
 // Verify that template template type parameter TTP is referenced/used in the
 // template arguments of the RHS.
 template <template<typename> typename TTP>
-using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<>>' against 'int'}}
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<template-parameter-0-0>>' against 'int'}}
 
 template <class T>
 class Container {};

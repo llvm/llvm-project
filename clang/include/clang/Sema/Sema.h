@@ -47,6 +47,7 @@
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ExternalSemaSource.h"
@@ -67,6 +68,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include <deque>
 #include <memory>
@@ -168,13 +170,31 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaAMDGPU;
+class SemaARM;
+class SemaAVR;
+class SemaBPF;
 class SemaCodeCompletion;
 class SemaCUDA;
 class SemaHLSL;
+class SemaHexagon;
+class SemaLoongArch;
+class SemaM68k;
+class SemaMIPS;
+class SemaMSP430;
+class SemaNVPTX;
 class SemaObjC;
 class SemaOpenACC;
+class SemaOpenCL;
 class SemaOpenMP;
+class SemaPPC;
+class SemaPseudoObject;
+class SemaRISCV;
 class SemaSYCL;
+class SemaSwift;
+class SemaSystemZ;
+class SemaWasm;
+class SemaX86;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -446,6 +466,70 @@ enum class CheckedConversionKind {
   ForBuiltinOverloadedOp
 };
 
+enum class TagUseKind {
+  Reference,   // Reference to a tag:  'struct foo *X;'
+  Declaration, // Fwd decl of a tag:   'struct foo;'
+  Definition,  // Definition of a tag: 'struct foo { int X; } Y;'
+  Friend       // Friend declaration:  'friend struct foo;'
+};
+
+/// Used with attributes/effects with a boolean condition, e.g. `nonblocking`.
+enum class FunctionEffectMode : uint8_t {
+  None,     // effect is not present.
+  False,    // effect(false).
+  True,     // effect(true).
+  Dependent // effect(expr) where expr is dependent.
+};
+
+struct FunctionEffectDiff {
+  enum class Kind { Added, Removed, ConditionMismatch };
+
+  FunctionEffect::Kind EffectKind;
+  Kind DiffKind;
+  FunctionEffectWithCondition Old; // invalid when Added.
+  FunctionEffectWithCondition New; // invalid when Removed.
+
+  StringRef effectName() const {
+    if (Old.Effect.kind() != FunctionEffect::Kind::None)
+      return Old.Effect.name();
+    return New.Effect.name();
+  }
+
+  /// Describes the result of effects differing between a base class's virtual
+  /// method and an overriding method in a subclass.
+  enum class OverrideResult {
+    NoAction,
+    Warn,
+    Merge // Merge missing effect from base to derived.
+  };
+
+  /// Return true if adding or removing the effect as part of a type conversion
+  /// should generate a diagnostic.
+  bool shouldDiagnoseConversion(QualType SrcType,
+                                const FunctionEffectsRef &SrcFX,
+                                QualType DstType,
+                                const FunctionEffectsRef &DstFX) const;
+
+  /// Return true if adding or removing the effect in a redeclaration should
+  /// generate a diagnostic.
+  bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
+                                   const FunctionEffectsRef &OldFX,
+                                   const FunctionDecl &NewFunction,
+                                   const FunctionEffectsRef &NewFX) const;
+
+  /// Return true if adding or removing the effect in a C++ virtual method
+  /// override should generate a diagnostic.
+  OverrideResult shouldDiagnoseMethodOverride(
+      const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+      const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
+};
+
+struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
+  /// Caller should short-circuit by checking for equality first.
+  FunctionEffectDifferences(const FunctionEffectsRef &Old,
+                            const FunctionEffectsRef &New);
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -471,20 +555,18 @@ class Sema final : public SemaBase {
   // 18. Name Lookup (SemaLookup.cpp)
   // 19. Modules (SemaModule.cpp)
   // 20. C++ Overloading (SemaOverload.cpp)
-  // 21. Pseudo-Object (SemaPseudoObject.cpp)
-  // 22. Statements (SemaStmt.cpp)
-  // 23. `inline asm` Statement (SemaStmtAsm.cpp)
-  // 24. Statement Attribute Handling (SemaStmtAttr.cpp)
-  // 25. C++ Templates (SemaTemplate.cpp)
-  // 26. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 28. C++ Template Declaration Instantiation
+  // 21. Statements (SemaStmt.cpp)
+  // 22. `inline asm` Statement (SemaStmtAsm.cpp)
+  // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
+  // 24. C++ Templates (SemaTemplate.cpp)
+  // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
+  // 26. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 27. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 30. Constraints and Concepts (SemaConcept.cpp)
-  // 31. Types (SemaType.cpp)
-  // 32. FixIt Helpers (SemaFixItUtils.cpp)
-  // 33. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
+  // 28. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 29. Constraints and Concepts (SemaConcept.cpp)
+  // 30. Types (SemaType.cpp)
+  // 31. FixIt Helpers (SemaFixItUtils.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -758,6 +840,28 @@ public:
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
 
+  // ----- function effects ---
+
+  /// Warn when implicitly changing function effects.
+  void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
+                                        SourceLocation Loc);
+
+  /// Warn and return true if adding an effect to a set would create a conflict.
+  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
+                                         const FunctionEffectWithCondition &EC,
+                                         SourceLocation NewAttrLoc);
+
+  void
+  diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
+                                       SourceLocation NewLoc,
+                                       SourceLocation OldLoc);
+
+  /// Try to parse the conditional expression attached to an effect attribute
+  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty
+  /// optional on error.
+  std::optional<FunctionEffectMode>
+  ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
+
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);
 
@@ -876,9 +980,6 @@ public:
     void disable() { Active = false; }
   };
 
-  /// Build a partial diagnostic.
-  PartialDiagnostic PDiag(unsigned DiagID = 0); // in SemaInternal.h
-
   sema::FunctionScopeInfo *getCurFunction() const {
     return FunctionScopes.empty() ? nullptr : FunctionScopes.back();
   }
@@ -985,6 +1086,26 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  SemaAMDGPU &AMDGPU() {
+    assert(AMDGPUPtr);
+    return *AMDGPUPtr;
+  }
+
+  SemaARM &ARM() {
+    assert(ARMPtr);
+    return *ARMPtr;
+  }
+
+  SemaAVR &AVR() {
+    assert(AVRPtr);
+    return *AVRPtr;
+  }
+
+  SemaBPF &BPF() {
+    assert(BPFPtr);
+    return *BPFPtr;
+  }
+
   SemaCodeCompletion &CodeCompletion() {
     assert(CodeCompletionPtr);
     return *CodeCompletionPtr;
@@ -1000,6 +1121,36 @@ public:
     return *HLSLPtr;
   }
 
+  SemaHexagon &Hexagon() {
+    assert(HexagonPtr);
+    return *HexagonPtr;
+  }
+
+  SemaLoongArch &LoongArch() {
+    assert(LoongArchPtr);
+    return *LoongArchPtr;
+  }
+
+  SemaM68k &M68k() {
+    assert(M68kPtr);
+    return *M68kPtr;
+  }
+
+  SemaMIPS &MIPS() {
+    assert(MIPSPtr);
+    return *MIPSPtr;
+  }
+
+  SemaMSP430 &MSP430() {
+    assert(MSP430Ptr);
+    return *MSP430Ptr;
+  }
+
+  SemaNVPTX &NVPTX() {
+    assert(NVPTXPtr);
+    return *NVPTXPtr;
+  }
+
   SemaObjC &ObjC() {
     assert(ObjCPtr);
     return *ObjCPtr;
@@ -1010,14 +1161,54 @@ public:
     return *OpenACCPtr;
   }
 
+  SemaOpenCL &OpenCL() {
+    assert(OpenCLPtr);
+    return *OpenCLPtr;
+  }
+
   SemaOpenMP &OpenMP() {
     assert(OpenMPPtr && "SemaOpenMP is dead");
     return *OpenMPPtr;
   }
 
+  SemaPPC &PPC() {
+    assert(PPCPtr);
+    return *PPCPtr;
+  }
+
+  SemaPseudoObject &PseudoObject() {
+    assert(PseudoObjectPtr);
+    return *PseudoObjectPtr;
+  }
+
+  SemaRISCV &RISCV() {
+    assert(RISCVPtr);
+    return *RISCVPtr;
+  }
+
   SemaSYCL &SYCL() {
     assert(SYCLPtr);
     return *SYCLPtr;
+  }
+
+  SemaSwift &Swift() {
+    assert(SwiftPtr);
+    return *SwiftPtr;
+  }
+
+  SemaSystemZ &SystemZ() {
+    assert(SystemZPtr);
+    return *SystemZPtr;
+  }
+
+  SemaWasm &Wasm() {
+    assert(WasmPtr);
+    return *WasmPtr;
+  }
+
+  SemaX86 &X86() {
+    assert(X86Ptr);
+    return *X86Ptr;
   }
 
   /// Source of additional semantic information.
@@ -1050,13 +1241,31 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
+  std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
+  std::unique_ptr<SemaARM> ARMPtr;
+  std::unique_ptr<SemaAVR> AVRPtr;
+  std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
+  std::unique_ptr<SemaHexagon> HexagonPtr;
+  std::unique_ptr<SemaLoongArch> LoongArchPtr;
+  std::unique_ptr<SemaM68k> M68kPtr;
+  std::unique_ptr<SemaMIPS> MIPSPtr;
+  std::unique_ptr<SemaMSP430> MSP430Ptr;
+  std::unique_ptr<SemaNVPTX> NVPTXPtr;
   std::unique_ptr<SemaObjC> ObjCPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
+  std::unique_ptr<SemaOpenCL> OpenCLPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
+  std::unique_ptr<SemaPPC> PPCPtr;
+  std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
+  std::unique_ptr<SemaRISCV> RISCVPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
+  std::unique_ptr<SemaSwift> SwiftPtr;
+  std::unique_ptr<SemaSystemZ> SystemZPtr;
+  std::unique_ptr<SemaWasm> WasmPtr;
+  std::unique_ptr<SemaX86> X86Ptr;
 
   ///@}
 
@@ -1905,8 +2114,6 @@ public:
 
   bool FormatStringHasSArg(const StringLiteral *FExpr);
 
-  static bool GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx);
-
   void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
                             BinaryOperatorKind Opcode);
 
@@ -2019,8 +2226,6 @@ public:
   bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
-  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-
   void checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                  const Expr *ThisArg, ArrayRef<const Expr *> Args,
                  bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
@@ -2030,6 +2235,33 @@ public:
                            const NamedDecl *Callee);
 
   void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
+
+  bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);
+  bool BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low, int High,
+                               bool RangeIsError = true);
+  bool BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+                                  unsigned Multiple);
+  bool BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
+  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+                                     unsigned ArgBits);
+  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
+                                           unsigned ArgBits);
+
+  bool checkArgCountAtLeast(CallExpr *Call, unsigned MinArgCount);
+  bool checkArgCountAtMost(CallExpr *Call, unsigned MaxArgCount);
+  bool checkArgCountRange(CallExpr *Call, unsigned MinArgCount,
+                          unsigned MaxArgCount);
+  bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
+
+  bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
+
+  void CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
+                               bool *ICContext = nullptr,
+                               bool IsListInit = false);
+
+  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                     bool CheckForFloatArgs = true);
+  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -2044,8 +2276,6 @@ private:
                             ArrayRef<const Expr *> Args,
                             const FunctionProtoType *Proto, SourceLocation Loc);
 
-  void checkAIXMemberAlignment(SourceLocation Loc, const Expr *Arg);
-
   void CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
                          StringRef ParamName, QualType ArgTy, QualType ParamTy);
 
@@ -2059,68 +2289,13 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
-  bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
-                                    unsigned MaxWidth);
-  bool CheckNeonBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                    CallExpr *TheCall);
-  bool CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool ParseSVEImmChecks(CallExpr *TheCall,
-                         SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
-  bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                   CallExpr *TheCall);
-  bool CheckARMCoprocessorImmediate(const TargetInfo &TI, const Expr *CoprocArg,
-                                    bool WantCDE);
-  bool CheckARMBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                   CallExpr *TheCall);
-
-  bool CheckAArch64BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                       CallExpr *TheCall);
-  bool CheckBPFBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckHexagonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckMipsBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                    CallExpr *TheCall);
-  bool CheckMipsBuiltinCpu(const TargetInfo &TI, unsigned BuiltinID,
-                           CallExpr *TheCall);
-  bool CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckSystemZBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinGatherScatterScale(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
-                                         ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileDuplicate(CallExpr *TheCall, ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileRangeAndDuplicate(CallExpr *TheCall,
-                                            ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                   CallExpr *TheCall);
-  bool CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                   CallExpr *TheCall);
-  bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
-  bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                     CallExpr *TheCall);
-  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
-                           const llvm::StringMap<bool> &FeatureMap);
-  bool CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
-                                         unsigned BuiltinID, CallExpr *TheCall);
-  bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
-                                           unsigned BuiltinID,
-                                           CallExpr *TheCall);
-  bool CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                     CallExpr *TheCall);
-
   bool BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool BuiltinVAStartARMMicrosoft(CallExpr *Call);
   bool BuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
   bool BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
                                unsigned BuiltinID);
   bool BuiltinComplex(CallExpr *TheCall);
-  bool BuiltinVSX(CallExpr *TheCall);
   bool BuiltinOSLogFormat(CallExpr *TheCall);
-  bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
   bool BuiltinPrefetch(CallExpr *TheCall);
   bool BuiltinAllocaWithAlign(CallExpr *TheCall);
@@ -2133,28 +2308,8 @@ private:
   ExprResult BuiltinNontemporalOverloaded(ExprResult TheCallResult);
   ExprResult AtomicOpsOverloaded(ExprResult TheCallResult,
                                  AtomicExpr::AtomicOp Op);
-  bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);
-  bool BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low, int High,
-                               bool RangeIsError = true);
-  bool BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
-                                  unsigned Multiple);
-  bool BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
-  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
-                                     unsigned ArgBits);
-  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
-                                           unsigned ArgBits);
-  bool BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall, int ArgNum,
-                            unsigned ExpectedFieldNum, bool AllowName);
-  bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool BuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
-                         const char *TypeDesc);
-
-  bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
   bool BuiltinElementwiseMath(CallExpr *TheCall);
-  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                     bool CheckForFloatArgs = true);
-  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -2165,16 +2320,6 @@ private:
                                           ExprResult CallResult);
   ExprResult BuiltinMatrixColumnMajorStore(CallExpr *TheCall,
                                            ExprResult CallResult);
-
-  // WebAssembly builtin handling.
-  bool BuiltinWasmRefNullExtern(CallExpr *TheCall);
-  bool BuiltinWasmRefNullFunc(CallExpr *TheCall);
-  bool BuiltinWasmTableGet(CallExpr *TheCall);
-  bool BuiltinWasmTableSet(CallExpr *TheCall);
-  bool BuiltinWasmTableSize(CallExpr *TheCall);
-  bool BuiltinWasmTableGrow(CallExpr *TheCall);
-  bool BuiltinWasmTableFill(CallExpr *TheCall);
-  bool BuiltinWasmTableCopy(CallExpr *TheCall);
 
   bool CheckFormatArguments(const FormatAttr *Format,
                             ArrayRef<const Expr *> Args, bool IsCXXMember,
@@ -3162,13 +3307,6 @@ public:
                                     bool isDefinition, SourceLocation NewTagLoc,
                                     const IdentifierInfo *Name);
 
-  enum TagUseKind {
-    TUK_Reference,   // Reference to a tag:  'struct foo *X;'
-    TUK_Declaration, // Fwd decl of a tag:   'struct foo;'
-    TUK_Definition,  // Definition of a tag: 'struct foo { int X; } Y;'
-    TUK_Friend       // Friend declaration:  'friend struct foo;'
-  };
-
   enum OffsetOfKind {
     // Not parsing a type within __builtin_offsetof.
     OOK_Outside,
@@ -3536,6 +3674,53 @@ public:
     BuiltinFunction
   };
 
+  /// A helper function to provide Attribute Location for the Attr types
+  /// AND the ParsedAttr.
+  template <typename AttrInfo>
+  static std::enable_if_t<std::is_base_of_v<Attr, AttrInfo>, SourceLocation>
+  getAttrLoc(const AttrInfo &AL) {
+    return AL.getLocation();
+  }
+  SourceLocation getAttrLoc(const ParsedAttr &AL);
+
+  /// If Expr is a valid integer constant, get the value of the integer
+  /// expression and return success or failure. May output an error.
+  ///
+  /// Negative argument is implicitly converted to unsigned, unless
+  /// \p StrictlyUnsigned is true.
+  template <typename AttrInfo>
+  bool checkUInt32Argument(const AttrInfo &AI, const Expr *Expr, uint32_t &Val,
+                           unsigned Idx = UINT_MAX,
+                           bool StrictlyUnsigned = false) {
+    std::optional<llvm::APSInt> I = llvm::APSInt(32);
+    if (Expr->isTypeDependent() ||
+        !(I = Expr->getIntegerConstantExpr(Context))) {
+      if (Idx != UINT_MAX)
+        Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
+            << &AI << Idx << AANT_ArgumentIntegerConstant
+            << Expr->getSourceRange();
+      else
+        Diag(getAttrLoc(AI), diag::err_attribute_argument_type)
+            << &AI << AANT_ArgumentIntegerConstant << Expr->getSourceRange();
+      return false;
+    }
+
+    if (!I->isIntN(32)) {
+      Diag(Expr->getExprLoc(), diag::err_ice_too_large)
+          << toString(*I, 10, false) << 32 << /* Unsigned */ 1;
+      return false;
+    }
+
+    if (StrictlyUnsigned && I->isSigned() && I->isNegative()) {
+      Diag(getAttrLoc(AI), diag::err_attribute_requires_positive_integer)
+          << &AI << /*non-negative*/ 1;
+      return false;
+    }
+
+    Val = (uint32_t)I->getZExtValue();
+    return true;
+  }
+
   /// WeakTopLevelDecl - Translation-unit scoped declarations generated by
   /// \#pragma weak during processing of other Decls.
   /// I couldn't figure out a clean way to generate these in-line, so
@@ -3642,8 +3827,6 @@ public:
                                           const AttributeCommonInfo &CI,
                                           const IdentifierInfo *Ident);
   MinSizeAttr *mergeMinSizeAttr(Decl *D, const AttributeCommonInfo &CI);
-  SwiftNameAttr *mergeSwiftNameAttr(Decl *D, const SwiftNameAttr &SNA,
-                                    StringRef Name);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D,
                                           const AttributeCommonInfo &CI);
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, const ParsedAttr &AL);
@@ -3657,8 +3840,6 @@ public:
       const ParsedAttr &attr, CallingConv &CC, const FunctionDecl *FD = nullptr,
       CUDAFunctionTarget CFT = CUDAFunctionTarget::InvalidTarget);
 
-  void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
-                           ParameterABI ABI);
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
 
   /// Create an CUDALaunchBoundsAttr attribute.
@@ -3673,60 +3854,11 @@ public:
                            Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
 
   enum class RetainOwnershipKind { NS, CF, OS };
-  void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
-                        RetainOwnershipKind K, bool IsTemplateInstantiation);
-
-  bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
-
-  /// Do a check to make sure \p Name looks like a legal argument for the
-  /// swift_name attribute applied to decl \p D.  Raise a diagnostic if the name
-  /// is invalid for the given declaration.
-  ///
-  /// \p AL is used to provide caret diagnostics in case of a malformed name.
-  ///
-  /// \returns true if the name is a valid swift name for \p D, false otherwise.
-  bool DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
-                         const ParsedAttr &AL, bool IsAsync);
 
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
 
   BTFDeclTagAttr *mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL);
-
-  WebAssemblyImportNameAttr *
-  mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL);
-  WebAssemblyImportModuleAttr *
-  mergeImportModuleAttr(Decl *D, const WebAssemblyImportModuleAttr &AL);
-
-  /// Create an AMDGPUWavesPerEUAttr attribute.
-  AMDGPUFlatWorkGroupSizeAttr *
-  CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI, Expr *Min,
-                                    Expr *Max);
-
-  /// addAMDGPUFlatWorkGroupSizeAttr - Adds an amdgpu_flat_work_group_size
-  /// attribute to a particular declaration.
-  void addAMDGPUFlatWorkGroupSizeAttr(Decl *D, const AttributeCommonInfo &CI,
-                                      Expr *Min, Expr *Max);
-
-  /// Create an AMDGPUWavesPerEUAttr attribute.
-  AMDGPUWavesPerEUAttr *
-  CreateAMDGPUWavesPerEUAttr(const AttributeCommonInfo &CI, Expr *Min,
-                             Expr *Max);
-
-  /// addAMDGPUWavePersEUAttr - Adds an amdgpu_waves_per_eu attribute to a
-  /// particular declaration.
-  void addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
-                               Expr *Min, Expr *Max);
-
-  /// Create an AMDGPUMaxNumWorkGroupsAttr attribute.
-  AMDGPUMaxNumWorkGroupsAttr *
-  CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI, Expr *XExpr,
-                                   Expr *YExpr, Expr *ZExpr);
-
-  /// addAMDGPUMaxNumWorkGroupsAttr - Adds an amdgpu_max_num_work_groups
-  /// attribute to a particular declaration.
-  void addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
-                                     Expr *XExpr, Expr *YExpr, Expr *ZExpr);
 
   DLLImportAttr *mergeDLLImportAttr(Decl *D, const AttributeCommonInfo &CI);
   DLLExportAttr *mergeDLLExportAttr(Decl *D, const AttributeCommonInfo &CI);
@@ -3790,6 +3922,52 @@ public:
   void PopParsingDeclaration(ParsingDeclState state, Decl *decl);
 
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
+
+  /// Check if IdxExpr is a valid parameter index for a function or
+  /// instance method D.  May output an error.
+  ///
+  /// \returns true if IdxExpr is a valid index.
+  template <typename AttrInfo>
+  bool checkFunctionOrMethodParameterIndex(const Decl *D, const AttrInfo &AI,
+                                           unsigned AttrArgNum,
+                                           const Expr *IdxExpr, ParamIdx &Idx,
+                                           bool CanIndexImplicitThis = false) {
+    assert(isFunctionOrMethodOrBlockForAttrSubject(D));
+
+    // In C++ the implicit 'this' function parameter also counts.
+    // Parameters are counted from one.
+    bool HP = hasFunctionProto(D);
+    bool HasImplicitThisParam = isInstanceMethod(D);
+    bool IV = HP && isFunctionOrMethodVariadic(D);
+    unsigned NumParams =
+        (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
+
+    std::optional<llvm::APSInt> IdxInt;
+    if (IdxExpr->isTypeDependent() ||
+        !(IdxInt = IdxExpr->getIntegerConstantExpr(Context))) {
+      Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
+          << &AI << AttrArgNum << AANT_ArgumentIntegerConstant
+          << IdxExpr->getSourceRange();
+      return false;
+    }
+
+    unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
+    if (IdxSource < 1 || (!IV && IdxSource > NumParams)) {
+      Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
+          << &AI << AttrArgNum << IdxExpr->getSourceRange();
+      return false;
+    }
+    if (HasImplicitThisParam && !CanIndexImplicitThis) {
+      if (IdxSource == 1) {
+        Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
+            << &AI << IdxExpr->getSourceRange();
+        return false;
+      }
+    }
+
+    Idx = ParamIdx(IdxSource, D);
+    return true;
+  }
 
   ///@}
 
@@ -3933,8 +4111,8 @@ public:
                               const ParsedAttributesView &AttrList);
   Decl *ActOnUsingEnumDeclaration(Scope *CurScope, AccessSpecifier AS,
                                   SourceLocation UsingLoc,
-                                  SourceLocation EnumLoc,
-                                  SourceLocation IdentLoc, IdentifierInfo &II,
+                                  SourceLocation EnumLoc, SourceRange TyLoc,
+                                  const IdentifierInfo &II, ParsedType Ty,
                                   CXXScopeSpec *SS = nullptr);
   Decl *ActOnAliasDeclaration(Scope *CurScope, AccessSpecifier AS,
                               MultiTemplateParamsArg TemplateParams,
@@ -4389,6 +4567,10 @@ public:
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
 
+  /// Check that VTable Pointer authentication is only being set on the first
+  /// first instantiation of the vtable
+  void checkIncorrectVTablePointerAuthenticationAttribute(CXXRecordDecl &RD);
+
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
                                          SourceLocation RBrac,
@@ -4514,7 +4696,7 @@ public:
 
   std::string getAmbiguousPathsDisplayString(CXXBasePaths &Paths);
 
-  bool CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
+  bool CheckOverridingFunctionAttributes(CXXMethodDecl *New,
                                          const CXXMethodDecl *Old);
 
   /// CheckOverridingFunctionReturnType - Checks whether the return types are
@@ -5100,6 +5282,13 @@ public:
              Context == ExpressionEvaluationContext::UnevaluatedList;
     }
 
+    bool isPotentiallyEvaluated() const {
+      return Context == ExpressionEvaluationContext::PotentiallyEvaluated ||
+             Context ==
+                 ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed ||
+             Context == ExpressionEvaluationContext::ConstantEvaluated;
+    }
+
     bool isConstantEvaluated() const {
       return Context == ExpressionEvaluationContext::ConstantEvaluated ||
              Context == ExpressionEvaluationContext::ImmediateFunctionContext;
@@ -5132,6 +5321,22 @@ public:
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
+  };
+
+  ExpressionEvaluationContextRecord &currentEvaluationContext() {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back();
+  };
+
+  ExpressionEvaluationContextRecord &parentEvaluationContext() {
+    assert(ExprEvalContexts.size() >= 2 &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts[ExprEvalContexts.size() - 2];
+  };
+
+  const ExpressionEvaluationContextRecord &parentEvaluationContext() const {
+    return const_cast<Sema *>(this)->parentEvaluationContext();
   };
 
   bool isBoundsAttrContext() const {
@@ -5375,11 +5580,9 @@ public:
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
                                   bool HasTrailingLParen);
 
-  ExprResult
-  BuildQualifiedDeclarationNameExpr(CXXScopeSpec &SS,
-                                    const DeclarationNameInfo &NameInfo,
-                                    bool IsAddressOfOperand, const Scope *S,
-                                    TypeSourceInfo **RecoveryTSI = nullptr);
+  ExprResult BuildQualifiedDeclarationNameExpr(
+      CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
+      bool IsAddressOfOperand, TypeSourceInfo **RecoveryTSI = nullptr);
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS, LookupResult &R,
                                       bool NeedsADL,
@@ -5615,6 +5818,10 @@ public:
   ExprResult ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
+
+  // #embed
+  ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
+                            StringLiteral *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
@@ -5886,7 +6093,6 @@ public:
                                        SourceLocation Loc, bool IsCompAssign);
 
   bool isValidSveBitcast(QualType srcType, QualType destType);
-  bool isValidRVVBitcast(QualType srcType, QualType destType);
 
   bool areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
 
@@ -6267,10 +6473,9 @@ public:
   /// flag from previous context.
   void keepInLifetimeExtendingContext() {
     if (ExprEvalContexts.size() > 2 &&
-        ExprEvalContexts[ExprEvalContexts.size() - 2]
-            .InLifetimeExtendingContext) {
+        parentEvaluationContext().InLifetimeExtendingContext) {
       auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      auto &PrevRecord = parentEvaluationContext();
       LastRecord.InLifetimeExtendingContext =
           PrevRecord.InLifetimeExtendingContext;
     }
@@ -6370,6 +6575,8 @@ public:
   /// block.
   llvm::SmallVector<std::pair<SourceLocation, const BlockDecl *>, 1>
       ImplicitlyRetainedSelfLocs;
+
+  void maybeExtendBlockObject(ExprResult &E);
 
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
@@ -7057,7 +7264,9 @@ public:
       StorageClass SC, ArrayRef<ParmVarDecl *> Params,
       bool HasExplicitResultType);
 
-  void DiagnoseInvalidExplicitObjectParameterInLambda(CXXMethodDecl *Method);
+  /// Returns true if the explicit object parameter was invalid.
+  bool DiagnoseInvalidExplicitObjectParameterInLambda(CXXMethodDecl *Method,
+                                                      SourceLocation CallLoc);
 
   /// Perform initialization analysis of the init-capture and perform
   /// any implicit conversions such as an lvalue-to-rvalue conversion if
@@ -8369,29 +8578,6 @@ public:
   //
   //
 
-  /// \name Pseudo-Object
-  /// Implementations are in SemaPseudoObject.cpp
-  ///@{
-
-public:
-  void maybeExtendBlockObject(ExprResult &E);
-
-  ExprResult checkPseudoObjectIncDec(Scope *S, SourceLocation OpLoc,
-                                     UnaryOperatorKind Opcode, Expr *Op);
-  ExprResult checkPseudoObjectAssignment(Scope *S, SourceLocation OpLoc,
-                                         BinaryOperatorKind Opcode, Expr *LHS,
-                                         Expr *RHS);
-  ExprResult checkPseudoObjectRValue(Expr *E);
-  Expr *recreateSyntacticForm(PseudoObjectExpr *E);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
   /// \name Statements
   /// Implementations are in SemaStmt.cpp
   ///@{
@@ -8982,6 +9168,9 @@ public:
                          const TemplateArgumentListInfo *TemplateArgs);
 
   void diagnoseMissingTemplateArguments(TemplateName Name, SourceLocation Loc);
+  void diagnoseMissingTemplateArguments(const CXXScopeSpec &SS,
+                                        bool TemplateKeyword, TemplateDecl *TD,
+                                        SourceLocation Loc);
 
   ExprResult BuildTemplateIdExpr(const CXXScopeSpec &SS,
                                  SourceLocation TemplateKWLoc, LookupResult &R,
@@ -8991,7 +9180,8 @@ public:
   ExprResult
   BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                                const DeclarationNameInfo &NameInfo,
-                               const TemplateArgumentListInfo *TemplateArgs);
+                               const TemplateArgumentListInfo *TemplateArgs,
+                               bool IsAddressOfOperand);
 
   TemplateNameKind ActOnTemplateName(Scope *S, CXXScopeSpec &SS,
                                      SourceLocation TemplateKWLoc,
@@ -9599,7 +9789,7 @@ public:
                  bool DependentDeduction = false,
                  bool IgnoreConstraints = false,
                  TemplateSpecCandidateSet *FailedTSC = nullptr);
-  void DiagnoseAutoDeductionFailure(VarDecl *VDecl, Expr *Init);
+  void DiagnoseAutoDeductionFailure(const VarDecl *VDecl, const Expr *Init);
   bool DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
                         bool Diagnose = true);
 
@@ -10083,7 +10273,9 @@ public:
 
   bool SubstTemplateArgument(const TemplateArgumentLoc &Input,
                              const MultiLevelTemplateArgumentList &TemplateArgs,
-                             TemplateArgumentLoc &Output);
+                             TemplateArgumentLoc &Output,
+                             SourceLocation Loc = {},
+                             const DeclarationName &Entity = {});
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -11397,7 +11589,8 @@ public:
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
 
-  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
+  QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
+                                                  Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
@@ -11701,27 +11894,6 @@ public:
   void ProcessAPINotes(Decl *D);
 
   ///@}
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name Name Lookup for RISC-V Vector Intrinsic
-  /// Implementations are in SemaRISCVVectorLookup.cpp
-  ///@{
-
-public:
-  /// Indicate RISC-V vector builtin functions enabled or not.
-  bool DeclareRISCVVBuiltins = false;
-
-  /// Indicate RISC-V SiFive vector builtin functions enabled or not.
-  bool DeclareRISCVSiFiveVectorBuiltins = false;
-
-private:
-  std::unique_ptr<sema::RISCVIntrinsicManager> RVIntrinsicManager;
-
-  ///@}
 };
 
 DeductionFailureInfo
@@ -11743,9 +11915,6 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
-
-std::unique_ptr<sema::RISCVIntrinsicManager>
-CreateRISCVIntrinsicManager(Sema &S);
 } // end namespace clang
 
 #endif

@@ -4,6 +4,10 @@ add_header_library(
   exhaustive_test
   HDRS
     exhaustive_test.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -278,6 +282,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmodf16_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    fmodf16_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.fmodf16
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   coshf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -417,6 +436,21 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.acosf
     libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  f16sqrtf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    f16sqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.f16sqrtf
   LINK_LIBRARIES
     -lpthread
 )

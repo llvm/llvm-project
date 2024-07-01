@@ -6,8 +6,8 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that we correctly encode new index into .debug_addr section
-# from DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x#)
+## This test checks that we correctly encode new index into .debug_addr section
+## from DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x#)
 
 # PRECHECK: version = 0x0005
 # PRECHECK: DW_TAG_variable

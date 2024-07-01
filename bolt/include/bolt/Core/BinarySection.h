@@ -284,6 +284,7 @@ public:
       return true;
     }
   }
+  bool isNote() const { return isELF() && ELFType == ELF::SHT_NOTE; }
   bool isReordered() const { return IsReordered; }
   bool isAnonymous() const { return IsAnonymous; }
   bool isRelro() const { return IsRelro; }

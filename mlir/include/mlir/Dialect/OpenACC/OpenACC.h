@@ -34,7 +34,7 @@
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.h.inc"
 
-#include "mlir/Dialect/OpenACC/OpenACCInterfaces.h"
+#include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOps.h.inc"

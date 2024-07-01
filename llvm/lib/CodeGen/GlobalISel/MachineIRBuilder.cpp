@@ -397,6 +397,19 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildConstantPtrAuth(const DstOp &Res,
+                                       const ConstantPtrAuth *CPA,
+                                       Register Addr, Register AddrDisc) {
+  auto MIB = buildInstr(TargetOpcode::G_PTRAUTH_GLOBAL_VALUE);
+  Res.addDefToMIB(*getMRI(), MIB);
+  MIB.addUse(Addr);
+  MIB.addImm(CPA->getKey()->getZExtValue());
+  MIB.addUse(AddrDisc);
+  MIB.addImm(CPA->getDiscriminator()->getZExtValue());
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(const SrcOp &Tst,
                                                   MachineBasicBlock &Dest) {
   assert(Tst.getLLTTy(*getMRI()).isScalar() && "invalid operand type");
@@ -996,7 +1009,6 @@ MachineInstrBuilder MachineIRBuilder::buildAtomicRMW(
   LLT OldValResTy = OldValRes.getLLTTy(*getMRI());
   LLT AddrTy = Addr.getLLTTy(*getMRI());
   LLT ValTy = Val.getLLTTy(*getMRI());
-  assert(OldValResTy.isScalar() && "invalid operand type");
   assert(AddrTy.isPointer() && "invalid operand type");
   assert(ValTy.isValid() && "invalid operand type");
   assert(OldValResTy == ValTy && "type mismatch");

@@ -11,6 +11,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -145,12 +146,12 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     const MCSymbol *A = &Target.getSymA()->getSymbol();
     if (A->isTemporary())
       A = &Writer->findAliasedSymbol(*A);
-    const MCSymbol *A_Base = Asm.getAtom(*A);
+    const MCSymbol *A_Base = Writer->getAtom(*A);
 
     const MCSymbol *B = &Target.getSymB()->getSymbol();
     if (B->isTemporary())
       B = &Writer->findAliasedSymbol(*B);
-    const MCSymbol *B_Base = Asm.getAtom(*B);
+    const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Neither symbol can be modified.
     if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None) {
@@ -217,10 +218,10 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     const MCSymbol *Symbol = &Target.getSymA()->getSymbol();
     if (Symbol->isTemporary() && Value) {
       const MCSection &Sec = Symbol->getSection();
-      if (!Asm.getContext().getAsmInfo()->isSectionAtomizableBySymbols(Sec))
+      if (!MCAsmInfoDarwin::isSectionAtomizableBySymbols(Sec))
         Symbol->setUsedInReloc();
     }
-    RelSymbol = Asm.getAtom(*Symbol);
+    RelSymbol = Writer->getAtom(*Symbol);
 
     // Relocations inside debug sections always use local relocations when
     // possible. This seems to be done because the debugger doesn't fully
@@ -251,8 +252,8 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     } else if (Symbol->isVariable()) {
       const MCExpr *Value = Symbol->getVariableValue();
       int64_t Res;
-      bool isAbs = Value->evaluateAsAbsolute(Res, Layout,
-                                             Writer->getSectionAddressMap());
+      bool isAbs =
+          Value->evaluateAsAbsolute(Res, Asm, Writer->getSectionAddressMap());
       if (isAbs) {
         FixedValue = Res;
         return;
@@ -565,7 +566,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
     if (A->isVariable()) {
       int64_t Res;
       if (A->getVariableValue()->evaluateAsAbsolute(
-              Res, Layout, Writer->getSectionAddressMap())) {
+              Res, Asm, Writer->getSectionAddressMap())) {
         FixedValue = Res;
         return;
       }

@@ -703,14 +703,16 @@ public:
         IndexCtx.handleDecl(TP);
       if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
         if (TTP->hasDefaultArgument())
-          IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);
+          handleTemplateArgumentLoc(TTP->getDefaultArgument(), Parent,
+                                    TP->getLexicalDeclContext());
         if (auto *C = TTP->getTypeConstraint())
           IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
                                    Parent, TTP->getLexicalDeclContext());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
         IndexCtx.indexTypeSourceInfo(NTTP->getTypeSourceInfo(), Parent);
         if (NTTP->hasDefaultArgument())
-          IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
+          handleTemplateArgumentLoc(NTTP->getDefaultArgument(), Parent,
+                                    TP->getLexicalDeclContext());
       } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
         if (TTPD->hasDefaultArgument())
           handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,

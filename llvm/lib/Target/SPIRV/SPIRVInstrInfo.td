@@ -18,7 +18,9 @@ let isCodeGenOnly=1 in {
   def ASSIGN_TYPE: Pseudo<(outs ANYID:$dst_id), (ins ANYID:$src_id, TYPE:$src_ty)>;
   def DECL_TYPE: Pseudo<(outs ANYID:$dst_id), (ins ANYID:$src_id, TYPE:$src_ty)>;
   def GET_ID: Pseudo<(outs ID:$dst_id), (ins ANYID:$src)>;
+  def GET_ID64: Pseudo<(outs ID64:$dst_id), (ins ANYID:$src)>;
   def GET_fID: Pseudo<(outs fID:$dst_id), (ins ANYID:$src)>;
+  def GET_fID64: Pseudo<(outs fID64:$dst_id), (ins ANYID:$src)>;
   def GET_pID32: Pseudo<(outs pID32:$dst_id), (ins ANYID:$src)>;
   def GET_pID64: Pseudo<(outs pID64:$dst_id), (ins ANYID:$src)>;
   def GET_vID: Pseudo<(outs vID:$dst_id), (ins ANYID:$src)>;
@@ -209,6 +211,9 @@ def OpTypeAccelerationStructureNV: Op<5341, (outs TYPE:$res), (ins),
 def OpTypeCooperativeMatrixNV: Op<5358, (outs TYPE:$res),
                   (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols),
                   "$res = OpTypeCooperativeMatrixNV $compType $scope $rows $cols">;
+def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
+                  (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
+                  "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols $use">;
 
 // 3.42.7 Constant-Creation Instructions
 
@@ -615,7 +620,7 @@ def OpFwidthCoarse: UnOp<"OpFwidthCoarse", 215>;
 def OpPhi: Op<245, (outs ID:$res), (ins TYPE:$type, ID:$var0, ID:$block0, variable_ops),
                   "$res = OpPhi $type $var0 $block0">;
 def OpLoopMerge: Op<246, (outs), (ins ID:$merge, ID:$continue, LoopControl:$lc, variable_ops),
-                  "OpLoopMerge $merge $merge $continue $lc">;
+                  "OpLoopMerge $merge $continue $lc">;
 def OpSelectionMerge: Op<247, (outs), (ins ID:$merge, SelectionControl:$sc),
                   "OpSelectionMerge $merge $sc">;
 def OpLabel: Op<248, (outs ID:$label), (ins), "$label = OpLabel">;
@@ -802,6 +807,11 @@ def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
                   (ins TYPE:$type, ID:$scope, ID:$value, ID:$delta, variable_ops),
                   "$res = OpGroupNonUniformRotateKHR $type $scope $value $delta">;
 
+// SPV_KHR_shader_clock
+def OpReadClockKHR: Op<5056, (outs ID:$res),
+                  (ins TYPE:$type, ID:$scope),
+                  "$res = OpReadClockKHR $type $scope">;
+
 // 3.49.7, Constant-Creation Instructions
 
 //  - SPV_INTEL_function_pointers
@@ -849,3 +859,24 @@ def OpGroupLogicalOrKHR: Op<6407, (outs ID:$res), (ins TYPE:$type, ID:$scope, i3
                   "$res = OpGroupLogicalOrKHR $type $scope $groupOp $value">;
 def OpGroupLogicalXorKHR: Op<6408, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
                   "$res = OpGroupLogicalXorKHR $type $scope $groupOp $value">;
+
+// Inline Assembly Instructions
+def OpAsmTargetINTEL: Op<5609, (outs ID:$res), (ins StringImm:$str), "$res = OpAsmTargetINTEL $str">;
+def OpAsmINTEL: Op<5610, (outs ID:$res), (ins TYPE:$type, TYPE:$asm_type, ID:$target,
+                                          StringImm:$asm, StringImm:$constraints),
+                  "$res = OpAsmINTEL $type $asm_type $target $asm">;
+def OpAsmCallINTEL: Op<5611, (outs ID:$res), (ins TYPE:$type, ID:$asm, variable_ops),
+                  "$res = OpAsmCallINTEL $type $asm">;
+
+// SPV_KHR_cooperative_matrix
+def OpCooperativeMatrixLoadKHR: Op<4457, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$pointer, ID:$memory_layout, variable_ops),
+                  "$res = OpCooperativeMatrixLoadKHR $resType $pointer $memory_layout">;
+def OpCooperativeMatrixStoreKHR: Op<4458, (outs),
+                  (ins ID:$pointer, ID:$objectToStore, ID:$memory_layout, variable_ops),
+                  "OpCooperativeMatrixStoreKHR $pointer $objectToStore $memory_layout">;
+def OpCooperativeMatrixMulAddKHR: Op<4459, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, ID:$B, ID:$C, variable_ops),
+                  "$res = OpCooperativeMatrixMulAddKHR $type $A $B $C">;
+def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, ID:$coop_matr_type),
+                  "$res = OpCooperativeMatrixLengthKHR $type $coop_matr_type">;

@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -std=c++98 -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fsized-deallocation -verify %s
+// RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify %s
 
 //
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -fno-relaxed-template-template-args -DNO_RELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -DCONCEPTS_TS=1 -verify %s
-// RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS -fsized-deallocation
-// RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify -fsized-deallocation %s
-// RUN: %clang_cc1 -std=c++2a -fno-char8_t -DNO_EXCEPTIONS -DNO_CHAR8_T -verify -fsized-deallocation %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fno-relaxed-template-template-args -DNO_RELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -DCONCEPTS_TS=1 -verify %s
+// RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
+// RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify %s
+// RUN: %clang_cc1 -std=c++2a -fno-char8_t -DNO_EXCEPTIONS -DNO_CHAR8_T -verify %s
 
 // expected-no-diagnostics
 

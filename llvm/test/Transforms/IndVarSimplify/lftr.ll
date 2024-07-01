@@ -196,7 +196,7 @@ define void @test_zext(ptr %a) #0 {
 ; CHECK-NEXT:    [[T2:%.*]] = load i8, ptr [[DOT0]], align 1
 ; CHECK-NEXT:    [[T3]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
 ; CHECK-NEXT:    store i8 [[T2]], ptr [[P_0]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[P_0]], getelementptr inbounds ([240 x i8], ptr @data, i64 0, i64 239)
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[P_0]], getelementptr inbounds (i8, ptr @data, i64 239)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

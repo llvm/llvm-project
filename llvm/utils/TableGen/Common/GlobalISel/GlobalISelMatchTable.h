@@ -806,6 +806,7 @@ public:
     IPM_MemoryAlignment,
     IPM_VectorSplatImm,
     IPM_NoUse,
+    IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
     OPM_SameOperand,
@@ -1686,6 +1687,28 @@ public:
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIM_CheckHasNoUse")
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+          << MatchTable::LineBreak;
+  }
+};
+
+/// Generates code to check that the first result has only one use.
+class OneUsePredicateMatcher : public InstructionPredicateMatcher {
+public:
+  OneUsePredicateMatcher(unsigned InsnVarID)
+      : InstructionPredicateMatcher(IPM_OneUse, InsnVarID) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_OneUse;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B);
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckHasOneUse")
           << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
           << MatchTable::LineBreak;
   }

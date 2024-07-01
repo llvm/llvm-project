@@ -162,8 +162,8 @@ public:
   StringRef getPassName() const override { return "SI Fix SGPR copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -173,7 +173,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SIFixSGPRCopies, DEBUG_TYPE,
                      "SI Fix SGPR copies", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SIFixSGPRCopies, DEBUG_TYPE,
                      "SI Fix SGPR copies", false, false)
 
@@ -611,8 +611,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
-
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
                                                   BI != BE; ++BI) {

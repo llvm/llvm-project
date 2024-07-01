@@ -1194,7 +1194,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
     if (!TemplateArgs) {
-      diagnoseMissingTemplateArguments(TemplateName(VarTempl), MemberLoc);
+      diagnoseMissingTemplateArguments(
+          SS, /*TemplateKeyword=*/TemplateKWLoc.isValid(), VarTempl, MemberLoc);
       return ExprError();
     }
 

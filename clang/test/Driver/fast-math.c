@@ -67,31 +67,31 @@
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 //
 // Target defaults for -fmath-errno (reusing the above checks).
-// RUN: %clang -### -target i686-unknown-linux -c %s 2>&1 \
+// RUN: %clang -### --target=i686-unknown-linux -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
 // RUN: %clang -### -target i686-apple-darwin -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-freebsd -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-freebsd -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-netbsd -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-netbsd -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-openbsd -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-openbsd -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### --target=x86_64-unknown-haiku -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-unknown-dragonfly -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-dragonfly -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-fuchsia -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-fuchsia -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-linux-android -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-android -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target x86_64-linux-musl -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-musl -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -nogpuinc -nogpulib -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target amdgcn-amd-amdpal -c %s 2>&1 \
+// RUN: %clang -### --target=amdgcn-amd-amdpal -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
-// RUN: %clang -### -target amdgcn-mesa-mesa3d -c %s 2>&1   \
+// RUN: %clang -### --target=amdgcn-mesa-mesa3d -c %s 2>&1   \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 //
 // Check that -ffast-math disables -fmath-errno, and -fno-fast-math merely
@@ -103,9 +103,9 @@
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s
 // RUN: %clang -### -ffast-math -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
-// RUN: %clang -### -target i686-unknown-linux -fno-fast-math -c %s 2>&1 \
+// RUN: %clang -### --target=i686-unknown-linux -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
-// RUN: %clang -### -target i686-unknown-linux -fno-math-errno -fno-fast-math -c %s 2>&1 \
+// RUN: %clang -### --target=i686-unknown-linux -fno-math-errno -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,ERRNO %s
 // RUN: %clang -### -target i686-apple-darwin -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,NO-ERRNO %s

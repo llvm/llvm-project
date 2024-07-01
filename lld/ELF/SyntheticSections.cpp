@@ -613,7 +613,7 @@ uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
   size_t off = fdeOff + 8;
   uint64_t addr = readFdeAddr(buf + off, enc & 0xf);
   if ((enc & 0x70) == DW_EH_PE_absptr)
-    return addr;
+    return config->is64 ? addr : uint32_t(addr);
   if ((enc & 0x70) == DW_EH_PE_pcrel)
     return addr + getParent()->addr + off + outSecOff;
   fatal("unknown FDE size relative encoding");
@@ -4729,9 +4729,14 @@ template <class ELFT> void elf::createSyntheticSections() {
       add(*part.buildId);
     }
 
+    // dynSymTab is always present to simplify sym->includeInDynsym() in
+    // finalizeSections.
     part.dynStrTab = std::make_unique<StringTableSection>(".dynstr", true);
     part.dynSymTab =
         std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
+
+    if (config->relocatable)
+      continue;
     part.dynamic = std::make_unique<DynamicSection<ELFT>>();
 
     if (hasMemtag()) {
@@ -4788,19 +4793,17 @@ template <class ELFT> void elf::createSyntheticSections() {
       add(*part.relrAuthDyn);
     }
 
-    if (!config->relocatable) {
-      if (config->ehFrameHdr) {
-        part.ehFrameHdr = std::make_unique<EhFrameHeader>();
-        add(*part.ehFrameHdr);
-      }
-      part.ehFrame = std::make_unique<EhFrameSection>();
-      add(*part.ehFrame);
+    if (config->ehFrameHdr) {
+      part.ehFrameHdr = std::make_unique<EhFrameHeader>();
+      add(*part.ehFrameHdr);
+    }
+    part.ehFrame = std::make_unique<EhFrameSection>();
+    add(*part.ehFrame);
 
-      if (config->emachine == EM_ARM) {
-        // This section replaces all the individual .ARM.exidx InputSections.
-        part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
-        add(*part.armExidx);
-      }
+    if (config->emachine == EM_ARM) {
+      // This section replaces all the individual .ARM.exidx InputSections.
+      part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
+      add(*part.armExidx);
     }
 
     if (!config->packageMetadata.empty()) {

@@ -48,14 +48,15 @@ struct implicit_args_t {
 };
 
 /// Print the error code and exit if \p code indicates an error.
-static void handle_error(hsa_status_t code) {
+static void handle_error_impl(const char *file, int32_t line,
+                              hsa_status_t code) {
   if (code == HSA_STATUS_SUCCESS || code == HSA_STATUS_INFO_BREAK)
     return;
 
   const char *desc;
   if (hsa_status_string(code, &desc) != HSA_STATUS_SUCCESS)
     desc = "Unknown error";
-  fprintf(stderr, "%s\n", desc);
+  fprintf(stderr, "%s:%d:0: Error: %s\n", file, line, desc);
   exit(EXIT_FAILURE);
 }
 

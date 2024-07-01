@@ -795,17 +795,17 @@ define amdgpu_kernel void @shl_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) 
 ; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 9:
-; EG-NEXT:     AND_INT T1.Y, T0.Z, literal.x,
-; EG-NEXT:     LSHR T1.Z, T0.Y, 1,
+; EG-NEXT:     LSHR T1.Y, T0.Y, 1,
+; EG-NEXT:     NOT_INT T1.Z, T0.Z,
 ; EG-NEXT:     BIT_ALIGN_INT T0.W, T0.Y, T0.X, 1,
-; EG-NEXT:     NOT_INT * T1.W, T0.Z,
+; EG-NEXT:     AND_INT * T1.W, T0.Z, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.Z, PV.W, PS,
-; EG-NEXT:     LSHL T0.W, T0.X, PV.Y,
+; EG-NEXT:     LSHL T2.Z, T0.X, PS,
+; EG-NEXT:     BIT_ALIGN_INT T0.W, PV.Y, PV.W, PV.Z,
 ; EG-NEXT:     AND_INT * T1.W, T0.Z, literal.x,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.Z, PV.W,
-; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.W, 0.0,
+; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.W, PV.Z,
+; EG-NEXT:     CNDE_INT T0.X, T1.W, T2.Z, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %b_ptr = getelementptr i64, ptr addrspace(1) %in, i64 1
@@ -858,8 +858,8 @@ define amdgpu_kernel void @shl_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 22, @11, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XYZW, T0.X, 1
+; EG-NEXT:    ALU 23, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
@@ -868,27 +868,28 @@ define amdgpu_kernel void @shl_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:    ALU clause starting at 10:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     AND_INT T1.Y, T1.Z, literal.x,
-; EG-NEXT:     LSHR T2.Z, T0.W, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.W, T0.W, T0.Z, 1,
-; EG-NEXT:     NOT_INT * T1.W, T1.Z,
+; EG-NEXT:     AND_INT * T1.W, T1.Z, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T0.W, PV.Z, PV.W, PS,
-; EG-NEXT:     LSHL * T1.W, T0.Z, PV.Y,
-; EG-NEXT:     AND_INT T2.X, T1.Z, literal.x,
-; EG-NEXT:     AND_INT T1.Y, T1.X, literal.y,
-; EG-NEXT:     LSHR T0.Z, T0.Y, 1,
-; EG-NEXT:     BIT_ALIGN_INT T2.W, T0.Y, T0.X, 1,
-; EG-NEXT:     NOT_INT * T3.W, T1.X,
-; EG-NEXT:    32(4.484155e-44), 31(4.344025e-44)
-; EG-NEXT:     BIT_ALIGN_INT T0.Y, PV.Z, PV.W, PS,
-; EG-NEXT:     LSHL T0.Z, T0.X, PV.Y,
-; EG-NEXT:     AND_INT T2.W, T1.X, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T3.W, PV.X, T0.W, T1.W,
+; EG-NEXT:     LSHL T2.X, T0.Z, PV.W,
+; EG-NEXT:     AND_INT T1.Y, T1.Z, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     LSHR T2.Z, T0.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T0.W, T0.W, T0.Z, 1, BS:VEC_102/SCL_221
+; EG-NEXT:     NOT_INT * T1.W, T1.Z,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PV.Y, PV.Z,
-; EG-NEXT:     CNDE_INT * T3.Z, T2.X, T1.W, 0.0,
-; EG-NEXT:     CNDE_INT T3.X, T2.W, T0.Z, 0.0,
+; EG-NEXT:     BIT_ALIGN_INT T3.X, PV.Z, PV.W, PS,
+; EG-NEXT:     LSHR T2.Y, T0.Y, 1,
+; EG-NEXT:     NOT_INT T0.Z, T1.X,
+; EG-NEXT:     BIT_ALIGN_INT T0.W, T0.Y, T0.X, 1,
+; EG-NEXT:     AND_INT * T1.W, T1.X, literal.x,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHL T0.Y, T0.X, PS, BS:VEC_120/SCL_212
+; EG-NEXT:     AND_INT T1.Z, T1.X, literal.x, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T0.W, PV.Y, PV.W, PV.Z,
+; EG-NEXT:     CNDE_INT * T2.W, T1.Y, PV.X, T2.X,
+; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     CNDE_INT * T2.Z, T1.Y, T2.X, 0.0,
+; EG-NEXT:     CNDE_INT T2.X, T1.Z, T0.Y, 0.0,
 ; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %b_ptr = getelementptr <2 x i64>, ptr addrspace(1) %in, i64 1
@@ -955,65 +956,66 @@ define amdgpu_kernel void @shl_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
-; EG-NEXT:    ALU 47, @15, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T2.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.XYZW, T0.X, 1
+; EG-NEXT:    ALU 48, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T0.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XYZW, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 48, #1
-; EG-NEXT:     VTX_READ_128 T2.XYZW, T0.X, 0, #1
-; EG-NEXT:     VTX_READ_128 T3.XYZW, T0.X, 32, #1
-; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 16, #1
+; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 32, #1
+; EG-NEXT:     VTX_READ_128 T2.XYZW, T0.X, 48, #1
+; EG-NEXT:     VTX_READ_128 T3.XYZW, T0.X, 16, #1
+; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 14:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 15:
-; EG-NEXT:     AND_INT T4.Z, T1.Z, literal.x,
-; EG-NEXT:     LSHR T1.W, T0.W, 1,
-; EG-NEXT:     NOT_INT * T3.W, T1.Z,
+; EG-NEXT:     AND_INT * T1.W, T1.Z, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T4.X, T0.W, T0.Z, 1,
-; EG-NEXT:     AND_INT T1.Y, T3.Z, literal.x, BS:VEC_201
-; EG-NEXT:     LSHR T5.Z, T2.W, 1, BS:VEC_120/SCL_212
-; EG-NEXT:     BIT_ALIGN_INT T0.W, T2.W, T2.Z, 1, BS:VEC_102/SCL_221
-; EG-NEXT:     NOT_INT * T2.W, T3.Z,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.Y, PV.Z, PV.W, PS,
-; EG-NEXT:     LSHL T2.Z, T2.Z, PV.Y,
-; EG-NEXT:     BIT_ALIGN_INT T0.W, T1.W, PV.X, T3.W,
-; EG-NEXT:     LSHL * T1.W, T0.Z, T4.Z,
+; EG-NEXT:     LSHL * T1.W, T0.Z, PV.W,
 ; EG-NEXT:     AND_INT T4.X, T1.Z, literal.x,
-; EG-NEXT:     AND_INT T1.Y, T1.X, literal.y,
-; EG-NEXT:     LSHR T0.Z, T0.Y, 1,
-; EG-NEXT:     BIT_ALIGN_INT T2.W, T0.Y, T0.X, 1,
-; EG-NEXT:     NOT_INT * T3.W, T1.X,
+; EG-NEXT:     LSHR T1.Y, T3.W, 1,
+; EG-NEXT:     NOT_INT T4.Z, T2.Z, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T2.W, T3.W, T3.Z, 1,
+; EG-NEXT:     AND_INT * T3.W, T2.Z, literal.y,
 ; EG-NEXT:    32(4.484155e-44), 31(4.344025e-44)
-; EG-NEXT:     AND_INT T5.X, T3.Z, literal.x,
-; EG-NEXT:     BIT_ALIGN_INT T0.Y, PV.Z, PV.W, PS,
-; EG-NEXT:     LSHL T0.Z, T0.X, PV.Y,
-; EG-NEXT:     AND_INT T2.W, T1.X, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T4.W, PV.X, T0.W, T1.W,
+; EG-NEXT:     LSHL T5.X, T3.Z, PS,
+; EG-NEXT:     AND_INT T2.Y, T2.Z, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.Y, PV.W, PV.Z,
+; EG-NEXT:     LSHR T2.W, T3.Y, 1,
+; EG-NEXT:     NOT_INT * T3.W, T2.X,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.X, T3.X, literal.x,
-; EG-NEXT:     CNDE_INT T4.Y, PV.W, PV.Y, PV.Z,
-; EG-NEXT:     LSHR T1.Z, T2.Y, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.W, T2.Y, T2.X, 1,
-; EG-NEXT:     NOT_INT * T3.W, T3.X,
+; EG-NEXT:     BIT_ALIGN_INT T6.X, T3.Y, T3.X, 1,
+; EG-NEXT:     AND_INT T1.Y, T2.X, literal.x,
+; EG-NEXT:     LSHR T3.Z, T0.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T0.W, T0.W, T0.Z, 1,
+; EG-NEXT:     NOT_INT * T4.W, T1.Z,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T1.X, PV.Z, PV.W, PS,
-; EG-NEXT:     LSHL T0.Y, T2.X, PV.X,
-; EG-NEXT:     CNDE_INT T4.Z, T4.X, T1.W, 0.0, BS:VEC_120/SCL_212
-; EG-NEXT:     AND_INT * T0.W, T3.X, literal.x, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T7.X, PV.Z, PV.W, PS,
+; EG-NEXT:     LSHL T1.Y, T3.X, PV.Y, BS:VEC_120/SCL_212
+; EG-NEXT:     AND_INT T0.Z, T2.X, literal.x, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T0.W, T2.W, PV.X, T3.W,
+; EG-NEXT:     CNDE_INT * T3.W, T2.Y, T2.Z, T5.X,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T1.W, T5.X, T3.Y, T2.Z,
-; EG-NEXT:     CNDE_INT T4.X, T2.W, T0.Z, 0.0,
-; EG-NEXT:     CNDE_INT T1.Y, T0.W, T1.X, T0.Y, BS:VEC_120/SCL_212
-; EG-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR T2.X, T0.Y, 1,
+; EG-NEXT:     CNDE_INT T3.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     NOT_INT T1.Z, T1.X,
+; EG-NEXT:     BIT_ALIGN_INT T0.W, T0.Y, T0.X, 1,
+; EG-NEXT:     AND_INT * T2.W, T1.X, literal.x,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHL T0.X, T0.X, PS,
+; EG-NEXT:     AND_INT T0.Y, T1.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     CNDE_INT T3.Z, T2.Y, T5.X, 0.0, BS:VEC_021/SCL_122
+; EG-NEXT:     BIT_ALIGN_INT * T0.W, PV.X, PV.W, PV.Z,
+; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T2.W, T4.X, T7.X, T1.W,
+; EG-NEXT:     CNDE_INT T3.X, T0.Z, T1.Y, 0.0,
+; EG-NEXT:     CNDE_INT T2.Y, T0.Y, T0.W, T0.X,
+; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T0.X, PV.W, literal.x,
-; EG-NEXT:     CNDE_INT T1.Z, T5.X, T2.Z, 0.0,
-; EG-NEXT:     CNDE_INT * T1.X, T0.W, T0.Y, 0.0,
+; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
+; EG-NEXT:     CNDE_INT T2.Z, T4.X, T1.W, 0.0,
+; EG-NEXT:     CNDE_INT * T2.X, T0.Y, T0.X, 0.0,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %b_ptr = getelementptr <4 x i64>, ptr addrspace(1) %in, i64 1
   %a = load <4 x i64>, ptr addrspace(1) %in
@@ -1172,17 +1174,17 @@ define amdgpu_kernel void @s_shl_constant_i64(ptr addrspace(1) %out, i64 %a) {
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     AND_INT T0.Z, KC0[2].W, literal.x,
-; EG-NEXT:     MOV T0.W, literal.y,
-; EG-NEXT:     NOT_INT * T1.W, KC0[2].W,
-; EG-NEXT:    31(4.344025e-44), -1(nan)
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, literal.x, PV.W, PS,
-; EG-NEXT:     LSHL T0.W, literal.y, PV.Z,
+; EG-NEXT:     MOV T0.Z, literal.x,
+; EG-NEXT:     NOT_INT T0.W, KC0[2].W,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.y,
+; EG-NEXT:    -1(nan), 31(4.344025e-44)
+; EG-NEXT:     LSHL T1.Z, literal.x, PS,
+; EG-NEXT:     BIT_ALIGN_INT T0.W, literal.y, PV.Z, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.z,
-; EG-NEXT:    32767(4.591635e-41), -1(nan)
+; EG-NEXT:    -1(nan), 32767(4.591635e-41)
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.Z, PV.W,
-; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.W, 0.0,
+; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.W, PV.Z,
+; EG-NEXT:     CNDE_INT T0.X, T1.W, T1.Z, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %shl = shl i64 281474976710655, %a
@@ -1423,15 +1425,15 @@ define amdgpu_kernel void @s_shl_inline_imm_64_i64(ptr addrspace(1) %out, ptr ad
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     NOT_INT T0.W, KC0[2].W,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.x,
+; EG-NEXT:     AND_INT T0.W, KC0[2].W, literal.x,
+; EG-NEXT:     NOT_INT * T1.W, KC0[2].W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHL T0.Z, literal.x, PS,
-; EG-NEXT:     BIT_ALIGN_INT T0.W, 0.0, literal.y, PV.W,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.y,
-; EG-NEXT:    64(8.968310e-44), 32(4.484155e-44)
-; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.W, PV.Z,
-; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.Z, 0.0,
+; EG-NEXT:     BIT_ALIGN_INT T0.Z, 0.0, literal.x, PS,
+; EG-NEXT:     AND_INT T1.W, KC0[2].W, literal.x,
+; EG-NEXT:     LSHL * T0.W, literal.y, PV.W,
+; EG-NEXT:    32(4.484155e-44), 64(8.968310e-44)
+; EG-NEXT:     CNDE_INT * T0.Y, PV.W, PV.Z, PS,
+; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.W, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %shl = shl i64 64, %a
@@ -1903,16 +1905,16 @@ define amdgpu_kernel void @s_shl_inline_imm_f32_4_0_i64(ptr addrspace(1) %out, p
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     NOT_INT T0.W, KC0[2].W,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.x,
+; EG-NEXT:     AND_INT T0.W, KC0[2].W, literal.x,
+; EG-NEXT:     NOT_INT * T1.W, KC0[2].W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHL T0.Z, literal.x, PS,
-; EG-NEXT:     BIT_ALIGN_INT T0.W, 0.0, literal.y, PV.W,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.z,
-; EG-NEXT:    1082130432(4.000000e+00), 541065216(1.626303e-19)
-; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.W, PV.Z,
-; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.Z, 0.0,
+; EG-NEXT:     BIT_ALIGN_INT T0.Z, 0.0, literal.x, PS,
+; EG-NEXT:     AND_INT T1.W, KC0[2].W, literal.y,
+; EG-NEXT:     LSHL * T0.W, literal.z, PV.W,
+; EG-NEXT:    541065216(1.626303e-19), 32(4.484155e-44)
+; EG-NEXT:    1082130432(4.000000e+00), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T0.Y, PV.W, PV.Z, PS,
+; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.W, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %shl = shl i64 1082130432, %a
@@ -1959,17 +1961,17 @@ define amdgpu_kernel void @s_shl_inline_imm_f32_neg_4_0_i64(ptr addrspace(1) %ou
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     AND_INT T0.Z, KC0[2].W, literal.x,
-; EG-NEXT:     MOV T0.W, literal.y,
-; EG-NEXT:     NOT_INT * T1.W, KC0[2].W,
-; EG-NEXT:    31(4.344025e-44), -532676608(-5.534023e+19)
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, literal.x, PV.W, PS,
-; EG-NEXT:     LSHL T0.W, literal.y, PV.Z,
+; EG-NEXT:     MOV T0.Z, literal.x,
+; EG-NEXT:     NOT_INT T0.W, KC0[2].W,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.y,
+; EG-NEXT:    -532676608(-5.534023e+19), 31(4.344025e-44)
+; EG-NEXT:     LSHL T1.Z, literal.x, PS,
+; EG-NEXT:     BIT_ALIGN_INT T0.W, literal.y, PV.Z, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.z,
-; EG-NEXT:    2147483647(nan), -1065353216(-4.000000e+00)
+; EG-NEXT:    -1065353216(-4.000000e+00), 2147483647(nan)
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.Z, PV.W,
-; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.W, 0.0,
+; EG-NEXT:     CNDE_INT * T0.Y, PS, PV.W, PV.Z,
+; EG-NEXT:     CNDE_INT T0.X, T1.W, T1.Z, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %shl = shl i64 -1065353216, %a

@@ -14,5 +14,3 @@ add_llvm_unittest(IPOTests
   AttributorTest.cpp
   FunctionSpecializationTest.cpp
   )
-
-set_property(TARGET IPOTests PROPERTY FOLDER "Tests/UnitTests/TransformsTests")

@@ -5,6 +5,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.A = type { [7 x i8] }
 
+@g = external global i8
+
 define ptr @test1(ptr %b, ptr %e) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[E_PTR:%.*]] = ptrtoint ptr [[E:%.*]] to i64
@@ -269,6 +271,14 @@ define <vscale x 2 x ptr> @ptr_idx_mix_scalar_scalable_vector() {
 ;
   %v = getelementptr [2 x i64], ptr null, i64 0, <vscale x 2 x i64> zeroinitializer
   ret <vscale x 2 x ptr> %v
+}
+
+define ptr @constexpr_gep_nusw_nuw() {
+; CHECK-LABEL: @constexpr_gep_nusw_nuw(
+; CHECK-NEXT:    ret ptr getelementptr nusw nuw (i8, ptr @g, i64 ptrtoint (ptr @g to i64))
+;
+  %v = getelementptr nusw nuw i8, ptr @g, i64 ptrtoint (ptr @g to i64)
+  ret ptr %v
 }
 
 ; Check ConstantExpr::getGetElementPtr() using ElementCount for size queries - end.

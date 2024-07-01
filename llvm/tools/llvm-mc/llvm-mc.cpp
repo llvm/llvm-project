@@ -183,10 +183,6 @@ static cl::opt<std::string> MainFileName(
     cl::desc("Specifies the name we should consider the input file"),
     cl::cat(MCCategory));
 
-static cl::opt<bool> SaveTempLabels("save-temp-labels",
-                                    cl::desc("Don't discard temporary labels"),
-                                    cl::cat(MCCategory));
-
 static cl::opt<bool> LexMasmIntegers(
     "masm-integers",
     cl::desc("Enable binary and hex masm integers (0b110 and 0ABCh)"),
@@ -428,9 +424,6 @@ int main(int argc, char **argv) {
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
 
-  if (SaveTempLabels)
-    Ctx.setAllowTemporaryLabels(false);
-
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
   unsigned DwarfVersion = MCOptions.DwarfVersion ? MCOptions.DwarfVersion : 4;
@@ -568,9 +561,6 @@ int main(int argc, char **argv) {
     if (NoExecStack)
       Str->initSections(true, *STI);
   }
-
-  // Use Assembler information for parsing.
-  Str->setUseAssemblerInfoForParsing(true);
 
   int Res = 1;
   bool disassemble = false;

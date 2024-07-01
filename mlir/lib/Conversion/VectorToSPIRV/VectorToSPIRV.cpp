@@ -18,7 +18,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -578,6 +577,107 @@ struct VectorShuffleOpConvert final
   }
 };
 
+struct VectorInterleaveOpConvert final
+    : public OpConversionPattern<vector::InterleaveOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp interleaveOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Check the result vector type.
+    VectorType oldResultType = interleaveOp.getResultVectorType();
+    Type newResultType = getTypeConverter()->convertType(oldResultType);
+    if (!newResultType)
+      return rewriter.notifyMatchFailure(interleaveOp,
+                                         "unsupported result vector type");
+
+    // Interleave the indices.
+    VectorType sourceType = interleaveOp.getSourceVectorType();
+    int n = sourceType.getNumElements();
+
+    // Input vectors of size 1 are converted to scalars by the type converter.
+    // We cannot use `spirv::VectorShuffleOp` directly in this case, and need to
+    // use `spirv::CompositeConstructOp`.
+    if (n == 1) {
+      Value newOperands[] = {adaptor.getLhs(), adaptor.getRhs()};
+      rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+          interleaveOp, newResultType, newOperands);
+      return success();
+    }
+
+    auto seq = llvm::seq<int64_t>(2 * n);
+    auto indices = llvm::map_to_vector(
+        seq, [n](int i) { return (i % 2 ? n : 0) + i / 2; });
+
+    // Emit a SPIR-V shuffle.
+    rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
+        interleaveOp, newResultType, adaptor.getLhs(), adaptor.getRhs(),
+        rewriter.getI32ArrayAttr(indices));
+
+    return success();
+  }
+};
+
+struct VectorDeinterleaveOpConvert final
+    : public OpConversionPattern<vector::DeinterleaveOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::DeinterleaveOp deinterleaveOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    // Check the result vector type.
+    VectorType oldResultType = deinterleaveOp.getResultVectorType();
+    Type newResultType = getTypeConverter()->convertType(oldResultType);
+    if (!newResultType)
+      return rewriter.notifyMatchFailure(deinterleaveOp,
+                                         "unsupported result vector type");
+
+    Location loc = deinterleaveOp->getLoc();
+
+    // Deinterleave the indices.
+    Value sourceVector = adaptor.getSource();
+    VectorType sourceType = deinterleaveOp.getSourceVectorType();
+    int n = sourceType.getNumElements();
+
+    // Output vectors of size 1 are converted to scalars by the type converter.
+    // We cannot use `spirv::VectorShuffleOp` directly in this case, and need to
+    // use `spirv::CompositeExtractOp`.
+    if (n == 2) {
+      auto elem0 = rewriter.create<spirv::CompositeExtractOp>(
+          loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({0}));
+
+      auto elem1 = rewriter.create<spirv::CompositeExtractOp>(
+          loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({1}));
+
+      rewriter.replaceOp(deinterleaveOp, {elem0, elem1});
+      return success();
+    }
+
+    // Indices for `shuffleEven` (result 0).
+    auto seqEven = llvm::seq<int64_t>(n / 2);
+    auto indicesEven =
+        llvm::map_to_vector(seqEven, [](int i) { return i * 2; });
+
+    // Indices for `shuffleOdd` (result 1).
+    auto seqOdd = llvm::seq<int64_t>(n / 2);
+    auto indicesOdd =
+        llvm::map_to_vector(seqOdd, [](int i) { return i * 2 + 1; });
+
+    // Create two SPIR-V shuffles.
+    auto shuffleEven = rewriter.create<spirv::VectorShuffleOp>(
+        loc, newResultType, sourceVector, sourceVector,
+        rewriter.getI32ArrayAttr(indicesEven));
+
+    auto shuffleOdd = rewriter.create<spirv::VectorShuffleOp>(
+        loc, newResultType, sourceVector, sourceVector,
+        rewriter.getI32ArrayAttr(indicesOdd));
+
+    rewriter.replaceOp(deinterleaveOp, {shuffleEven, shuffleOdd});
+    return success();
+  }
+};
+
 struct VectorLoadOpConverter final
     : public OpConversionPattern<vector::LoadOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -822,6 +922,7 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
       VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
+      VectorInterleaveOpConvert, VectorDeinterleaveOpConvert,
       VectorSplatPattern, VectorLoadOpConverter, VectorStoreOpConverter>(
       typeConverter, patterns.getContext(), PatternBenefit(1));
 
@@ -829,9 +930,6 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   // than the generic one that extracts all elements.
   patterns.add<VectorReductionToFPDotProd>(typeConverter, patterns.getContext(),
                                            PatternBenefit(2));
-
-  // Need this until vector.interleave is handled.
-  vector::populateVectorInterleaveToShufflePatterns(patterns);
 }
 
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(

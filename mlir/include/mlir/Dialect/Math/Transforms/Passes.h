@@ -14,10 +14,6 @@
 namespace mlir {
 namespace math {
 #define GEN_PASS_DECL
-#include "mlir/Dialect/Math/Transforms/Passes.h.inc"
-#define GEN_PASS_DECL_MATHUPLIFTTOFMA
-#define GEN_PASS_DECL_MATHLEGALIZETOF32
-#include "mlir/Dialect/Math/Transforms/Passes.h.inc"
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Math/Transforms/Passes.h.inc"
 } // namespace math

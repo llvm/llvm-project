@@ -532,6 +532,15 @@ enum clock_function_type {
 enum mic_type { non_mic, mic1, mic2, mic3, dummy };
 #endif
 
+// OpenMP 3.1 - Nested num threads array
+typedef struct kmp_nested_nthreads_t {
+  int *nth;
+  int size;
+  int used;
+} kmp_nested_nthreads_t;
+
+extern kmp_nested_nthreads_t __kmp_nested_nth;
+
 /* -- fast reduction stuff ------------------------------------------------ */
 
 #undef KMP_FAST_REDUCTION_BARRIER
@@ -2675,11 +2684,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
 #if OMPX_TASKGRAPH
-  unsigned reserved31 : 6;
+  unsigned reserved31 : 5;
   unsigned onced : 1;
 #else
-  unsigned reserved31 : 7;
+  unsigned reserved31 : 6;
 #endif
+  unsigned target : 1;
   unsigned native : 1;
   unsigned freed : 1;
   unsigned complete : 1;
@@ -2728,11 +2738,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned complete : 1; /* 1==complete, 0==not complete   */
   unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
+  unsigned target : 1;
 #if OMPX_TASKGRAPH
   unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
-  unsigned reserved31 : 6; /* reserved for library use */
+  unsigned reserved31 : 5; /* reserved for library use */
 #else
-  unsigned reserved31 : 7; /* reserved for library use */
+  unsigned reserved31 : 6; /* reserved for library use */
 #endif
 #endif
 } kmp_tasking_flags_t;
@@ -2963,6 +2974,12 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   /* The data set by the primary thread at reinit, then R/W by the worker */
   KMP_ALIGN_CACHE int
       th_set_nproc; /* if > 0, then only use this request for the next fork */
+  int *th_set_nested_nth;
+  bool th_nt_strict; // num_threads clause has strict modifier
+  ident_t *th_nt_loc; // loc for strict modifier
+  int th_nt_sev; // error severity for strict modifier
+  const char *th_nt_msg; // error message for strict modifier
+  int th_set_nested_nth_sz;
 #if KMP_NESTED_HOT_TEAMS
   kmp_hot_team_ptr_t *th_hot_teams; /* array of hot teams */
 #endif
@@ -3204,6 +3221,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   void *t_stack_id; // team specific stack stitching id (for ittnotify)
 #endif /* USE_ITT_BUILD */
   distributedBarrier *b; // Distributed barrier data associated with team
+  kmp_nested_nthreads_t *t_nested_nth;
 } kmp_base_team_t;
 
 // Assert that the list structure fits and aligns within
@@ -3540,15 +3558,6 @@ extern enum mic_type __kmp_mic_type;
 extern double __kmp_load_balance_interval; // load balance algorithm interval
 #endif /* USE_LOAD_BALANCE */
 
-// OpenMP 3.1 - Nested num threads array
-typedef struct kmp_nested_nthreads_t {
-  int *nth;
-  int size;
-  int used;
-} kmp_nested_nthreads_t;
-
-extern kmp_nested_nthreads_t __kmp_nested_nth;
-
 #if KMP_USE_ADAPTIVE_LOCKS
 
 // Parameters for the speculative lock backoff system.
@@ -3783,6 +3792,11 @@ extern void ___kmp_thread_free(kmp_info_t *th, void *ptr KMP_SRC_LOC_DECL);
   ___kmp_thread_free((th), (ptr)KMP_SRC_LOC_CURR)
 
 extern void __kmp_push_num_threads(ident_t *loc, int gtid, int num_threads);
+extern void __kmp_push_num_threads_list(ident_t *loc, int gtid,
+                                        kmp_uint32 list_length,
+                                        int *num_threads_list);
+extern void __kmp_set_strict_num_threads(ident_t *loc, int gtid, int sev,
+                                         const char *msg);
 
 extern void __kmp_push_proc_bind(ident_t *loc, int gtid,
                                  kmp_proc_bind_t proc_bind);
@@ -4421,6 +4435,18 @@ KMP_EXPORT kmp_int32 __kmpc_in_parallel(ident_t *loc);
 KMP_EXPORT void __kmpc_pop_num_threads(ident_t *loc, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
                                         kmp_int32 num_threads);
+KMP_EXPORT void __kmpc_push_num_threads_strict(ident_t *loc,
+                                               kmp_int32 global_tid,
+                                               kmp_int32 num_threads,
+                                               int severity,
+                                               const char *message);
+
+KMP_EXPORT void __kmpc_push_num_threads_list(ident_t *loc, kmp_int32 global_tid,
+                                             kmp_uint32 list_length,
+                                             kmp_int32 *num_threads_list);
+KMP_EXPORT void __kmpc_push_num_threads_list_strict(
+    ident_t *loc, kmp_int32 global_tid, kmp_uint32 list_length,
+    kmp_int32 *num_threads_list, int severity, const char *message);
 
 KMP_EXPORT void __kmpc_push_proc_bind(ident_t *loc, kmp_int32 global_tid,
                                       int proc_bind);

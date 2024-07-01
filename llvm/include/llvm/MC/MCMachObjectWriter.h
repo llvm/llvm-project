@@ -162,6 +162,8 @@ public:
 
   uint64_t getPaddingSize(const MCSection *SD, const MCAsmLayout &Layout) const;
 
+  const MCSymbol *getAtom(const MCSymbol &S) const;
+
   bool doesSymbolRequireExternRelocation(const MCSymbol &S);
 
   /// @}
@@ -253,11 +255,6 @@ public:
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &A,
-                                              const MCSymbol &B,
-                                              bool InSet) const override;
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,

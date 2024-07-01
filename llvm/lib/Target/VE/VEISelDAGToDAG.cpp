@@ -34,11 +34,9 @@ class VEDAGToDAGISel : public SelectionDAGISel {
   const VESubtarget *Subtarget;
 
 public:
-  static char ID;
-
   VEDAGToDAGISel() = delete;
 
-  explicit VEDAGToDAGISel(VETargetMachine &tm) : SelectionDAGISel(ID, tm) {}
+  explicit VEDAGToDAGISel(VETargetMachine &tm) : SelectionDAGISel(tm) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<VESubtarget>();
@@ -70,11 +68,18 @@ private:
   bool matchADDRrr(SDValue N, SDValue &Base, SDValue &Index);
   bool matchADDRri(SDValue N, SDValue &Base, SDValue &Offset);
 };
+
+class VEDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit VEDAGToDAGISelLegacy(VETargetMachine &tm)
+      : SelectionDAGISelLegacy(ID, std::make_unique<VEDAGToDAGISel>(tm)) {}
+};
 } // end anonymous namespace
 
-char VEDAGToDAGISel::ID = 0;
+char VEDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(VEDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(VEDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool VEDAGToDAGISel::selectADDRrri(SDValue Addr, SDValue &Base, SDValue &Index,
                                    SDValue &Offset) {
@@ -336,5 +341,5 @@ SDNode *VEDAGToDAGISel::getGlobalBaseReg() {
 /// VE-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createVEISelDag(VETargetMachine &TM) {
-  return new VEDAGToDAGISel(TM);
+  return new VEDAGToDAGISelLegacy(TM);
 }

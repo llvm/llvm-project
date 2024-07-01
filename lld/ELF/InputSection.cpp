@@ -76,12 +76,12 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
     invokeELFT(parseCompressedHeader,);
 }
 
-// Drop SHF_GROUP bit unless we are producing a re-linkable object file.
-// SHF_GROUP is a marker that a section belongs to some comdat group.
-// That flag doesn't make sense in an executable.
+// SHF_INFO_LINK and SHF_GROUP are normally resolved and not copied to the
+// output section. However, for relocatable linking without
+// --force-group-allocation, the SHF_GROUP flag and section groups are retained.
 static uint64_t getFlags(uint64_t flags) {
   flags &= ~(uint64_t)SHF_INFO_LINK;
-  if (!config->relocatable)
+  if (config->resolveGroups)
     flags &= ~(uint64_t)SHF_GROUP;
   return flags;
 }
@@ -411,7 +411,7 @@ void InputSection::copyRelocations(uint8_t *buf,
     auto *p = reinterpret_cast<typename ELFT::Rela *>(buf);
     buf += sizeof(RelTy);
 
-    if (RelTy::IsRela)
+    if (RelTy::HasAddend)
       p->r_addend = rel.addend;
 
     // Output section VA is zero for -r, so r_offset is an offset within the
@@ -452,7 +452,7 @@ void InputSection::copyRelocations(uint8_t *buf,
 
       int64_t addend = rel.addend;
       const uint8_t *bufLoc = sec->content().begin() + rel.offset;
-      if (!RelTy::IsRela)
+      if (!RelTy::HasAddend)
         addend = target.getImplicitAddend(bufLoc, type);
 
       if (config->emachine == EM_MIPS &&
@@ -471,7 +471,7 @@ void InputSection::copyRelocations(uint8_t *buf,
         addend += sec->getFile<ELFT>()->mipsGp0;
       }
 
-      if (RelTy::IsRela)
+      if (RelTy::HasAddend)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       // For SHF_ALLOC sections relocated by REL, append a relocation to
       // sec->relocations so that relocateAlloc transitively called by
@@ -877,6 +877,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return in.got->getTlsDescAddr(sym) + a - in.gotPlt->getVA();
   case R_AARCH64_TLSDESC_PAGE:
     return getAArch64Page(in.got->getTlsDescAddr(sym) + a) - getAArch64Page(p);
+  case R_LOONGARCH_TLSDESC_PAGE_PC:
+    return getLoongArchPageDelta(in.got->getTlsDescAddr(sym) + a, p, type);
   case R_TLSGD_GOT:
     return in.got->getGlobalDynOffset(sym) + a;
   case R_TLSGD_GOTPLT:
@@ -932,7 +934,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
-    if (!RelTy::IsRela)
+    if (!RelTy::HasAddend)
       addend += target.getImplicitAddend(bufLoc, type);
 
     Symbol &sym = f->getRelocTargetSym(rel);
@@ -1005,10 +1007,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       }
     }
 
-    // For a relocatable link, content relocated by RELA remains unchanged and
-    // we can stop here, while content relocated by REL referencing STT_SECTION
-    // needs updating implicit addends.
-    if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
+    // For a relocatable link, content relocated by relocation types with an
+    // explicit addend, such as RELA, remain unchanged and we can stop here.
+    // While content relocated by relocation types with an implicit addend, such
+    // as REL, needs the implicit addend updated.
+    if (config->relocatable && (RelTy::HasAddend || sym.type != STT_SECTION))
       continue;
 
     // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC

@@ -3423,12 +3423,18 @@ void OpEmitter::genSideEffectInterfaceMethods() {
         }
       } else {
         // Otherwise this is an operand/result, so we need to attach the Value.
-        body << "  for (::mlir::Value value : getODS"
-             << (location.kind == EffectKind::Operand ? "Operands" : "Results")
-             << "(" << location.index << "))\n  "
-             << llvm::formatv(addEffectCode, effect, "value, ", stage,
-                              effectOnFullRegion, resource)
-                    .str();
+        body << "  {\n    auto valueRange = getODS"
+             << (location.kind == EffectKind::Operand ? "Operand" : "Result")
+             << "IndexAndLength(" << location.index << ");\n"
+             << "    for (unsigned idx = valueRange.first; idx < "
+                "valueRange.first"
+             << " + valueRange.second; idx++) {\n    "
+             << llvm::formatv(addEffectCode, effect,
+                              (location.kind == EffectKind::Operand
+                                   ? "&getOperation()->getOpOperand(idx), "
+                                   : "getOperation()->getOpResult(idx), "),
+                              stage, effectOnFullRegion, resource)
+             << "    }\n  }\n";
       }
     }
   }
@@ -4101,7 +4107,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                              "{}");
     }
     paramList.emplace_back("::mlir::RegionRange", "regions", "{}");
-    auto *baseConstructor = genericAdaptorBase.addConstructor(paramList);
+    auto *baseConstructor =
+        genericAdaptorBase.addConstructor<Method::Inline>(paramList);
     baseConstructor->addMemberInitializer("odsAttrs", "attrs");
     if (useProperties)
       baseConstructor->addMemberInitializer("properties", "properties");
@@ -4163,14 +4170,24 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   // and the value range from the parameter.
   {
     // Base class is in the cpp file and can simply access the members of the op
-    // class to initialize the template independent fields.
-    auto *constructor = genericAdaptorBase.addConstructor(
-        MethodParameter(op.getCppClassName(), "op"));
-    constructor->addMemberInitializer(
-        genericAdaptorBase.getClassName(),
-        llvm::Twine(!useProperties ? "op->getAttrDictionary()"
-                                   : "op->getDiscardableAttrDictionary()") +
-            ", op.getProperties(), op->getRegions()");
+    // class to initialize the template independent fields. If the op doesn't
+    // have properties, we can emit a generic constructor inline. Otherwise,
+    // emit it out-of-line because we need the op to be defined.
+    Constructor *constructor;
+    if (useProperties) {
+      constructor = genericAdaptorBase.addConstructor(
+          MethodParameter(op.getCppClassName(), "op"));
+    } else {
+      constructor = genericAdaptorBase.addConstructor<Method::Inline>(
+          MethodParameter("::mlir::Operation *", "op"));
+    }
+    constructor->addMemberInitializer("odsAttrs",
+                                      "op->getRawDictionaryAttrs()");
+    // Retrieve the operation name from the op directly.
+    constructor->addMemberInitializer("odsOpName", "op->getName()");
+    if (useProperties)
+      constructor->addMemberInitializer("properties", "op.getProperties()");
+    constructor->addMemberInitializer("odsRegions", "op->getRegions()");
 
     // Generic adaptor is templated and therefore defined inline in the header.
     // We cannot use the Op class here as it is an incomplete type (we have a

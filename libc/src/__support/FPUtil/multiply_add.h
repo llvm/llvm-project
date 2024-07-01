@@ -39,17 +39,18 @@ multiply_add(T x, T y, T z) {
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
 
 // FMA instructions are available.
-#include "FMA.h"
+// We use builtins directly instead of including FMA.h to avoid a circular
+// dependency: multiply_add.h -> FMA.h -> generic/FMA.h -> dyadic_float.h.
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
 LIBC_INLINE float multiply_add(float x, float y, float z) {
-  return fma(x, y, z);
+  return __builtin_fmaf(x, y, z);
 }
 
 LIBC_INLINE double multiply_add(double x, double y, double z) {
-  return fma(x, y, z);
+  return __builtin_fma(x, y, z);
 }
 
 } // namespace fputil

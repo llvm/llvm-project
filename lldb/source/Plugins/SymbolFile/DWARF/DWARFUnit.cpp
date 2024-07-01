@@ -63,7 +63,7 @@ void DWARFUnit::ExtractUnitDIENoDwoIfNeeded() {
   // parse
   const DWARFDataExtractor &data = GetData();
   if (offset < GetNextUnitOffset() &&
-      m_first_die.Extract(data, this, &offset)) {
+      m_first_die.Extract(data, *this, &offset)) {
     AddUnitDIE(m_first_die);
     return;
   }
@@ -242,7 +242,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   die_index_stack.reserve(32);
   die_index_stack.push_back(0);
   bool prev_die_had_children = false;
-  while (offset < next_cu_offset && die.Extract(data, this, &offset)) {
+  while (offset < next_cu_offset && die.Extract(data, *this, &offset)) {
     const bool null_die = die.IsNULL();
     if (depth == 0) {
       assert(m_die_array.empty() && "Compile unit DIE already added");
@@ -670,7 +670,7 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
 
 llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
   DWARFDebugInfoEntry die;
-  if (!die.Extract(GetData(), this, &die_offset))
+  if (!die.Extract(GetData(), *this, &die_offset))
     return llvm::StringRef();
 
   // Does die contain a DW_AT_Name?

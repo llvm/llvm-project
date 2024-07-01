@@ -31,8 +31,7 @@ struct Y {
   static int z;
 
   template<int U>
-  struct Inner : Y { // expected-note {{declared here}}
-  };
+  struct Inner; // expected-note {{declared here}}
 
   bool f(T other) {
     // We can determine that 'inner' does not exist at parse time, so can
@@ -40,6 +39,10 @@ struct Y {
     return this->inner<other>::z; // expected-error {{no template named 'inner' in 'Y<T>'; did you mean 'Inner'?}}
   }
 };
+
+template<typename T>
+template<int U>
+struct Y<T>::Inner : Y { };
 
 struct Q { constexpr operator int() { return 0; } };
 void use_y(Y<Q> x) { x.f(Q()); }

@@ -12,7 +12,7 @@ set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra" CACHE STRING "")
 
 set(CLANG_ENABLE_HLSL On CACHE BOOL "")
 
-if (NOT CMAKE_CONFIGURATION_TYPES)
+if (HLSL_ENABLE_DISTRIBUTION)
   set(LLVM_DISTRIBUTION_COMPONENTS
       "clang;hlsl-resource-headers;clangd"
       CACHE STRING "")

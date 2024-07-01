@@ -12,7 +12,6 @@ add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL
   CodeGenIntrinsics.cpp
   SDNodeProperties.cpp
 )
-set_target_properties(LLVMTableGenBasic PROPERTIES FOLDER "Tablegenning")
 
 # Users may include its headers as "Basic/*.h"
 target_include_directories(LLVMTableGenBasic

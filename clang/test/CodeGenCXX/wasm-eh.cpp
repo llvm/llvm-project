@@ -1,4 +1,8 @@
 // REQUIRES: webassembly-registered-target
+
+// RUN: %clang -E -dM %s -target wasm32-unknown-unknown -fwasm-exceptions | FileCheck %s -check-prefix PREPROCESSOR
+// PREPROCESSOR: #define __WASM_EXCEPTIONS__ 1
+
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 

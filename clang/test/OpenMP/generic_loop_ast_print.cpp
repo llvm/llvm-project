@@ -50,7 +50,7 @@
 //PRINT: }
 //DUMP: FunctionDecl{{.*}}templ_foo 'void (int)'
 //DUMP: TemplateArgument type 'int'
-//DUMP: TemplateArgument integral 2
+//DUMP: TemplateArgument integral '2'
 //DUMP: ParmVarDecl{{.*}}'int'
 //DUMP: OMPSimdDirective
 //DUMP: OMPCollapseClause

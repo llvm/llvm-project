@@ -36,6 +36,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
+llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os,
+                                            const CompilerContext &rhs) {
+  StreamString lldb_stream;
+  rhs.Dump(lldb_stream);
+  return os << lldb_stream.GetString();
+}
+
 bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
                                   llvm::ArrayRef<CompilerContext> pattern) {
   auto ctx = context_chain.begin();
@@ -68,20 +75,18 @@ bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
 static CompilerContextKind ConvertTypeClass(lldb::TypeClass type_class) {
   if (type_class == eTypeClassAny)
     return CompilerContextKind::AnyType;
-  uint16_t result = 0;
-  if (type_class & lldb::eTypeClassClass)
-    result |= (uint16_t)CompilerContextKind::Class;
-  if (type_class & lldb::eTypeClassStruct)
-    result |= (uint16_t)CompilerContextKind::Struct;
+  CompilerContextKind result = {};
+  if (type_class & (lldb::eTypeClassClass | lldb::eTypeClassStruct))
+    result |= CompilerContextKind::ClassOrStruct;
   if (type_class & lldb::eTypeClassUnion)
-    result |= (uint16_t)CompilerContextKind::Union;
+    result |= CompilerContextKind::Union;
   if (type_class & lldb::eTypeClassEnumeration)
-    result |= (uint16_t)CompilerContextKind::Enum;
+    result |= CompilerContextKind::Enum;
   if (type_class & lldb::eTypeClassFunction)
-    result |= (uint16_t)CompilerContextKind::Function;
+    result |= CompilerContextKind::Function;
   if (type_class & lldb::eTypeClassTypedef)
-    result |= (uint16_t)CompilerContextKind::Typedef;
-  return (CompilerContextKind)result;
+    result |= CompilerContextKind::Typedef;
+  return result;
 }
 
 TypeQuery::TypeQuery(llvm::StringRef name, TypeQueryOptions options)
@@ -200,11 +205,8 @@ void CompilerContext::Dump(Stream &s) const {
   case CompilerContextKind::Namespace:
     s << "Namespace";
     break;
-  case CompilerContextKind::Class:
-    s << "Class";
-    break;
-  case CompilerContextKind::Struct:
-    s << "Structure";
+  case CompilerContextKind::ClassOrStruct:
+    s << "ClassOrStruct";
     break;
   case CompilerContextKind::Union:
     s << "Union";

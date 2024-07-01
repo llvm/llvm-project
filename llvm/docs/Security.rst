@@ -20,7 +20,7 @@ The LLVM Security Group is private. It is composed of trusted LLVM contributors.
 How to report a security issue?
 ===============================
 
-To report a security issue in the LLVM Project, please `open a new issue`_ in the LLVM project page, on the chromium issue tracker.  Be sure to use the "Security bug report" template.
+To report a security issue in any of the LLVM projects, please use the `report a vulnerability`_ feature in the `llvm/llvm-security-repo`_ repository on github, under the "Security" tab.
 
 We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by posting on the `Discourse forums`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
 
@@ -44,7 +44,6 @@ username for an individual isn't available, the brackets will be empty.
 * Ed Maste (individual; FreeBSD) [@emaste]
 * George Burgess IV (Google) [@gburgessiv]
 * Josh Stone (Red Hat; Rust) [@cuviper]
-* Kate McInnes (Apple) []
 * Kristof Beyls (ARM) [@kbeyls]
 * Matthew Riley (Google) [@mmdriley]
 * Nikhil Gupta (Nvidia) []
@@ -54,8 +53,10 @@ username for an individual isn't available, the brackets will be empty.
 * Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
-* Tim Penge (Sony) []
+* Tim Penge (Sony) [@tpenge]
+* Tulio Magno Quites Machado Filho (Red Hat) [@tuliom]
 * Will Huhn (Intel) [@wphuhn-intel]
+* Yvan Roux (ST) [@yroux]
 
 Criteria
 --------
@@ -92,9 +93,7 @@ Nomination process
 
 Anyone who feels they meet these criteria can nominate themselves, or may be nominated by a third party such as an existing LLVM Security Group member. The nomination should state whether the nominee is nominated as an individual, researcher, or as a vendor contact. It should clearly describe the grounds for nomination.
 
-For the moment, nominations are generally proposed, discussed, and voted on using Phabricator. An `example nomination is available here`_. The use of Phabricator helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may `open a new issue`_, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
-
-Our recommended method of nomination may change as our `Discussion Medium`_ story evolves over time.
+For the moment, nominations are generally proposed, discussed, and voted on using a github pull request. An `example nomination is available here`_. The use of pull requests helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may reach out to the security group via the `report a vulnerability`_ route, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
 
 Choosing new members
 --------------------
@@ -129,7 +128,7 @@ Privileges and Responsibilities of LLVM Security Group Members
 Access
 ------
 
-LLVM Security Group members will be subscribed to a private `Discussion Medium`_ (*FUTURE*: see section below). It will be used for technical discussions of security issues, as well as process discussions about matters such as disclosure timelines and group membership. Members have access to all security issues.
+LLVM Security Group members will be subscribed to a private `Discussion Medium`_. It will be used for technical discussions of security issues, as well as process discussions about matters such as disclosure timelines and group membership. Members have access to all security issues.
 
 Confidentiality
 ---------------
@@ -160,20 +159,12 @@ Members of the LLVM Security Group are expected to:
 Discussion Medium
 =================
 
-*FUTURE*: this section needs more work! Where discussions occur is influenced by other factors that are still open in this document. We can finalize it later.
-It seems like bugzilla and email don't meet security requirements.
-
 The medium used to host LLVM Security Group discussions is security-sensitive. It should therefore run on infrastructure which can meet our security expectations.
 
-We are currently using the `chromium issue tracker`_ (as the `llvm` project) to have security discussions:
+We use `GitHub's mechanism to privately report security vulnerabilities`_ to have security discussions:
 
 * File security issues.
 * Discuss security improvements to LLVM.
-
-When a new issue is filed, a template is provided to help issue reporters provide all relevant information.
-
-*FUTURE*: The `Github security`_ workflow allows publicly disclosing resolved security issues on the github project page, and we would be interested in adopting it for that purpose.  However, it does not easily allow confidential reporting of security issues, as creating Github Security Advisories is currently restricted to Github project admins.  That is why we have started with the `chromium issue tracker`_ instead.
-
 
 We also occasionally need to discuss logistics of the LLVM Security Group itself:
 
@@ -251,9 +242,10 @@ sensitive are the following. Note that this list can change over time.
 
 
 .. _CVE process: https://cve.mitre.org
-.. _open a new issue: https://bugs.chromium.org/p/llvm/issues/entry
-.. _chromium issue tracker: https://crbug.com
+.. _report a vulnerability: https://github.com/llvm/llvm-security-repo/security/advisories/new
+.. _llvm/llvm-security-repo: https://github.com/llvm/llvm-security-repo/security
+.. _GitHub's mechanism to privately report security vulnerabilities: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
 .. _Discourse forums: https://discourse.llvm.org
 .. _MITRE: https://cve.mitre.org
-.. _example nomination is available here: https://reviews.llvm.org/D99232
+.. _example nomination is available here: https://github.com/llvm/llvm-project/pull/92174
