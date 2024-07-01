@@ -5263,6 +5263,52 @@ static SDValue PerformREMCombine(SDNode *N,
   return SDValue();
 }
 
+// truncate (logic_op x, y) --> logic_op (truncate x), (truncate y)
+// This will reduce register pressure. 
+static SDValue PerformTruncCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  if (DCI.isBeforeLegalizeOps()) {
+    SDValue LogicalOp = N->getOperand(0);
+    switch (LogicalOp.getOpcode()) {
+    default: 
+      break;
+    case ISD::ADD:
+    case ISD::SUB:
+    case ISD::MUL:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR: {
+      EVT VT = N->getValueType(0);
+      EVT LogicalVT = LogicalOp.getValueType();
+      if (VT == MVT::i32 && LogicalVT == MVT::i64) {
+        const TargetLowering &TLI = DCI.DAG.getTargetLoweringInfo();
+        if (VT.isScalarInteger() ||
+            TLI.isOperationLegal(LogicalOp.getOpcode(), VT)) {
+          if (all_of(LogicalOp.getNode()->uses(), [](SDNode *U) {
+                return U->isMachineOpcode() ? 
+                       U->getMachineOpcode() == NVPTX::CVT_u32_u64 : 
+                       U->getOpcode() == ISD::TRUNCATE;
+              })) {
+            
+            SDLoc DL(N);
+            SDValue None = DCI.DAG.getTargetConstant(NVPTX::PTXCvtMode::NONE, 
+                                                     DL, MVT::i32);
+            SDNode *NarrowL = DCI.DAG.getMachineNode(
+                NVPTX::CVT_u32_u64, DL, VT, LogicalOp.getOperand(0), None);
+            SDNode *NarrowR = DCI.DAG.getMachineNode(
+                NVPTX::CVT_u32_u64, DL, VT, LogicalOp.getOperand(1), None);
+            return DCI.DAG.getNode(LogicalOp.getOpcode(), DL, VT,
+                                   SDValue(NarrowL, 0), SDValue(NarrowR, 0));
+          }
+        }
+      }
+      break;
+    }
+    }
+  }
+  return SDValue();
+}
+
 enum OperandSignedness {
   Signed = 0,
   Unsigned,
@@ -5719,6 +5765,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case ISD::UREM:
     case ISD::SREM:
       return PerformREMCombine(N, DCI, OptLevel);
+    case ISD::TRUNCATE:
+      return PerformTruncCombine(N, DCI);
     case ISD::SETCC:
       return PerformSETCCCombine(N, DCI, STI.getSmVersion());
     case NVPTXISD::StoreRetval:
@@ -5738,6 +5786,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case ISD::ADDRSPACECAST:
       return combineADDRSPACECAST(N, DCI);
   }
+
+  if (N->isMachineOpcode() && N->getMachineOpcode() == NVPTX::CVT_u32_u64)
+    return PerformTruncCombine(N, DCI);
+
   return SDValue();
 }
 
