@@ -140,22 +140,22 @@ func.func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
   %cf0 = arith.constant 0.0 : f32
 
   %0 = vector.transfer_read %arg0[%c0, %c0], %cf0
-    { permutation_map = affine_map<(d0, d1) -> (d0, d1)> }
+    { permutation_map = affine_map<(d0, d1) -> (d0, d1)>, in_bounds = [false, false]}
       : memref<4x2xf32>, vector<4x2xf32>
 
   %1 = vector.transfer_read %arg1[%c0, %c0], %cf0
-    { permutation_map = affine_map<(d0, d1) -> (d0, d1)> }
+    { permutation_map = affine_map<(d0, d1) -> (d0, d1)>, in_bounds = [false, false]}
     : memref<2x4xf32>, vector<2x4xf32>
 
   %2 = vector.transfer_read %arg2[%c0, %c0], %cf0
-    { permutation_map = affine_map<(d0, d1) -> (d0, d1)> }
+    { permutation_map = affine_map<(d0, d1) -> (d0, d1)>, in_bounds = [false, false]}
       : memref<4x4xf32>, vector<4x4xf32>
 
   %3 = vector.contract #contraction_trait1 %0, %1, %2
       : vector<4x2xf32>, vector<2x4xf32> into vector<4x4xf32>
 
   vector.transfer_write %3, %arg2[%c0, %c0]
-    {permutation_map = affine_map<(d0, d1) -> (d0, d1)>}
+    {permutation_map = affine_map<(d0, d1) -> (d0, d1)>, in_bounds = [false, false]}
       : vector<4x4xf32>, memref<4x4xf32>
   return
 }
@@ -175,10 +175,10 @@ func.func @vector_transfers(%arg0: index, %arg1: index) {
   %cst_1 = arith.constant 2.000000e+00 : f32
   affine.for %arg2 = 0 to %arg0 step 4 {
     affine.for %arg3 = 0 to %arg1 step 4 {
-      %4 = vector.transfer_read %0[%arg2, %arg3], %cst {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : memref<?x?xf32>, vector<4x4xf32>
-      %5 = vector.transfer_read %1[%arg2, %arg3], %cst {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : memref<?x?xf32>, vector<4x4xf32>
+      %4 = vector.transfer_read %0[%arg2, %arg3], %cst {permutation_map = affine_map<(d0, d1) -> (d0, d1)>, in_bounds = [false, false]} : memref<?x?xf32>, vector<4x4xf32>
+      %5 = vector.transfer_read %1[%arg2, %arg3], %cst {permutation_map = affine_map<(d0, d1) -> (d0, d1)>, in_bounds = [false, false]} : memref<?x?xf32>, vector<4x4xf32>
       %6 = arith.addf %4, %5 : vector<4x4xf32>
-      vector.transfer_write %6, %2[%arg2, %arg3] {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : vector<4x4xf32>, memref<?x?xf32>
+      vector.transfer_write %6, %2[%arg2, %arg3] {permutation_map = affine_map<(d0, d1) -> (d0, d1)>, in_bounds = [false, false]} : vector<4x4xf32>, memref<?x?xf32>
     }
   }
   return
@@ -228,14 +228,14 @@ func.func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32>
 func.func @elementwise_unroll(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
-  %1 = vector.transfer_read %arg1[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [false, false]} : memref<4x4xf32>, vector<4x4xf32>
+  %1 = vector.transfer_read %arg1[%c0, %c0], %cf0 {in_bounds = [false, false]} : memref<4x4xf32>, vector<4x4xf32>
   %cond = arith.cmpf ult, %0, %1 : vector<4x4xf32>
   // Vector transfer split pattern only support single user right now.
-  %2 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
-  %3 = vector.transfer_read %arg1[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
+  %2 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [false, false]} : memref<4x4xf32>, vector<4x4xf32>
+  %3 = vector.transfer_read %arg1[%c0, %c0], %cf0 {in_bounds = [false, false]} : memref<4x4xf32>, vector<4x4xf32>
   %4 = arith.select %cond, %2, %3 : vector<4x4xi1>, vector<4x4xf32>
-  vector.transfer_write %4, %arg0[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
+  vector.transfer_write %4, %arg0[%c0, %c0] {in_bounds = [false, false]} : vector<4x4xf32>, memref<4x4xf32>
   return
 }
 
@@ -268,16 +268,16 @@ func.func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
   tensor<4x4xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 :
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [false, false]} :
     tensor<4x2xf32>, vector<4x2xf32>
-  %1 = vector.transfer_read %arg1[%c0, %c0], %cf0 :
+  %1 = vector.transfer_read %arg1[%c0, %c0], %cf0 {in_bounds = [false, false]} :
     tensor<2x4xf32>, vector<2x4xf32>
-  %2 = vector.transfer_read %arg2[%c0, %c0], %cf0 :
+  %2 = vector.transfer_read %arg2[%c0, %c0], %cf0 {in_bounds = [false, false]} :
     tensor<4x4xf32>, vector<4x4xf32>
-  %3 = vector.contract #contraction_trait1 %0, %1, %2
-      : vector<4x2xf32>, vector<2x4xf32> into vector<4x4xf32>
-  %r = vector.transfer_write %3, %arg2[%c0, %c0]
-      : vector<4x4xf32>, tensor<4x4xf32>
+  %3 = vector.contract #contraction_trait1 %0, %1, %2 :
+    vector<4x2xf32>, vector<2x4xf32> into vector<4x4xf32>
+  %r = vector.transfer_write %3, %arg2[%c0, %c0] {in_bounds = [false, false]} :
+    vector<4x4xf32>, tensor<4x4xf32>
   return %r : tensor<4x4xf32>
 }
 

@@ -418,10 +418,10 @@ func.func @lift_illegal_transpose_to_memory(%a: index, %b: index, %memref: memre
   // CHECK-NEXT: %[[READ_SUBVIEW:.*]] = memref.subview %[[MEMREF]][%[[INDEXA]], %[[INDEXB]]] [%[[C8_VSCALE]], 4] [1, 1] : memref<?x?xf32> to memref<?x4xf32, strided<[?, 1], offset: ?>>
   // CHECK-NEXT: %[[CAST:.*]] = memref.cast %[[READ_SUBVIEW]] : memref<?x4xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
   // CHECK-NEXT: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]] (d0, d1) -> (d1, d0) : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  // CHECK-NEXT: %[[LEGAL_READ:.*]]  = vector.transfer_read %[[TRANSPOSE]][%c0, %c0], %[[C0_F32]] : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4x[8]xf32>
+  // CHECK-NEXT: %[[LEGAL_READ:.*]]  = vector.transfer_read %[[TRANSPOSE]][%c0, %c0], %[[C0_F32]] {{.*}} : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4x[8]xf32>
   // CHECK-NEXT: return %[[LEGAL_READ]]
   %pad = arith.constant 0.0 : f32
-  %illegalRead = vector.transfer_read %memref[%a, %b], %pad : memref<?x?xf32>, vector<[8]x4xf32>
+  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = [false, false]}: memref<?x?xf32>, vector<[8]x4xf32>
   %legalType = vector.transpose %illegalRead, [1, 0] : vector<[8]x4xf32> to vector<4x[8]xf32>
   return %legalType : vector<4x[8]xf32>
 }
@@ -438,11 +438,11 @@ func.func @lift_illegal_transpose_to_memory_with_mask(%dim0: index, %dim1: index
   // CHECK-DAG: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]]
   // CHECK-DAG: %[[MASK:.*]] = vector.create_mask %[[DIM1]], %[[DIM0]] : vector<4x[8]xi1>
   // CHECK:     %[[LEGAL_READ:.*]] = vector.transfer_read %[[TRANSPOSE]]
-  // CHECK-SAME:                       %[[MASK]] : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4x[8]xf32>
+  // CHECK-SAME:                       %[[MASK]] {{.*}} : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4x[8]xf32>
   // CHECK-NEXT: return %[[LEGAL_READ]]
   %pad = arith.constant 0.0 : f32
   %mask = vector.create_mask %dim0, %dim1 : vector<[8]x4xi1>
-  %illegalRead = vector.transfer_read %memref[%a, %b], %pad, %mask : memref<?x?xf32>, vector<[8]x4xf32>
+  %illegalRead = vector.transfer_read %memref[%a, %b], %pad, %mask {in_bounds = [false, false]} : memref<?x?xf32>, vector<[8]x4xf32>
   %legalType = vector.transpose %illegalRead, [1, 0] : vector<[8]x4xf32> to vector<4x[8]xf32>
   return %legalType : vector<4x[8]xf32>
 }
@@ -459,7 +459,7 @@ func.func @lift_illegal_transpose_to_memory_with_arith_extop(%a: index, %b: inde
   // CHECK-NEXT: %[[EXT_TYPE:.*]] = arith.extsi %[[LEGAL_READ]] : vector<4x[8]xi8> to vector<4x[8]xi32>
   // CHECK-NEXT: return %[[EXT_TYPE]]
   %pad = arith.constant 0 : i8
-  %illegalRead = vector.transfer_read %memref[%a, %b], %pad : memref<?x?xi8>, vector<[8]x4xi8>
+  %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = [false, false]} : memref<?x?xi8>, vector<[8]x4xi8>
   %extRead = arith.extsi %illegalRead : vector<[8]x4xi8> to vector<[8]x4xi32>
   %legalType = vector.transpose %extRead, [1, 0] : vector<[8]x4xi32> to vector<4x[8]xi32>
   return %legalType : vector<4x[8]xi32>

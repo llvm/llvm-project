@@ -265,7 +265,7 @@ func.func @insert_slice_regression(%t: tensor<10xf32>, %b: tensor<5xf32>) -> ten
   %1 = linalg.fill ins(%cst : f32) outs(%t : tensor<10xf32>) -> tensor<10xf32>
 
   // Read %1 so that it does not DCE away.
-  %vec = vector.transfer_read %1[%c0], %cst : tensor<10xf32>, vector<10xf32>
+  %vec = vector.transfer_read %1[%c0], %cst {in_bounds=[false]} : tensor<10xf32>, vector<10xf32>
   vector.print %vec : vector<10xf32>
 
   // Write back a different value (not %1).
@@ -286,7 +286,7 @@ func.func @insert_slice_full_overwrite(%t: tensor<10xf32>, %b: tensor<10xf32>) -
   %1 = linalg.fill ins(%cst : f32) outs(%t : tensor<10xf32>) -> tensor<10xf32>
 
   // Read %1 so that it does not DCE away.
-  %vec = vector.transfer_read %1[%c0], %cst : tensor<10xf32>, vector<10xf32>
+  %vec = vector.transfer_read %1[%c0], %cst {in_bounds=[false]} : tensor<10xf32>, vector<10xf32>
   vector.print %vec : vector<10xf32>
 
   // Write back a different value (not %1).

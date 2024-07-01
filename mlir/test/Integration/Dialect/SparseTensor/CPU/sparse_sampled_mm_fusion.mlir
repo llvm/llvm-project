@@ -229,9 +229,9 @@ module {
     // CHECK-NEXT: values : ( 96, 192 )
     // CHECK-NEXT: ----
     //
-    %v0 = vector.transfer_read %0[%c0, %c0], %d0
+    %v0 = vector.transfer_read %0[%c0, %c0], %d0 {in_bounds=[false, false]}
         : tensor<8x8xf64>, vector<8x8xf64>
-    %v1 = vector.transfer_read %1[%c0, %c0], %d0
+    %v1 = vector.transfer_read %1[%c0, %c0], %d0 {in_bounds=[false, false]}
         : tensor<8x8xf64>, vector<8x8xf64>
     vector.print %v0 : vector<8x8xf64>
     vector.print %v1 : vector<8x8xf64>

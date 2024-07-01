@@ -113,7 +113,7 @@ func.func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg
   //      VECT: {{.*}} #[[$map_id1]](%[[M]]) step 4 {
   // VECT-NEXT:   {{.*}} #[[$map_id1]](%[[N]]) step 8 {
   //      VECT:     %[[VC0:.*]] = arith.constant dense<0.000000e+00> : vector<4x8xf32>
-  // VECT-NEXT:     vector.transfer_write %[[VC0]], %{{.*}}[%{{.*}}, %{{.*}}] : vector<4x8xf32>, memref<?x?xf32>
+  // VECT-NEXT:     vector.transfer_write %[[VC0]], %{{.*}}[%{{.*}}, %{{.*}}] {{.*}} : vector<4x8xf32>, memref<?x?xf32>
   affine.for %i0 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
     affine.for %i1 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
       %cst = arith.constant 0.000000e+00 : f32
@@ -123,13 +123,13 @@ func.func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg
   //      VECT:  affine.for %[[I2:.*]] = #[[$map_id1]](%[[C0]]) to #[[$map_id1]](%[[M]]) step 4 {
   // VECT-NEXT:    affine.for %[[I3:.*]] = #[[$map_id1]](%[[C0]]) to #[[$map_id1]](%[[N]]) step 8 {
   // VECT-NEXT:      affine.for %[[I4:.*]] = #[[$map_id1]](%[[C0]]) to #[[$map_id1]](%[[K]]) {
-  //      VECT:        %[[A:.*]] = vector.transfer_read %{{.*}}[%[[I4]], %[[I3]]], %{{.*}} {permutation_map = #[[$map_proj_d0d1_zerod1]]} : memref<?x?xf32>, vector<4x8xf32>
-  //      VECT:        %[[B:.*]] = vector.transfer_read %{{.*}}[%[[I2]], %[[I4]]], %{{.*}} {permutation_map = #[[$map_proj_d0d1_d0zero]]} : memref<?x?xf32>, vector<4x8xf32>
+  //      VECT:        %[[A:.*]] = vector.transfer_read %{{.*}}[%[[I4]], %[[I3]]], %{{.*}} {{{.*}} permutation_map = #[[$map_proj_d0d1_zerod1]]} : memref<?x?xf32>, vector<4x8xf32>
+  //      VECT:        %[[B:.*]] = vector.transfer_read %{{.*}}[%[[I2]], %[[I4]]], %{{.*}} {{{.*}} permutation_map = #[[$map_proj_d0d1_d0zero]]} : memref<?x?xf32>, vector<4x8xf32>
   // VECT-NEXT:        %[[C:.*]] = arith.mulf %[[B]], %[[A]] : vector<4x8xf32>
   //      VECT:        %[[D:.*]] = vector.transfer_read %{{.*}}[%[[I2]], %[[I3]]], %{{.*}} : memref<?x?xf32>, vector<4x8xf32>
   // VECT-NEXT:        %[[E:.*]] = arith.addf %[[D]], %[[C]] : vector<4x8xf32>
-  //      VECT:        vector.transfer_write %[[E]], %{{.*}}[%[[I2]], %[[I3]]] : vector<4x8xf32>, memref<?x?xf32>
-  affine.for %i2 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
+  //      VECT:        vector.transfer_write %[[E]], %{{.*}}[%[[I2]], %[[I3]]] {{.*}} : vector<4x8xf32>, memref<?x?xf32>
+  affine.for %i2 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M ) {
     affine.for %i3 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
       affine.for %i4 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%K) {
         %6 = affine.load %arg1[%i4, %i3] : memref<?x?xf32>

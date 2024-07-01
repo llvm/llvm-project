@@ -188,13 +188,13 @@ module {
     //
     %f0  = arith.constant 0.0 : f32
     scf.for %i = %c0 to %c8 step %c1 {
-      %v1 = vector.transfer_read %C1[%i, %c0], %f0
+      %v1 = vector.transfer_read %C1[%i, %c0], %f0 {in_bounds=[false]}
         : tensor<8x8xf32>, vector<8xf32>
-      %v2 = vector.transfer_read %C2[%i, %c0], %f0
+      %v2 = vector.transfer_read %C2[%i, %c0], %f0 {in_bounds=[false]}
         : tensor<8x8xf32>, vector<8xf32>
-      %v3 = vector.transfer_read %C3[%i, %c0], %f0
+      %v3 = vector.transfer_read %C3[%i, %c0], %f0 {in_bounds=[false]}
         : tensor<8x8xf32>, vector<8xf32>
-      %v4 = vector.transfer_read %C4[%i, %c0], %f0
+      %v4 = vector.transfer_read %C4[%i, %c0], %f0 {in_bounds=[false]}
         : tensor<8x8xf32>, vector<8xf32>
       vector.print %v1 : vector<8xf32>
       vector.print %v2 : vector<8xf32>

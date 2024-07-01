@@ -176,7 +176,6 @@ func.func @negative_contiguous_inner_most_non_zero_idx_out_of_bounds(%A: memref<
 // CHECK-NOT:     memref.shape_cast
 // CHECK:         vector.transfer_read
 
-
 // -----
 
 func.func @contiguous_inner_most_dim_with_subview(%A: memref<1000x1xf32>, %i:index, %ii:index) -> (vector<4x1xf32>) {
@@ -229,7 +228,7 @@ func.func @contiguous_inner_most_dim_with_subview_2d(%A: memref<1000x1x1xf32>, %
 
 // Same as the top example within this split, but with the outer vector
 // dim scalable. Note that this example only makes sense when "4 = [4]" (i.e.
-// vscale = 1). This is assumed (implicitly) via the `in_bounds` attribute.
+// vscale = 1). This is assumed via the `in_bounds` attribute.
 
 func.func @contiguous_inner_most_dim_with_subview_2d_scalable_inner_dim(%A: memref<1000x1x1xf32>, %i:index, %ii:index) -> (vector<[4]x1x1xf32>) {
   %c0 = arith.constant 0 : index
@@ -254,7 +253,7 @@ func.func @contiguous_inner_most_dim_with_subview_2d_scalable_inner_dim(%A: memr
 func.func @negative_non_unit_inner_vec_dim(%arg0: memref<4x1xf32>) -> vector<4x8xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cst : memref<4x1xf32>, vector<4x8xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [false, false]}: memref<4x1xf32>, vector<4x8xf32>
   return %0 : vector<4x8xf32>
 }
 //      CHECK: func.func @negative_non_unit_inner_vec_dim
@@ -266,7 +265,7 @@ func.func @negative_non_unit_inner_vec_dim(%arg0: memref<4x1xf32>) -> vector<4x8
 func.func @negative_non_unit_inner_memref_dim(%arg0: memref<4x8xf32>) -> vector<4x1xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cst : memref<4x8xf32>, vector<4x1xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [false, false]} : memref<4x8xf32>, vector<4x1xf32>
   return %0 : vector<4x1xf32>
 }
 //      CHECK: func.func @negative_non_unit_inner_memref_dim

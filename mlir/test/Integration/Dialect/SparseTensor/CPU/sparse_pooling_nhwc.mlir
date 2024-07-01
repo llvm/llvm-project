@@ -69,7 +69,7 @@ func.func @main() {
   %CCCC_ret = call @pooling_nhwc_sum_CCCC(%in_CCCC, %filter) : (tensor<1x4x4x1xf32, #CCCC>, tensor<2x2xf32>) -> tensor<1x3x3x1xf32, #CCCC>
 
   // CHECK: ( ( ( ( 6 ), ( 6 ), ( 6 ) ), ( ( 6 ), ( 6 ), ( 6 ) ), ( ( 6 ), ( 6 ), ( 6 ) ) ) )
-  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero
+  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
       : tensor<1x3x3x1xf32>, vector<1x3x3x1xf32>
   vector.print %dense_v : vector<1x3x3x1xf32>
 

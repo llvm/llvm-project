@@ -41,7 +41,7 @@ func.func @use_tensor_func_arg(%A : tensor<?xf32>) -> (vector<4xf32>) {
 
   // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
   // CHECK: %[[res:.*]] = vector.transfer_read %[[A_memref]]
-  %0 = vector.transfer_read %A[%c0], %f0 : tensor<?xf32>, vector<4xf32>
+  %0 = vector.transfer_read %A[%c0], %f0 {in_bounds=[false]} : tensor<?xf32>, vector<4xf32>
 
   // CHECK: return %[[res]]
   return %0 : vector<4xf32>
@@ -60,7 +60,7 @@ func.func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  %0 = vector.transfer_write %v, %A[%c0] {in_bounds=[false]} : vector<4xf32>, tensor<?xf32>
 
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
@@ -75,11 +75,11 @@ func.func @func_without_tensor_args(%v : vector<10xf32>) -> () {
 
   %c0 = arith.constant 0 : index
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-  %1 = vector.transfer_write %v, %0[%c0] : vector<10xf32>, tensor<10xf32>
+  %1 = vector.transfer_write %v, %0[%c0] {in_bounds=[false]} : vector<10xf32>, tensor<10xf32>
 
   %cst = arith.constant 0.0 : f32
   // CHECK: vector.transfer_read %[[alloc]]
-  %r = vector.transfer_read %1[%c0], %cst : tensor<10xf32>, vector<11xf32>
+  %r = vector.transfer_read %1[%c0], %cst {in_bounds=[false]} : tensor<10xf32>, vector<11xf32>
 
   vector.print %r : vector<11xf32>
   return

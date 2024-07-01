@@ -105,7 +105,7 @@ func.func @vec_inplace(
   %c0 = arith.constant 0 : index
 
   // CHECK-NOT: alloc
-  %r = vector.transfer_write %vec, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  %r = vector.transfer_write %vec, %A[%c0] {in_bounds = [false]} : vector<4xf32>, tensor<?xf32>
 
   //     CHECK: return
   // CHECK-NOT: tensor
@@ -127,12 +127,12 @@ func.func @vec_not_inplace(
   //      CHECK: %[[ALLOC:.*]] = memref.alloc
   //      CHECK: memref.copy {{.*}}, %[[ALLOC]]
   // CHECK-NEXT: vector.transfer_write {{.*}}, %[[ALLOC]]
-  %r0 = vector.transfer_write %vec, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  %r0 = vector.transfer_write %vec, %A[%c0] {in_bounds = [false]} : vector<4xf32>, tensor<?xf32>
 
   /// The second vector.transfer has no interfering reads and can reuse the buffer.
   //  CHECK-NOT: alloc
   // CHECK-NEXT: vector.transfer_write {{.*}}, %[[A]]
-  %r1 = vector.transfer_write %vec, %A[%c1] : vector<4xf32>, tensor<?xf32>
+  %r1 = vector.transfer_write %vec, %A[%c1] {in_bounds = [false]} : vector<4xf32>, tensor<?xf32>
 
   //     CHECK: return
   // CHECK-NOT: tensor

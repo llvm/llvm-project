@@ -6,8 +6,8 @@
 func.func @mask(%t0: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?xf32> {
   // CHECK-NOT: alloc
   // CHECK-NOT: copy
-  //     CHECK: vector.mask %{{.*}} { vector.transfer_write %{{.*}}, %[[t0]][%{{.*}}] : vector<16xf32>, memref<?xf32, strided<[?], offset: ?>> } : vector<16xi1>
-  %0 = vector.mask %m0 { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
+  //     CHECK: vector.mask %{{.*}} { vector.transfer_write %{{.*}}, %[[t0]][%{{.*}}] {{.*}}: vector<16xf32>, memref<?xf32, strided<[?], offset: ?>> } : vector<16xi1>
+  %0 = vector.mask %m0 { vector.transfer_write %val, %t0[%idx] {in_bounds = [false]} : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
   //     CHECK: return %[[t0]]
   return %0 : tensor<?xf32>
 }
@@ -18,7 +18,7 @@ func.func @mask(%t0: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vect
 //  CHECK-ANALYSIS-SAME: tensor<5x10xf32> {bufferization.access = "write"}
 func.func @non_reading_xfer_write(%t: tensor<5x10xf32>, %v: vector<6x11xf32>) -> tensor<5x10xf32> {
   %c0 = arith.constant 0 : index
-  %1 = vector.transfer_write %v, %t[%c0, %c0] : vector<6x11xf32>, tensor<5x10xf32>
+  %1 = vector.transfer_write %v, %t[%c0, %c0] {in_bounds = [false, false]} : vector<6x11xf32>, tensor<5x10xf32>
   return %1 : tensor<5x10xf32>
 }
 // -----
@@ -27,6 +27,6 @@ func.func @non_reading_xfer_write(%t: tensor<5x10xf32>, %v: vector<6x11xf32>) ->
 //  CHECK-ANALYSIS-SAME: tensor<5x10xf32> {bufferization.access = "read-write"}
 func.func @reading_xfer_write(%t: tensor<5x10xf32>, %v: vector<4x11xf32>) -> tensor<5x10xf32> {
   %c0 = arith.constant 0 : index
-  %1 = vector.transfer_write %v, %t[%c0, %c0] : vector<4x11xf32>, tensor<5x10xf32>
+  %1 = vector.transfer_write %v, %t[%c0, %c0] {in_bounds = [false, false]} : vector<4x11xf32>, tensor<5x10xf32>
   return %1 : tensor<5x10xf32>
 }

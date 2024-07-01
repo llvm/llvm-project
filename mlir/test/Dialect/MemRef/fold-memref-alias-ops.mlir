@@ -86,7 +86,7 @@ func.func @fold_subview_with_transfer_read_0d(
     -> vector<f32> {
   %f1 = arith.constant 1.0 : f32
   %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
-  %1 = vector.transfer_read %0[], %f1 : memref<f32, strided<[], offset: ?>>, vector<f32>
+  %1 = vector.transfer_read %0[], %f1 {in_bounds = []}: memref<f32, strided<[], offset: ?>>, vector<f32>
   return %1 : vector<f32>
 }
 //      CHECK: func @fold_subview_with_transfer_read_0d

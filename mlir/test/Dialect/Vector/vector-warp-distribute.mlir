@@ -106,14 +106,14 @@ func.func @warp(%laneid: index, %arg1: memref<1024xf32>, %arg2: memref<1024xf32>
     %c0 = arith.constant 0 : index
     %c32 = arith.constant 32 : index
     %cst = arith.constant 0.000000e+00 : f32
-    %2 = vector.transfer_read %sa[%c0], %cst : memref<128xf32, strided<[1], offset: ?>>, vector<32xf32>
-    %3 = vector.transfer_read %sa[%c32], %cst : memref<128xf32, strided<[1], offset: ?>>, vector<32xf32>
-    %4 = vector.transfer_read %sb[%c0], %cst : memref<128xf32, strided<[1], offset: ?>>, vector<64xf32>
-    %5 = vector.transfer_read %sb[%c32], %cst : memref<128xf32, strided<[1], offset: ?>>, vector<64xf32>
+    %2 = vector.transfer_read %sa[%c0], %cst {in_bounds=[false]} : memref<128xf32, strided<[1], offset: ?>>, vector<32xf32>
+    %3 = vector.transfer_read %sa[%c32], %cst {in_bounds=[false]} : memref<128xf32, strided<[1], offset: ?>>, vector<32xf32>
+    %4 = vector.transfer_read %sb[%c0], %cst {in_bounds=[false]} : memref<128xf32, strided<[1], offset: ?>>, vector<64xf32>
+    %5 = vector.transfer_read %sb[%c32], %cst {in_bounds=[false]} : memref<128xf32, strided<[1], offset: ?>>, vector<64xf32>
     %6 = arith.addf %2, %3 : vector<32xf32>
     %7 = arith.addf %4, %5 : vector<64xf32>
-    vector.transfer_write %6, %sc[%c0] : vector<32xf32>, memref<128xf32, strided<[1], offset: ?>>
-    vector.transfer_write %7, %sc[%c32] : vector<64xf32>, memref<128xf32, strided<[1], offset: ?>>
+    vector.transfer_write %6, %sc[%c0] {in_bounds=[false]} : vector<32xf32>, memref<128xf32, strided<[1], offset: ?>>
+    vector.transfer_write %7, %sc[%c32] {in_bounds=[false]} : vector<64xf32>, memref<128xf32, strided<[1], offset: ?>>
   }
   return
 }
@@ -138,8 +138,8 @@ func.func @warp_extract(%laneid: index, %arg1: memref<1024x1024xf32>, %gid : ind
     %c0 = arith.constant 0 : index
     %v = "test.dummy_op"() : () -> (vector<1xf32>)
     %v1 = "test.dummy_op"() : () -> (vector<1x1xf32>)
-    vector.transfer_write %v1, %arg1[%c0, %c0] : vector<1x1xf32>, memref<1024x1024xf32>
-    vector.transfer_write %v, %arg1[%c0, %c0] : vector<1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v1, %arg1[%c0, %c0] {in_bounds=[false, false]} : vector<1x1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v, %arg1[%c0, %c0] {in_bounds=[false]} : vector<1xf32>, memref<1024x1024xf32>
   }
   return
 }
@@ -166,8 +166,8 @@ func.func @warp_extract_4_elems(%laneid: index, %arg1: memref<1024x1024xf32>, %g
     %c0 = arith.constant 0 : index
     %v = "test.dummy_op"() : () -> (vector<4xf32>)
     %v1 = "test.dummy_op"() : () -> (vector<4x1xf32>)
-    vector.transfer_write %v1, %arg1[%c0, %c0] : vector<4x1xf32>, memref<1024x1024xf32>
-    vector.transfer_write %v, %arg1[%c0, %c0] : vector<4xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v1, %arg1[%c0, %c0] {in_bounds=[false, false]} : vector<4x1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v, %arg1[%c0, %c0] {in_bounds=[false]} : vector<4xf32>, memref<1024x1024xf32>
   }
   return
 }
@@ -191,8 +191,8 @@ func.func @warp_extract_5_elems(%laneid: index, %arg1: memref<1024x1024xf32>, %g
     %c0 = arith.constant 0 : index
     %v = "test.dummy_op"() : () -> (vector<5xf32>)
     %v1 = "test.dummy_op"() : () -> (vector<5x1xf32>)
-    vector.transfer_write %v1, %arg1[%c0, %c0] : vector<5x1xf32>, memref<1024x1024xf32>
-    vector.transfer_write %v, %arg1[%c0, %c0] : vector<5xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v1, %arg1[%c0, %c0] {in_bounds=[false, false]} : vector<5x1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v, %arg1[%c0, %c0] {in_bounds=[false]} : vector<5xf32>, memref<1024x1024xf32>
   }
   return
 }
@@ -216,8 +216,8 @@ func.func @warp_extract_8_elems(%laneid: index, %arg1: memref<1024x1024xf32>, %g
     %c0 = arith.constant 0 : index
     %v = "test.dummy_op"() : () -> (vector<8xf32>)
     %v1 = "test.dummy_op"() : () -> (vector<8x1xf32>)
-    vector.transfer_write %v1, %arg1[%c0, %c0] : vector<8x1xf32>, memref<1024x1024xf32>
-    vector.transfer_write %v, %arg1[%c0, %c0] : vector<8xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v1, %arg1[%c0, %c0] {in_bounds=[false, false]} : vector<8x1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v, %arg1[%c0, %c0] {in_bounds=[false]} : vector<8xf32>, memref<1024x1024xf32>
   }
   return
 }
@@ -284,8 +284,8 @@ func.func @warp_propagate_elementwise(%laneid: index, %dest: memref<1024xf32>) {
   %id2 = affine.apply #map0()[%laneid]
   // CHECK-PROP: vector.transfer_write %[[A1]], {{.*}} : vector<1xf32>, memref<1024xf32>
   // CHECK-PROP: vector.transfer_write %[[A0]], {{.*}} : vector<2xf32>, memref<1024xf32>
-  vector.transfer_write %r#0, %dest[%laneid] : vector<1xf32>, memref<1024xf32>
-  vector.transfer_write %r#1, %dest[%id2] : vector<2xf32>, memref<1024xf32>
+  vector.transfer_write %r#0, %dest[%laneid] {in_bounds = [false]} : vector<1xf32>, memref<1024xf32>
+  vector.transfer_write %r#1, %dest[%id2] {in_bounds = [false]} : vector<2xf32>, memref<1024xf32>
   return
 }
 
@@ -342,13 +342,13 @@ func.func @warp_propagate_read(%laneid: index, %src: memref<1024xf32>, %dest: me
   %c32 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %r:2 = vector.warp_execute_on_lane_0(%laneid)[32] ->(vector<1xf32>, vector<2xf32>) {
-    %2 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>, vector<32xf32>
-    %3 = vector.transfer_read %src[%c32], %cst : memref<1024xf32>, vector<64xf32>
+    %2 = vector.transfer_read %src[%c0], %cst {in_bounds=[false]} : memref<1024xf32>, vector<32xf32>
+    %3 = vector.transfer_read %src[%c32], %cst {in_bounds=[false]} : memref<1024xf32>, vector<64xf32>
     vector.yield %2, %3 : vector<32xf32>, vector<64xf32>
   }
   %id2 = affine.apply #map0()[%laneid]
-  vector.transfer_write %r#0, %dest[%laneid] : vector<1xf32>, memref<1024xf32>
-  vector.transfer_write %r#1, %dest[%id2] : vector<2xf32>, memref<1024xf32>
+  vector.transfer_write %r#0, %dest[%laneid] {in_bounds = [false]} : vector<1xf32>, memref<1024xf32>
+  vector.transfer_write %r#1, %dest[%id2] {in_bounds = [false]} : vector<2xf32>, memref<1024xf32>
   return
 }
 
@@ -625,15 +625,15 @@ func.func @vector_reduction(%laneid: index, %m0: memref<4x2x32xf32>, %m1: memref
   %f0 = arith.constant 0.0: f32
   //     CHECK-D: %[[R:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<f32>) {
   //     CHECK-D: vector.warp_execute_on_lane_0(%{{.*}})[32] {
-  //     CHECK-D:   vector.transfer_write %[[R]], %{{.*}}[] : vector<f32>, memref<f32>
+  //     CHECK-D:   vector.transfer_write %[[R]], %{{.*}}[] {{.*}} : vector<f32>, memref<f32>
   vector.warp_execute_on_lane_0(%laneid)[32] {
     %0 = vector.transfer_read %m0[%c0, %c0, %c0], %f0 {in_bounds = [true]} : memref<4x2x32xf32>, vector<32xf32>
-    %1 = vector.transfer_read %m1[], %f0 : memref<f32>, vector<f32>
+    %1 = vector.transfer_read %m1[], %f0 {in_bounds=[]} : memref<f32>, vector<f32>
     %2 = vector.extractelement %1[] : vector<f32>
     %3 = vector.reduction <add>, %0 : vector<32xf32> into f32
     %4 = arith.addf %3, %2 : f32
     %5 = vector.broadcast %4 : f32 to vector<f32>
-    vector.transfer_write %5, %m1[] : vector<f32>, memref<f32>
+    vector.transfer_write %5, %m1[] {in_bounds=[]} : vector<f32>, memref<f32>
   }
   return
 }
@@ -929,10 +929,10 @@ func.func @lane_dependent_warp_propagate_read(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x1xf32>) {
-    %2 = vector.transfer_read %src[%c0, %c0], %cst : memref<1x1024xf32>, vector<1x32xf32>
+    %2 = vector.transfer_read %src[%c0, %c0], %cst {in_bounds=[false, false]} : memref<1x1024xf32>, vector<1x32xf32>
     vector.yield %2 : vector<1x32xf32>
   }
-  vector.transfer_write %r, %dest[%c0, %laneid] : vector<1x1xf32>, memref<1x1024xf32>
+  vector.transfer_write %r, %dest[%c0, %laneid] {in_bounds=[false, false]} : vector<1x1xf32>, memref<1x1024xf32>
   return
 }
 
@@ -942,7 +942,7 @@ func.func @warp_propagate_read_3d(%laneid: index, %src: memref<32x4x32xf32>) -> 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %r = vector.warp_execute_on_lane_0(%laneid)[1024] -> (vector<1x1x4xf32>) {
-    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst : memref<32x4x32xf32>, vector<32x4x32xf32>
+    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst {in_bounds=[false, false, false]} : memref<32x4x32xf32>, vector<32x4x32xf32>
     vector.yield %2 : vector<32x4x32xf32>
   }
   return %r : vector<1x1x4xf32>
@@ -992,7 +992,7 @@ func.func @dont_duplicate_read(
 //  CHECK-PROP-NEXT:     "blocking_use"
 //  CHECK-PROP-NEXT:     vector.yield
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
-    %2 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>, vector<32xf32>
+    %2 = vector.transfer_read %src[%c0], %cst {in_bounds=[false]} : memref<1024xf32>, vector<32xf32>
     "blocking_use"(%2) : (vector<32xf32>) -> ()
     vector.yield %2 : vector<32xf32>
   }
@@ -1042,7 +1042,7 @@ func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: v
       // CHECK-SCF-IF: "some_def_1"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
       // CHECK-SCF-IF: "some_def_1"(%{{.*}}) : (vector<1x1xf32>) -> vector<1x1xf32>
       // CHECK-SCF-IF: memref.store {{.*}}[%[[C0]]] : memref<1xf32, 3>
-      // CHECK-SCF-IF: vector.transfer_write {{.*}}[] : vector<f32>, memref<f32, 3>
+      // CHECK-SCF-IF: vector.transfer_write {{.*}}[] {{.*}} : vector<f32>, memref<f32, 3>
       // CHECK-SCF-IF: vector.transfer_write {{.*}}[%[[C0]]] {in_bounds = [true]} : vector<1xf32>, memref<1xf32, 3>
       // CHECK-SCF-IF: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<1x1xf32>, memref<1x1xf32, 3>
 
@@ -1336,7 +1336,7 @@ func.func @warp_propagate_shape_cast(%laneid: index, %src: memref<32x4x32xf32>) 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %r = vector.warp_execute_on_lane_0(%laneid)[1024] -> (vector<4xf32>) {
-    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst : memref<32x4x32xf32>, vector<32x4x32xf32>
+    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst {in_bounds=[false, false, false]} : memref<32x4x32xf32>, vector<32x4x32xf32>
     %3 = vector.shape_cast %2 : vector<32x4x32xf32> to vector<4096xf32>
     vector.yield %3 : vector<4096xf32>
   }
@@ -1410,8 +1410,8 @@ func.func @warp_propagate_masked_write(%laneid: index, %dest: memref<4096xf32>) 
     %mask2 = "mask_def_1"() : () -> (vector<32xi1>)
     %0 = "some_def_0"() : () -> (vector<4096xf32>)
     %1 = "some_def_1"() : () -> (vector<32xf32>)
-    vector.transfer_write %0, %dest[%c0], %mask : vector<4096xf32>, memref<4096xf32>
-    vector.transfer_write %1, %dest[%c0], %mask2 : vector<32xf32>, memref<4096xf32>
+    vector.transfer_write %0, %dest[%c0], %mask {in_bounds=[false]} : vector<4096xf32>, memref<4096xf32>
+    vector.transfer_write %1, %dest[%c0], %mask2 {in_bounds=[false]} : vector<32xf32>, memref<4096xf32>
     vector.yield
   }
   return
@@ -1513,7 +1513,7 @@ func.func @warp_propagate_unconnected_read_write(%laneid: index, %buffer: memref
   %r:2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xf32>, vector<4xf32>) {
     %cst = arith.constant dense<2.0> : vector<128xf32>
     %0 = vector.transfer_read %buffer[%c0], %f0 {in_bounds = [true]} : memref<128xf32>, vector<128xf32>
-    vector.transfer_write %cst, %buffer[%c0] : vector<128xf32>, memref<128xf32>
+    vector.transfer_write %cst, %buffer[%c0] {in_bounds=[false]} : vector<128xf32>, memref<128xf32>
     %1 = vector.broadcast %f1 : f32 to vector<64xf32>
     vector.yield %1, %0 : vector<64xf32>, vector<128xf32>
   }
@@ -1566,7 +1566,7 @@ func.func @warp_propagate_nd_write(%laneid: index, %dest: memref<4x1024xf32>) {
   %c0 = arith.constant 0 : index
   vector.warp_execute_on_lane_0(%laneid)[32] -> () {
     %0 = "some_def"() : () -> (vector<4x1024xf32>)
-    vector.transfer_write %0, %dest[%c0, %c0] : vector<4x1024xf32>, memref<4x1024xf32>
+    vector.transfer_write %0, %dest[%c0, %c0] {in_bounds=[false, false]} : vector<4x1024xf32>, memref<4x1024xf32>
     vector.yield
   }
   return

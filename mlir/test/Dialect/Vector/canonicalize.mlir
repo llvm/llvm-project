@@ -443,10 +443,10 @@ func.func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
   %0 = memref.cast %A : memref<4x8xf32> to memref<?x?xf32>
 
   // CHECK: vector.transfer_read %{{.*}} {in_bounds = [true, true]} : memref<4x8xf32>, vector<4x8xf32>
-  %1 = vector.transfer_read %0[%c0, %c0], %f0 : memref<?x?xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %0[%c0, %c0], %f0 {in_bounds=[false, false]} : memref<?x?xf32>, vector<4x8xf32>
 
   // CHECK: vector.transfer_write %{{.*}} {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
-  vector.transfer_write %1, %0[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32>
+  vector.transfer_write %1, %0[%c0, %c0] {in_bounds=[false, false]} : vector<4x8xf32>, memref<?x?xf32>
   return %1 : vector<4x8xf32>
 }
 
@@ -459,7 +459,7 @@ func.func @cast_transfers(%A: tensor<4x8xf32>) -> (vector<4x8xf32>) {
   %0 = tensor.cast %A : tensor<4x8xf32> to tensor<?x?xf32>
 
   // CHECK: vector.transfer_read %{{.*}} {in_bounds = [true, true]} : tensor<4x8xf32>, vector<4x8xf32>
-  %1 = vector.transfer_read %0[%c0, %c0], %f0 : tensor<?x?xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %0[%c0, %c0], %f0 {in_bounds=[false, false]} : tensor<?x?xf32>, vector<4x8xf32>
 
   return %1 : vector<4x8xf32>
 }
@@ -878,19 +878,19 @@ func.func @fold_vector_transfer_masks(%A: memref<?x?xf32>) -> (vector<4x8xf32>, 
 
   %arith_all_true_mask = arith.constant dense<true> : vector<4x[4]xi1>
 
-  // CHECK: vector.transfer_read %{{.*}}, %[[F0]] {permutation_map
+  // CHECK: vector.transfer_read %{{.*}}, %[[F0]] {in_bounds
   %1 = vector.transfer_read %A[%c0, %c0], %f0, %mask
-      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<?x?xf32>, vector<4x8xf32>
+      {in_bounds = [false, false], permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<?x?xf32>, vector<4x8xf32>
 
-  // CHECK: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] {permutation_map
+  // CHECK: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] {in_bounds
   vector.transfer_write %1, %A[%c0, %c0], %mask
-      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<4x8xf32>, memref<?x?xf32>
+      {in_bounds = [false, false], permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<4x8xf32>, memref<?x?xf32>
 
-  // CHECK: vector.transfer_read %{{.*}}, %[[F0]] :
-  %2 = vector.transfer_read %A[%c0, %c0], %f0, %arith_all_true_mask : memref<?x?xf32>, vector<4x[4]xf32>
+  // CHECK: vector.transfer_read %{{.*}}, %[[F0]] {in_bounds
+  %2 = vector.transfer_read %A[%c0, %c0], %f0, %arith_all_true_mask {in_bounds = [false, false]} : memref<?x?xf32>, vector<4x[4]xf32>
 
-  // CHECK: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] :
-  vector.transfer_write %2, %A[%c0, %c0], %arith_all_true_mask : vector<4x[4]xf32>, memref<?x?xf32>
+  // CHECK: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] {in_bounds
+  vector.transfer_write %2, %A[%c0, %c0], %arith_all_true_mask {in_bounds = [false, false]} : vector<4x[4]xf32>, memref<?x?xf32>
 
   // CHECK: return
   return %1, %2 : vector<4x8xf32>, vector<4x[4]xf32>
@@ -904,20 +904,20 @@ func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vecto
   %f0 = arith.constant 0.0 : f32
 
   // CHECK: vector.transfer_read %{{.*}} {in_bounds = [false, true]}
-  %1 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %A[%c0, %c0], %f0 {in_bounds=[false, false]} : memref<?x8xf32>, vector<4x8xf32>
 
   // CHECK: vector.transfer_write %{{.*}} {in_bounds = [false, true]}
-  vector.transfer_write %1, %A[%c0, %c0] : vector<4x8xf32>, memref<?x8xf32>
+  vector.transfer_write %1, %A[%c0, %c0] {in_bounds=[false, false]} : vector<4x8xf32>, memref<?x8xf32>
 
   // Both dims may be out-of-bounds, attribute is elided.
   // CHECK: vector.transfer_read %{{.*}}
   // CHECK-NOT: in_bounds
-  %2 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x8xf32>, vector<4x9xf32>
+  %2 = vector.transfer_read %A[%c0, %c0], %f0 {in_bounds=[false, false]} : memref<?x8xf32>, vector<4x9xf32>
 
   // Both dims may be out-of-bounds, attribute is elided.
   // CHECK: vector.transfer_write %{{.*}}
   // CHECK-NOT: in_bounds
-  vector.transfer_write %2, %A[%c0, %c0] : vector<4x9xf32>, memref<?x8xf32>
+  vector.transfer_write %2, %A[%c0, %c0] {in_bounds=[false, false]} : vector<4x9xf32>, memref<?x8xf32>
 
   // CHECK: return
   return %1, %2 : vector<4x8xf32>, vector<4x9xf32>
@@ -1109,9 +1109,9 @@ func.func @dead_transfer_op(%arg0 : tensor<4x4xf32>, %arg1 : memref<4x4xf32>,
                        %v0 : vector<1x4xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %r = vector.transfer_read %arg1[%c0, %c0], %cf0 :
+  %r = vector.transfer_read %arg1[%c0, %c0], %cf0 {in_bounds=[false, false]} :
     memref<4x4xf32>, vector<1x4xf32>
-  %w = vector.transfer_write %v0, %arg0[%c0, %c0] :
+  %w = vector.transfer_write %v0, %arg0[%c0, %c0] {in_bounds=[false, false]} :
     vector<1x4xf32>, tensor<4x4xf32>
   return
 }
@@ -1221,9 +1221,9 @@ func.func @store_after_load_tensor(%arg0 : tensor<4x4xf32>) -> tensor<4x4xf32> {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c1, %c0], %cf0 :
+  %0 = vector.transfer_read %arg0[%c1, %c0], %cf0 {in_bounds=[false, false]} :
     tensor<4x4xf32>, vector<1x4xf32>
-  %w0 = vector.transfer_write %0, %arg0[%c1, %c0] :
+  %w0 = vector.transfer_write %0, %arg0[%c1, %c0] {in_bounds=[false, false]} :
     vector<1x4xf32>, tensor<4x4xf32>
   return %w0 : tensor<4x4xf32>
 }
@@ -1238,9 +1238,9 @@ func.func @store_after_load_tensor_negative(%arg0 : tensor<4x4xf32>) -> tensor<4
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c1, %c0], %cf0 :
+  %0 = vector.transfer_read %arg0[%c1, %c0], %cf0 {in_bounds=[false, false]} :
     tensor<4x4xf32>, vector<1x4xf32>
-  %w0 = vector.transfer_write %0, %arg0[%c0, %c0] :
+  %w0 = vector.transfer_write %0, %arg0[%c0, %c0] {in_bounds=[false, false]} :
     vector<1x4xf32>, tensor<4x4xf32>
   return %w0 : tensor<4x4xf32>
 }
@@ -2489,7 +2489,7 @@ func.func @all_true_vector_mask_no_result(%a : vector<3x4xf32>, %m : memref<3x4x
 //       CHECK:   vector.transfer_write
   %c0 = arith.constant 0 : index
   %all_true = vector.constant_mask [3, 4] : vector<3x4xi1>
-  vector.mask %all_true { vector.transfer_write %a, %m[%c0, %c0] : vector<3x4xf32>, memref<3x4xf32> } : vector<3x4xi1>
+  vector.mask %all_true { vector.transfer_write %a, %m[%c0, %c0] {in_bounds = [false, false]} : vector<3x4xf32>, memref<3x4xf32> } : vector<3x4xi1>
   return
 }
 

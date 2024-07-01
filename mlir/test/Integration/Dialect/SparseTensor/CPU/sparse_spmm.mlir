@@ -110,7 +110,7 @@ module {
     //
     // CHECK: ( ( 3548, 3550, 3552, 3554 ), ( 6052, 6053, 6054, 6055 ), ( -56, -63, -70, -77 ), ( -13704, -13709, -13714, -13719 ) )
     //
-    %v = vector.transfer_read %0[%c0, %c0], %i0: tensor<?x?xf64>, vector<4x4xf64>
+    %v = vector.transfer_read %0[%c0, %c0], %i0 {in_bounds=[false, false]}: tensor<?x?xf64>, vector<4x4xf64>
     vector.print %v : vector<4x4xf64>
 
     // Release the resources.

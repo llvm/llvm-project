@@ -110,28 +110,28 @@ func.func @main() {
   // CHECK:      ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
-  %v_dual = vector.transfer_read %dual_CDCC_ret[%c0, %c0, %c0, %c0], %zero
+  %v_dual = vector.transfer_read %dual_CDCC_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %v_dual : vector<3x3x3x1xf32>
 
   // CHECK-NEXT: ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
-  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero
+  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %dense_v : vector<3x3x3x1xf32>
 
   // CHECK-NEXT: ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
-  %v1 = vector.transfer_read %CCCC_ret[%c0, %c0, %c0, %c0], %zero
+  %v1 = vector.transfer_read %CCCC_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %v1 : vector<3x3x3x1xf32>
 
   // CHECK-NEXT: ( ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 20 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ),
   // CHECK-SAME:   ( ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ), ( ( 0 ), ( 0 ), ( 0 ) ) ) )
-  %v2 = vector.transfer_read %CDCC_ret[%c0, %c0, %c0, %c0], %zero
+  %v2 = vector.transfer_read %CDCC_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
       : tensor<?x?x?x?xf32>, vector<3x3x3x1xf32>
   vector.print %v1 : vector<3x3x3x1xf32>
 
