@@ -30,7 +30,7 @@
 func.func @transfer_read_unroll(%arg0 : memref<4x4xf32>) -> vector<4x4xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [false, false]} : memref<4x4xf32>, vector<4x4xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
   return %0 : vector<4x4xf32>
 }
 
@@ -62,7 +62,7 @@ func.func @transfer_read_unroll(%arg0 : memref<4x4xf32>) -> vector<4x4xf32> {
 
 func.func @transfer_write_unroll(%arg0 : memref<4x4xf32>, %arg1 : vector<4x4xf32>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %arg1, %arg0[%c0, %c0] {in_bounds = [false, false]} : vector<4x4xf32>, memref<4x4xf32>
+  vector.transfer_write %arg1, %arg0[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
   return
 }
 
@@ -82,8 +82,8 @@ func.func @transfer_write_unroll(%arg0 : memref<4x4xf32>, %arg1 : vector<4x4xf32
 func.func @transfer_readwrite_unroll(%arg0 : memref<4x4xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [false, false]} : memref<4x4xf32>, vector<4x4xf32>
-  vector.transfer_write %0, %arg0[%c0, %c0] {in_bounds = [false, false]}  : vector<4x4xf32>, memref<4x4xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
+  vector.transfer_write %0, %arg0[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
   return
 }
 
@@ -103,7 +103,7 @@ func.func @transfer_readwrite_unroll(%arg0 : memref<4x4xf32>) {
 func.func @transfer_read_unroll_tensor(%arg0 : tensor<4x4xf32>) -> vector<4x4xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [false, false]} : tensor<4x4xf32>, vector<4x4xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : tensor<4x4xf32>, vector<4x4xf32>
   return %0 : vector<4x4xf32>
 }
 
@@ -123,7 +123,7 @@ func.func @transfer_read_unroll_tensor(%arg0 : tensor<4x4xf32>) -> vector<4x4xf3
 func.func @transfer_write_unroll_tensor(%arg0 : tensor<4x4xf32>,
   %arg1 : vector<4x4xf32>) -> tensor<4x4xf32> {
   %c0 = arith.constant 0 : index
-  %r = vector.transfer_write %arg1, %arg0[%c0, %c0] {in_bounds = [false, false]} :
+  %r = vector.transfer_write %arg1, %arg0[%c0, %c0] :
     vector<4x4xf32>, tensor<4x4xf32>
   return %r: tensor<4x4xf32>
 }
@@ -145,8 +145,8 @@ func.func @transfer_readwrite_unroll_tensor(%arg0 : tensor<4x4xf32>, %arg1 : ten
   tensor<4x4xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {in_bounds = [false, false]} : tensor<4x4xf32>, vector<4x4xf32>
-  %r = vector.transfer_write %0, %arg1[%c0, %c0] {in_bounds = [false, false]} : vector<4x4xf32>, tensor<4x4xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : tensor<4x4xf32>, vector<4x4xf32>
+  %r = vector.transfer_write %0, %arg1[%c0, %c0] : vector<4x4xf32>, tensor<4x4xf32>
   return %r: tensor<4x4xf32>
 }
 
@@ -173,7 +173,7 @@ func.func @transfer_readwrite_unroll_tensor(%arg0 : tensor<4x4xf32>, %arg1 : ten
 func.func @transfer_read_unroll_permutation(%arg0 : memref<6x4xf32>) -> vector<4x6xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0  {in_bounds = [false, false], permutation_map = #map0} : memref<6x4xf32>, vector<4x6xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 {permutation_map = #map0} : memref<6x4xf32>, vector<4x6xf32>
   return %0 : vector<4x6xf32>
 }
 
@@ -272,7 +272,7 @@ func.func @transfer_read_unroll_broadcast_permuation(%arg0 : memref<6x4xf32>) ->
 func.func @transfer_read_unroll_different_rank(%arg0 : memref<?x?x?xf32>) -> vector<6x4xf32> {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %arg0[%c0, %c0, %c0], %cf0 {in_bounds = [false, false], permutation_map = #map0} : memref<?x?x?xf32>, vector<6x4xf32>
+  %0 = vector.transfer_read %arg0[%c0, %c0, %c0], %cf0 {permutation_map = #map0} : memref<?x?x?xf32>, vector<6x4xf32>
   return %0 : vector<6x4xf32>
 }
 

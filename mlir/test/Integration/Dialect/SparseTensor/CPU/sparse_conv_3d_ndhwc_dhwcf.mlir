@@ -142,7 +142,7 @@ func.func @main() {
   // CHECK-SAME:      ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ) ) ) )
   %dense_ret = call @conv_3d_ndhwc_dhwcf(%in3D_ndhwc, %filter3D_ndhwc, %out3D_ndhwc)
       : (tensor<?x?x?x?x?xf32>, tensor<?x?x?x?x?xf32>, tensor<?x?x?x?x?xf32>) -> (tensor<?x?x?x?x?xf32>)
-  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false, false]}
+  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?x?xf32>, vector<1x6x6x6x1xf32>
   vector.print %dense_v : vector<1x6x6x6x1xf32>
 

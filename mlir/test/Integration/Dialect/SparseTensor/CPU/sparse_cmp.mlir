@@ -150,7 +150,7 @@ module {
     // CHECK-NEXT: values : ( 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0 )
     // CHECK-NEXT: ----
     //
-    %v = vector.transfer_read %all_dn_out[%c0, %c0], %d0 {in_bounds=[false, false]}
+    %v = vector.transfer_read %all_dn_out[%c0, %c0], %d0
        : tensor<4x4xi8>, vector<4x4xi8>
     vector.print %v : vector<4x4xi8>
     sparse_tensor.print %lhs_sp_out : tensor<4x4xi8, #DCSR>

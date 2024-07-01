@@ -176,7 +176,7 @@ module {
     // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
     // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
     //
-    %v = vector.transfer_read %0[%c0, %c0], %i0 {in_bounds=[false, false]}
+    %v = vector.transfer_read %0[%c0, %c0], %i0
       : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v : vector<6x6xi32>
 
@@ -263,7 +263,7 @@ module {
     // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
     // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
     //
-    %v6 = vector.transfer_read %6[%c0, %c0], %i0 {in_bounds=[false, false]}
+    %v6 = vector.transfer_read %6[%c0, %c0], %i0
       : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v : vector<6x6xi32>
 

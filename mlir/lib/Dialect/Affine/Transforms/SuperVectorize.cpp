@@ -1227,8 +1227,7 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   // is set to `true` - that's required by the xfer Op.
   // FIXME: We're not veryfying whether the corresponding access is in bounds.
   // TODO: Use masking instead.
-  SmallVector<unsigned> broadcastedDims = {};
-  permutationMap.getBroadcastDims(&broadcastedDims);
+  SmallVector<unsigned> broadcastedDims = permutationMap.getBroadcastDims();
   SmallVector<bool> inBounds(vectorType.getRank(), false);
 
   for (auto idx : broadcastedDims)

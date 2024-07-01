@@ -194,17 +194,17 @@ module {
     // CHECK-SAME: ( 0, 0, 0, -12, 0, -6 ),
     // CHECK-SAME: ( -60, -27, -50, 0, -16, 0 ) )
     //
-    %v0 = vector.transfer_read %0[%c0, %c0], %i0 {in_bounds=[false, false]} : tensor<6x6xi32>, vector<6x6xi32>
+    %v0 = vector.transfer_read %0[%c0, %c0], %i0 : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v0 : vector<6x6xi32>
-    %v1 = vector.transfer_read %1[%c0, %c0], %i0 {in_bounds=[false, false]} : tensor<6x6xi32>, vector<6x6xi32>
+    %v1 = vector.transfer_read %1[%c0, %c0], %i0 : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v1 : vector<6x6xi32>
-    %v2 = vector.transfer_read %2[%c0, %c0], %i0 {in_bounds=[false, false]} : tensor<6x6xi32>, vector<6x6xi32>
+    %v2 = vector.transfer_read %2[%c0, %c0], %i0 : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v2 : vector<6x6xi32>
-    %v3 = vector.transfer_read %3[%c0, %c0], %i0 {in_bounds=[false, false]} : tensor<6x6xi32>, vector<6x6xi32>
+    %v3 = vector.transfer_read %3[%c0, %c0], %i0 : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v3 : vector<6x6xi32>
-    %v4 = vector.transfer_read %4[%c0, %c0], %i0 {in_bounds=[false, false]} : tensor<6x6xi32>, vector<6x6xi32>
+    %v4 = vector.transfer_read %4[%c0, %c0], %i0 : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v4 : vector<6x6xi32>
-    %v5 = vector.transfer_read %5[%c0, %c0], %i0 {in_bounds=[false, false]} : tensor<6x6xi32>, vector<6x6xi32>
+    %v5 = vector.transfer_read %5[%c0, %c0], %i0 : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v5 : vector<6x6xi32>
 
     // Release resources.

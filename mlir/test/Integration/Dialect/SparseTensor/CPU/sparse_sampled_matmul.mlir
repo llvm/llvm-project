@@ -128,7 +128,7 @@ module {
     // CHECK: ( 0, 520, 0, 0, 1250 )
     //
     scf.for %i = %c0 to %c5 step %c1 {
-      %v = vector.transfer_read %0[%i, %c0], %d0 {in_bounds=[false]}: tensor<?x?xf32>, vector<5xf32>
+      %v = vector.transfer_read %0[%i, %c0], %d0: tensor<?x?xf32>, vector<5xf32>
       vector.print %v : vector<5xf32>
     }
 

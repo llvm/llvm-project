@@ -114,15 +114,15 @@ module {
     sparse_tensor.sort quick_sort %i5, %xy jointly %y1 {perm_map = #ID_MAP, ny = 1 : index}
       : memref<?xi32> jointly memref<?xi32>
     // Dumps memory in the same order as the perm_map such that the output is ordered.
-    %x1v = vector.transfer_read %x1[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x1v = vector.transfer_read %x1[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x1v : vector<5xi32>
-    %x2v = vector.transfer_read %x2[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x2v = vector.transfer_read %x2[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x2v : vector<5xi32>
-    %x0v = vector.transfer_read %x0[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x0v = vector.transfer_read %x0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x0v : vector<5xi32>
-    %y0v = vector.transfer_read %y0[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %y0v = vector.transfer_read %y0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %y0v : vector<5xi32>
-    %y1v = vector.transfer_read %y1[%i0], %c100 {in_bounds=[false]}: memref<?xi32>, vector<5xi32>
+    %y1v = vector.transfer_read %y1[%i0], %c100: memref<?xi32>, vector<5xi32>
     vector.print %y1v : vector<5xi32>
     // Stable sort.
     // CHECK: ( 1, 1, 2, 5, 10 )
@@ -142,15 +142,15 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     sparse_tensor.sort insertion_sort_stable %i5, %xy jointly %y1 {perm_map = #ID_MAP, ny = 1 : index}
       : memref<?xi32> jointly memref<?xi32>
-    %x1v2 = vector.transfer_read %x1[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x1v2 = vector.transfer_read %x1[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x1v2 : vector<5xi32>
-    %x2v2 = vector.transfer_read %x2[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x2v2 = vector.transfer_read %x2[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x2v2 : vector<5xi32>
-    %x0v2 = vector.transfer_read %x0[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x0v2 = vector.transfer_read %x0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x0v2 : vector<5xi32>
-    %y0v2 = vector.transfer_read %y0[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %y0v2 = vector.transfer_read %y0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %y0v2 : vector<5xi32>
-    %y1v2 = vector.transfer_read %y1[%i0], %c100 {in_bounds=[false]}: memref<?xi32>, vector<5xi32>
+    %y1v2 = vector.transfer_read %y1[%i0], %c100: memref<?xi32>, vector<5xi32>
     vector.print %y1v2 : vector<5xi32>
     // Heap sort.
     // CHECK: ( 1, 1, 2, 5, 10 )
@@ -170,15 +170,15 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     sparse_tensor.sort heap_sort %i5, %xy jointly %y1 {perm_map = #ID_MAP, ny = 1 : index}
       : memref<?xi32> jointly memref<?xi32>
-    %x1v3 = vector.transfer_read %x1[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x1v3 = vector.transfer_read %x1[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x1v3 : vector<5xi32>
-    %x2v3 = vector.transfer_read %x2[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x2v3 = vector.transfer_read %x2[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x2v3 : vector<5xi32>
-    %x0v3 = vector.transfer_read %x0[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %x0v3 = vector.transfer_read %x0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x0v3 : vector<5xi32>
-    %y0v3 = vector.transfer_read %y0[%i0], %c100 {in_bounds=[false]}: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    %y0v3 = vector.transfer_read %y0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %y0v3 : vector<5xi32>
-    %y1v3 = vector.transfer_read %y1[%i0], %c100 {in_bounds=[false]}: memref<?xi32>, vector<5xi32>
+    %y1v3 = vector.transfer_read %y1[%i0], %c100: memref<?xi32>, vector<5xi32>
     vector.print %y1v3 : vector<5xi32>
 
     // Release the buffers.

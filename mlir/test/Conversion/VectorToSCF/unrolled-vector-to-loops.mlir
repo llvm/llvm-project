@@ -51,7 +51,7 @@ func.func @transfer_read_out_of_bounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4x
   // CHECK: vector.transfer_read {{.*}} : memref<?x?x?xf32>, vector<4xf32>
   // CHECK: vector.insert {{.*}} [1, 2] : vector<4xf32> into vector<2x3x4xf32>
   // CHECK-NOT: scf.for
-  %vec = vector.transfer_read %A[%c0, %c0, %c0], %f0 {in_bounds=[false, false, false]} : memref<?x?x?xf32>, vector<2x3x4xf32>
+  %vec = vector.transfer_read %A[%c0, %c0, %c0], %f0 : memref<?x?x?xf32>, vector<2x3x4xf32>
   return %vec : vector<2x3x4xf32>
 }
 

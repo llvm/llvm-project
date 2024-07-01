@@ -10,7 +10,7 @@
 func.func @transfer_read_2d(%A : memref<40xi32>, %base1: index) {
   %i42 = arith.constant -42: i32
   %f = vector.transfer_read %A[%base1], %i42
-      {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [false]} :
+      {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<40xi32>, vector<40xi32>
   vector.print %f: vector<40xi32>
   return

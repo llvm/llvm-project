@@ -107,7 +107,7 @@ func.func @main() {
   //      CHECK: ( ( ( 12 ), ( 28 ), ( 28 ), ( 28 ), ( 12 ), ( 12 ) ),
   // CHECK-SAME:   ( ( 12 ), ( 12 ), ( 12 ), ( 12 ), ( 12 ), ( 12 ) ),
   // CHECK-SAME:   ( ( 12 ), ( 12 ), ( 12 ), ( 12 ), ( 12 ), ( 12 ) ) )
-  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0], %zero {in_bounds=[false, false, false]}
+  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0], %zero
       : tensor<?x?x?xf32>, vector<3x6x1xf32>
   vector.print %dense_v : vector<3x6x1xf32>
 

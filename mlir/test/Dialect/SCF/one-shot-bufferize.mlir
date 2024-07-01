@@ -75,7 +75,7 @@ func.func @nested_scf_for(%A : tensor<?xf32> {bufferization.writable = true},
   %c10 = arith.constant 10 : index
   %r1 = scf.for %i = %c0 to %c10 step %c1 iter_args(%B = %A) -> tensor<?xf32> {
     %r2 = scf.for %j = %c0 to %c10 step %c1 iter_args(%C = %B) -> tensor<?xf32> {
-      %w = vector.transfer_write %v, %C[%c0] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+      %w = vector.transfer_write %v, %C[%c0] : vector<5xf32>, tensor<?xf32>
       scf.yield %w : tensor<?xf32>
     }
     scf.yield %r2 : tensor<?xf32>
@@ -162,13 +162,12 @@ func.func @scf_if_inplace(%cond: i1,
   //      CHECK: scf.if %[[cond]] {
   // CHECK-NEXT: } else {
   // CHECK-NEXT:   vector.transfer_write %[[v]], %[[t1]]
-  // CHECK-SAME:   {in_bounds = [false]}
   // CHECK-NEXT: }
   // CHECK-NEXT: return
   %r = scf.if %cond -> (tensor<?xf32>) {
     scf.yield %t1 : tensor<?xf32>
   } else {
-    %t2 = vector.transfer_write %v, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t2 = vector.transfer_write %v, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     scf.yield %t2 : tensor<?xf32>
   }
   return %r : tensor<?xf32>
@@ -199,7 +198,7 @@ func.func @scf_if_inside_scf_for(
     %r2 = scf.if %cond -> (tensor<?xf32>) {
       scf.yield %bb : tensor<?xf32>
     } else {
-      %t2 = vector.transfer_write %v, %bb[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+      %t2 = vector.transfer_write %v, %bb[%idx] : vector<5xf32>, tensor<?xf32>
       scf.yield %t2 : tensor<?xf32>
     }
     scf.yield %r2 : tensor<?xf32>

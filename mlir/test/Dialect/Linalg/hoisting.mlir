@@ -46,13 +46,13 @@ func.func @hoist_vector_transfer_pairs(
 // CHECK: "unrelated_use"(%[[MEMREF1]]) : (memref<?x?xf32>) -> ()
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
-      %r0 = vector.transfer_read %memref1[%c0, %c0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<1xf32>
-      %r1 = vector.transfer_read %memref0[%i, %i], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<2xf32>
-      %r2 = vector.transfer_read %memref2[%c0, %c0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<3xf32>
-      %r3 = vector.transfer_read %memref3[%c0, %c0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
+      %r0 = vector.transfer_read %memref1[%c0, %c0], %cst: memref<?x?xf32>, vector<1xf32>
+      %r1 = vector.transfer_read %memref0[%i, %i], %cst: memref<?x?xf32>, vector<2xf32>
+      %r2 = vector.transfer_read %memref2[%c0, %c0], %cst: memref<?x?xf32>, vector<3xf32>
+      %r3 = vector.transfer_read %memref3[%c0, %c0], %cst: memref<?x?xf32>, vector<4xf32>
       "some_crippling_use"(%memref4) : (memref<?x?xf32>) -> ()
-      %r4 = vector.transfer_read %memref4[%c0, %c0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<5xf32>
-      %r5 = vector.transfer_read %memref5[%c0, %c0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<6xf32>
+      %r4 = vector.transfer_read %memref4[%c0, %c0], %cst: memref<?x?xf32>, vector<5xf32>
+      %r5 = vector.transfer_read %memref5[%c0, %c0], %cst: memref<?x?xf32>, vector<6xf32>
       "some_crippling_use"(%memref5) : (memref<?x?xf32>) -> ()
       %u0 = "some_use"(%r0) : (vector<1xf32>) -> vector<1xf32>
       %u1 = "some_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
@@ -60,12 +60,12 @@ func.func @hoist_vector_transfer_pairs(
       %u3 = "some_use"(%r3) : (vector<4xf32>) -> vector<4xf32>
       %u4 = "some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
       %u5 = "some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
-      vector.transfer_write %u0, %memref1[%c0, %c0] {in_bounds=[false]} : vector<1xf32>, memref<?x?xf32>
-      vector.transfer_write %u1, %memref0[%i, %i] {in_bounds=[false]} : vector<2xf32>, memref<?x?xf32>
-      vector.transfer_write %u2, %memref2[%c0, %c0] {in_bounds=[false]} : vector<3xf32>, memref<?x?xf32>
-      vector.transfer_write %u3, %memref3[%c0, %c0] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
-      vector.transfer_write %u4, %memref4[%c0, %c0] {in_bounds=[false]} : vector<5xf32>, memref<?x?xf32>
-      vector.transfer_write %u5, %memref5[%c0, %c0] {in_bounds=[false]} : vector<6xf32>, memref<?x?xf32>
+      vector.transfer_write %u0, %memref1[%c0, %c0] : vector<1xf32>, memref<?x?xf32>
+      vector.transfer_write %u1, %memref0[%i, %i] : vector<2xf32>, memref<?x?xf32>
+      vector.transfer_write %u2, %memref2[%c0, %c0] : vector<3xf32>, memref<?x?xf32>
+      vector.transfer_write %u3, %memref3[%c0, %c0] : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u4, %memref4[%c0, %c0] : vector<5xf32>, memref<?x?xf32>
+      vector.transfer_write %u5, %memref5[%c0, %c0] : vector<6xf32>, memref<?x?xf32>
       "some_crippling_use"(%memref3) : (memref<?x?xf32>) -> ()
     }
     "unrelated_use"(%memref0) : (memref<?x?xf32>) -> ()
@@ -136,14 +136,14 @@ func.func @hoist_vector_transfer_pairs_disjoint(
 // CHECK: vector.transfer_write %{{.*}}, %[[MEMREF2]]{{.*}} : vector<3xf32>, memref<?x?xf32>
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
-      %r00 = vector.transfer_read %memref1[%c0, %c0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<2xf32>
-      %r01 = vector.transfer_read %memref1[%c0, %c1], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<2xf32>
-      %r20 = vector.transfer_read %memref2[%c0, %c0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<3xf32>
-      %r21 = vector.transfer_read %memref2[%c0, %c3], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<3xf32>
-      %r30 = vector.transfer_read %memref3[%c0, %random_index], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
-      %r31 = vector.transfer_read %memref3[%c1, %random_index], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
-      %r10 = vector.transfer_read %memref0[%i, %i], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<2xf32>
-      %r11 = vector.transfer_read %memref0[%random_index, %random_index], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<2xf32>
+      %r00 = vector.transfer_read %memref1[%c0, %c0], %cst: memref<?x?xf32>, vector<2xf32>
+      %r01 = vector.transfer_read %memref1[%c0, %c1], %cst: memref<?x?xf32>, vector<2xf32>
+      %r20 = vector.transfer_read %memref2[%c0, %c0], %cst: memref<?x?xf32>, vector<3xf32>
+      %r21 = vector.transfer_read %memref2[%c0, %c3], %cst: memref<?x?xf32>, vector<3xf32>
+      %r30 = vector.transfer_read %memref3[%c0, %random_index], %cst: memref<?x?xf32>, vector<4xf32>
+      %r31 = vector.transfer_read %memref3[%c1, %random_index], %cst: memref<?x?xf32>, vector<4xf32>
+      %r10 = vector.transfer_read %memref0[%i, %i], %cst: memref<?x?xf32>, vector<2xf32>
+      %r11 = vector.transfer_read %memref0[%random_index, %random_index], %cst: memref<?x?xf32>, vector<2xf32>
       %u00 = "some_use"(%r00) : (vector<2xf32>) -> vector<2xf32>
       %u01 = "some_use"(%r01) : (vector<2xf32>) -> vector<2xf32>
       %u20 = "some_use"(%r20) : (vector<3xf32>) -> vector<3xf32>
@@ -152,14 +152,14 @@ func.func @hoist_vector_transfer_pairs_disjoint(
       %u31 = "some_use"(%r31) : (vector<4xf32>) -> vector<4xf32>
       %u10 = "some_use"(%r10) : (vector<2xf32>) -> vector<2xf32>
       %u11 = "some_use"(%r11) : (vector<2xf32>) -> vector<2xf32>
-      vector.transfer_write %u00, %memref1[%c0, %c0] {in_bounds=[false]} : vector<2xf32>, memref<?x?xf32>
-      vector.transfer_write %u01, %memref1[%c0, %c1] {in_bounds=[false]} : vector<2xf32>, memref<?x?xf32>
-      vector.transfer_write %u20, %memref2[%c0, %c0] {in_bounds=[false]} : vector<3xf32>, memref<?x?xf32>
-      vector.transfer_write %u21, %memref2[%c0, %c3] {in_bounds=[false]} : vector<3xf32>, memref<?x?xf32>
-      vector.transfer_write %u30, %memref3[%c0, %random_index] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
-      vector.transfer_write %u31, %memref3[%c1, %random_index] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
-      vector.transfer_write %u10, %memref0[%i, %i] {in_bounds=[false]} : vector<2xf32>, memref<?x?xf32>
-      vector.transfer_write %u11, %memref0[%random_index, %random_index] {in_bounds=[false]} : vector<2xf32>, memref<?x?xf32>
+      vector.transfer_write %u00, %memref1[%c0, %c0] : vector<2xf32>, memref<?x?xf32>
+      vector.transfer_write %u01, %memref1[%c0, %c1] : vector<2xf32>, memref<?x?xf32>
+      vector.transfer_write %u20, %memref2[%c0, %c0] : vector<3xf32>, memref<?x?xf32>
+      vector.transfer_write %u21, %memref2[%c0, %c3] : vector<3xf32>, memref<?x?xf32>
+      vector.transfer_write %u30, %memref3[%c0, %random_index] : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u31, %memref3[%c1, %random_index] : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u10, %memref0[%i, %i] : vector<2xf32>, memref<?x?xf32>
+      vector.transfer_write %u11, %memref0[%random_index, %random_index] : vector<2xf32>, memref<?x?xf32>
     }
   }
   return
@@ -184,7 +184,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : i32
 //       CHECK:   affine.for %[[I:.*]] = 0 to 64 {
 //       CHECK:     affine.for %[[J:.*]] = 0 to 64 step 16 {
-//       CHECK:       %[[R0:.*]] = vector.transfer_read %[[MEMREF2]][%[[I]], %[[J]]], %[[C0]] {{.*}} : memref<64x64xi32>, vector<16xi32>
+//       CHECK:       %[[R0:.*]] = vector.transfer_read %[[MEMREF2]][%[[I]], %[[J]]], %[[C0]] : memref<64x64xi32>, vector<16xi32>
 //       CHECK:       %[[R:.*]] = affine.for %[[K:.*]] = 0 to 64 iter_args(%[[ACC:.*]] = %[[R0]]) -> (vector<16xi32>) {
 //       CHECK:         %[[AV:.*]] = vector.transfer_read %[[MEMREF0]][%[[I]], %[[K]]], %[[C0]] {{.*}}: memref<64x64xi32>, vector<16xi32>
 //       CHECK:         %[[BV:.*]] = vector.transfer_read %[[MEMREF1]][%[[K]], %[[J]]], %[[C0]] {{.*}}: memref<64x64xi32>, vector<16xi32>
@@ -192,7 +192,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:         %[[T1:.*]] = arith.addi %[[ACC]], %[[T0]] : vector<16xi32>
 //       CHECK:         affine.yield %[[T1]] : vector<16xi32>
 //       CHECK:       }
-//       CHECK:       vector.transfer_write %[[R]], %[[MEMREF2]][%[[I]], %[[J]]] {{.*}} : vector<16xi32>, memref<64x64xi32>
+//       CHECK:       vector.transfer_write %[[R]], %[[MEMREF2]][%[[I]], %[[J]]] : vector<16xi32>, memref<64x64xi32>
 //       CHECK:     }
 //       CHECK:   }
 func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi32>, %memref1: memref<64x64xi32>, %memref2: memref<64x64xi32>) {
@@ -200,12 +200,12 @@ func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi3
   affine.for %arg3 = 0 to 64 {
     affine.for %arg4 = 0 to 64 step 16 {
       affine.for %arg5 = 0 to 64 {
-        %0 = vector.transfer_read %memref0[%arg3, %arg5], %c0_i32 {in_bounds=[true], permutation_map = affine_map<(d0, d1) -> (0)>} : memref<64x64xi32>, vector<16xi32>
-        %1 = vector.transfer_read %memref1[%arg5, %arg4], %c0_i32 {in_bounds=[false]} : memref<64x64xi32>, vector<16xi32>
-        %2 = vector.transfer_read %memref2[%arg3, %arg4], %c0_i32 {in_bounds=[false]} : memref<64x64xi32>, vector<16xi32>
+        %0 = vector.transfer_read %memref0[%arg3, %arg5], %c0_i32 {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (0)>} : memref<64x64xi32>, vector<16xi32>
+        %1 = vector.transfer_read %memref1[%arg5, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
+        %2 = vector.transfer_read %memref2[%arg3, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
         %3 = arith.muli %0, %1 : vector<16xi32>
         %4 = arith.addi %2, %3 : vector<16xi32>
-        vector.transfer_write %4, %memref2[%arg3, %arg4] {in_bounds=[false]} : vector<16xi32>, memref<64x64xi32>
+        vector.transfer_write %4, %memref2[%arg3, %arg4] : vector<16xi32>, memref<64x64xi32>
       }
     }
   }
@@ -458,17 +458,17 @@ func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
 
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
-      %r0 = vector.transfer_read %buffer[%i0, %i0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
+      %r0 = vector.transfer_read %buffer[%i0, %i0], %cst: memref<?x?xf32>, vector<4xf32>
       // Disjoint leading dim
-      %r1 = vector.transfer_read %buffer[%i1, %i0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
+      %r1 = vector.transfer_read %buffer[%i1, %i0], %cst: memref<?x?xf32>, vector<4xf32>
       // Non-overlap trailing dim
-      %r2 = vector.transfer_read %buffer[%i1, %i2], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
+      %r2 = vector.transfer_read %buffer[%i1, %i2], %cst: memref<?x?xf32>, vector<4xf32>
       %u0 = "some_use"(%r0) : (vector<4xf32>) -> vector<4xf32>
       %u1 = "some_use"(%r1) : (vector<4xf32>) -> vector<4xf32>
       %u2 = "some_use"(%r2) : (vector<4xf32>) -> vector<4xf32>
-      vector.transfer_write %u0, %buffer[%i0, %i0] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
-      vector.transfer_write %u1, %buffer[%i1, %i0] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
-      vector.transfer_write %u2, %buffer[%i1, %i2] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u0, %buffer[%i0, %i0] : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u1, %buffer[%i1, %i0] : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u2, %buffer[%i1, %i2] : vector<4xf32>, memref<?x?xf32>
     }
   }
   return
@@ -500,13 +500,13 @@ func.func @hoist_vector_transfer_pairs_overlapping_dynamic(
 
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
-      %r0 = vector.transfer_read %buffer[%i0, %i0], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
+      %r0 = vector.transfer_read %buffer[%i0, %i0], %cst: memref<?x?xf32>, vector<4xf32>
       // Overlapping range with the above
-      %r1 = vector.transfer_read %buffer[%i0, %i1], %cst {in_bounds=[false]}: memref<?x?xf32>, vector<4xf32>
+      %r1 = vector.transfer_read %buffer[%i0, %i1], %cst: memref<?x?xf32>, vector<4xf32>
       %u0 = "some_use"(%r0) : (vector<4xf32>) -> vector<4xf32>
       %u1 = "some_use"(%r1) : (vector<4xf32>) -> vector<4xf32>
-      vector.transfer_write %u0, %buffer[%i0, %i0] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
-      vector.transfer_write %u1, %buffer[%i0, %i1] {in_bounds=[false]} : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u0, %buffer[%i0, %i0] : vector<4xf32>, memref<?x?xf32>
+      vector.transfer_write %u1, %buffer[%i0, %i1] : vector<4xf32>, memref<?x?xf32>
     }
   }
   return
@@ -542,15 +542,15 @@ func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
 
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
-      %r0 = vector.transfer_read %buffer[%i0, %i2], %cst {in_bounds=[false, false]}: memref<?x?xf32>, vector<16x8xf32>
-      %r1 = vector.transfer_read %buffer[%i0, %i3], %cst {in_bounds=[false, false]}: memref<?x?xf32>, vector<16x8xf32>
-      %r2 = vector.transfer_read %buffer[%i0, %i4], %cst {in_bounds=[false, false]}: memref<?x?xf32>, vector<16x8xf32>
+      %r0 = vector.transfer_read %buffer[%i0, %i2], %cst: memref<?x?xf32>, vector<16x8xf32>
+      %r1 = vector.transfer_read %buffer[%i0, %i3], %cst: memref<?x?xf32>, vector<16x8xf32>
+      %r2 = vector.transfer_read %buffer[%i0, %i4], %cst: memref<?x?xf32>, vector<16x8xf32>
       %u0 = "some_use"(%r0) : (vector<16x8xf32>) -> vector<16x8xf32>
       %u1 = "some_use"(%r1) : (vector<16x8xf32>) -> vector<16x8xf32>
       %u2 = "some_use"(%r2) : (vector<16x8xf32>) -> vector<16x8xf32>
-      vector.transfer_write %u2, %buffer[%i0, %i4] {in_bounds=[false, false]} : vector<16x8xf32>, memref<?x?xf32>
-      vector.transfer_write %u1, %buffer[%i0, %i3] {in_bounds=[false, false]} : vector<16x8xf32>, memref<?x?xf32>
-      vector.transfer_write %u0, %buffer[%i0, %i2] {in_bounds=[false, false]} : vector<16x8xf32>, memref<?x?xf32>
+      vector.transfer_write %u2, %buffer[%i0, %i4] : vector<16x8xf32>, memref<?x?xf32>
+      vector.transfer_write %u1, %buffer[%i0, %i3] : vector<16x8xf32>, memref<?x?xf32>
+      vector.transfer_write %u0, %buffer[%i0, %i2] : vector<16x8xf32>, memref<?x?xf32>
     }
   }
   return

@@ -29,7 +29,7 @@ func.func @use_of_unknown_op_1(%t1: tensor<?xf32>)
   // CHECK: vector.transfer_read %[[dummy_memref]][%{{.*}}], %{{.*}} : memref<?xf32, strided<[?], offset: ?>>
   // CHECK-NO-LAYOUT-MAP: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : memref<?xf32>
   // CHECK-NO-LAYOUT-MAP: vector.transfer_read %[[dummy_memref]][%{{.*}}], %{{.*}} : memref<?xf32>
-  %1 = vector.transfer_read %0[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+  %1 = vector.transfer_read %0[%idx], %cst : tensor<?xf32>, vector<5xf32>
   return %1 : vector<5xf32>
 }
 
@@ -57,13 +57,13 @@ func.func @use_of_unknown_op_3(%t1: tensor<?xf32>)
   %cst = arith.constant 0.0 : f32
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]]
   // CHECK: %[[v1:.*]] = vector.transfer_read %[[m1]]
-  %1 = vector.transfer_read %t1[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+  %1 = vector.transfer_read %t1[%idx], %cst : tensor<?xf32>, vector<5xf32>
 
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[t1]])
   %0 = "test.dummy_op"(%t1) : (tensor<?xf32>) -> tensor<?xf32>
   // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : memref<?xf32, strided<[?], offset: ?>>
   // CHECK: %[[v2:.*]] = vector.transfer_read %[[dummy_memref]]
-  %2 = vector.transfer_read %0[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+  %2 = vector.transfer_read %0[%idx], %cst : tensor<?xf32>, vector<5xf32>
 
   // CHECK: return %[[v1]], %[[v2]]
   return %1, %2 : vector<5xf32>, vector<5xf32>
@@ -83,7 +83,7 @@ func.func @use_of_unknown_op_4(%t1: tensor<?xf32>)
 
   // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]]
   // CHECK: %[[v1:.*]] = vector.transfer_read %[[dummy_memref]]
-  %1 = vector.transfer_read %0[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+  %1 = vector.transfer_read %0[%idx], %cst : tensor<?xf32>, vector<5xf32>
 
   // CHECK: %[[another_dummy:.*]] = "test.another_dummy_op"(%[[dummy]])
   %2 = "test.another_dummy_op"(%0) : (tensor<?xf32>) -> tensor<?xf32>
@@ -121,7 +121,7 @@ func.func @unused_unknown_op(%t1 : tensor<?xf32>) -> vector<5xf32> {
 
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]]
   // CHECK: vector.transfer_read %[[m1]]
-  %1 = vector.transfer_read %t1[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+  %1 = vector.transfer_read %t1[%idx], %cst : tensor<?xf32>, vector<5xf32>
 
   // CHECK: "test.dummy_op"(%[[t1]])
   "test.dummy_op"(%t1) : (tensor<?xf32>) -> ()
@@ -150,7 +150,7 @@ func.func @unknown_op_may_read(%v: vector<5xf32>)
   // CHECK: memref.copy %[[m1]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
   // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-  %1 = vector.transfer_write %v, %filled[%idx] {in_bounds=[true]} : vector<5xf32>, tensor<10xf32>
+  %1 = vector.transfer_write %v, %filled[%idx] : vector<5xf32>, tensor<10xf32>
 
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[filled_tensor]])
   %2 = "test.dummy_op"(%filled) : (tensor<10xf32>) -> (tensor<10xf32>)
@@ -174,7 +174,7 @@ func.func @unknown_op_not_writable(
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[dummy_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-  %1 = vector.transfer_write %v, %0[%idx] {in_bounds=[true]} : vector<5xf32>, tensor<?xf32>
+  %1 = vector.transfer_write %v, %0[%idx] : vector<5xf32>, tensor<?xf32>
 
   // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   // CHECK: return %[[alloc_tensor]]

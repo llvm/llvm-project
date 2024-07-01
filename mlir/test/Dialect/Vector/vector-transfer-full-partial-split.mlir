@@ -31,7 +31,7 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   //      CHECK:   scf.yield %[[A]], %[[i]], %[[j]] : memref<?x8xf32>, index, index
   //      CHECK: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      CHECK:   %[[slow:.*]] = vector.transfer_read %[[A]][%[[i]], %[[j]]], %cst {{.*}} :
+  //      CHECK:   %[[slow:.*]] = vector.transfer_read %[[A]][%[[i]], %[[j]]], %cst :
   // CHECK-SAME:     memref<?x8xf32>, vector<4x8xf32>
   //      CHECK:   %[[cast_alloc:.*]] = vector.type_cast %[[alloc]] :
   // CHECK-SAME:     memref<4x8xf32> to memref<vector<4x8xf32>>
@@ -44,7 +44,7 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
   // CHECK-SAME:   {in_bounds = [true, true]} : memref<?x8xf32>, vector<4x8xf32>
 
-  %1 = vector.transfer_read %A[%i, %j], %f0 {in_bounds = [false, false]}: memref<?x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>
 
   return %1: vector<4x8xf32>
 }
@@ -81,7 +81,7 @@ func.func @split_vector_transfer_read_strided_2d(
   // CHECK-SAME:     memref<?x8xf32, strided<[?, 1], offset: ?>>, index, index
   //      CHECK: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      CHECK:   %[[slow:.*]] = vector.transfer_read %[[A]][%[[i]], %[[j]]], %cst {{.*}} :
+  //      CHECK:   %[[slow:.*]] = vector.transfer_read %[[A]][%[[i]], %[[j]]], %cst :
   // CHECK-SAME:     memref<7x8xf32, strided<[?, 1], offset: ?>>, vector<4x8xf32>
   //      CHECK:   %[[cast_alloc:.*]] = vector.type_cast %[[alloc]] :
   // CHECK-SAME:     memref<4x8xf32> to memref<vector<4x8xf32>>
@@ -94,7 +94,7 @@ func.func @split_vector_transfer_read_strided_2d(
   //      CHECK: }
   //      CHECK: %[[res:.*]] = vector.transfer_read {{.*}} {in_bounds = [true, true]} :
   // CHECK-SAME:   memref<?x8xf32, strided<[?, 1], offset: ?>>, vector<4x8xf32>
-  %1 = vector.transfer_read %A[%i, %j], %f0 {in_bounds = [false, false]} :
+  %1 = vector.transfer_read %A[%i, %j], %f0 :
     memref<7x8xf32, strided<[?, 1], offset: ?>>, vector<4x8xf32>
 
   // CHECK: return %[[res]] : vector<4x8xf32>
@@ -114,7 +114,7 @@ func.func @split_vector_transfer_read_mem_space(%A: memref<?x8xf32, 3>, %i: inde
   //      CHECK:   scf.yield %[[cast]], {{.*}} : memref<?x8xf32, strided<[8, 1]>>, index, index
   //      CHECK: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      CHECK:   %[[slow:.*]] = vector.transfer_read %[[A]][%[[i]], %[[j]]], %cst {{.*}} :
+  //      CHECK:   %[[slow:.*]] = vector.transfer_read %[[A]][%[[i]], %[[j]]], %cst :
   // CHECK-SAME:     memref<?x8xf32, 3>, vector<4x8xf32>
   //      CHECK:   %[[cast_alloc:.*]] = vector.type_cast %[[alloc]] :
   // CHECK-SAME:     memref<4x8xf32> to memref<vector<4x8xf32>>
@@ -127,7 +127,7 @@ func.func @split_vector_transfer_read_mem_space(%A: memref<?x8xf32, 3>, %i: inde
   //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
   // CHECK-SAME:   {in_bounds = [true, true]} : memref<?x8xf32, strided<[8, 1]>>, vector<4x8xf32>
 
-  %1 = vector.transfer_read %A[%i, %j], %f0 {in_bounds = [false, false]} : memref<?x8xf32, 3>, vector<4x8xf32>
+  %1 = vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32, 3>, vector<4x8xf32>
 
   return %1: vector<4x8xf32>
 }
@@ -145,7 +145,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf32>, %i: index, %j: index) {
-  vector.transfer_write %V, %A[%i, %j] {in_bounds = [false, false]} :
+  vector.transfer_write %V, %A[%i, %j] :
     vector<4x8xf32>, memref<?x8xf32>
   return
 }
@@ -208,7 +208,7 @@ module attributes {transform.with_named_sequence} {
 func.func @split_vector_transfer_write_strided_2d(
     %V: vector<4x8xf32>, %A: memref<7x8xf32, strided<[?, 1], offset: ?>>,
     %i: index, %j: index) {
-  vector.transfer_write %V, %A[%i, %j] {in_bounds = [false, false]} :
+  vector.transfer_write %V, %A[%i, %j] :
     vector<4x8xf32>, memref<7x8xf32, strided<[?, 1], offset: ?>>
   return
 }
@@ -271,7 +271,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func @split_vector_transfer_write_mem_space(%V: vector<4x8xf32>, %A: memref<?x8xf32, 3>, %i: index, %j: index) {
-  vector.transfer_write %V, %A[%i, %j] {in_bounds = [false, false]} :
+  vector.transfer_write %V, %A[%i, %j] :
     vector<4x8xf32>, memref<?x8xf32, 3>
   return
 }
@@ -317,7 +317,7 @@ func.func @transfer_read_within_async_execute(%A : memref<?x?xf32>) -> !async.to
   //     CHECK: async.execute
   //     CHECK:   alloca
   %token = async.execute {
-    %0 = vector.transfer_read %A[%c0, %c0], %f0 {in_bounds = [false, false]} : memref<?x?xf32>, vector<2x2xf32>
+    %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x?xf32>, vector<2x2xf32>
     func.call @fake_side_effecting_fun(%0) : (vector<2x2xf32>) -> ()
     async.yield
   }
@@ -334,7 +334,7 @@ func.func @transfer_read_within_scf_for(%A : memref<?x?xf32>, %lb : index, %ub :
   // CHECK: scf.for
   // CHECK-NOT: memref.alloca
   scf.for %i = %lb to %ub step %step {
-    %0 = vector.transfer_read %A[%c0, %c0], %f0 {in_bounds = [false, false]} : memref<?x?xf32>, vector<2x2xf32>
+    %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x?xf32>, vector<2x2xf32>
     func.call @fake_side_effecting_fun(%0) : (vector<2x2xf32>) -> ()
   }
   return

@@ -9,11 +9,11 @@ func.func @vector_transfer_ops_0d(%M: memref<f32>) {
   // 0-d transfers are left untouched by vector-to-scf.
   // They are independently lowered to the proper memref.load/store.
   //  CHECK: vector.transfer_read {{.*}}: memref<f32>, vector<f32>
-  %0 = vector.transfer_read %M[], %f0 {permutation_map = affine_map<()->()>, in_bounds = []} :
+  %0 = vector.transfer_read %M[], %f0 {permutation_map = affine_map<()->()>} :
     memref<f32>, vector<f32>
 
   //  CHECK: vector.transfer_write {{.*}}: vector<f32>, memref<f32>
-  vector.transfer_write %0, %M[] {permutation_map = affine_map<()->()>, in_bounds = []} :
+  vector.transfer_write %0, %M[] {permutation_map = affine_map<()->()>} :
     vector<f32>, memref<f32>
 
   return
@@ -27,13 +27,13 @@ func.func @materialize_read_1d() {
   %A = memref.alloc () : memref<7x42xf32>
   affine.for %i0 = 0 to 7 step 4 {
     affine.for %i1 = 0 to 42 step 4 {
-      %f1 = vector.transfer_read %A[%i0, %i1], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]} : memref<7x42xf32>, vector<4xf32>
+      %f1 = vector.transfer_read %A[%i0, %i1], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<7x42xf32>, vector<4xf32>
       %ip1 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i1)
-      %f2 = vector.transfer_read %A[%i0, %ip1], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]} : memref<7x42xf32>, vector<4xf32>
+      %f2 = vector.transfer_read %A[%i0, %ip1], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<7x42xf32>, vector<4xf32>
       %ip2 = affine.apply affine_map<(d0) -> (d0 + 2)> (%i1)
-      %f3 = vector.transfer_read %A[%i0, %ip2], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]} : memref<7x42xf32>, vector<4xf32>
+      %f3 = vector.transfer_read %A[%i0, %ip2], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<7x42xf32>, vector<4xf32>
       %ip3 = affine.apply affine_map<(d0) -> (d0 + 3)> (%i1)
-      %f4 = vector.transfer_read %A[%i0, %ip3], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]} : memref<7x42xf32>, vector<4xf32>
+      %f4 = vector.transfer_read %A[%i0, %ip3], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<7x42xf32>, vector<4xf32>
       // Both accesses in the load must be clipped otherwise %i1 + 2 and %i1 + 3 will go out of bounds.
       // CHECK: scf.if
       // CHECK-NEXT: memref.load
@@ -60,9 +60,9 @@ func.func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : inde
       affine.for %i2 = 0 to %dyn2 {
         affine.for %i3 = 0 to 42 step 2 {
           affine.for %i4 = 0 to %dyn4 {
-            %f1 = vector.transfer_read %A[%i0, %i1, %i2, %i3, %i4], %f0 {permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d3)>, in_bounds = [false]} : memref<7x?x?x42x?xf32>, vector<4xf32>
+            %f1 = vector.transfer_read %A[%i0, %i1, %i2, %i3, %i4], %f0 {permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d3)>} : memref<7x?x?x42x?xf32>, vector<4xf32>
             %i3p1 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i3)
-            %f2 = vector.transfer_read %A[%i0, %i1, %i2, %i3p1, %i4], %f0 {permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d3)>, in_bounds = [false]} : memref<7x?x?x42x?xf32>, vector<4xf32>
+            %f2 = vector.transfer_read %A[%i0, %i1, %i2, %i3p1, %i4], %f0 {permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d3)>} : memref<7x?x?x42x?xf32>, vector<4xf32>
             // Add a dummy use to prevent dead code elimination from removing
             // transfer read ops.
             "dummy_use"(%f1, %f2) : (vector<4xf32>, vector<4xf32>) -> ()
@@ -133,7 +133,7 @@ func.func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
     affine.for %i1 = 0 to %N {
       affine.for %i2 = 0 to %O {
         affine.for %i3 = 0 to %P step 5 {
-          %f = vector.transfer_read %A[%i0, %i1, %i2, %i3], %f0 {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, 0, d0)>, in_bounds = [false, true, false]} : memref<?x?x?x?xf32>, vector<5x4x3xf32>
+          %f = vector.transfer_read %A[%i0, %i1, %i2, %i3], %f0 {in_bounds = [false, true, false], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, 0, d0)>} : memref<?x?x?x?xf32>, vector<5x4x3xf32>
           // Add a dummy use to prevent dead code elimination from removing
           // transfer read ops.
           "dummy_use"(%f) : (vector<5x4x3xf32>) -> ()
@@ -174,7 +174,7 @@ func.func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK:                      scf.for %[[I6:.*]] = %[[C0]] to %[[C1]] step %[[C1]] {
   // CHECK:                        %[[S0:.*]] = affine.apply #[[$ADD]](%[[I2]], %[[I6]])
   // CHECK:                        %[[VEC:.*]] = memref.load %[[VECTOR_VIEW3]][%[[I4]], %[[I5]], %[[I6]]] : memref<3x4x1xvector<5xf32>>
-  // CHECK:                        vector.transfer_write %[[VEC]], %{{.*}}[%[[S3]], %[[S1]], %[[S0]], %[[I3]]] {in_bounds = [false]} : vector<5xf32>, memref<?x?x?x?xf32>
+  // CHECK:                        vector.transfer_write %[[VEC]], %{{.*}}[%[[S3]], %[[S1]], %[[S0]], %[[I3]]] : vector<5xf32>, memref<?x?x?x?xf32>
   // CHECK:                      }
   // CHECK:                    }
   // CHECK:                  }
@@ -196,7 +196,7 @@ func.func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
     affine.for %i1 = 0 to %N step 4 {
       affine.for %i2 = 0 to %O {
         affine.for %i3 = 0 to %P step 5 {
-          vector.transfer_write %f1, %A[%i0, %i1, %i2, %i3] {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d1, d0)>, in_bounds = [false, false, false]} : vector<5x4x3xf32>, memref<?x?x?x?xf32>
+          vector.transfer_write %f1, %A[%i0, %i1, %i2, %i3] {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d1, d0)>} : vector<5x4x3xf32>, memref<?x?x?x?xf32>
         }
       }
     }
@@ -234,7 +234,7 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // CHECK:       %[[add:.*]] = affine.apply #[[$MAP0]](%[[I]])[%[[base]]]
   // CHECK:       %[[cond1:.*]] = arith.cmpi sgt, %[[dim]], %[[add]] : index
   // CHECK:       scf.if %[[cond1]] {
-  // CHECK:         %[[vec_1d:.*]] = vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] {{.*}} : memref<?x?xf32>, vector<15xf32>
+  // CHECK:         %[[vec_1d:.*]] = vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // CHECK:         memref.store %[[vec_1d]], %[[alloc_casted]][%[[I]]] : memref<3xvector<15xf32>>
   // CHECK:       } else {
   // CHECK:         store %[[splat]], %[[alloc_casted]][%[[I]]] : memref<3xvector<15xf32>>
@@ -248,7 +248,7 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // FULL-UNROLL: %[[DIM:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32>
   // FULL-UNROLL: cmpi sgt, %[[DIM]], %[[base]] : index
   // FULL-UNROLL: %[[VEC1:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {
-  // FULL-UNROLL:   vector.transfer_read %[[A]][%[[base]], %[[base]]], %[[C7]] {{.*}} : memref<?x?xf32>, vector<15xf32>
+  // FULL-UNROLL:   vector.transfer_read %[[A]][%[[base]], %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // FULL-UNROLL:   vector.insert %{{.*}}, %[[VEC0]] [0] : vector<15xf32> into vector<3x15xf32>
   // FULL-UNROLL:   scf.yield %{{.*}} : vector<3x15xf32>
   // FULL-UNROLL: } else {
@@ -257,7 +257,7 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // FULL-UNROLL: affine.apply #[[$MAP1]]()[%[[base]]]
   // FULL-UNROLL: cmpi sgt, %{{.*}}, %{{.*}} : index
   // FULL-UNROLL: %[[VEC2:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {
-  // FULL-UNROLL:   vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] {{.*}} : memref<?x?xf32>, vector<15xf32>
+  // FULL-UNROLL:   vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // FULL-UNROLL:   vector.insert %{{.*}}, %[[VEC1]] [1] : vector<15xf32> into vector<3x15xf32>
   // FULL-UNROLL:   scf.yield %{{.*}} : vector<3x15xf32>
   // FULL-UNROLL: } else {
@@ -266,14 +266,14 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // FULL-UNROLL: affine.apply #[[$MAP2]]()[%[[base]]]
   // FULL-UNROLL: cmpi sgt, %{{.*}}, %{{.*}} : index
   // FULL-UNROLL: %[[VEC3:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {
-  // FULL-UNROLL:   vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] {{.*}} : memref<?x?xf32>, vector<15xf32>
+  // FULL-UNROLL:   vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // FULL-UNROLL:   vector.insert %{{.*}}, %[[VEC2]] [2] : vector<15xf32> into vector<3x15xf32>
   // FULL-UNROLL:   scf.yield %{{.*}} : vector<3x15xf32>
   // FULL-UNROLL: } else {
   // FULL-UNROLL:   scf.yield %{{.*}} : vector<3x15xf32>
   // FULL-UNROLL: }
 
-  %f = vector.transfer_read %A[%base, %base], %f7 {in_bounds = [false, false]} :
+  %f = vector.transfer_read %A[%base, %base], %f7 :
     memref<?x?xf32>, vector<3x15xf32>
 
   return %f: vector<3x15xf32>
@@ -307,7 +307,7 @@ func.func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: 
   // CHECK:       %[[cmp:.*]] = arith.cmpi sgt, %[[dim]], %[[add]] : index
   // CHECK:       scf.if %[[cmp]] {
   // CHECK:         %[[vec_1d:.*]] = memref.load %[[vmemref]][%[[I]]] : memref<3xvector<15xf32>>
-  // CHECK:         vector.transfer_write %[[vec_1d]], %[[A]][{{.*}}, %[[base]]] {{.*}} : vector<15xf32>, memref<?x?xf32>
+  // CHECK:         vector.transfer_write %[[vec_1d]], %[[A]][{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // CHECK:       }
   // CHECK:     }
 
@@ -316,22 +316,22 @@ func.func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: 
   // FULL-UNROLL: %[[CMP0:.*]] = arith.cmpi sgt, %[[DIM]], %[[base]] : index
   // FULL-UNROLL: scf.if %[[CMP0]] {
   // FULL-UNROLL:   %[[V0:.*]] = vector.extract %[[vec]][0] : vector<15xf32> from vector<3x15xf32>
-  // FULL-UNROLL:   vector.transfer_write %[[V0]], %[[A]][%[[base]], %[[base]]] {{.*}} : vector<15xf32>, memref<?x?xf32>
+  // FULL-UNROLL:   vector.transfer_write %[[V0]], %[[A]][%[[base]], %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: %[[I1:.*]] = affine.apply #[[$MAP1]]()[%[[base]]]
   // FULL-UNROLL: %[[CMP1:.*]] = arith.cmpi sgt, %{{.*}}, %[[I1]] : index
   // FULL-UNROLL: scf.if %[[CMP1]] {
   // FULL-UNROLL:   %[[V1:.*]] = vector.extract %[[vec]][1] : vector<15xf32> from vector<3x15xf32>
-  // FULL-UNROLL:   vector.transfer_write %[[V1]], %[[A]][%{{.*}}, %[[base]]] {{.*}} : vector<15xf32>, memref<?x?xf32>
+  // FULL-UNROLL:   vector.transfer_write %[[V1]], %[[A]][%{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: %[[I2:.*]] = affine.apply #[[$MAP2]]()[%[[base]]]
   // FULL-UNROLL: %[[CMP2:.*]] = arith.cmpi sgt, %{{.*}}, %[[I2]] : index
   // FULL-UNROLL: scf.if %[[CMP2]] {
   // FULL-UNROLL:   %[[V2:.*]] = vector.extract %[[vec]][2] : vector<15xf32> from vector<3x15xf32>
-  // FULL-UNROLL:   vector.transfer_write %[[V2]], %[[A]][%{{.*}}, %[[base]]] {{.*}} : vector<15xf32>, memref<?x?xf32>
+  // FULL-UNROLL:   vector.transfer_write %[[V2]], %[[A]][%{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
 
-  vector.transfer_write %vec, %A[%base, %base] {in_bounds = [false, false]} :
+  vector.transfer_write %vec, %A[%base, %base] :
     vector<3x15xf32>, memref<?x?xf32>
   return
 }
@@ -389,7 +389,7 @@ func.func @transfer_read_simple(%A : memref<2x2xf32>) -> vector<2x2xf32> {
   // FULL-UNROLL: %[[RES0:.*]] = vector.insert %[[V0]], %[[VC0]] [0] : vector<2xf32> into vector<2x2xf32>
   // FULL-UNROLL: %[[V1:.*]] = vector.transfer_read %{{.*}}[%[[C1]], %[[C0]]]
   // FULL-UNROLL: %[[RES1:.*]] = vector.insert %[[V1]], %[[RES0]] [1] : vector<2xf32> into vector<2x2xf32>
-  %0 = vector.transfer_read %A[%c0, %c0], %f0 {in_bounds = [false, false]} : memref<2x2xf32>, vector<2x2xf32>
+  %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<2x2xf32>, vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
 
@@ -397,7 +397,7 @@ func.func @transfer_read_minor_identity(%A : memref<?x?x?x?xf32>) -> vector<3x3x
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %A[%c0, %c0, %c0, %c0], %f0
-    { permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d3)>, in_bounds = [false, false]}
+    { permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d3)> }
       : memref<?x?x?x?xf32>, vector<3x3xf32>
   return %0 : vector<3x3xf32>
 }
@@ -416,7 +416,7 @@ func.func @transfer_read_minor_identity(%A : memref<?x?x?x?xf32>) -> vector<3x3x
 //  CHECK:          %[[d:.*]] = memref.dim %[[A]], %[[c2]] : memref<?x?x?x?xf32>
 //  CHECK:          %[[cmp:.*]] = arith.cmpi sgt, %[[d]], %[[arg1]] : index
 //  CHECK:          scf.if %[[cmp]] {
-//  CHECK:            %[[tr:.*]] = vector.transfer_read %[[A]][%c0, %c0, %[[arg1]], %c0], %[[f0]] {{.*}} : memref<?x?x?x?xf32>, vector<3xf32>
+//  CHECK:            %[[tr:.*]] = vector.transfer_read %[[A]][%c0, %c0, %[[arg1]], %c0], %[[f0]] : memref<?x?x?x?xf32>, vector<3xf32>
 //  CHECK:            memref.store %[[tr]], %[[cast]][%[[arg1]]] : memref<3xvector<3xf32>>
 //  CHECK:          } else {
 //  CHECK:            memref.store %[[cst0]], %[[cast]][%[[arg1]]] : memref<3xvector<3xf32>>
@@ -429,7 +429,7 @@ func.func @transfer_write_minor_identity(%A : vector<3x3xf32>, %B : memref<?x?x?
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   vector.transfer_write %A, %B[%c0, %c0, %c0, %c0]
-    { permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d3)>, in_bounds = [false, false]}
+    { permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d3)> }
       : vector<3x3xf32>, memref<?x?x?x?xf32>
   return
 }
@@ -449,7 +449,7 @@ func.func @transfer_write_minor_identity(%A : vector<3x3xf32>, %B : memref<?x?x?
 // CHECK:           %[[cmp:.*]] = arith.cmpi sgt, %[[d]], %[[arg2]] : index
 // CHECK:           scf.if %[[cmp]] {
 // CHECK:             %[[tmp:.*]] = memref.load %[[cast]][%[[arg2]]] : memref<3xvector<3xf32>>
-// CHECK:             vector.transfer_write %[[tmp]], %[[B]][%[[c0]], %[[c0]], %[[arg2]], %[[c0]]] {{.*}} : vector<3xf32>, memref<?x?x?x?xf32>
+// CHECK:             vector.transfer_write %[[tmp]], %[[B]][%[[c0]], %[[c0]], %[[arg2]], %[[c0]]] : vector<3xf32>, memref<?x?x?x?xf32>
 // CHECK:           }
 // CHECK:         }
 // CHECK:         return
@@ -460,7 +460,7 @@ func.func @transfer_write_minor_identity(%A : vector<3x3xf32>, %B : memref<?x?x?
 func.func @transfer_read_strided(%A : memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %A[%c0, %c0], %f0 {in_bounds = [false]}
+  %0 = vector.transfer_read %A[%c0, %c0], %f0
       : memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>, vector<4xf32>
   return %0 : vector<4xf32>
 }
@@ -471,8 +471,8 @@ func.func @transfer_read_strided(%A : memref<8x4xf32, affine_map<(d0, d1) -> (d0
 
 func.func @transfer_write_strided(%A : vector<4xf32>, %B : memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %A, %B[%c0, %c0] {in_bounds = [false]}
-    : vector<4xf32>, memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>
+  vector.transfer_write %A, %B[%c0, %c0] :
+    vector<4xf32>, memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>
   return
 }
 
@@ -492,7 +492,7 @@ func.func @transfer_read_within_async_execute(%A : memref<2x2xf32>) -> !async.to
   //     CHECK: async.execute
   //     CHECK:   alloca
   %token = async.execute {
-    %0 = vector.transfer_read %A[%c0, %c0], %f0 {in_bounds = [false, false]}: memref<2x2xf32>, vector<2x2xf32>
+    %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<2x2xf32>, vector<2x2xf32>
     func.call @fake_side_effecting_fun(%0) : (vector<2x2xf32>) -> ()
     async.yield
   }
@@ -507,7 +507,7 @@ func.func @transfer_read_with_tensor(%arg: tensor<f32>) -> vector<1xf32> {
     // CHECK-NEXT: %[[RESULT:.*]] = vector.broadcast %[[EXTRACTED]] : f32 to vector<1xf32>
     // CHECK-NEXT: return %[[RESULT]] : vector<1xf32>
     %f0 = arith.constant 0.0 : f32
-    %0 = vector.transfer_read %arg[], %f0 {permutation_map = affine_map<()->(0)>, in_bounds = [true]} :
+    %0 = vector.transfer_read %arg[], %f0 {in_bounds = [true], permutation_map = affine_map<()->(0)>} :
       tensor<f32>, vector<1xf32>
     return %0: vector<1xf32>
 }
@@ -746,7 +746,7 @@ func.func @cannot_lower_transfer_read_with_leading_scalable(%arg0: memref<?x4xf3
 func.func @does_not_crash_on_unpack_one_dim(%subview:  memref<1x1x1x1xi32>, %mask: vector<1x1xi1>) -> vector<1x1x1x1xi32> {
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
-  %3 = vector.transfer_read %subview[%c0, %c0, %c0, %c0], %c0_i32, %mask {permutation_map = #map1, in_bounds = [false, true, true, false]}
+  %3 = vector.transfer_read %subview[%c0, %c0, %c0, %c0], %c0_i32, %mask {in_bounds = [false, true, true, false], permutation_map = #map1}
           : memref<1x1x1x1xi32>, vector<1x1x1x1xi32>
   return %3 : vector<1x1x1x1xi32>
 }
@@ -793,7 +793,7 @@ func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%vec: vector
 func.func @unroll_transfer_write_target_rank_zero(%vec : vector<2xi32>) {
   %alloc = memref.alloc() : memref<4xi32>
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %alloc[%c0] {in_bounds = [false]} : vector<2xi32>, memref<4xi32>
+  vector.transfer_write %vec, %alloc[%c0] : vector<2xi32>, memref<4xi32>
   return
 }
 // TARGET-RANK-ZERO: %[[ALLOC:.*]] = memref.alloc() : memref<4xi32>

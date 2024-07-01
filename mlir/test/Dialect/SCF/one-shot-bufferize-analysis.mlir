@@ -136,7 +136,7 @@ func.func @reading_scf_for(%t1: tensor<?xf32> {bufferization.writable = true},
   // Write to %t1.
   // CHECK:      vector.transfer_write
   // CHECK-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
-  %t3 = vector.transfer_write %v, %t1[%s] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+  %t3 = vector.transfer_write %v, %t1[%s] : vector<5xf32>, tensor<?xf32>
 
   // Read the old value of %t1 inside the loop via an alias.
   // CHECK: scf.for {{.*}} {
@@ -146,7 +146,7 @@ func.func @reading_scf_for(%t1: tensor<?xf32> {bufferization.writable = true},
     %e = tensor.extract_slice %t2[%s][%s][1] : tensor<?xf32> to tensor<?xf32>
 
     // Read from %t1 via alias %e.
-    %v2 = vector.transfer_read %e[%s], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+    %v2 = vector.transfer_read %e[%s], %cst : tensor<?xf32>, vector<5xf32>
     scf.yield %t2, %v2 : tensor<?xf32>, vector<5xf32>
   }
   // CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "true", "none"]}
@@ -184,7 +184,7 @@ func.func @non_reading_scf_for(%t1: tensor<?xf32> {bufferization.writable = true
   // Write to %t1.
   // CHECK:      vector.transfer_write
   // CHECK-SAME: __inplace_operands_attr__ = ["none", "true", "none"]
-  %t3 = vector.transfer_write %v, %t1[%s] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+  %t3 = vector.transfer_write %v, %t1[%s] : vector<5xf32>, tensor<?xf32>
 
   // This loop does not read from %t1. It only writes to it.
   // CHECK:      scf.for
@@ -198,7 +198,7 @@ func.func @non_reading_scf_for(%t1: tensor<?xf32> {bufferization.writable = true
       } -> (tensor<?xf32>)
 
     // Read overwritten value. This is not a read of %t1.
-    %v2 = vector.transfer_read %o2[%s], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+    %v2 = vector.transfer_read %o2[%s], %cst : tensor<?xf32>, vector<5xf32>
     scf.yield %o2, %v2 : tensor<?xf32>, vector<5xf32>
   }
 
@@ -251,7 +251,7 @@ func.func @scf_if_inplace2(%t1: tensor<?xf32> {bufferization.writable = true},
   } else {
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-    %t2 = vector.transfer_write %v, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t2 = vector.transfer_write %v, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     scf.yield %t2 : tensor<?xf32>
   }
   //      CHECK: return
@@ -271,7 +271,7 @@ func.func @scf_if_inplace3(%t1: tensor<?xf32> {bufferization.writable = true},
   %r = scf.if %cond -> (tensor<?xf32>) {
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-    %t2 = vector.transfer_write %v1, %e[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t2 = vector.transfer_write %v1, %e[%idx] : vector<5xf32>, tensor<?xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %t2 : tensor<?xf32>
@@ -279,7 +279,7 @@ func.func @scf_if_inplace3(%t1: tensor<?xf32> {bufferization.writable = true},
     // Writing the same tensor through an alias. This is OK.
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-    %t3 = vector.transfer_write %v2, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t3 = vector.transfer_write %v2, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %t3 : tensor<?xf32>
@@ -301,7 +301,7 @@ func.func @scf_if_in_place4(%t1: tensor<?xf32> {bufferization.writable = true},
   } else {
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-    %t2 = vector.transfer_write %v, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t2 = vector.transfer_write %v, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %t2 : tensor<?xf32>
@@ -316,7 +316,7 @@ func.func @scf_if_in_place4(%t1: tensor<?xf32> {bufferization.writable = true},
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %r : tensor<?xf32>
   }
-  %v2 = vector.transfer_read %r_alias[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<10xf32>
+  %v2 = vector.transfer_read %r_alias[%idx], %cst : tensor<?xf32>, vector<10xf32>
 
   //      CHECK: return
   // CHECK-SAME: __equivalent_func_args__ = [0, -1]
@@ -367,14 +367,14 @@ func.func @scf_if_inplace6(%t1: tensor<?xf32> {bufferization.writable = true},
     %t2 = scf.if %cond2 -> (tensor<?xf32>) {
       //      CHECK: vector.transfer_write
       // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-      %t3 = vector.transfer_write %v1, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+      %t3 = vector.transfer_write %v1, %t1[%idx] : vector<5xf32>, tensor<?xf32>
       //      CHECK: scf.yield
       // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
       scf.yield %t3 : tensor<?xf32>
     } else {
       //      CHECK: vector.transfer_write
       // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-      %t4 = vector.transfer_write %v3, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+      %t4 = vector.transfer_write %v3, %t1[%idx] : vector<5xf32>, tensor<?xf32>
       //      CHECK: scf.yield
       // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
       scf.yield %t4 : tensor<?xf32>
@@ -385,7 +385,7 @@ func.func @scf_if_inplace6(%t1: tensor<?xf32> {bufferization.writable = true},
   } else {
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-    %t3 = vector.transfer_write %v2, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t3 = vector.transfer_write %v2, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %t3 : tensor<?xf32>
@@ -406,7 +406,7 @@ func.func @scf_if_inplace7(%t1: tensor<?xf32> {bufferization.writable = true},
   %r, %v_r2 = scf.if %cond -> (tensor<?xf32>, vector<5xf32>) {
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-    %t2 = vector.transfer_write %v1, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t2 = vector.transfer_write %v1, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none"]}
     scf.yield %t2, %v1 : tensor<?xf32>, vector<5xf32>
@@ -414,11 +414,11 @@ func.func @scf_if_inplace7(%t1: tensor<?xf32> {bufferization.writable = true},
     // Writing the same tensor through an alias.
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]
-    %t3 = vector.transfer_write %v2, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t3 = vector.transfer_write %v2, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     // Read the original value of %t1. This requires the write in this branch
     // to be out-of-place. But the write in the other branch can still be
     // inplace.
-    %v_r = vector.transfer_read %t1[%idx2], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+    %v_r = vector.transfer_read %t1[%idx2], %cst : tensor<?xf32>, vector<5xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none"]}
     scf.yield %t3, %v_r : tensor<?xf32>, vector<5xf32>
@@ -532,7 +532,7 @@ func.func @scf_if_out_of_place2(%t1: tensor<?xf32> {bufferization.writable = tru
   } else {
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]
-    %t2 = vector.transfer_write %v, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t2 = vector.transfer_write %v, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %t2 : tensor<?xf32>
@@ -540,7 +540,7 @@ func.func @scf_if_out_of_place2(%t1: tensor<?xf32> {bufferization.writable = tru
 
   // Read the old value of %t1. Forces the transfer_write to bufferize
   // out-of-place.
-  %v2 = vector.transfer_read %t1[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<10xf32>
+  %v2 = vector.transfer_read %t1[%idx], %cst : tensor<?xf32>, vector<10xf32>
   return %r, %v2 : tensor<?xf32>, vector<10xf32>
 }
 
@@ -556,7 +556,7 @@ func.func @scf_if_out_of_place3(%t1: tensor<?xf32> {bufferization.writable = tru
   } else {
     //      CHECK: vector.transfer_write
     // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]
-    %t2 = vector.transfer_write %v, %t1[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+    %t2 = vector.transfer_write %v, %t1[%idx] : vector<5xf32>, tensor<?xf32>
     //      CHECK: scf.yield
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %t2 : tensor<?xf32>
@@ -571,7 +571,7 @@ func.func @scf_if_out_of_place3(%t1: tensor<?xf32> {bufferization.writable = tru
     // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
     scf.yield %t1 : tensor<?xf32>
   }
-  %v2 = vector.transfer_read %t1_alias[%idx], %cst {in_bounds=[false]} : tensor<?xf32>, vector<10xf32>
+  %v2 = vector.transfer_read %t1_alias[%idx], %cst : tensor<?xf32>, vector<10xf32>
   return %r, %v2 : tensor<?xf32>, vector<10xf32>
 }
 

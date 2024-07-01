@@ -240,8 +240,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     bool isDimInBounds(unsigned dim) {
       if ($_op.isBroadcastDim(dim))
         return true;
-      if (!$_op.getInBounds())
-        return false;
       auto inBounds = $_op.getInBounds();
       return ::llvm::cast<::mlir::BoolAttr>(inBounds[dim]).getValue();
     }

@@ -21,7 +21,7 @@ func.func @entry() {
   }
 
   %d0 = arith.constant -1.0 : f32
-  %Av = vector.transfer_read %A[%c0], %d0 {in_bounds=[false]} : memref<8xf32>, vector<8xf32>
+  %Av = vector.transfer_read %A[%c0], %d0: memref<8xf32>, vector<8xf32>
   vector.print %Av : vector<8xf32>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7 )
 
@@ -35,7 +35,7 @@ func.func @entry() {
     memref.store %fi, %B[%i] : memref<10xf32>
   }
 
-  %Bv = vector.transfer_read %B[%c0], %d0 {in_bounds=[false]} : memref<10xf32>, vector<10xf32>
+  %Bv = vector.transfer_read %B[%c0], %d0: memref<10xf32>, vector<10xf32>
   vector.print %Bv : vector<10xf32>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 )
 
@@ -51,7 +51,7 @@ func.func @entry() {
     memref.store %fi, %C[%i] : memref<13xf32>
   }
 
-  %Cv = vector.transfer_read %C[%c0], %d0 {in_bounds=[false]} : memref<13xf32>, vector<13xf32>
+  %Cv = vector.transfer_read %C[%c0], %d0: memref<13xf32>, vector<13xf32>
   vector.print %Cv : vector<13xf32>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
 

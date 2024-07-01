@@ -7,7 +7,7 @@
 //       CHECK:   %[[dim:.*]] = tensor.dim %[[t]], %[[c0]]
 //       CHECK:   return %[[dim]]
 func.func @vector_transfer_write(%t: tensor<?xf32>, %v: vector<5xf32>, %pos: index) -> index {
-  %0 = vector.transfer_write %v, %t[%pos] {in_bounds = [false]} : vector<5xf32>, tensor<?xf32>
+  %0 = vector.transfer_write %v, %t[%pos] : vector<5xf32>, tensor<?xf32>
   %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
   return %1 : index
 }

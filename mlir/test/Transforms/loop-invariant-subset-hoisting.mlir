@@ -326,12 +326,12 @@ func.func @hoist_vector_transfer_pairs_tensor(
               %arg9 = %arg3,  %arg10 = %arg4, %arg11 = %arg5)
     -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
        tensor<?x?xf32>, tensor<?x?xf32>)  {
-      %r0 = vector.transfer_read %arg7[%c0, %c0], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<1xf32>
-      %r1 = vector.transfer_read %arg6[%i, %i], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<2xf32>
-      %r3 = vector.transfer_read %arg9[%c0, %c0], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<4xf32>
+      %r0 = vector.transfer_read %arg7[%c0, %c0], %cst: tensor<?x?xf32>, vector<1xf32>
+      %r1 = vector.transfer_read %arg6[%i, %i], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r3 = vector.transfer_read %arg9[%c0, %c0], %cst: tensor<?x?xf32>, vector<4xf32>
       "test.some_crippling_use"(%arg10) : (tensor<?x?xf32>) -> ()
-      %r4 = vector.transfer_read %arg10[%c0, %c0], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<5xf32>
-      %r5 = vector.transfer_read %arg11[%c0, %c0], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<6xf32>
+      %r4 = vector.transfer_read %arg10[%c0, %c0], %cst: tensor<?x?xf32>, vector<5xf32>
+      %r5 = vector.transfer_read %arg11[%c0, %c0], %cst: tensor<?x?xf32>, vector<6xf32>
       "test.some_crippling_use"(%arg11) : (tensor<?x?xf32>) -> ()
       %u0 = "test.some_use"(%r0) : (vector<1xf32>) -> vector<1xf32>
       %u1 = "test.some_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
@@ -339,12 +339,12 @@ func.func @hoist_vector_transfer_pairs_tensor(
       %u3 = "test.some_use"(%r3) : (vector<4xf32>) -> vector<4xf32>
       %u4 = "test.some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
       %u5 = "test.some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
-      %w1 = vector.transfer_write %u0, %arg7[%c0, %c0] {in_bounds=[true]} : vector<1xf32>, tensor<?x?xf32>
-      %w0 = vector.transfer_write %u1, %arg6[%i, %i] {in_bounds=[true]} : vector<2xf32>, tensor<?x?xf32>
-      %w2 = vector.transfer_write %u2, %arg8[%c0, %c0] {in_bounds=[true]} : vector<3xf32>, tensor<?x?xf32>
-      %w3 = vector.transfer_write %u3, %arg9[%c0, %c0] {in_bounds=[true]} : vector<4xf32>, tensor<?x?xf32>
-      %w4 = vector.transfer_write %u4, %arg10[%c0, %c0] {in_bounds=[true]} : vector<5xf32>, tensor<?x?xf32>
-      %w5 = vector.transfer_write %u5, %arg11[%c0, %c0] {in_bounds=[true]} : vector<6xf32>, tensor<?x?xf32>
+      %w1 = vector.transfer_write %u0, %arg7[%c0, %c0] : vector<1xf32>, tensor<?x?xf32>
+      %w0 = vector.transfer_write %u1, %arg6[%i, %i] : vector<2xf32>, tensor<?x?xf32>
+      %w2 = vector.transfer_write %u2, %arg8[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
+      %w3 = vector.transfer_write %u3, %arg9[%c0, %c0] : vector<4xf32>, tensor<?x?xf32>
+      %w4 = vector.transfer_write %u4, %arg10[%c0, %c0] : vector<5xf32>, tensor<?x?xf32>
+      %w5 = vector.transfer_write %u5, %arg11[%c0, %c0] : vector<6xf32>, tensor<?x?xf32>
       "test.some_crippling_use"(%w3) : (tensor<?x?xf32>) -> ()
       scf.yield %w0, %w1, %w2, %w3, %w4, %w5 :
         tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
@@ -415,14 +415,14 @@ func.func @hoist_vector_transfer_pairs_disjoint_tensor(
     iter_args(%arg4 = %arg0, %arg5 = %arg1, %arg6 = %arg2,
               %arg7 = %arg3)
     -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) {
-      %r00 = vector.transfer_read %arg5[%c0, %c0], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<2xf32>
-      %r01 = vector.transfer_read %arg5[%c0, %c1], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<2xf32>
-      %r20 = vector.transfer_read %arg6[%c0, %c0], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<3xf32>
-      %r21 = vector.transfer_read %arg6[%c0, %c3], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<3xf32>
-      %r30 = vector.transfer_read %arg7[%c0, %random_index], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<4xf32>
-      %r31 = vector.transfer_read %arg7[%c1, %random_index], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<4xf32>
-      %r10 = vector.transfer_read %arg4[%i, %i], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<2xf32>
-      %r11 = vector.transfer_read %arg4[%random_index, %random_index], %cst {in_bounds=[true]}: tensor<?x?xf32>, vector<2xf32>
+      %r00 = vector.transfer_read %arg5[%c0, %c0], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r01 = vector.transfer_read %arg5[%c0, %c1], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r20 = vector.transfer_read %arg6[%c0, %c0], %cst: tensor<?x?xf32>, vector<3xf32>
+      %r21 = vector.transfer_read %arg6[%c0, %c3], %cst: tensor<?x?xf32>, vector<3xf32>
+      %r30 = vector.transfer_read %arg7[%c0, %random_index], %cst: tensor<?x?xf32>, vector<4xf32>
+      %r31 = vector.transfer_read %arg7[%c1, %random_index], %cst: tensor<?x?xf32>, vector<4xf32>
+      %r10 = vector.transfer_read %arg4[%i, %i], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r11 = vector.transfer_read %arg4[%random_index, %random_index], %cst: tensor<?x?xf32>, vector<2xf32>
       %u00 = "test.some_use"(%r00) : (vector<2xf32>) -> vector<2xf32>
       %u01 = "test.some_use"(%r01) : (vector<2xf32>) -> vector<2xf32>
       %u20 = "test.some_use"(%r20) : (vector<3xf32>) -> vector<3xf32>
@@ -431,14 +431,14 @@ func.func @hoist_vector_transfer_pairs_disjoint_tensor(
       %u31 = "test.some_use"(%r31) : (vector<4xf32>) -> vector<4xf32>
       %u10 = "test.some_use"(%r10) : (vector<2xf32>) -> vector<2xf32>
       %u11 = "test.some_use"(%r11) : (vector<2xf32>) -> vector<2xf32>
-      %w10 = vector.transfer_write %u00, %arg5[%c0, %c0] {in_bounds=[true]} : vector<2xf32>, tensor<?x?xf32>
-      %w11 = vector.transfer_write %u01, %w10[%c0, %c1] {in_bounds=[true]} : vector<2xf32>, tensor<?x?xf32>
-      %w20 = vector.transfer_write %u20, %arg6[%c0, %c0] {in_bounds=[true]} : vector<3xf32>, tensor<?x?xf32>
-      %w21 = vector.transfer_write %u21, %w20[%c0, %c3] {in_bounds=[true]} : vector<3xf32>, tensor<?x?xf32>
-      %w30 = vector.transfer_write %u30, %arg7[%c0, %random_index] {in_bounds=[true]} : vector<4xf32>, tensor<?x?xf32>
-      %w31 = vector.transfer_write %u31, %w30[%c1, %random_index] {in_bounds=[true]} : vector<4xf32>, tensor<?x?xf32>
-      %w00 = vector.transfer_write %u10, %arg4[%i, %i] {in_bounds=[true]} : vector<2xf32>, tensor<?x?xf32>
-      %w01 = vector.transfer_write %u11, %w00[%random_index, %random_index] {in_bounds=[true]} : vector<2xf32>, tensor<?x?xf32>
+      %w10 = vector.transfer_write %u00, %arg5[%c0, %c0] : vector<2xf32>, tensor<?x?xf32>
+      %w11 = vector.transfer_write %u01, %w10[%c0, %c1] : vector<2xf32>, tensor<?x?xf32>
+      %w20 = vector.transfer_write %u20, %arg6[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
+      %w21 = vector.transfer_write %u21, %w20[%c0, %c3] : vector<3xf32>, tensor<?x?xf32>
+      %w30 = vector.transfer_write %u30, %arg7[%c0, %random_index] : vector<4xf32>, tensor<?x?xf32>
+      %w31 = vector.transfer_write %u31, %w30[%c1, %random_index] : vector<4xf32>, tensor<?x?xf32>
+      %w00 = vector.transfer_write %u10, %arg4[%i, %i] : vector<2xf32>, tensor<?x?xf32>
+      %w01 = vector.transfer_write %u11, %w00[%random_index, %random_index] : vector<2xf32>, tensor<?x?xf32>
       scf.yield %w01, %w11, %w21, %w31 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
     }
     scf.yield %1#0,  %1#1, %1#2, %1#3 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
@@ -492,19 +492,19 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices(
     -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)  {
       // Hoists.
       %st0 = tensor.extract_slice %arg6[%i, %i][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-      %r0 = vector.transfer_read %st0[%c0, %c0], %cst {in_bounds=[false]}: tensor<?x?xf32>, vector<1xf32>
+      %r0 = vector.transfer_read %st0[%c0, %c0], %cst: tensor<?x?xf32>, vector<1xf32>
 
       // CHECK:     %[[ST1:.*]] = tensor.extract_slice %[[TENSOR1_ARG_L2]][%[[J]],{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
       // CHECK:     %[[V1:.*]] = vector.transfer_read %[[ST1]]{{.*}} : tensor<?x?xf32>, vector<2xf32>
       // Does not hoist (slice depends on %j)
       %st1 = tensor.extract_slice %arg7[%j, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-      %r1 = vector.transfer_read %st1[%c0, %c0], %cst {in_bounds=[false]}: tensor<?x?xf32>, vector<2xf32>
+      %r1 = vector.transfer_read %st1[%c0, %c0], %cst: tensor<?x?xf32>, vector<2xf32>
 
       // CHECK:     %[[ST2:.*]] = tensor.extract_slice %[[TENSOR2_ARG_L2]][%[[I]],{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
       // CHECK:     %[[V2:.*]] = vector.transfer_read %[[ST2]]{{.*}} : tensor<?x?xf32>, vector<3xf32>
       // Does not hoist, 2 slice %arg8.
       %st2 = tensor.extract_slice %arg8[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-      %r2 = vector.transfer_read %st2[%c0, %c0], %cst {in_bounds=[false]}: tensor<?x?xf32>, vector<3xf32>
+      %r2 = vector.transfer_read %st2[%c0, %c0], %cst: tensor<?x?xf32>, vector<3xf32>
 
       // CHECK:     %[[U0:.*]] = "test.some_use"(%[[V0_ARG_L2]]) : (vector<1xf32>) -> vector<1xf32>
       // CHECK:     %[[U1:.*]] = "test.some_use"(%[[V1]]) : (vector<2xf32>) -> vector<2xf32>
@@ -514,15 +514,15 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices(
       %u2 = "test.some_use"(%r2) : (vector<3xf32>) -> vector<3xf32>
 
       // Hoists
-      %w0 = vector.transfer_write %u0, %st0[%c0, %c0] {in_bounds=[false]} : vector<1xf32>, tensor<?x?xf32>
+      %w0 = vector.transfer_write %u0, %st0[%c0, %c0] : vector<1xf32>, tensor<?x?xf32>
 
       // CHECK-DAG:     %[[STI1:.*]] = vector.transfer_write %[[U1]], %{{.*}} : vector<2xf32>, tensor<?x?xf32>
       // Does not hoist (associated slice depends on %j).
-      %w1 = vector.transfer_write %u1, %st1[%i, %i] {in_bounds=[false]} : vector<2xf32>, tensor<?x?xf32>
+      %w1 = vector.transfer_write %u1, %st1[%i, %i] : vector<2xf32>, tensor<?x?xf32>
 
       // CHECK-DAG:     %[[STI2:.*]] = vector.transfer_write %[[U2]], %{{.*}} : vector<3xf32>, tensor<?x?xf32>
       // Does not hoist, 2 slice / insert_slice for %arg8.
-      %w2 = vector.transfer_write %u2, %st2[%c0, %c0] {in_bounds=[false]} : vector<3xf32>, tensor<?x?xf32>
+      %w2 = vector.transfer_write %u2, %st2[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
 
       // Hoists.
       %sti0 = tensor.insert_slice %w0 into %arg6[%i, %i][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
@@ -570,8 +570,8 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices(
 //       CHECK:     %[[R5:.*]] = "test.some_use"(%[[R3]]) : (vector<2xf32>) -> vector<2xf32>
 //       CHECK:     scf.yield %[[TL]], %[[R4]], %[[R5]] : tensor<?x?xf32>, vector<2xf32>, vector<2xf32>
 //       CHECK:   }
-//       CHECK:   %[[W0:.*]] = vector.transfer_write %[[F]]#2, %[[F]]#0[%[[C0]], %[[C3]]] {{.*}} : vector<2xf32>, tensor<?x?xf32>
-//       CHECK:   %[[W1:.*]] = vector.transfer_write %[[F]]#1, %[[W0]][%[[C0]], %[[C0]]] {{.*}} : vector<2xf32>, tensor<?x?xf32>
+//       CHECK:   %[[W0:.*]] = vector.transfer_write %[[F]]#2, %[[F]]#0[%[[C0]], %[[C3]]] : vector<2xf32>, tensor<?x?xf32>
+//       CHECK:   %[[W1:.*]] = vector.transfer_write %[[F]]#1, %[[W0]][%[[C0]], %[[C0]]] : vector<2xf32>, tensor<?x?xf32>
 //       CHECK:  return %[[W1]] : tensor<?x?xf32>
 func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
     %tensor: tensor<?x?xf32>,
@@ -583,14 +583,14 @@ func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
   %cst = arith.constant 0.0 : f32
   %1 = scf.for %j = %lb to %ub step %step iter_args(%arg5 = %tensor)
     -> (tensor<?x?xf32>) {
-    %r00 = vector.transfer_read %arg5[%c0, %c0], %cst {in_bounds=[false]}: tensor<?x?xf32>, vector<2xf32>
+    %r00 = vector.transfer_read %arg5[%c0, %c0], %cst: tensor<?x?xf32>, vector<2xf32>
     %u00 = "test.some_use"(%r00) : (vector<2xf32>) -> vector<2xf32>
-    %w10 = vector.transfer_write %u00, %arg5[%c0, %c0] {in_bounds=[false]} : vector<2xf32>, tensor<?x?xf32>
+    %w10 = vector.transfer_write %u00, %arg5[%c0, %c0] : vector<2xf32>, tensor<?x?xf32>
 
     // Hoist by properly bypassing the disjoint write %w10.
-    %r01 = vector.transfer_read %w10[%c0, %c3], %cst {in_bounds=[false]}: tensor<?x?xf32>, vector<2xf32>
+    %r01 = vector.transfer_read %w10[%c0, %c3], %cst: tensor<?x?xf32>, vector<2xf32>
     %u01 = "test.some_use"(%r01) : (vector<2xf32>) -> vector<2xf32>
-    %w11 = vector.transfer_write %u01, %w10[%c0, %c3] {in_bounds=[false]} : vector<2xf32>, tensor<?x?xf32>
+    %w11 = vector.transfer_write %u01, %w10[%c0, %c3] : vector<2xf32>, tensor<?x?xf32>
     scf.yield %w11 : tensor<?x?xf32>
   }
   return %1 : tensor<?x?xf32>

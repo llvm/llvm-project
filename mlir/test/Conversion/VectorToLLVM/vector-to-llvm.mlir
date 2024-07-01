@@ -1689,10 +1689,10 @@ func.func @matrix_ops_index(%A: vector<64xindex>, %B: vector<48xindex>) -> vecto
 func.func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
   %f7 = arith.constant 7.0: f32
   %f = vector.transfer_read %A[%base], %f7
-      {in_bounds = [false], permutation_map = affine_map<(d0) -> (d0)>} :
+      {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<?xf32>, vector<17xf32>
   vector.transfer_write %f, %A[%base]
-      {in_bounds = [false], permutation_map = affine_map<(d0) -> (d0)>} :
+      {permutation_map = affine_map<(d0) -> (d0)>} :
     vector<17xf32>, memref<?xf32>
   return %f: vector<17xf32>
 }
@@ -1763,10 +1763,10 @@ func.func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> 
 func.func @transfer_read_index_1d(%A : memref<?xindex>, %base: index) -> vector<17xindex> {
   %f7 = arith.constant 7: index
   %f = vector.transfer_read %A[%base], %f7
-      {in_bounds = [false], permutation_map = affine_map<(d0) -> (d0)>} :
+      {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<?xindex>, vector<17xindex>
   vector.transfer_write %f, %A[%base]
-      {in_bounds = [false], permutation_map = affine_map<(d0) -> (d0)>} :
+      {permutation_map = affine_map<(d0) -> (d0)>} :
     vector<17xindex>, memref<?xindex>
   return %f: vector<17xindex>
 }
@@ -1786,7 +1786,7 @@ func.func @transfer_read_index_1d(%A : memref<?xindex>, %base: index) -> vector<
 func.func @transfer_read_2d_to_1d(%A : memref<?x?xf32>, %base0: index, %base1: index) -> vector<17xf32> {
   %f7 = arith.constant 7.0: f32
   %f = vector.transfer_read %A[%base0, %base1], %f7
-      {in_bounds = [false], permutation_map = affine_map<(d0, d1) -> (d1)>} :
+      {permutation_map = affine_map<(d0, d1) -> (d1)>} :
     memref<?x?xf32>, vector<17xf32>
   return %f: vector<17xf32>
 }
@@ -1815,10 +1815,10 @@ func.func @transfer_read_2d_to_1d(%A : memref<?x?xf32>, %base0: index, %base1: i
 func.func @transfer_read_1d_non_zero_addrspace(%A : memref<?xf32, 3>, %base: index) -> vector<17xf32> {
   %f7 = arith.constant 7.0: f32
   %f = vector.transfer_read %A[%base], %f7
-      {in_bounds = [false], permutation_map = affine_map<(d0) -> (d0)>} :
+      {permutation_map = affine_map<(d0) -> (d0)>} :
     memref<?xf32, 3>, vector<17xf32>
   vector.transfer_write %f, %A[%base]
-      {in_bounds = [false], permutation_map = affine_map<(d0) -> (d0)>} :
+      {permutation_map = affine_map<(d0) -> (d0)>} :
     vector<17xf32>, memref<?xf32, 3>
   return %f: vector<17xf32>
 }
@@ -1866,7 +1866,7 @@ func.func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector
 func.func @transfer_read_1d_mask(%A : memref<?xf32>, %base : index) -> vector<5xf32> {
   %m = arith.constant dense<[0, 0, 1, 0, 1]> : vector<5xi1>
   %f7 = arith.constant 7.0: f32
-  %f = vector.transfer_read %A[%base], %f7, %m {in_bounds=[false]} : memref<?xf32>, vector<5xf32>
+  %f = vector.transfer_read %A[%base], %f7, %m : memref<?xf32>, vector<5xf32>
   return %f: vector<5xf32>
 }
 

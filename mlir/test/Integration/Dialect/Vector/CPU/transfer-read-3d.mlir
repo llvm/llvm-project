@@ -12,7 +12,6 @@ func.func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
                        %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
-      {in_bounds = [false, false, false]}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
   vector.print %f: vector<2x5x3xf32>
   return
@@ -33,8 +32,7 @@ func.func @transfer_read_3d_broadcast(%A : memref<?x?x?x?xf32>,
                                  %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
-      {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>,
-      in_bounds = [false, true, false]}
+      {in_bounds = [false, true, false], permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
   vector.print %f: vector<2x5x3xf32>
   return
@@ -45,8 +43,7 @@ func.func @transfer_read_3d_mask_broadcast(
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[0, 1]> : vector<2xi1>
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42, %mask
-      {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, 0)>,
-      in_bounds = [false, true, true]}
+      {in_bounds = [false, true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, 0)>}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
   vector.print %f: vector<2x5x3xf32>
   return
@@ -56,8 +53,7 @@ func.func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
                                   %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
-      {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d0, d1)>,
-      in_bounds = [false, false, false]}
+      {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d0, d1)>}
       : memref<?x?x?x?xf32>, vector<3x5x3xf32>
   vector.print %f: vector<3x5x3xf32>
   return
@@ -67,8 +63,7 @@ func.func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
                         %o: index, %a: index, %b: index, %c: index) {
   %fn1 = arith.constant -1.0 : f32
   %vf0 = vector.splat %fn1 : vector<2x9x3xf32>
-  vector.transfer_write %vf0, %A[%o, %a, %b, %c] 
-    {in_bounds = [false, false, false] }
+  vector.transfer_write %vf0, %A[%o, %a, %b, %c]
       : vector<2x9x3xf32>, memref<?x?x?x?xf32>
   return
 }

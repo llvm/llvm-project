@@ -64,7 +64,7 @@ module {
   func.func @dump_234(%arg0: tensor<2x3x4xf64>) {
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
-    %0 = vector.transfer_read %arg0[%c0, %c0, %c0], %d0 {in_bounds=[false, false, false]}: tensor<2x3x4xf64>, vector<2x3x4xf64>
+    %0 = vector.transfer_read %arg0[%c0, %c0, %c0], %d0: tensor<2x3x4xf64>, vector<2x3x4xf64>
     vector.print %0 : vector<2x3x4xf64>
     return
   }

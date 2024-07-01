@@ -16,7 +16,7 @@ func.func @simple_test(%lb: index, %ub: index, %step: index, %f1: f32, %f2: f32)
     %2 = linalg.fill ins(%f1 : f32) outs(%t : tensor<5xf32>) -> tensor<5xf32>
     // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
     %3 = linalg.fill ins(%f2 : f32) outs(%t : tensor<5xf32>) -> tensor<5xf32>
-    %4 = vector.transfer_read %2[%c0], %p {in_bounds=[false]} : tensor<5xf32>, vector<5xf32>
+    %4 = vector.transfer_read %2[%c0], %p : tensor<5xf32>, vector<5xf32>
     vector.print %4 : vector<5xf32>
     scf.yield %3 : tensor<5xf32>
   }
@@ -27,7 +27,7 @@ func.func @simple_test(%lb: index, %ub: index, %step: index, %f1: f32, %f2: f32)
     %7 = linalg.fill ins(%f1 : f32) outs(%t : tensor<5xf32>) -> tensor<5xf32>
     // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
     %8 = linalg.fill ins(%f2 : f32) outs(%t : tensor<5xf32>) -> tensor<5xf32>
-    %9 = vector.transfer_read %8[%c0], %p {in_bounds=[false]} : tensor<5xf32>, vector<5xf32>
+    %9 = vector.transfer_read %8[%c0], %p : tensor<5xf32>, vector<5xf32>
     vector.print %9 : vector<5xf32>
     scf.yield %7 : tensor<5xf32>
   }

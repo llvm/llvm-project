@@ -3971,6 +3971,9 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
   if (op.getPermutationMap().isMinorIdentity())
     elidedAttrs.push_back(op.getPermutationMapAttrName());
+  // Elide in_bounds attribute if all dims are out-of-bounds.
+  if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
+    elidedAttrs.push_back(op.getInBoundsAttrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
@@ -4033,6 +4036,13 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
+  }
+  auto inBoundsAttrName = TransferReadOp::getInBoundsAttrName(result.name);
+  Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
+  if (!inBoundsAttr) {
+    result.addAttribute(inBoundsAttrName,
+                        builder.getBoolArrayAttr(
+                            SmallVector<bool>(permMap.getNumResults(), false)));
   }
   if (parser.resolveOperand(sourceInfo, shapedType, result.operands) ||
       parser.resolveOperands(indexInfo, indexType, result.operands) ||
@@ -4407,6 +4417,13 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
+  }
+  auto inBoundsAttrName = TransferWriteOp::getInBoundsAttrName(result.name);
+  Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
+  if (!inBoundsAttr) {
+    result.addAttribute(inBoundsAttrName,
+                        builder.getBoolArrayAttr(
+                            SmallVector<bool>(permMap.getNumResults(), false)));
   }
   if (parser.resolveOperand(vectorInfo, vectorType, result.operands) ||
       parser.resolveOperand(sourceInfo, shapedType, result.operands) ||

@@ -120,7 +120,7 @@ module {
     //
     // CHECK: ( 889, 1514, -21, -3431 )
     //
-    %v = vector.transfer_read %0[%c0], %i0 {in_bounds=[false]}: tensor<?xi32>, vector<4xi32>
+    %v = vector.transfer_read %0[%c0], %i0: tensor<?xi32>, vector<4xi32>
     vector.print %v : vector<4xi32>
 
     // Release the resources.

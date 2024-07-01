@@ -9,8 +9,8 @@ func.func @simple_depth_2_unpeeled(%global: memref<?xf32>, %result: memref<?xf32
   // Predication is not currently implemented for transfer_read/write, so this is expected to fail.
   // expected-note @below {{couldn't predicate}}
   scf.for %i = %c0 to %c100 step %c4 iter_args(%accum = %c0f) -> f32 {
-    %mem = vector.transfer_read %global[%i], %c0f {in_bounds=[false]} : memref<?xf32>, vector<4xf32>
-    vector.transfer_write %mem, %shared[%i] {in_bounds=[false]} : vector<4xf32>, memref<?xf32, #gpu.address_space<workgroup>>
+    %mem = vector.transfer_read %global[%i], %c0f : memref<?xf32>, vector<4xf32>
+    vector.transfer_write %mem, %shared[%i] : vector<4xf32>, memref<?xf32, #gpu.address_space<workgroup>>
     %0 = arith.addf %accum, %accum : f32
     scf.yield %0 : f32
   }
@@ -53,8 +53,8 @@ func.func @simple_depth_2_peeled(%global: memref<?xf32>) {
   // CHECK:   %[[LOCAL_LOADED:.+]] = vector.transfer_read %[[ARG]]
   // CHECK:   scf.yield %[[IA2]], %[[LOCAL_LOADED]]
   scf.for %i = %c0 to %c100 step %c4 {
-    %mem = vector.transfer_read %global[%i], %c0f {in_bounds=[false]} : memref<?xf32>, vector<4xf32>
-    vector.transfer_write %mem, %shared[%i] {in_bounds=[false]} : vector<4xf32>, memref<?xf32, #gpu.address_space<workgroup>>
+    %mem = vector.transfer_read %global[%i], %c0f : memref<?xf32>, vector<4xf32>
+    vector.transfer_write %mem, %shared[%i] : vector<4xf32>, memref<?xf32, #gpu.address_space<workgroup>>
     func.call @body(%i, %shared) : (index, memref<?xf32, #gpu.address_space<workgroup>>) -> ()
   }
   // CHECK: vector.transfer_write %[[LOOP]]#0

@@ -73,6 +73,6 @@ func.func @genbool_var_1d_scalable(%arg0: index) -> vector<[11]xi1> {
 
 func.func @transfer_read_1d(%A : memref<?xf32>, %i: index) -> vector<16xf32> {
   %d = arith.constant -1.0: f32
-  %f = vector.transfer_read %A[%i], %d {in_bounds = [false], permutation_map = affine_map<(d0) -> (d0)>} : memref<?xf32>, vector<16xf32>
+  %f = vector.transfer_read %A[%i], %d {permutation_map = affine_map<(d0) -> (d0)>} : memref<?xf32>, vector<16xf32>
   return %f : vector<16xf32>
 }

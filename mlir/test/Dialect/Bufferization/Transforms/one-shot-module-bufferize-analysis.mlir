@@ -271,7 +271,7 @@ func.func @read_of_matching_insert_slice_source(
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
   %2 = tensor.insert_slice %1 into %A[%idx][%idx][1] : tensor<?xf32> into tensor<?xf32>
 
-  %3 = vector.transfer_read %1[%idx2], %cst2 {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+  %3 = vector.transfer_read %1[%idx2], %cst2 : tensor<?xf32>, vector<5xf32>
 
   //      CHECK: return
   // CHECK-SAME: __equivalent_func_args__ = [0, -1]
@@ -311,7 +311,7 @@ func.func @read_of_matching_insert_slice_source_interleaved(
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]}
   %5 = linalg.fill ins(%cst : f32) outs(%4 : tensor<?xf32>) -> tensor<?xf32>
 
-  %3 = vector.transfer_read %1[%idx2], %cst2 {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
+  %3 = vector.transfer_read %1[%idx2], %cst2 : tensor<?xf32>, vector<5xf32>
 
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
@@ -670,8 +670,8 @@ func.func @write_into_constant_via_alias(%v : vector<5xi32>,
   // CHECK-SAME: {__inplace_operands_attr__ = ["false", "none", "none"]}
   %b = tensor.extract_slice %A[%s1][%s2][1] : tensor<4xi32> to tensor<?xi32>
   //      CHECK: vector.transfer_write
-  // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"], {{.*}}}
-  %r = vector.transfer_write %v, %b[%s3] {in_bounds=[false]} : vector<5xi32>, tensor<?xi32>
+  // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]}
+  %r = vector.transfer_write %v, %b[%s3] : vector<5xi32>, tensor<?xi32>
   return %r : tensor<?xi32>
 }
 
@@ -732,7 +732,7 @@ func.func @matmul_on_tensors(
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
   %8 = linalg.fill ins(%cst_0 : f32) outs(%7 : tensor<256x256xf32>) -> tensor<256x256xf32>
-  %9 = vector.transfer_read %arg0[%c0, %c0], %cst_0 {in_bounds=[false, true]} : tensor<518x518xf32>, vector<256x256xf32>
+  %9 = vector.transfer_read %arg0[%c0, %c0], %cst_0 {in_bounds = [false, true]} : tensor<518x518xf32>, vector<256x256xf32>
   %10 = vector.transfer_write %9, %8[%c0, %c0] {in_bounds = [true, true]} : vector<256x256xf32>, tensor<256x256xf32>
 
   //      CHECK: linalg.fill
@@ -791,7 +791,7 @@ func.func @insert_slice_chain(
   %2 = tensor.extract_slice %0[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %7 = vector.transfer_write %v1, %2[%c0, %c0] {in_bounds=[false, false]} : vector<32x90xf32>, tensor<32x90xf32>
+  %7 = vector.transfer_write %v1, %2[%c0, %c0] {in_bounds = [true, true]} : vector<32x90xf32>, tensor<32x90xf32>
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
   %8 = tensor.insert_slice %7 into %0[0, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
@@ -801,7 +801,7 @@ func.func @insert_slice_chain(
   %10 = tensor.extract_slice %8[32, 0] [30, 90] [1, 1] : tensor<62x90xf32> to tensor<30x90xf32>
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none", "none"]
-  %14 = vector.transfer_write %v2, %10[%c0, %c0] {in_bounds=[true, true]} : vector<30x90xf32>, tensor<30x90xf32>
+  %14 = vector.transfer_write %v2, %10[%c0, %c0] {in_bounds = [true, true]} : vector<30x90xf32>, tensor<30x90xf32>
   //      CHECK: tensor.insert_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
   %15 = tensor.insert_slice %14 into %8[32, 0] [30, 90] [1, 1] : tensor<30x90xf32> into tensor<62x90xf32>
@@ -829,7 +829,7 @@ func.func @ip(%t: tensor<10x20xf32> {bufferization.writable = true},
   %r = scf.for %arg0 = %c0 to %c257 step %c256 iter_args(%arg1 = %t) -> (tensor<10x20xf32>) {
     %t1 = tensor.extract_slice %arg1[%x, 0] [5, %y] [1, 1] : tensor<10x20xf32> to tensor<5x?xf32>
     %t11 = tensor.extract_slice %t1[0, 0] [5, %y] [1, 1] : tensor<5x?xf32> to tensor<5x?xf32>
-    %t2 = vector.transfer_write %v, %t11[%c0, %c0] {in_bounds=[false, false]} : vector<5x6xf32>, tensor<5x?xf32>
+    %t2 = vector.transfer_write %v, %t11[%c0, %c0] : vector<5x6xf32>, tensor<5x?xf32>
     %t3 = tensor.insert_slice %t2 into %arg1[%x, 0] [5, %y] [1, 1] : tensor<5x?xf32> into tensor<10x20xf32>
     scf.yield %t3 : tensor<10x20xf32>
   }
@@ -1044,7 +1044,7 @@ func.func @some_use(%A : tensor<?xf32> {bufferization.writable = true},
   %idx = arith.constant 0 : index
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true", "none"]
-  %0 = vector.transfer_write %v, %A[%idx] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+  %0 = vector.transfer_write %v, %A[%idx] : vector<5xf32>, tensor<?xf32>
   return %0 : tensor<?xf32>
 }
 
@@ -1069,11 +1069,11 @@ func.func @to_tensor_op_not_writable(%m: memref<?xf32>, %v:  vector<5xf32>,
   // Write to the tensor. Cannot be inplace due to tensor_load.
   //      CHECK: vector.transfer_write
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]
-  %w = vector.transfer_write %v, %0[%idx1] {in_bounds=[false]} : vector<5xf32>, tensor<?xf32>
+  %w = vector.transfer_write %v, %0[%idx1] : vector<5xf32>, tensor<?xf32>
 
   // Read from the tensor and return result.
   %cst = arith.constant 0.0 : f32
-  %r = vector.transfer_read %w[%idx2], %cst {in_bounds=[false]} : tensor<?xf32>, vector<10xf32>
+  %r = vector.transfer_read %w[%idx2], %cst : tensor<?xf32>, vector<10xf32>
   return %r : vector<10xf32>
 }
 

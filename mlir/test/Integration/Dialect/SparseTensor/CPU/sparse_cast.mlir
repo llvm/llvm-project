@@ -207,28 +207,28 @@ module {
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 )
     //
     %c0 = call @sparse_cast_s32_to_f32(%1, %zero_f) : (tensor<10xi32, #SV>, tensor<10xf32>) -> tensor<10xf32>
-    %v0 = vector.transfer_read %c0[%z], %f {in_bounds=[false]}: tensor<10xf32>, vector<10xf32>
+    %v0 = vector.transfer_read %c0[%z], %f: tensor<10xf32>, vector<10xf32>
     vector.print %v0 : vector<10xf32>
 
     //
     // CHECK: ( 4.29497e+09, 4.29497e+09, 4.29497e+09, 4.29497e+09, 0, 1, 2, 3, 4, 305 )
     //
     %c1 = call @sparse_cast_u32_to_f32(%1, %zero_f) : (tensor<10xi32, #SV>, tensor<10xf32>) -> tensor<10xf32>
-    %v1 = vector.transfer_read %c1[%z], %f {in_bounds=[false]}: tensor<10xf32>, vector<10xf32>
+    %v1 = vector.transfer_read %c1[%z], %f: tensor<10xf32>, vector<10xf32>
     vector.print %v1 : vector<10xf32>
 
     //
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 )
     //
     %c2 = call @sparse_cast_f32_to_s32(%3, %zero_i) : (tensor<10xf32, #SV>, tensor<10xi32>) -> tensor<10xi32>
-    %v2 = vector.transfer_read %c2[%z], %i {in_bounds=[false]}: tensor<10xi32>, vector<10xi32>
+    %v2 = vector.transfer_read %c2[%z], %i: tensor<10xi32>, vector<10xi32>
     vector.print %v2 : vector<10xi32>
 
     //
     // CHECK: ( 4294967295, 4294967294, 4294967293, 4294967292, 0, 1, 2, 3, 4, 305 )
     //
     %c3 = call @sparse_cast_f64_to_u32(%7, %zero_i) : (tensor<10xf64, #SV>, tensor<10xi32>) -> tensor<10xi32>
-    %v3 = vector.transfer_read %c3[%z], %i {in_bounds=[false]}: tensor<10xi32>, vector<10xi32>
+    %v3 = vector.transfer_read %c3[%z], %i: tensor<10xi32>, vector<10xi32>
     %vu = vector.bitcast %v3 : vector<10xi32> to vector<10xui32>
     vector.print %vu : vector<10xui32>
 
@@ -236,42 +236,42 @@ module {
     // CHECK: ( -4.4, -3.3, -2.2, -1.1, 0, 1.1, 2.2, 3.3, 4.4, 305.5 )
     //
     %c4 = call @sparse_cast_f32_to_f64(%3, %zero_d) : (tensor<10xf32, #SV>, tensor<10xf64>) -> tensor<10xf64>
-    %v4 = vector.transfer_read %c4[%z], %d {in_bounds=[false]}: tensor<10xf64>, vector<10xf64>
+    %v4 = vector.transfer_read %c4[%z], %d: tensor<10xf64>, vector<10xf64>
     vector.print %v4 : vector<10xf64>
 
     //
     // CHECK: ( -4.4, -3.3, -2.2, -1.1, 0, 1.1, 2.2, 3.3, 4.4, 305.5 )
     //
     %c5 = call @sparse_cast_f64_to_f32(%5, %zero_f) : (tensor<10xf64, #SV>, tensor<10xf32>) -> tensor<10xf32>
-    %v5 = vector.transfer_read %c5[%z], %f {in_bounds=[false]}: tensor<10xf32>, vector<10xf32>
+    %v5 = vector.transfer_read %c5[%z], %f: tensor<10xf32>, vector<10xf32>
     vector.print %v5 : vector<10xf32>
 
     //
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 )
     //
     %c6 = call @sparse_cast_s32_to_u64(%1, %zero_l) : (tensor<10xi32, #SV>, tensor<10xi64>) -> tensor<10xi64>
-    %v6 = vector.transfer_read %c6[%z], %l {in_bounds=[false]}: tensor<10xi64>, vector<10xi64>
+    %v6 = vector.transfer_read %c6[%z], %l: tensor<10xi64>, vector<10xi64>
     vector.print %v6 : vector<10xi64>
 
     //
     // CHECK: ( 4294967292, 4294967293, 4294967294, 4294967295, 0, 1, 2, 3, 4, 305 )
     //
     %c7 = call @sparse_cast_u32_to_s64(%1, %zero_l) : (tensor<10xi32, #SV>, tensor<10xi64>) -> tensor<10xi64>
-    %v7 = vector.transfer_read %c7[%z], %l {in_bounds=[false]}: tensor<10xi64>, vector<10xi64>
+    %v7 = vector.transfer_read %c7[%z], %l: tensor<10xi64>, vector<10xi64>
     vector.print %v7 : vector<10xi64>
 
     //
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 49 )
     //
     %c8 = call @sparse_cast_i32_to_i8(%1, %zero_b) : (tensor<10xi32, #SV>, tensor<10xi8>) -> tensor<10xi8>
-    %v8 = vector.transfer_read %c8[%z], %b {in_bounds=[false]}: tensor<10xi8>, vector<10xi8>
+    %v8 = vector.transfer_read %c8[%z], %b: tensor<10xi8>, vector<10xi8>
     vector.print %v8 : vector<10xi8>
 
     //
     // CHECK: ( -1064514355, -1068289229, -1072902963, -1081291571, 0, 1066192077, 1074580685, 1079194419, 1082969293, 1134084096 )
     //
     %c9 = call @sparse_cast_f32_as_s32(%3, %zero_i) : (tensor<10xf32, #SV>, tensor<10xi32>) -> tensor<10xi32>
-    %v9 = vector.transfer_read %c9[%z], %i {in_bounds=[false]}: tensor<10xi32>, vector<10xi32>
+    %v9 = vector.transfer_read %c9[%z], %i: tensor<10xi32>, vector<10xi32>
     vector.print %v9 : vector<10xi32>
 
     // Release the resources.

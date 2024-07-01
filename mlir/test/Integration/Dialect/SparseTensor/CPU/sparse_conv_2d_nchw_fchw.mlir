@@ -131,7 +131,7 @@ func.func @main() {
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ) ) ) )
-  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
+  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x1x6x6xf32>
   vector.print %dense_v : vector<3x1x6x6xf32>
 
@@ -153,7 +153,7 @@ func.func @main() {
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ) ) ) )
-  %v1 = vector.transfer_read %CCCC_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
+  %v1 = vector.transfer_read %CCCC_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x1x6x6xf32>
   vector.print %v1 : vector<3x1x6x6xf32>
 
@@ -175,7 +175,7 @@ func.func @main() {
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ) ) ) )
-  %v2 = vector.transfer_read %CDCD_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
+  %v2 = vector.transfer_read %CDCD_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x1x6x6xf32>
   vector.print %v2 : vector<3x1x6x6xf32>
 
@@ -197,7 +197,7 @@ func.func @main() {
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ) ) ) )
-  %v3 = vector.transfer_read %dual_CCCC_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
+  %v3 = vector.transfer_read %dual_CCCC_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?xf32>, vector<3x1x6x6xf32>
   vector.print %v3 : vector<3x1x6x6xf32>
 

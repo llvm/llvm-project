@@ -51,7 +51,7 @@ module {
     vector.print %s1 : index
 
     // CHECK (  2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 )
-    %values = vector.transfer_read %buffer3[%c0], %d0 {in_bounds=[false]}: memref<?xf32>, vector<11xf32>
+    %values = vector.transfer_read %buffer3[%c0], %d0: memref<?xf32>, vector<11xf32>
     vector.print %values : vector<11xf32>
 
     // Release the buffers.

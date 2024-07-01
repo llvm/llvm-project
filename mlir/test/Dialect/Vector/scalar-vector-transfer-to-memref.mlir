@@ -7,7 +7,7 @@
 //       CHECK:   return %[[r]]
 func.func @transfer_read_0d(%m: memref<?x?x?xf32>, %idx: index) -> f32 {
   %cst = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst {in_bounds = []} : memref<?x?x?xf32>, vector<f32>
+  %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst : memref<?x?x?xf32>, vector<f32>
   %1 = vector.extractelement %0[] : vector<f32>
   return %1 : f32
 }
@@ -36,7 +36,7 @@ func.func @transfer_read_1d(%m: memref<?x?x?xf32>, %idx: index, %idx2: index) ->
 //       CHECK:   return %[[r]]
 func.func @tensor_transfer_read_0d(%t: tensor<?x?x?xf32>, %idx: index) -> f32 {
   %cst = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %t[%idx, %idx, %idx], %cst {in_bounds = []} : tensor<?x?x?xf32>, vector<f32>
+  %0 = vector.transfer_read %t[%idx, %idx, %idx], %cst : tensor<?x?x?xf32>, vector<f32>
   %1 = vector.extractelement %0[] : vector<f32>
   return %1 : f32
 }
@@ -50,7 +50,7 @@ func.func @tensor_transfer_read_0d(%t: tensor<?x?x?xf32>, %idx: index) -> f32 {
 //       CHECK:   memref.store %[[extract]], %[[m]][%[[idx]], %[[idx]], %[[idx]]]
 func.func @transfer_write_0d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
   %0 = vector.broadcast %f : f32 to vector<f32>
-  vector.transfer_write %0, %m[%idx, %idx, %idx] {in_bounds = []} : vector<f32>, memref<?x?x?xf32>
+  vector.transfer_write %0, %m[%idx, %idx, %idx] : vector<f32>, memref<?x?x?xf32>
   return
 }
 
@@ -61,7 +61,7 @@ func.func @transfer_write_0d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
 //       CHECK:   memref.store %[[f]], %[[m]][%[[idx]], %[[idx]], %[[idx]]]
 func.func @transfer_write_1d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
   %0 = vector.broadcast %f : f32 to vector<1xf32>
-  vector.transfer_write %0, %m[%idx, %idx, %idx] {in_bounds = [false]} : vector<1xf32>, memref<?x?x?xf32>
+  vector.transfer_write %0, %m[%idx, %idx, %idx] : vector<1xf32>, memref<?x?x?xf32>
   return
 }
 
@@ -75,7 +75,7 @@ func.func @transfer_write_1d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
 //       CHECK:   return %[[r]]
 func.func @tensor_transfer_write_0d(%t: tensor<?x?x?xf32>, %idx: index, %f: f32) -> tensor<?x?x?xf32> {
   %0 = vector.broadcast %f : f32 to vector<f32>
-  %1 = vector.transfer_write %0, %t[%idx, %idx, %idx] {in_bounds = []} : vector<f32>, tensor<?x?x?xf32>
+  %1 = vector.transfer_write %0, %t[%idx, %idx, %idx] : vector<f32>, tensor<?x?x?xf32>
   return %1 : tensor<?x?x?xf32>
 }
 
@@ -106,7 +106,7 @@ func.func @transfer_read_2d_extract(%m: memref<?x?x?x?xf32>, %idx: index, %idx2:
 //       CHECK:   memref.store %[[extract]], %[[m]][%[[idx]], %[[idx]], %[[idx]]]
 func.func @transfer_write_arith_constant(%m: memref<?x?x?xf32>, %idx: index) {
   %cst = arith.constant dense<5.000000e+00> : vector<1x1xf32>
-  vector.transfer_write %cst, %m[%idx, %idx, %idx] {in_bounds = [false, false]} : vector<1x1xf32>, memref<?x?x?xf32>
+  vector.transfer_write %cst, %m[%idx, %idx, %idx] : vector<1x1xf32>, memref<?x?x?xf32>
   return
 }
 

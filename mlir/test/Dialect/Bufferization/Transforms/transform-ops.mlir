@@ -21,7 +21,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-  %0 = vector.transfer_write %v, %A[%c0] {in_bounds=[false]} : vector<4xf32>, tensor<?xf32>
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
@@ -51,7 +51,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   // CHECK: linalg.copy ins(%[[A_memref]] : memref<{{.*}}>) outs(%[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-  %0 = vector.transfer_write %v, %A[%c0] {in_bounds=[false]} : vector<4xf32>, tensor<?xf32>
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
@@ -75,9 +75,9 @@ module attributes {transform.with_named_sequence} {
 func.func @test_function_analysis(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   // CHECK: vector.transfer_write
-  // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"], {{.*}}}
+  // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]}
   // CHECK-SAME: tensor<?xf32>
-  %0 = vector.transfer_write %v, %A[%c0] {in_bounds=[false]} : vector<4xf32>, tensor<?xf32>
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
   return %0 : tensor<?xf32>
 }
 
@@ -123,7 +123,7 @@ module {
     // CHECK: memref.copy %[[A_memref]], %[[alloc]]
     // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
     // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-    %0 = vector.transfer_write %v, %A[%c0] {in_bounds=[false]} : vector<4xf32>, tensor<?xf32>
+    %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
     // CHECK: return %[[res_tensor]]
     return %0 : tensor<?xf32>

@@ -1345,8 +1345,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     // Make sure that the in_bounds attribute corresponding to a broadcast dim
     // is `true`
-    SmallVector<unsigned> broadcastedDims = {};
-    readMap.getBroadcastDims(&broadcastedDims);
+    SmallVector<unsigned> broadcastedDims = readMap.getBroadcastDims();
     SmallVector<bool> inBounds(readType.getRank(), false);
 
     for (auto idx : broadcastedDims)

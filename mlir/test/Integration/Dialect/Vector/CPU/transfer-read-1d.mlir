@@ -21,7 +21,7 @@ memref.global "private" @gv : memref<5x6xf32> =
 func.func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
-      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]}
+      {permutation_map = affine_map<(d0, d1) -> (d0)>}
       : memref<?x?xf32>, vector<9xf32>
   vector.print %f: vector<9xf32>
   return
@@ -82,7 +82,7 @@ func.func @transfer_read_1d_broadcast(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
-      {permutation_map = affine_map<(d0, d1) -> (0)>, in_bounds = [true]}
+      {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (0)>}
       : memref<?x?xf32>, vector<9xf32>
   vector.print %f: vector<9xf32>
   return
@@ -105,7 +105,7 @@ func.func @transfer_read_1d_mask(
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
-      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]}
+      {permutation_map = affine_map<(d0, d1) -> (d0)>}
       : memref<?x?xf32>, vector<9xf32>
   vector.print %f: vector<9xf32>
   return
@@ -139,7 +139,7 @@ func.func @transfer_write_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : inde
   %fn1 = arith.constant -1.0 : f32
   %vf0 = vector.splat %fn1 : vector<7xf32>
   vector.transfer_write %vf0, %A[%base1, %base2]
-    {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]}
+    {permutation_map = affine_map<(d0, d1) -> (d0)>}
     : vector<7xf32>, memref<?x?xf32>
   return
 }
@@ -150,7 +150,7 @@ func.func @transfer_write_1d_mask(%A : memref<?x?xf32>, %base1 : index, %base2 :
   %vf0 = vector.splat %fn1 : vector<7xf32>
   %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1]> : vector<7xi1>
   vector.transfer_write %vf0, %A[%base1, %base2], %mask
-    {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]}
+    {permutation_map = affine_map<(d0, d1) -> (d0)>}
     : vector<7xf32>, memref<?x?xf32>
   return
 }
