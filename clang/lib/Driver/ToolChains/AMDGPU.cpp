@@ -627,10 +627,19 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
-  if (C.getDriver().isUsingLTO())
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+  if (C.getDriver().isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, *Input,
                   C.getDriver().getLTOMode() == LTOK_Thin);
-  else if (Args.hasArg(options::OPT_mcpu_EQ))
+  } else if (Args.hasArg(options::OPT_mcpu_EQ))
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
   CmdArgs.push_back("-o");
