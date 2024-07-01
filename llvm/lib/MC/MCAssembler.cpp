@@ -381,15 +381,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   llvm_unreachable("invalid fragment kind");
 }
 
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
-  // Compute the section layout order. Virtual sections must go last.
-  for (MCSection &Sec : Asm)
-    if (!Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-  for (MCSection &Sec : Asm)
-    if (Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-}
+MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {}
 
 // Compute the amount of padding required before the fragment \p F to
 // obey bundling restrictions, where \p FOffset is the fragment's offset in
@@ -951,31 +943,26 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       errs() << "assembler backend - pre-layout\n--\n";
       dump(); });
 
-  // Create dummy fragments and assign section ordinals.
+  // Assign section ordinals.
   unsigned SectionIndex = 0;
-  for (MCSection &Sec : *this)
+  for (MCSection &Sec : *this) {
     Sec.setOrdinal(SectionIndex++);
 
-  // Assign layout order indices to sections and fragments.
-  for (unsigned i = 0, e = Layout.getSectionOrder().size(); i != e; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
-    Sec->setLayoutOrder(i);
-
     // Chain together fragments from all subsections.
-    if (Sec->Subsections.size() > 1) {
+    if (Sec.Subsections.size() > 1) {
       MCDummyFragment Dummy;
       MCFragment *Tail = &Dummy;
-      for (auto &[_, List] : Sec->Subsections) {
+      for (auto &[_, List] : Sec.Subsections) {
         assert(List.Head);
         Tail->Next = List.Head;
         Tail = List.Tail;
       }
-      Sec->Subsections.clear();
-      Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
-      Sec->CurFragList = &Sec->Subsections[0].second;
+      Sec.Subsections.clear();
+      Sec.Subsections.push_back({0u, {Dummy.getNext(), Tail}});
+      Sec.CurFragList = &Sec.Subsections[0].second;
 
       unsigned FragmentIndex = 0;
-      for (MCFragment &Frag : *Sec)
+      for (MCFragment &Frag : Sec)
         Frag.setLayoutOrder(FragmentIndex++);
     }
   }
