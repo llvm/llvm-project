@@ -180,5 +180,31 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
   return HashString;
 }
 
+/// The same as the above function, but for profiled functions.
+std::string hashBlockCalls(
+    const std::unordered_map<uint32_t, yaml::bolt::BinaryFunctionProfile *>
+        &IdsToProfiledFunctions,
+    const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+
+  std::multiset<std::string> FunctionNames;
+  for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
+    auto It = IdsToProfiledFunctions.find(CallSiteInfo.DestId);
+    assert(It != IdsToProfiledFunctions.end() &&
+           "All profiled functions should have ids");
+    StringRef Name = It->second->Name;
+    const size_t Pos = Name.find("(*");
+    if (Pos != StringRef::npos)
+      Name = Name.substr(0, Pos);
+    FunctionNames.insert(std::string(Name));
+  }
+
+  std::string HashString;
+  for (const std::string &FunctionName : FunctionNames)
+    HashString.append(FunctionName);
+
+  return HashString;
+}
+//
+
 } // namespace bolt
 } // namespace llvm

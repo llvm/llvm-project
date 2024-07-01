@@ -325,6 +325,10 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
     }
   }
 
+  // Map profiled function ids to names.
+  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
+    YamlBP.IdToFunctionProfile[YamlBF.Id] = &YamlBF;
+
   return Error::success();
 }
 

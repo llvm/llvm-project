@@ -16,6 +16,7 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Profile/ProfileYAMLMapping.h"
 
 namespace llvm {
 namespace bolt {
@@ -36,6 +37,11 @@ std::string hashBlock(BinaryContext &BC, const BinaryBasicBlock &BB,
 std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB);
 
 std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB);
+
+std::string hashBlockCalls(
+    const std::unordered_map<uint32_t, yaml::bolt::BinaryFunctionProfile *>
+        &IdsToProfiledFunctions,
+    const yaml::bolt::BinaryBasicBlockProfile &YamlBB);
 
 } // namespace bolt
 } // namespace llvm
