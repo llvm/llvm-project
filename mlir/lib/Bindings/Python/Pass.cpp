@@ -52,6 +52,55 @@ private:
 
 } // namespace
 
+class PythonPass {
+public:
+  explicit PythonPass(py::object passObj) : passObj(std::move(passObj)) {}
+
+  void *construct() {}
+  void *destruct() {}
+
+  MlirLogicalResult *initialize(MlirContext ctx) {}
+  void *clone() {}
+
+  void run(MlirOperation op, MlirExternalPass pass) {}
+
+  py::object passObj;
+};
+
+template <typename T, typename R>
+void *void_cast(R (T::*f)()) {
+  union {
+    R (T::*pf)();
+    void *p;
+  };
+  pf = f;
+  return p;
+}
+
+template <typename classT, typename memberT>
+union u_ptm_cast {
+  memberT pmember;
+  void *pvoid;
+};
+
+MlirExternalPassCallbacks makeTestExternalPassCallbacks() {
+  return (MlirExternalPassCallbacks){
+      reinterpret_cast<decltype(MlirExternalPassCallbacks::construct)>(
+          void_cast(&PythonPass::construct)),
+      reinterpret_cast<decltype(MlirExternalPassCallbacks::destruct)>(
+          void_cast(&PythonPass::destruct)),
+      nullptr,
+      reinterpret_cast<decltype(MlirExternalPassCallbacks::clone)>(
+          void_cast(&PythonPass::clone)),
+      reinterpret_cast<decltype(MlirExternalPassCallbacks::run)>(
+          u_ptm_cast<PythonPass,
+                     void (PythonPass::*)(MlirOperation, MlirExternalPass)>{
+              &PythonPass::run}
+              .pvoid),
+
+  };
+}
+
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(py::module &m) {
   //----------------------------------------------------------------------------
@@ -115,6 +164,27 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           "pipeline"_a,
           "Add textual pipeline elements to the pass manager. Throws a "
           "ValueError if the pipeline can't be parsed.")
+      .def_static(
+          "create_external_pass",
+          [](py::object &passObj) {
+            PythonPass pass = PythonPass(passObj);
+
+            MlirTypeIDAllocator typeIDAllocator = mlirTypeIDAllocatorCreate();
+            MlirTypeID passID =
+                mlirTypeIDAllocatorAllocateTypeID(typeIDAllocator);
+            MlirStringRef name =
+                mlirStringRefCreateFromCString("TestExternalPass");
+            MlirStringRef description = mlirStringRefCreateFromCString("");
+            MlirStringRef emptyOpName = mlirStringRefCreateFromCString("");
+            MlirStringRef argument =
+                mlirStringRefCreateFromCString("test-external-pass");
+
+            auto cbs = makeTestExternalPassCallbacks();
+
+            MlirPass externalPass =
+                mlirCreateExternalPass(passID, name, argument, description,
+                                       emptyOpName, 0, NULL, cbs, &pass);
+          })
       .def(
           "run",
           [](PyPassManager &passManager, PyOperationBase &op,
@@ -145,4 +215,8 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           },
           "Print the textual representation for this PassManager, suitable to "
           "be passed to `parse` for round-tripping.");
+
+  py::class_<PythonPass>(m, "PythonPass", py::module_local())
+      .def(py::init<>(
+          [](py::object pass) { return PythonPass(std::move(pass)); }));
 }
