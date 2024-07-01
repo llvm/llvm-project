@@ -1,0 +1,4 @@
+{
+  "sourceDirectory": "llvm",
+  "enableCMake": false
+}
