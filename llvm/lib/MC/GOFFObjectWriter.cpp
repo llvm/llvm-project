@@ -239,9 +239,7 @@ public:
   void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override {}
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {}
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 };
 } // end anonymous namespace
 
@@ -278,8 +276,7 @@ void GOFFObjectWriter::writeEnd() {
   OS.finalize();
 }
 
-uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
+uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = OS.tell();
 
   writeHeader();

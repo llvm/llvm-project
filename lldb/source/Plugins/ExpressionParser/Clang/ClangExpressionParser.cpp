@@ -881,7 +881,7 @@ private:
         else
           ToInsert += "(";
         raw_string_ostream OS(Description);
-        F->print(OS, m_desc_policy);
+        F->print(OS, m_desc_policy, false);
         OS.flush();
       } else if (const VarDecl *V = dyn_cast<VarDecl>(D)) {
         Description = V->getType().getAsString(m_desc_policy);
