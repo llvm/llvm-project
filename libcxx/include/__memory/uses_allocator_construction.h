@@ -58,6 +58,32 @@ __uses_allocator_construction_args(const _Alloc& __alloc, _Args&&... __args) noe
 }
 
 template <class _Pair, class _Alloc, class _Tuple1, class _Tuple2, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+__uses_allocator_construction_args(const _Alloc& __a, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept;
+
+template <class _Pair, class _Alloc, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto __uses_allocator_construction_args(const _Alloc&) noexcept;
+
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto __uses_allocator_construction_args(const _Alloc&, _Up&&, _Vp&&) noexcept;
+
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+__uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>& __pair) noexcept;
+
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+__uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>& __pair) noexcept;
+
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+__uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>&& __pair) noexcept;
+
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+__uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>&& __pair) noexcept;
+
+template <class _Pair, class _Alloc, class _Tuple1, class _Tuple2, __enable_if_t<__is_cv_std_pair<_Pair>, int>>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __uses_allocator_construction_args(
     const _Alloc& __alloc, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept {
   return std::make_tuple(
@@ -76,12 +102,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __uses_allocator_construction_args(
           std::forward<_Tuple2>(__y)));
 }
 
-template <class _Pair, class _Alloc, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+template <class _Pair, class _Alloc, __enable_if_t<__is_cv_std_pair<_Pair>, int>>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __uses_allocator_construction_args(const _Alloc& __alloc) noexcept {
   return std::__uses_allocator_construction_args<_Pair>(__alloc, piecewise_construct, tuple<>{}, tuple<>{});
 }
 
-template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int>>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) noexcept {
   return std::__uses_allocator_construction_args<_Pair>(
@@ -92,7 +118,7 @@ __uses_allocator_construction_args(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) 
 }
 
 #  if _LIBCPP_STD_VER >= 23
-template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int>>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>& __pair) noexcept {
   return std::__uses_allocator_construction_args<_Pair>(
@@ -100,14 +126,14 @@ __uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>& __pair
 }
 #  endif
 
-template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int>>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>& __pair) noexcept {
   return std::__uses_allocator_construction_args<_Pair>(
       __alloc, piecewise_construct, std::forward_as_tuple(__pair.first), std::forward_as_tuple(__pair.second));
 }
 
-template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int>>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>&& __pair) noexcept {
   return std::__uses_allocator_construction_args<_Pair>(
@@ -118,7 +144,7 @@ __uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>&& __pai
 }
 
 #  if _LIBCPP_STD_VER >= 23
-template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int> = 0>
+template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_cv_std_pair<_Pair>, int>>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>&& __pair) noexcept {
   return std::__uses_allocator_construction_args<_Pair>(
