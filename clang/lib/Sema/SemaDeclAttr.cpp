@@ -5941,7 +5941,7 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
   // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
   // when `FieldTy->isArrayType()`.
   bool ShouldWarn = false;
-  if (PointeeTy->isIncompleteType()) {
+  if (PointeeTy->isIncompleteType() && !CountInBytes) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
   } else if (PointeeTy->isSizelessType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
@@ -5960,14 +5960,13 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
   }
 
-  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID &&
-      !CountInBytes) {
+  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
     unsigned DiagID = ShouldWarn
                           ? diag::warn_counted_by_attr_elt_type_unknown_size
                           : diag::err_counted_by_attr_pointee_unknown_size;
     S.Diag(FD->getBeginLoc(), DiagID)
         << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
-        << (ShouldWarn ? 1 : 0) << OrNull << FD->getSourceRange();
+        << (ShouldWarn ? 1 : 0) << Kind << FD->getSourceRange();
     return true;
   }
 

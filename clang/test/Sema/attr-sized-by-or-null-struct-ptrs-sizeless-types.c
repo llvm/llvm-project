@@ -5,6 +5,7 @@
 
 struct on_sizeless_pointee_ty {
     int size;
+    // expected-error@+1{{'sized_by_or_null' cannot be applied to a pointer with pointee of unknown size because '__SVInt8_t' is a sizeless type}}
     __SVInt8_t* member __sized_by_or_null(size);
 };
 

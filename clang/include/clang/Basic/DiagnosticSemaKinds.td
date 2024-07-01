@@ -6588,7 +6588,7 @@ def err_count_attr_refer_to_union : Error<
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
 def err_counted_by_attr_pointee_unknown_size : Error<
-  "'%select{counted_by|counted_by_or_null}4' %select{cannot|should not}3 be applied to %select{"
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}4' %select{cannot|should not}3 be applied to %select{"
     "a pointer with pointee|" // pointer
     "an array with element}0" // array
   " of unknown size because %1 is %select{"
