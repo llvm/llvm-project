@@ -1361,12 +1361,21 @@ DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
   Metadata *Ops[] = {Scope, Name, File};
   DEFINE_GETIMPL_STORE(DILabel, (Line), Ops);
 }
+DIExpression *DIExpression::getImpl(LLVMContext &Context, ArrayRef<uint64_t> Elements) {
+  auto &DIExpressions = Context.pImpl->DIExpressions;
+  DIExpressionKeyInfo Key(Elements);
 
-DIExpression *DIExpression::getImpl(LLVMContext &Context,
-                                    ArrayRef<uint64_t> Elements,
-                                    StorageType Storage, bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
-  DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
+  // Check if an existing expression matches the key
+  auto It = DIExpressions.find_as(Key);
+  if (It != DIExpressions.end())
+    return *It;
+
+  // Create a new DIExpression if not found
+  DIExpression *NewExpr = new DIExpression(Context, Elements);
+
+  // Insert the new expression into the set
+  DIExpressions.insert(NewExpr);
+  return NewExpr;
 }
 bool DIExpression::isEntryValue() const {
   if (auto singleLocElts = getSingleLocationExpressionElements()) {

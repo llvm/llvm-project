@@ -472,7 +472,7 @@ public:
   bool parseExternalSymbolOperand(MachineOperand &Dest);
   bool parseMCSymbolOperand(MachineOperand &Dest);
   [[nodiscard]] bool parseMDNode(MDNode *&Node);
-  bool parseDIExpression(MDNode *&Expr);
+  bool parseDIExpression(Metadata *&Expr);
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
@@ -1268,9 +1268,6 @@ bool MIParser::parseStandaloneMDNode(MDNode *&Node) {
   lex();
   if (Token.is(MIToken::exclaim)) {
     if (parseMDNode(Node))
-      return true;
-  } else if (Token.is(MIToken::md_diexpr)) {
-    if (parseDIExpression(Node))
       return true;
   } else if (Token.is(MIToken::md_dilocation)) {
     if (parseDILocation(Node))
@@ -2301,7 +2298,7 @@ bool MIParser::parseMDNode(MDNode *&Node) {
   return false;
 }
 
-bool MIParser::parseDIExpression(MDNode *&Expr) {
+bool MIParser::parseDIExpression(Metadata *&Expr) {
   assert(Token.is(MIToken::md_diexpr));
   lex();
 
@@ -2451,15 +2448,15 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
 }
 
 bool MIParser::parseMetadataOperand(MachineOperand &Dest) {
-  MDNode *Node = nullptr;
+    Metadata *Meta = nullptr;
   if (Token.is(MIToken::exclaim)) {
-    if (parseMDNode(Node))
+     if (parseMDNode(reinterpret_cast<MDNode *&>(Meta)))
       return true;
   } else if (Token.is(MIToken::md_diexpr)) {
-    if (parseDIExpression(Node))
+    if (parseDIExpression(Meta))
       return true;
   }
-  Dest = MachineOperand::CreateMetadata(Node);
+  Dest = MachineOperand::CreateMetadata(reinterpret_cast<MDNode *>(Meta));
   return false;
 }
 

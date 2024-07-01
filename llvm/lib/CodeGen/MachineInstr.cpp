@@ -2224,7 +2224,7 @@ void MachineInstr::emitError(StringRef Msg) const {
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
                                   const MCInstrDesc &MCID, bool IsIndirect,
                                   Register Reg, const MDNode *Variable,
-                                  const MDNode *Expr) {
+                                  const Metadata *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
@@ -2240,7 +2240,7 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
                                   const MCInstrDesc &MCID, bool IsIndirect,
                                   ArrayRef<MachineOperand> DebugOps,
-                                  const MDNode *Variable, const MDNode *Expr) {
+                                  const MDNode *Variable, const Metadata *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
@@ -2275,7 +2275,7 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, const MCInstrDesc &MCID,
                                   bool IsIndirect, Register Reg,
-                                  const MDNode *Variable, const MDNode *Expr) {
+                                  const MDNode *Variable, const Metadata *Expr) {
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = BuildMI(MF, DL, MCID, IsIndirect, Reg, Variable, Expr);
   BB.insert(I, MI);
@@ -2287,7 +2287,7 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
                                   const DebugLoc &DL, const MCInstrDesc &MCID,
                                   bool IsIndirect,
                                   ArrayRef<MachineOperand> DebugOps,
-                                  const MDNode *Variable, const MDNode *Expr) {
+                                  const MDNode *Variable, const Metadata *Expr) {
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI =
       BuildMI(MF, DL, MCID, IsIndirect, DebugOps, Variable, Expr);

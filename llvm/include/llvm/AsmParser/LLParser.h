@@ -573,6 +573,7 @@ namespace llvm {
     bool parseValueAsMetadata(Metadata *&MD, const Twine &TypeMsg,
                               PerFunctionState *PFS);
     bool parseDIArgList(Metadata *&MD, PerFunctionState *PFS);
+    bool parseDIExpression(Metadata *&MD);
     bool parseMetadata(Metadata *&MD, PerFunctionState *PFS);
     bool parseMDTuple(MDNode *&MD, bool IsDistinct = false);
     bool parseMDNode(MDNode *&N);
