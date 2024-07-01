@@ -311,7 +311,7 @@ void wholeprogramdevirt::setAfterReturnValues(
 
 VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
     : Fn(Fn), TM(TM),
-      IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()),
+      IsBigEndian(Fn->getDataLayout().isBigEndian()),
       WasDevirt(false) {}
 
 namespace {
@@ -1616,7 +1616,7 @@ std::string DevirtModule::getGlobalName(VTableSlot Slot,
   for (uint64_t Arg : Args)
     OS << '_' << Arg;
   OS << '_' << Name;
-  return OS.str();
+  return FullName;
 }
 
 bool DevirtModule::shouldExportConstantsAsAbsoluteSymbols() {

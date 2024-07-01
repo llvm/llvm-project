@@ -26,6 +26,7 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
+class MCObjectStreamer;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -35,6 +36,7 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
+  friend MCObjectStreamer;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -106,6 +108,8 @@ private:
 
   bool IsText : 1;
 
+  bool IsVirtual : 1;
+
   MCDummyFragment DummyFragment;
 
   // Mapping from subsection number to fragment list. At layout time, the
@@ -127,7 +131,8 @@ protected:
   StringRef Name;
   SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
+            MCSymbol *Begin);
   ~MCSection();
 
 public:
@@ -193,20 +198,6 @@ public:
   iterator end() const { return {}; }
   bool empty() const { return !CurFragList->Head; }
 
-  void addFragment(MCFragment &F) {
-    // The formal layout order will be finalized in MCAssembler::layout.
-    if (CurFragList->Tail) {
-      CurFragList->Tail->Next = &F;
-      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
-    } else {
-      CurFragList->Head = &F;
-      assert(F.getLayoutOrder() == 0);
-    }
-    CurFragList->Tail = &F;
-  }
-
-  void switchSubsection(unsigned Subsection);
-
   void dump() const;
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
@@ -219,7 +210,7 @@ public:
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
-  virtual bool isVirtualSection() const = 0;
+  bool isVirtualSection() const { return IsVirtual; }
 
   virtual StringRef getVirtualSectionKind() const;
 

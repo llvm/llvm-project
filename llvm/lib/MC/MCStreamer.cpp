@@ -102,9 +102,9 @@ void MCStreamer::reset() {
   DwarfFrameInfos.clear();
   CurrentWinFrameInfo = nullptr;
   WinFrameInfos.clear();
-  SymbolOrdering.clear();
   SectionStack.clear();
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
+  CurFrag = nullptr;
 }
 
 raw_ostream &MCStreamer::getCommentOS() {
@@ -409,15 +409,6 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   switchSection(getContext().getObjectFileInfo()->getTextSection());
-}
-
-void MCStreamer::assignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
-  assert(Fragment);
-  Symbol->setFragment(Fragment);
-
-  // As we emit symbols into a section, track the order so that they can
-  // be sorted upon later. Zero is reserved to mean 'unemitted'.
-  SymbolOrdering[Symbol] = 1 + SymbolOrdering.size();
 }
 
 void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -1217,7 +1208,9 @@ void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
-void MCStreamer::changeSection(MCSection *, uint32_t) {}
+void MCStreamer::changeSection(MCSection *Section, uint32_t) {
+  CurFrag = &Section->getDummyFragment();
+}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
@@ -1287,6 +1280,12 @@ bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
   }
   switchSection(Section, Subsec);
   return false;
+}
+
+void MCStreamer::switchSectionNoPrint(MCSection *Section) {
+  SectionStack.back().second = SectionStack.back().first;
+  SectionStack.back().first = MCSectionSubPair(Section, 0);
+  CurFrag = &Section->getDummyFragment();
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {

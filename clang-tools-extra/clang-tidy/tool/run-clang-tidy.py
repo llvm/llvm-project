@@ -107,6 +107,7 @@ def get_tidy_invocation(
     plugins,
     warnings_as_errors,
     exclude_header_filter,
+    allow_no_checks,
 ):
     """Gets a command line for clang-tidy."""
     start = [clang_tidy_binary]
@@ -147,6 +148,8 @@ def get_tidy_invocation(
         start.append("-load=" + plugin)
     if warnings_as_errors:
         start.append("--warnings-as-errors=" + warnings_as_errors)
+    if allow_no_checks:
+        start.append("--allow-no-checks")
     start.append(f)
     return start
 
@@ -232,6 +235,7 @@ def run_tidy(args, clang_tidy_binary, tmpdir, build_path, queue, lock, failed_fi
             args.plugins,
             args.warnings_as_errors,
             args.exclude_header_filter,
+            args.allow_no_checks,
         )
 
         proc = subprocess.Popen(
@@ -405,6 +409,11 @@ def main():
         default=None,
         help="Upgrades warnings to errors. Same format as '-checks'.",
     )
+    parser.add_argument(
+        "-allow-no-checks",
+        action="store_true",
+        help="Allow empty enabled checks.",
+    )
     args = parser.parse_args()
 
     db_path = "compile_commands.json"
@@ -466,6 +475,7 @@ def main():
             args.plugins,
             args.warnings_as_errors,
             args.exclude_header_filter,
+            args.allow_no_checks,
         )
         invocation.append("-list-checks")
         invocation.append("-")

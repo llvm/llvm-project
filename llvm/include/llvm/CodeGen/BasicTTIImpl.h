@@ -1945,8 +1945,7 @@ public:
         ScalarRetTy = RetTy->getScalarType();
       }
       SmallVector<Type *, 4> ScalarTys;
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        Type *Ty = Tys[i];
+      for (Type *Ty : Tys) {
         if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (!SkipScalarizationCost)
             ScalarizationCost += getScalarizationOverhead(
@@ -2368,8 +2367,7 @@ public:
 
       unsigned ScalarCalls = cast<FixedVectorType>(RetVTy)->getNumElements();
       SmallVector<Type *, 4> ScalarTys;
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        Type *Ty = Tys[i];
+      for (Type *Ty : Tys) {
         if (Ty->isVectorTy())
           Ty = Ty->getScalarType();
         ScalarTys.push_back(Ty);
@@ -2377,8 +2375,8 @@ public:
       IntrinsicCostAttributes Attrs(IID, RetTy->getScalarType(), ScalarTys, FMF);
       InstructionCost ScalarCost =
           thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        if (auto *VTy = dyn_cast<VectorType>(Tys[i])) {
+      for (Type *Ty : Tys) {
+        if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (!ICA.skipScalarizationCost())
             ScalarizationCost += getScalarizationOverhead(
                 VTy, /*Insert*/ false, /*Extract*/ true, CostKind);

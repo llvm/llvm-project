@@ -62,13 +62,6 @@ public:
   /// tricky way for optimization.
   virtual bool allowEnhancedRelaxation() const { return false; }
 
-  /// Give the target a chance to manipulate state related to instruction
-  /// alignment (e.g. padding for optimization), instruction relaxablility, etc.
-  /// before and after actually emitting the instruction.
-  virtual void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
-                                    const MCSubtargetInfo &STI) {}
-  virtual void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) {}
-
   /// lifetime management
   virtual void reset() {}
 
@@ -117,7 +110,6 @@ public:
   /// Hook which indicates if the target requires a fixup to be generated when
   /// handling an align directive in an executable section
   virtual bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                             const MCAsmLayout &Layout,
                                              MCAlignFragment &AF) {
     return false;
   }
@@ -131,7 +123,7 @@ public:
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
-  virtual bool handleAddSubRelocations(const MCAsmLayout &Layout,
+  virtual bool handleAddSubRelocations(const MCAssembler &Asm,
                                        const MCFragment &F,
                                        const MCFixup &Fixup,
                                        const MCValue &Target,
@@ -167,10 +159,10 @@ public:
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
-  virtual bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+  virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                            const MCFixup &Fixup, bool Resolved,
                                             uint64_t Value,
                                             const MCRelaxableFragment *DF,
-                                            const MCAsmLayout &Layout,
                                             const bool WasForced) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation

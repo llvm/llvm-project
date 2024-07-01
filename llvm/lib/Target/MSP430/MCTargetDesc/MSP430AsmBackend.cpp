@@ -53,10 +53,10 @@ public:
     return false;
   }
 
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                    const MCFixup &Fixup, bool Resolved,
                                     uint64_t Value,
                                     const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout,
                                     const bool WasForced) const override {
     return false;
   }

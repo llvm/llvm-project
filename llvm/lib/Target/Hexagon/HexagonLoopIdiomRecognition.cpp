@@ -2419,7 +2419,7 @@ bool HexagonLoopIdiomRecognize::run(Loop *L) {
   if (Name == "memset" || Name == "memcpy" || Name == "memmove")
     return false;
 
-  DL = &L->getHeader()->getModule()->getDataLayout();
+  DL = &L->getHeader()->getDataLayout();
 
   HasMemcpy = TLI->has(LibFunc_memcpy);
   HasMemmove = TLI->has(LibFunc_memmove);
