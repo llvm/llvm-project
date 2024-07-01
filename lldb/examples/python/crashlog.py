@@ -166,7 +166,7 @@ class CrashLog(symbolication.Symbolicator):
             this_thread_crashed = self.app_specific_backtrace
             if not this_thread_crashed:
                 this_thread_crashed = self.did_crash()
-                if options.crashed_only and this_thread_crashed == False:
+                if options.crashed_only and not this_thread_crashed:
                     return
 
             print("%s" % self)

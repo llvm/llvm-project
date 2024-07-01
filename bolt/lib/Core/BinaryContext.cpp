@@ -2422,14 +2422,14 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   // Obtain fragment sizes.
   std::vector<uint64_t> FragmentSizes;
   // Main fragment size.
-  const uint64_t HotSize =
-      Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
+  const uint64_t HotSize = Assembler.getSymbolOffset(*EndLabel) -
+                           Assembler.getSymbolOffset(*StartLabel);
   FragmentSizes.push_back(HotSize);
   // Split fragment sizes.
   uint64_t ColdSize = 0;
   for (const auto &Labels : SplitLabels) {
-    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
-                    Layout.getSymbolOffset(*Labels.first);
+    uint64_t Size = Assembler.getSymbolOffset(*Labels.second) -
+                    Assembler.getSymbolOffset(*Labels.first);
     FragmentSizes.push_back(Size);
     ColdSize += Size;
   }
@@ -2439,7 +2439,8 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     BinaryBasicBlock *PrevBB = nullptr;
     for (BinaryBasicBlock *BB : FF) {
-      const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      const uint64_t BBStartOffset =
+          Assembler.getSymbolOffset(*(BB->getLabel()));
       BB->setOutputStartAddress(BBStartOffset);
       if (PrevBB)
         PrevBB->setOutputEndAddress(BBStartOffset);

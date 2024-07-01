@@ -29,6 +29,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -56,6 +57,9 @@ static cl::opt<SkipMLPolicyCriteria> SkipPolicy(
                clEnumValN(SkipMLPolicyCriteria::IfCallerIsNotCold,
                           "if-caller-not-cold", "if the caller is not cold")));
 
+static cl::opt<std::string> ModelSelector("ml-inliner-model-selector",
+                                          cl::Hidden, cl::init(""));
+
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
@@ -73,7 +77,8 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   std::unique_ptr<MLModelRunner> AOTRunner;
   if (InteractiveChannelBaseName.empty())
     AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), FeatureMap, DecisionName);
+        M.getContext(), FeatureMap, DecisionName,
+        EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
   else {
     auto Features = FeatureMap;
     if (InteractiveIncludeDefault)
@@ -216,6 +221,7 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
       const auto *AdjNode = &E.getNode();
       assert(!AdjNode->isDead() && !AdjNode->getFunction().isDeclaration());
       auto I = AllNodes.insert(AdjNode);
+      // We've discovered a new function.
       if (I.second) {
         ++NodeCount;
         NodesInLastSCC.insert(AdjNode);
@@ -423,6 +429,10 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_users) =
       CalleeBefore.Uses;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::cost_estimate) = CostEstimate;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_callee_avail_external) =
+      Callee.hasAvailableExternallyLinkage();
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_caller_avail_external) =
+      Caller.hasAvailableExternallyLinkage();
 
   // Add the cost features
   for (size_t I = 0;

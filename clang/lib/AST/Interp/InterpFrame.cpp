@@ -37,7 +37,8 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
   Locals = std::make_unique<char[]>(FrameSize);
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
+      Block *B =
+          new (localBlock(Local.Offset)) Block(S.Ctx.getEvalID(), Local.Desc);
       B->invokeCtor();
       new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
     }
@@ -220,7 +221,7 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   const auto &Desc = Func->getParamDescriptor(Off);
   size_t BlockSize = sizeof(Block) + Desc.second->getAllocSize();
   auto Memory = std::make_unique<char[]>(BlockSize);
-  auto *B = new (Memory.get()) Block(Desc.second);
+  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), Desc.second);
 
   // Copy the initial value.
   TYPE_SWITCH(Desc.first, new (B->data()) T(stackRef<T>(Off)));

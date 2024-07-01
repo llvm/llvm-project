@@ -141,7 +141,7 @@ define i8 @only_poison(i1 %cond) {
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       EXIT:
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   br i1 %cond, label %A, label %B
 A:

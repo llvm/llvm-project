@@ -841,8 +841,6 @@ void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,
   VisibleModules.setVisible(Mod, Loc);
 }
 
-/// We have parsed the start of an export declaration, including the '{'
-/// (if present).
 Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
                                  SourceLocation LBraceLoc) {
   ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
@@ -978,7 +976,6 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   return true;
 }
 
-/// Complete the definition of an export declaration.
 Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
   auto *ED = cast<ExportDecl>(D);
   if (RBraceLoc.isValid())

@@ -830,8 +830,14 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       // Load the vptr, and mix it with TypeHash.
       llvm::Value *TypeHash =
           llvm::ConstantInt::get(Int64Ty, xxh3_64bits(Out.str()));
+
+      llvm::Type *VPtrTy = llvm::PointerType::get(IntPtrTy, 0);
       Address VPtrAddr(Ptr, IntPtrTy, getPointerAlign());
-      llvm::Value *VPtrVal = Builder.CreateLoad(VPtrAddr);
+      llvm::Value *VPtrVal = GetVTablePtr(VPtrAddr, VPtrTy,
+                                          Ty->getAsCXXRecordDecl(),
+                                          VTableAuthMode::UnsafeUbsanStrip);
+      VPtrVal = Builder.CreateBitOrPointerCast(VPtrVal, IntPtrTy);
+
       llvm::Value *Hash =
           emitHashMix(Builder, TypeHash, Builder.CreateZExt(VPtrVal, Int64Ty));
       Hash = Builder.CreateTrunc(Hash, IntPtrTy);

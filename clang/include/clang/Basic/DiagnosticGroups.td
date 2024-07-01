@@ -430,6 +430,7 @@ def LogicalOpParentheses: DiagGroup<"logical-op-parentheses">;
 def LogicalNotParentheses: DiagGroup<"logical-not-parentheses">;
 def ShiftOpParentheses: DiagGroup<"shift-op-parentheses">;
 def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
+def DanglingAssignment: DiagGroup<"dangling-assignment">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
@@ -437,7 +438,8 @@ def DanglingGsl : DiagGroup<"dangling-gsl">;
 def ReturnStackAddress : DiagGroup<"return-stack-address">;
 // Name of this warning in GCC
 def : DiagGroup<"return-local-addr", [ReturnStackAddress]>;
-def Dangling : DiagGroup<"dangling", [DanglingField,
+def Dangling : DiagGroup<"dangling", [DanglingAssignment,
+                                      DanglingField,
                                       DanglingInitializerList,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
@@ -1539,3 +1541,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
+
+// Warnings about using the non-standard extension having an explicit specialization
+// with a storage class specifier.
+def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;

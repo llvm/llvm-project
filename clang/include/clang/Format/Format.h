@@ -3095,20 +3095,49 @@ struct FormatStyle {
   bool JavaScriptWrapImports;
   // clang-format on
 
-  /// Keep empty lines (up to ``MaxEmptyLinesToKeep``) at end of file.
-  /// \version 17
-  bool KeepEmptyLinesAtEOF;
-
-  /// If true, the empty line at the start of blocks is kept.
+  /// Options regarding which empty lines are kept.
+  ///
+  /// For example, the config below will remove empty lines at start of the
+  /// file, end of the file, and start of blocks.
+  ///
   /// \code
-  ///    true:                                  false:
-  ///    if (foo) {                     vs.     if (foo) {
-  ///                                             bar();
-  ///      bar();                               }
-  ///    }
+  ///   KeepEmptyLines:
+  ///     AtEndOfFile: false
+  ///     AtStartOfBlock: false
+  ///     AtStartOfFile: false
   /// \endcode
+  struct KeepEmptyLinesStyle {
+    /// Keep empty lines at end of file.
+    bool AtEndOfFile;
+    /// Keep empty lines at start of a block.
+    /// \code
+    ///    true:                                  false:
+    ///    if (foo) {                     vs.     if (foo) {
+    ///                                             bar();
+    ///      bar();                               }
+    ///    }
+    /// \endcode
+    bool AtStartOfBlock;
+    /// Keep empty lines at start of file.
+    bool AtStartOfFile;
+    bool operator==(const KeepEmptyLinesStyle &R) const {
+      return AtEndOfFile == R.AtEndOfFile &&
+             AtStartOfBlock == R.AtStartOfBlock &&
+             AtStartOfFile == R.AtStartOfFile;
+    }
+  };
+  /// Which empty lines are kept.  See ``MaxEmptyLinesToKeep`` for how many
+  /// consecutive empty lines are kept.
+  /// \version 19
+  KeepEmptyLinesStyle KeepEmptyLines;
+
+  /// This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  /// \version 17
+  // bool KeepEmptyLinesAtEOF;
+
+  /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
   /// \version 3.7
-  bool KeepEmptyLinesAtTheStartOfBlocks;
+  // bool KeepEmptyLinesAtTheStartOfBlocks;
 
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
@@ -5033,10 +5062,7 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLinesAtEOF == R.KeepEmptyLinesAtEOF &&
-           KeepEmptyLinesAtTheStartOfBlocks ==
-               R.KeepEmptyLinesAtTheStartOfBlocks &&
-           Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&

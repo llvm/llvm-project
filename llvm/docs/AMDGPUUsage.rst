@@ -1188,6 +1188,23 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
 
+  llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
+                                                   the lowest active lane of the input operand. Currently implemented
+                                                   for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
+                                                   i64, double, pointers, multiples of the 32-bit vectors.
+
+  llvm.amdgcn.readlane                             Provides direct access to v_readlane_b32. Returns the value in the
+                                                   specified lane of the first input operand. The second operand specifies
+                                                   the lane to read from. Currently implemented for i16, i32, float, half,
+                                                   bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers,
+                                                   multiples of the 32-bit vectors.
+
+  llvm.amdgcn.writelane                            Provides direct access to v_writelane_b32. Writes value in the first input
+                                                   operand to the specified lane of divergent output. The second operand
+                                                   specifies the lane to write. Currently implemented for i16, i32, float,
+                                                   half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers,
+                                                   multiples of the 32-bit vectors.
+
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
                                                    Intrinsic takes a hint for reduction strategy using second operand
@@ -1207,6 +1224,26 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    If target does not support the DPP operations (e.g. gfx6/7),
                                                    reduction will be performed using default iterative strategy.
                                                    Intrinsic is currently only implemented for i32.
+
+  llvm.amdgcn.permlane16                           Provides direct access to v_permlane16_b32. Performs arbitrary gather-style
+                                                   operation within a row (16 contiguous lanes) of the second input operand.
+                                                   The third and fourth inputs must be scalar values. these are combined into
+                                                   a single 64-bit value representing lane selects used to swizzle within each
+                                                   row. Currently implemented for i16, i32, float, half, bfloat, <2 x i16>, 
+                                                   <2 x half>, <2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
+
+  llvm.amdgcn.permlanex16                          Provides direct access to v_permlanex16_b32. Performs arbitrary gather-style
+                                                   operation across two rows of the second input operand (each row is 16 contiguous
+                                                   lanes). The third and fourth inputs must be scalar values. these are combined
+                                                   into a single 64-bit value representing lane selects used to swizzle within each
+                                                   row. Currently implemented for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, 
+                                                   <2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
+
+  llvm.amdgcn.permlane64                           Provides direct access to v_permlane64_b32. Performs a specific permutation across
+                                                   lanes of the input operand where the high half and low half of a wave64 are swapped.
+                                                   Performs no operation in wave32 mode. Currently implemented for i16, i32, float, half, 
+                                                   bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers, multiples of the 
+                                                   32-bit vectors.
 
   llvm.amdgcn.udot2                                Provides direct access to v_dot2_u32_u16 across targets which
                                                    support such instructions. This performs unsigned dot product
