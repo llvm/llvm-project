@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Version.h"
-
 #include "VCSVersion.inc"
+#include "llvm/Support/VCSRevision.h"
 
 // Returns a version string, e.g.:
 // LLD 14.0.0 (https://github.com/llvm/llvm-project.git
@@ -25,4 +25,20 @@ std::string lld::getLLDVersion() {
 #endif
   return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING;
 #undef LLD_VENDOR_DISPLAY
+}
+
+std::string lld::getLLVMRepositoryPath() {
+#ifdef LLVM_REPOSITORY
+  return LLVM_REPOSITORY;
+#else
+  return "";
+#endif
+}
+
+std::string lld::getLLVMRevision() {
+#ifdef LLVM_REVISION
+  return LLVM_REVISION;
+#else
+  return "";
+#endif
 }
