@@ -353,6 +353,23 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   return nullptr;
 }
 
+void CGHLSLRuntime::emitFunctionProlog(const FunctionDecl *FD,
+                                       llvm::Function *Fn) {
+  if (!FD || !Fn)
+    return;
+
+  if (FD->hasAttr<HLSLShaderAttr>()) {
+    emitEntryFunction(FD, Fn);
+  } else {
+    // HLSL functions declared in the current translation unit without
+    // body have external linkage by default.
+    if (!FD->isDefined())
+      Fn->setLinkage(GlobalValue::ExternalLinkage);
+
+    // FIXME: also set external linkage on exported functions
+  }
+}
+
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                       llvm::Function *Fn) {
   llvm::Module &M = CGM.getModule();
@@ -369,6 +386,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   setHLSLEntryAttributes(FD, EntryFn);
 
   // Set the called function as internal linkage.
+  assert(Fn->getLinkage() == GlobalValue::ExternalLinkage);
   Fn->setLinkage(GlobalValue::InternalLinkage);
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", EntryFn);

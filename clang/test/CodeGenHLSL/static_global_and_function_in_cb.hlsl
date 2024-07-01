@@ -13,6 +13,6 @@ cbuffer A {
   float foo() { return a + b; }
 }
 
-float bar() {
+export float bar() {
   return foo();
 }

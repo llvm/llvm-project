@@ -4,6 +4,8 @@
 bool cond();
 void foo();
 
+export {
+
 void test1() {
   do {
   } while (cond());
@@ -88,3 +90,5 @@ void test5() {
 
 // CHECK-DAG: attributes [[A0]] = { {{.*}}convergent{{.*}} }
 // CHECK-DAG: attributes [[A3]] = { {{.*}}convergent{{.*}} }
+
+} // export

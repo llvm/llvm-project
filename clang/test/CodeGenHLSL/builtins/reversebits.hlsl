@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s
 
+export {
+
 #ifdef __HLSL_ENABLE_16_BIT
 // CHECK: define noundef i16 @
 // CHECK: call i16 @llvm.bitreverse.i16(
@@ -78,3 +80,5 @@ uint64_t4 test_bitreverse_long4(uint64_t4 p0)
 {
 	return reversebits(p0);
 }
+
+} // export

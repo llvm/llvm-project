@@ -39,7 +39,7 @@ void Fn3( int64_t2 p0);
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<long, 2>' <FloatingToIntegral>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'half2':'vector<half, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'half2':'vector<half, 2>' lvalue ParmVar {{.*}} 'p0' 'half2':'vector<half, 2>'
-// CHECKIR-LABEL: Call3
+// CHECKIR-LABEL: define {{.*}}Call3
 // CHECKIR: {{.*}} = fptosi <2 x half> {{.*}} to <2 x i64>
 void Call3(half2 p0) {
   Fn3(p0);
@@ -52,7 +52,7 @@ void Call3(half2 p0) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<long, 2>' <FloatingToIntegral>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2':'vector<float, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float2':'vector<float, 2>' lvalue ParmVar {{.*}} 'p0' 'float2':'vector<float, 2>'
-// CHECKIR-LABEL: Call4
+// CHECKIR-LABEL: define {{.*}}Call4
 // CHECKIR: {{.*}} = fptosi <2 x float> {{.*}} to <2 x i64>
 void Call4(float2 p0) {
   Fn3(p0);
@@ -67,8 +67,20 @@ void Fn4( float2 p0);
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2':'vector<float, 2>' <IntegralToFloating>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<long, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int64_t2':'vector<long, 2>' lvalue ParmVar {{.*}} 'p0' 'int64_t2':'vector<long, 2>'
-// CHECKIR-LABEL: Call5
+// CHECKIR-LABEL: define {{.*}}Call5
 // CHECKIR: {{.*}} = sitofp <2 x i64> {{.*}} to <2 x float>
 void Call5(int64_t2 p0) {
   Fn4(p0);
+}
+
+// shader entry function using the Call* functions to make sure they are not
+// optimized away and get to codegen to test the IR results
+[shader("compute")]
+[numthreads(4,1,1)]
+void CSMain() {
+  Call(float2(1.0f, -1.0f));
+  Call2(int2(1, -1));
+  Call3(half2(1.0, -1.0));
+  Call4(float2(1.0, -1.0));
+  Call5(int64_t2(1.0, -1.0));
 }

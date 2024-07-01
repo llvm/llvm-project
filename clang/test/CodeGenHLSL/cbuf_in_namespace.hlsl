@@ -16,7 +16,7 @@ namespace n1 {
   }
 }
 
-float foo() {
+export float foo() {
 // CHECK: load float, ptr @[[CB]], align 4
 // CHECK: load float, ptr @[[TB]], align 4
   return n0::n1::a + n0::b;

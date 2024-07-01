@@ -3,7 +3,7 @@
 const RWBuffer<float> In;
 RWBuffer<float> Out;
 
-void fn(int Idx) {
+export void fn(int Idx) {
   Out[Idx] = In[Idx];
 }
 

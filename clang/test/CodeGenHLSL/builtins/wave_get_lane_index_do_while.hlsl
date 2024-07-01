@@ -2,7 +2,7 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK: define spir_func void @main() [[A0:#[0-9]+]] {
-void main() {
+export void main() {
 // CHECK: entry:
 // CHECK:   %[[CT_ENTRY:[0-9]+]] = call token @llvm.experimental.convergence.entry()
 // CHECK:   br label %[[LABEL_WHILE_COND:.+]]

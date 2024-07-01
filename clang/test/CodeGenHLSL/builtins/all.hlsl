@@ -13,6 +13,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,DXIL_NO_HALF,DXIL_CHECK
 
+export {
+    
 #ifdef __HLSL_ENABLE_16_BIT
 // DXIL_NATIVE_HALF: define noundef i1 @
 // SPIR_NATIVE_HALF: define spir_func noundef i1 @
@@ -275,3 +277,5 @@ bool test_all_bool3(bool3 p0) { return all(p0); }
 // SPIR_CHECK: %hlsl.all = call i1 @llvm.spv.all.v4i1
 // CHECK: ret i1 %hlsl.all
 bool test_all_bool4(bool4 p0) { return all(p0); }
+
+} // export

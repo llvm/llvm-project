@@ -13,6 +13,8 @@
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,SPIR_CHECK,NO_HALF,SPIR_NO_HALF
 
+export {
+
 // DXIL_NATIVE_HALF: define noundef half @
 // SPIR_NATIVE_HALF: define spir_func noundef half @
 // DXIL_NATIVE_HALF: %hlsl.rsqrt = call half @llvm.dx.rsqrt.f16(
@@ -82,3 +84,5 @@ float3 test_rsqrt_float3(float3 p0) { return rsqrt(p0); }
 // SPIR_CHECK: %hlsl.rsqrt = call <4 x float> @llvm.spv.rsqrt.v4f32
 // CHECK: ret <4 x float> %hlsl.rsqrt
 float4 test_rsqrt_float4(float4 p0) { return rsqrt(p0); }
+
+} // export

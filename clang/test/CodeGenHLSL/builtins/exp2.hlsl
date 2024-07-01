@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+export {
+
 // NATIVE_HALF: define noundef half @
 // NATIVE_HALF: %elt.exp2 = call half @llvm.exp2.f16(
 // NATIVE_HALF: ret half %elt.exp2
@@ -51,3 +53,5 @@ float3 test_exp2_float3(float3 p0) { return exp2(p0); }
 // CHECK: %elt.exp2 = call <4 x float> @llvm.exp2.v4f32
 // CHECK: ret <4 x float> %elt.exp2
 float4 test_exp2_float4(float4 p0) { return exp2(p0); }
+
+} // export

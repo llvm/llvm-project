@@ -16,6 +16,6 @@
 // HALF:define {{.*}}half @"?foo@@YA$f16@$f16@0@Z"(half{{[^,]+}}, half{{[^,)]+}})
 // HALF-NOT:float
 // HALF:ret half %
-half foo(half a, half b) {
+export half foo(half a, half b) {
   return a+b;
 }

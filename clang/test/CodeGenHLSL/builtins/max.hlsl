@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+export {
+
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF: define noundef i16 @
 // NATIVE_HALF: call i16 @llvm.smax.i16(
@@ -132,3 +134,5 @@ double3 test_max_double3(double3 p0, double3 p1) { return max(p0, p1); }
 // CHECK: define noundef <4 x double> @
 // CHECK: call <4 x double> @llvm.maxnum.v4f64
 double4 test_max_double4(double4 p0, double4 p1) { return max(p0, p1); }
+
+} // export

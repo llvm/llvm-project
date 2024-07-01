@@ -5,7 +5,7 @@
 // CHECK: %dx.dot = fmul double %conv, %conv1
 // CHECK: %conv2 = fptrunc double %dx.dot to float
 // CHECK: ret float %conv2
-float builtin_bool_to_float_type_promotion ( float p0, bool p1 ) {
+export float builtin_bool_to_float_type_promotion ( float p0, bool p1 ) {
   return __builtin_hlsl_dot ( p0, p1 );
 }
 
@@ -15,7 +15,7 @@ float builtin_bool_to_float_type_promotion ( float p0, bool p1 ) {
 // CHECK: %dx.dot = fmul double %conv, %conv1
 // CHECK: %conv2 = fptrunc double %dx.dot to float
 // CHECK: ret float %conv2
-float builtin_bool_to_float_arg1_type_promotion ( bool p0, float p1 ) {
+export float builtin_bool_to_float_arg1_type_promotion ( bool p0, float p1 ) {
   return __builtin_hlsl_dot ( p0, p1 );
 }
 
@@ -25,6 +25,6 @@ float builtin_bool_to_float_arg1_type_promotion ( bool p0, float p1 ) {
 // CHECK: dx.dot = fmul double %conv, %conv1
 // CHECK: %conv2 = fptrunc double %dx.dot to float
 // CHECK: ret float %conv2
-float builtin_dot_int_to_float_promotion ( float p0, int p1 ) {
+export float builtin_dot_int_to_float_promotion ( float p0, int p1 ) {
   return __builtin_hlsl_dot ( p0, p1 );
 }

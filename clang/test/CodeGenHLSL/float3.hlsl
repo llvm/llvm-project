@@ -8,6 +8,6 @@
 // CHECK-NEXT:store <3 x float> %[[PARAM]], ptr %[[A_ADDR]], align 16
 // CHECK-NEXT:%[[V:[0-9]+]] = load <3 x float>, ptr %[[A_ADDR]], align 16
 // CHECK-NEXT:ret <3 x float> %[[V]]
-float3 foo(float3 a) {
+export float3 foo(float3 a) {
   return a;
 }

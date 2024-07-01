@@ -8,6 +8,8 @@
 
 using hlsl::floor;
 
+export {
+
 // NATIVE_HALF: define noundef half @
 // NATIVE_HALF: call half @llvm.floor.f16(
 // NO_HALF: define noundef float @"?test_floor_half@@YA$halff@$halff@@Z"(
@@ -41,3 +43,5 @@ float3 test_floor_float3(float3 p0) { return floor(p0); }
 // CHECK: define noundef <4 x float> @
 // CHECK: call <4 x float> @llvm.floor.v4f32(
 float4 test_floor_float4(float4 p0) { return floor(p0); }
+
+} // export

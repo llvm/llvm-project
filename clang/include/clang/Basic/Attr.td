@@ -158,7 +158,8 @@ def FunctionTmpl
 
 def HLSLEntry
     : SubsetSubject<Function,
-                    [{S->isExternallyVisible() && !isa<CXXMethodDecl>(S)}],
+                   [{S->getDeclContext()->getRedeclContext()->isFileContext() &&
+                    S->getStorageClass() != SC_Static}],
                     "global functions">;
 def HLSLBufferObj : SubsetSubject<HLSLBuffer,
                     [{isa<HLSLBufferDecl>(S)}],

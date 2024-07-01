@@ -8,6 +8,8 @@
 
 using hlsl::abs;
 
+export {
+
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF: define noundef i16 @
 // NATIVE_HALF: call i16 @llvm.abs.i16(
@@ -91,3 +93,5 @@ double3 test_abs_double3(double3 p0) { return abs(p0); }
 // CHECK: define noundef <4 x double> @
 // CHECK: call <4 x double> @llvm.fabs.v4f64(
 double4 test_abs_double4(double4 p0) { return abs(p0); }
+
+} // export

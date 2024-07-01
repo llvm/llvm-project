@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+export {
+
 // NATIVE_HALF: define noundef half @
 // NATIVE_HALF: call half @llvm.sin.f16(
 // NO_HALF: define noundef float @"?test_sin_half@@YA$halff@$halff@@Z"(
@@ -39,3 +41,5 @@ float3 test_sin_float3(float3 p0) { return sin(p0); }
 // CHECK: define noundef <4 x float> @
 // CHECK: call <4 x float> @llvm.sin.v4f32
 float4 test_sin_float4(float4 p0) { return sin(p0); }
+
+} // export

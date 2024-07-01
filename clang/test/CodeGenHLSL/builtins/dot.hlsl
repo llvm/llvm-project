@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+export {
+
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF: %dx.dot = mul i16 %0, %1
 // NATIVE_HALF: ret i16 %dx.dot
@@ -191,3 +193,5 @@ int test_dot_bool_scalar_arg0_type_promotion(bool p0, int p1) {
 int test_dot_bool_scalar_arg1_type_promotion(int p0, bool p1) {
   return dot(p0, p1);
 }
+
+} // export

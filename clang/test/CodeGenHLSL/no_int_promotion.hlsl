@@ -5,6 +5,8 @@
 // FIXME: add test for char/int8_t/uint8_t when these types are supported in HLSL.
 //  See https://github.com/llvm/llvm-project/issues/58453.
 
+export {
+
 // Make sure generate i16 add.
 // CHECK: add nsw i16 %
 int16_t add(int16_t a, int16_t b) {
@@ -45,3 +47,5 @@ uint16_t3 add(uint16_t3 a, uint16_t3 b) {
 uint16_t4 add(uint16_t4 a, uint16_t4 b) {
   return a + b;
 }
+
+} // export

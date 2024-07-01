@@ -965,6 +965,10 @@ static void checkUndefinedButUsed(Sema &S) {
                            Func->getIdentifier()->isMangledOpenMPVariantName();
         }
       }
+      // Do not warn on undefined internal functions in HLSL, they will get 
+      // external linkage assigned during CodeGen
+      if (S.getLangOpts().HLSL)
+        continue;
       if (!S.getLangOpts().OpenMP || !IsImplicitBase)
         S.Diag(VD->getLocation(), diag::warn_undefined_internal)
             << isa<VarDecl>(VD) << VD;

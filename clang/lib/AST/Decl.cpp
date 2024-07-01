@@ -621,6 +621,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // - a variable, variable template, function, or function template
     //   that is explicitly declared static; or
     // (This bullet corresponds to C99 6.2.2p3.)
+    // - also applies to HLSL
     return LinkageInfo::internal();
   }
 
@@ -657,11 +658,29 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       if (PrevVar->getStorageClass() == SC_Static)
         return LinkageInfo::internal();
     }
+
+    if (Context.getLangOpts().HLSL &&
+        Var->hasAttr<HLSLGroupSharedAddressSpaceAttr>())
+      return LinkageInfo::internal();
+
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(D)) {
     //   - a data member of an anonymous union.
     const VarDecl *VD = IFD->getVarDecl();
     assert(VD && "Expected a VarDecl in this IndirectFieldDecl!");
     return getLVForNamespaceScopeDecl(VD, computation, IgnoreVarTypeLinkage);
+
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // HLSL: functions that are not shader entry points or exported library
+    // functions have internal linkage by default.
+    if (Context.getLangOpts().HLSL &&
+        !(FD->isInExportDeclContext() || FD->hasAttr<HLSLShaderAttr>())) {
+      // Non-library shader entry points might not have an implicit
+      // HLSLShaderAttr added yet so we need to check the entry point name.
+      const TargetInfo &TI = Context.getTargetInfo();
+      if (TI.getTriple().getEnvironment() != llvm::Triple::Library &&
+          FD->getName() != TI.getTargetOpts().HLSLEntry)
+        return LinkageInfo::internal();
+    }
   }
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 

@@ -8,6 +8,8 @@
 
 using hlsl::ceil;
 
+export {
+    
 // NATIVE_HALF: define noundef half @
 // NATIVE_HALF: call half @llvm.ceil.f16(
 // NO_HALF: define noundef float @"?test_ceil_half@@YA$halff@$halff@@Z"(
@@ -41,3 +43,5 @@ float3 test_ceil_float3(float3 p0) { return ceil(p0); }
 // CHECK: define noundef <4 x float> @
 // CHECK: call <4 x float> @llvm.ceil.v4f32(
 float4 test_ceil_float4(float4 p0) { return ceil(p0); }
+
+} // export

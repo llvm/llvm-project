@@ -14,7 +14,7 @@ tbuffer A : register(t2, space1) {
   double d;
 }
 
-float foo() {
+export float foo() {
 // CHECK: load float, ptr @[[CB]], align 4
 // CHECK: load double, ptr getelementptr ({ float, double }, ptr @[[CB]], i32 0, i32 1), align 8
 // CHECK: load float, ptr @[[TB]], align 4

@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+export {
+
 // NATIVE_HALF: define noundef half @
 // NATIVE_HALF: %elt.roundeven = call half @llvm.roundeven.f16(
 // NATIVE_HALF: ret half %elt.roundeven
@@ -51,3 +53,5 @@ float3 test_round_float3(float3 p0) { return round(p0); }
 // CHECK: %elt.roundeven = call <4 x float> @llvm.roundeven.v4f32
 // CHECK: ret <4 x float> %elt.roundeven
 float4 test_round_float4(float4 p0) { return round(p0); }
+
+} // export

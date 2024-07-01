@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+export {
+
 // CHECK: define noundef i1 @
 // NATIVE_HALF: %dx.isinf = call i1 @llvm.dx.isinf.f16(
 // NO_HALF: %dx.isinf = call i1 @llvm.dx.isinf.f32(
@@ -43,3 +45,5 @@ bool3 test_isinf_float3(float3 p0) { return isinf(p0); }
 // CHECK: %dx.isinf = call <4 x i1> @llvm.dx.isinf.v4f32
 // CHECK: ret <4 x i1> %dx.isinf
 bool4 test_isinf_float4(float4 p0) { return isinf(p0); }
+
+} // export

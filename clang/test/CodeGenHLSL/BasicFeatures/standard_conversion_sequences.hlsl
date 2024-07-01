@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+export {
+
 // CHECK-LABEL: f3_to_d4
 // CHECK: [[f3:%.*]] = alloca <3 x float>
 // CHECK: [[d4:%.*]] = alloca <4 x double>
@@ -117,3 +119,5 @@ void d4_to_b2() {
   vector<double,4> d4 = 9.0;
   vector<bool, 2> b2 = d4;
 }
+
+} //export

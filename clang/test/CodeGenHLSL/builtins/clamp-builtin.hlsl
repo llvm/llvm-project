@@ -3,6 +3,6 @@
 // CHECK-LABEL: builtin_test_clamp_int4
 // CHECK: %dx.clamp = call <4 x i32> @llvm.dx.clamp.v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
 // CHECK: ret <4 x i32> %dx.clamp
-int4 builtin_test_clamp_int4(int4 p0, int4 p1, int4 p2) {
+export int4 builtin_test_clamp_int4(int4 p0, int4 p1, int4 p2) {
   return __builtin_hlsl_elementwise_clamp(p0, p1, p2);
 }

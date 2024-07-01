@@ -12,7 +12,7 @@
 // CHECK: [[splat:%.*]] = insertelement <1 x i32> poison, i32 {{.*}}, i64 0
 // CHECK: [[vec2:%.*]] = shufflevector <1 x i32> [[splat]], <1 x i32> poison, <2 x i32> zeroinitializer
 // CHECK: ret <2 x i32> [[vec2]]
-int2 ToTwoInts(int V){
+export int2 ToTwoInts(int V){
   return V.xx;
 }
 

@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s
 
+export {
+
 // CHECK-LABEL: ToTwoInts
 // CHECK: [[splat:%.*]] = insertelement <1 x i32> poison, i32 {{.*}}, i64 0
 // CHECK: [[vec2:%.*]] = shufflevector <1 x i32> [[splat]], <1 x i32> poison, <2 x i32> zeroinitializer
@@ -166,3 +168,5 @@ int AssignInt(int V){
   X.x = V.x + V.x;
   return X;
 }
+
+} // export
