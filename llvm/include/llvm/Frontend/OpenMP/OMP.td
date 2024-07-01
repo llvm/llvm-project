@@ -2089,6 +2089,9 @@ def OMP_Scan : Directive<"scan"> {
   ];
   let association = AS_Separating;
 }
+def OMP_Assume : Directive<"assume"> {
+  let association = AS_Block;
+}
 def OMP_Assumes : Directive<"assumes"> {
   let association = AS_None;
 }

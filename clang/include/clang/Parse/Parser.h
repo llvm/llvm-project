@@ -3380,8 +3380,8 @@ private:
                                      SourceLocation Loc);
 
   /// Parse 'omp [begin] assume[s]' directive.
-  void ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
-                                   SourceLocation Loc);
+  StmtResult ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
+                                         SourceLocation Loc);
 
   /// Parse 'omp end assumes' directive.
   void ParseOpenMPEndAssumesDirective(SourceLocation Loc);

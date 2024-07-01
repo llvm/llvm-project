@@ -3497,7 +3497,8 @@ void Sema::ActOnOpenMPAssumesDirective(SourceLocation Loc,
         << llvm::omp::getOpenMPDirectiveName(DKind);
 
   auto *AA = OMPAssumeAttr::Create(Context, llvm::join(Assumptions, ","), Loc);
-  if (DKind == llvm::omp::Directive::OMPD_begin_assumes) {
+  if (DKind == llvm::omp::Directive::OMPD_begin_assumes ||
+      DKind == llvm::omp::Directive::OMPD_assume) {
     OMPAssumeScoped.push_back(AA);
     return;
   }
@@ -4195,6 +4196,7 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
 
 void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   switch (DKind) {
+  case OMPD_assume:
   case OMPD_parallel:
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
@@ -7355,6 +7357,69 @@ void Sema::ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D) {
   }
   for (OMPAssumeAttr *AA : OMPAssumeGlobal)
     FD->addAttr(AA);
+}
+
+class OMPAssumeStmtVisitor : public StmtVisitor<OMPAssumeStmtVisitor> {
+  SmallVector<OMPAssumeAttr *, 4> *OMPAssumeScoped;
+
+public:
+  OMPAssumeStmtVisitor(SmallVector<OMPAssumeAttr *, 4> *OMPAssumeScoped) {
+    this->OMPAssumeScoped = OMPAssumeScoped;
+  }
+
+  void VisitCapturedStmt(CapturedStmt *CS) {
+    // To find the CaptureDecl for the CaptureStmt
+    CapturedDecl *CD = CS->getCapturedDecl();
+    if (CD) {
+      for (OMPAssumeAttr *AA : *OMPAssumeScoped)
+        CD->addAttr(AA);
+    }
+  }
+
+  void VisitCompoundStmt(CompoundStmt *CS) {
+    // Handle CompoundStmt
+    // Visit each statement in the CompoundStmt
+    for (Stmt *SubStmt : CS->body()) {
+      if (Expr *CE = dyn_cast<Expr>(SubStmt)) {
+        // If the statement is a Expr, process it
+        VisitExpr(CE);
+      }
+    }
+  }
+
+  void VisitExpr(Expr *CE) {
+    // Handle all Expr
+    for (auto *Child : CE->children()) {
+      Visit(Child);
+    }
+  }
+
+  void Visit(Stmt *S) {
+    const char *CName = S->getStmtClassName();
+    if ((strstr(CName, "OMP") != NULL) &&
+        (strstr(CName, "Directive") != NULL)) {
+      for (Stmt *Child : S->children()) {
+        auto *CS = dyn_cast<CapturedStmt>(Child);
+        if (CS)
+          VisitCapturedStmt(CS);
+        else
+          StmtVisitor<OMPAssumeStmtVisitor>::Visit(Child);
+      }
+    } else {
+      StmtVisitor<OMPAssumeStmtVisitor>::Visit(S);
+    }
+  }
+};
+
+StmtResult
+Sema::ActOnFinishedStatementInOpenMPAssumeScope(Stmt *AssociatedStmt) {
+
+  if (AssociatedStmt) {
+    // Add the AssumeAttr to the Directive associated with the Assume Directive.
+    OMPAssumeStmtVisitor Visitor(&OMPAssumeScoped);
+    Visitor.Visit(AssociatedStmt);
+  }
+  return AssociatedStmt;
 }
 
 Sema::OMPDeclareVariantScope::OMPDeclareVariantScope(OMPTraitInfo &TI)

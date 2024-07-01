@@ -1673,8 +1673,8 @@ void Parser::ParseOpenMPClauses(OpenMPDirectiveKind DKind,
 ///     'no_openmp_routines'
 ///     'no_parallelism'
 ///
-void Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
-                                         SourceLocation Loc) {
+StmtResult Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
+                                               SourceLocation Loc) {
   SmallVector<std::string, 4> Assumptions;
   bool SkippedClauses = false;
 
@@ -1750,7 +1750,33 @@ void Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
     Assumptions.push_back(Assumption);
   }
 
+  StmtResult AssociatedStmt;
+
+  // Fix the scope for assume.
+  if (DKind == llvm::omp::Directive::OMPD_assume) {
+
+    if (Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+      ConsumeAnyToken();
+
+    DeclarationNameInfo DirName;
+    Actions.StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(), Loc);
+  }
+
   Actions.ActOnOpenMPAssumesDirective(Loc, DKind, Assumptions, SkippedClauses);
+
+  if (DKind == llvm::omp::Directive::OMPD_assume) {
+
+    AssociatedStmt = ParseStatement();
+    AssociatedStmt =
+        Actions.ActOnFinishedStatementInOpenMPAssumeScope(AssociatedStmt.get());
+
+    // End the scope for assume.
+    ParseOpenMPEndAssumesDirective(Loc);
+    Actions.EndOpenMPDSABlock(nullptr);
+    if (Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+      ConsumeAnyToken();
+  }
+  return AssociatedStmt;
 }
 
 void Parser::ParseOpenMPEndAssumesDirective(SourceLocation Loc) {
@@ -2759,6 +2785,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     }
     break;
   }
+  case OMPD_assume:
+    Directive = ParseOpenMPAssumesDirective(DKind, ConsumeToken());
+    break;
   case OMPD_flush:
   case OMPD_depobj:
   case OMPD_scan:
