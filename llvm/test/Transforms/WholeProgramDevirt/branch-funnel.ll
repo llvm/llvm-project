@@ -157,30 +157,30 @@ declare ptr @llvm.load.relative.i32(ptr, i32)
 @vt4_2_rv = constant [1 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf4_2 to i64), i64 ptrtoint (ptr @vt4_2_rv to i64)) to i32)], !type !8
 
 
-; CHECK-LABEL: define noundef i32 @fn1
+; CHECK-LABEL: define i32 @fn1
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn1(ptr %obj) #0 {
+define i32 @fn1(ptr %obj) #0 {
   %vtable = load ptr, ptr %obj
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid1")
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr %vtable
   ; RETP: call i32 @__typeid_typeid1_0_branch_funnel(ptr nest %vtable, ptr %obj, i32 1)
-  call i32 %fptr(ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ; NORETP: call i32 %
-  ret i32 0
+  ret i32 %result
 }
 
-; CHECK-LABEL: define noundef i32 @fn1_rv
+; CHECK-LABEL: define i32 @fn1_rv
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn1_rv(ptr %obj) #0 {
+define i32 @fn1_rv(ptr %obj) #0 {
   %vtable = load ptr, ptr %obj
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid1_rv")
   call void @llvm.assume(i1 %p)
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 0)
   ; RETP: call i32 @__typeid_typeid1_rv_0_branch_funnel(ptr nest %vtable, ptr %obj, i32 1)
-  call i32 %fptr(ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ; NORETP: call i32 %
-  ret i32 0
+  ret i32 %result
 }
 
 ; CHECK-LABEL: define i32 @fn2
@@ -207,78 +207,78 @@ define i32 @fn2_rv(ptr %obj) #0 {
   ret i32 %result
 }
 
-; CHECK-LABEL: define noundef i32 @fn3
+; CHECK-LABEL: define i32 @fn3
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn3(ptr %obj) #0 {
+define i32 @fn3(ptr %obj) #0 {
   %vtable = load ptr, ptr %obj
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !4)
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr %vtable
   ; RETP: call i32 @branch_funnel(ptr
   ; NORETP: call i32 %
-  call i32 %fptr(ptr %obj, i32 1)
-  ret i32 0
+  %result = call i32 %fptr(ptr %obj, i32 1)
+  ret i32 %result
 }
 
-; CHECK-LABEL: define noundef i32 @fn3_rv
+; CHECK-LABEL: define i32 @fn3_rv
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn3_rv(ptr %obj) #0 {
+define i32 @fn3_rv(ptr %obj) #0 {
   %vtable = load ptr, ptr %obj
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !9)
   call void @llvm.assume(i1 %p)
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 0)
   ; RETP: call i32 @branch_funnel.1(ptr
   ; NORETP: call i32 %
-  call i32 %fptr(ptr %obj, i32 1)
-  ret i32 0
+  %result = call i32 %fptr(ptr %obj, i32 1)
+  ret i32 %result
 }
 
-; CHECK-LABEL: define noundef i32 @fn4
+; CHECK-LABEL: define i32 @fn4
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn4(ptr %obj) #0 {
+define i32 @fn4(ptr %obj) #0 {
   %p = call i1 @llvm.type.test(ptr @vt1_1, metadata !"typeid1")
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr @vt1_1
   ; RETP: call i32 @__typeid_typeid1_0_branch_funnel(ptr nest @vt1_1, ptr %obj, i32 1)
-  call i32 %fptr(ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ; NORETP: call i32 %
-  ret i32 0
+  ret i32 %result
 }
 
-; CHECK-LABEL: define noundef i32 @fn4_cpy
+; CHECK-LABEL: define i32 @fn4_cpy
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn4_cpy(ptr %obj) #0 {
+define i32 @fn4_cpy(ptr %obj) #0 {
   %p = call i1 @llvm.type.test(ptr @vt1_1, metadata !"typeid1")
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr @vt1_1
   ; RETP: call i32 @__typeid_typeid1_0_branch_funnel(ptr nest @vt1_1, ptr %obj, i32 1)
-  call i32 %fptr(ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ; NORETP: call i32 %
-  ret i32 0
+  ret i32 %result
 }
 
-; CHECK-LABEL: define noundef i32 @fn4_rv
+; CHECK-LABEL: define i32 @fn4_rv
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn4_rv(ptr %obj) #0 {
+define i32 @fn4_rv(ptr %obj) #0 {
   %p = call i1 @llvm.type.test(ptr @vt1_1_rv, metadata !"typeid1_rv")
   call void @llvm.assume(i1 %p)
   %fptr = call ptr @llvm.load.relative.i32(ptr @vt1_1_rv, i32 0)
   ; RETP: call i32 @__typeid_typeid1_rv_0_branch_funnel(ptr nest @vt1_1_rv, ptr %obj, i32 1)
-  call i32 %fptr(ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ; NORETP: call i32 %
-  ret i32 0
+  ret i32 %result
 }
 
-; CHECK-LABEL: define noundef i32 @fn4_rv_cpy
+; CHECK-LABEL: define i32 @fn4_rv_cpy
 ; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
-define noundef i32 @fn4_rv_cpy(ptr %obj) #0 {
+define i32 @fn4_rv_cpy(ptr %obj) #0 {
   %p = call i1 @llvm.type.test(ptr @vt1_1_rv, metadata !"typeid1_rv")
   call void @llvm.assume(i1 %p)
   %fptr = call ptr @llvm.load.relative.i32(ptr @vt1_1_rv, i32 0)
   ; RETP: call i32 @__typeid_typeid1_rv_0_branch_funnel(ptr nest @vt1_1_rv, ptr %obj, i32 1)
-  call i32 %fptr(ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
   ; NORETP: call i32 %
-  ret i32 0
+  ret i32 %result
 }
 
 ; CHECK-LABEL: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...)

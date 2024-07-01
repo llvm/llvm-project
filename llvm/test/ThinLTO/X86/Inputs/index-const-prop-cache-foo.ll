@@ -10,10 +10,10 @@ define i32 @foo() local_unnamed_addr {
 }
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @bar() local_unnamed_addr {
+define void @bar() local_unnamed_addr {
   %1 = tail call i32 @rand()
   store i32 %1, ptr @gFoo, align 4
-  ret i32 %1
+  ret void
 }
 
 declare i32 @rand() local_unnamed_addr
