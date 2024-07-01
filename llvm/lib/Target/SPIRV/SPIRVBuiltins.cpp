@@ -2406,17 +2406,18 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
   case SPIRV::AsyncCopy:
   case SPIRV::LoadStore:
   case SPIRV::CoopMatr:
-    if (const auto *R = SPIRV::lookupNativeBuiltin(Call->Builtin->Name, Call->Builtin->Set))
+    if (const auto *R =
+            SPIRV::lookupNativeBuiltin(Call->Builtin->Name, Call->Builtin->Set))
       return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
     break;
   case SPIRV::Extended:
-    if (const auto *R =
-            SPIRV::lookupExtendedBuiltin(Call->Builtin->Name, Call->Builtin->Set))
+    if (const auto *R = SPIRV::lookupExtendedBuiltin(Call->Builtin->Name,
+                                                     Call->Builtin->Set))
       return std::make_tuple(Call->Builtin->Group, 0, R->Number);
     break;
   case SPIRV::VectorLoadStore:
-    if (const auto *R =
-            SPIRV::lookupVectorLoadStoreBuiltin(Call->Builtin->Name, Call->Builtin->Set))
+    if (const auto *R = SPIRV::lookupVectorLoadStoreBuiltin(Call->Builtin->Name,
+                                                            Call->Builtin->Set))
       return std::make_tuple(SPIRV::Extended, 0, R->Number);
     break;
   case SPIRV::Group:
@@ -2440,7 +2441,8 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
   case SPIRV::Select:
     return std::make_tuple(Call->Builtin->Group, TargetOpcode::G_SELECT, 0);
   case SPIRV::Construct:
-    return std::make_tuple(Call->Builtin->Group, SPIRV::OpCompositeConstruct, 0);
+    return std::make_tuple(Call->Builtin->Group, SPIRV::OpCompositeConstruct,
+                           0);
   case SPIRV::KernelClock:
     return std::make_tuple(Call->Builtin->Group, SPIRV::OpReadClockKHR, 0);
   default:
