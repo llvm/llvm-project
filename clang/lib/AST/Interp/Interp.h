@@ -2689,6 +2689,25 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
+  // An expression E is a core constant expression unless the evaluation of E
+  // would evaluate one of the following: [C++23] - a control flow that passes
+  // through a declaration of a variable with static or thread storage duration
+  // unless that variable is usable in constant expressions.
+  assert(VD->isLocalVarDecl() &&
+         VD->isStaticLocal()); // Checked before emitting this.
+
+  if (VD == S.EvaluatingDecl)
+    return true;
+
+  if (!VD->isUsableInConstantExpressions(S.getCtx())) {
+    S.CCEDiag(VD->getLocation(), diag::note_constexpr_static_local)
+        << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
+    return false;
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

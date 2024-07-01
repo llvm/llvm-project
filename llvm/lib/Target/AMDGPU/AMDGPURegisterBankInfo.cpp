@@ -4730,7 +4730,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wmma_f64_16x16x4_f64:
     case Intrinsic::amdgcn_wmma_f64_16x16x8_f64:
     case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
-    case Intrinsic::amdgcn_wmma_f32_16x16x16_xf32:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
     case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:

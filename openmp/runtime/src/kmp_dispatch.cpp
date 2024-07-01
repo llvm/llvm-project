@@ -3009,6 +3009,11 @@ See @ref __kmpc_dispatch_fini_4
 void __kmpc_dispatch_fini_8u(ident_t *loc, kmp_int32 gtid) {
   __kmp_dispatch_finish<kmp_uint64>(gtid, loc);
 }
+
+/*!
+See @ref __kmpc_dispatch_deinit
+*/
+void __kmpc_dispatch_deinit(ident_t *loc, kmp_int32 gtid) {}
 /*! @} */
 
 //-----------------------------------------------------------------------------
