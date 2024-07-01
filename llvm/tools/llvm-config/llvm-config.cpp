@@ -719,14 +719,13 @@ int main(int argc, char **argv) {
           if (HostTriple.isWindowsMSVCEnvironment()) {
             LibFileName = GetComponentLibraryPath(Lib, Shared);
           } else {
+            OS << "-l";
             StringRef LibName;
             if (GetComponentLibraryNameSlice(Lib, LibName)) {
               // Extract library name (remove prefix and suffix).
-              OS << "-l";
               LibFileName = LibName;
             } else {
               // Lib is already a library name without prefix and suffix.
-              OS << "-l";
               LibFileName = Lib;
             }
           }
