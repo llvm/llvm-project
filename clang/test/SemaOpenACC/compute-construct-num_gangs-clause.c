@@ -51,4 +51,8 @@ void Test() {
   // expected-error@+1{{too many integer expression arguments provided to OpenACC 'num_gangs' clause: 'parallel' directive expects maximum of 3, 4 were provided}}
 #pragma acc parallel num_gangs(getS(), 1, getS(), 1)
   while(1);
+
+  // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'loop' directive}}
+#pragma acc loop num_gangs(1)
+  for(;;);
 }

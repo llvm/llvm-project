@@ -1555,6 +1555,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                 bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
+
+  assert((!ListInitialization || Exprs.size() == 1) &&
+         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -2071,7 +2074,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (DirectInitRange.isValid()) {
     assert(Initializer && "Have parens but no initializer.");
     InitStyle = CXXNewInitializationStyle::Parens;
-  } else if (Initializer && isa<InitListExpr>(Initializer))
+  } else if (isa_and_nonnull<InitListExpr>(Initializer))
     InitStyle = CXXNewInitializationStyle::Braces;
   else {
     assert((!Initializer || isa<ImplicitValueInitExpr>(Initializer) ||
@@ -3820,7 +3823,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
         // Otherwise, the usual operator delete[] should be the
         // function we just found.
-        else if (OperatorDelete && isa<CXXMethodDecl>(OperatorDelete))
+        else if (isa_and_nonnull<CXXMethodDecl>(OperatorDelete))
           UsualArrayDeleteWantsSize =
             UsualDeallocFnInfo(*this,
                                DeclAccessPair::make(OperatorDelete, AS_public))
@@ -5126,6 +5129,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsStandardLayout:
   case UTT_IsPOD:
   case UTT_IsLiteral:
+  case UTT_IsBitwiseCloneable:
   // By analogy, is_trivially_relocatable and is_trivially_equality_comparable
   // impose the same constraints.
   case UTT_IsTriviallyRelocatable:
@@ -5619,6 +5623,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return C.hasUniqueObjectRepresentations(T);
   case UTT_IsTriviallyRelocatable:
     return T.isTriviallyRelocatableType(C);
+  case UTT_IsBitwiseCloneable:
+    return T.isBitwiseCloneableType(C);
   case UTT_IsReferenceable:
     return T.isReferenceable();
   case UTT_CanPassInRegs:
@@ -8589,7 +8595,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   assert(S.CurContext->isDependentContext());
 #ifndef NDEBUG
   DeclContext *DC = S.CurContext;
-  while (DC && isa<CapturedDecl>(DC))
+  while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   assert(
       CurrentLSI->CallOperator == DC &&
@@ -9166,7 +9172,7 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   //  - Teach the handful of places that iterate over FunctionScopes to
   //    stop at the outermost enclosing lexical scope."
   DeclContext *DC = CurContext;
-  while (DC && isa<CapturedDecl>(DC))
+  while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   const bool IsInLambdaDeclContext = isLambdaCallOperator(DC);
   if (IsInLambdaDeclContext && CurrentLSI &&

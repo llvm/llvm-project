@@ -562,7 +562,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       switch (y_u) {
       case 0x3f00'0000: // y = 0.5f
         // pow(x, 1/2) = sqrt(x)
-        return fputil::sqrt(x);
+        return fputil::sqrt<float>(x);
       case 0x3f80'0000: // y = 1.0f
         return x;
       case 0x4000'0000: // y = 2.0f

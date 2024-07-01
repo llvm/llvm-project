@@ -449,6 +449,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(SIN_F);
   case TargetOpcode::G_FCOS:
     RTLIBCASE(COS_F);
+  case TargetOpcode::G_FTAN:
+    RTLIBCASE(TAN_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -1037,6 +1039,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
@@ -1120,15 +1123,13 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
     // FIXME: Support other types
-    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    Type *FromTy =
+        getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(1).getReg()));
     unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    if ((ToSize != 32 && ToSize != 64) || (FromSize != 32 && FromSize != 64))
+    if ((ToSize != 32 && ToSize != 64 && ToSize != 128) || !FromTy)
       return UnableToLegalize;
     LegalizeResult Status = conversionLibcall(
-        MI, MIRBuilder,
-        ToSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx),
-        FromSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
-        LocObserver);
+        MI, MIRBuilder, Type::getIntNTy(Ctx, ToSize), FromTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -2893,6 +2894,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
@@ -3637,6 +3639,9 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     Observer.changingInstr(MI);
     bitcastDst(MI, CastTy, 0);
     MMO.setType(CastTy);
+    // The range metadata is no longer valid when reinterpreted as a different
+    // type.
+    MMO.clearRanges();
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -4659,6 +4664,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_INTRINSIC_TRUNC:
   case G_FCOS:
   case G_FSIN:
+  case G_FTAN:
   case G_FSQRT:
   case G_BSWAP:
   case G_BITREVERSE:
@@ -7137,8 +7143,6 @@ LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   return UnableToLegalize;
 }
 
-// TODO: If RHS is a constant SelectionDAGBuilder expands this into a
-// multiplication tree.
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
@@ -7209,6 +7213,10 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
   // constants are a nan and -0.0, but the final result should preserve
   // everything.
   unsigned Flags = MI.getFlags();
+
+  // We masked the sign bit and the not-sign bit, so these are disjoint.
+  Flags |= MachineInstr::Disjoint;
+
   MIRBuilder.buildOr(Dst, And0, And1, Flags);
 
   MI.eraseFromParent();
@@ -8387,8 +8395,6 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
   return UnableToLegalize;
 }
 
-static Type *getTypeForLLT(LLT Ty, LLVMContext &C);
-
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineFunction &MF = *MI.getMF();
   const DataLayout &DL = MIRBuilder.getDataLayout();
@@ -8510,13 +8516,6 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
   }
 
   return true;
-}
-
-static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
-  if (Ty.isVector())
-    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
-                                Ty.getNumElements());
-  return IntegerType::get(C, Ty.getSizeInBits());
 }
 
 // Get a vectorized representation of the memset value operand, GISel edition.

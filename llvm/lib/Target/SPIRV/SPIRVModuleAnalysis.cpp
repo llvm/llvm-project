@@ -95,7 +95,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap))
-        return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+        return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
     } else {
       // By SPIR-V specification: "If an instruction, enumerant, or other
       // feature specifies multiple enabling capabilities, only one such
@@ -110,7 +110,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
         auto Cap = UseCaps[i];
         if (i == Sz - 1 || !AvoidCaps.S.contains(Cap))
-          return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+          return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
       }
     }
   }
@@ -1167,6 +1167,15 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_inline_assembly);
       Reqs.addCapability(SPIRV::Capability::AsmINTEL);
     }
+    break;
+  case SPIRV::OpTypeCooperativeMatrixKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
+      report_fatal_error(
+          "OpTypeCooperativeMatrixKHR type requires the "
+          "following SPIR-V extension: SPV_KHR_cooperative_matrix",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
+    Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
     break;
   default:
     break;

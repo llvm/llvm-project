@@ -48,7 +48,6 @@ public:
 
   /// Returns true if we know the value of all bits.
   bool isConstant() const {
-    assert(!hasConflict() && "KnownBits conflict!");
     return Zero.popcount() + One.popcount() == getBitWidth();
   }
 
@@ -74,16 +73,10 @@ public:
   }
 
   /// Returns true if value is all zero.
-  bool isZero() const {
-    assert(!hasConflict() && "KnownBits conflict!");
-    return Zero.isAllOnes();
-  }
+  bool isZero() const { return Zero.isAllOnes(); }
 
   /// Returns true if value is all one bits.
-  bool isAllOnes() const {
-    assert(!hasConflict() && "KnownBits conflict!");
-    return One.isAllOnes();
-  }
+  bool isAllOnes() const { return One.isAllOnes(); }
 
   /// Make all bits known to be zero and discard any previous information.
   void setAllZero() {
@@ -316,12 +309,6 @@ public:
   /// high bits of the result of a multiplication.
   KnownBits unionWith(const KnownBits &RHS) const {
     return KnownBits(Zero | RHS.Zero, One | RHS.One);
-  }
-
-  /// Compute known bits common to LHS and RHS.
-  LLVM_DEPRECATED("use intersectWith instead", "intersectWith")
-  static KnownBits commonBits(const KnownBits &LHS, const KnownBits &RHS) {
-    return LHS.intersectWith(RHS);
   }
 
   /// Return true if LHS and RHS have no common bits set.

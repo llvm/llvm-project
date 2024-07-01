@@ -3,7 +3,7 @@
 // check conversion of complex type of different size. Both fir and mlir
 // variants are checked.
 
-module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @test1(%x : !fir.complex<4>) -> !fir.complex<8> {
   %1 = fir.convert %x : (!fir.complex<4>) -> !fir.complex<8>
   return %1 : !fir.complex<8>

@@ -3355,7 +3355,7 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(const VarDecl *VD) {
 
   // Variables with higher required alignment than their type's ABI
   // alignment cannot use NRVO.
-  if (!VD->hasDependentAlignment() &&
+  if (!VD->hasDependentAlignment() && !VDType->isIncompleteType() &&
       Context.getDeclAlign(VD) > Context.getTypeAlignInChars(VDType))
     Info.S = NamedReturnInfo::MoveEligible;
 
@@ -3701,7 +3701,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
   if (isLambdaConversionOperator(FD))
     return false;
 
-  if (RetExpr && isa<InitListExpr>(RetExpr)) {
+  if (isa_and_nonnull<InitListExpr>(RetExpr)) {
     //  If the deduction is for a return statement and the initializer is
     //  a braced-init-list, the program is ill-formed.
     Diag(RetExpr->getExprLoc(),

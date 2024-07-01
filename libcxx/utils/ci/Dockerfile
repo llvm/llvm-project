@@ -91,10 +91,11 @@ RUN sudo apt-get update \
         make \
         python3 \
         python3-dev \
-        python3-distutils \
+        python3-packaging \
+        python3-setuptools \
         python3-psutil \
         software-properties-common \
-        swig4.0 \
+        swig \
         unzip \
         uuid-dev \
         wget \
@@ -141,7 +142,6 @@ EOF
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 RUN <<EOF
-  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
   sudo apt-get update
   sudo apt-get install -y \
     gcc-$((GCC_LATEST_VERSION - 1)) \
@@ -287,12 +287,5 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 #
 FROM builder-base AS actions-builder
 
-# Install 'act' for running github actions locally. This provides an alternative to the run-buildbot script
-# while still providing reproducability.
-RUN curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
-
 WORKDIR /home/runner
 USER runner
-
-
-

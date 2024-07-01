@@ -184,7 +184,7 @@ namespace bolt {
 /// Emits debug information into .debug_info or .debug_types section.
 class DIEStreamer : public DwarfStreamer {
   DIEBuilder *DIEBldr;
-  DWARFRewriter &Rewriter;
+  GDBIndex &GDBIndexSection;
 
 private:
   /// Emit the compilation unit header for \p Unit in the debug_info
@@ -247,7 +247,7 @@ private:
     const uint64_t TypeSignature = cast<DWARFTypeUnit>(Unit).getTypeHash();
     DIE *TypeDIE = DIEBldr->getTypeDIE(Unit);
     const DIEBuilder::DWARFUnitInfo &UI = DIEBldr->getUnitInfoByDwarfUnit(Unit);
-    Rewriter.addGDBTypeUnitEntry(
+    GDBIndexSection.addGDBTypeUnitEntry(
         {UI.UnitOffset, TypeSignature, TypeDIE->getOffset()});
     if (Unit.getVersion() < 5) {
       // Switch the section to .debug_types section.
@@ -278,12 +278,12 @@ private:
   }
 
 public:
-  DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
+  DIEStreamer(DIEBuilder *DIEBldr, GDBIndex &GDBIndexSection,
               DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
               DWARFLinkerBase::MessageHandlerTy Warning)
       : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
-        Rewriter(Rewriter){};
+        GDBIndexSection(GDBIndexSection) {};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
@@ -326,12 +326,11 @@ static cl::opt<bool> KeepARanges(
         "keep or generate .debug_aranges section if .gdb_index is written"),
     cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-DeterministicDebugInfo("deterministic-debuginfo",
-  cl::desc("disables parallel execution of tasks that may produce "
-           "nondeterministic debug info"),
-  cl::init(true),
-  cl::cat(BoltCategory));
+static cl::opt<bool> DeterministicDebugInfo(
+    "deterministic-debuginfo",
+    cl::desc("disables parallel execution of tasks that may produce "
+             "nondeterministic debug info"),
+    cl::init(true), cl::cat(BoltCategory));
 
 static cl::opt<std::string> DwarfOutputPath(
     "dwarf-output-path",
@@ -352,7 +351,7 @@ static cl::opt<bool> CreateDebugNames(
 
 static cl::opt<bool>
     DebugSkeletonCu("debug-skeleton-cu",
-                    cl::desc("prints out offsetrs for abbrev and debu_info of "
+                    cl::desc("prints out offsets for abbrev and debug_info of "
                              "Skeleton CUs that get patched."),
                     cl::ZeroOrMore, cl::Hidden, cl::init(false),
                     cl::cat(BoltCategory));
@@ -460,10 +459,11 @@ static std::optional<uint64_t> getAsAddress(const DWARFUnit &DU,
 static std::unique_ptr<DIEStreamer>
 createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
                   StringRef Swift5ReflectionSegmentName, DIEBuilder &DIEBldr,
-                  DWARFRewriter &Rewriter) {
+                  GDBIndex &GDBIndexSection) {
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
-      &DIEBldr, Rewriter, DWARFLinkerBase::OutputFileType::Object, OutFile,
+      &DIEBldr, GDBIndexSection, DWARFLinkerBase::OutputFileType::Object,
+      OutFile,
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
   if (Err)
@@ -484,13 +484,12 @@ emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
   return {U.UnitOffset, U.UnitLength, TypeHash};
 }
 
-static void emitDWOBuilder(const std::string &DWOName,
-                           DIEBuilder &DWODIEBuilder, DWARFRewriter &Rewriter,
-                           DWARFUnit &SplitCU, DWARFUnit &CU,
-                           DWARFRewriter::DWPState &State,
-                           DebugLocWriter &LocWriter,
-                           DebugStrOffsetsWriter &StrOffstsWriter,
-                           DebugStrWriter &StrWriter) {
+static void
+emitDWOBuilder(const std::string &DWOName, DIEBuilder &DWODIEBuilder,
+               DWARFRewriter &Rewriter, DWARFUnit &SplitCU, DWARFUnit &CU,
+               DWARFRewriter::DWPState &State, DebugLocWriter &LocWriter,
+               DebugStrOffsetsWriter &StrOffstsWriter,
+               DebugStrWriter &StrWriter, GDBIndex &GDBIndexSection) {
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
   DWODIEBuilder.generateAbbrevs();
   DWODIEBuilder.finish();
@@ -500,8 +499,9 @@ static void emitDWOBuilder(const std::string &DWOName,
       std::make_shared<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = SplitCU.getContext().getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> Streamer = createDIEStreamer(
-      *TheTriple, *ObjOS, "DwoStreamerInitAug2", DWODIEBuilder, Rewriter);
+  std::unique_ptr<DIEStreamer> Streamer =
+      createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
+                        DWODIEBuilder, GDBIndexSection);
   DWARFRewriter::UnitMetaVectorType TUMetaVector;
   DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
@@ -652,6 +652,7 @@ void DWARFRewriter::updateDebugInfo() {
 
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
+  GDBIndex GDBIndexSection(BC);
   DWPState State;
   if (opts::WriteDWP)
     initDWPState(State);
@@ -704,7 +705,8 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter->finalizeSection();
 
       emitDWOBuilder(DWOName, DWODIEBuilder, *this, **SplitCU, *Unit, State,
-                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter);
+                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter,
+                     GDBIndexSection);
     }
 
     if (Unit->getVersion() >= 5) {
@@ -729,9 +731,10 @@ void DWARFRewriter::updateDebugInfo() {
       std::make_unique<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> Streamer =
-      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this);
-  CUOffsetMap OffsetMap = finalizeTypeSections(DIEBlder, *Streamer);
+  std::unique_ptr<DIEStreamer> Streamer = createDIEStreamer(
+      *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, GDBIndexSection);
+  CUOffsetMap OffsetMap =
+      finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
 
   const bool SingleThreadedMode =
       opts::NoThreads || opts::DeterministicDebugInfo;
@@ -761,7 +764,8 @@ void DWARFRewriter::updateDebugInfo() {
 
   finalizeDebugSections(DIEBlder, DebugNamesTable, *Streamer, *ObjOS,
                         OffsetMap);
-  updateGdbIndexSection(OffsetMap, CUIndex);
+  GDBIndexSection.updateGdbIndexSection(OffsetMap, CUIndex,
+                                        *ARangesSectionWriter);
 }
 
 void DWARFRewriter::updateUnitDebugInfo(
@@ -1429,7 +1433,8 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
 }
 
 CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
-                                                DIEStreamer &Streamer) {
+                                                DIEStreamer &Streamer,
+                                                GDBIndex &GDBIndexSection) {
   // update TypeUnit DW_AT_stmt_list with new .debug_line information.
   auto updateLineTable = [&](const DWARFUnit &Unit) -> void {
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(Unit);
@@ -1449,8 +1454,8 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
       std::make_shared<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> TypeStreamer =
-      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this);
+  std::unique_ptr<DIEStreamer> TypeStreamer = createDIEStreamer(
+      *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, GDBIndexSection);
 
   // generate debug_info and CUMap
   CUOffsetMap CUMap;
@@ -2053,177 +2058,6 @@ void DWARFRewriter::writeDWOFiles(
   }
   Streamer->finish();
   TempOut->keep();
-}
-
-void DWARFRewriter::addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry) {
-  std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
-  if (!BC.getGdbIndexSection())
-    return;
-  GDBIndexTUEntryVector.emplace_back(Entry);
-}
-
-void DWARFRewriter::updateGdbIndexSection(CUOffsetMap &CUMap, uint32_t NumCUs) {
-  if (!BC.getGdbIndexSection())
-    return;
-
-  // See https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
-  // for .gdb_index section format.
-
-  StringRef GdbIndexContents = BC.getGdbIndexSection()->getContents();
-
-  const char *Data = GdbIndexContents.data();
-
-  // Parse the header.
-  const uint32_t Version = read32le(Data);
-  if (Version != 7 && Version != 8) {
-    errs() << "BOLT-ERROR: can only process .gdb_index versions 7 and 8\n";
-    exit(1);
-  }
-
-  // Some .gdb_index generators use file offsets while others use section
-  // offsets. Hence we can only rely on offsets relative to each other,
-  // and ignore their absolute values.
-  const uint32_t CUListOffset = read32le(Data + 4);
-  const uint32_t CUTypesOffset = read32le(Data + 8);
-  const uint32_t AddressTableOffset = read32le(Data + 12);
-  const uint32_t SymbolTableOffset = read32le(Data + 16);
-  const uint32_t ConstantPoolOffset = read32le(Data + 20);
-  Data += 24;
-
-  // Map CUs offsets to indices and verify existing index table.
-  std::map<uint32_t, uint32_t> OffsetToIndexMap;
-  const uint32_t CUListSize = CUTypesOffset - CUListOffset;
-  const uint32_t TUListSize = AddressTableOffset - CUTypesOffset;
-  const unsigned NUmCUsEncoded = CUListSize / 16;
-  unsigned MaxDWARFVersion = BC.DwCtx->getMaxVersion();
-  unsigned NumDWARF5TUs =
-      getGDBIndexTUEntryVector().size() - BC.DwCtx->getNumTypeUnits();
-  bool SkipTypeUnits = false;
-  // For DWARF5 Types are in .debug_info.
-  // LLD doesn't generate Types CU List, and in CU list offset
-  // only includes CUs.
-  // GDB 11+ includes only CUs in CU list and generates Types
-  // list.
-  // GDB 9 includes CUs and TUs in CU list and generates TYpes
-  // list. The NumCUs is CUs + TUs, so need to modify the check.
-  // For split-dwarf
-  // GDB-11, DWARF5: TU units from dwo are not included.
-  // GDB-11, DWARF4: TU units from dwo are included.
-  if (MaxDWARFVersion >= 5)
-    SkipTypeUnits = !TUListSize ? true
-                                : ((NUmCUsEncoded + NumDWARF5TUs) ==
-                                   BC.DwCtx->getNumCompileUnits());
-
-  if (!((CUListSize == NumCUs * 16) ||
-        (CUListSize == (NumCUs + NumDWARF5TUs) * 16))) {
-    errs() << "BOLT-ERROR: .gdb_index: CU count mismatch\n";
-    exit(1);
-  }
-  DenseSet<uint64_t> OriginalOffsets;
-  for (unsigned Index = 0, Units = BC.DwCtx->getNumCompileUnits();
-       Index < Units; ++Index) {
-    const DWARFUnit *CU = BC.DwCtx->getUnitAtIndex(Index);
-    if (SkipTypeUnits && CU->isTypeUnit())
-      continue;
-    const uint64_t Offset = read64le(Data);
-    Data += 16;
-    if (CU->getOffset() != Offset) {
-      errs() << "BOLT-ERROR: .gdb_index CU offset mismatch\n";
-      exit(1);
-    }
-
-    OriginalOffsets.insert(Offset);
-    OffsetToIndexMap[Offset] = Index;
-  }
-
-  // Ignore old address table.
-  const uint32_t OldAddressTableSize = SymbolTableOffset - AddressTableOffset;
-  // Move Data to the beginning of symbol table.
-  Data += SymbolTableOffset - CUTypesOffset;
-
-  // Calculate the size of the new address table.
-  uint32_t NewAddressTableSize = 0;
-  for (const auto &CURangesPair : ARangesSectionWriter->getCUAddressRanges()) {
-    const SmallVector<DebugAddressRange, 2> &Ranges = CURangesPair.second;
-    NewAddressTableSize += Ranges.size() * 20;
-  }
-
-  // Difference between old and new table (and section) sizes.
-  // Could be negative.
-  int32_t Delta = NewAddressTableSize - OldAddressTableSize;
-
-  size_t NewGdbIndexSize = GdbIndexContents.size() + Delta;
-
-  // Free'd by ExecutableFileMemoryManager.
-  auto *NewGdbIndexContents = new uint8_t[NewGdbIndexSize];
-  uint8_t *Buffer = NewGdbIndexContents;
-
-  write32le(Buffer, Version);
-  write32le(Buffer + 4, CUListOffset);
-  write32le(Buffer + 8, CUTypesOffset);
-  write32le(Buffer + 12, AddressTableOffset);
-  write32le(Buffer + 16, SymbolTableOffset + Delta);
-  write32le(Buffer + 20, ConstantPoolOffset + Delta);
-  Buffer += 24;
-
-  using MapEntry = std::pair<uint32_t, CUInfo>;
-  std::vector<MapEntry> CUVector(CUMap.begin(), CUMap.end());
-  // Need to sort since we write out all of TUs in .debug_info before CUs.
-  std::sort(CUVector.begin(), CUVector.end(),
-            [](const MapEntry &E1, const MapEntry &E2) -> bool {
-              return E1.second.Offset < E2.second.Offset;
-            });
-  // Writing out CU List <Offset, Size>
-  for (auto &CUInfo : CUVector) {
-    // Skipping TU for DWARF5 when they are not included in CU list.
-    if (!OriginalOffsets.count(CUInfo.first))
-      continue;
-    write64le(Buffer, CUInfo.second.Offset);
-    // Length encoded in CU doesn't contain first 4 bytes that encode length.
-    write64le(Buffer + 8, CUInfo.second.Length + 4);
-    Buffer += 16;
-  }
-
-  // Rewrite TU CU List, since abbrevs can be different.
-  // Entry example:
-  // 0: offset = 0x00000000, type_offset = 0x0000001e, type_signature =
-  // 0x418503b8111e9a7b Spec says " triplet, the first value is the CU offset,
-  // the second value is the type offset in the CU, and the third value is the
-  // type signature" Looking at what is being generated by gdb-add-index. The
-  // first entry is TU offset, second entry is offset from it, and third entry
-  // is the type signature.
-  if (TUListSize)
-    for (const GDBIndexTUEntry &Entry : getGDBIndexTUEntryVector()) {
-      write64le(Buffer, Entry.UnitOffset);
-      write64le(Buffer + 8, Entry.TypeDIERelativeOffset);
-      write64le(Buffer + 16, Entry.TypeHash);
-      Buffer += sizeof(GDBIndexTUEntry);
-    }
-
-  // Generate new address table.
-  for (const std::pair<const uint64_t, DebugAddressRangesVector> &CURangesPair :
-       ARangesSectionWriter->getCUAddressRanges()) {
-    const uint32_t CUIndex = OffsetToIndexMap[CURangesPair.first];
-    const DebugAddressRangesVector &Ranges = CURangesPair.second;
-    for (const DebugAddressRange &Range : Ranges) {
-      write64le(Buffer, Range.LowPC);
-      write64le(Buffer + 8, Range.HighPC);
-      write32le(Buffer + 16, CUIndex);
-      Buffer += 20;
-    }
-  }
-
-  const size_t TrailingSize =
-      GdbIndexContents.data() + GdbIndexContents.size() - Data;
-  assert(Buffer + TrailingSize == NewGdbIndexContents + NewGdbIndexSize &&
-         "size calculation error");
-
-  // Copy over the rest of the original data.
-  memcpy(Buffer, Data, TrailingSize);
-
-  // Register the new section.
-  BC.registerOrUpdateNoteSection(".gdb_index", NewGdbIndexContents,
-                                 NewGdbIndexSize);
 }
 
 std::unique_ptr<DebugBufferVector>

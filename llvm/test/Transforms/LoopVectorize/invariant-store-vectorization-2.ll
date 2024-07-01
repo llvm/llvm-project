@@ -237,8 +237,8 @@ define i32 @variant_val_store_to_inv_address(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x i32> [ [[TMP3]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[DOTLCSSA]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[DOTLCSSA]])
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]

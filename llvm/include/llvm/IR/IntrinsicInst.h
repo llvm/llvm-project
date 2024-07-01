@@ -33,6 +33,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -1454,9 +1455,7 @@ protected:
 public:
   static bool classof(const Value *V) {
     if (const auto *Instr = dyn_cast<IntrinsicInst>(V))
-      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr) ||
-             Instr->getIntrinsicID() ==
-                 Intrinsic::instrprof_mcdc_condbitmap_update;
+      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr);
     return false;
   }
   // The name of the instrumented function.
@@ -1580,10 +1579,16 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
+  /// \return The number of bits used for the MCDC bitmaps for the instrumented
+  /// function.
+  ConstantInt *getNumBitmapBits() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  }
+
   /// \return The number of bytes used for the MCDC bitmaps for the instrumented
   /// function.
-  ConstantInt *getNumBitmapBytes() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  auto getNumBitmapBytes() const {
+    return alignTo(getNumBitmapBits()->getZExtValue(), CHAR_BIT) / CHAR_BIT;
   }
 };
 
@@ -1611,42 +1616,13 @@ public:
   /// \return The index of the TestVector Bitmap upon which this intrinsic
   /// acts.
   ConstantInt *getBitmapIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
   }
 
   /// \return The address of the corresponding condition bitmap containing
   /// the index of the TestVector to update within the TestVector Bitmap.
   Value *getMCDCCondBitmapAddr() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
-  }
-};
-
-/// This represents the llvm.instrprof.mcdc.condbitmap.update intrinsic.
-/// It does not pertain to global bitmap updates or parameters and so doesn't
-/// inherit from InstrProfMCDCBitmapInstBase.
-class InstrProfMCDCCondBitmapUpdate : public InstrProfInstBase {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::instrprof_mcdc_condbitmap_update;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-
-  /// \return The ID of the condition to update.
-  ConstantInt *getCondID() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
-  }
-
-  /// \return The address of the corresponding condition bitmap.
-  Value *getMCDCCondBitmapAddr() const {
     return cast<Value>(const_cast<Value *>(getArgOperand(3)));
-  }
-
-  /// \return The boolean value to set in the condition bitmap for the
-  /// corresponding condition ID. This represents how the condition evaluated.
-  Value *getCondBool() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
   }
 };
 
@@ -1799,17 +1775,14 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  // Returns the convergence intrinsic referenced by |I|'s convergencectrl
-  // attribute if any.
-  static IntrinsicInst *getParentConvergenceToken(Instruction *I) {
-    auto *CI = dyn_cast<llvm::CallInst>(I);
-    if (!CI)
-      return nullptr;
-
-    auto Bundle = CI->getOperandBundle(llvm::LLVMContext::OB_convergencectrl);
-    assert(Bundle->Inputs.size() == 1 &&
-           Bundle->Inputs[0]->getType()->isTokenTy());
-    return dyn_cast<llvm::IntrinsicInst>(Bundle->Inputs[0].get());
+  bool isAnchor() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
+  }
+  bool isEntry() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_entry;
+  }
+  bool isLoop() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_loop;
   }
 };
 

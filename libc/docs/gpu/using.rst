@@ -41,7 +41,7 @@ they can be used directly.
 
 .. code-block:: sh
 
-  $> clang opnemp.c -fopenmp --offload-arch=gfx90a -lcgpu-amdgpu
+  $> clang openmp.c -fopenmp --offload-arch=gfx90a -lcgpu-amdgpu
   $> clang cuda.cu --offload-arch=sm_80 --offload-new-driver -fgpu-rdc -lcgpu-nvptx
   $> clang hip.hip --offload-arch=gfx940 --offload-new-driver -fgpu-rdc -lcgpu-amdgpu
 

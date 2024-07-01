@@ -292,8 +292,8 @@ define void @call_floor(float %a) #0 {
 define float @call_floor2(float %a) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor2
-; CHECK-SAME: (float nofpclass(sub) [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float nofpclass(sub) [[A]]) #[[ATTR30:[0-9]+]]
+; CHECK-SAME: (float [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR30:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)

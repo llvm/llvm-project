@@ -40,9 +40,9 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
                       uint64_t Offset) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
   void emitThumbFunc(MCSymbol *Func) override;
@@ -72,9 +72,6 @@ private:
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
   void fixSymbolsInTLSFixups(const MCExpr *expr);
-
-  /// Merge the content of the fragment \p EF into the fragment \p DF.
-  void mergeFragment(MCDataFragment *, MCDataFragment *);
 
   bool SeenIdent;
 };

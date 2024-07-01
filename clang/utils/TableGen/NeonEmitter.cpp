@@ -2370,10 +2370,6 @@ void NeonEmitter::run(raw_ostream &OS) {
         "Please use -mfloat-abi=softfp or -mfloat-abi=hard\"\n";
   OS << "#else\n\n";
 
-  OS << "#if !defined(__ARM_NEON)\n";
-  OS << "#error \"NEON support not enabled\"\n";
-  OS << "#else\n\n";
-
   OS << "#include <stdint.h>\n\n";
 
   OS << "#include <arm_bf16.h>\n";
@@ -2450,7 +2446,6 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#undef __ai\n\n";
   OS << "#endif /* if !defined(__ARM_NEON) */\n";
   OS << "#endif /* ifndef __ARM_FP */\n";
-  OS << "#endif /* __ARM_NEON_H */\n";
 }
 
 /// run - Read the records in arm_fp16.td and output arm_fp16.h.  arm_fp16.h

@@ -45,6 +45,10 @@ TEST_F(FormatTest, FormatsGlobalStatementsAt0) {
   verifyFormat("\nint i;", " \n\t \v \f  int i;");
   verifyFormat("int i;\nint j;", "    int i; int j;");
   verifyFormat("int i;\nint j;", "    int i;\n  int j;");
+
+  auto Style = getLLVMStyle();
+  Style.KeepEmptyLines.AtStartOfFile = false;
+  verifyFormat("int i;", " \n\t \v \f  int i;", Style);
 }
 
 TEST_F(FormatTest, FormatsUnwrappedLinesAtFirstFormat) {
@@ -163,7 +167,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   auto CustomStyle = getLLVMStyle();
   CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
-  CustomStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
+  CustomStyle.KeepEmptyLines.AtStartOfBlock = false;
   verifyFormat("namespace N\n"
                "{\n"
                "\n"
@@ -389,7 +393,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   Style.BraceWrapping.AfterFunction = true;
-  Style.KeepEmptyLinesAtTheStartOfBlocks = false;
+  Style.KeepEmptyLines.AtStartOfBlock = false;
 
   verifyFormat("class Foo\n"
                "{\n"
@@ -9241,6 +9245,14 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                "        b));",
                Style);
 
+  Style.ColumnLimit = 30;
+  verifyFormat("for (int foo = 0; foo < FOO;\n"
+               "    ++foo) {\n"
+               "  bar(foo);\n"
+               "}",
+               Style);
+  Style.ColumnLimit = 80;
+
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   Style.BinPackArguments = false;
   Style.BinPackParameters = false;
@@ -12904,6 +12916,15 @@ TEST_F(FormatTest, FormatsAccessModifiers) {
                "  int j;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  Style.AttributeMacros.push_back("BAR");
+  verifyFormat("struct foo {\n"
+               "FOO private:\n"
+               "  int i;\n"
+               "BAR(x) protected:\n"
+               "  int j;\n"
+               "};",
+               Style);
 
   FormatStyle NoEmptyLines = getLLVMStyle();
   NoEmptyLines.MaxEmptyLinesToKeep = 0;
@@ -14928,7 +14949,7 @@ TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
   verifyFormat("union Z {\n  int n;\n} x;");
   verifyFormat("class MACRO Z {\n} n;");
   verifyFormat("class MACRO(X) Z {\n} n;");
-  verifyFormat("class __attribute__(X) Z {\n} n;");
+  verifyFormat("class __attribute__((X)) Z {\n} n;");
   verifyFormat("class __declspec(X) Z {\n} n;");
   verifyFormat("class A##B##C {\n} n;");
   verifyFormat("class alignas(16) Z {\n} n;");
@@ -21939,6 +21960,11 @@ TEST_F(FormatTest, HandlesUTF8BOM) {
   verifyFormat("\xef\xbb\xbf");
   verifyFormat("\xef\xbb\xbf#include <iostream>");
   verifyFormat("\xef\xbb\xbf\n#include <iostream>");
+
+  auto Style = getLLVMStyle();
+  Style.KeepEmptyLines.AtStartOfFile = false;
+  verifyFormat("\xef\xbb\xbf#include <iostream>",
+               "\xef\xbb\xbf\n#include <iostream>", Style);
 }
 
 // FIXME: Encode Cyrillic and CJK characters below to appease MS compilers.
@@ -22664,6 +22690,7 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("SomeFunction({[]() -> int *[] { return {}; }});");
   verifyFormat("SomeFunction({[]() -> int (*)[] { return {}; }});");
   verifyFormat("SomeFunction({[]() -> ns::type<int (*)[]> { return {}; }});");
+  verifyFormat("foo([&](u32 bar) __attribute__((always_inline)) -> void {});");
   verifyFormat("return int{[x = x]() { return x; }()};");
 
   // Lambdas with explicit template argument lists.
@@ -22856,6 +22883,22 @@ TEST_F(FormatTest, FormatsLambdas) {
       "            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> {\n"
       "      //\n"
       "    });");
+
+  FormatStyle LLVMStyle = getLLVMStyleWithColumns(60);
+  verifyFormat("very_long_function_name_yes_it_is_really_long(\n"
+               "    [](auto n) noexcept [[back_attr]]\n"
+               "        -> std::unordered_map<very_long_type_name_A,\n"
+               "                              very_long_type_name_B> {\n"
+               "      really_do_something();\n"
+               "    });",
+               LLVMStyle);
+  verifyFormat("very_long_function_name_yes_it_is_really_long(\n"
+               "    [](auto n) constexpr\n"
+               "        -> std::unordered_map<very_long_type_name_A,\n"
+               "                              very_long_type_name_B> {\n"
+               "      really_do_something();\n"
+               "    });",
+               LLVMStyle);
 
   FormatStyle DoNotMerge = getLLVMStyle();
   DoNotMerge.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
@@ -24878,7 +24921,7 @@ TEST_F(FormatTest, SkipMacroDefinitionBody) {
                Style);
 
   // With comments.
-  verifyFormat("/* */ #define A  a //  a  a", "/* */  # define A  a  //  a  a",
+  verifyFormat("/* */ #define A  a  //  a  a", "/* */  # define A  a  //  a  a",
                Style);
   verifyNoChange("/* */ #define A  a //  a  a", Style);
 
@@ -24889,6 +24932,15 @@ TEST_F(FormatTest, SkipMacroDefinitionBody) {
                "#define A  // a\n"
                "int aaa; // a",
                Style);
+
+  verifyNoChange(
+      "#define MACRO_WITH_COMMENTS()                                       \\\n"
+      "  public:                                                           \\\n"
+      "    /* Documentation parsed by Doxygen for the following method. */ \\\n"
+      "    static MyType getClassTypeId();                                 \\\n"
+      "    /** Normal comment for the following method. */                 \\\n"
+      "    virtual MyType getTypeId() const;",
+      Style);
 
   // multiline macro definitions
   verifyNoChange("#define A  a\\\n"
@@ -26096,6 +26148,12 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "      int i;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  verifyFormat("class C {\n"
+               "   FOO public:\n"
+               "      int i;\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, LimitlessStringsAndComments) {
@@ -26958,6 +27016,9 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "; int bar;",
                Style);
 #endif
+
+  Style.TypenameMacros.push_back("STRUCT");
+  verifyFormat("STRUCT(T, B) { int i; };", Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {
@@ -27178,7 +27239,7 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
 
 TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
   FormatStyle Style = getLLVMStyle();
-  Style.KeepEmptyLinesAtEOF = true;
+  Style.KeepEmptyLines.AtEndOfFile = true;
 
   const StringRef Code{"int i;\n\n"};
   verifyNoChange(Code, Style);
@@ -27450,6 +27511,12 @@ TEST_F(FormatTest, AlignUTFCommentsAndStringLiterals) {
                "    Language{{'r', 'u'}, U\"Test Русский\" },\n"
                "};",
                Style);
+}
+
+TEST_F(FormatTest, SpaceBetweenKeywordAndLiteral) {
+  verifyFormat("return .5;");
+  verifyFormat("return not '5';");
+  verifyFormat("return sizeof \"5\";");
 }
 
 } // namespace

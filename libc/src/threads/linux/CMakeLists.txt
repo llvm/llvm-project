@@ -9,6 +9,7 @@ add_header_library(
     libc.src.__support.CPP.mutex
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.mutex
+    libc.src.__support.threads.linux.raw_mutex
     libc.src.__support.threads.linux.futex_utils
 )
 

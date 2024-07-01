@@ -47,6 +47,7 @@
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ExternalSemaSource.h"
@@ -171,21 +172,26 @@ class PseudoObjectExpr;
 class QualType;
 class SemaAMDGPU;
 class SemaARM;
+class SemaAVR;
 class SemaBPF;
 class SemaCodeCompletion;
 class SemaCUDA;
 class SemaHLSL;
 class SemaHexagon;
 class SemaLoongArch;
+class SemaM68k;
 class SemaMIPS;
+class SemaMSP430;
 class SemaNVPTX;
 class SemaObjC;
 class SemaOpenACC;
+class SemaOpenCL;
 class SemaOpenMP;
 class SemaPPC;
 class SemaPseudoObject;
 class SemaRISCV;
 class SemaSYCL;
+class SemaSwift;
 class SemaSystemZ;
 class SemaWasm;
 class SemaX86;
@@ -465,6 +471,63 @@ enum class TagUseKind {
   Declaration, // Fwd decl of a tag:   'struct foo;'
   Definition,  // Definition of a tag: 'struct foo { int X; } Y;'
   Friend       // Friend declaration:  'friend struct foo;'
+};
+
+/// Used with attributes/effects with a boolean condition, e.g. `nonblocking`.
+enum class FunctionEffectMode : uint8_t {
+  None,     // effect is not present.
+  False,    // effect(false).
+  True,     // effect(true).
+  Dependent // effect(expr) where expr is dependent.
+};
+
+struct FunctionEffectDiff {
+  enum class Kind { Added, Removed, ConditionMismatch };
+
+  FunctionEffect::Kind EffectKind;
+  Kind DiffKind;
+  FunctionEffectWithCondition Old; // invalid when Added.
+  FunctionEffectWithCondition New; // invalid when Removed.
+
+  StringRef effectName() const {
+    if (Old.Effect.kind() != FunctionEffect::Kind::None)
+      return Old.Effect.name();
+    return New.Effect.name();
+  }
+
+  /// Describes the result of effects differing between a base class's virtual
+  /// method and an overriding method in a subclass.
+  enum class OverrideResult {
+    NoAction,
+    Warn,
+    Merge // Merge missing effect from base to derived.
+  };
+
+  /// Return true if adding or removing the effect as part of a type conversion
+  /// should generate a diagnostic.
+  bool shouldDiagnoseConversion(QualType SrcType,
+                                const FunctionEffectsRef &SrcFX,
+                                QualType DstType,
+                                const FunctionEffectsRef &DstFX) const;
+
+  /// Return true if adding or removing the effect in a redeclaration should
+  /// generate a diagnostic.
+  bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
+                                   const FunctionEffectsRef &OldFX,
+                                   const FunctionDecl &NewFunction,
+                                   const FunctionEffectsRef &NewFX) const;
+
+  /// Return true if adding or removing the effect in a C++ virtual method
+  /// override should generate a diagnostic.
+  OverrideResult shouldDiagnoseMethodOverride(
+      const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+      const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
+};
+
+struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
+  /// Caller should short-circuit by checking for equality first.
+  FunctionEffectDifferences(const FunctionEffectsRef &Old,
+                            const FunctionEffectsRef &New);
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -777,6 +840,28 @@ public:
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
 
+  // ----- function effects ---
+
+  /// Warn when implicitly changing function effects.
+  void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
+                                        SourceLocation Loc);
+
+  /// Warn and return true if adding an effect to a set would create a conflict.
+  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
+                                         const FunctionEffectWithCondition &EC,
+                                         SourceLocation NewAttrLoc);
+
+  void
+  diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
+                                       SourceLocation NewLoc,
+                                       SourceLocation OldLoc);
+
+  /// Try to parse the conditional expression attached to an effect attribute
+  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty
+  /// optional on error.
+  std::optional<FunctionEffectMode>
+  ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
+
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);
 
@@ -1011,6 +1096,11 @@ public:
     return *ARMPtr;
   }
 
+  SemaAVR &AVR() {
+    assert(AVRPtr);
+    return *AVRPtr;
+  }
+
   SemaBPF &BPF() {
     assert(BPFPtr);
     return *BPFPtr;
@@ -1041,9 +1131,19 @@ public:
     return *LoongArchPtr;
   }
 
+  SemaM68k &M68k() {
+    assert(M68kPtr);
+    return *M68kPtr;
+  }
+
   SemaMIPS &MIPS() {
     assert(MIPSPtr);
     return *MIPSPtr;
+  }
+
+  SemaMSP430 &MSP430() {
+    assert(MSP430Ptr);
+    return *MSP430Ptr;
   }
 
   SemaNVPTX &NVPTX() {
@@ -1059,6 +1159,11 @@ public:
   SemaOpenACC &OpenACC() {
     assert(OpenACCPtr);
     return *OpenACCPtr;
+  }
+
+  SemaOpenCL &OpenCL() {
+    assert(OpenCLPtr);
+    return *OpenCLPtr;
   }
 
   SemaOpenMP &OpenMP() {
@@ -1084,6 +1189,11 @@ public:
   SemaSYCL &SYCL() {
     assert(SYCLPtr);
     return *SYCLPtr;
+  }
+
+  SemaSwift &Swift() {
+    assert(SwiftPtr);
+    return *SwiftPtr;
   }
 
   SemaSystemZ &SystemZ() {
@@ -1133,21 +1243,26 @@ private:
 
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
   std::unique_ptr<SemaARM> ARMPtr;
+  std::unique_ptr<SemaAVR> AVRPtr;
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaHexagon> HexagonPtr;
   std::unique_ptr<SemaLoongArch> LoongArchPtr;
+  std::unique_ptr<SemaM68k> M68kPtr;
   std::unique_ptr<SemaMIPS> MIPSPtr;
+  std::unique_ptr<SemaMSP430> MSP430Ptr;
   std::unique_ptr<SemaNVPTX> NVPTXPtr;
   std::unique_ptr<SemaObjC> ObjCPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
+  std::unique_ptr<SemaOpenCL> OpenCLPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
   std::unique_ptr<SemaPPC> PPCPtr;
   std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
   std::unique_ptr<SemaRISCV> RISCVPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
+  std::unique_ptr<SemaSwift> SwiftPtr;
   std::unique_ptr<SemaSystemZ> SystemZPtr;
   std::unique_ptr<SemaWasm> WasmPtr;
   std::unique_ptr<SemaX86> X86Ptr;
@@ -1999,8 +2114,6 @@ public:
 
   bool FormatStringHasSArg(const StringLiteral *FExpr);
 
-  static bool GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx);
-
   void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
                             BinaryOperatorKind Opcode);
 
@@ -2113,8 +2226,6 @@ public:
   bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
-  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-
   void checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                  const Expr *ThisArg, ArrayRef<const Expr *> Args,
                  bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
@@ -2143,6 +2254,14 @@ public:
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
 
   bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
+
+  void CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
+                               bool *ICContext = nullptr,
+                               bool IsListInit = false);
+
+  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                     bool CheckForFloatArgs = true);
+  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -2191,9 +2310,6 @@ private:
                                  AtomicExpr::AtomicOp Op);
 
   bool BuiltinElementwiseMath(CallExpr *TheCall);
-  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                     bool CheckForFloatArgs = true);
-  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -3711,8 +3827,6 @@ public:
                                           const AttributeCommonInfo &CI,
                                           const IdentifierInfo *Ident);
   MinSizeAttr *mergeMinSizeAttr(Decl *D, const AttributeCommonInfo &CI);
-  SwiftNameAttr *mergeSwiftNameAttr(Decl *D, const SwiftNameAttr &SNA,
-                                    StringRef Name);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D,
                                           const AttributeCommonInfo &CI);
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, const ParsedAttr &AL);
@@ -3726,8 +3840,6 @@ public:
       const ParsedAttr &attr, CallingConv &CC, const FunctionDecl *FD = nullptr,
       CUDAFunctionTarget CFT = CUDAFunctionTarget::InvalidTarget);
 
-  void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
-                           ParameterABI ABI);
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
 
   /// Create an CUDALaunchBoundsAttr attribute.
@@ -3742,20 +3854,6 @@ public:
                            Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
 
   enum class RetainOwnershipKind { NS, CF, OS };
-  void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
-                        RetainOwnershipKind K, bool IsTemplateInstantiation);
-
-  bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
-
-  /// Do a check to make sure \p Name looks like a legal argument for the
-  /// swift_name attribute applied to decl \p D.  Raise a diagnostic if the name
-  /// is invalid for the given declaration.
-  ///
-  /// \p AL is used to provide caret diagnostics in case of a malformed name.
-  ///
-  /// \returns true if the name is a valid swift name for \p D, false otherwise.
-  bool DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
-                         const ParsedAttr &AL, bool IsAsync);
 
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
@@ -3824,6 +3922,52 @@ public:
   void PopParsingDeclaration(ParsingDeclState state, Decl *decl);
 
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
+
+  /// Check if IdxExpr is a valid parameter index for a function or
+  /// instance method D.  May output an error.
+  ///
+  /// \returns true if IdxExpr is a valid index.
+  template <typename AttrInfo>
+  bool checkFunctionOrMethodParameterIndex(const Decl *D, const AttrInfo &AI,
+                                           unsigned AttrArgNum,
+                                           const Expr *IdxExpr, ParamIdx &Idx,
+                                           bool CanIndexImplicitThis = false) {
+    assert(isFunctionOrMethodOrBlockForAttrSubject(D));
+
+    // In C++ the implicit 'this' function parameter also counts.
+    // Parameters are counted from one.
+    bool HP = hasFunctionProto(D);
+    bool HasImplicitThisParam = isInstanceMethod(D);
+    bool IV = HP && isFunctionOrMethodVariadic(D);
+    unsigned NumParams =
+        (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
+
+    std::optional<llvm::APSInt> IdxInt;
+    if (IdxExpr->isTypeDependent() ||
+        !(IdxInt = IdxExpr->getIntegerConstantExpr(Context))) {
+      Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
+          << &AI << AttrArgNum << AANT_ArgumentIntegerConstant
+          << IdxExpr->getSourceRange();
+      return false;
+    }
+
+    unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
+    if (IdxSource < 1 || (!IV && IdxSource > NumParams)) {
+      Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
+          << &AI << AttrArgNum << IdxExpr->getSourceRange();
+      return false;
+    }
+    if (HasImplicitThisParam && !CanIndexImplicitThis) {
+      if (IdxSource == 1) {
+        Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
+            << &AI << IdxExpr->getSourceRange();
+        return false;
+      }
+    }
+
+    Idx = ParamIdx(IdxSource, D);
+    return true;
+  }
 
   ///@}
 
@@ -3967,8 +4111,8 @@ public:
                               const ParsedAttributesView &AttrList);
   Decl *ActOnUsingEnumDeclaration(Scope *CurScope, AccessSpecifier AS,
                                   SourceLocation UsingLoc,
-                                  SourceLocation EnumLoc,
-                                  SourceLocation IdentLoc, IdentifierInfo &II,
+                                  SourceLocation EnumLoc, SourceRange TyLoc,
+                                  const IdentifierInfo &II, ParsedType Ty,
                                   CXXScopeSpec *SS = nullptr);
   Decl *ActOnAliasDeclaration(Scope *CurScope, AccessSpecifier AS,
                               MultiTemplateParamsArg TemplateParams,
@@ -4423,6 +4567,10 @@ public:
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
 
+  /// Check that VTable Pointer authentication is only being set on the first
+  /// first instantiation of the vtable
+  void checkIncorrectVTablePointerAuthenticationAttribute(CXXRecordDecl &RD);
+
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
                                          SourceLocation RBrac,
@@ -4548,7 +4696,7 @@ public:
 
   std::string getAmbiguousPathsDisplayString(CXXBasePaths &Paths);
 
-  bool CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
+  bool CheckOverridingFunctionAttributes(CXXMethodDecl *New,
                                          const CXXMethodDecl *Old);
 
   /// CheckOverridingFunctionReturnType - Checks whether the return types are
@@ -5175,6 +5323,12 @@ public:
     return ExprEvalContexts.back();
   };
 
+  ExpressionEvaluationContextRecord &currentEvaluationContext() {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back();
+  };
+
   ExpressionEvaluationContextRecord &parentEvaluationContext() {
     assert(ExprEvalContexts.size() >= 2 &&
            "Must be in an expression evaluation context");
@@ -5664,6 +5818,10 @@ public:
   ExprResult ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
+
+  // #embed
+  ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
+                            StringLiteral *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
@@ -9631,7 +9789,7 @@ public:
                  bool DependentDeduction = false,
                  bool IgnoreConstraints = false,
                  TemplateSpecCandidateSet *FailedTSC = nullptr);
-  void DiagnoseAutoDeductionFailure(VarDecl *VDecl, Expr *Init);
+  void DiagnoseAutoDeductionFailure(const VarDecl *VDecl, const Expr *Init);
   bool DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
                         bool Diagnose = true);
 

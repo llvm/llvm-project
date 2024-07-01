@@ -65,6 +65,8 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCall             = ps.isCall;
   let isBranch           = ps.isBranch;
   let isBarrier          = ps.isBarrier;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
 
   // encoding
   bits<7> sdst;
@@ -212,6 +214,11 @@ let isMoveImm = 1 in {
     def S_CMOV_B64 : SOP1_64 <"s_cmov_b64">;
   } // End Uses = [SCC]
 } // End isMoveImm = 1
+
+// Variant of S_MOV_B32 used for reading from volatile registers like
+// SRC_POPS_EXITING_WAVE_ID.
+let hasSideEffects = 1 in
+def S_MOV_B32_sideeffects : SOP1_32 <"s_mov_b32">;
 
 let Defs = [SCC] in {
   def S_NOT_B32 : SOP1_32 <"s_not_b32",
@@ -570,6 +577,8 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let mayStore             = ps.mayStore;
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   // encoding
   bits<7> sdst;
@@ -985,6 +994,8 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   let isTerminator       = ps.isTerminator;
   let isReturn           = ps.isReturn;
   let isBarrier          = ps.isBarrier;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
 
   // encoding
   bits<7>  sdst;
@@ -1190,11 +1201,15 @@ let SubtargetPredicate = isGFX9Plus in {
   }
 } // End SubtargetPredicate = isGFX9Plus
 
+def VersionImm : S16ImmOperand {
+  let DecoderMethod = "decodeVersionImm";
+}
+
 let SubtargetPredicate = isGFX10Plus in {
   def S_VERSION : SOPK_Pseudo<
       "s_version",
       (outs),
-      (ins s16imm:$simm16),
+      (ins VersionImm:$simm16),
       "$simm16"> {
     let has_sdst = 0;
   }
@@ -1245,6 +1260,8 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps> :
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   // encoding
   bits<8> src0;
@@ -1440,6 +1457,8 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   let isCall               = ps.isCall;
   let isBranch             = ps.isBranch;
   let isBarrier            = ps.isBarrier;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
   bits <16> simm16;
 }
 
@@ -1865,6 +1884,12 @@ def : GetFPModePat<fpmode_mask_gfx9plus>;
 let SubtargetPredicate = isNotGFX9Plus in {
 def : GetFPModePat<fpmode_mask_gfx6plus>;
 }
+
+let SubtargetPredicate = isGFX9GFX10 in
+def : GCNPat<
+  (int_amdgcn_pops_exiting_wave_id),
+  (S_MOV_B32_sideeffects (i32 SRC_POPS_EXITING_WAVE_ID))
+>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 Patterns

@@ -13,6 +13,7 @@
 #include "polly/ScopInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;

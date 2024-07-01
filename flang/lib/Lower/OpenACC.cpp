@@ -46,14 +46,15 @@ static mlir::Location
 genOperandLocation(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::AccObject &accObject) {
   mlir::Location loc = converter.genUnknownLocation();
-  std::visit(Fortran::common::visitors{
-                 [&](const Fortran::parser::Designator &designator) {
-                   loc = converter.genLocation(designator.source);
-                 },
-                 [&](const Fortran::parser::Name &name) {
-                   loc = converter.genLocation(name.source);
-                 }},
-             accObject.u);
+  Fortran::common::visit(
+      Fortran::common::visitors{
+          [&](const Fortran::parser::Designator &designator) {
+            loc = converter.genLocation(designator.source);
+          },
+          [&](const Fortran::parser::Name &name) {
+            loc = converter.genLocation(name.source);
+          }},
+      accObject.u);
   return loc;
 }
 
@@ -297,8 +298,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-    Fortran::semantics::MaybeExpr designator =
-        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
+        [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -335,8 +336,8 @@ static void genDeclareDataOperandOperations(
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-    Fortran::semantics::MaybeExpr designator =
-        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
+        [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -790,8 +791,8 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-    Fortran::semantics::MaybeExpr designator =
-        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
+        [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -1364,8 +1365,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-    Fortran::semantics::MaybeExpr designator =
-        std::visit([&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
+        [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     Fortran::lower::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -3414,7 +3415,7 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const auto &accObject : accObjectList.v) {
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
-    std::visit(
+    Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::Designator &designator) {
               if (const auto *name =
@@ -3993,7 +3994,7 @@ genACC(Fortran::lower::AbstractConverter &converter,
        const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
 
   mlir::Location loc = converter.genLocation(atomicConstruct.source);
-  std::visit(
+  Fortran::common::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::AccAtomicRead &atomicRead) {
             Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
@@ -4061,7 +4062,7 @@ mlir::Value Fortran::lower::genOpenACCConstruct(
     const Fortran::parser::OpenACCConstruct &accConstruct) {
 
   mlir::Value exitCond;
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const Fortran::parser::OpenACCBlockConstruct &blockConstruct) {
             genACC(converter, semanticsContext, eval, blockConstruct);
@@ -4101,7 +4102,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
     const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct,
     Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
 
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                   &standaloneDeclarativeConstruct) {

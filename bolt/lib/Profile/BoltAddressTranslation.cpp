@@ -304,7 +304,7 @@ std::error_code BoltAddressTranslation::parse(raw_ostream &OS, StringRef Buf) {
 
   StringRef Name = Buf.slice(Offset, Offset + NameSz);
   Offset = alignTo(Offset + NameSz, 4);
-  if (Name.substr(0, 4) != "BOLT")
+  if (!Name.starts_with("BOLT"))
     return make_error_code(llvm::errc::io_error);
 
   Error Err(Error::success());

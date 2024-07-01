@@ -10,8 +10,8 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.exe.bolt.dwp | FileCheck -check-prefix=BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-TU-INDEX %s
 
-; Test input into bolt a .dwo file with TU Index.
-; Make sure the output .dwp file has a type information.
+;; Test input into bolt a .dwo file with TU Index.
+;; Make sure the output .dwp file has a type information.
 
 ; PRE-BOLT: DW_TAG_type_unit
 ; PRE-BOLT: DW_TAG_type_unit
