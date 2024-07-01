@@ -6834,24 +6834,26 @@ CGObjCNonFragileABIMac::ObjCIvarOffsetVariable(const ObjCInterfaceDecl *ID,
   Name += Ivar->getName();
   llvm::GlobalVariable *IvarOffsetGV = CGM.getModule().getGlobalVariable(Name);
   if (!IvarOffsetGV) {
-    IvarOffsetGV =
-        new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.IvarOffsetVarTy,
-                                 false, llvm::GlobalValue::ExternalLinkage,
-                                 nullptr, Name.str());
+    IvarOffsetGV = new llvm::GlobalVariable(
+        CGM.getModule(), ObjCTypes.IvarOffsetVarTy, false,
+        llvm::GlobalValue::ExternalLinkage, nullptr, Name.str());
+    bool IsPrivateOrPackage =
+        Ivar->getAccessControl() == ObjCIvarDecl::Private ||
+        Ivar->getAccessControl() == ObjCIvarDecl::Package;
     if (CGM.getTriple().isOSBinFormatCOFF()) {
-      bool IsPrivateOrPackage =
-          Ivar->getAccessControl() == ObjCIvarDecl::Private ||
-          Ivar->getAccessControl() == ObjCIvarDecl::Package;
-
       const ObjCInterfaceDecl *ContainingID = Ivar->getContainingInterface();
-
       if (ContainingID->hasAttr<DLLImportAttr>())
-        IvarOffsetGV
-            ->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+        IvarOffsetGV->setDLLStorageClass(
+            llvm::GlobalValue::DLLImportStorageClass);
       else if (ContainingID->hasAttr<DLLExportAttr>() && !IsPrivateOrPackage)
-        IvarOffsetGV
-            ->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+        IvarOffsetGV->setDLLStorageClass(
+            llvm::GlobalValue::DLLExportStorageClass);
     }
+
+    if (IsPrivateOrPackage || ID->getVisibility() == HiddenVisibility)
+      IvarOffsetGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    else
+      IvarOffsetGV->setVisibility(llvm::GlobalValue::DefaultVisibility);
   }
   return IvarOffsetGV;
 }
@@ -6867,8 +6869,6 @@ CGObjCNonFragileABIMac::EmitIvarOffsetVar(const ObjCInterfaceDecl *ID,
       CGM.getDataLayout().getABITypeAlign(ObjCTypes.IvarOffsetVarTy));
 
   if (!CGM.getTriple().isOSBinFormatCOFF()) {
-    // FIXME: This matches gcc, but shouldn't the visibility be set on the use
-    // as well (i.e., in ObjCIvarOffsetVariable).
     if (Ivar->getAccessControl() == ObjCIvarDecl::Private ||
         Ivar->getAccessControl() == ObjCIvarDecl::Package ||
         ID->getVisibility() == HiddenVisibility)
