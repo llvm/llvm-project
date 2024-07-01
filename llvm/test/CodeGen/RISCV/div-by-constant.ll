@@ -141,21 +141,39 @@ define i64 @udiv64_constant_add(i64 %a) nounwind {
 }
 
 define i8 @udiv8_constant_no_add(i8 %a) nounwind {
-; RV32-LABEL: udiv8_constant_no_add:
-; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 255
-; RV32-NEXT:    li a1, 205
-; RV32-NEXT:    mul a0, a0, a1
-; RV32-NEXT:    srli a0, a0, 10
-; RV32-NEXT:    ret
+; RV32IM-LABEL: udiv8_constant_no_add:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    andi a0, a0, 255
+; RV32IM-NEXT:    li a1, 205
+; RV32IM-NEXT:    mul a0, a0, a1
+; RV32IM-NEXT:    srli a0, a0, 10
+; RV32IM-NEXT:    ret
 ;
-; RV64-LABEL: udiv8_constant_no_add:
-; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
-; RV64-NEXT:    li a1, 205
-; RV64-NEXT:    mul a0, a0, a1
-; RV64-NEXT:    srli a0, a0, 10
-; RV64-NEXT:    ret
+; RV32IMZB-LABEL: udiv8_constant_no_add:
+; RV32IMZB:       # %bb.0:
+; RV32IMZB-NEXT:    andi a0, a0, 255
+; RV32IMZB-NEXT:    sh2add a1, a0, a0
+; RV32IMZB-NEXT:    sh3add a0, a1, a0
+; RV32IMZB-NEXT:    sh2add a0, a0, a0
+; RV32IMZB-NEXT:    srli a0, a0, 10
+; RV32IMZB-NEXT:    ret
+;
+; RV64IM-LABEL: udiv8_constant_no_add:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    andi a0, a0, 255
+; RV64IM-NEXT:    li a1, 205
+; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    srli a0, a0, 10
+; RV64IM-NEXT:    ret
+;
+; RV64IMZB-LABEL: udiv8_constant_no_add:
+; RV64IMZB:       # %bb.0:
+; RV64IMZB-NEXT:    andi a0, a0, 255
+; RV64IMZB-NEXT:    sh2add a1, a0, a0
+; RV64IMZB-NEXT:    sh3add a0, a1, a0
+; RV64IMZB-NEXT:    sh2add a0, a0, a0
+; RV64IMZB-NEXT:    srli a0, a0, 10
+; RV64IMZB-NEXT:    ret
   %1 = udiv i8 %a, 5
   ret i8 %1
 }
@@ -657,8 +675,9 @@ define i8 @sdiv8_constant_sub_srai(i8 %a) nounwind {
 ; RV32IMZB-LABEL: sdiv8_constant_sub_srai:
 ; RV32IMZB:       # %bb.0:
 ; RV32IMZB-NEXT:    sext.b a1, a0
-; RV32IMZB-NEXT:    li a2, 109
-; RV32IMZB-NEXT:    mul a1, a1, a2
+; RV32IMZB-NEXT:    sh3add a2, a1, a1
+; RV32IMZB-NEXT:    sh1add a2, a2, a2
+; RV32IMZB-NEXT:    sh2add a1, a2, a1
 ; RV32IMZB-NEXT:    srli a1, a1, 8
 ; RV32IMZB-NEXT:    sub a1, a1, a0
 ; RV32IMZB-NEXT:    slli a1, a1, 24
@@ -684,8 +703,9 @@ define i8 @sdiv8_constant_sub_srai(i8 %a) nounwind {
 ; RV64IMZB-LABEL: sdiv8_constant_sub_srai:
 ; RV64IMZB:       # %bb.0:
 ; RV64IMZB-NEXT:    sext.b a1, a0
-; RV64IMZB-NEXT:    li a2, 109
-; RV64IMZB-NEXT:    mul a1, a1, a2
+; RV64IMZB-NEXT:    sh3add a2, a1, a1
+; RV64IMZB-NEXT:    sh1add a2, a2, a2
+; RV64IMZB-NEXT:    sh2add a1, a2, a1
 ; RV64IMZB-NEXT:    srli a1, a1, 8
 ; RV64IMZB-NEXT:    subw a1, a1, a0
 ; RV64IMZB-NEXT:    slli a1, a1, 56

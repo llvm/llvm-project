@@ -148,10 +148,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV32M-NEXT:    slli a1, a1, 24
 ; RV32M-NEXT:    srli a1, a1, 31
 ; RV32M-NEXT:    add a1, a2, a1
-; RV32M-NEXT:    slli a2, a1, 3
+; RV32M-NEXT:    slli a2, a1, 1
+; RV32M-NEXT:    add a1, a2, a1
 ; RV32M-NEXT:    slli a1, a1, 1
-; RV32M-NEXT:    sub a1, a1, a2
-; RV32M-NEXT:    add a0, a0, a1
+; RV32M-NEXT:    sub a0, a0, a1
 ; RV32M-NEXT:    andi a0, a0, 15
 ; RV32M-NEXT:    addi a0, a0, -1
 ; RV32M-NEXT:    seqz a0, a0
@@ -167,10 +167,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV64M-NEXT:    slli a1, a1, 56
 ; RV64M-NEXT:    srli a1, a1, 63
 ; RV64M-NEXT:    add a1, a2, a1
-; RV64M-NEXT:    slli a2, a1, 3
+; RV64M-NEXT:    slli a2, a1, 1
+; RV64M-NEXT:    add a1, a2, a1
 ; RV64M-NEXT:    slli a1, a1, 1
-; RV64M-NEXT:    subw a1, a1, a2
-; RV64M-NEXT:    add a0, a0, a1
+; RV64M-NEXT:    subw a0, a0, a1
 ; RV64M-NEXT:    andi a0, a0, 15
 ; RV64M-NEXT:    addi a0, a0, -1
 ; RV64M-NEXT:    seqz a0, a0
@@ -186,10 +186,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV32MV-NEXT:    slli a1, a1, 24
 ; RV32MV-NEXT:    srli a1, a1, 31
 ; RV32MV-NEXT:    add a1, a2, a1
-; RV32MV-NEXT:    slli a2, a1, 3
+; RV32MV-NEXT:    slli a2, a1, 1
+; RV32MV-NEXT:    add a1, a2, a1
 ; RV32MV-NEXT:    slli a1, a1, 1
-; RV32MV-NEXT:    sub a1, a1, a2
-; RV32MV-NEXT:    add a0, a0, a1
+; RV32MV-NEXT:    sub a0, a0, a1
 ; RV32MV-NEXT:    andi a0, a0, 15
 ; RV32MV-NEXT:    addi a0, a0, -1
 ; RV32MV-NEXT:    seqz a0, a0
@@ -205,10 +205,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV64MV-NEXT:    slli a1, a1, 56
 ; RV64MV-NEXT:    srli a1, a1, 63
 ; RV64MV-NEXT:    add a1, a2, a1
-; RV64MV-NEXT:    slli a2, a1, 3
+; RV64MV-NEXT:    slli a2, a1, 1
+; RV64MV-NEXT:    add a1, a2, a1
 ; RV64MV-NEXT:    slli a1, a1, 1
-; RV64MV-NEXT:    subw a1, a1, a2
-; RV64MV-NEXT:    add a0, a0, a1
+; RV64MV-NEXT:    subw a0, a0, a1
 ; RV64MV-NEXT:    andi a0, a0, 15
 ; RV64MV-NEXT:    addi a0, a0, -1
 ; RV64MV-NEXT:    seqz a0, a0
@@ -756,12 +756,12 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    mulh a4, a3, a5
 ; RV64MV-NEXT:    srli a5, a4, 63
 ; RV64MV-NEXT:    add a4, a4, a5
-; RV64MV-NEXT:    slli a5, a4, 3
+; RV64MV-NEXT:    slli a5, a4, 1
+; RV64MV-NEXT:    add a4, a5, a4
 ; RV64MV-NEXT:    slli a4, a4, 1
-; RV64MV-NEXT:    sub a4, a4, a5
 ; RV64MV-NEXT:    lui a5, %hi(.LCPI3_2)
 ; RV64MV-NEXT:    ld a5, %lo(.LCPI3_2)(a5)
-; RV64MV-NEXT:    add a3, a3, a4
+; RV64MV-NEXT:    sub a3, a3, a4
 ; RV64MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64MV-NEXT:    vmv.v.x v8, a3
 ; RV64MV-NEXT:    vslide1down.vx v8, v8, a2
