@@ -631,7 +631,7 @@ bool generateDsymCompanion(
   for (const MCSection &Sec : MCAsm) {
     uint64_t Pos = OutFile.tell();
     OutFile.write_zeros(alignTo(Pos, Sec.getAlign()) - Pos);
-    MCAsm.writeSectionData(OutFile, &Sec, Layout);
+    MCAsm.writeSectionData(OutFile, &Sec);
   }
 
   // Apply relocations to the contents of the DWARF segment.

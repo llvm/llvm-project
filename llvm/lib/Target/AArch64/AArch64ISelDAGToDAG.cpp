@@ -395,8 +395,9 @@ public:
   template <unsigned MaxIdx, unsigned Scale>
   void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
                              unsigned Op);
-  void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs, unsigned Op,
-                              unsigned MaxIdx, unsigned Scale);
+  void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
+                              unsigned Op, unsigned MaxIdx, unsigned Scale,
+                              unsigned BaseReg = 0);
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
@@ -2006,9 +2007,14 @@ void AArch64DAGToDAGISel::SelectMultiVectorMove(SDNode *N, unsigned NumVecs,
 
 void AArch64DAGToDAGISel::SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
                                                  unsigned Op, unsigned MaxIdx,
-                                                 unsigned Scale) {
+                                                 unsigned Scale, unsigned BaseReg) {
+  // Slice can be in different positions
+  // The array to vector: llvm.aarch64.sme.readz.<h/v>.<sz>(slice)
+  // The tile to vector: llvm.aarch64.sme.readz.<h/v>.<sz>(tile, slice)
+  SDValue SliceBase = N->getOperand(2);
+  if (BaseReg != AArch64::ZA)
+    SliceBase = N->getOperand(3);
 
-  SDValue SliceBase = N->getOperand(3);
   SDValue Base, Offset;
   if (!SelectSMETileSlice(SliceBase, MaxIdx, Base, Offset, Scale))
     return;
@@ -2016,8 +2022,12 @@ void AArch64DAGToDAGISel::SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
   // See EmitZAInstr
   // DAG cannot select Za tile as an output register with ZReg
   SDLoc DL(N);
-  SDValue Ops[] = {/*TileNum*/ N->getOperand(2), Base, Offset,
-                   /*Chain*/ N->getOperand(0)};
+  SmallVector<SDValue, 6> Ops;
+  if (BaseReg != AArch64::ZA )
+    Ops.push_back(N->getOperand(2));
+  Ops.push_back(Base);
+  Ops.push_back(Offset);
+  Ops.push_back(N->getOperand(0)); //Chain
   SDNode *Mov = CurDAG->getMachineNode(Op, DL, {MVT::Untyped, MVT::Other}, Ops);
 
   EVT VT = N->getValueType(0);
@@ -5341,6 +5351,16 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       }
       break;
+    }
+    case Intrinsic::aarch64_sme_readz_x2: {
+      SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_VG2_2ZMXI_PSEUDO, 7, 1,
+                             AArch64::ZA);
+      return;
+    }
+    case Intrinsic::aarch64_sme_readz_x4: {
+      SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_VG4_4ZMXI_PSEUDO, 7, 1,
+                             AArch64::ZA);
+      return;
     }
     case Intrinsic::swift_async_context_addr: {
       SDLoc DL(Node);
