@@ -1649,7 +1649,6 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   return BuildQualifiedType(T, Loc, Q, DS);
 }
 
-/// Build a paren type including \p T.
 QualType Sema::BuildParenType(QualType T) {
   return Context.getParenType(T);
 }
@@ -1780,19 +1779,6 @@ static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
   return PointeeType;
 }
 
-/// Build a pointer type.
-///
-/// \param T The type to which we'll be building a pointer.
-///
-/// \param Loc The location of the entity whose type involves this
-/// pointer type or, if there is no such entity, the location of the
-/// type that will have pointer type.
-///
-/// \param Entity The name of the entity that involves the pointer
-/// type, if known.
-///
-/// \returns A suitable pointer type, if there are no
-/// errors. Otherwise, returns a NULL type.
 QualType Sema::BuildPointerType(QualType T,
                                 SourceLocation Loc, DeclarationName Entity) {
   if (T->isReferenceType()) {
@@ -1845,19 +1831,6 @@ QualType Sema::BuildPointerType(QualType T,
   return Context.getPointerType(T);
 }
 
-/// Build a reference type.
-///
-/// \param T The type to which we'll be building a reference.
-///
-/// \param Loc The location of the entity whose type involves this
-/// reference type or, if there is no such entity, the location of the
-/// type that will have reference type.
-///
-/// \param Entity The name of the entity that involves the reference
-/// type, if known.
-///
-/// \returns A suitable reference type, if there are no
-/// errors. Otherwise, returns a NULL type.
 QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
                                   SourceLocation Loc,
                                   DeclarationName Entity) {
@@ -1933,38 +1906,14 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
   return Context.getRValueReferenceType(T);
 }
 
-/// Build a Read-only Pipe type.
-///
-/// \param T The type to which we'll be building a Pipe.
-///
-/// \param Loc We do not use it for now.
-///
-/// \returns A suitable pipe type, if there are no errors. Otherwise, returns a
-/// NULL type.
 QualType Sema::BuildReadPipeType(QualType T, SourceLocation Loc) {
   return Context.getReadPipeType(T);
 }
 
-/// Build a Write-only Pipe type.
-///
-/// \param T The type to which we'll be building a Pipe.
-///
-/// \param Loc We do not use it for now.
-///
-/// \returns A suitable pipe type, if there are no errors. Otherwise, returns a
-/// NULL type.
 QualType Sema::BuildWritePipeType(QualType T, SourceLocation Loc) {
   return Context.getWritePipeType(T);
 }
 
-/// Build a bit-precise integer type.
-///
-/// \param IsUnsigned Boolean representing the signedness of the type.
-///
-/// \param BitWidth Size of this int type in bits, or an expression representing
-/// that.
-///
-/// \param Loc Location of the keyword.
 QualType Sema::BuildBitIntType(bool IsUnsigned, Expr *BitWidth,
                                SourceLocation Loc) {
   if (BitWidth->isInstantiationDependent())
@@ -2073,21 +2022,6 @@ bool Sema::checkArrayElementAlignment(QualType EltTy, SourceLocation Loc) {
   return false;
 }
 
-/// Build an array type.
-///
-/// \param T The type of each element in the array.
-///
-/// \param ASM C99 array size modifier (e.g., '*', 'static').
-///
-/// \param ArraySize Expression describing the size of the array.
-///
-/// \param Brackets The range from the opening '[' to the closing ']'.
-///
-/// \param Entity The name of the entity that involves the array
-/// type, if known.
-///
-/// \returns A suitable array type, if there are no errors. Otherwise,
-/// returns a NULL type.
 QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
@@ -2427,9 +2361,6 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                VectorKind::Generic);
 }
 
-/// Build an ext-vector type.
-///
-/// Run the required checks for the extended vector type.
 QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
                                   SourceLocation AttrLoc) {
   // Unlike gcc's vector_size attribute, we do not allow vectors to be defined
@@ -2718,15 +2649,6 @@ QualType Sema::BuildFunctionType(QualType T,
   return Context.getFunctionType(T, ParamTypes, EPI);
 }
 
-/// Build a member pointer type \c T Class::*.
-///
-/// \param T the type to which the member pointer refers.
-/// \param Class the class type into which the member pointer points.
-/// \param Loc the location where this type begins
-/// \param Entity the name of the entity that will have this member pointer type
-///
-/// \returns a member pointer type, if successful, or a NULL type if there was
-/// an error.
 QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
                                       SourceLocation Loc,
                                       DeclarationName Entity) {
@@ -2779,17 +2701,6 @@ QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
   return Context.getMemberPointerType(T, Class.getTypePtr());
 }
 
-/// Build a block pointer type.
-///
-/// \param T The type to which we'll be building a block pointer.
-///
-/// \param Loc The source location, used for diagnostics.
-///
-/// \param Entity The name of the entity that involves the block pointer
-/// type, if known.
-///
-/// \returns A suitable block pointer type, if there are no
-/// errors. Otherwise, returns a NULL type.
 QualType Sema::BuildBlockPointerType(QualType T,
                                      SourceLocation Loc,
                                      DeclarationName Entity) {
@@ -5675,11 +5586,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
-/// GetTypeForDeclarator - Convert the type for the specified
-/// declarator to Type instances.
-///
-/// The result of this call will never be null, but the associated
-/// type may be a null type if there's an unrecoverable error.
 TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D) {
   // Determine the type of the declarator. Not all forms of declarator
   // have a type.
@@ -6460,10 +6366,6 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
   return true;
 }
 
-/// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an expression
-/// is uninstantiated. If instantiated it will apply the appropriate address
-/// space to the type. This function allows dependent template variables to be
-/// used in conjunction with the address_space attribute
 QualType Sema::BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                      SourceLocation AttrLoc) {
   if (!AddrSpace->isValueDependent()) {
@@ -8914,21 +8816,6 @@ QualType Sema::getCompletedType(Expr *E) {
   return E->getType();
 }
 
-/// Ensure that the type of the given expression is complete.
-///
-/// This routine checks whether the expression \p E has a complete type. If the
-/// expression refers to an instantiable construct, that instantiation is
-/// performed as needed to complete its type. Furthermore
-/// Sema::RequireCompleteType is called for the expression's type (or in the
-/// case of a reference type, the referred-to type).
-///
-/// \param E The expression whose type is required to be complete.
-/// \param Kind Selects which completeness rules should be applied.
-/// \param Diagnoser The object that will emit a diagnostic if the type is
-/// incomplete.
-///
-/// \returns \c true if the type of \p E is incomplete and diagnosed, \c false
-/// otherwise.
 bool Sema::RequireCompleteExprType(Expr *E, CompleteTypeKind Kind,
                                    TypeDiagnoser &Diagnoser) {
   return RequireCompleteType(E->getExprLoc(), getCompletedType(E), Kind,
@@ -8940,25 +8827,6 @@ bool Sema::RequireCompleteExprType(Expr *E, unsigned DiagID) {
   return RequireCompleteExprType(E, CompleteTypeKind::Default, Diagnoser);
 }
 
-/// Ensure that the type T is a complete type.
-///
-/// This routine checks whether the type @p T is complete in any
-/// context where a complete type is required. If @p T is a complete
-/// type, returns false. If @p T is a class template specialization,
-/// this routine then attempts to perform class template
-/// instantiation. If instantiation fails, or if @p T is incomplete
-/// and cannot be completed, issues the diagnostic @p diag (giving it
-/// the type @p T) and returns true.
-///
-/// @param Loc  The location in the source that the incomplete type
-/// diagnostic should refer to.
-///
-/// @param T  The type that this routine is examining for completeness.
-///
-/// @param Kind Selects which completeness rules should be applied.
-///
-/// @returns @c true if @p T is incomplete and a diagnostic was emitted,
-/// @c false otherwise.
 bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
                                CompleteTypeKind Kind,
                                TypeDiagnoser &Diagnoser) {
@@ -9135,7 +9003,6 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
   }
 }
 
-/// The implementation of RequireCompleteType
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                    CompleteTypeKind Kind,
                                    TypeDiagnoser *Diagnoser) {
@@ -9327,24 +9194,6 @@ static unsigned getLiteralDiagFromTagKind(TagTypeKind Tag) {
   }
 }
 
-/// Ensure that the type T is a literal type.
-///
-/// This routine checks whether the type @p T is a literal type. If @p T is an
-/// incomplete type, an attempt is made to complete it. If @p T is a literal
-/// type, or @p AllowIncompleteType is true and @p T is an incomplete type,
-/// returns false. Otherwise, this routine issues the diagnostic @p PD (giving
-/// it the type @p T), along with notes explaining why the type is not a
-/// literal type, and returns true.
-///
-/// @param Loc  The location in the source that the non-literal type
-/// diagnostic should refer to.
-///
-/// @param T  The type that this routine is examining for literalness.
-///
-/// @param Diagnoser Emits a diagnostic if T is not a literal type.
-///
-/// @returns @c true if @p T is not a literal type and a diagnostic was emitted,
-/// @c false otherwise.
 bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
                               TypeDiagnoser &Diagnoser) {
   assert(!T->isDependentType() && "type should not be dependent");
@@ -9441,9 +9290,6 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T, unsigned DiagID) {
   return RequireLiteralType(Loc, T, Diagnoser);
 }
 
-/// Retrieve a version of the type 'T' that is elaborated by Keyword, qualified
-/// by the nested-name-specifier contained in SS, and that is (re)declared by
-/// OwnedTagDecl, which is nullptr if this is not a (re)declaration.
 QualType Sema::getElaboratedType(ElaboratedTypeKeyword Keyword,
                                  const CXXScopeSpec &SS, QualType T,
                                  TagDecl *OwnedTagDecl) {

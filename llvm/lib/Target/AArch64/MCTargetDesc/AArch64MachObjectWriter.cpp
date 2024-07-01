@@ -361,8 +361,8 @@ void AArch64MachObjectWriter::recordRelocation(
       Value += Writer->getSymbolAddress(*Symbol, *Asm.getLayout());
 
       if (IsPCRel)
-        Value -= Writer->getFragmentAddress(Fragment, *Asm.getLayout()) +
-                 Fixup.getOffset() + (1ULL << Log2Size);
+        Value -= Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset() +
+                 (1ULL << Log2Size);
     } else {
       llvm_unreachable(
           "This constant variable should have been expanded during evaluation");

@@ -12,26 +12,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/Z3CrosscheckVisitor.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/SMTAPI.h"
+#include "llvm/Support/Timer.h"
 
 #define DEBUG_TYPE "Z3CrosscheckOracle"
 
 STATISTIC(NumZ3QueriesDone, "Number of Z3 queries done");
 STATISTIC(NumTimesZ3TimedOut, "Number of times Z3 query timed out");
+STATISTIC(NumTimesZ3ExhaustedRLimit,
+          "Number of times Z3 query exhausted the rlimit");
+STATISTIC(NumTimesZ3SpendsTooMuchTimeOnASingleEQClass,
+          "Number of times report equivalenece class was cut because it spent "
+          "too much time in Z3");
 
 STATISTIC(NumTimesZ3QueryAcceptsReport,
           "Number of Z3 queries accepting a report");
 STATISTIC(NumTimesZ3QueryRejectReport,
           "Number of Z3 queries rejecting a report");
+STATISTIC(NumTimesZ3QueryRejectEQClass,
+          "Number of times rejecting an report equivalenece class");
 
 using namespace clang;
 using namespace ento;
 
-Z3CrosscheckVisitor::Z3CrosscheckVisitor(Z3CrosscheckVisitor::Z3Result &Result)
-    : Constraints(ConstraintMap::Factory().getEmptyMap()), Result(Result) {}
+Z3CrosscheckVisitor::Z3CrosscheckVisitor(Z3CrosscheckVisitor::Z3Result &Result,
+                                         const AnalyzerOptions &Opts)
+    : Constraints(ConstraintMap::Factory().getEmptyMap()), Result(Result),
+      Opts(Opts) {}
 
 void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
                                           const ExplodedNode *EndPathNode,
@@ -41,8 +52,12 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
 
   // Create a refutation manager
   llvm::SMTSolverRef RefutationSolver = llvm::CreateZ3Solver();
-  RefutationSolver->setBoolParam("model", true);        // Enable model finding
-  RefutationSolver->setUnsignedParam("timeout", 15000); // ms
+  if (Opts.Z3CrosscheckRLimitThreshold)
+    RefutationSolver->setUnsignedParam("rlimit",
+                                       Opts.Z3CrosscheckRLimitThreshold);
+  if (Opts.Z3CrosscheckTimeoutThreshold)
+    RefutationSolver->setUnsignedParam("timeout",
+                                       Opts.Z3CrosscheckTimeoutThreshold); // ms
 
   ASTContext &Ctx = BRC.getASTContext();
 
@@ -63,8 +78,15 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
   }
 
   // And check for satisfiability
+  llvm::TimeRecord Start = llvm::TimeRecord::getCurrentTime(/*Start=*/true);
   std::optional<bool> IsSAT = RefutationSolver->check();
-  Result = Z3Result{IsSAT};
+  llvm::TimeRecord Diff = llvm::TimeRecord::getCurrentTime(/*Start=*/false);
+  Diff -= Start;
+  Result = Z3Result{
+      IsSAT,
+      static_cast<unsigned>(Diff.getWallTime() * 1000),
+      RefutationSolver->getStatistics()->getUnsigned("rlimit count"),
+  };
 }
 
 void Z3CrosscheckVisitor::addConstraints(
@@ -101,18 +123,38 @@ void Z3CrosscheckVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
 Z3CrosscheckOracle::Z3Decision Z3CrosscheckOracle::interpretQueryResult(
     const Z3CrosscheckVisitor::Z3Result &Query) {
   ++NumZ3QueriesDone;
+  AccumulatedZ3QueryTimeInEqClass += Query.Z3QueryTimeMilliseconds;
 
-  if (!Query.IsSAT.has_value()) {
-    // For backward compatibility, let's accept the first timeout.
-    ++NumTimesZ3TimedOut;
+  if (Query.IsSAT && Query.IsSAT.value()) {
+    ++NumTimesZ3QueryAcceptsReport;
     return AcceptReport;
   }
 
-  if (Query.IsSAT.value()) {
-    ++NumTimesZ3QueryAcceptsReport;
-    return AcceptReport; // sat
+  // Suggest cutting the EQClass if certain heuristics trigger.
+  if (Opts.Z3CrosscheckTimeoutThreshold &&
+      Query.Z3QueryTimeMilliseconds >= Opts.Z3CrosscheckTimeoutThreshold) {
+    ++NumTimesZ3TimedOut;
+    ++NumTimesZ3QueryRejectEQClass;
+    return RejectEQClass;
   }
 
+  if (Opts.Z3CrosscheckRLimitThreshold &&
+      Query.UsedRLimit >= Opts.Z3CrosscheckRLimitThreshold) {
+    ++NumTimesZ3ExhaustedRLimit;
+    ++NumTimesZ3QueryRejectEQClass;
+    return RejectEQClass;
+  }
+
+  if (Opts.Z3CrosscheckEQClassTimeoutThreshold &&
+      AccumulatedZ3QueryTimeInEqClass >
+          Opts.Z3CrosscheckEQClassTimeoutThreshold) {
+    ++NumTimesZ3SpendsTooMuchTimeOnASingleEQClass;
+    ++NumTimesZ3QueryRejectEQClass;
+    return RejectEQClass;
+  }
+
+  // If no cutoff heuristics trigger, and the report is "unsat" or "undef",
+  // then reject the report.
   ++NumTimesZ3QueryRejectReport;
-  return RejectReport; // unsat
+  return RejectReport;
 }
