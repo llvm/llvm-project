@@ -184,9 +184,8 @@ static bool isOptimizableAtomic(Type *Ty) {
   case Type::DoubleTyID:
     return true;
   case Type::IntegerTyID: {
-    unsigned size = Ty->getIntegerBitWidth();
-    if (size == 32 || size == 64)
-      return true;
+    unsigned Size = Ty->getIntegerBitWidth();
+    return (Size == 32 || Size == 64);
   }
   default:
     return false;
@@ -250,10 +249,14 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is 32
-  // bits.
-  if (ValDivergent && (!ST->hasDPP() || !isOptimizableAtomic(I.getType()))) {
-    return;
+  // we have DPP available on our subtarget (for DPP strategy), and the atomic
+  // operation is 32 or 64 bits.
+  if (ValDivergent) {
+    if (ScanImpl == ScanOptions::DPP && !ST->hasDPP())
+      return;
+
+    if (!isOptimizableAtomic(I.getType()))
+      return;
   }
 
   // If we get here, we can optimize the atomic using a single wavefront-wide
@@ -332,10 +335,14 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is 32
-  // bits.
-  if (ValDivergent && (!ST->hasDPP() || !isOptimizableAtomic(I.getType()))) {
-    return;
+  // we have DPP available on our subtarget (for DPP strategy), and the atomic
+  // operation is 32 or 64 bits.
+  if (ValDivergent) {
+    if (ScanImpl == ScanOptions::DPP && !ST->hasDPP())
+      return;
+
+    if (!isOptimizableAtomic(I.getType()))
+      return;
   }
 
   // If any of the other arguments to the intrinsic are divergent, we can't
