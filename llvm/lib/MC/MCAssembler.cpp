@@ -1151,7 +1151,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   // fragments. This is used by __gcc_except_table.
   bool Abs = getSubsectionsViaSymbols()
                  ? LF.getValue().evaluateKnownAbsolute(Value, *Layout)
-                 : LF.getValue().evaluateAsAbsolute(Value, *Layout);
+                 : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
     bool Relaxed, UseZeroPad;
     std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(*this, LF, Value);
@@ -1269,7 +1269,7 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
 
   MCContext &Context = getContext();
   int64_t Value;
-  bool Abs = DF.getAddrDelta().evaluateAsAbsolute(Value, *Layout);
+  bool Abs = DF.getAddrDelta().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
     getContext().reportError(DF.getAddrDelta().getLoc(),
                              "invalid CFI advance_loc expression");

@@ -323,7 +323,7 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
   bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
   assert(IsAbsolute && "CFA with invalid expression");
@@ -389,7 +389,7 @@ bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
 
   auto &Layout = *Asm.getLayout();
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
   bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
   assert(IsAbsolute && "CFA with invalid expression");
