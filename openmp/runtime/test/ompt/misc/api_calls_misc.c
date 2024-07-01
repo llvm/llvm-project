@@ -10,12 +10,12 @@ int main() {
     ompt_callback_t callback;
     ompt_get_callback(ompt_callback_thread_begin, &callback);
     printf("%" PRIu64 ": &on_ompt_callback_thread_begin=%p\n",
-           ompt_get_thread_data()->value, &on_ompt_callback_thread_begin);
+           get_current_thread_id(), &on_ompt_callback_thread_begin);
     printf("%" PRIu64 ": ompt_get_callback() result=%p\n",
-           ompt_get_thread_data()->value, callback);
+           get_current_thread_id(), callback);
 
     // ompt_get_state()
-    printf("%" PRIu64 ": ompt_get_state()=%d\n", ompt_get_thread_data()->value,
+    printf("%" PRIu64 ": ompt_get_state()=%d\n", get_current_thread_id(),
            ompt_get_state(NULL));
 
     // ompt_enumerate_states()
@@ -26,12 +26,12 @@ int main() {
       steps++;
       if (!state_name)
         printf("%" PRIu64 ": state_name is NULL\n",
-               ompt_get_thread_data()->value);
+               get_current_thread_id());
     }
     if (steps >= 1000) {
       // enumeration did not end after 1000 steps
       printf("%" PRIu64 ": states enumeration did not end\n",
-             ompt_get_thread_data()->value);
+             get_current_thread_id());
     }
 
     // ompt_enumerate_mutex_impls()
@@ -43,12 +43,12 @@ int main() {
       steps++;
       if (!impl_name)
         printf("%" PRIu64 ": impl_name is NULL\n",
-               ompt_get_thread_data()->value);
+               get_current_thread_id());
     }
     if (steps >= 1000) {
       // enumeration did not end after 1000 steps
       printf("%" PRIu64 ": mutex_impls enumeration did not end\n",
-             ompt_get_thread_data()->value);
+             get_current_thread_id());
     }
   }
 

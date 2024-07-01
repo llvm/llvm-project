@@ -13,7 +13,7 @@ int main()
   {
     #pragma omp single
     {
-      printf("%" PRIu64 ": in single\n", ompt_get_thread_data()->value);
+      printf("%" PRIu64 ": in single\n", get_current_thread_id());
       x++;
     }
   }

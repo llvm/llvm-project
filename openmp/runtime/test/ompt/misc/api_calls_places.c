@@ -7,7 +7,7 @@
 #undef __USE_GNU
 
 void print_list(char *function_name, int size, int list[]) {
-  printf("%" PRIu64 ": %s(0)=(%d", ompt_get_thread_data()->value, function_name,
+  printf("%" PRIu64 ": %s(0)=(%d", get_current_thread_id(), function_name,
          list[0]);
   int i;
   for (i = 1; i < size; i++) {
@@ -20,9 +20,9 @@ int main() {
 #pragma omp parallel num_threads(1)
   {
     printf("%" PRIu64 ": omp_get_num_places()=%d\n",
-           ompt_get_thread_data()->value, omp_get_num_places());
+           get_current_thread_id(), omp_get_num_places());
     printf("%" PRIu64 ": ompt_get_num_places()=%d\n",
-           ompt_get_thread_data()->value, ompt_get_num_places());
+           get_current_thread_id(), ompt_get_num_places());
 
     int omp_ids_size = omp_get_place_num_procs(0);
     int omp_ids[omp_ids_size];
@@ -34,9 +34,9 @@ int main() {
     print_list("ompt_get_place_proc_ids", ompt_ids_size, ompt_ids);
 
     printf("%" PRIu64 ": omp_get_place_num()=%d\n",
-           ompt_get_thread_data()->value, omp_get_place_num());
+           get_current_thread_id(), omp_get_place_num());
     printf("%" PRIu64 ": ompt_get_place_num()=%d\n",
-           ompt_get_thread_data()->value, ompt_get_place_num());
+           get_current_thread_id(), ompt_get_place_num());
 
     int omp_nums_size = omp_get_partition_num_places();
     int omp_nums[omp_nums_size];
@@ -47,15 +47,15 @@ int main() {
     ompt_get_partition_place_nums(ompt_nums_size, ompt_nums);
     print_list("ompt_get_partition_place_nums", ompt_nums_size, ompt_nums);
 
-    printf("%" PRIu64 ": sched_getcpu()=%d\n", ompt_get_thread_data()->value,
+    printf("%" PRIu64 ": sched_getcpu()=%d\n", get_current_thread_id(),
            sched_getcpu());
     printf("%" PRIu64 ": ompt_get_proc_id()=%d\n",
-           ompt_get_thread_data()->value, ompt_get_proc_id());
+           get_current_thread_id(), ompt_get_proc_id());
 
     printf("%" PRIu64 ": omp_get_num_procs()=%d\n",
-           ompt_get_thread_data()->value, omp_get_num_procs());
+           get_current_thread_id(), omp_get_num_procs());
     printf("%" PRIu64 ": ompt_get_num_procs()=%d\n",
-           ompt_get_thread_data()->value, ompt_get_num_procs());
+           get_current_thread_id(), ompt_get_num_procs());
   }
 
   // Check if libomp supports the callbacks for this test.

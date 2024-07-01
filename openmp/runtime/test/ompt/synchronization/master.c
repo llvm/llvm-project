@@ -4,6 +4,7 @@
 // XFAIL: gcc
 
 #define USE_PRIVATE_TOOL 1
+#define get_current_thread_id() ompt_get_thread_data()->value
 #include "callback.h"
 #include <omp.h>
 
