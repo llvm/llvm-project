@@ -722,7 +722,7 @@ public:
         default:
           break;
         case MCFragment::FT_Align: {
-          auto Size = Asm.computeFragmentSize(Layout, *Frags[J]);
+          auto Size = Asm.computeFragmentSize(*Frags[J]);
           for (auto K = J; K != 0 && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
             switch (Frags[K]->getKind()) {
@@ -756,7 +756,7 @@ public:
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
-              Layout.invalidateFragmentsFrom(&RF);
+              I->setHasLayout(false);
               Size = 0; // Only look back one instruction
               break;
             }

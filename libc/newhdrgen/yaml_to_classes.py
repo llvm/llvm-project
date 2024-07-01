@@ -47,21 +47,25 @@ def yaml_to_classes(yaml_data):
             Enumeration(enum_data["name"], enum_data.get("value", None))
         )
 
-    for object_data in yaml_data.get("objects", []):
-        header.add_object(
-            Object(object_data["object_name"], object_data["object_type"])
-        )
-
     for function_data in yaml_data.get("functions", []):
         arguments = [arg["type"] for arg in function_data["arguments"]]
+        guard = function_data.get("guard", None)
+        attributes = function_data.get("attributes", None)
+        standards = (function_data.get("standards", None),)
         header.add_function(
             Function(
+                standards,
                 function_data["return_type"],
                 function_data["name"],
                 arguments,
-                function_data.get("guard"),
-                function_data.get("attributes", []),
+                guard,
+                attributes,
             )
+        )
+
+    for object_data in yaml_data.get("objects", []):
+        header.add_object(
+            Object(object_data["object_name"], object_data["object_type"])
         )
 
     for include_data in yaml_data.get("includes", []):

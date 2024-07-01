@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -1803,19 +1804,18 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                 .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos)));
       }
     } else {
-      constexpr uint64_t Mask16 = 0xffff;
       const uint64_t UOffset = Offset;
       EmitAndIncrement(MCInstBuilder(IsNeg ? AArch64::MOVNXi : AArch64::MOVZXi)
                            .addReg(AArch64::X17)
-                           .addImm((IsNeg ? ~UOffset : UOffset) & Mask16)
+                           .addImm((IsNeg ? ~UOffset : UOffset) & 0xffff)
                            .addImm(/*shift=*/0));
-      auto NeedMovk = [Mask16, IsNeg, UOffset](int BitPos) -> bool {
+      auto NeedMovk = [IsNeg, UOffset](int BitPos) -> bool {
         assert(BitPos == 16 || BitPos == 32 || BitPos == 48);
         uint64_t Shifted = UOffset >> BitPos;
         if (!IsNeg)
           return Shifted != 0;
         for (int I = 0; I != 64 - BitPos; I += 16)
-          if (((Shifted >> I) & Mask16) != Mask16)
+          if (((Shifted >> I) & 0xffff) != 0xffff)
             return true;
         return false;
       };
@@ -1823,7 +1823,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
         EmitAndIncrement(MCInstBuilder(AArch64::MOVKXi)
                              .addReg(AArch64::X17)
                              .addReg(AArch64::X17)
-                             .addImm((UOffset >> BitPos) & Mask16)
+                             .addImm((UOffset >> BitPos) & 0xffff)
                              .addImm(/*shift=*/BitPos));
       }
       EmitAndIncrement(MCInstBuilder(AArch64::ADDXrs)
