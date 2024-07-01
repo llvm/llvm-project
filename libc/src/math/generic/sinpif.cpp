@@ -76,7 +76,7 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
         -0x1.32d2c0b62d41cp-1, 0x1.501ec4497cb7dp-4);
     return static_cast<float>(xd * result);
   }
-  
+
   // Numbers greater or equal to 2^23 are always integers or NaN
   if (LIBC_UNLIKELY(x_abs >= 0x4B00'0000)) {
 
@@ -89,7 +89,7 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
 
       return x + FPBits::quiet_nan().get_val();
     }
-    
+
     return FPBits::zero(xbits.sign()).get_val();
   }
 
