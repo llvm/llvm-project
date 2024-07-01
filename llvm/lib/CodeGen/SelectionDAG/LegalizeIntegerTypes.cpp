@@ -6022,9 +6022,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PATCHPOINT(SDNode *N) {
   SDLoc dl(N);
 
   assert(N->getNumValues() == 3 && "Expected 3 values for PATCHPOINT");
-  SmallVector<EVT, 3> VTs(N->values());
-  VTs[0] = NVT;
-  SDVTList VTList = DAG.getVTList(VTs);
+  SDVTList VTList = DAG.getVTList({NVT, MVT::Other, MVT::Glue});
 
   SmallVector<SDValue> Ops(N->ops());
   SDValue Res = DAG.getNode(ISD::PATCHPOINT, dl, VTList, Ops);
