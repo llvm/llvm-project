@@ -2315,15 +2315,20 @@ struct SCEVFindUnsafe {
   ScalarEvolution &SE;
   bool CanonicalMode;
   bool IsUnsafe = false;
+  bool OnlyCheckPreheader;
 
-  SCEVFindUnsafe(ScalarEvolution &SE, bool CanonicalMode)
-      : SE(SE), CanonicalMode(CanonicalMode) {}
+  SCEVFindUnsafe(ScalarEvolution &SE, bool CanonicalMode,
+                 bool OnlyCheckPreheader)
+      : SE(SE), CanonicalMode(CanonicalMode),
+        OnlyCheckPreheader(OnlyCheckPreheader) {}
 
   bool follow(const SCEV *S) {
-    if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS())) {
-        IsUnsafe = true;
-        return false;
+    if (!OnlyCheckPreheader) {
+      if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
+        if (!SE.isKnownNonZero(D->getRHS())) {
+          IsUnsafe = true;
+          return false;
+        }
       }
     }
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
@@ -2342,7 +2347,13 @@ struct SCEVFindUnsafe {
 } // namespace
 
 bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
-  SCEVFindUnsafe Search(SE, CanonicalMode);
+  SCEVFindUnsafe Search(SE, CanonicalMode, false);
+  visitAll(S, Search);
+  return !Search.IsUnsafe;
+}
+
+bool SCEVExpander::canExpand(const SCEV *S) const {
+  SCEVFindUnsafe Search(SE, CanonicalMode, true);
   visitAll(S, Search);
   return !Search.IsUnsafe;
 }

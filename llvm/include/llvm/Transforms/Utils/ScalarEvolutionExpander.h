@@ -295,6 +295,9 @@ public:
   /// defined, and the expander is capable of expanding the expression.
   bool isSafeToExpand(const SCEV *S) const;
 
+  /// Return true if the expander is capable of expanding the expression.
+  bool canExpand(const SCEV *S) const;
+
   /// Return true if the given expression is safe to expand in the sense that
   /// all materialized values are defined and safe to speculate at the specified
   /// location and their operands are defined at this location.
