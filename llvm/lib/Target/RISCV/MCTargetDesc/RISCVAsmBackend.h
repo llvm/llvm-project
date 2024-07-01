@@ -45,7 +45,6 @@ public:
 
   // Insert target specific fixup type for alignment directive in code section.
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     const MCAsmLayout &Layout,
                                      MCAlignFragment &AF) override;
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
@@ -53,7 +52,7 @@ public:
                            const MCValue &Target, const MCSubtargetInfo *STI,
                            uint64_t &Value, bool &WasForced) override;
 
-  bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
+  bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
                                uint64_t &FixedValue) const override;
 
@@ -75,10 +74,10 @@ public:
     llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
 
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                    const MCFixup &Fixup, bool Resolved,
                                     uint64_t Value,
                                     const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout,
                                     const bool WasForced) const override;
 
   unsigned getNumFixupKinds() const override {

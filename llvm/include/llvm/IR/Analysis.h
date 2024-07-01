@@ -13,10 +13,10 @@
 #define LLVM_IR_ANALYSIS_H
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/Function.h"
 
 namespace llvm {
 
+class Function;
 class Module;
 
 /// A special type used by analysis passes to provide an address that

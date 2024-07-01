@@ -210,7 +210,8 @@ bool isParamGridConstant(const Value &V) {
   if (const Argument *Arg = dyn_cast<Argument>(&V)) {
     // "grid_constant" counts argument indices starting from 1
     if (Arg->hasByValAttr() &&
-        argHasNVVMAnnotation(*Arg, "grid_constant", /*StartArgIndexAtOne*/true)) {
+        argHasNVVMAnnotation(*Arg, "grid_constant",
+                             /*StartArgIndexAtOne*/ true)) {
       assert(isKernelFunction(*Arg->getParent()) &&
              "only kernel arguments can be grid_constant");
       return true;
