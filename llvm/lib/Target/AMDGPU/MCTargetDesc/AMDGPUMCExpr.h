@@ -48,13 +48,13 @@ private:
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
   ~AMDGPUMCExpr();
 
-  bool evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
                           const MCFixup *Fixup) const;
-  bool evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
                             const MCFixup *Fixup) const;
-  bool evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
                        const MCFixup *Fixup) const;
-  bool evaluateOccupancy(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
                          const MCFixup *Fixup) const;
 
 public:
