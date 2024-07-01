@@ -1243,3 +1243,16 @@ namespace Extern {
   static_assert(&ExternNonLiteralVarDecl() == &nl, "");
 #endif
 }
+
+#if __cplusplus >= 201402L
+constexpr int StmtExprEval() {
+  if (({
+    while (0);
+    true;
+  })) {
+    return 2;
+  }
+  return 1;
+}
+static_assert(StmtExprEval() == 2, "");
+#endif
