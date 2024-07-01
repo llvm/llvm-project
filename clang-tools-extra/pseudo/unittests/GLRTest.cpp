@@ -52,7 +52,7 @@ Token::Index recoverBraces(Token::Index Begin, const TokenStream &Code) {
   EXPECT_GT(Begin, 0u);
   const Token &Left = Code.tokens()[Begin - 1];
   EXPECT_EQ(Left.Kind, tok::l_brace);
-  if (const auto* Right = Left.pair()) {
+  if (const auto *Right = Left.pair()) {
     EXPECT_EQ(Right->Kind, tok::r_brace);
     return Code.index(*Right);
   }
@@ -71,7 +71,7 @@ public:
     Empty.finalize();
     return Empty;
   }
- 
+
   void buildGrammar(std::vector<std::string> Nonterminals,
                     std::vector<std::string> Rules) {
     Nonterminals.push_back("_");
@@ -185,8 +185,8 @@ TEST_F(GLRTest, ReduceConflictsSplitting) {
       GSStack.addNode(1, &Arena.createTerminal(tok::identifier, 0), {GSSNode0});
 
   std::vector<const GSS::Node *> Heads = {GSSNode1};
-  glrReduce(Heads, tokenSymbol(tok::eof),
-            {emptyTokenStream(), Arena, GSStack}, TestLang);
+  glrReduce(Heads, tokenSymbol(tok::eof), {emptyTokenStream(), Arena, GSStack},
+            TestLang);
   EXPECT_THAT(Heads, UnorderedElementsAre(
                          GSSNode1,
                          AllOf(state(2), parsedSymbolID(id("class-name")),
@@ -209,8 +209,8 @@ TEST_F(GLRTest, ReduceSplittingDueToMultipleBases) {
   auto *ClassNameNode = &Arena.createOpaque(id("class-name"), /*TokenIndex=*/0);
   auto *EnumNameNode = &Arena.createOpaque(id("enum-name"), /*TokenIndex=*/0);
 
-  const auto *GSSNode2 =
-      GSStack.addNode(/*State=*/2, /*ForestNode=*/ClassNameNode, /*Parents=*/{});
+  const auto *GSSNode2 = GSStack.addNode(
+      /*State=*/2, /*ForestNode=*/ClassNameNode, /*Parents=*/{});
   const auto *GSSNode3 =
       GSStack.addNode(/*State=*/3, /*ForestNode=*/EnumNameNode, /*Parents=*/{});
   const auto *GSSNode4 = GSStack.addNode(
@@ -332,8 +332,8 @@ TEST_F(GLRTest, ReduceJoiningWithSameBase) {
   TestLang.Table = std::move(B).build();
 
   std::vector<const GSS::Node *> Heads = {GSSNode3, GSSNode4};
-  glrReduce(Heads, tokenSymbol(tok::eof),
-            {emptyTokenStream(), Arena, GSStack}, TestLang);
+  glrReduce(Heads, tokenSymbol(tok::eof), {emptyTokenStream(), Arena, GSStack},
+            TestLang);
 
   EXPECT_THAT(
       Heads, UnorderedElementsAre(GSSNode3, GSSNode4,
@@ -660,21 +660,18 @@ TEST_F(GLRTest, RecoveryFromStartOfInput) {
   )bnf");
   TestLang.Table = LRTable::buildSLR(TestLang.G);
   bool fallback_recovered = false;
-  auto fallback = [&](Token::Index Start, const TokenStream & Code) {
+  auto fallback = [&](Token::Index Start, const TokenStream &Code) {
     fallback_recovered = true;
     return Code.tokens().size();
   };
-  TestLang.RecoveryStrategies.try_emplace(
-      extensionID("Fallback"),
-      fallback);
+  TestLang.RecoveryStrategies.try_emplace(extensionID("Fallback"), fallback);
   clang::LangOptions LOptions;
   TokenStream Tokens = cook(lex("?", LOptions), LOptions);
 
   const ForestNode &Parsed =
       glrParse({Tokens, Arena, GSStack}, id("start"), TestLang);
   EXPECT_TRUE(fallback_recovered);
-  EXPECT_EQ(Parsed.dumpRecursive(TestLang.G),
-            "[  0, end) start := <opaque>\n");
+  EXPECT_EQ(Parsed.dumpRecursive(TestLang.G), "[  0, end) start := <opaque>\n");
 }
 
 TEST_F(GLRTest, RepeatedRecovery) {
@@ -737,14 +734,11 @@ TEST_F(GLRTest, GuardExtension) {
 
     start := IDENTIFIER [guard]
   )bnf");
-  TestLang.Guards.try_emplace(
-      ruleFor("start"), [&](const GuardParams &P) {
-        assert(P.RHS.size() == 1 &&
-               P.RHS.front()->symbol() ==
-                   tokenSymbol(clang::tok::identifier));
-        return P.Tokens.tokens()[P.RHS.front()->startTokenIndex()]
-                   .text() == "test";
-      });
+  TestLang.Guards.try_emplace(ruleFor("start"), [&](const GuardParams &P) {
+    assert(P.RHS.size() == 1 &&
+           P.RHS.front()->symbol() == tokenSymbol(clang::tok::identifier));
+    return P.Tokens.tokens()[P.RHS.front()->startTokenIndex()].text() == "test";
+  });
   clang::LangOptions LOptions;
   TestLang.Table = LRTable::buildSLR(TestLang.G);
 

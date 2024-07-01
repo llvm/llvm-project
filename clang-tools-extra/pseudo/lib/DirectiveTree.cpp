@@ -148,9 +148,9 @@ struct Dumper {
   llvm::raw_ostream &OS;
   unsigned Indent = 0;
 
-  Dumper(llvm::raw_ostream& OS) : OS(OS) {}
-  void operator()(const DirectiveTree& Tree) {
-    for (const auto& Chunk : Tree.Chunks)
+  Dumper(llvm::raw_ostream &OS) : OS(OS) {}
+  void operator()(const DirectiveTree &Tree) {
+    for (const auto &Chunk : Tree.Chunks)
       std::visit(*this, Chunk);
   }
   void operator()(const DirectiveTree::Conditional &Conditional) {
@@ -185,7 +185,7 @@ DirectiveTree DirectiveTree::parse(const TokenStream &Code) {
 // Define operator<< in terms of dump() functions above.
 #define OSTREAM_DUMP(Type)                                                     \
   llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Type &T) {        \
-    Dumper{OS}(T);                                                         \
+    Dumper{OS}(T);                                                             \
     return OS;                                                                 \
   }
 OSTREAM_DUMP(DirectiveTree)

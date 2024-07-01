@@ -76,14 +76,13 @@ public:
   // Expected to be called by LR parsers.
   // If the nonterminal is invalid here, returns std::nullopt.
   std::optional<StateID> getGoToState(StateID State,
-                                       SymbolID Nonterminal) const {
+                                      SymbolID Nonterminal) const {
     return Gotos.get(gotoIndex(State, Nonterminal, numStates()));
   }
   // Returns the state after we shift a terminal.
   // Expected to be called by LR parsers.
   // If the terminal is invalid here, returns std::nullopt.
-  std::optional<StateID> getShiftState(StateID State,
-                                        SymbolID Terminal) const {
+  std::optional<StateID> getShiftState(StateID State, SymbolID Terminal) const {
     return Shifts.get(shiftIndex(State, Terminal, numStates()));
   }
 
