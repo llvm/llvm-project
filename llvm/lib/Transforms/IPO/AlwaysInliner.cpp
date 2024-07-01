@@ -38,25 +38,19 @@ bool AlwaysInlineImpl(
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedFunctions;
-  SmallVector<Function *, 16> WorkList;
-  for (Function &F : M) {
-    // When callee coroutine function is inlined into caller coroutine function
-    // before coro-split pass,
-    // coro-early pass can not handle this quiet well.
-    // So we won't inline the coroutine function if it have not been unsplited
+
+  for (Function &F : make_early_inc_range(M)) {
     if (F.isPresplitCoroutine())
       continue;
 
-    if (!F.isDeclaration() && isInlineViable(F).isSuccess())
-      WorkList.push_back(&F);
-  }
+    if (F.isDeclaration() || !isInlineViable(F).isSuccess())
+      continue;
 
-  for (Function *F : WorkList) {
     Calls.clear();
 
-    for (User *U : F->users())
+    for (User *U : F.users())
       if (auto *CB = dyn_cast<CallBase>(U))
-        if (CB->getCalledFunction() == F &&
+        if (CB->getCalledFunction() == &F &&
               CB->hasFnAttr(Attribute::AlwaysInline) &&
               !CB->getAttributes().hasFnAttr(Attribute::NoInline))
             Calls.insert(CB);
@@ -69,15 +63,15 @@ bool AlwaysInlineImpl(
 
       InlineFunctionInfo IFI(GetAssumptionCache, &PSI,
                               GetBFI ? &GetBFI(*Caller) : nullptr,
-                              GetBFI ? &GetBFI(*F) : nullptr);
+                              GetBFI ? &GetBFI(F) : nullptr);
 
       InlineResult Res = InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
-                                        &GetAAR(*F), InsertLifetime);
+                                        &GetAAR(F), InsertLifetime);
       if (!Res.isSuccess()) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc,
                                           Block)
-                  << "'" << ore::NV("Callee", F) << "' is not inlined into '"
+                  << "'" << ore::NV("Callee", &F) << "' is not inlined into '"
                   << ore::NV("Caller", Caller)
                   << "': " << ore::NV("Reason", Res.getFailureReason());
         });
@@ -85,32 +79,26 @@ bool AlwaysInlineImpl(
       }
 
       emitInlinedIntoBasedOnCost(
-          ORE, DLoc, Block, *F, *Caller,
+          ORE, DLoc, Block, F, *Caller,
           InlineCost::getAlways("always inline attribute"),
           /*ForProfileContext=*/false, DEBUG_TYPE);
 
       Changed = true;
     }
 
-    F->removeDeadConstantUsers();
-    if (F->hasFnAttribute(Attribute::AlwaysInline) && F->isDefTriviallyDead()) {
+    F.removeDeadConstantUsers();
+    if (F.hasFnAttribute(Attribute::AlwaysInline) && F.isDefTriviallyDead()) {
       // Remember to try and delete this function afterward. This both avoids
       // re-walking the rest of the module and avoids dealing with any
       // iterator invalidation issues while deleting functions.
-      if (F->hasComdat()){
-        InlinedFunctions.push_back(F);
+      if (F.hasComdat()) {
+        InlinedFunctions.push_back(&F);
       } else {
         M.getFunctionList().erase(F);
         Changed = true;
       }
     }
   }
-
-  // Final cleanup stage. Firstly, remove any live functions.
-  erase_if(InlinedFunctions, [&](Function *F) {
-    F->removeDeadConstantUsers();
-    return !F->isDefTriviallyDead();
-  });
 
   // Delete the non-comdat ones from the module and also from our vector.
   auto *NonComdatBegin = partition(
