@@ -16,7 +16,7 @@ func.func @inline_notation() -> i32 {
   // CHECK: affine.for %arg0 loc("IVlocation") = 0 to 8 {
   // CHECK: } loc(fused["foo", "mysource.cc":10:8])
   affine.for %i0 loc("IVlocation") = 0 to 8 {
-  } loc(fused["foo", "mysource.cc":10:8])
+  } loc(fused["foo", range("mysource.cc":10:8 to 5)])
 
   // CHECK: } loc(fused<"myPass">["foo", "foo2"])
   affine.if #set0(%2) {

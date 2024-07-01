@@ -103,6 +103,44 @@ def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FileRange
+//===----------------------------------------------------------------------===//
+
+def FileRangeLoc : Builtin_LocationAttr<"FileRangeLoc"> {
+  let summary = "A file:line:column to line:column source location range";
+  let description = [{
+    Syntax:
+
+    ```
+    filelinecol-location ::= `range(` string-literal `:` integer-literal `:`
+                             integer-literal ` to ` integer-literal `)`
+    ```
+
+    An instance of this location represents a tuple of file, start line number,
+    start column number, end line, and end column number. This represents a range
+    inside a file.
+  }];
+  let parameters = (ins "StringAttr":$filename, "unsigned":$line,
+                        "unsigned":$column, "unsigned":$byte_size);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "StringAttr":$filename,
+                                        "unsigned":$line,
+                                        "unsigned":$column,
+                                        "unsigned":$byteSize), [{
+      return $_get(filename.getContext(), filename, line, column, byteSize);
+    }]>,
+    AttrBuilder<(ins "StringRef":$filename, "unsigned":$line,
+                     "unsigned":$column, "unsigned":$byteSize), [{
+      return $_get($_ctxt,
+                   StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
+                   line, column, byteSize);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+  let attrName = "builtin.file_range";
+}
+
+//===----------------------------------------------------------------------===//
 // FusedLoc
 //===----------------------------------------------------------------------===//
 

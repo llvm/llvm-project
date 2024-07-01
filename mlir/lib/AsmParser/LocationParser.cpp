@@ -20,12 +20,16 @@ using namespace mlir::detail;
 /// Specific location instances.
 ///
 /// location-inst ::= filelinecol-location |
+///                   filerange-location |
 ///                   name-location |
 ///                   callsite-location |
 ///                   fused-location |
 ///                   unknown-location
 /// filelinecol-location ::= string-literal ':' integer-literal
 ///                                         ':' integer-literal
+/// filerange-location ::= 'range(' string-literal ':' integer-literal
+///                                                ':' integer-literal
+///                                                'to' integer-literal ')'
 /// name-location ::= string-literal
 /// callsite-location ::= 'callsite' '(' location-inst 'at' location-inst ')'
 /// fused-location ::= fused ('<' attribute-value '>')?
@@ -95,6 +99,55 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
 
   // Return the fused location.
   loc = FusedLoc::get(locations, metadata, getContext());
+  return success();
+}
+
+ParseResult Parser::parseRangeLocation(LocationAttr &loc) {
+  consumeToken(Token::bare_identifier);
+  if (parseToken(Token::l_paren, "expected '(' in FileRangeLoc"))
+    return failure();
+
+  auto *ctx = getContext();
+  auto str = getToken().getStringValue();
+  consumeToken(Token::string);
+
+  if (parseToken(Token::colon, "expected ':' in FileRangeLoc"))
+    return failure();
+
+  // Parse the line number.
+  if (getToken().isNot(Token::integer))
+    return emitWrongTokenError("expected integer line number in FileRangeLoc");
+  auto line = getToken().getUnsignedIntegerValue();
+  if (!line)
+    return emitWrongTokenError("expected integer line number in FileRangeLoc");
+  consumeToken(Token::integer);
+
+  // Parse the ':'.
+  if (parseToken(Token::colon, "expected ':' in FileRangeLoc"))
+    return failure();
+
+  // Parse the column number.
+  if (getToken().isNot(Token::integer))
+    return emitWrongTokenError(
+        "expected integer column number in FileRangeLoc");
+  auto column = getToken().getUnsignedIntegerValue();
+  if (!column.has_value())
+    return emitError("expected integer column number in FileRangeLoc");
+  consumeToken(Token::integer);
+
+  if (parseToken(Token::kw_to, "expected 'to' in FileRangeLoc"))
+    return failure();
+
+  auto size = getToken().getUnsignedIntegerValue();
+  if (!size.has_value())
+    return emitError("expected integer size in FileRangeLoc");
+  consumeToken(Token::integer);
+
+  // Parse the closing ')'.
+  if (parseToken(Token::r_paren, "expected ')' after file range location"))
+    return failure();
+
+  loc = FileRangeLoc::get(ctx, str, *line, *column, *size);
   return success();
 }
 
@@ -168,6 +221,10 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
   // Handle either name or filelinecol locations.
   if (getToken().is(Token::string))
     return parseNameOrFileLineColLocation(loc);
+
+  // Check for the 'range' signifying a range location.
+  if (getToken().getSpelling() == "range")
+    return parseRangeLocation(loc);
 
   // Bare tokens required for other cases.
   if (!getToken().is(Token::bare_identifier))

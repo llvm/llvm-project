@@ -594,6 +594,9 @@ private:
   /// Convert a location into the given memory buffer into an SMLoc.
   SMLoc convertLocToSMLoc(FileLineColLoc loc);
 
+  /// Convert a location into the given memory buffer into an SMRange.
+  SMRange convertLocToSMRange(FileRangeLoc loc);
+
   /// Given a location, returns the first nested location (including 'loc') that
   /// can be shown to the user.
   std::optional<Location> findLocToShow(Location loc);

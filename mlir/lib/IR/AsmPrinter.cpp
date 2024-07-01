@@ -2013,6 +2013,15 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           printEscapedString(loc.getFilename());
         os << ':' << loc.getLine() << ':' << loc.getColumn();
       })
+      .Case<FileRangeLoc>([&](FileRangeLoc loc) {
+        os << "range(";
+        if (pretty)
+          os << loc.getFilename().getValue();
+        else
+          printEscapedString(loc.getFilename());
+        os << ':' << loc.getLine() << ':' << loc.getColumn() << " to "
+           << loc.getByteSize() << ')';
+      })
       .Case<NameLoc>([&](NameLoc loc) {
         printEscapedString(loc.getName());
 

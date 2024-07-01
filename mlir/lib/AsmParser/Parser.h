@@ -300,6 +300,9 @@ public:
   /// Parse a name or FileLineCol location instance.
   ParseResult parseNameOrFileLineColLocation(LocationAttr &loc);
 
+  /// Parse a FileRange location instance.
+  ParseResult parseRangeLocation(LocationAttr &loc);
+
   //===--------------------------------------------------------------------===//
   // Affine Parsing
   //===--------------------------------------------------------------------===//

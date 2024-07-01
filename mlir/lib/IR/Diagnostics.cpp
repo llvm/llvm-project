@@ -442,10 +442,13 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
                                                 DiagnosticSeverity kind,
                                                 bool displaySourceLine) {
   // Extract a file location from this loc.
-  auto fileLoc = loc->findInstanceOf<FileLineColLoc>();
+  auto fileRange = loc->findInstanceOf<FileRangeLoc>();
+  FileLineColLoc fileLoc = nullptr;
+  if (!fileRange)
+    fileLoc = loc->findInstanceOf<FileLineColLoc>();
 
   // If one doesn't exist, then print the raw message without a source location.
-  if (!fileLoc) {
+  if (!fileRange && !fileLoc) {
     std::string str;
     llvm::raw_string_ostream strOS(str);
     if (!llvm::isa<UnknownLoc>(loc))
@@ -457,9 +460,16 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // Otherwise if we are displaying the source line, try to convert the file
   // location to an SMLoc.
   if (displaySourceLine) {
-    auto smloc = convertLocToSMLoc(fileLoc);
-    if (smloc.isValid())
-      return mgr.PrintMessage(os, smloc, getDiagKind(kind), message);
+    if (fileLoc) {
+      auto smloc = convertLocToSMLoc(fileLoc);
+      if (smloc.isValid())
+        return mgr.PrintMessage(os, smloc, getDiagKind(kind), message);
+    } else if (fileRange) {
+      auto smrange = convertLocToSMRange(fileRange);
+      if (smrange.isValid())
+        return mgr.PrintMessage(os, smrange.Start, getDiagKind(kind), message,
+                                smrange);
+    }
   }
 
   // If the conversion was unsuccessful, create a diagnostic with the file
@@ -467,8 +477,14 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // the constructor of SMDiagnostic that takes a location.
   std::string locStr;
   llvm::raw_string_ostream locOS(locStr);
-  locOS << fileLoc.getFilename().getValue() << ":" << fileLoc.getLine() << ":"
-        << fileLoc.getColumn();
+  if (fileLoc) {
+    locOS << fileLoc.getFilename().getValue() << ":" << fileLoc.getLine() << ":"
+          << fileLoc.getColumn();
+  } else {
+    locOS << "range(" << fileRange.getFilename().getValue() << ":"
+          << fileRange.getLine() << ":" << fileRange.getColumn() << " to "
+          << fileRange.getByteSize() << ")";
+  }
   llvm::SMDiagnostic diag(locOS.str(), getDiagKind(kind), message.str());
   diag.print(nullptr, os);
 }
@@ -542,6 +558,7 @@ SourceMgrDiagnosticHandler::findLocToShow(Location loc) {
         return findLocToShow(callLoc.getCallee());
       })
       .Case([&](FileLineColLoc) -> std::optional<Location> { return loc; })
+      .Case([&](FileRangeLoc) -> std::optional<Location> { return loc; })
       .Case([&](FusedLoc fusedLoc) -> std::optional<Location> {
         // Fused location is unique in that we try to find a sub-location to
         // show, rather than the top-level location itself.
@@ -563,8 +580,6 @@ SourceMgrDiagnosticHandler::findLocToShow(Location loc) {
       });
 }
 
-/// Get a memory buffer for the given file, or the main file of the source
-/// manager if one doesn't exist. This always returns non-null.
 SMLoc SourceMgrDiagnosticHandler::convertLocToSMLoc(FileLineColLoc loc) {
   // The column and line may be zero to represent unknown column and/or unknown
   /// line/column information.
@@ -575,6 +590,23 @@ SMLoc SourceMgrDiagnosticHandler::convertLocToSMLoc(FileLineColLoc loc) {
   if (!bufferId)
     return SMLoc();
   return mgr.FindLocForLineAndColumn(bufferId, loc.getLine(), loc.getColumn());
+}
+
+SMRange SourceMgrDiagnosticHandler::convertLocToSMRange(FileRangeLoc loc) {
+  // The column and line may be zero to represent unknown column and/or unknown
+  /// line/column information.
+  if (loc.getLine() == 0 || loc.getColumn() == 0)
+    return SMRange();
+
+  unsigned bufferId = impl->getSourceMgrBufferIDForFile(mgr, loc.getFilename());
+  if (!bufferId)
+    return SMRange();
+  SMLoc start =
+      mgr.FindLocForLineAndColumn(bufferId, loc.getLine(), loc.getColumn());
+  SMLoc end;
+  if (start.isValid())
+    end = SMLoc::getFromPointer(start.getPointer() + loc.getByteSize());
+  return {start, end};
 }
 
 //===----------------------------------------------------------------------===//
@@ -845,6 +877,8 @@ void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
   // Process a FileLineColLoc.
   if (auto fileLoc = diag.getLocation()->findInstanceOf<FileLineColLoc>())
     return process(fileLoc, diag.str(), kind);
+
+  // TODO: consider handling ranges here too.
 
   emitDiagnostic(diag.getLocation(),
                  "unexpected " + getDiagKindStr(kind) + ": " + diag.str(),

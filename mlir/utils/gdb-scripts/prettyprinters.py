@@ -181,6 +181,7 @@ for name in [
     # mlir/IR/Location.h
     "CallSiteLoc",
     "FileLineColLoc",
+    "FileRangeLoc",
     "FusedLoc",
     "NameLoc",
     "OpaqueLoc",
