@@ -1130,6 +1130,7 @@ clang-format
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
 - Adds ``KeepEmptyLines`` option to deprecate ``KeepEmptyLinesAtEOF``
   and ``KeepEmptyLinesAtTheStartOfBlocks``.
+- Adds ``BinPackBinaryOperations`` option.
 
 libclang
 --------
