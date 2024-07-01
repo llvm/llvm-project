@@ -992,6 +992,40 @@ ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
   return ConstantRange(Min, APInt(BitWidth, *AttrMax) + 1);
 }
 
+void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
+                                       Value *Arm, bool Invert, unsigned Depth,
+                                       const SimplifyQuery &Q) {
+  // If we have a constant arm, we are done.
+  if (Known.isConstant())
+    return;
+
+  // See what condition implies about the bits of the select arm.
+  KnownBits CondRes(Known.getBitWidth());
+  computeKnownBitsFromCond(Arm, Cond, CondRes, Depth + 1, Q, Invert);
+  // If we don't get any information from the condition, no reason to
+  // proceed.
+  if (CondRes.isUnknown())
+    return;
+
+  // We can have conflict if the condition is dead. I.e if we have
+  // (x | 64) < 32 ? (x | 64) : y
+  // we will have conflict at bit 6 from the condition/the `or`.
+  // In that case just return. Its not particularly important
+  // what we do, as this select is going to be simplified soon.
+  CondRes = CondRes.unionWith(Known);
+  if (CondRes.hasConflict())
+    return;
+
+  // Finally make sure the information we found is valid. This is relatively
+  // expensive so it's left for the very end.
+  if (!isGuaranteedNotToBeUndef(Arm, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+    return;
+
+  // Finally, we know we get information from the condition and its valid,
+  // so return it.
+  Known = CondRes;
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known, unsigned Depth,
@@ -1048,36 +1082,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
     auto ComputeForArm = [&](Value *Arm, bool Invert) {
       KnownBits Res(Known.getBitWidth());
       computeKnownBits(Arm, Res, Depth + 1, Q);
-      // If we have a constant arm, we are done.
-      if (Res.isConstant())
-        return Res;
-
-      // See what condition implies about the bits of the two select arms.
-      KnownBits CondRes(Res.getBitWidth());
-      computeKnownBitsFromCond(Arm, I->getOperand(0), CondRes, Depth + 1, Q,
-                               Invert);
-      // If we don't get any information from the condition, no reason to
-      // proceed.
-      if (CondRes.isUnknown())
-        return Res;
-
-      // We can have conflict if the condition is dead. I.e if we have
-      // (x | 64) < 32 ? (x | 64) : y
-      // we will have conflict at bit 6 from the condition/the `or`.
-      // In that case just return. Its not particularly important
-      // what we do, as this select is going to be simplified soon.
-      CondRes = CondRes.unionWith(Res);
-      if (CondRes.hasConflict())
-        return Res;
-
-      // Finally make sure the information we found is valid. This is relatively
-      // expensive so it's left for the very end.
-      if (!isGuaranteedNotToBeUndef(Arm, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-        return Res;
-
-      // Finally, we know we get information from the condition and its valid,
-      // so return it.
-      return CondRes;
+      adjustKnownBitsForSelectArm(Res, I->getOperand(0), Arm, Invert, Depth, Q);
+      return Res;
     };
     // Only known if known in both the LHS and RHS.
     Known =

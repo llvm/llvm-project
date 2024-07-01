@@ -71,11 +71,6 @@ C++ Specific Potentially Breaking Changes
 
   To fix this, update libstdc++ to version 14.1.1 or greater.
 
-- Clang now emits errors when Thread Safety Analysis trylock attributes are
-  applied to functions or methods with incompatible return values, such as
-  constructors, destructors, and void-returning functions. This only affects the
-  ``TRY_ACQUIRE`` and ``TRY_ACQUIRE_SHARED`` attributes (and any synonyms).
-
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -639,9 +634,16 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
+- Clang now has an improved error message for captures that refer to a class member.
+  Fixes #GH94764.
+
 - Clang now diagnoses unsupported class declarations for ``std::initializer_list<E>`` when they are
   used rather than when they are needed for constant evaluation or when code is generated for them.
   The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
+
+- Clang now diagnoses dangling cases where a pointer is assigned to a temporary
+  that will be destroyed at the end of the full expression.
+  Fixes #GH54492.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -750,11 +752,6 @@ Bug Fixes in This Version
   Fixes #GH92775
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
-
-- Clang's Thread Safety Analysis now evaluates trylock success arguments of enum
-  types rather than silently defaulting to false. This fixes a class of false
-  negatives where the analysis failed to detect unchecked access to guarded
-  data.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
