@@ -356,7 +356,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void recordRelocation(MCAssembler &, const MCFragment *, const MCFixup &,
                         MCValue, uint64_t &) override;
 
-  uint64_t writeObject(MCAssembler &, const MCAsmLayout &) override;
+  uint64_t writeObject(MCAssembler &) override;
 
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
   bool nameShouldBeInStringTable(const StringRef &);
@@ -377,7 +377,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void writeAuxFileHeader();
   void writeSectionHeader(const SectionEntry *Sec);
   void writeSectionHeaderTable();
-  void writeSections(const MCAssembler &Asm, const MCAsmLayout &Layout);
+  void writeSections(const MCAssembler &Asm);
   void writeSectionForControlSectionEntry(const MCAssembler &Asm,
                                           const MCAsmLayout &Layout,
                                           const CsectSectionEntry &CsectEntry,
@@ -393,7 +393,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
                                            const MCAsmLayout &Layout,
                                            CInfoSymSectionEntry &CInfoSymEntry,
                                            uint64_t &CurrentAddressLocation);
-  void writeSymbolTable(MCAssembler &Asm, const MCAsmLayout &Layout);
+  void writeSymbolTable(MCAssembler &Asm);
   void writeSymbolAuxFileEntry(StringRef &Name, uint8_t ftype);
   void writeSymbolAuxDwarfEntry(uint64_t LengthOfSectionPortion,
                                 uint64_t NumberOfRelocEnt = 0);
@@ -813,8 +813,8 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   FixedValue -= getVirtualAddress(SymB, SymBSec);
 }
 
-void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
-                                      const MCAsmLayout &Layout) {
+void XCOFFObjectWriter::writeSections(const MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   uint64_t CurrentAddressLocation = 0;
   for (const auto *Section : Sections)
     writeSectionForControlSectionEntry(Asm, Layout, *Section,
@@ -828,8 +828,7 @@ void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
                                       CurrentAddressLocation);
 }
 
-uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) {
+uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm) {
   // We always emit a timestamp of 0 for reproducibility, so ensure incremental
   // linking is not enabled, in case, like with Windows COFF, such a timestamp
   // is incompatible with incremental linking of XCOFF.
@@ -842,9 +841,9 @@ uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm,
   writeFileHeader();
   writeAuxFileHeader();
   writeSectionHeaderTable();
-  writeSections(Asm, Layout);
+  writeSections(Asm);
   writeRelocations();
-  writeSymbolTable(Asm, Layout);
+  writeSymbolTable(Asm);
   // Write the string table.
   Strings.write(W.OS);
 
@@ -1165,8 +1164,7 @@ void XCOFFObjectWriter::writeRelocations() {
       writeRelocation(Reloc, *DwarfSection.DwarfSect);
 }
 
-void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm,
-                                         const MCAsmLayout &Layout) {
+void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm) {
   // Write C_FILE symbols.
   StringRef Vers = Asm.getCompilerVersion();
 
@@ -1237,7 +1235,7 @@ void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm,
 
         for (const auto &Sym : Csect.Syms)
           writeSymbolEntryForCsectMemberLabel(
-              Sym, Csect, SectionIndex, Layout.getSymbolOffset(*(Sym.MCSym)));
+              Sym, Csect, SectionIndex, Asm.getSymbolOffset(*(Sym.MCSym)));
       }
     }
   }
@@ -1631,7 +1629,7 @@ void XCOFFObjectWriter::writeSectionForControlSectionEntry(
       if (uint32_t PaddingSize = Csect.Address - CurrentAddressLocation)
         W.OS.write_zeros(PaddingSize);
       if (Csect.Size)
-        Asm.writeSectionData(W.OS, Csect.MCSec, Layout);
+        Asm.writeSectionData(W.OS, Csect.MCSec);
       CurrentAddressLocation = Csect.Address + Csect.Size;
     }
   }
@@ -1660,7 +1658,7 @@ void XCOFFObjectWriter::writeSectionForDwarfSectionEntry(
     W.OS.write_zeros(PaddingSize);
 
   if (DwarfEntry.Size)
-    Asm.writeSectionData(W.OS, DwarfEntry.DwarfSect->MCSec, Layout);
+    Asm.writeSectionData(W.OS, DwarfEntry.DwarfSect->MCSec);
 
   CurrentAddressLocation = DwarfEntry.Address + DwarfEntry.Size;
 
