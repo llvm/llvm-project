@@ -11,7 +11,6 @@
 
 #include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Flags.h"
 
 namespace lldb_private {
 
