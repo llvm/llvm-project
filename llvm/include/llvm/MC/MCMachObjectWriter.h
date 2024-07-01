@@ -156,8 +156,8 @@ public:
   }
   uint64_t getSymbolAddress(const MCSymbol &S, const MCAsmLayout &Layout) const;
 
-  uint64_t getFragmentAddress(const MCFragment *Fragment,
-                              const MCAsmLayout &Layout) const;
+  uint64_t getFragmentAddress(const MCAssembler &Asm,
+                              const MCFragment *Fragment) const;
 
   uint64_t getPaddingSize(const MCSection *SD, const MCAsmLayout &Layout) const;
 

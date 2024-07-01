@@ -494,10 +494,6 @@ uint64_t MCAssembler::getFragmentOffset(const MCFragment &F) const {
   return F.Offset;
 }
 
-uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
-  return Assembler.getFragmentOffset(*F);
-}
-
 // Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAssembler &Asm, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {

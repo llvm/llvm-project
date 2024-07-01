@@ -81,10 +81,11 @@ bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
   return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }
 
-uint64_t MachObjectWriter::getFragmentAddress(const MCFragment *Fragment,
-                                              const MCAsmLayout &Layout) const {
+uint64_t
+MachObjectWriter::getFragmentAddress(const MCAssembler &Asm,
+                                     const MCFragment *Fragment) const {
   return getSectionAddress(Fragment->getParent()) +
-         Layout.getFragmentOffset(Fragment);
+         Asm.getFragmentOffset(*Fragment);
 }
 
 uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,

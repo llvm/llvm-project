@@ -103,8 +103,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
   // See <reloc.h>.
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   uint32_t FixupAddress =
-      Writer->getFragmentAddress(Fragment, *Asm.getLayout()) +
-      Fixup.getOffset();
+      Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset();
   int64_t Value = 0;
   unsigned Index = 0;
   unsigned IsExtern = 0;
@@ -474,8 +473,7 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
   if (auto *SymB = Target.getSymB()) {
     // If this is a subtraction then we're pcrel.
     uint32_t FixupAddress =
-        Writer->getFragmentAddress(Fragment, *Asm.getLayout()) +
-        Fixup.getOffset();
+        Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset();
     IsPCRel = 1;
     FixedValue = FixupAddress -
                  Writer->getSymbolAddress(SymB->getSymbol(), *Asm.getLayout()) +

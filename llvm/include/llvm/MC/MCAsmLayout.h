@@ -50,9 +50,6 @@ public:
   /// \name Fragment Layout Data
   /// @{
 
-  /// Get the offset of the given fragment inside its containing section.
-  uint64_t getFragmentOffset(const MCFragment *F) const;
-
   /// @}
   /// \name Utility Functions
   /// @{
