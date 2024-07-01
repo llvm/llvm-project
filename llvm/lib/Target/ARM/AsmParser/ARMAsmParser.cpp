@@ -7739,6 +7739,39 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     }
     return false;
   }
+  case ARM::t2STREXB:
+  case ARM::t2STREXH:
+  case ARM::t2STREX:
+  case ARM::STREXB:
+  case ARM::STREXH:
+  case ARM::STREX:
+  case ARM::STREXD: {
+    unsigned Rd = MRI->getEncodingValue(Inst.getOperand(0).getReg());
+    unsigned Rm = MRI->getEncodingValue(Inst.getOperand(1).getReg());
+    unsigned Rn = MRI->getEncodingValue(Inst.getOperand(2).getReg());
+
+    if (Rd == 15 || Rm == 15 || Rn == 15)
+      return Error(Operands[3]->getStartLoc(), "operand can't be R15");
+
+    if (Rd == Rm || Rd == Rn || (Opcode == ARM::STREXD && Rd == Rm + 1))
+      return Error(Operands[3]->getStartLoc(),
+                   "destination operand can't be identical to source operand");
+    return false;
+  }
+  case ARM::t2STREXD: {
+    unsigned Rd = MRI->getEncodingValue(Inst.getOperand(0).getReg());
+    unsigned Rm1 = MRI->getEncodingValue(Inst.getOperand(1).getReg());
+    unsigned Rm2 = MRI->getEncodingValue(Inst.getOperand(2).getReg());
+    unsigned Rn = MRI->getEncodingValue(Inst.getOperand(3).getReg());
+
+    if (Rd == 15 || Rn == 15)
+      return Error(Operands[4]->getStartLoc(), "operand can't be R15");
+
+    if (Rd == Rm1 || Rd == Rm2 || Rd == Rn)
+      return Error(Operands[4]->getStartLoc(),
+                   "destination operand can't be identical to source operand");
+    return false;
+  }
   case ARM::t2IT: {
     // Encoding is unpredictable if it ever results in a notional 'NV'
     // predicate. Since we don't parse 'NV' directly this means an 'AL'

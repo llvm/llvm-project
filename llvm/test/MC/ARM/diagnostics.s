@@ -336,6 +336,58 @@
 @ CHECK-ERRORS:         strexd  r6, r5, r3, [r8]
 @ CHECK-ERRORS:                         ^
 
+        @ Invalid Rm/Rn operands for strex
+        strex r1, r2, [r1]
+        strex r1, r1, [r2]
+
+@ CHECK-ERRORS: error: destination operand can't be identical to source operand
+@ CHECK-ERRORS:         strex r1, r2, [r1]
+@ CHECK-ERRORS:                     ^
+@ CHECK-ERRORS: error: destination operand can't be identical to source operand
+@ CHECK-ERRORS:         strex r1, r1, [r2]
+@ CHECK-ERRORS:                     ^
+
+        @ Can not use R15 as operand for strex
+        strex r15, r2, [r1]
+        strex r1, r15, [r2]
+        strex r1, r2, [r15]
+
+@ CHECK-ERRORS: error: operand can't be R15
+@ CHECK-ERRORS:         strex r15, r2, [r1]
+@ CHECK-ERRORS:                    ^
+@ CHECK-ERRORS: error: operand can't be R15
+@ CHECK-ERRORS:         strex r1, r15, [r2]
+@ CHECK-ERRORS:                   ^
+@ CHECK-ERRORS: error: operand can't be R15
+@ CHECK-ERRORS:         strex r1, r2, [r15]
+@ CHECK-ERRORS:                   ^
+
+        @ Can not use R15 as operand for strexd
+        strexd r15, r0, r1, [r6]
+        strexd r2, r0, r1, [r15]
+
+@ CHECK-ERRORS: error: operand can't be R15
+@ CHECK-ERRORS:         strexd r15, r0, r1, [r6]
+@ CHECK-ERRORS:                     ^
+@ CHECK-ERRORS: error: operand can't be R15
+@ CHECK-ERRORS:         strexd r2, r0, r1, [r15]
+@ CHECK-ERRORS:                    ^
+
+        @ Invalid Rm/Rn operands for strexd
+        strexd r1, r0, r1, [r6]
+        strexd r2, r2, r3, [r6]
+        strexd r4, r0, r1, [r4]
+
+@ CHECK-ERRORS: error: destination operand can't be identical to source operand
+@ CHECK-ERRORS:         strexd r1, r0, r1, [r6]
+@ CHECK-ERRORS:                    ^
+@ CHECK-ERRORS: error: destination operand can't be identical to source operand
+@ CHECK-ERRORS:         strexd r2, r2, r3, [r6]
+@ CHECK-ERRORS:                    ^
+@ CHECK-ERRORS: error: destination operand can't be identical to source operand
+@ CHECK-ERRORS:         strexd r4, r0, r1, [r4]
+@ CHECK-ERRORS:                        ^
+
         @ Illegal rotate operators for extend instructions
         sxtb r8, r3, #8
         sxtb r8, r3, ror 24
