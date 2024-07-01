@@ -445,7 +445,8 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   ASSERT_TRUE(Expr);
   ASSERT_EQ(Expr->getNumElements(), 1u);
 
-  Expr = parseDIExpressionBodyAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  Expr = parseDIExpressionBodyAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read,
+                                          Error, M, &Mapping);
   ASSERT_TRUE(Expr);
   ASSERT_EQ(Expr->getNumElements(), 3u);
 
@@ -455,7 +456,8 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   ASSERT_EQ(Error.getMessage(), "expected '(' here");
 
   Error = {};
-  Expr = parseDIExpressionBodyAtBeginning("!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  Expr = parseDIExpressionBodyAtBeginning(
+      "!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
   ASSERT_FALSE(Expr);
   ASSERT_EQ(Error.getMessage(), "expected '(' here");
 }
