@@ -147,6 +147,37 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
 }
 
 //===----------------------------------------------------------------------===//
+// ConstVectorAttr
+//===----------------------------------------------------------------------===//
+
+def ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector",
+                               [TypedAttrInterface]> {
+  let summary = "A constant vector from ArrayAttr";
+  let description = [{
+    A CIR vector attribute is an array of literals of the specified attribute
+    types.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+		        "ArrayAttr":$elts);
+
+  // Define a custom builder for the type; that removes the need to pass in an
+  // MLIRContext instance, as it can be inferred from the `type`.
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::cir::VectorType":$type,
+		                        "ArrayAttr":$elts), [{
+      return $_get(type.getContext(), type, elts);
+    }]>
+  ];
+
+  // Printing and parsing available in CIRDialect.cpp
+  let hasCustomAssemblyFormat = 1;
+
+  // Enable verifier.
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstStructAttr
 //===----------------------------------------------------------------------===//
 
