@@ -453,3 +453,16 @@ void getline_buffer_size_negative() {
   free(buffer);
   fclose(file);
 }
+
+void gh_93408_regression(void *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash: void is treated as char.
+  fclose(f);
+}
+
+typedef void VOID;
+void gh_93408_regression_typedef(VOID *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash: VOID is treated as char.
+  fclose(f);
+}
