@@ -107,10 +107,10 @@ public:
   /// expression of the fixed form (a - b + constant).
   ///
   /// \param Res - The relocatable value, if evaluation succeeds.
-  /// \param Layout - The assembler layout object to use for evaluating values.
+  /// \param Asm - The assembler object to use for evaluating values.
   /// \param Fixup - The Fixup object if available.
   /// \return - True on success.
-  bool evaluateAsRelocatable(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
                              const MCFixup *Fixup) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
@@ -656,8 +656,7 @@ protected:
 
 public:
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAsmLayout *Layout,
+  virtual bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                          const MCFixup *Fixup) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }

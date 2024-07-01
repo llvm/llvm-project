@@ -99,9 +99,7 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
                                       const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
-                                    Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -130,9 +128,7 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
                                         const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
-                                    Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -159,9 +155,7 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
                                    const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
-                                    Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -182,9 +176,7 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
                                      const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm ? Asm->getLayout() : nullptr,
-                                    Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -224,11 +216,9 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
 }
 
 bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                             const MCAsmLayout *Layout,
+                                             const MCAssembler *Asm,
                                              const MCFixup *Fixup) const {
   std::optional<int64_t> Total;
-  MCAssembler *Asm = Layout ? &Layout->getAssembler() : nullptr;
-
   switch (Kind) {
   default:
     break;
@@ -244,8 +234,7 @@ bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
 
   for (const MCExpr *Arg : Args) {
     MCValue ArgRes;
-    if (!Arg->evaluateAsRelocatable(ArgRes, Layout, Fixup) ||
-        !ArgRes.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(ArgRes, Asm, Fixup) || !ArgRes.isAbsolute())
       return false;
 
     if (!Total.has_value())

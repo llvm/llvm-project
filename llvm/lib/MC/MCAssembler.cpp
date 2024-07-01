@@ -187,7 +187,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   MCContext &Ctx = getContext();
   Value = 0;
   WasForced = false;
-  if (!Expr->evaluateAsRelocatable(Target, Layout, &Fixup)) {
+  if (!Expr->evaluateAsRelocatable(Target, this, &Fixup)) {
     Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
   }
