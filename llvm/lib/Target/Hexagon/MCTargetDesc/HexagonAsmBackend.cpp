@@ -644,13 +644,6 @@ public:
     return false;
   }
 
-  /// Simple predicate for targets where !Resolved implies requiring relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
-  }
-
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {
     assert(HexagonMCInstrInfo::isBundle(Inst) &&
