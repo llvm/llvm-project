@@ -286,7 +286,7 @@ function(declare_mlir_dialect_python_bindings)
   cmake_parse_arguments(ARG
     "GEN_ENUM_BINDINGS"
     "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME"
-    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE"
+    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE;EXTRA_INCLUDES"
     ${ARGN})
   # Sources.
   set(_dialect_target "${ARG_ADD_TO_PARENT}.${ARG_DIALECT_NAME}")
@@ -307,7 +307,7 @@ function(declare_mlir_dialect_python_bindings)
     set(LLVM_TARGET_DEFINITIONS ${td_file})
     mlir_tablegen("${dialect_filename}"
       -gen-python-op-bindings -bind-dialect=${ARG_DIALECT_NAME}
-      DEPENDS ${ARG_DEPENDS}
+      DEPENDS ${ARG_DEPENDS} EXTRA_INCLUDES ${ARG_EXTRA_INCLUDES}
     )
     add_public_tablegen_target(${tblgen_target})
 
@@ -318,7 +318,7 @@ function(declare_mlir_dialect_python_bindings)
         set(LLVM_TARGET_DEFINITIONS ${td_file})
       endif()
       set(enum_filename "${relative_td_directory}/_${ARG_DIALECT_NAME}_enum_gen.py")
-      mlir_tablegen(${enum_filename} -gen-python-enum-bindings)
+      mlir_tablegen(${enum_filename} -gen-python-enum-bindings EXTRA_INCLUDES ${ARG_EXTRA_INCLUDES})
       list(APPEND _sources ${enum_filename})
     endif()
 

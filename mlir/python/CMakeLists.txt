@@ -427,6 +427,17 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS_TD_FILE
     "dialects/VectorAttributes.td")
 
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/FIROps.td
+  SOURCES dialects/fir.py
+  DIALECT_NAME fir
+  GEN_ENUM_BINDINGS_TD_FILE
+    "dialects/FIRAttrs.td"
+  EXTRA_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/mlir/../../../flang/include"
+)
+
 ################################################################################
 # Python extensions.
 # The sources for these are all in lib/Bindings/Python, but since they have to
