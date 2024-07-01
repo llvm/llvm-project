@@ -20,6 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -392,10 +394,19 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
   }
 }
 
-/// TODO: Handle explicit casts.
-///       Handle C++ casts.
-///
-/// Precondition: the cast is between ObjCObjectPointers.
+// For some reason a CastExpr casting to an lvalue does not have a reference
+// type. This function adds that reference to the expr type.
+static QualType getTypeOfExpression(const Expr *E, const ASTContext &Ctx) {
+  QualType Ty = E->getType().getCanonicalType();
+  if (Ty->isPointerType() || Ty->isReferenceType())
+    return Ty;
+  if (E->isLValue())
+    return Ctx.getLValueReferenceType(Ty);
+  if (E->isXValue())
+    return Ctx.getRValueReferenceType(Ty);
+  return Ty;
+}
+
 ExplodedNode *DynamicTypePropagation::dynamicTypePropagationOnCasts(
     const CastExpr *CE, ProgramStateRef &State, CheckerContext &C) const {
   // We only track type info for regions.
@@ -403,8 +414,20 @@ ExplodedNode *DynamicTypePropagation::dynamicTypePropagationOnCasts(
   if (!ToR)
     return C.getPredecessor();
 
-  if (isa<ExplicitCastExpr>(CE))
+  if (CE->getCastKind() == CK_BaseToDerived) {
+    bool CastSucceeds = true;
+    const ASTContext &Ctx = C.getASTContext();
+    QualType FromTy = getTypeOfExpression(CE->getSubExpr(), Ctx);
+    QualType ToTy = getTypeOfExpression(CE, Ctx);
+    ToR = ToR->StripCasts(/*StripBaseAndDerivedCasts=*/true);
+    State = setDynamicTypeAndCastInfo(State, ToR, FromTy, ToTy, CastSucceeds);
+    return C.addTransition(State);
+  }
+
+  // TODO: Handle the rest of explicit casts, inluding the regular C++ casts.
+  if (isa<ExplicitCastExpr>(CE)) {
     return C.getPredecessor();
+  }
 
   if (const Type *NewTy = getBetterObjCType(CE, C)) {
     State = setDynamicTypeInfo(State, ToR, QualType(NewTy, 0));
@@ -609,6 +632,9 @@ storeWhenMoreInformative(ProgramStateRef &State, SymbolRef Sym,
 /// symbol and the destination type of the cast are unrelated, report an error.
 void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
                                            CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  ExplodedNode *AfterTypeProp = dynamicTypePropagationOnCasts(CE, State, C);
+
   if (CE->getCastKind() != CK_BitCast)
     return;
 
@@ -620,9 +646,6 @@ void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
 
   if (!OrigObjectPtrType || !DestObjectPtrType)
     return;
-
-  ProgramStateRef State = C.getState();
-  ExplodedNode *AfterTypeProp = dynamicTypePropagationOnCasts(CE, State, C);
 
   ASTContext &ASTCtxt = C.getASTContext();
 
