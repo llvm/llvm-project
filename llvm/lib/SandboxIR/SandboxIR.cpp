@@ -58,8 +58,122 @@ void Value::printAsOperandCommon(raw_ostream &OS) const {
     OS << "NULL ";
 }
 
+void Argument::printAsOperand(raw_ostream &OS) const {
+  printAsOperandCommon(OS);
+}
+void Argument::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+void Argument::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+bool User::classof(const Value *From) {
+  switch (From->getSubclassID()) {
+#define DEF_VALUE(ID, CLASS)
+#define DEF_USER(ID, CLASS)                                                    \
+  case ClassID::ID:                                                            \
+    return true;
+#define DEF_INSTR(ID, OPC, CLASS)                                              \
+  case ClassID::ID:                                                            \
+    return true;
+#include "llvm/SandboxIR/SandboxIRValues.def"
+  default:
+    return false;
+  }
+}
+
+#ifndef NDEBUG
 void User::dumpCommonHeader(raw_ostream &OS) const {
   Value::dumpCommonHeader(OS);
   // TODO: This is incomplete
 }
 #endif // NDEBUG
+
+const char *Instruction::getOpcodeName(Opcode Opc) {
+  switch (Opc) {
+#define DEF_VALUE(ID, CLASS)
+#define DEF_USER(ID, CLASS)
+#define OP(OPC)                                                                \
+  case Opcode::OPC:                                                            \
+    return #OPC;
+#define DEF_INSTR(ID, OPC, CLASS) OPC
+#include "llvm/SandboxIR/SandboxIRValues.def"
+  }
+}
+
+bool Instruction::classof(const sandboxir::Value *From) {
+  switch (From->getSubclassID()) {
+#define DEF_INSTR(ID, OPC, CLASS)                                              \
+  case ClassID::ID:                                                            \
+    return true;
+#include "llvm/SandboxIR/SandboxIRValues.def"
+  default:
+    return false;
+  }
+}
+
+#ifndef NDEBUG
+void Instruction::dump(raw_ostream &OS) const {
+  OS << "Unimplemented! Please override dump().";
+}
+void Instruction::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+
+void OpaqueInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void OpaqueInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+
+void Constant::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void Constant::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+
+void Function::dumpNameAndArgs(raw_ostream &OS) const {
+  auto *F = cast<llvm::Function>(Val);
+  OS << *getType() << " @" << F->getName() << "(";
+  auto NumArgs = F->arg_size();
+  for (auto [Idx, Arg] : enumerate(F->args())) {
+    auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&Arg));
+    if (SBArg == nullptr)
+      OS << "NULL";
+    else
+      SBArg->printAsOperand(OS);
+    if (Idx + 1 < NumArgs)
+      OS << ", ";
+  }
+  OS << ")";
+}
+void Function::dump(raw_ostream &OS) const {
+  dumpNameAndArgs(OS);
+  OS << " {\n";
+  OS << "}\n";
+}
+void Function::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+Value *Context::getValue(llvm::Value *V) const {
+  auto It = LLVMValueToValueMap.find(V);
+  if (It != LLVMValueToValueMap.end())
+    return It->second.get();
+  return nullptr;
+}
