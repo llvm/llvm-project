@@ -161,7 +161,7 @@ public:
                 DwoMode Mode);
 
   void reset();
-  void executePostLayoutBinding(MCAssembler &Asm, const MCAsmLayout &Layout);
+  void executePostLayoutBinding(MCAssembler &Asm);
   void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue);
@@ -223,8 +223,7 @@ public:
 
   // MCObjectWriter interface implementation.
   void reset() override;
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
@@ -834,8 +833,8 @@ void WinCOFFWriter::reset() {
   WeakDefaults.clear();
 }
 
-void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                             const MCAsmLayout &Layout) {
+void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
   for (const auto &Section : Asm) {
@@ -1204,11 +1203,10 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SymA.getSection() == FB.getParent();
 }
 
-void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                                   const MCAsmLayout &Layout) {
-  ObjWriter->executePostLayoutBinding(Asm, Layout);
+void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
+  ObjWriter->executePostLayoutBinding(Asm);
   if (DwoWriter)
-    DwoWriter->executePostLayoutBinding(Asm, Layout);
+    DwoWriter->executePostLayoutBinding(Asm);
 }
 
 void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,

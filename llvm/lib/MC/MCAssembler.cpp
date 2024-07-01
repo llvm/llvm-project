@@ -1022,7 +1022,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 
   // Allow the object writer a chance to perform post-layout binding (for
   // example, to set the index fields in the symbol data).
-  getWriter().executePostLayoutBinding(*this, Layout);
+  getWriter().executePostLayoutBinding(*this);
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {

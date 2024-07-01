@@ -668,24 +668,22 @@ void MachObjectWriter::computeSymbolTable(
   }
 }
 
-void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm,
-                                               const MCAsmLayout &Layout) {
+void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
   uint64_t StartAddress = 0;
-  for (const MCSection *Sec : Layout.getSectionOrder()) {
+  for (const MCSection *Sec : Asm.getLayout()->getSectionOrder()) {
     StartAddress = alignTo(StartAddress, Sec->getAlign());
     SectionAddress[Sec] = StartAddress;
-    StartAddress += Layout.getSectionAddressSize(Sec);
+    StartAddress += Asm.getSectionAddressSize(*Sec);
 
     // Explicitly pad the section to match the alignment requirements of the
     // following one. This is for 'gas' compatibility, it shouldn't
     /// strictly be necessary.
-    StartAddress += getPaddingSize(Sec, Layout);
+    StartAddress += getPaddingSize(Sec, *Asm.getLayout());
   }
 }
 
-void MachObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                                const MCAsmLayout &Layout) {
-  computeSectionAddresses(Asm, Layout);
+void MachObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
+  computeSectionAddresses(Asm);
 
   // Create symbol data for any indirect symbols.
   bindIndirectSymbols(Asm);
