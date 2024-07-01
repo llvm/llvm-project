@@ -470,8 +470,9 @@ std::string CGObjCRuntime::getSymbolNameForMethod(const ObjCMethodDecl *OMD,
                                                   bool includeCategoryName) {
   std::string buffer;
   llvm::raw_string_ostream out(buffer);
-  CGM.getCXXABI().getMangleContext().mangleObjCMethodName(OMD, out,
-                                       /*includePrefixByte=*/true,
-                                       includeCategoryName);
+  CGM.getCXXABI().getMangleContext().mangleObjCMethodName(
+      OMD, out,
+      /*includePrefixByte=*/
+      !OMD->hasMethodVisibilityDefault(), includeCategoryName);
   return buffer;
 }
