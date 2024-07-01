@@ -8204,6 +8204,8 @@ let CategoryName = "Lambda Issue" in {
     "'&' must precede a capture when the capture default is '='">;
   def err_capture_does_not_name_variable : Error<
     "%0 in capture list does not name a variable">;
+  def err_capture_class_member_does_not_name_variable : Error<
+    "class member %0 cannot appear in capture list as it is not a variable">;
   def err_capture_non_automatic_variable : Error<
     "%0 cannot be captured because it does not have automatic storage "
     "duration">;
