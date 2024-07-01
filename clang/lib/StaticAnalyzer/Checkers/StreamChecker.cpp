@@ -1043,7 +1043,7 @@ static QualType getPointeeType(const MemRegion *R) {
     return TR->getValueType()->getCanonicalTypeUnqualified();
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
     return SR->getPointeeStaticType()->getCanonicalTypeUnqualified();
-  return QualType{};
+  return {};
 }
 
 static std::optional<NonLoc> getStartIndex(SValBuilder &SVB,
