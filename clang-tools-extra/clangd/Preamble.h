@@ -27,6 +27,10 @@
 #include "Diagnostics.h"
 #include "FS.h"
 #include "Headers.h"
+
+#include "ModulesBuilder.h"
+#include "PrerequisiteModules.h"
+
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
 #include "clang/Basic/SourceManager.h"
@@ -109,6 +113,8 @@ struct PreambleData {
   IncludeStructure Includes;
   // Captures #include-mapping information in #included headers.
   std::shared_ptr<const include_cleaner::PragmaIncludes> Pragmas;
+  // Information about required module files for this preamble.
+  std::unique_ptr<PrerequisiteModules> RequiredModules;
   // Macros defined in the preamble section of the main file.
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.
@@ -149,9 +155,13 @@ struct PreambleBuildStats {
 /// If \p PreambleCallback is set, it will be run on top of the AST while
 /// building the preamble.
 /// If Stats is not non-null, build statistics will be exported there.
+/// If \p RequiredModuleBuilder is not null, it will scan the source file
+/// to see if it is related to modules, and if yes, modules related things
+/// will be built.
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation CI,
               const ParseInputs &Inputs, bool StoreInMemory,
+              ModulesBuilder *RequiredModuleBuilder,
               PreambleParsedCallback PreambleCallback,
               PreambleBuildStats *Stats = nullptr);
 

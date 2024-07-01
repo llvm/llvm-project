@@ -2,6 +2,7 @@ set(CLANGD_TEST_DEPS
   clangd
   ClangdTests
   clangd-indexer
+  split-file
   # No tests for it, but we should still make sure they build.
   dexp
   )

@@ -587,11 +587,10 @@ public:
 };
 } // namespace
 
-std::shared_ptr<const PreambleData>
-buildPreamble(PathRef FileName, CompilerInvocation CI,
-              const ParseInputs &Inputs, bool StoreInMemory,
-              PreambleParsedCallback PreambleCallback,
-              PreambleBuildStats *Stats) {
+std::shared_ptr<const PreambleData> buildPreamble(
+    PathRef FileName, CompilerInvocation CI, const ParseInputs &Inputs,
+    bool StoreInMemory, ModulesBuilder *RequiredModuleBuilder,
+    PreambleParsedCallback PreambleCallback, PreambleBuildStats *Stats) {
   // Note that we don't need to copy the input contents, preamble can live
   // without those.
   auto ContentsBuffer =
@@ -660,10 +659,12 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   WallTimer PreambleTimer;
   PreambleTimer.startTimer();
+
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
       StoreInMemory, /*StoragePath=*/"", CapturedInfo);
+
   PreambleTimer.stopTimer();
 
   // We have to setup DiagnosticConsumer that will be alife
@@ -696,6 +697,19 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->Includes = CapturedInfo.takeIncludes();
     Result->Pragmas = std::make_shared<const include_cleaner::PragmaIncludes>(
         CapturedInfo.takePragmaIncludes());
+
+    if (RequiredModuleBuilder) {
+      WallTimer PrerequisiteModuleTimer;
+      PrerequisiteModuleTimer.startTimer();
+      Result->RequiredModules =
+          RequiredModuleBuilder->buildPrerequisiteModulesFor(FileName,
+                                                             Inputs.TFS);
+      PrerequisiteModuleTimer.stopTimer();
+
+      log("Built prerequisite modules for file {0} in {1} seconds", FileName,
+          PrerequisiteModuleTimer.getTime());
+    }
+
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
     Result->StatCache = StatCache;
@@ -737,7 +751,9 @@ bool isPreambleCompatible(const PreambleData &Preamble,
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
-         Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS);
+         Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS) &&
+         (!Preamble.RequiredModules ||
+          Preamble.RequiredModules->canReuse(CI, VFS));
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {

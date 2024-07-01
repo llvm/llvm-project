@@ -192,8 +192,10 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   TU.AdditionalFiles["b.h"] = "";
   TU.AdditionalFiles["c.h"] = "";
   auto PI = TU.inputs(FS);
-  auto BaselinePreamble = buildPreamble(
-      TU.Filename, *buildCompilerInvocation(PI, Diags), PI, true, nullptr);
+  MockCompilationDatabase CDB;
+  auto BaselinePreamble =
+      buildPreamble(TU.Filename, *buildCompilerInvocation(PI, Diags), PI, true,
+                    /*RequiredModuleBuilder=*/nullptr, nullptr);
   // We drop c.h from modified and add a new header. Since the latter is patched
   // we should only get a.h in preamble includes. d.h shouldn't be part of the
   // preamble, as it's coming from a disabled region.

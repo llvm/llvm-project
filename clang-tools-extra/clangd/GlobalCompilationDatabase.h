@@ -25,6 +25,8 @@
 namespace clang {
 namespace clangd {
 
+class ProjectModules;
+
 struct ProjectInfo {
   // The directory in which the compilation database was discovered.
   // Empty if directory-based compilation database discovery was not used.
@@ -43,6 +45,12 @@ public:
   /// Finds the closest project to \p File.
   virtual std::optional<ProjectInfo> getProjectInfo(PathRef File) const {
     return std::nullopt;
+  }
+
+  /// Get the modules in the closest project to \p File
+  virtual std::shared_ptr<ProjectModules>
+  getProjectModules(PathRef File) const {
+    return nullptr;
   }
 
   /// Makes a guess at how to build a file.
@@ -75,6 +83,9 @@ public:
   getCompileCommand(PathRef File) const override;
 
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+
+  std::shared_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
@@ -121,6 +132,9 @@ public:
   /// Returns the path to first directory containing a compilation database in
   /// \p File's parents.
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+
+  std::shared_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
   bool blockUntilIdle(Deadline Timeout) const override;
 
