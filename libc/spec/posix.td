@@ -135,6 +135,9 @@ def POSIX : StandardSpec<"POSIX"> {
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 
+  NamedType FsFilCntTType = NamedType<"fsfilcnt_t">;
+  NamedType FsBlkCntTType = NamedType<"fsblkcnt_t">;
+
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
       [
@@ -928,7 +931,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysStatvfs = HeaderSpec<
       "sys/statvfs.h",
       [], // Macros
-      [StructStatvfs], // Types
+      [StructStatvfs, FsFilCntTType, FsBlkCntTType], // Types
       [], // Enumerations
       [
         FunctionSpec<

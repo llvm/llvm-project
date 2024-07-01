@@ -312,6 +312,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     # XXX
     libc.src.assert.__assert_fail
     libc.src.sys_time.utimes
+    libc.src.sys.statvfs.fstatvfs
+    libc.src.sys.statvfs.statvfs
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

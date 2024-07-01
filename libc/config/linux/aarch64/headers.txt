@@ -34,6 +34,7 @@ set(TARGET_PUBLIC_HEADERS
 
     # XXX
     libc.include.sys_auxv
+    libc.include.sys_statvfs
     libc.include.fcntl
     libc.include.sched
     libc.include.sys_stat
