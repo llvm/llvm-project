@@ -33,9 +33,6 @@ private:
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override {}
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {}
-
   uint64_t writeObject(MCAssembler &Asm) override;
   void writeHeader(const MCAssembler &Asm);
 };

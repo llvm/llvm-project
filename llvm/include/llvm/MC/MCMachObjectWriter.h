@@ -249,11 +249,9 @@ public:
                           std::vector<MachSymbolData> &ExternalSymbolData,
                           std::vector<MachSymbolData> &UndefinedSymbolData);
 
-  void computeSectionAddresses(const MCAssembler &Asm,
-                               const MCAsmLayout &Layout);
+  void computeSectionAddresses(const MCAssembler &Asm);
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,
