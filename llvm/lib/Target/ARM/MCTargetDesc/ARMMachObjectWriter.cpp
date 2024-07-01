@@ -27,18 +27,14 @@ using namespace llvm;
 
 namespace {
 class ARMMachObjectWriter : public MCMachObjectTargetWriter {
-  void RecordARMScatteredRelocation(MachObjectWriter *Writer,
+  void recordARMScatteredRelocation(MachObjectWriter *Writer,
                                     const MCAssembler &Asm,
-                                    const MCAsmLayout &Layout,
                                     const MCFragment *Fragment,
-                                    const MCFixup &Fixup,
-                                    MCValue Target,
-                                    unsigned Type,
-                                    unsigned Log2Size,
+                                    const MCFixup &Fixup, MCValue Target,
+                                    unsigned Type, unsigned Log2Size,
                                     uint64_t &FixedValue);
-  void RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
+  void recordARMScatteredHalfRelocation(MachObjectWriter *Writer,
                                         const MCAssembler &Asm,
-                                        const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue);
@@ -53,9 +49,8 @@ public:
       : MCMachObjectTargetWriter(Is64Bit, CPUType, CPUSubtype) {}
 
   void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
-                        const MCAsmLayout &Layout, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+                        const MCFragment *Fragment, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 };
 }
 
@@ -136,15 +131,11 @@ static bool getARMFixupKindMachOInfo(unsigned Kind, unsigned &RelocType,
   }
 }
 
-void ARMMachObjectWriter::
-RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
-                                 const MCAssembler &Asm,
-                                 const MCAsmLayout &Layout,
-                                 const MCFragment *Fragment,
-                                 const MCFixup &Fixup,
-                                 MCValue Target,
-                                 uint64_t &FixedValue) {
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
+    MachObjectWriter *Writer, const MCAssembler &Asm,
+    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
+    uint64_t &FixedValue) {
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
 
   if (FixupOffset & 0xff000000) {
     Asm.getContext().reportError(Fixup.getLoc(),
@@ -167,7 +158,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, Layout);
+  uint32_t Value = Writer->getSymbolAddress(*A, *Asm.getLayout());
   uint32_t Value2 = 0;
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
@@ -184,7 +175,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_HALF_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), Layout);
+    Value2 = Writer->getSymbolAddress(B->getSymbol(), *Asm.getLayout());
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -250,16 +241,11 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
   Writer->addRelocation(nullptr, Fragment->getParent(), MRE);
 }
 
-void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
-                                                    const MCAssembler &Asm,
-                                                    const MCAsmLayout &Layout,
-                                                    const MCFragment *Fragment,
-                                                    const MCFixup &Fixup,
-                                                    MCValue Target,
-                                                    unsigned Type,
-                                                    unsigned Log2Size,
-                                                    uint64_t &FixedValue) {
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+void ARMMachObjectWriter::recordARMScatteredRelocation(
+    MachObjectWriter *Writer, const MCAssembler &Asm,
+    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
+    unsigned Type, unsigned Log2Size, uint64_t &FixedValue) {
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
 
   if (FixupOffset & 0xff000000) {
     Asm.getContext().reportError(Fixup.getLoc(),
@@ -281,7 +267,7 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, Layout);
+  uint32_t Value = Writer->getSymbolAddress(*A, *Asm.getLayout());
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
@@ -299,7 +285,7 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), Layout);
+    Value2 = Writer->getSymbolAddress(B->getSymbol(), *Asm.getLayout());
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -374,7 +360,6 @@ bool ARMMachObjectWriter::requiresExternRelocation(MachObjectWriter *Writer,
 
 void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
                                            MCAssembler &Asm,
-                                           const MCAsmLayout &Layout,
                                            const MCFragment *Fragment,
                                            const MCFixup &Fixup, MCValue Target,
                                            uint64_t &FixedValue) {
@@ -395,11 +380,10 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   // relocations.
   if (Target.getSymB()) {
     if (RelocType == MachO::ARM_RELOC_HALF)
-      return RecordARMScatteredHalfRelocation(Writer, Asm, Layout, Fragment,
-                                              Fixup, Target, FixedValue);
-    return RecordARMScatteredRelocation(Writer, Asm, Layout, Fragment, Fixup,
-                                        Target, RelocType, Log2Size,
-                                        FixedValue);
+      return recordARMScatteredHalfRelocation(Writer, Asm, Fragment, Fixup,
+                                              Target, FixedValue);
+    return recordARMScatteredRelocation(Writer, Asm, Fragment, Fixup, Target,
+                                        RelocType, Log2Size, FixedValue);
   }
 
   // Get the symbol data, if any.
@@ -417,12 +401,11 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
     Offset += 1 << Log2Size;
   if (Offset && A && !Writer->doesSymbolRequireExternRelocation(*A) &&
       RelocType != MachO::ARM_RELOC_HALF)
-    return RecordARMScatteredRelocation(Writer, Asm, Layout, Fragment, Fixup,
-                                        Target, RelocType, Log2Size,
-                                        FixedValue);
+    return recordARMScatteredRelocation(Writer, Asm, Fragment, Fixup, Target,
+                                        RelocType, Log2Size, FixedValue);
 
   // See <reloc.h>.
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   unsigned Index = 0;
   unsigned Type = 0;
   const MCSymbol *RelSymbol = nullptr;
@@ -453,7 +436,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
       // compensate for the addend of the symbol address, if it was
       // undefined. This occurs with weak definitions, for example.
       if (!A->isUndefined())
-        FixedValue -= Layout.getSymbolOffset(*A);
+        FixedValue -= Asm.getSymbolOffset(*A);
     } else {
       // The index is the section ordinal (1-based).
       const MCSection &Sec = A->getSection();

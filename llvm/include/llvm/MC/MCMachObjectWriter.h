@@ -73,7 +73,6 @@ public:
   /// @{
 
   virtual void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
-                                const MCAsmLayout &Layout,
                                 const MCFragment *Fragment,
                                 const MCFixup &Fixup, MCValue Target,
                                 uint64_t &FixedValue) = 0;
