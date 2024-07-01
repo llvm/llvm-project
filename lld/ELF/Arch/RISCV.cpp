@@ -1084,76 +1084,10 @@ static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
   }
 }
 
-static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
-                        const InputSectionBase *oldSection,
-                        const InputSectionBase *newSection,
-                        RISCVAttrs::RISCVAtomicAbiTag oldTag,
-                        RISCVAttrs::RISCVAtomicAbiTag newTag) {
-  using RISCVAttrs::RISCVAtomicAbiTag;
-  // Same tags stay the same, and UNKNOWN is compatible with anything
-  if (oldTag == newTag || newTag == RISCVAtomicAbiTag::UNKNOWN)
-    return;
-
-  auto reportAbiError = [&]() {
-    errorOrWarn("atomic abi mismatch for " + oldSection->name + "\n>>> " +
-                toString(oldSection) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(oldTag)) +
-                "\n>>> " + toString(newSection) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(newTag)));
-  };
-
-  switch (static_cast<RISCVAtomicAbiTag>(oldTag)) {
-  case RISCVAtomicAbiTag::UNKNOWN:
-    it->getSecond() = static_cast<unsigned>(newTag);
-    return;
-  case RISCVAtomicAbiTag::A6C:
-    switch (newTag) {
-    case RISCVAtomicAbiTag::A6S:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
-      return;
-    case RISCVAtomicAbiTag::A7:
-      reportAbiError();
-      return;
-    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
-    case RISCVAttrs::RISCVAtomicAbiTag::A6C:
-      return;
-    };
-
-  case RISCVAtomicAbiTag::A6S:
-    switch (newTag) {
-    case RISCVAtomicAbiTag::A6C:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
-      return;
-    case RISCVAtomicAbiTag::A7:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
-      return;
-    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
-    case RISCVAttrs::RISCVAtomicAbiTag::A6S:
-      return;
-    };
-
-  case RISCVAtomicAbiTag::A7:
-    switch (newTag) {
-    case RISCVAtomicAbiTag::A6S:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
-      return;
-    case RISCVAtomicAbiTag::A6C:
-      reportAbiError();
-      return;
-    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
-    case RISCVAttrs::RISCVAtomicAbiTag::A7:
-      return;
-    };
-  };
-  llvm_unreachable("unknown AtomicABI");
-}
-
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
-  using RISCVAttrs::RISCVAtomicAbiTag;
   RISCVISAUtils::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
-  const InputSectionBase *firstAtomicAbi = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
@@ -1200,18 +1134,6 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case RISCVAttrs::PRIV_SPEC_MINOR:
       case RISCVAttrs::PRIV_SPEC_REVISION:
         break;
-
-      case llvm::RISCVAttrs::AttrType::ATOMIC_ABI:
-        if (auto i = parser.getAttributeValue(tag.attr)) {
-          auto r = merged.intAttr.try_emplace(tag.attr, *i);
-          if (r.second)
-            firstAtomicAbi = sec;
-          else
-            mergeAtomic(r.first, firstAtomicAbi, sec,
-                        static_cast<RISCVAtomicAbiTag>(r.first->getSecond()),
-                        static_cast<RISCVAtomicAbiTag>(*i));
-        }
-        continue;
       }
 
       // Fallback for deprecated priv_spec* and other unknown attributes: retain
