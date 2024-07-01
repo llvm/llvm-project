@@ -205,6 +205,8 @@ struct TestConditionVariableConfig {
 #endif
 
   struct Secondary {
+    static const bool VerifyInUseAddresses = true;
+    static const scudo::u32 InUseBlocksSize = 1000U;
     template <typename Config>
     using CacheT = scudo::MapAllocatorNoCache<Config>;
   };
@@ -701,6 +703,8 @@ struct DeathConfig {
   using PrimaryT = scudo::SizeClassAllocator64<Config>;
 
   struct Secondary {
+    static const bool VerifyInUseAddresses = true;
+    static const scudo::u32 InUseBlocksSize = 1000U;
     template <typename Config>
     using CacheT = scudo::MapAllocatorNoCache<Config>;
   };
