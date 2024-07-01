@@ -88,6 +88,8 @@ public:
   ///   passed indirectly as an argument
   bool shouldPassIndirectly(bool asReturnValue) const;
 
+  bool shouldReturnTypedErrorIndirectly() const;
+
   using EnumerationCallback =
     llvm::function_ref<void(CharUnits offset, CharUnits end, llvm::Type *type)>;
 
