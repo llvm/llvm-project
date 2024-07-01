@@ -18,7 +18,7 @@ if(HAVE_CLANG_REPL_SUPPORT)
 endif()
 
 add_clang_subdirectory(c-index-test)
-
+add_clang_subdirectory(clang-named-modules-querier)
 add_clang_subdirectory(clang-rename)
 add_clang_subdirectory(clang-refactor)
 # For MinGW we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.
