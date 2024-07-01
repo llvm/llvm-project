@@ -535,13 +535,13 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
-    ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[UBFMXri]]
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
-    ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[ADDXri]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
-    ; CHECK-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[ADDXrr1]]
+    ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
+    ; CHECK-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrr]], [[ADDXrr1]]
     ; CHECK-NEXT: $x2 = COPY [[ADDXrr2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
@@ -571,19 +571,36 @@ body:             |
     liveins: $x0, $x1, $x2
     liveins: $w1, $x0
 
-    ; CHECK-LABEL: name: ldrhrox_more_than_one_mem_use_shl
-    ; CHECK: liveins: $x0, $x1, $x2, $w1, $x0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 9, 31
-    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[UBFMWri]], 0
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-    ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[SUBREG_TO_REG]], 4103
-    ; CHECK-NEXT: [[LDRHHroX:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
-    ; CHECK-NEXT: [[LDRHHroX1:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
-    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRHHroX]], [[LDRHHroX1]]
-    ; CHECK-NEXT: RET_ReallyLR implicit [[ADDWrr]]
+    ; CHECK-FAST-LABEL: name: ldrhrox_more_than_one_mem_use_shl
+    ; CHECK-FAST: liveins: $x0, $x1, $x2, $w1, $x0
+    ; CHECK-FAST-NEXT: {{  $}}
+    ; CHECK-FAST-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-FAST-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-FAST-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 9, 31
+    ; CHECK-FAST-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[UBFMWri]], 0
+    ; CHECK-FAST-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-FAST-NEXT: [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[SUBREG_TO_REG]], 4103
+    ; CHECK-FAST-NEXT: [[LDRHHroX:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
+    ; CHECK-FAST-NEXT: [[LDRHHroX1:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
+    ; CHECK-FAST-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRHHroX]], [[LDRHHroX1]]
+    ; CHECK-FAST-NEXT: RET_ReallyLR implicit [[ADDWrr]]
+    ;
+    ; CHECK-SLOW-LABEL: name: ldrhrox_more_than_one_mem_use_shl
+    ; CHECK-SLOW: liveins: $x0, $x1, $x2, $w1, $x0
+    ; CHECK-SLOW-NEXT: {{  $}}
+    ; CHECK-SLOW-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-SLOW-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 9, 31
+    ; CHECK-SLOW-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[UBFMWri]], 0
+    ; CHECK-SLOW-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]].sub_32
+    ; CHECK-SLOW-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
+    ; CHECK-SLOW-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY [[COPY]]
+    ; CHECK-SLOW-NEXT: [[ADDXrx:%[0-9]+]]:gpr64sp = ADDXrx [[COPY4]], [[COPY3]], 1
+    ; CHECK-SLOW-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[ADDXrx]], 0 :: (load (s16))
+    ; CHECK-SLOW-NEXT: [[LDRHHui1:%[0-9]+]]:gpr32 = LDRHHui [[ADDXrx]], 0 :: (load (s16))
+    ; CHECK-SLOW-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRHHui]], [[LDRHHui1]]
+    ; CHECK-SLOW-NEXT: RET_ReallyLR implicit [[ADDWrr]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = COPY $w1
     %15:gpr(s64) = G_CONSTANT i64 9
@@ -612,19 +629,36 @@ body:             |
     liveins: $x0, $x1, $x2
     liveins: $w1, $x0
 
-    ; CHECK-LABEL: name: ldrhrox_more_than_one_use_shl
-    ; CHECK: liveins: $x0, $x1, $x2, $w1, $x0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 9, 31
-    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[UBFMWri]], 0
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-    ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[SUBREG_TO_REG]], 4103
-    ; CHECK-NEXT: [[LDRHHroX:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
-    ; CHECK-NEXT: [[LDRHHroX1:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
-    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRHHroX]], [[LDRHHroX1]]
-    ; CHECK-NEXT: RET_ReallyLR implicit [[ADDWrr]]
+    ; CHECK-FAST-LABEL: name: ldrhrox_more_than_one_use_shl
+    ; CHECK-FAST: liveins: $x0, $x1, $x2, $w1, $x0
+    ; CHECK-FAST-NEXT: {{  $}}
+    ; CHECK-FAST-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-FAST-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-FAST-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 9, 31
+    ; CHECK-FAST-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[UBFMWri]], 0
+    ; CHECK-FAST-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-FAST-NEXT: [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[SUBREG_TO_REG]], 4103
+    ; CHECK-FAST-NEXT: [[LDRHHroX:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
+    ; CHECK-FAST-NEXT: [[LDRHHroX1:%[0-9]+]]:gpr32 = LDRHHroX [[COPY]], [[ANDXri]], 0, 1 :: (load (s16))
+    ; CHECK-FAST-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRHHroX]], [[LDRHHroX1]]
+    ; CHECK-FAST-NEXT: RET_ReallyLR implicit [[ADDWrr]]
+    ;
+    ; CHECK-SLOW-LABEL: name: ldrhrox_more_than_one_use_shl
+    ; CHECK-SLOW: liveins: $x0, $x1, $x2, $w1, $x0
+    ; CHECK-SLOW-NEXT: {{  $}}
+    ; CHECK-SLOW-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-SLOW-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 9, 31
+    ; CHECK-SLOW-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[UBFMWri]], 0
+    ; CHECK-SLOW-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]].sub_32
+    ; CHECK-SLOW-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
+    ; CHECK-SLOW-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY [[COPY]]
+    ; CHECK-SLOW-NEXT: [[ADDXrx:%[0-9]+]]:gpr64sp = ADDXrx [[COPY4]], [[COPY3]], 1
+    ; CHECK-SLOW-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[ADDXrx]], 0 :: (load (s16))
+    ; CHECK-SLOW-NEXT: [[LDRHHui1:%[0-9]+]]:gpr32 = LDRHHui [[ADDXrx]], 0 :: (load (s16))
+    ; CHECK-SLOW-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRHHui]], [[LDRHHui1]]
+    ; CHECK-SLOW-NEXT: RET_ReallyLR implicit [[ADDWrr]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = COPY $w1
     %15:gpr(s64) = G_CONSTANT i64 9
@@ -656,15 +690,15 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 62, 61
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
-    ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[ADDXrr]], 0 :: (load (s32) from %ir.addr)
-    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[LDRWui]], 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[UBFMXri]]
+    ; CHECK-NEXT: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[COPY1]], [[COPY]], 0, 1 :: (load (s32) from %ir.addr)
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[LDRWroX]], 0
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 2, 0
     ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[SUBREG_TO_REG]], [[ADDXri]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
-    ; CHECK-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[ADDXrr1]]
+    ; CHECK-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrr]], [[ADDXrr1]]
     ; CHECK-NEXT: $x2 = COPY [[ADDXrr2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
@@ -692,21 +726,37 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
-    ; CHECK-LABEL: name: ldrqrox_more_than_one_use_shl
-    ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 60, 59
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
-    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADDXrr]], 0 :: (load (s128) from %ir.addr)
-    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 4, 0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
-    ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[COPY3]], [[ADDXri]]
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
-    ; CHECK-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[COPY4]], [[ADDXrr1]]
-    ; CHECK-NEXT: RET_ReallyLR implicit [[ADDXrr2]]
+    ; CHECK-FAST-LABEL: name: ldrqrox_more_than_one_use_shl
+    ; CHECK-FAST: liveins: $x0, $x1, $x2
+    ; CHECK-FAST-NEXT: {{  $}}
+    ; CHECK-FAST-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-FAST-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 60, 59
+    ; CHECK-FAST-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-FAST-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+    ; CHECK-FAST-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[UBFMXri]]
+    ; CHECK-FAST-NEXT: [[LDRQroX:%[0-9]+]]:fpr128 = LDRQroX [[COPY1]], [[COPY]], 0, 1 :: (load (s128) from %ir.addr)
+    ; CHECK-FAST-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 4, 0
+    ; CHECK-FAST-NEXT: [[COPY3:%[0-9]+]]:fpr64 = COPY [[LDRQroX]].dsub
+    ; CHECK-FAST-NEXT: [[COPY4:%[0-9]+]]:gpr64 = COPY [[COPY3]]
+    ; CHECK-FAST-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[COPY4]], [[ADDXri]]
+    ; CHECK-FAST-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrr]], [[ADDXrr1]]
+    ; CHECK-FAST-NEXT: RET_ReallyLR implicit [[ADDXrr2]]
+    ;
+    ; CHECK-SLOW-LABEL: name: ldrqrox_more_than_one_use_shl
+    ; CHECK-SLOW: liveins: $x0, $x1, $x2
+    ; CHECK-SLOW-NEXT: {{  $}}
+    ; CHECK-SLOW-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-SLOW-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 60, 59
+    ; CHECK-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-SLOW-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
+    ; CHECK-SLOW-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADDXrr]], 0 :: (load (s128) from %ir.addr)
+    ; CHECK-SLOW-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 4, 0
+    ; CHECK-SLOW-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
+    ; CHECK-SLOW-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
+    ; CHECK-SLOW-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[COPY3]], [[ADDXri]]
+    ; CHECK-SLOW-NEXT: [[COPY4:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
+    ; CHECK-SLOW-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[COPY4]], [[ADDXrr1]]
+    ; CHECK-SLOW-NEXT: RET_ReallyLR implicit [[ADDXrr2]]
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 4
     %2:gpr(s64) = G_SHL %0, %1(s64)
