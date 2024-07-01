@@ -183,6 +183,13 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
   for (auto &BB : F)
     for (Instruction &I : make_early_inc_range(BB)) {
       Changed |= visit(I);
+    }
+
+  // TODO -- combine the loops. visitLoad instruction deletes loads, which may
+  // cause use after free in optimizeLiveType. However, deferring the deletion
+  // of those may corrupt the logic in optimizeLiveType.
+  for (auto &BB : F)
+    for (Instruction &I : make_early_inc_range(BB)) {
       Changed |= LRO.optimizeLiveType(&I);
     }
 
