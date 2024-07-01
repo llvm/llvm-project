@@ -150,7 +150,8 @@ static bool startsNextParameter(const FormatToken &Current,
 static bool startsNextOperand(const FormatToken &Current) {
   const FormatToken &Previous = *Current.Previous;
   return Previous.is(TT_BinaryOperator) && !Current.isTrailingComment() &&
-         (Previous.getPrecedence() > prec::Conditional);
+         (Previous.getPrecedence() > prec::Conditional) && 
+         (Previous.getPrecedence() < prec::PointerToMember);
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,

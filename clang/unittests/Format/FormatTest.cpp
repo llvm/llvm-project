@@ -27588,6 +27588,11 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                "         operand5 +\n"
                "         operand6;\n",
                Style);
+  verifyFormat("result = operand1.member *\n"
+               "         (operand2.member() - operand3->mem * operand4) -\n"
+               "         operand5.member() +\n"
+               "         operand6->member;\n",
+               Style);
 }
 
 } // namespace
