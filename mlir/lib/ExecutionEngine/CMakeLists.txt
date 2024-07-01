@@ -245,6 +245,19 @@ if(LLVM_ENABLE_PIC)
       PRIVATE
       ${CUDA_RUNTIME_LIBRARY}
     )
+    find_package(CUDAToolkit)
+    if (CUDAToolkit_FOUND)
+      target_link_libraries(mlir_cuda_runtime PRIVATE CUDA::cudart)
+      target_compile_definitions(mlir_cuda_runtime
+        PRIVATE
+        MLIR_ENABLE_CUDA_RUNNER_RT=1
+      )
+    else()
+      target_compile_definitions(mlir_cuda_runtime
+        PRIVATE
+        MLIR_ENABLE_CUDA_RUNNER_RT=0
+      )
+    endif()
 
     if(MLIR_ENABLE_CUDA_CUSPARSE)
       # Find the libcusparse.so library if CUSPARSE build is requested.
