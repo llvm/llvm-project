@@ -332,7 +332,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wctob
 
     # XXX
-    libc.src.sys_time.utimes
+    libc.src.sys.time.utimes
+    libc.src.sys.ioctl.ioctl
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
