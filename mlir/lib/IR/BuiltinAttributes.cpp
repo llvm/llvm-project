@@ -958,6 +958,8 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
       intVal = floatAttr.getValue().bitcastToAPInt();
     } else {
       auto intAttr = llvm::cast<IntegerAttr>(values[i]);
+      if (intAttr.getType().isIndex())
+        continue;
       assert(intAttr.getType() == eltType &&
              "expected integer attribute type to equal element type");
       intVal = intAttr.getValue();
