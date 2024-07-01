@@ -141,6 +141,18 @@ function(declare_mlir_python_extension name)
   # These properties support generator expressions and are automatically exported
   list(TRANSFORM ARG_SOURCES PREPEND "${ARG_ROOT_DIR}/" OUTPUT_VARIABLE _build_sources)
   list(TRANSFORM ARG_SOURCES PREPEND "${_install_destination}/" OUTPUT_VARIABLE _install_sources)
+
+  set(build_sources)
+  foreach(s ${_build_sources})
+    cmake_path(SET path NORMALIZE "${s}")
+    list(APPEND build_sources ${path})
+  endforeach()
+  set(install_sources)
+  foreach(s ${_install_sources})
+    cmake_path(SET path NORMALIZE "${s}")
+    list(APPEND install_sources ${path})
+  endforeach()
+
   target_sources(${name} INTERFACE
     "$<BUILD_INTERFACE:${_build_sources}>"
     "$<INSTALL_INTERFACE:${_install_sources}>"
