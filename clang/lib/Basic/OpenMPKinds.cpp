@@ -709,10 +709,44 @@ bool clang::isOpenMPExecutableDirective(OpenMPDirectiveKind DKind) {
   return Cat == Category::Executable || Cat == Category::Subsidiary;
 }
 
+bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
+  if (isOpenMPExecutableDirective(DKind)) {
+    switch (DKind) {
+    case OMPD_atomic:
+    case OMPD_barrier:
+    case OMPD_cancel:
+    case OMPD_cancellation_point:
+    case OMPD_critical:
+    case OMPD_depobj:
+    case OMPD_error:
+    case OMPD_flush:
+    case OMPD_masked:
+    case OMPD_master:
+    case OMPD_section:
+    case OMPD_taskwait:
+    case OMPD_taskyield:
+      return false;
+    default:
+      return !isOpenMPLoopTransformationDirective(DKind);
+    }
+  }
+  // Non-executable directives.
+  switch (DKind) {
+  case OMPD_metadirective:
+  case OMPD_nothing:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
+  assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
+
   switch (DKind) {
   case OMPD_metadirective:
     CaptureRegions.push_back(OMPD_metadirective);
@@ -799,48 +833,18 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_for:
   case OMPD_for_simd:
   case OMPD_sections:
-  case OMPD_section:
   case OMPD_single:
-  case OMPD_master:
-  case OMPD_critical:
   case OMPD_taskgroup:
   case OMPD_distribute:
   case OMPD_ordered:
-  case OMPD_atomic:
   case OMPD_target_data:
   case OMPD_distribute_simd:
   case OMPD_scope:
   case OMPD_dispatch:
     CaptureRegions.push_back(OMPD_unknown);
     break;
-  case OMPD_tile:
-  case OMPD_unroll:
-    // loop transformations do not introduce captures.
-    break;
-  case OMPD_threadprivate:
-  case OMPD_allocate:
-  case OMPD_taskyield:
-  case OMPD_barrier:
-  case OMPD_error:
-  case OMPD_taskwait:
-  case OMPD_cancellation_point:
-  case OMPD_cancel:
-  case OMPD_flush:
-  case OMPD_depobj:
-  case OMPD_scan:
-  case OMPD_declare_reduction:
-  case OMPD_declare_mapper:
-  case OMPD_declare_simd:
-  case OMPD_declare_target:
-  case OMPD_end_declare_target:
-  case OMPD_requires:
-  case OMPD_declare_variant:
-  case OMPD_begin_declare_variant:
-  case OMPD_end_declare_variant:
-    llvm_unreachable("OpenMP Directive is not allowed");
-  case OMPD_unknown:
   default:
-    llvm_unreachable("Unknown OpenMP directive");
+    llvm_unreachable("Unhandled OpenMP directive");
   }
 }
 
