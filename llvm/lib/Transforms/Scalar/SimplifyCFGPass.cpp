@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -262,12 +263,52 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   return Changed;
 }
 
+static void decayOneInputPHIs(BasicBlock &BB) {
+  if (BB.empty() || !isa<PHINode>(BB.begin()))
+    return;
+  unsigned NumPreds = cast<PHINode>(BB.front()).getNumIncomingValues();
+  if (NumPreds != 1)
+    return;
+  for (PHINode &Phi : make_early_inc_range(BB.phis())) {
+    if (Value *PhiConst = Phi.hasConstantValue()) {
+      Phi.replaceAllUsesWith(PhiConst);
+      Phi.eraseFromParent();
+      // Additionally, constant-fold conditional branch if there is one present,
+      // and the PHI has decayed into a constant, since it may make another CFG
+      // edge dead.
+      if (!isa<Constant>(PhiConst))
+        continue;
+      if (BranchInst *BI = dyn_cast<BranchInst>(BB.getTerminator()))
+        if (BI->isConditional())
+          if (auto *Cmp = dyn_cast<CmpInst>(BI->getCondition()))
+            if (auto *LHS = dyn_cast<Constant>(Cmp->getOperand(0)))
+              if (auto *RHS = dyn_cast<Constant>(Cmp->getOperand(1))) {
+                const DataLayout &DL = BB.getModule()->getDataLayout();
+                Constant *ConstCond = ConstantFoldCompareInstOperands(
+                    Cmp->getPredicate(), LHS, RHS, DL);
+                if (ConstCond)
+                  BI->setCondition(ConstCond);
+              }
+    }
+  }
+}
+
+static bool removeUnreachableBlocksAndSimplify(Function &F,
+                                               DomTreeUpdater *DTU) {
+  bool Changed = removeUnreachableBlocks(F, DTU, /*MSSAU=*/nullptr,
+                                         /*KeepOneInputPHIs=*/true);
+  if (Changed)
+    for (BasicBlock &BB : F)
+      decayOneInputPHIs(BB);
+  return Changed;
+}
+
 static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
                                     DominatorTree *DT,
                                     const SimplifyCFGOptions &Options) {
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
-  bool EverChanged = removeUnreachableBlocks(F, DT ? &DTU : nullptr);
+  bool EverChanged = removeUnreachableBlocksAndSimplify(F, DT ? &DTU : nullptr);
   EverChanged |=
       tailMergeBlocksWithSimilarFunctionTerminators(F, DT ? &DTU : nullptr);
   EverChanged |= iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
@@ -285,7 +326,7 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
 
   do {
     EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
-    EverChanged |= removeUnreachableBlocks(F, DT ? &DTU : nullptr);
+    EverChanged |= removeUnreachableBlocksAndSimplify(F, DT ? &DTU : nullptr);
   } while (EverChanged);
 
   return true;
