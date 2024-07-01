@@ -14,7 +14,7 @@ from lldbsuite.test import configuration
 from textwrap import dedent
 import shutil
 import select
-
+import random
 
 def _get_support_exe(basename):
     support_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeSupportExecutableDir)
