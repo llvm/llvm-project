@@ -313,6 +313,11 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   return getAssembler().registerSection(*Section);
 }
 
+void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {
+  MCStreamer::switchSectionNoPrint(Section);
+  changeSection(Section, 0);
+}
+
 void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   getAssembler().registerSymbol(*Symbol);
   MCStreamer::emitAssignment(Symbol, Value);
