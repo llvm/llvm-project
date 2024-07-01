@@ -284,9 +284,8 @@ bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   return false;
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                                          const MCRelaxableFragment *DF,
-                                          const MCAsmLayout &Layout) const {
+bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                          uint64_t Value) const {
   return false;
 }
 
