@@ -211,7 +211,11 @@ features added.  Some tips for getting your testcase approved:
   directory. The appropriate sub-directory should be selected (see the
   :doc:`Testing Guide <TestingGuide>` for details).
 
-* Test cases should be written in :doc:`LLVM assembly language <LangRef>`.
+* Test cases should be written in the closest, most directly supported input
+  language for the component being tested. This is usually
+  :doc:`LLVM assembly language <LangRef>` but there are some exceptions such as
+  assembly for MC layer tests, or in some cases a choice is available such
+  LLVM assembly language or MIR for GlobalISel tests.
 
 * Test cases, especially for regressions, should be reduced as much as possible,
   by :doc:`bugpoint <Bugpoint>` or manually. It is unacceptable to place an
