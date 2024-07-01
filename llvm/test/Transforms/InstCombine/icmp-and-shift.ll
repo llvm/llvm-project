@@ -741,9 +741,9 @@ define i1 @test_const_shr_and_1_ne_0_multi_use_and_negative(i32 %b) {
 
 define i1 @test_shl_sub_bw_minus_1_slt_0(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_shl_sub_bw_minus_1_slt_0(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[SHL]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i32 31, %b
@@ -754,9 +754,9 @@ define i1 @test_shl_sub_bw_minus_1_slt_0(i32 %a, i32 %b) {
 
 define i1 @test_const_shl_sub_bw_minus_1_slt_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shl_sub_bw_minus_1_slt_0(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 42, [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[SHL]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i32 31, %b
@@ -767,9 +767,9 @@ define i1 @test_const_shl_sub_bw_minus_1_slt_0(i32 %b) {
 
 define i1 @test_not_shl_sub_bw_minus_1_slt_0(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_not_shl_sub_bw_minus_1_slt_0(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SHL]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i32 31, %b
@@ -780,9 +780,9 @@ define i1 @test_not_shl_sub_bw_minus_1_slt_0(i32 %a, i32 %b) {
 
 define i1 @test_shl_nuw_sub_bw_minus_1_slt_0(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_shl_nuw_sub_bw_minus_1_slt_0(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[A:%.*]], [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[SHL]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i32 31, %b
@@ -793,9 +793,9 @@ define i1 @test_shl_nuw_sub_bw_minus_1_slt_0(i32 %a, i32 %b) {
 
 define i1 @test_not_const_shl_sub_bw_minus_1_slt_0(i32 %b) {
 ; CHECK-LABEL: @test_not_const_shl_sub_bw_minus_1_slt_0(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 42, [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SHL]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i32 31, %b
@@ -806,9 +806,9 @@ define i1 @test_not_const_shl_sub_bw_minus_1_slt_0(i32 %b) {
 
 define <8 x i1> @test_shl_sub_bw_minus_1_slt_0_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @test_shl_sub_bw_minus_1_slt_0_v8i8(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i8> [[A:%.*]], [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i8> [[SHL]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %sub = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, %b
@@ -819,9 +819,9 @@ define <8 x i1> @test_shl_sub_bw_minus_1_slt_0_v8i8(<8 x i8> %a, <8 x i8> %b) {
 
 define <8 x i1> @test_const_shl_sub_bw_minus_1_slt_0_v8i8_splat(<8 x i8> %b) {
 ; CHECK-LABEL: @test_const_shl_sub_bw_minus_1_slt_0_v8i8_splat(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i8> <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>, [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i8> [[SHL]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %sub = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, %b
@@ -845,9 +845,9 @@ define <8 x i1> @test_const_shl_sub_bw_minus_1_slt_0_v8i8_splat_poison_1(<8 x i8
 
 define <8 x i1> @test_const_shl_sub_bw_minus_1_slt_0_v8i8_splat_poison_2(<8 x i8> %b) {
 ; CHECK-LABEL: @test_const_shl_sub_bw_minus_1_slt_0_v8i8_splat_poison_2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i8> <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 poison>, [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i8> [[SHL]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 poison>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %sub = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, %b
@@ -858,9 +858,9 @@ define <8 x i1> @test_const_shl_sub_bw_minus_1_slt_0_v8i8_splat_poison_2(<8 x i8
 
 define <8 x i1> @test_const_shl_sub_bw_minus_1_slt_0_v8i8_nonsplat(<8 x i8> %b) {
 ; CHECK-LABEL: @test_const_shl_sub_bw_minus_1_slt_0_v8i8_nonsplat(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i8> <i8 42, i8 43, i8 44, i8 45, i8 46, i8 47, i8 48, i8 49>, [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i8> [[SHL]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], <i8 42, i8 43, i8 44, i8 45, i8 46, i8 47, i8 48, i8 49>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret <8 x i1> [[CMP]]
 ;
   %sub = sub <8 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>, %b

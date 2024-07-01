@@ -2305,18 +2305,32 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
     if (C.isZero() || (Pred == ICmpInst::ICMP_SGT ? C.isAllOnes() : C.isOne()))
       return new ICmpInst(Pred, Shl->getOperand(0), Cmp.getOperand(1));
 
+  unsigned TypeBits = C.getBitWidth();
+  Value *X = Shl->getOperand(0);
+  Type *ShType = Shl->getType();
+
+  // (icmp slt (shl X, (sub bw-1, Y)), 0)  --> (icmp ne (and X, (shl 1, Y)), 0)
+  // (icmp sgt (shl X, (sub bw-1, Y)), -1) --> (icmp eq (and X, (shl 1, Y)), 0)
+  Value *Y;
+  if (Shl->hasOneUse() &&
+      ((Pred == ICmpInst::ICMP_SLT && C.isZero()) ||
+       (Pred == ICmpInst::ICMP_SGT && C.isAllOnes())) &&
+      match(Shl->getOperand(1),
+            m_OneUse(m_Sub(m_SpecificInt(TypeBits - 1), m_Value(Y)))))
+    return new ICmpInst(
+        Pred == ICmpInst::ICMP_SLT ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ,
+        Builder.CreateAnd(X, Builder.CreateShl(ConstantInt::get(ShType, 1), Y,
+                                               "", /*HasNUW=*/true)),
+        ConstantInt::get(ShType, 0));
+
   const APInt *ShiftAmt;
   if (!match(Shl->getOperand(1), m_APInt(ShiftAmt)))
     return foldICmpShlOne(Cmp, Shl, C);
 
   // Check that the shift amount is in range. If not, don't perform undefined
   // shifts. When the shift is visited, it will be simplified.
-  unsigned TypeBits = C.getBitWidth();
   if (ShiftAmt->uge(TypeBits))
     return nullptr;
-
-  Value *X = Shl->getOperand(0);
-  Type *ShType = Shl->getType();
 
   // NSW guarantees that we are only shifting out sign bits from the high bits,
   // so we can ASHR the compare constant without needing a mask and eliminate
