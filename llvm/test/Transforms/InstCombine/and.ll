@@ -2497,6 +2497,22 @@ define i8 @negate_lowbitmask_use1(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+define i32 @fold_and_and_xor1_and(i1 %k, i1 %c, i1 %c1) {
+; CHECK-LABEL: @fold_and_and_xor1_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[TMP2]], [[C1:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[NARROW]] to i32
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %and12 = and i1 %k, %c
+  %not.and12 = xor i1 %and12, true
+  %1 = and i1 %not.and12, %c1
+  %narrow = and i1 %k, %1
+  %cond = zext i1 %narrow to i32
+  ret i32 %cond
+}
+
 ; negative test
 
 define i8 @negate_lowbitmask_use2(i8 %x, i8 %y) {
