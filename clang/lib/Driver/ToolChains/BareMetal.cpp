@@ -33,7 +33,7 @@ using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
 
-static bool findRISCVMultilibs(const Driver &D,
+[[maybe_unused]] static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
   Multilib::flags_list Flags;
@@ -218,18 +218,11 @@ static std::string computeBaseSysRoot(const Driver &D,
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args) {
   DetectedMultilibs Result;
-  if (isRISCVBareMetal(Triple)) {
-    if (findRISCVMultilibs(D, Triple, Args, Result)) {
-      SelectedMultilibs = Result.SelectedMultilibs;
-      Multilibs = Result.Multilibs;
-    }
-  } else {
-    llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
-    llvm::sys::path::append(MultilibPath, MultilibFilename);
-    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
-    SelectedMultilibs = Result.SelectedMultilibs;
-    Multilibs = Result.Multilibs;
-  }
+  llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
+  llvm::sys::path::append(MultilibPath, MultilibFilename);
+  findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
+  SelectedMultilibs = Result.SelectedMultilibs;
+  Multilibs = Result.Multilibs;
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
