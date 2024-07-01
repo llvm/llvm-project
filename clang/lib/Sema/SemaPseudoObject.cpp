@@ -928,7 +928,7 @@ ObjCPropertyOpBuilder::buildAssignmentOperation(Scope *Sc,
   // Various warnings about property assignments in ARC.
   if (S.getLangOpts().ObjCAutoRefCount && InstanceReceiver) {
     S.ObjC().checkRetainCycles(InstanceReceiver->getSourceExpr(), RHS);
-    S.checkUnsafeExprAssigns(opcLoc, LHS, RHS);
+    S.ObjC().checkUnsafeExprAssigns(opcLoc, LHS, RHS);
   }
 
   return result;
@@ -1017,7 +1017,7 @@ ObjCSubscriptOpBuilder::buildAssignmentOperation(Scope *Sc,
   // Various warnings about objc Index'ed assignments in ARC.
   if (S.getLangOpts().ObjCAutoRefCount && InstanceBase) {
     S.ObjC().checkRetainCycles(InstanceBase->getSourceExpr(), RHS);
-    S.checkUnsafeExprAssigns(opcLoc, LHS, RHS);
+    S.ObjC().checkUnsafeExprAssigns(opcLoc, LHS, RHS);
   }
 
   return result;

@@ -694,7 +694,6 @@ public:
   Scope *getScopeForContext(DeclContext *Ctx);
 
   void PushFunctionScope();
-  void PushBlockScope(Scope *BlockScope, BlockDecl *Block);
   sema::LambdaScopeInfo *PushLambdaScope();
 
   /// This is used to inform Sema what the current TemplateParameterDepth
@@ -735,9 +734,6 @@ public:
   void PopCompoundScope();
 
   bool hasAnyUnrecoverableErrorsInThisFunction() const;
-
-  /// Retrieve the current block, if any.
-  sema::BlockScopeInfo *getCurBlock();
 
   /// Get the innermost lambda enclosing the current location, if any. This
   /// looks through intervening non-lambda scopes such as local functions and
@@ -2181,14 +2177,6 @@ public:
                                 bool CheckParameterNames);
 
   void CheckCastAlign(Expr *Op, QualType T, SourceRange TRange);
-
-  /// checkUnsafeAssigns - Check whether +1 expr is being assigned
-  /// to weak/__unsafe_unretained type.
-  bool checkUnsafeAssigns(SourceLocation Loc, QualType LHS, Expr *RHS);
-
-  /// checkUnsafeExprAssigns - Check whether +1 expr is being assigned
-  /// to weak/__unsafe_unretained expression.
-  void checkUnsafeExprAssigns(SourceLocation Loc, Expr *LHS, Expr *RHS);
 
   /// Emit \p DiagID if statement located on \p StmtLoc has a suspicious null
   /// statement as a \p Body, and it is located on the same line.
@@ -3852,8 +3840,6 @@ public:
   /// declaration.
   void AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
                            Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
-
-  enum class RetainOwnershipKind { NS, CF, OS };
 
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
@@ -5833,26 +5819,6 @@ public:
 
   bool CheckCaseExpression(Expr *E);
 
-  //===------------------------- "Block" Extension ------------------------===//
-
-  /// ActOnBlockStart - This callback is invoked when a block literal is
-  /// started.
-  void ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope);
-
-  /// ActOnBlockArguments - This callback allows processing of block arguments.
-  /// If there are no arguments, this is still invoked.
-  void ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
-                           Scope *CurScope);
-
-  /// ActOnBlockError - If there is an error parsing a block, this callback
-  /// is invoked to pop the information about the block from the action impl.
-  void ActOnBlockError(SourceLocation CaretLoc, Scope *CurScope);
-
-  /// ActOnBlockStmtExpr - This is called when the body of a block statement
-  /// literal was successfully completed.  ^(int x){...}
-  ExprResult ActOnBlockStmtExpr(SourceLocation CaretLoc, Stmt *Body,
-                                Scope *CurScope);
-
   //===---------------------------- Clang Extensions ----------------------===//
 
   /// __builtin_convertvector(...)
@@ -6570,13 +6536,6 @@ public:
 
   // Set of failed immediate invocations to avoid double diagnosing.
   llvm::SmallPtrSet<ConstantExpr *, 4> FailedImmediateInvocations;
-
-  /// List of SourceLocations where 'self' is implicitly retained inside a
-  /// block.
-  llvm::SmallVector<std::pair<SourceLocation, const BlockDecl *>, 1>
-      ImplicitlyRetainedSelfLocs;
-
-  void maybeExtendBlockObject(ExprResult &E);
 
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);

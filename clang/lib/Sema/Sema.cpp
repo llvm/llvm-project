@@ -2204,12 +2204,6 @@ void Sema::PushFunctionScope() {
     OpenMP().pushOpenMPFunctionRegion();
 }
 
-void Sema::PushBlockScope(Scope *BlockScope, BlockDecl *Block) {
-  FunctionScopes.push_back(new BlockScopeInfo(getDiagnostics(),
-                                              BlockScope, Block));
-  CapturingFunctionScopes++;
-}
-
 LambdaScopeInfo *Sema::PushLambdaScope() {
   LambdaScopeInfo *const LSI = new LambdaScopeInfo(getDiagnostics());
   FunctionScopes.push_back(LSI);
@@ -2380,21 +2374,6 @@ void Sema::setFunctionHasIndirectGoto() {
 void Sema::setFunctionHasMustTail() {
   if (!FunctionScopes.empty())
     FunctionScopes.back()->setHasMustTail();
-}
-
-BlockScopeInfo *Sema::getCurBlock() {
-  if (FunctionScopes.empty())
-    return nullptr;
-
-  auto CurBSI = dyn_cast<BlockScopeInfo>(FunctionScopes.back());
-  if (CurBSI && CurBSI->TheDecl &&
-      !CurBSI->TheDecl->Encloses(CurContext)) {
-    // We have switched contexts due to template instantiation.
-    assert(!CodeSynthesisContexts.empty());
-    return nullptr;
-  }
-
-  return CurBSI;
 }
 
 FunctionScopeInfo *Sema::getEnclosingFunction() const {

@@ -34,6 +34,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -5191,7 +5192,7 @@ static void AddKeywordsToConsumer(Sema &SemaRef,
   }
 
   if (CCC.WantRemainingKeywords) {
-    if (SemaRef.getCurFunctionOrMethodDecl() || SemaRef.getCurBlock()) {
+    if (SemaRef.getCurFunctionOrMethodDecl() || SemaRef.ObjC().getCurBlock()) {
       // Statements.
       static const char *const CStmts[] = {
         "do", "else", "for", "goto", "if", "return", "switch", "while" };

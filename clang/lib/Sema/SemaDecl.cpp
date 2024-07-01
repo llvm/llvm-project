@@ -13782,7 +13782,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     VDecl->setType(DclT);
 
   if (!VDecl->isInvalidDecl()) {
-    checkUnsafeAssigns(VDecl->getLocation(), VDecl->getType(), Init);
+    ObjC().checkUnsafeAssigns(VDecl->getLocation(), VDecl->getType(), Init);
 
     if (VDecl->hasAttr<BlocksAttr>())
       ObjC().checkRetainCycles(VDecl, Init);
@@ -16016,35 +16016,6 @@ private:
   bool IsLambda = false;
 };
 
-static void diagnoseImplicitlyRetainedSelf(Sema &S) {
-  llvm::DenseMap<const BlockDecl *, bool> EscapeInfo;
-
-  auto IsOrNestedInEscapingBlock = [&](const BlockDecl *BD) {
-    if (EscapeInfo.count(BD))
-      return EscapeInfo[BD];
-
-    bool R = false;
-    const BlockDecl *CurBD = BD;
-
-    do {
-      R = !CurBD->doesNotEscape();
-      if (R)
-        break;
-      CurBD = CurBD->getParent()->getInnermostBlockDecl();
-    } while (CurBD);
-
-    return EscapeInfo[BD] = R;
-  };
-
-  // If the location where 'self' is implicitly retained is inside a escaping
-  // block, emit a diagnostic.
-  for (const std::pair<SourceLocation, const BlockDecl *> &P :
-       S.ImplicitlyRetainedSelfLocs)
-    if (IsOrNestedInEscapingBlock(P.second))
-      S.Diag(P.first, diag::warn_implicitly_retains_self)
-          << FixItHint::CreateInsertion(P.first, "self->");
-}
-
 static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
   return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
          FD->getDeclName().isIdentifier() && FD->getName() == Name;
@@ -16392,7 +16363,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         FSI->ObjCWarnForNoInitDelegation = false;
       }
 
-      diagnoseImplicitlyRetainedSelf(*this);
+      ObjC().diagnoseImplicitlyRetainedSelf();
     } else {
       // Parsing the function declaration failed in some way. Pop the fake scope
       // we pushed on.
