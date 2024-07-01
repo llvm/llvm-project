@@ -16,10 +16,9 @@ Quickstart
    environment:
 
    ```bash
-   % mkdir venv
-   % virtualenv venv
-   % . venv/bin/activate
-   % pip install svn+https://llvm.org/svn/llvm-project/llvm/trunk/utils/lit
+   % python3 -m venv .venv
+   % . .venv/bin/activate
+   % pip install git+https://github.com/llvm/llvm-project.git#subdirectory=llvm/utils/lit
    % lit --version
    lit 0.8.0dev
    ```
