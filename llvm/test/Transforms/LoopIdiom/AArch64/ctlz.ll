@@ -336,6 +336,64 @@ while.end:                                        ; preds = %while.cond
   ret i32 %i.0
 }
 
+
+; Recognize CTLZ builtin pattern.
+; Here it will replace the loop -
+; assume builtin is always profitable.
+;
+; int ctlz_sub(int n, int i0)
+; {
+;   n = n >= 0 ? n : -n;
+;   int i = i0;
+;   while(n >>= 1) {
+;     i--;
+;   }
+;   return i;
+; }
+;
+;
+; Function Attrs: norecurse nounwind readnone uwtable
+define i32 @ctlz_sub(i32 %n, i32 %i0) {
+; CHECK-LABEL: define i32 @ctlz_sub(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[I0:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ABS_N:%.*]] = call i32 @llvm.abs.i32(i32 [[N]], i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr i32 [[ABS_N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[I0]], [[TMP2]]
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP3]], [[ENTRY:%.*]] ], [ [[TCDEC:%.*]], [[WHILE_COND]] ]
+; CHECK-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[ABS_N]], [[ENTRY]] ], [ [[SHR:%.*]], [[WHILE_COND]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ [[I0]], [[ENTRY]] ], [ [[INC:%.*]], [[WHILE_COND]] ]
+; CHECK-NEXT:    [[SHR]] = ashr i32 [[N_ADDR_0]], 1
+; CHECK-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], -1
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_COND]]
+; CHECK:       while.end:
+; CHECK-NEXT:    [[I_0_LCSSA:%.*]] = phi i32 [ [[TMP4]], [[WHILE_COND]] ]
+; CHECK-NEXT:    ret i32 [[I_0_LCSSA]]
+;
+entry:
+  %abs_n = call i32 @llvm.abs.i32(i32 %n, i1 true)
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.cond, %entry
+  %n.addr.0 = phi i32 [ %abs_n, %entry ], [ %shr, %while.cond ]
+  %i.0 = phi i32 [ %i0, %entry ], [ %inc, %while.cond ]
+  %shr = ashr i32 %n.addr.0, 1
+  %tobool = icmp eq i32 %shr, 0
+  %inc = add nsw i32 %i.0, -1
+  br i1 %tobool, label %while.end, label %while.cond
+
+while.end:                                        ; preds = %while.cond
+  ret i32 %i.0
+}
+
+
 ; Recognize CTLZ builtin pattern.
 ; Here it will replace the loop -
 ; assume builtin is always profitable.
@@ -494,6 +552,66 @@ while.body:
 
 while.end.loopexit:
   %inc.lcssa = phi i32 [ %result.04, %while.body ]
+  br label %while.end
+
+while.end:
+  %result.0.lcssa = phi i32 [ 0, %entry ], [ %inc.lcssa, %while.end.loopexit ]
+  ret i32 %result.0.lcssa
+}
+
+
+; unsigned floor_log2_dec(unsigned long n) {
+;   unsigned result = 0;
+;   while (n >>= 1) result--;
+;   return result;
+; }
+
+define i32 @floor_log2_dec(i64 noundef %n) {
+; CHECK-LABEL: define i32 @floor_log2_dec(
+; CHECK-SAME: i64 noundef [[N:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT2:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT2]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
+; CHECK:       while.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[N]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 64, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 0, [[TMP3]]
+; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i64 [ [[TMP2]], [[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[RESULT_04:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[N_ADDR_03:%.*]] = phi i64 [ [[SHR:%.*]], [[WHILE_BODY]] ], [ [[N]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SHR]] = lshr i64 [[N_ADDR_03]], 1
+; CHECK-NEXT:    [[INC]] = add i32 [[RESULT_04]], -1
+; CHECK-NEXT:    [[TCDEC]] = sub nsw i64 [[TCPHI]], 1
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[TCDEC]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
+; CHECK:       while.end.loopexit:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP4]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    br label [[WHILE_END]]
+; CHECK:       while.end:
+; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_LCSSA]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i32 [[RESULT_0_LCSSA]]
+;
+entry:
+  %tobool.not2 = icmp ult i64 %n, 2
+  br i1 %tobool.not2, label %while.end, label %while.body.preheader
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %result.04 = phi i32 [ %inc, %while.body ], [ 0, %while.body.preheader ]
+  %n.addr.03 = phi i64 [ %shr, %while.body ], [ %n, %while.body.preheader ]
+  %shr = lshr i64 %n.addr.03, 1
+  %inc = add i32 %result.04, -1
+  %tobool.not = icmp ult i64 %n.addr.03, 4
+  br i1 %tobool.not, label %while.end.loopexit, label %while.body
+
+while.end.loopexit:
+  %inc.lcssa = phi i32 [ %inc, %while.body ]
   br label %while.end
 
 while.end:

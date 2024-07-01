@@ -233,8 +233,9 @@ private:
                                PHINode *CntPhi, Value *Var);
   bool isProfitableToInsertFFS(Intrinsic::ID IntrinID, Value *InitX,
                                bool ZeroCheck, size_t CanonicalSize);
-  bool insertFFS(Intrinsic::ID IntrinID, Value *InitX, Instruction *DefX,
-                 PHINode *CntPhi, Instruction *CntInst);
+  bool insertFFSIfProfitable(Intrinsic::ID IntrinID, Value *InitX,
+                             Instruction *DefX, PHINode *CntPhi,
+                             Instruction *CntInst);
   bool recognizeAndInsertFFS();  /// Find First Set: ctlz or cttz
   bool recognizeShiftUntilLessThan();
   void transformLoopToCountable(Intrinsic::ID IntrinID, BasicBlock *PreCondBB,
@@ -1529,7 +1530,7 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
 /// the control yields to the loop entry. If the branch matches the behaviour,
 /// the variable involved in the comparison is returned.
 static Value *matchShiftULTCondition(BranchInst *BI, BasicBlock *LoopEntry,
-                                     unsigned &Threshold) {
+                                     uint64_t &Threshold) {
   if (!BI || !BI->isConditional())
     return nullptr;
 
@@ -1578,7 +1579,7 @@ static PHINode *getRecurrenceVar(Value *VarX, Instruction *DefX,
 /// The core idiom we are trying to detect is:
 /// \code
 ///    if (x0 < 2)
-///      goto loop-exit // the predcondition of the loop
+///      goto loop-exit // the precondition of the loop
 ///    cnt0 = init-val
 ///    do {
 ///      x = phi (x0, x.next);   //PhiX
@@ -1587,14 +1588,14 @@ static PHINode *getRecurrenceVar(Value *VarX, Instruction *DefX,
 ///      cnt.next = cnt + 1;
 ///       ...
 ///      x.next = x >> 1;   // DefX
-///    } while (x < 4)
+///    } while (x >= 4)
 /// loop-exit:
 /// \endcode
 static bool detectShiftUntilLessThanIdiom(Loop *CurLoop, const DataLayout &DL,
                                           Intrinsic::ID &IntrinID,
                                           Value *&InitX, Instruction *&CntInst,
                                           PHINode *&CntPhi, Instruction *&DefX,
-                                          unsigned &Threshold) {
+                                          uint64_t &Threshold) {
   BasicBlock *LoopEntry;
 
   DefX = nullptr;
@@ -1917,9 +1918,10 @@ bool LoopIdiomRecognize::isProfitableToInsertFFS(Intrinsic::ID IntrinID,
 /// Convert CTLZ / CTTZ idiom loop into countable loop.
 /// If CTLZ / CTTZ inserted as a new trip count returns true; otherwise,
 /// returns false.
-bool LoopIdiomRecognize::insertFFS(Intrinsic::ID IntrinID, Value *InitX,
-                                   Instruction *DefX, PHINode *CntPhi,
-                                   Instruction *CntInst) {
+bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
+                                               Value *InitX, Instruction *DefX,
+                                               PHINode *CntPhi,
+                                               Instruction *CntInst) {
   bool IsCntPhiUsedOutsideLoop = false;
   for (User *U : CntPhi->users())
     if (!CurLoop->contains(cast<Instruction>(U))) {
@@ -1996,7 +1998,7 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
                                  DefX))
     return false;
 
-  return insertFFS(IntrinID, InitX, DefX, CntPhi, CntInst);
+  return insertFFSIfProfitable(IntrinID, InitX, DefX, CntPhi, CntInst);
 }
 
 bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
@@ -2010,14 +2012,14 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
   PHINode *CntPhi = nullptr;
   Instruction *CntInst = nullptr;
 
-  unsigned LoopThreshold;
+  uint64_t LoopThreshold;
   if (!detectShiftUntilLessThanIdiom(CurLoop, *DL, IntrinID, InitX, CntInst,
                                      CntPhi, DefX, LoopThreshold))
     return false;
 
   if (LoopThreshold == 2) {
     // Treat as regular FFS.
-    return insertFFS(IntrinID, InitX, DefX, CntPhi, CntInst);
+    return insertFFSIfProfitable(IntrinID, InitX, DefX, CntPhi, CntInst);
   }
 
   // Look for Floor Log2 Idiom.
@@ -2026,9 +2028,8 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
 
   // Abort if CntPhi is used outside of the loop.
   for (User *U : CntPhi->users())
-    if (!CurLoop->contains(cast<Instruction>(U))) {
+    if (!CurLoop->contains(cast<Instruction>(U)))
       return false;
-    }
 
   // It is safe to assume Preheader exist as it was checked in
   // parent function RunOnLoop.
@@ -2040,7 +2041,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
   if (!PreCondBI)
     return false;
 
-  unsigned PreLoopThreshold;
+  uint64_t PreLoopThreshold;
   if (matchShiftULTCondition(PreCondBI, PH, PreLoopThreshold) != InitX ||
       PreLoopThreshold != 2)
     return false;
