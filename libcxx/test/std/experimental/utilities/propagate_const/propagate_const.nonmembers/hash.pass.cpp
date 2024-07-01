@@ -19,8 +19,8 @@
 
 using std::experimental::propagate_const;
 
-namespace std {
-template <> struct hash<X>
+template <>
+struct std::hash<X>
 {
   typedef X first_argument_type;
 
@@ -30,7 +30,6 @@ template <> struct hash<X>
   }
 
 };
-} // namespace std
 
 int main(int, char**) {
 

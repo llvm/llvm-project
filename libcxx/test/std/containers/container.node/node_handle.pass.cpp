@@ -59,16 +59,14 @@ struct Static
     Static& operator=(Static&&) = delete;
 };
 
-namespace std
-{
-template <> struct hash<Static>
+template <>
+struct std::hash<Static>
 {
     using argument_type = Static;
     using result_type = std::size_t;
     hash() = default;
     std::size_t operator()(const Static&) const;
 };
-}
 
 static_assert(node_compatibility_table<
                   int, int, std::less<int>, std::less<int>, std::hash<int>,
