@@ -15,7 +15,7 @@
 // CHECK:        Type: PT_NOTE
 // CHECK-NEXT:   Offset: 0x{{0*}}[[NOTE_OFFSET:[^ ]*]]
 
-// CHECK:      NoteSectionList [
+// CHECK:      NoteSections [
 // CHECK-NEXT:   NoteSection {
 // CHECK-NEXT:     Name: .note.obj
 // CHECK-NEXT:     Offset: 0x{{0*}}[[NOTE_OFFSET]]
