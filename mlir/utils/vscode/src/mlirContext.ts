@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as vscodelc from 'vscode-languageclient/node';
+import * as which from 'which';
 
 import * as config from './config';
 import * as configWatcher from './configWatcher';
@@ -334,7 +335,7 @@ export class MLIRContext implements vscode.Disposable {
       if (defaultPath === '') {
         return filePath;
       }
-      filePath = defaultPath;
+      return await which(defaultPath);
 
       // Fallthrough to try resolving the default path.
     }
