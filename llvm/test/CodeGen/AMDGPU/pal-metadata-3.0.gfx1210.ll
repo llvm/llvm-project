@@ -1,6 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefix=CHECK
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1210 <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; NumSgprs: 4
@@ -10,7 +8,6 @@
 ; CHECK-NEXT: amdpal.pipelines:
 ; CHECK-NEXT:   - .api:            Vulkan
 ; CHECK-NEXT:     .compute_registers:
-; DVGPR-NEXT:       .dynamic_vgpr_en:   true
 ; CHECK-NEXT:       .tg_size_en:     true
 ; CHECK-NEXT:       .tgid_x_en:      false
 ; CHECK-NEXT:       .tgid_y_en:      false
@@ -113,36 +110,33 @@
 ; CHECK-NEXT:      .gs:
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    gs_shader
-; GFX11-NEXT:        .ieee_mode:      false
-; CHECK-NEXT:        .lds_size:       0x200
+; CHECK-NEXT:      .lds_size:       0x400
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
 ; CHECK-NEXT:        .sgpr_count:     0x1
 ; CHECK-NEXT:        .vgpr_count:     0x1
-; CHECK-NEXT:        .wgp_mode:       true
+; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    hs_shader
-; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0x1000
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
 ; CHECK-NEXT:        .sgpr_count:     0x1
 ; CHECK-NEXT:        .vgpr_count:     0x1
-; CHECK-NEXT:        .wgp_mode:       true
+; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    ps_shader
-; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
 ; CHECK-NEXT:        .sgpr_count:     0x1
 ; CHECK-NEXT:        .vgpr_count:     0x1
-; CHECK-NEXT:        .wgp_mode:       true
+; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK:    .registers:      {}
 ; CHECK:amdpal.version:
 ; CHECK-NEXT:  - 0x3
@@ -198,7 +192,7 @@ declare i64 @llvm.amdgcn.s.getpc() #2
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg) #3
 
-attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" "denormal-fp-math-f32"="preserve-sign" "target-features"=",+wavefrontsize64,+cumode" }
+attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" "denormal-fp-math-f32"="preserve-sign" }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" }
 
