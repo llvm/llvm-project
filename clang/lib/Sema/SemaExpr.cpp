@@ -2097,9 +2097,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
 
   // Warn on u8 string literals before C++20 and C23, whose type
   // was an array of char before but becomes an array of char8_t.
-  // In C++20, initializing an array of char from a u8 string literal
-  // becomes ill-formed. In C23, it might have an unexpected value if
-  // char was signed.
+  // In C++20, it cannot be used where a pointer to char is expected.
+  // In C23, it might have an unexpected value if char was signed.
   if (Kind == StringLiteralKind::UTF8 &&
       (getLangOpts().CPlusPlus
            ? !getLangOpts().CPlusPlus20 && !getLangOpts().Char8
