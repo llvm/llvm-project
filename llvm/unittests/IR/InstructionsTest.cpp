@@ -1814,5 +1814,60 @@ TEST(InstructionsTest, InsertAtEnd) {
   EXPECT_EQ(Ret->getNextNode(), I);
 }
 
+TEST(InstructionsTest, InsertPhiAfterRecords) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define i32 @f(i1 %cond) {
+    entry:
+      br i1 %cond, label %if.then, label %if.end
+
+    if.then:
+      br label %if.end
+
+    if.end:
+      %val = phi i32 [ 0, %entry ], [ 1, %if.then ]
+        #dbg_value(i32 %val, !11, !DIExpression(), !13)
+      ret i32 %val
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!3, !4}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 19.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "test.c", directory: "foo")
+    !2 = !{}
+    !3 = !{i32 2, !"Dwarf Version", i32 5}
+    !4 = !{i32 2, !"Debug Info Version", i32 3}
+    !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+    !9 = !DISubroutineType(types: !10)
+    !10 = !{null}
+    !11 = !DILocalVariable(name: "val", scope: !8, file: !1, line: 2, type: !12)
+    !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !13 = !DILocation(line: 2, column: 7, scope: !8)
+)");
+  M->convertToNewDbgValues();
+  Function *F = &*M->begin();
+  BasicBlock *IfEnd = &*F->begin()->getNextNode()->getNextNode();
+  Instruction *Val = &*IfEnd->begin();
+  Instruction *Ret = Val->getNextNode();
+  EXPECT_TRUE(Ret->hasDbgRecords());
+
+  // When inserting a new instruction before another instruction, the new
+  // instruction should adopt any debug records directly preceding its insert
+  // point.
+  BinaryOperator *NewMul = BinaryOperator::CreateMul(Val, Val);
+  NewMul->insertBefore(IfEnd->getFirstNonPHI());
+  EXPECT_FALSE(Ret->hasDbgRecords());
+  EXPECT_TRUE(NewMul->hasDbgRecords());
+
+  // But when inserting a PHI in the same way, we intentionally avoid adopting
+  // the debug records to prevent invalid IR; this shouldn't happen with correct
+  // iterator usage, but we want to avoid errors.
+  PHINode *NewPHI = PHINode::Create(IntegerType::get(Ctx, 32), 2);
+  NewPHI->insertBefore(IfEnd->getFirstNonPHI());
+  EXPECT_TRUE(NewMul->hasDbgRecords());
+  EXPECT_FALSE(NewPHI->hasDbgRecords());
+}
+
 } // end anonymous namespace
 } // end namespace llvm
