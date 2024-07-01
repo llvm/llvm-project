@@ -121,6 +121,15 @@ Deprecations and Removals
 - The ``_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS`` macro has been removed and is not honored anymore. Additional
   warnings provided by libc++ as a matter of QoI will now be provided unconditionally.
 
+- libc++ no longer supports ``std::allocator<const T>`` and containers of ``const``-qualified element type, such
+  as ``std::vector<const T>`` and ``std::list<const T>``. This used to be supported as an undocumented extension.
+  If you were using ``std::vector<const T>``, replace it with ``std::vector<T>`` instead. The
+  ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro can be defined to temporarily re-enable this extension as
+  folks transition their code. This macro will be honored for one released and ignored starting in LLVM 20.
+  To assist with the clean-up process, consider running your code through Clang Tidy, with
+  `std-allocator-const <https://clang.llvm.org/extra/clang-tidy/checks/portability/std-allocator-const.html>`
+  enabled.
+
 
 Upcoming Deprecations and Removals
 ----------------------------------

@@ -605,7 +605,8 @@ static bool isDimsDivisibleByTileSizes(ArrayRef<int64_t> dimsPos,
 static int64_t applyPermutationAndReindexReassoc(
     SmallVector<ReassociationIndices> &reassocIndices,
     ArrayRef<int64_t> permutation) {
-  applyPermutationToVector<ReassociationIndices>(reassocIndices, permutation);
+  if (!permutation.empty())
+    applyPermutationToVector<ReassociationIndices>(reassocIndices, permutation);
   int64_t nextPos = 0;
   for (ReassociationIndices &indices : reassocIndices) {
     for (auto &index : indices) {

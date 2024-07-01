@@ -347,7 +347,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
       Ty = AT->getValueType();
 
     // Invalid pointers.
-    if (Ptr.isDummy() || !Ptr.isLive() ||
+    if (Ptr.isDummy() || !Ptr.isLive() || !Ptr.isBlockPointer() ||
         (!Ptr.isUnknownSizeArray() && Ptr.isOnePastEnd()))
       return false;
 

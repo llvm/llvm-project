@@ -49,7 +49,7 @@ void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setTLS();
 }
 
-void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment *F,
+void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
                                     uint64_t Offset) {
   auto *Symbol = cast<MCSymbolWasm>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
@@ -68,8 +68,7 @@ void MCWasmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   llvm_unreachable("invalid assembler flag!");
 }
 
-void MCWasmStreamer::changeSection(MCSection *Section,
-                                   const MCExpr *Subsection) {
+void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   auto *SectionWasm = cast<MCSectionWasm>(Section);
   const MCSymbol *Grp = SectionWasm->getGroup();

@@ -1776,7 +1776,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsTopLevel = getAffectingIncludeLoc(SourceMgr, File).isInvalid();
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
-    auto ContentHash = hash_code(-1);
+    uint64_t ContentHash = 0;
     if (PP->getHeaderSearchInfo()
             .getHeaderSearchOpts()
             .ValidateASTInputFilesContent) {
@@ -1787,12 +1787,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
         PP->Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
             << Entry.File.getName();
     }
-    auto CH = llvm::APInt(64, ContentHash);
-    Entry.ContentHash[0] =
-        static_cast<uint32_t>(CH.getLoBits(32).getZExtValue());
-    Entry.ContentHash[1] =
-        static_cast<uint32_t>(CH.getHiBits(32).getZExtValue());
-
+    Entry.ContentHash[0] = uint32_t(ContentHash);
+    Entry.ContentHash[1] = uint32_t(ContentHash >> 32);
     if (Entry.IsSystemFile)
       SystemFiles.push_back(Entry);
     else
@@ -5359,6 +5355,20 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   writeUnhashedControlBlock(PP, Context);
 
+  // Don't reuse type ID and Identifier ID from readers for C++ standard named
+  // modules since we want to support no-transitive-change model for named
+  // modules. The theory for no-transitive-change model is,
+  // for a user of a named module, the user can only access the indirectly
+  // imported decls via the directly imported module. So that it is possible to
+  // control what matters to the users when writing the module. It would be
+  // problematic if the users can reuse the type IDs and identifier IDs from
+  // indirectly imported modules arbitrarily. So we choose to clear these ID
+  // here.
+  if (isWritingStdCXXNamedModules()) {
+    TypeIdxs.clear();
+    IdentifierIDs.clear();
+  }
+
   // Look for any identifiers that were named while processing the
   // headers, but are otherwise not needed. We add these to the hash
   // table to enable checking of the predefines buffer in the case
@@ -5391,6 +5401,17 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     }
   }
 
+  // Form the record of special types.
+  RecordData SpecialTypes;
+  AddTypeRef(Context.getRawCFConstantStringType(), SpecialTypes);
+  AddTypeRef(Context.getFILEType(), SpecialTypes);
+  AddTypeRef(Context.getjmp_bufType(), SpecialTypes);
+  AddTypeRef(Context.getsigjmp_bufType(), SpecialTypes);
+  AddTypeRef(Context.ObjCIdRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.ObjCClassRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.ObjCSelRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.getucontext_tType(), SpecialTypes);
+
   PrepareWritingSpecialDecls(SemaRef);
 
   // Write the control block
@@ -5421,17 +5442,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     AllSelectors.push_back(SelectorAndID.first);
   for (auto &Selector : AllSelectors)
     SemaRef.ObjC().updateOutOfDateSelector(Selector);
-
-  // Form the record of special types.
-  RecordData SpecialTypes;
-  AddTypeRef(Context.getRawCFConstantStringType(), SpecialTypes);
-  AddTypeRef(Context.getFILEType(), SpecialTypes);
-  AddTypeRef(Context.getjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context.getsigjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context.ObjCIdRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.ObjCClassRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.ObjCSelRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.getucontext_tType(), SpecialTypes);
 
   if (Chain) {
     // Write the mapping information describing our module dependencies and how
@@ -6690,6 +6700,11 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 }
 
 void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
   IdentifierID &StoredID = IdentifierIDs[II];
   unsigned OriginalModuleFileIndex = StoredID >> 32;
 
@@ -6712,6 +6727,11 @@ void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
 }
 
 void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
   // Always take the type index that comes in later module files.
   // This copes with an interesting
   // case for chained AST writing where we schedule writing the type and then,

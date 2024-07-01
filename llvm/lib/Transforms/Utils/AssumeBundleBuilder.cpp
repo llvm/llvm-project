@@ -320,7 +320,7 @@ RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,
                                                   AssumptionCache *AC,
                                                   DominatorTree *DT) {
   AssumeBuilderState Builder(Assume->getModule(), Assume, AC, DT);
-  RK = canonicalizedKnowledge(RK, Assume->getModule()->getDataLayout());
+  RK = canonicalizedKnowledge(RK, Assume->getDataLayout());
 
   if (!Builder.isKnowledgeWorthPreserving(RK))
     return RetainedKnowledge::none();

@@ -73,7 +73,6 @@ public:
   /// @{
 
   virtual void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
-                                const MCAsmLayout &Layout,
                                 const MCFragment *Fragment,
                                 const MCFixup &Fixup, MCValue Target,
                                 uint64_t &FixedValue) = 0;
@@ -162,6 +161,8 @@ public:
 
   uint64_t getPaddingSize(const MCSection *SD, const MCAsmLayout &Layout) const;
 
+  const MCSymbol *getAtom(const MCSymbol &S) const;
+
   bool doesSymbolRequireExternRelocation(const MCSymbol &S);
 
   /// @}
@@ -236,9 +237,9 @@ public:
     Relocations[Sec].push_back(P);
   }
 
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override;
 
   void bindIndirectSymbols(MCAssembler &Asm);
 
@@ -255,18 +256,13 @@ public:
                                 const MCAsmLayout &Layout) override;
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &A,
-                                              const MCSymbol &B,
-                                              bool InSet) const override;
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
   void populateAddrSigSection(MCAssembler &Asm);
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 };
 
 /// Construct a new Mach-O writer instance.

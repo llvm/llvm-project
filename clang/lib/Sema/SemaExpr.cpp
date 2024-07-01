@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "TreeTransform.h"
 #include "UsedDeclVisitor.h"
 #include "clang/AST/ASTConsumer.h"
@@ -6288,7 +6289,7 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   FunctionDecl *OverloadDecl = FunctionDecl::Create(
       Context, Parent, FDecl->getLocation(), FDecl->getLocation(),
       FDecl->getIdentifier(), OverloadTy,
-      /*TInfo=*/nullptr, SC_Extern, Sema->getCurFPFeatures().isFPConstrained(),
+      /*TInfo=*/nullptr, SC_None, Sema->getCurFPFeatures().isFPConstrained(),
       false,
       /*hasPrototype=*/true);
   SmallVector<ParmVarDecl*, 16> Params;
@@ -13778,6 +13779,9 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
 
   CheckForNullPointerDereference(*this, LHSExpr);
 
+  AssignedEntity AE{LHSExpr};
+  checkExprLifetime(*this, AE, RHS.get());
+
   if (getLangOpts().CPlusPlus20 && LHSType.isVolatileQualified()) {
     if (CompoundType.isNull()) {
       // C++2a [expr.ass]p5:
@@ -14217,6 +14221,39 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
     QualType MPTy = Context.getMemberPointerType(
         op->getType(), Context.getTypeDeclType(MD->getParent()).getTypePtr());
+
+    if (getLangOpts().PointerAuthCalls && MD->isVirtual() &&
+        !isUnevaluatedContext() && !MPTy->isDependentType()) {
+      // When pointer authentication is enabled, argument and return types of
+      // vitual member functions must be complete. This is because vitrual
+      // member function pointers are implemented using virtual dispatch
+      // thunks and the thunks cannot be emitted if the argument or return
+      // types are incomplete.
+      auto ReturnOrParamTypeIsIncomplete = [&](QualType T,
+                                               SourceLocation DeclRefLoc,
+                                               SourceLocation RetArgTypeLoc) {
+        if (RequireCompleteType(DeclRefLoc, T, diag::err_incomplete_type)) {
+          Diag(DeclRefLoc,
+               diag::note_ptrauth_virtual_function_pointer_incomplete_arg_ret);
+          Diag(RetArgTypeLoc,
+               diag::note_ptrauth_virtual_function_incomplete_arg_ret_type)
+              << T;
+          return true;
+        }
+        return false;
+      };
+      QualType RetTy = MD->getReturnType();
+      bool IsIncomplete =
+          !RetTy->isVoidType() &&
+          ReturnOrParamTypeIsIncomplete(
+              RetTy, OpLoc, MD->getReturnTypeSourceRange().getBegin());
+      for (auto *PVD : MD->parameters())
+        IsIncomplete |= ReturnOrParamTypeIsIncomplete(PVD->getType(), OpLoc,
+                                                      PVD->getBeginLoc());
+      if (IsIncomplete)
+        return QualType();
+    }
+
     // Under the MS ABI, lock down the inheritance model now.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       (void)isCompleteType(OpLoc, MPTy);
