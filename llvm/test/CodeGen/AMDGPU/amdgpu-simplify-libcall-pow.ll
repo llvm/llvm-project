@@ -1783,8 +1783,7 @@ define float @test_pow_afn_f32_nnan_ninf__y_10(float %x) {
 define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_poison(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_poison
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> poison)
-; CHECK-NEXT:    ret <2 x float> [[__EXP2]]
+; CHECK-NEXT:    ret <2 x float> poison
 ;
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> poison)
   ret <2 x float> %pow
@@ -2216,9 +2215,10 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_sitofp(float %x, i32 %y)
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[__POW_SIGN]] to float
-; CHECK-NEXT:    [[__POW_SIGN1:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[__EXP2]], float [[TMP3]])
-; CHECK-NEXT:    ret float [[__POW_SIGN1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    ret float [[TMP5]]
 ;
   %y.cast = sitofp i32 %y to float
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float %y.cast)
@@ -2303,9 +2303,10 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp(float %x, i32 %y)
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[__POW_SIGN]] to float
-; CHECK-NEXT:    [[__POW_SIGN1:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[__EXP2]], float [[TMP3]])
-; CHECK-NEXT:    ret float [[__POW_SIGN1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    ret float [[TMP5]]
 ;
   %y.cast = uitofp i32 %y to float
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float %y.cast)
@@ -2351,9 +2352,10 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp_i256(float %x, i2
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[__POW_SIGN]] to float
-; CHECK-NEXT:    [[__POW_SIGN1:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[__EXP2]], float [[TMP3]])
-; CHECK-NEXT:    ret float [[__POW_SIGN1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    ret float [[TMP5]]
 ;
   %y.cast = uitofp i256 %y to float
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float %y.cast)
@@ -2373,9 +2375,10 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_sitofp_i256(float %x, i2
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[__POW_SIGN]] to float
-; CHECK-NEXT:    [[__POW_SIGN1:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[__EXP2]], float [[TMP3]])
-; CHECK-NEXT:    ret float [[__POW_SIGN1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    ret float [[TMP5]]
 ;
   %y.cast = sitofp i256 %y to float
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float %y.cast)
@@ -2395,9 +2398,10 @@ define <2 x float> @test_pow_afn_nnan_ninf_v2f32_known_integral_sitofp(<2 x floa
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i32> [[TMP1]], <i32 31, i32 31>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i32> [[__YEVEN]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[__POW_SIGN]] to <2 x float>
-; CHECK-NEXT:    [[__POW_SIGN1:%.*]] = call nnan ninf afn <2 x float> @llvm.copysign.v2f32(<2 x float> [[__EXP2]], <2 x float> [[TMP3]])
-; CHECK-NEXT:    ret <2 x float> [[__POW_SIGN1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x float> [[__EXP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint <2 x i32> [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[TMP5]]
 ;
   %y.cast = sitofp <2 x i32> %y to <2 x float>
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> %y.cast)
@@ -2443,9 +2447,10 @@ define <2 x float> @test_pow_afn_nnan_ninf_v2f32_known_integral_uitofp(<2 x floa
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i32> [[TMP1]], <i32 31, i32 31>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i32> [[__YEVEN]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[__POW_SIGN]] to <2 x float>
-; CHECK-NEXT:    [[__POW_SIGN1:%.*]] = call nnan ninf afn <2 x float> @llvm.copysign.v2f32(<2 x float> [[__EXP2]], <2 x float> [[TMP3]])
-; CHECK-NEXT:    ret <2 x float> [[__POW_SIGN1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x float> [[__EXP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint <2 x i32> [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[TMP5]]
 ;
   %y.cast = uitofp <2 x i32> %y to <2 x float>
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> %y.cast)
@@ -2554,9 +2559,10 @@ define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc(float %x, float
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[__POW_SIGN]] to float
-; CHECK-NEXT:    [[__POW_SIGN1:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[__EXP2]], float [[TMP3]])
-; CHECK-NEXT:    ret float [[__POW_SIGN1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    ret float [[TMP5]]
 ;
   %y = call float @llvm.trunc.f32(float %y.arg)
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float %y)
