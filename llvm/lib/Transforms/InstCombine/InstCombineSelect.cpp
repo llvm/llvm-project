@@ -3519,6 +3519,33 @@ static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
   return false;
 }
 
+/// Check whether the KnownBits of a select arm may be affected by the
+/// select condition.
+static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
+                             unsigned Depth) {
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
+
+  // Ignore the case where the select arm itself is affected. These cases
+  // are handled more efficiently by other optimizations.
+  if (Depth != 0 && Affected.contains(V))
+    return true;
+
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (isa<PHINode>(I)) {
+      if (Depth == MaxAnalysisRecursionDepth - 1)
+        return false;
+      Depth = MaxAnalysisRecursionDepth - 2;
+    }
+    return any_of(I->operands(), [&](Value *Op) {
+      return Op->getType()->isIntOrIntVectorTy() &&
+             hasAffectedValue(Op, Affected, Depth + 1);
+    });
+  }
+
+  return false;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4015,6 +4042,34 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // select Cond, !X, X -> xor Cond, X
   if (CondVal->getType() == SI.getType() && isKnownInversion(FalseVal, TrueVal))
     return BinaryOperator::CreateXor(CondVal, FalseVal);
+
+  if (SelType->isIntOrIntVectorTy() &&
+      (!isa<Constant>(TrueVal) || !isa<Constant>(FalseVal))) {
+    // Try to simplify select arms based on KnownBits implied by the condition.
+    CondContext CC(CondVal);
+    findValuesAffectedByCondition(CondVal, /*IsAssume=*/false, [&](Value *V) {
+      CC.AffectedValues.insert(V);
+    });
+    SimplifyQuery Q = SQ.getWithInstruction(&SI).getWithCondContext(CC);
+    if (!CC.AffectedValues.empty()) {
+      if (!isa<Constant>(TrueVal) &&
+          hasAffectedValue(TrueVal, CC.AffectedValues, /*Depth=*/0)) {
+        KnownBits Known = llvm::computeKnownBits(TrueVal, /*Depth=*/0, Q);
+        if (Known.isConstant())
+          return replaceOperand(SI, 1,
+                                ConstantInt::get(SelType, Known.getConstant()));
+      }
+
+      CC.Invert = true;
+      if (!isa<Constant>(FalseVal) &&
+          hasAffectedValue(FalseVal, CC.AffectedValues, /*Depth=*/0)) {
+        KnownBits Known = llvm::computeKnownBits(FalseVal, /*Depth=*/0, Q);
+        if (Known.isConstant())
+          return replaceOperand(SI, 2,
+                                ConstantInt::get(SelType, Known.getConstant()));
+      }
+    }
+  }
 
   return nullptr;
 }

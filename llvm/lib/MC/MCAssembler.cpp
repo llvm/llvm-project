@@ -270,7 +270,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   // recordRelocation handle non-VK_None cases like A@plt-B+C.
   if (!IsResolved && Target.getSymA() && Target.getSymB() &&
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None &&
-      getBackend().handleAddSubRelocations(*Layout, *DF, Fixup, Target, Value))
+      getBackend().handleAddSubRelocations(*this, *DF, Fixup, Target, Value))
     return true;
 
   return IsResolved;
@@ -1040,7 +1040,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         // Insert fixup type for code alignment if the target define
         // shouldInsertFixupForCodeAlign target hook.
         if (Sec.useCodeAlign() && AF.hasEmitNops())
-          getBackend().shouldInsertFixupForCodeAlign(*this, Layout, AF);
+          getBackend().shouldInsertFixupForCodeAlign(*this, AF);
         continue;
       }
       case MCFragment::FT_Data: {
@@ -1126,8 +1126,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
       Fixup.getKind() == FK_Data_1)
     return false;
-  return getBackend().fixupNeedsRelaxationAdvanced(Fixup, Resolved, Value, DF,
-                                                   *Layout, WasForced);
+  return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Resolved,
+                                                   Value, DF, WasForced);
 }
 
 bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F) const {

@@ -39,7 +39,7 @@ public:
         STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
   ~LoongArchAsmBackend() override {}
 
-  bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
+  bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
                                uint64_t &FixedValue) const override;
 
@@ -54,7 +54,6 @@ public:
 
   // Insert target specific fixup type for alignment directive in code section.
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     const MCAsmLayout &Layout,
                                      MCAlignFragment &AF) override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,

@@ -6288,7 +6288,7 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   FunctionDecl *OverloadDecl = FunctionDecl::Create(
       Context, Parent, FDecl->getLocation(), FDecl->getLocation(),
       FDecl->getIdentifier(), OverloadTy,
-      /*TInfo=*/nullptr, SC_Extern, Sema->getCurFPFeatures().isFPConstrained(),
+      /*TInfo=*/nullptr, SC_None, Sema->getCurFPFeatures().isFPConstrained(),
       false,
       /*hasPrototype=*/true);
   SmallVector<ParmVarDecl*, 16> Params;
