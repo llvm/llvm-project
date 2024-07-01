@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL1.2 -o - %s 2>&1 | FileCheck %s -check-prefixes CHECK,CHECK-UNIFORM
+// RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL1.2 -fno-offload-uniform-block -o - %s 2>&1 | FileCheck %s -check-prefixes CHECK,CHECK-NONUNIFORM
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -o - %s 2>&1 | FileCheck %s -check-prefixes CHECK,CHECK-NONUNIFORM
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -cl-uniform-work-group-size -o - %s 2>&1 | FileCheck %s -check-prefixes CHECK,CHECK-UNIFORM
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -foffload-uniform-block -o - %s 2>&1 | FileCheck %s -check-prefixes CHECK,CHECK-UNIFORM
