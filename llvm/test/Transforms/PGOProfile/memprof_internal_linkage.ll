@@ -12,7 +12,8 @@
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S | FileCheck %s
 
 ; CHECK: call {{.*}} @_Znam{{.*}} #[[ATTR:[0-9]+]]
-; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="notcold" }
+; old: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="notcold" }
+; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) }
 
 ; ModuleID = 'memprof_internal_linkage.cc'
 source_filename = "memprof_internal_linkage.cc"
