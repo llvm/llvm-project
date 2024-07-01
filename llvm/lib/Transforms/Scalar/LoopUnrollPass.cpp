@@ -60,6 +60,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1628,6 +1629,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   SmallPriorityWorklist<Loop *, 4> Worklist;
   appendLoopsToWorklist(LI, Worklist);
 
+  auto PA = getLoopPassPreservedAnalyses();
   while (!Worklist.empty()) {
     // Because the LoopInfo stores the loops in RPO, we walk the worklist
     // from back to front so that we work forward across the CFG, which
@@ -1657,6 +1659,11 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
         UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount,
         &AA);
     Changed |= Result != LoopUnrollResult::Unmodified;
+    if (Result == LoopUnrollResult::PartiallyUnrolled) {
+      auto &E = AM.getResult<ShouldRunExtraUnrollPasses>(F);
+      E.Loops.insert(&L);
+      PA.preserve<ShouldRunExtraUnrollPasses>();
+    }
 
     // The parent must not be damaged by unrolling!
 #ifndef NDEBUG
@@ -1672,7 +1679,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  return getLoopPassPreservedAnalyses();
+  return PA;
 }
 
 void LoopUnrollPass::printPipeline(
