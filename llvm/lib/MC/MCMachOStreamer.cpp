@@ -161,6 +161,10 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
     return true;
   if (SegName == "__LLVM" && (SecName == "__cg_profile"))
     return true;
+
+  if (SegName == "__DATA" && SecName == "__auth_ptr")
+    return true;
+
   return false;
 }
 
