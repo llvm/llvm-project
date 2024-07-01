@@ -52,8 +52,7 @@ lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.EmitAddrsig = true;
-  for (StringRef C : ctx.config.mllvmOpts)
-    c.MllvmArgs.emplace_back(C.str());
+  c.EmbedCmdArgs = context().cmdArgs;
 
   // Always emit a section per function/datum with LTO. LLVM LTO should get most
   // of the benefit of linker GC, but there are still opportunities for ICF.
