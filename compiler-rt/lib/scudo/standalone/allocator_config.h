@@ -54,8 +54,14 @@ struct DefaultConfig {
   struct Primary {
     using SizeClassMap = DefaultSizeClassMap;
 #if SCUDO_CAN_USE_PRIMARY64
+#if SCUDO_RISCV64
+    // Support 39-bit VMA for riscv-64
+    static const uptr RegionSizeLog = 30U;
+    static const uptr GroupSizeLog = 19U;
+#else
     static const uptr RegionSizeLog = 32U;
     static const uptr GroupSizeLog = 21U;
+#endif
     typedef uptr CompactPtrT;
     static const uptr CompactPtrScale = 0;
     static const bool EnableRandomOffset = true;
