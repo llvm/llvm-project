@@ -2982,7 +2982,8 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
             msgs.Annex(std::move(bad));
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, context_.languageFeatures())) {
+                       *type, context_.languageFeatures())
+                        .value_or(false)) {
           auto maybeDyType{evaluate::DynamicType::From(*type)};
           if (type->category() == DeclTypeSpec::Logical) {
             if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
@@ -3084,7 +3085,8 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
         type->characterTypeSpec().length().isDeferred()) {
       // ok; F'2023 18.3.7 p2(6)
     } else if (derived ||
-        IsInteroperableIntrinsicType(*type, context_.languageFeatures())) {
+        IsInteroperableIntrinsicType(*type, context_.languageFeatures())
+            .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
     } else if (type->category() == DeclTypeSpec::Logical) {
       if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool) &&

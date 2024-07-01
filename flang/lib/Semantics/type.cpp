@@ -891,10 +891,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
 }
 
-bool IsInteroperableIntrinsicType(
+std::optional<bool> IsInteroperableIntrinsicType(
     const DeclTypeSpec &type, const common::LanguageFeatureControl &features) {
-  auto dyType{evaluate::DynamicType::From(type)};
-  return dyType && IsInteroperableIntrinsicType(*dyType, &features);
+  if (auto dyType{evaluate::DynamicType::From(type)}) {
+    return IsInteroperableIntrinsicType(*dyType, &features);
+  } else {
+    return std::nullopt;
+  }
 }
 
 } // namespace Fortran::semantics
