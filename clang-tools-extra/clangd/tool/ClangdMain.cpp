@@ -13,6 +13,7 @@
 #include "Config.h"
 #include "ConfigProvider.h"
 #include "Feature.h"
+#include "FeatureModuleSet.h"
 #include "IncludeCleaner.h"
 #include "PathMapping.h"
 #include "Protocol.h"
@@ -712,6 +713,10 @@ enum class ErrorResultCode : int {
 };
 
 int clangdMain(int argc, char *argv[]) {
+  return clangdMain(arc, argv, nullptr);
+}
+
+int clangdMain(int argc, char *argv[], FeatureModuleSet* FeatureModules) {
   // Clang could run on the main thread. e.g., when the flag '-check' or '-sync'
   // is enabled.
   clang::noteBottomOfStack();
@@ -898,6 +903,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
+  Opts.FeatureModules = FeatureModules;
 
   Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;
   Opts.CodeComplete.Limit = LimitResults;

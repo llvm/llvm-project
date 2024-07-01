@@ -11,8 +11,10 @@
 
 namespace clang {
 namespace clangd {
+class FeatureModuleSet;
 // clangd main function (clangd server loop)
 int clangdMain(int argc, char *argv[]);
+int clangdMain(int argc, char *argv[], FeatureModuleSet *FeatureModules);
 } // namespace clangd
 } // namespace clang
 
