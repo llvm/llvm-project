@@ -15,7 +15,7 @@ from clang.cindex import (
 )
 
 
-class TestCursorKind(unittest.TestCase):
+class TestEnums(unittest.TestCase):
     enums = [
         TokenKind,
         CursorKind,
@@ -39,3 +39,11 @@ class TestCursorKind(unittest.TestCase):
                 enum.from_id(max_value + 1)
             with self.assertRaises(ValueError):
                 enum.from_id(-1)
+
+    def test_duplicate_ids(self):
+        """Check that no two kinds have the same id"""
+        # for enum in self.enums:
+        for enum in self.enums:
+            num_declared_variants = len(enum._member_map_.keys())
+            num_unique_variants = len(list(enum))
+            self.assertEqual(num_declared_variants, num_unique_variants)
