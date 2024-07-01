@@ -321,6 +321,11 @@ public:
 
   std::vector<Elf_Rel> decode_relrs(Elf_Relr_Range relrs) const;
 
+  Expected<uint64_t> getCrelHeader(ArrayRef<uint8_t> Content) const;
+  using RelsOrRelas = std::pair<std::vector<Elf_Rel>, std::vector<Elf_Rela>>;
+  Expected<RelsOrRelas> decodeCrel(ArrayRef<uint8_t> Content) const;
+  Expected<RelsOrRelas> crels(const Elf_Shdr &Sec) const;
+
   Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr &Sec) const;
 
   /// Iterate over program header table.
