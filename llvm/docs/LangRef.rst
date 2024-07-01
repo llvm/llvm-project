@@ -19238,7 +19238,7 @@ The ``mask`` operand will apply to at least the gather and scatter operations.
 .. _int_vector_compress:
 
 '``llvm.experimental.vector.compress.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 LLVM provides an intrinsic for compressing data within a vector based on a selection mask.
 Semantically, this is similar to :ref:`llvm.masked.compressstore <int_compressstore>` but with weaker assumptions
