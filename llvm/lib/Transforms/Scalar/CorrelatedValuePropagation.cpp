@@ -85,6 +85,7 @@ STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
+STATISTIC(NumCmpIntr, "Number of llvm.[us]cmp intrinsics removed");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumSMinMax,
           "Number of llvm.s{min,max} intrinsics simplified to unsigned");
@@ -556,11 +557,13 @@ static bool processCmpIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
                                                     /*UndefAllowed*/ false);
 
   if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, RHS_CR)) {
+    ++NumCmpIntr;
     II->replaceAllUsesWith(ConstantInt::get(II->getType(), 1));
     II->eraseFromParent();
     return true;
   }
   if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, RHS_CR)) {
+    ++NumCmpIntr;
     II->replaceAllUsesWith(ConstantInt::getSigned(II->getType(), -1));
     II->eraseFromParent();
     return true;
