@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 
 using namespace clang;
@@ -76,13 +76,13 @@ inline bool fullyContains(SourceRange Larger, SourceRange Smaller,
          isLessOrEqual(Smaller.getEnd(), Larger.getEnd(), SM);
 }
 
-class CacheInitializer : public RecursiveASTVisitor<CacheInitializer> {
+class CacheInitializer : public DynamicRecursiveASTVisitor {
 public:
   static void initialize(const Decl *D, Ranges &ToInit) {
     CacheInitializer(ToInit).TraverseDecl(const_cast<Decl *>(D));
   }
 
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     // Bug location could be somewhere in the init value of
     // a freshly declared variable.  Even though it looks like the
     // user applied attribute to a statement, it will apply to a
@@ -90,7 +90,7 @@ public:
     return VisitAttributedNode(D);
   }
 
-  bool VisitAttributedStmt(AttributedStmt *AS) {
+  bool VisitAttributedStmt(AttributedStmt *AS) override {
     // When we apply attributes to statements, it actually creates
     // a wrapper statement that only contains attributes and the wrapped
     // statement.

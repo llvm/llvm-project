@@ -18,7 +18,8 @@
 #define LLVM_CLANG_ANALYSIS_CALLGRAPH_H
 
 #include "clang/AST/Decl.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/STLExtras.h"
@@ -39,7 +40,7 @@ class Stmt;
 /// The call graph extends itself with the given declarations by implementing
 /// the recursive AST visitor, which constructs the graph by visiting the given
 /// declarations.
-class CallGraph : public RecursiveASTVisitor<CallGraph> {
+class CallGraph : public DynamicRecursiveASTVisitor {
   friend class CallGraphNode;
 
   using FunctionMapTy =
@@ -109,7 +110,7 @@ public:
 
   /// Part of recursive declaration visitation. We recursively visit all the
   /// declarations to collect the root functions.
-  bool VisitFunctionDecl(FunctionDecl *FD) {
+  bool VisitFunctionDecl(FunctionDecl *FD) override {
     // We skip function template definitions, as their semantics is
     // only determined when they are instantiated.
     if (includeInGraph(FD) && FD->isThisDeclarationADefinition()) {
@@ -124,7 +125,7 @@ public:
   }
 
   /// Part of recursive declaration visitation.
-  bool VisitObjCMethodDecl(ObjCMethodDecl *MD) {
+  bool VisitObjCMethodDecl(ObjCMethodDecl *MD) override {
     if (includeInGraph(MD)) {
       addNodesForBlocks(MD);
       addNodeForDecl(MD, true);
@@ -133,11 +134,7 @@ public:
   }
 
   // We are only collecting the declarations, so do not step into the bodies.
-  bool TraverseStmt(Stmt *S) { return true; }
-
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const { return true; }
+  bool TraverseStmt(Stmt *S) override { return true; }
 
 private:
   /// Add the given declaration to the call graph.
