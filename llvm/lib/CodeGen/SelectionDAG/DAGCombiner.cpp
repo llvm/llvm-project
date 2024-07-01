@@ -17571,6 +17571,11 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
                            APInt::getSignMask(SignVT.getScalarSizeInBits())))
     return SDValue(N, 0);
 
+  // We only take the non-sign bits from the value operand
+  if (SimplifyDemandedBits(N0,
+                           APInt::getSignedMaxValue(VT.getScalarSizeInBits())))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
