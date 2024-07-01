@@ -3023,4 +3023,82 @@ define i1 @icmp_addnuw_nonzero_fail_multiuse(i32 %x, i32 %y) {
   ret i1 %c
 }
 
+define i1 @ult_add_C2_pow2_C_neg(i8 %x) {
+; CHECK-LABEL: @ult_add_C2_pow2_C_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add i8 %x, 32
+  %c = icmp ult i8 %i, -32
+  ret i1 %c
+}
+
+define i1 @ult_add_nsw_C2_pow2_C_neg(i8 %x) {
+; CHECK-LABEL: @ult_add_nsw_C2_pow2_C_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nsw i8 %x, 32
+  %c = icmp ult i8 %i, -32
+  ret i1 %c
+}
+
+define i1 @ult_add_nuw_nsw_C2_pow2_C_neg(i8 %x) {
+; CHECK-LABEL: @ult_add_nuw_nsw_C2_pow2_C_neg(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], -64
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nuw nsw i8 %x, 32
+  %c = icmp ult i8 %i, -32
+  ret i1 %c
+}
+
+define i1 @ult_add_C2_neg_C_pow2(i8 %x) {
+; CHECK-LABEL: @ult_add_C2_neg_C_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], 32
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add i8 %x, -32
+  %c = icmp ult i8 %i, 32
+  ret i1 %c
+}
+
+define <2 x i1> @ult_add_C2_pow2_C_neg_vec(<2 x i8> %x) {
+; CHECK-LABEL: @ult_add_C2_pow2_C_neg_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -32, i8 -32>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 -64, i8 -64>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %i = add <2 x i8> %x, <i8 32, i8 32>
+  %c = icmp ult <2 x i8> %i, <i8 -32, i8 -32>
+  ret <2 x i1> %c
+}
+
+define i1 @ult_add_C2_pow2_C_neg_multiuse(i8 %x) {
+; CHECK-LABEL: @ult_add_C2_pow2_C_neg_multiuse(
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[X:%.*]], 32
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], -32
+; CHECK-NEXT:    call void @use(i8 [[I]])
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add i8 %x, 32
+  %c = icmp ult i8 %i, -32
+  call void @use(i8 %i)
+  ret i1 %c
+}
+
+define i1 @uge_add_C2_pow2_C_neg(i8 %x) {
+; CHECK-LABEL: @uge_add_C2_pow2_C_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add i8 %x, 32
+  %c = icmp uge i8 %i, -32
+  ret i1 %c
+}
+
 declare void @llvm.assume(i1)

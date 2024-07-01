@@ -83,5 +83,55 @@ exit:
   ret void
 }
 
+; Check constrained ops converted to call
+define void @testTan(ptr %cast) strictfp {
+; CHECK-LABEL: testTan:
+; CHECK:       # %bb.0: # %root
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r29, -24
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    addi 30, 3, -8
+; CHECK-NEXT:    li 29, 255
+; CHECK-NEXT:    std 0, 80(1)
+; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:  .LBB2_1: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    lfdu 1, 8(30)
+; CHECK-NEXT:    bl tan
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi 29, 29, -1
+; CHECK-NEXT:    stfd 1, 0(30)
+; CHECK-NEXT:    cmpldi 29, 0
+; CHECK-NEXT:    bc 12, 1, .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    addi 1, 1, 64
+; CHECK-NEXT:    ld 0, 16(1)
+; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+root:
+  br label %for.body
+
+exit:
+  ret void
+
+for.body:
+  %i = phi i64 [ 0, %root ], [ %next, %for.body ]
+  %idx = getelementptr inbounds double, ptr %cast, i64 %i
+  %val = load double, ptr %idx
+  %tan = tail call nnan ninf nsz arcp double @llvm.experimental.constrained.tan.f64(double %val, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  store double %tan, ptr %idx, align 8
+  %next = add nuw nsw i64 %i, 1
+  %cond = icmp eq i64 %next, 255
+  br i1 %cond, label %exit, label %for.body
+}
+
 declare double @llvm.experimental.constrained.cos.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadata)

@@ -220,8 +220,8 @@ public:
 };
 #  endif
 
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_THREAD_SAFETY_ANNOTATION(__capability__("shared_timed_mutex"))
-    shared_timed_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI
+_LIBCPP_THREAD_SAFETY_ANNOTATION(__capability__("shared_timed_mutex")) shared_timed_mutex {
   __shared_mutex_base __base_;
 
 public:

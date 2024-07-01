@@ -22,6 +22,28 @@ using namespace Fortran::runtime;
 // may not have them in their runtime library. This can occur in the
 // case of cross compilation, for example.
 
+/// Placeholder for real*10 version of ErfcScaled Intrinsic
+struct ForcedErfcScaled10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ErfcScaled10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of ErfcScaled Intrinsic
+struct ForcedErfcScaled16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ErfcScaled16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Exponent Intrinsic
 struct ForcedExponent10_4 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Exponent10_4));
@@ -436,6 +458,30 @@ mlir::Value fir::runtime::genRRSpacing(fir::FirOpBuilder &builder,
     func = fir::runtime::getRuntimeFunc<ForcedRRSpacing16>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "RRSPACING");
+
+  auto funcTy = func.getFunctionType();
+  llvm::SmallVector<mlir::Value> args = {
+      builder.createConvert(loc, funcTy.getInput(0), x)};
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to ErfcScaled intrinsic runtime routine.
+mlir::Value fir::runtime::genErfcScaled(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value x) {
+  mlir::func::FuncOp func;
+  mlir::Type fltTy = x.getType();
+
+  if (fltTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ErfcScaled4)>(loc, builder);
+  else if (fltTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ErfcScaled8)>(loc, builder);
+  else if (fltTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedErfcScaled10>(loc, builder);
+  else if (fltTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedErfcScaled16>(loc, builder);
+  else
+    fir::intrinsicTypeTODO(builder, fltTy, loc, "ERFC_SCALED");
 
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {

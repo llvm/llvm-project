@@ -46,13 +46,13 @@ define void @test_prepare_for_lto_intrinsic() !dbg !7 {
 ; FULL-LABEL: @test_prepare_for_lto_intrinsic(
 ; FULL-NEXT:  entry:
 ; FULL-NEXT:    %array = alloca [20 x i32], align 16
-; FULL-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !DIExpression()), !dbg !13
+; FULL-NEXT:    #dbg_value(i32 0, !12, !DIExpression(), !13
 ; FULL-NEXT:    br label %for.body
 ;
 ; PREPARE-LABEL: @test_prepare_for_lto_intrinsic(
 ; PREPARE-NEXT:  entry:
 ; PREPARE-NEXT:    %array = alloca [20 x i32], align 16
-; PREPARE-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !DIExpression()), !dbg !13
+; PREPARE-NEXT:    #dbg_value(i32 0, !12, !DIExpression(), !13
 ; PREPARE-NEXT:    br label %for.body
 ;
 entry:

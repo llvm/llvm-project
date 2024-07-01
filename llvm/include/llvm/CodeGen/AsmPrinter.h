@@ -19,7 +19,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -34,11 +33,14 @@
 namespace llvm {
 
 class AddrLabelMap;
+class AsmPrinterHandler;
 class BasicBlock;
 class BlockAddress;
 class Constant;
 class ConstantArray;
+class ConstantPtrAuth;
 class DataLayout;
+class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
@@ -142,23 +144,6 @@ public:
   using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
-  /// struct HandlerInfo and Handlers permit users or target extended
-  /// AsmPrinter to add their own handlers.
-  struct HandlerInfo {
-    std::unique_ptr<AsmPrinterHandler> Handler;
-    StringRef TimerName;
-    StringRef TimerDescription;
-    StringRef TimerGroupName;
-    StringRef TimerGroupDescription;
-
-    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler, StringRef TimerName,
-                StringRef TimerDescription, StringRef TimerGroupName,
-                StringRef TimerGroupDescription)
-        : Handler(std::move(Handler)), TimerName(TimerName),
-          TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
-          TimerGroupDescription(TimerGroupDescription) {}
-  };
-
   // Flags representing which CFI section is required for a function/module.
   enum class CFISection : unsigned {
     None = 0, ///< Do not emit either .eh_frame or .debug_frame
@@ -204,8 +189,12 @@ protected:
 
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
-  std::vector<HandlerInfo> Handlers;
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
+
+  /// Debuginfo handler. Protected so that targets can add their own.
+  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
+  size_t NumUserDebugHandlers = 0;
 
   StackMaps SM;
 
@@ -221,7 +210,7 @@ private:
 
   /// A handler that supports pseudo probe emission with embedded inline
   /// context.
-  PseudoProbeHandler *PP = nullptr;
+  std::unique_ptr<PseudoProbeHandler> PP;
 
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
@@ -530,10 +519,9 @@ public:
   // Overridable Hooks
   //===------------------------------------------------------------------===//
 
-  void addAsmPrinterHandler(HandlerInfo Handler) {
-    Handlers.insert(Handlers.begin(), std::move(Handler));
-    NumUserHandlers++;
-  }
+  void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler);
+
+  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler);
 
   // Targets can, or in the case of EmitInstruction, must implement these to
   // customize output.
@@ -583,6 +571,10 @@ public:
   /// a C++ static/global constructor list are emitted.
   virtual void emitXXStructor(const DataLayout &DL, const Constant *CV) {
     emitGlobalConstant(DL, CV);
+  }
+
+  virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
+    report_fatal_error("ptrauth constant lowering not implemented");
   }
 
   /// Return true if the basic block has exactly one predecessor and the control

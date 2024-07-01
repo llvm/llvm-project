@@ -31,21 +31,12 @@ class MCAsmLayout {
   /// List of sections in layout order.
   llvm::SmallVector<MCSection *, 16> SectionOrder;
 
-  /// Compute the layout for the section if necessary.
-  void ensureValid(const MCFragment *F) const;
-
 public:
   MCAsmLayout(MCAssembler &Assembler);
 
   /// Get the assembler object this is a layout for.
   MCAssembler &getAssembler() const { return Assembler; }
 
-  /// Invalidate the fragments starting with F because it has been
-  /// resized. The fragment's size should have already been updated, but
-  /// its bundle padding will be recomputed.
-  void invalidateFragmentsFrom(MCFragment *F);
-
-  void layoutBundle(MCFragment *F);
 
   /// \name Section Access (in layout order)
   /// @{
@@ -59,26 +50,9 @@ public:
   /// \name Fragment Layout Data
   /// @{
 
-  /// Get the offset of the given fragment inside its containing section.
-  uint64_t getFragmentOffset(const MCFragment *F) const;
-
   /// @}
   /// \name Utility Functions
   /// @{
-
-  /// Get the address space size of the given section, as it effects
-  /// layout. This may differ from the size reported by \see
-  /// getSectionFileSize() by not including section tail padding.
-  uint64_t getSectionAddressSize(const MCSection *Sec) const;
-
-  /// Get the data size of the given section, as emitted to the object
-  /// file. This may include additional padding, or be 0 for virtual sections.
-  uint64_t getSectionFileSize(const MCSection *Sec) const;
-
-  /// Get the offset of the given symbol, as computed in the current
-  /// layout.
-  /// \return True on success.
-  bool getSymbolOffset(const MCSymbol &S, uint64_t &Val) const;
 
   /// Variant that reports a fatal error if the offset is not computable.
   uint64_t getSymbolOffset(const MCSymbol &S) const;

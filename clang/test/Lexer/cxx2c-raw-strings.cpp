@@ -21,4 +21,8 @@ int main() {
   (void) R"\()\";
   // expected-error@-1 {{invalid character '\' in raw string delimiter}}
   // expected-error@-2 {{expected expression}}
+
+  (void) R"@(foo)@";
+  // cxx26-warning@-1 {{'@' in a raw string literal delimiter is incompatible with standards before C++2c}}
+  // precxx26-warning@-2 {{'@' in a raw string literal delimiter is a C++2c extension}}
 }

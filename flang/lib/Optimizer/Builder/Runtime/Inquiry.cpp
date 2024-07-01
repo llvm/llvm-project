@@ -29,6 +29,20 @@ mlir::Value fir::runtime::genLboundDim(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, lboundFunc, args).getResult(0);
 }
 
+void fir::runtime::genLbound(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value resultAddr, mlir::Value array,
+                             mlir::Value kind) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(Lbound)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, resultAddr, array, kind, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 /// Generate call to `Ubound` runtime routine.  Calls to UBOUND with a DIM
 /// argument get transformed into an expression equivalent to
 /// SIZE() + LBOUND() - 1, so they don't have an intrinsic in the runtime.

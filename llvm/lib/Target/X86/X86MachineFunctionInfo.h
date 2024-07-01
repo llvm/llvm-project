@@ -16,12 +16,42 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <set>
 
 namespace llvm {
 
 enum AMXProgModelEnum { None = 0, DirectReg = 1, ManagedRA = 2 };
+
+class X86MachineFunctionInfo;
+
+namespace yaml {
+template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
+  static void enumeration(IO &YamlIO, AMXProgModelEnum &Value) {
+    YamlIO.enumCase(Value, "None", AMXProgModelEnum::None);
+    YamlIO.enumCase(Value, "DirectReg", AMXProgModelEnum::DirectReg);
+    YamlIO.enumCase(Value, "ManagedRA", AMXProgModelEnum::ManagedRA);
+  }
+};
+
+struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
+  AMXProgModelEnum AMXProgModel;
+
+  X86MachineFunctionInfo() = default;
+  X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~X86MachineFunctionInfo() = default;
+};
+
+template <> struct MappingTraits<X86MachineFunctionInfo> {
+  static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
+    YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
+  }
+};
+} // end namespace yaml
 
 /// X86MachineFunctionInfo - This class is derived from MachineFunction and
 /// contains private X86 target-specific information for each MachineFunction.
@@ -119,10 +149,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// True if this function has tile virtual register. This is used to
-  /// determine if we should insert tilerelease in frame lowering.
-  bool HasVirtualTileReg = false;
-
   /// Ajust stack for push2/pop2
   bool PadForPush2Pop2 = false;
 
@@ -159,6 +185,8 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  void initializeBaseYamlFields(const yaml::X86MachineFunctionInfo &YamlMFI);
 
   bool getForceFramePointer() const { return ForceFramePointer;}
   void setForceFramePointer(bool forceFP) { ForceFramePointer = forceFP; }
@@ -249,9 +277,6 @@ public:
 
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
   void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
-
-  bool hasVirtualTileReg() const { return HasVirtualTileReg; }
-  void setHasVirtualTileReg(bool v) { HasVirtualTileReg = v; }
 
   bool padForPush2Pop2() const { return PadForPush2Pop2; }
   void setPadForPush2Pop2(bool V) { PadForPush2Pop2 = V; }

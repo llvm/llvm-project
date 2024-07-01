@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 use-bare-ptr-memref-call-conv=1' -split-input-file | FileCheck %s --check-prefix=CHECK-BARE
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
 gpu.module @test_module_0 {
@@ -638,7 +639,7 @@ gpu.module @test_module_30 {
   }
   // CHECK-LABEL: @subgroup_reduce_xor
   gpu.func @subgroup_reduce_xor(%arg0 : i32) {
-    // CHECK nvvm.redux.sync xor {{.*}}
+    // CHECK: nvvm.redux.sync xor {{.*}}
     %result = gpu.subgroup_reduce xor %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
@@ -670,11 +671,33 @@ gpu.module @test_module_32 {
   }
 }
 
-gpu.module @gpumodule {
+gpu.module @test_module_33 {
 // CHECK-LABEL: func @kernel_with_block_size()
-// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>} 
-  gpu.func @kernel_with_block_size() kernel attributes {gpu.known_block_size = array<i32: 128, 1, 1>} {
+// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>}
+  gpu.func @kernel_with_block_size() kernel attributes {known_block_size = array<i32: 128, 1, 1>} {
     gpu.return
+  }
+}
+
+
+gpu.module @test_module_34 {
+  // CHECK-LABEL: llvm.func @memref_signature(
+  //  CHECK-SAME:     %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: f32) -> !llvm.struct<(struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, f32)>
+  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.return
+
+  // CHECK-BARE-LABEL: llvm.func @memref_signature(
+  //  CHECK-BARE-SAME:     %{{.*}}: !llvm.ptr, %{{.*}}: f32) -> !llvm.struct<(ptr, f32)>
+  gpu.func @memref_signature(%m: memref<2xf32>, %f: f32) -> (memref<2xf32>, f32) {
+    gpu.return %m, %f : memref<2xf32>, f32
   }
 }
 
@@ -701,9 +724,7 @@ module attributes {transform.with_named_sequence} {
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
         {index_bitwidth = 64,
-        use_bare_ptr = true,
-        use_bare_ptr_memref_call_conv = true,
-        use_opaque_pointers = true}
+        use_bare_ptr_call_conv = false}
     } {
       legal_dialects = ["llvm", "memref", "nvvm", "test"],
       legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],

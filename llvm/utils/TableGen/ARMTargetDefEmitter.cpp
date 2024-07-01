@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -41,9 +42,9 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   std::vector<Record *> SortedExtensions =
       RK.getAllDerivedDefinitions("Extension");
   auto Alphabetical = [](Record *A, Record *B) -> bool {
-    const auto MarchA = A->getValueAsString("MArchName");
-    const auto MarchB = B->getValueAsString("MArchName");
-    return MarchA.compare(MarchB) < 0; // A lexographically less than B
+    const auto NameA = A->getValueAsString("Name");
+    const auto NameB = B->getValueAsString("Name");
+    return NameA.compare(NameB) < 0; // A lexographically less than B
   };
   std::sort(SortedExtensions.begin(), SortedExtensions.end(), Alphabetical);
 
@@ -71,6 +72,10 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     OS << "ARM_ARCHITECTURE(" << Arch << ")\n";
   OS << "\n#undef ARM_ARCHITECTURE\n\n";
 
+  // Currently only AArch64 (not ARM) is handled beyond this point.
+  if (!RK.getClass("Architecture64"))
+    return;
+
   // Emit the ArchExtKind enum
   OS << "#ifdef EMIT_ARCHEXTKIND_ENUM\n"
      << "enum ArchExtKind : unsigned {\n"
@@ -91,29 +96,44 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   for (const Record *Rec : SortedExtensions) {
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
     OS << "  ";
-    OS << "{\"" << Rec->getValueAsString("MArchName") << "\"";
-    if (auto Alias = Rec->getValueAsString("MArchAlias"); Alias.empty())
+    OS << "{\"" << Rec->getValueAsString("UserVisibleName") << "\"";
+    if (auto Alias = Rec->getValueAsString("UserVisibleAlias"); Alias.empty())
       OS << ", {}";
     else
       OS << ", \"" << Alias << "\"";
     OS << ", AArch64::" << AEK;
-    if (AEK == "AEK_NONE") {
-      // HACK: don't emit posfeat/negfeat strings for FMVOnlyExtensions.
-      OS << ", {}, {}";
-    } else {
-      OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
-      OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
-    }
-    OS << ", " << Rec->getValueAsString("FMVBit");
-    OS << ", \"" << Rec->getValueAsString("FMVDependencies") << "\"";
-    OS << ", " << (uint64_t)Rec->getValueAsInt("FMVPriority");
+    OS << ", \"" << Rec->getValueAsString("ArchFeatureName") << "\"";
+    OS << ", \"" << Rec->getValueAsString("Desc") << "\"";
+    OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
+    OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
     OS << "},\n";
   };
-  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, FEAT_INIT, \"\", "
-        "ExtensionInfo::MaxFMVPriority},\n";
+  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, {}, {} },\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
+     << "\n";
+
+  // Emit FMV information
+  auto FMVExts = RK.getAllDerivedDefinitionsIfDefined("FMVExtension");
+  OS << "#ifdef EMIT_FMV_INFO\n"
+     << "const std::vector<llvm::AArch64::FMVInfo>& "
+        "llvm::AArch64::getFMVInfo() {\n"
+     << "  static std::vector<FMVInfo> I;\n"
+     << "  if(I.size()) return I;\n"
+     << "  I.reserve(" << FMVExts.size() << ");\n";
+  for (const Record *Rec : FMVExts) {
+    OS << "  I.emplace_back(";
+    OS << "\"" << Rec->getValueAsString("Name") << "\"";
+    OS << ", " << Rec->getValueAsString("Bit");
+    OS << ", \"" << Rec->getValueAsString("BackendFeatures") << "\"";
+    OS << ", " << (uint64_t)Rec->getValueAsInt("Priority");
+    OS << ");\n";
+  };
+  OS << "  return I;\n"
+     << "}\n"
+     << "#undef EMIT_FMV_INFO\n"
+     << "#endif // EMIT_FMV_INFO\n"
      << "\n";
 
   // Emit extension dependencies
@@ -137,6 +157,14 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   // Emit architecture information
   OS << "#ifdef EMIT_ARCHITECTURES\n";
 
+  // Return the C++ name of the of an ArchInfo object
+  auto ArchInfoName = [](int Major, int Minor,
+                         StringRef Profile) -> std::string {
+    return Minor == 0 ? "ARMV" + std::to_string(Major) + Profile.upper()
+                      : "ARMV" + std::to_string(Major) + "_" +
+                            std::to_string(Minor) + Profile.upper();
+  };
+
   auto Architectures = RK.getAllDerivedDefinitionsIfDefined("Architecture64");
   std::vector<std::string> CppSpellings;
   for (const Record *Rec : Architectures) {
@@ -151,10 +179,7 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
                           ProfileLower + "'");
 
     // Name of the object in C++
-    const std::string CppSpelling =
-        Minor == 0 ? "ARMV" + std::to_string(Major) + ProfileUpper.c_str()
-                   : "ARMV" + std::to_string(Major) + "_" +
-                         std::to_string(Minor) + ProfileUpper.c_str();
+    const std::string CppSpelling = ArchInfoName(Major, Minor, ProfileUpper);
     OS << "inline constexpr ArchInfo " << CppSpelling << " = {\n";
     CppSpellings.push_back(CppSpelling);
 
@@ -175,7 +200,6 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     // Construct the list of default extensions
     OS << "  (AArch64::ExtensionBitset({";
     for (auto *E : Rec->getValueAsListOfDefs("DefaultExts")) {
-      // Only process subclasses of Extension
       OS << "AArch64::" << E->getValueAsString("ArchExtKindSpelling").upper()
          << ", ";
     }
@@ -194,6 +218,100 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
   OS << "#undef EMIT_ARCHITECTURES\n"
      << "#endif // EMIT_ARCHITECTURES\n"
+     << "\n";
+
+  // Emit CPU Aliases
+  OS << "#ifdef EMIT_CPU_ALIAS\n"
+     << "inline constexpr Alias CpuAliases[] = {\n";
+
+  llvm::StringSet<> Processors;
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorModel"))
+    Processors.insert(Rec->getValueAsString("Name"));
+
+  llvm::StringSet<> Aliases;
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorAlias")) {
+    auto Name = Rec->getValueAsString("Name");
+    auto Alias = Rec->getValueAsString("Alias");
+    if (!Processors.contains(Alias))
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' references a non-existent ProcessorModel '" + Alias + "'");
+    if (Processors.contains(Name))
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' duplicates an existing ProcessorModel");
+    if (!Aliases.insert(Name).second)
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' duplicates an existing ProcessorAlias");
+
+    OS << llvm::formatv(R"(  { "{0}", "{1}" },)", Name, Alias) << '\n';
+  }
+
+  OS << "};\n"
+     << "#undef EMIT_CPU_ALIAS\n"
+     << "#endif // EMIT_CPU_ALIAS\n"
+     << "\n";
+
+  // Emit CPU information
+  OS << "#ifdef EMIT_CPU_INFO\n"
+     << "inline constexpr CpuInfo CpuInfos[] = {\n";
+
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorModel")) {
+    auto Name = Rec->getValueAsString("Name");
+    auto Features = Rec->getValueAsListOfDefs("Features");
+
+    // "apple-latest" is backend-only, should not be accepted by TargetParser.
+    if (Name == "apple-latest")
+      continue;
+
+    Record *Arch;
+    if (Name == "generic") {
+      // "generic" is an exception. It does not have an architecture, and there
+      // are tests that depend on e.g. -mattr=-v8.4a meaning HasV8_0aOps==false.
+      // However, in TargetParser CPUInfo, it is written as 8.0-A.
+      Arch = RK.getDef("HasV8_0aOps");
+    } else {
+      // Search for an Architecture64 in the list of features.
+      auto IsArch = [](Record *F) { return F->isSubClassOf("Architecture64"); };
+      auto ArchIter = llvm::find_if(Features, IsArch);
+      if (ArchIter == Features.end())
+        PrintFatalError(Rec, "Features must include an Architecture64.");
+      Arch = *ArchIter;
+
+      // Check there is only one Architecture in the list.
+      if (llvm::count_if(Features, IsArch) > 1)
+        PrintFatalError(Rec, "Features has multiple Architecture64 entries");
+    }
+
+    auto Major = Arch->getValueAsInt("Major");
+    auto Minor = Arch->getValueAsInt("Minor");
+    auto Profile = Arch->getValueAsString("Profile");
+    auto ArchInfo = ArchInfoName(Major, Minor, Profile);
+
+    // The apple-latest alias is backend only, do not expose it to -mcpu.
+    if (Name == "apple-latest")
+      continue;
+
+    OS << "  {\n"
+       << "    \"" << Name << "\",\n"
+       << "    " << ArchInfo << ",\n"
+       << "    AArch64::ExtensionBitset({\n";
+
+    // Keep track of extensions we have seen
+    StringSet<> SeenExts;
+    for (auto *E : Rec->getValueAsListOfDefs("Features"))
+      // Only process subclasses of Extension
+      if (E->isSubClassOf("Extension")) {
+        const auto AEK = E->getValueAsString("ArchExtKindSpelling").upper();
+        if (!SeenExts.insert(AEK).second)
+          PrintFatalError(Rec, "feature already added: " + E->getName());
+        OS << "      AArch64::" << AEK << ",\n";
+      }
+    OS << "    })\n"
+       << "  },\n";
+  }
+  OS << "};\n";
+
+  OS << "#undef EMIT_CPU_INFO\n"
+     << "#endif // EMIT_CPU_INFO\n"
      << "\n";
 }
 

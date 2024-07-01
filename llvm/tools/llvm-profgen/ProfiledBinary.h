@@ -291,6 +291,9 @@ class ProfiledBinary {
   // Whether we need to symbolize all instructions to get function context size.
   bool TrackFuncContextSize = false;
 
+  // Whether this is a kernel image;
+  bool IsKernel = false;
+
   // Indicate if the base loading address is parsed from the mmap event or uses
   // the preferred address
   bool IsLoadedByMMap = false;
@@ -428,6 +431,14 @@ public:
 
   bool usePseudoProbes() const { return UsePseudoProbes; }
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
+  bool isKernel() const { return IsKernel; }
+
+  static bool isKernelImageName(StringRef BinaryName) {
+    return BinaryName == "[kernel.kallsyms]" ||
+           BinaryName == "[kernel.kallsyms]_stext" ||
+           BinaryName == "[kernel.kallsyms]_text";
+  }
+
   // Get the index in CodeAddressVec for the address
   // As we might get an address which is not the code
   // here it would round to the next valid code address by

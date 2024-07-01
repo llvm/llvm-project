@@ -690,8 +690,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
         // Cache set of StringAttrs for fast lookup in `isLegalToInline`.
         disallowedFunctionAttrs({
             StringAttr::get(dialect->getContext(), "noduplicate"),
-            StringAttr::get(dialect->getContext(), "noinline"),
-            StringAttr::get(dialect->getContext(), "optnone"),
             StringAttr::get(dialect->getContext(), "presplitcoroutine"),
             StringAttr::get(dialect->getContext(), "returns_twice"),
             StringAttr::get(dialect->getContext(), "strictfp"),
@@ -702,14 +700,20 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     if (!wouldBeCloned)
       return false;
     if (!isa<LLVM::CallOp>(call)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Cannot inline: call is not an LLVM::CallOp\n");
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is not an '"
+                              << LLVM::CallOp::getOperationName() << "' op\n");
       return false;
     }
     auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
     if (!funcOp) {
       LLVM_DEBUG(llvm::dbgs()
-                 << "Cannot inline: callable is not an LLVM::LLVMFuncOp\n");
+                 << "Cannot inline: callable is not an '"
+                 << LLVM::LLVMFuncOp::getOperationName() << "' op\n");
+      return false;
+    }
+    if (funcOp.isNoInline()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Cannot inline: function is marked no_inline\n");
       return false;
     }
     if (funcOp.isVarArg()) {

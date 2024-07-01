@@ -1494,3 +1494,69 @@ define i64 @bswap_i64(i64 %a) {
   %1 = call i64 @llvm.bswap.i64(i64 %a)
   ret i64 %1
 }
+
+define i16 @orc_b_i16(i16 %a) {
+; RV64I-LABEL: orc_b_i16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, 257
+; RV64I-NEXT:    slli a1, a0, 8
+; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: orc_b_i16:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andi a0, a0, 257
+; RV64ZBB-NEXT:    orc.b a0, a0
+; RV64ZBB-NEXT:    ret
+  %1 = and i16 %a, 257
+  %2 = mul nuw i16 %1, 255
+  ret i16 %2
+}
+
+define i32 @orc_b_i32(i32 %a) {
+; RV64I-LABEL: orc_b_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 4112
+; RV64I-NEXT:    addi a1, a1, 257
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 8
+; RV64I-NEXT:    subw a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: orc_b_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    lui a1, 4112
+; RV64ZBB-NEXT:    addiw a1, a1, 257
+; RV64ZBB-NEXT:    and a0, a0, a1
+; RV64ZBB-NEXT:    orc.b a0, a0
+; RV64ZBB-NEXT:    ret
+  %1 = and i32 %a, 16843009
+  %2 = mul nuw i32 %1, 255
+  ret i32 %2
+}
+
+define i64 @orc_b_i64(i64 %a) {
+; RV64I-LABEL: orc_b_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 4112
+; RV64I-NEXT:    addiw a1, a1, 257
+; RV64I-NEXT:    slli a2, a1, 32
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 8
+; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: orc_b_i64:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    lui a1, 4112
+; RV64ZBB-NEXT:    addiw a1, a1, 257
+; RV64ZBB-NEXT:    slli a2, a1, 32
+; RV64ZBB-NEXT:    add a1, a1, a2
+; RV64ZBB-NEXT:    and a0, a0, a1
+; RV64ZBB-NEXT:    orc.b a0, a0
+; RV64ZBB-NEXT:    ret
+  %1 = and i64 %a, 72340172838076673
+  %2 = mul nuw i64 %1, 255
+  ret i64 %2
+}
