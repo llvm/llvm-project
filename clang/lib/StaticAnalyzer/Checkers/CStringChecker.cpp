@@ -461,12 +461,14 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
   const NonLoc Zero = SVB.makeZeroArrayIndex();
 
-  Loc FirstElementVal =
-      State->getLValue(ElemTy, Zero, loc::MemRegionVal(SuperR)).castAs<Loc>();
+  std::optional<Loc> FirstElementVal =
+      State->getLValue(ElemTy, Zero, loc::MemRegionVal(SuperR)).getAs<Loc>();
+  if (!FirstElementVal)
+    return State;
 
   // Ensure that we wouldn't read uninitialized value.
   if (Filter.CheckCStringUninitializedRead &&
-      State->getSVal(FirstElementVal.castAs<Loc>()).isUndef()) {
+      State->getSVal(*FirstElementVal).isUndef()) {
     llvm::SmallString<258> Buf;
     llvm::raw_svector_ostream OS(Buf);
     OS << "The first element of the ";

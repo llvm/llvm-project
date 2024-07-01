@@ -122,3 +122,11 @@ void ga_copy_strings() {
     memmove(alloc, ((char **)ga_copy_strings_from_0)[i], 1);
 }
 
+// Creduced crash. In this case, retrieving the Loc for the first element failed.
+char mov_mdhd_language_map[][4] = {};
+int ff_mov_lang_to_iso639_code;
+char *ff_mov_lang_to_iso639_to;
+void ff_mov_lang_to_iso639() {
+  memcpy(ff_mov_lang_to_iso639_to,
+         mov_mdhd_language_map[ff_mov_lang_to_iso639_code], 4);
+}
