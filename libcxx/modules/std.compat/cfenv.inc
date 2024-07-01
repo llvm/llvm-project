@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   // types
   using ::fenv_t _LIBCPP_USING_IF_EXISTS;
   using ::fexcept_t _LIBCPP_USING_IF_EXISTS;
@@ -26,4 +26,4 @@ export {
   using ::feholdexcept _LIBCPP_USING_IF_EXISTS;
   using ::fesetenv _LIBCPP_USING_IF_EXISTS;
   using ::feupdateenv _LIBCPP_USING_IF_EXISTS;
-} // export
+} // _LIBCPP_MODULE_EXPORT

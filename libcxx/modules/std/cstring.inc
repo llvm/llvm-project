@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::size_t _LIBCPP_USING_IF_EXISTS;
 
   using std::memchr _LIBCPP_USING_IF_EXISTS;

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #if defined(__STDCPP_FLOAT16_T__)
   using std::float16_t;
 #endif

@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   // [array], class template array
   using std::array;
 

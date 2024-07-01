@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #ifndef _LIBCPP_HAS_NO_THREADS
 #  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
   // [stoptoken], class stop_­token

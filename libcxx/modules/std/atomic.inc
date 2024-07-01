@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   // [atomics.order], order and consistency
   using std::memory_order _LIBCPP_USING_IF_EXISTS;
   using std::memory_order_acq_rel _LIBCPP_USING_IF_EXISTS;

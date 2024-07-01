@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [format.context], class template basic_format_context
   using std::basic_format_context;
   using std::format_context;
