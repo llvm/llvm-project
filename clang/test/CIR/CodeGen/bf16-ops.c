@@ -30,8 +30,8 @@ void foo(void) {
 
   h1 = -h1;
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.float), !cir.bf16
-  // NONATIVE-NEXT: %{{.+}} = cir.unary(minus, %[[#B]]) : !cir.bf16, !cir.bf16
+  // NONATIVE-NEXT: %[[#B:]] = cir.unary(minus, %[[#A]]) : !cir.float, !cir.float
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(floating, %[[#B]] : !cir.float), !cir.bf16
 
   //  NATIVE-NOT: %{{.+}} = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
   //  NATIVE-NOT: %{{.+}} = cir.cast(floating, %{{.+}} : !cir.float), !cir.bf16
@@ -39,8 +39,8 @@ void foo(void) {
 
   h1 = +h1;
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
-  // NONATIVE-NEXT: %[[#B:]] = cir.cast(floating, %[[#A]] : !cir.float), !cir.bf16
-  // NONATIVE-NEXT: %{{.+}} = cir.unary(plus, %[[#B]]) : !cir.bf16, !cir.bf16
+  // NONATIVE-NEXT: %[[#B:]] = cir.unary(plus, %[[#A]]) : !cir.float, !cir.float
+  // NONATIVE-NEXT: %{{.+}} = cir.cast(floating, %[[#B]] : !cir.float), !cir.bf16
 
   //  NATIVE-NOT: %{{.+}} = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float
   //  NATIVE-NOT: %{{.+}} = cir.cast(floating, %{{.+}} : !cir.float), !cir.bf16

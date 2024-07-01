@@ -604,37 +604,47 @@ public:
                                : PromotionType;
     auto result = VisitPlus(E, promotionTy);
     if (result && !promotionTy.isNull())
-      result = buildUnPromotedValue(result, E->getType());
-    return buildUnaryOp(E, mlir::cir::UnaryOpKind::Plus, result);
+      return buildUnPromotedValue(result, E->getType());
+    return result;
   }
 
-  mlir::Value VisitPlus(const UnaryOperator *E, QualType PromotionType) {
+  mlir::Value VisitPlus(const UnaryOperator *E,
+                        QualType PromotionType = QualType()) {
     // This differs from gcc, though, most likely due to a bug in gcc.
     TestAndClearIgnoreResultAssign();
+
+    mlir::Value operand;
     if (!PromotionType.isNull())
-      return CGF.buildPromotedScalarExpr(E->getSubExpr(), PromotionType);
-    return Visit(E->getSubExpr());
+      operand = CGF.buildPromotedScalarExpr(E->getSubExpr(), PromotionType);
+    else
+      operand = Visit(E->getSubExpr());
+
+    return buildUnaryOp(E, mlir::cir::UnaryOpKind::Plus, operand);
   }
 
-  mlir::Value VisitUnaryMinus(const UnaryOperator *E) {
-    // NOTE(cir): QualType function parameter still not used, so don´t replicate
-    // it here yet.
-    QualType promotionTy = getPromotionType(E->getSubExpr()->getType());
+  mlir::Value VisitUnaryMinus(const UnaryOperator *E,
+                              QualType PromotionType = QualType()) {
+    QualType promotionTy = PromotionType.isNull()
+                               ? getPromotionType(E->getSubExpr()->getType())
+                               : PromotionType;
     auto result = VisitMinus(E, promotionTy);
     if (result && !promotionTy.isNull())
-      result = buildUnPromotedValue(result, E->getType());
-    return buildUnaryOp(E, mlir::cir::UnaryOpKind::Minus, result);
+      return buildUnPromotedValue(result, E->getType());
+    return result;
   }
 
   mlir::Value VisitMinus(const UnaryOperator *E, QualType PromotionType) {
     TestAndClearIgnoreResultAssign();
+
+    mlir::Value operand;
     if (!PromotionType.isNull())
-      return CGF.buildPromotedScalarExpr(E->getSubExpr(), PromotionType);
+      operand = CGF.buildPromotedScalarExpr(E->getSubExpr(), PromotionType);
+    else
+      operand = Visit(E->getSubExpr());
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-
-    return Visit(E->getSubExpr());
+    return buildUnaryOp(E, mlir::cir::UnaryOpKind::Minus, operand);
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *E) {
@@ -660,8 +670,8 @@ public:
   mlir::Value buildUnaryOp(const UnaryOperator *E, mlir::cir::UnaryOpKind kind,
                            mlir::Value input) {
     return Builder.create<mlir::cir::UnaryOp>(
-        CGF.getLoc(E->getSourceRange().getBegin()),
-        CGF.getCIRType(E->getType()), kind, input);
+        CGF.getLoc(E->getSourceRange().getBegin()), input.getType(), kind,
+        input);
   }
 
   // C++
