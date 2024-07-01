@@ -658,6 +658,10 @@ INTERCEPTOR_STRTO_BASE(long, __isoc23_strtol)
 INTERCEPTOR_STRTO_BASE(long long, __isoc23_strtoll)
 #  endif
 
+#  if SANITIZER_FREEBSD || SANITIZER_NETBSD
+INTERCEPTOR_STRTO_BASE(u64, strtoq)
+#  endif
+
 INTERCEPTOR(int, atoi, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atoi);
