@@ -657,12 +657,12 @@
         ! V9: prefetcha [%i1+3968] %asi, #one_read    ! encoding: [0xc3,0xee,0x6f,0x80]
         prefetcha  [ %i1 + 0xf80 ] %asi, #one_read
 
-        ! V8:      error: malformed ASI tag, must be a constant integer expression
+        ! V8:      error: invalid operand for instruction
         ! V8-NEXT: prefetcha  [ %i1 + %i2 ] #ASI_SNF, 1
         ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
         prefetcha  [ %i1 + %i2 ] #ASI_SNF, 1
 
-        ! V8:      error: malformed ASI tag, must be a constant integer expression
+        ! V8:      error: unexpected token
         ! V8-NEXT: prefetcha  [ %i1 + %i2 ] #ASI_SNF, #one_read
         ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
         prefetcha  [ %i1 + %i2 ] #ASI_SNF, #one_read

@@ -116,7 +116,7 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
 
   const UniformityInfo *UA =
       &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
 
   DominatorTreeWrapperPass *const DTW =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
@@ -137,7 +137,7 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
 
   const auto *UA = &AM.getResult<UniformityInfoAnalysis>(F);
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
 
   DomTreeUpdater DTU(&AM.getResult<DominatorTreeAnalysis>(F),
                      DomTreeUpdater::UpdateStrategy::Lazy);
@@ -404,7 +404,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
   assert(ST->hasPermLaneX16());
   V = B.CreateBitCast(V, IntNTy);
   Value *Permlanex16Call = B.CreateIntrinsic(
-      Intrinsic::amdgcn_permlanex16, {},
+      V->getType(), Intrinsic::amdgcn_permlanex16,
       {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
   V = buildNonAtomicBinOp(B, Op, B.CreateBitCast(V, AtomicTy),
                           B.CreateBitCast(Permlanex16Call, AtomicTy));
@@ -416,7 +416,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
     // Reduce across the upper and lower 32 lanes.
     V = B.CreateBitCast(V, IntNTy);
     Value *Permlane64Call =
-        B.CreateIntrinsic(Intrinsic::amdgcn_permlane64, {}, V);
+        B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_permlane64, V);
     return buildNonAtomicBinOp(B, Op, B.CreateBitCast(V, AtomicTy),
                                B.CreateBitCast(Permlane64Call, AtomicTy));
   }
@@ -424,7 +424,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
   // Pick an arbitrary lane from 0..31 and an arbitrary lane from 32..63 and
   // combine them with a scalar operation.
   Function *ReadLane =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
+      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, B.getInt32Ty());
   V = B.CreateBitCast(V, IntNTy);
   Value *Lane0 = B.CreateCall(ReadLane, {V, B.getInt32(0)});
   Value *Lane32 = B.CreateCall(ReadLane, {V, B.getInt32(32)});
@@ -472,7 +472,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     assert(ST->hasPermLaneX16());
     V = B.CreateBitCast(V, IntNTy);
     Value *PermX = B.CreateIntrinsic(
-        Intrinsic::amdgcn_permlanex16, {},
+        V->getType(), Intrinsic::amdgcn_permlanex16,
         {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
 
     Value *UpdateDPPCall =
@@ -514,10 +514,10 @@ Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
                      {Identity, V, B.getInt32(DPP::WAVE_SHR1), B.getInt32(0xf),
                       B.getInt32(0xf), B.getFalse()});
   } else {
-    Function *ReadLane =
-        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
-    Function *WriteLane =
-        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_writelane, {});
+    Function *ReadLane = Intrinsic::getDeclaration(
+        M, Intrinsic::amdgcn_readlane, B.getInt32Ty());
+    Function *WriteLane = Intrinsic::getDeclaration(
+        M, Intrinsic::amdgcn_writelane, B.getInt32Ty());
 
     // On GFX10 all DPP operations are confined to a single row. To get cross-
     // row operations we have to use permlane or readlane.

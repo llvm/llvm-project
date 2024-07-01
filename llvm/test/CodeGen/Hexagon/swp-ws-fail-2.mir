@@ -1,6 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -o - 2>&1 | FileCheck %s
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
 
 # CHECK: The WindowScheduler failed to initialize!
 

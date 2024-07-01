@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -130,6 +131,36 @@ uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
   if (NextSec.isVirtualSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
+}
+
+static bool isSymbolLinkerVisible(const MCSymbol &Symbol) {
+  // Non-temporary labels should always be visible to the linker.
+  if (!Symbol.isTemporary())
+    return true;
+
+  if (Symbol.isUsedInReloc())
+    return true;
+
+  return false;
+}
+
+const MCSymbol *MachObjectWriter::getAtom(const MCSymbol &S) const {
+  // Linker visible symbols define atoms.
+  if (isSymbolLinkerVisible(S))
+    return &S;
+
+  // Absolute and undefined symbols have no defining atom.
+  if (!S.isInSection())
+    return nullptr;
+
+  // Non-linker visible symbols in sections which can't be atomized have no
+  // defining atom.
+  if (!MCAsmInfoDarwin::isSectionAtomizableBySymbols(
+          *S.getFragment()->getParent()))
+    return nullptr;
+
+  // Otherwise, return the atom for the containing fragment.
+  return S.getFragment()->getAtom();
 }
 
 void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
@@ -461,7 +492,6 @@ static bool isFixupTargetValid(const MCValue &Target) {
 }
 
 void MachObjectWriter::recordRelocation(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
@@ -471,8 +501,8 @@ void MachObjectWriter::recordRelocation(MCAssembler &Asm,
     return;
   }
 
-  TargetObjectWriter->recordRelocation(this, Asm, Layout, Fragment, Fixup,
-                                       Target, FixedValue);
+  TargetObjectWriter->recordRelocation(this, Asm, Fragment, Fixup, Target,
+                                       FixedValue);
 }
 
 void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
@@ -662,18 +692,6 @@ void MachObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 }
 
 bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &A, const MCSymbol &B,
-    bool InSet) const {
-  // FIXME: We don't handle things like
-  // foo = .
-  // creating atoms.
-  if (A.isVariable() || B.isVariable())
-    return false;
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, A, B,
-                                                                InSet);
-}
-
-bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
     bool InSet, bool IsPCRel) const {
   if (InSet)
@@ -716,18 +734,8 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   if (&SecA != &SecB)
     return false;
 
-  const MCFragment *FA = SA.getFragment();
-
-  // Bail if the symbol has no fragment.
-  if (!FA)
-    return false;
-
   // If the atoms are the same, they are guaranteed to have the same address.
-  if (FA->getAtom() == FB.getAtom())
-    return true;
-
-  // Otherwise, we can't prove this is fully resolved.
-  return false;
+  return SA.getFragment()->getAtom() == FB.getAtom();
 }
 
 static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {

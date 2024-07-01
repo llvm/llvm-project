@@ -1468,6 +1468,17 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
     // If you change anything here, be sure to update <ptrauth.h>.
     Opts.FunctionPointers =
         PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+
+    Opts.CXXVTablePointers = PointerAuthSchema(
+        Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
+        LangOpts.PointerAuthVTPtrTypeDiscrimination ? Discrimination::Type
+                                                    : Discrimination::None);
+    Opts.CXXTypeInfoVTablePointer =
+        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+    Opts.CXXVTTVTablePointers =
+        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+    Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
   }
 }
 
