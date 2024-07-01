@@ -5706,9 +5706,9 @@ static void emitTargetCall(
   // The presence of certain clauses on the target directive require the
   // explicit generation of the target task.
   if (RequiresOuterTargetTask) {
-    OMPBuilder.emitTargetTask(OutlinedFn, OutlinedFnID,
-                              EmitTargetCallFallbackCB, KArgs, DeviceID, RTLoc,
-                              AllocaIP, Dependencies, HasNoWait);
+    Builder.restoreIP(OMPBuilder.emitTargetTask(
+        OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs, DeviceID,
+        RTLoc, AllocaIP, Dependencies, HasNoWait));
   } else {
     Builder.restoreIP(OMPBuilder.emitKernelLaunch(
         Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,

@@ -34,34 +34,25 @@ program main
       ! Spawn 3 threads
       !$omp parallel num_threads(3)
 
-      ! A single thread will then create two tasks
-      ! One is the 'producer' and potentially slower
-      ! task that updates 'z' to 'N'. The second is an
-      ! offloaded target task that increments 'z'.
-      ! If the depend clauses work properly, the
-      ! target task should wait for the 'producer'
-      ! task to complete before incrementing z
-      ! We use !$omp single here because only
-      ! the depend clause establishes dependencies
-      ! between sibling tasks only. This is the easiest
-      ! way of creating two sibling tasks.
+      ! A single thread will then create two tasks - one is the 'producer' and
+      ! potentially slower task that updates 'z' to 'N'. The second is an
+      ! offloaded target task that increments 'z'. If the depend clauses work
+      ! properly, the target task should wait for the 'producer' task to
+      ! complete before incrementing 'z'. We use 'omp single' here because the
+      ! depend clause establishes dependencies between sibling tasks only.
+      ! This is the easiest way of creating two sibling tasks.
       !$omp single
       !$omp task depend(out: z) shared(z)
-      do while (k < 32000)
-         do while (j < 32766)
-            do while (i < 32766)
-               ! dumb loop nest to slow down the update of
-               ! z
-               i = i + 1
-               ! Adding a function call slows down the producer
-               ! to the point that removing the depend clause
-               ! from the target construct below frequently
-               ! results in the wrong answer.
+      do k=1, 32766
+         do j=1, 32766
+            do i = 1, 32766
+               ! dumb loop nest to slow down the update of 'z'.
+               ! Adding a function call slows down the producer to the point
+               ! that removing the depend clause from the target construct below
+               ! frequently results in the wrong answer.
                accumulator = accumulator + omp_get_device_num()
             end do
-            j = j +1
          end do
-         k = k + 1
       end do
       z = N
       !$omp end task
@@ -72,11 +63,10 @@ program main
       !$omp end target
       !$omp end single
       !$omp end parallel
-      ! Use 'accumulator' so it is not optimized away
-      ! by the compiler.
+      ! Use 'accumulator' so it is not optimized away by the compiler.
       print *, accumulator
       r = z
-end subroutine foo
+    end subroutine foo
 
 !CHECK: ======= FORTRAN Test passed! =======
 !CHECK: foo(5) returned 6 , expected 6
