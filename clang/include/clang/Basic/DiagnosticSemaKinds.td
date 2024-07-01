@@ -10109,6 +10109,11 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
+def warn_dangling_pointer_assignment : Warning<
+   "object backing the pointer %0 "
+   "will be destroyed at the end of the full-expression">,
+   InGroup<DanglingAssignment>;
+
 def warn_unsupported_lifetime_extension : Warning<
   "lifetime extension of "
   "%select{temporary|backing array of initializer list}0 created "
