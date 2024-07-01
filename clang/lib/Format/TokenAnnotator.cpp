@@ -3134,6 +3134,15 @@ public:
       parse(Precedence + 1);
 
       int CurrentPrecedence = getCurrentPrecedence();
+      if (!Style.BinPackBinaryOperations &&
+          (CurrentPrecedence > prec::Conditional) &&
+          (CurrentPrecedence < prec::PointerToMember)) {
+        // With BinPackBinaryOperations disabled,
+        // all operations will be on the same line or on individual lines.
+        // Override precedence to avoid adding fake parenthesis which could
+        // group operations of a different precedence level on the same line
+        CurrentPrecedence = prec::Additive;
+      }
 
       if (Precedence == CurrentPrecedence && Current &&
           Current->is(TT_SelectorName)) {
