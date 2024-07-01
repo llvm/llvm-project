@@ -12,7 +12,7 @@
 
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 using namespace clang;
 
@@ -44,17 +44,17 @@ OpenACCComputeConstruct *OpenACCComputeConstruct::Create(
 }
 
 void OpenACCComputeConstruct::findAndSetChildLoops() {
-  struct LoopConstructFinder : RecursiveASTVisitor<LoopConstructFinder> {
+  struct LoopConstructFinder : DynamicRecursiveASTVisitor {
     OpenACCComputeConstruct *Construct = nullptr;
 
     LoopConstructFinder(OpenACCComputeConstruct *Construct)
         : Construct(Construct) {}
 
-    bool TraverseOpenACCComputeConstruct(OpenACCComputeConstruct *C) {
+    bool TraverseOpenACCComputeConstruct(OpenACCComputeConstruct *C) override {
       // Stop searching if we find a compute construct.
       return true;
     }
-    bool TraverseOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
+    bool TraverseOpenACCLoopConstruct(OpenACCLoopConstruct *C) override {
       // Stop searching if we find a loop construct, after taking ownership of
       // it.
       C->setParentComputeConstruct(Construct);

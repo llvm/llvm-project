@@ -148,6 +148,9 @@ void CallGraph::addNodesForBlocks(DeclContext *D) {
 
 CallGraph::CallGraph() {
   Root = getOrInsertNode(nullptr);
+  ShouldWalkTypesOfTypeLocs = false;
+  ShouldVisitTemplateInstantiations = true;
+  ShouldVisitImplicitCode = true;
 }
 
 CallGraph::~CallGraph() = default;

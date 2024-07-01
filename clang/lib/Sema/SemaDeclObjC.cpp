@@ -17,7 +17,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -5320,8 +5320,7 @@ SemaObjC::GetIvarBackingPropertyAccessor(const ObjCMethodDecl *Method,
 namespace {
 /// Used by SemaObjC::DiagnoseUnusedBackingIvarInAccessor to check if a property
 /// accessor references the backing ivar.
-class UnusedBackingIvarChecker
-    : public RecursiveASTVisitor<UnusedBackingIvarChecker> {
+class UnusedBackingIvarChecker : public DynamicRecursiveASTVisitor {
 public:
   Sema &S;
   const ObjCMethodDecl *Method;
@@ -5336,7 +5335,7 @@ public:
     assert(IvarD);
   }
 
-  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
+  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) override {
     if (E->getDecl() == IvarD) {
       AccessedIvar = true;
       return false;
@@ -5344,7 +5343,7 @@ public:
     return true;
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
     if (E->getReceiverKind() == ObjCMessageExpr::Instance &&
         S.ObjC().isSelfExpr(E->getInstanceReceiver(), Method)) {
       InvokedSelfMethod = true;

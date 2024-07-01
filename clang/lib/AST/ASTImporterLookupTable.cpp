@@ -20,6 +20,8 @@ namespace clang {
 
 namespace {
 
+// FIXME: This breaks if we try to use a dynamic visitor,
+// and I have no idea why.
 struct Builder : RecursiveASTVisitor<Builder> {
   ASTImporterLookupTable &LT;
   Builder(ASTImporterLookupTable &LT) : LT(LT) {}

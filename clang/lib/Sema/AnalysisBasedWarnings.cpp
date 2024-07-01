@@ -22,7 +22,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1067,11 +1067,12 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
 }
 
 namespace {
-  class FallthroughMapper : public RecursiveASTVisitor<FallthroughMapper> {
+  class FallthroughMapper : public DynamicRecursiveASTVisitor {
   public:
     FallthroughMapper(Sema &S)
       : FoundSwitchStatements(false),
         S(S) {
+      ShouldWalkTypesOfTypeLocs = false;
     }
 
     bool foundSwitchStatements() const { return FoundSwitchStatements; }
@@ -1186,26 +1187,23 @@ namespace {
       return !!UnannotatedCnt;
     }
 
-    // RecursiveASTVisitor setup.
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool VisitAttributedStmt(AttributedStmt *S) {
+    bool VisitAttributedStmt(AttributedStmt *S) override {
       if (asFallThroughAttr(S))
         FallthroughStmts.insert(S);
       return true;
     }
 
-    bool VisitSwitchStmt(SwitchStmt *S) {
+    bool VisitSwitchStmt(SwitchStmt *S) override {
       FoundSwitchStatements = true;
       return true;
     }
 
     // We don't want to traverse local type declarations. We analyze their
     // methods separately.
-    bool TraverseDecl(Decl *D) { return true; }
+    bool TraverseDecl(Decl *D) override { return true; }
 
     // We analyze lambda bodies separately. Skip them here.
-    bool TraverseLambdaExpr(LambdaExpr *LE) {
+    bool TraverseLambdaExpr(LambdaExpr *LE) override {
       // Traverse the captures, but not the body.
       for (const auto C : zip(LE->captures(), LE->capture_inits()))
         TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
@@ -2463,15 +2461,18 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
 
 // An AST Visitor that calls a callback function on each callable DEFINITION
 // that is NOT in a dependent context:
-class CallableVisitor : public RecursiveASTVisitor<CallableVisitor> {
+class CallableVisitor : public DynamicRecursiveASTVisitor {
 private:
   llvm::function_ref<void(const Decl *)> Callback;
 
 public:
   CallableVisitor(llvm::function_ref<void(const Decl *)> Callback)
-      : Callback(Callback) {}
+      : Callback(Callback) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = false;
+  }
 
-  bool VisitFunctionDecl(FunctionDecl *Node) {
+  bool VisitFunctionDecl(FunctionDecl *Node) override {
     if (cast<DeclContext>(Node)->isDependentContext())
       return true; // Not to analyze dependent decl
     // `FunctionDecl->hasBody()` returns true if the function has a body
@@ -2482,14 +2483,14 @@ public:
     return true;
   }
 
-  bool VisitBlockDecl(BlockDecl *Node) {
+  bool VisitBlockDecl(BlockDecl *Node) override {
     if (cast<DeclContext>(Node)->isDependentContext())
       return true; // Not to analyze dependent decl
     Callback(Node);
     return true;
   }
 
-  bool VisitObjCMethodDecl(ObjCMethodDecl *Node) {
+  bool VisitObjCMethodDecl(ObjCMethodDecl *Node) override {
     if (cast<DeclContext>(Node)->isDependentContext())
       return true; // Not to analyze dependent decl
     if (Node->hasBody())
@@ -2497,12 +2498,9 @@ public:
     return true;
   }
 
-  bool VisitLambdaExpr(LambdaExpr *Node) {
+  bool VisitLambdaExpr(LambdaExpr *Node) override {
     return VisitFunctionDecl(Node->getCallOperator());
   }
-
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const { return false; }
 };
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
