@@ -77,7 +77,8 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
   clang::FunctionDecl *func_decl = FunctionDecl::Create(
       ast, context, SourceLocation(), SourceLocation(), decl_name, qual_type,
-      nullptr, SC_Extern, /*UsesFPIntrin=*/false, isInlineSpecified, hasWrittenPrototype,
+      nullptr, SC_None, /*UsesFPIntrin=*/false, isInlineSpecified,
+      hasWrittenPrototype,
       isConstexprSpecified ? ConstexprSpecKind::Constexpr
                            : ConstexprSpecKind::Unspecified);
 
