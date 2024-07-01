@@ -142,12 +142,6 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  assert(!getCurrentSection().first ||
-         CurFrag->getParent() == getCurrentSection().first);
-  return CurFrag;
-}
-
 static bool canReuseDataFragment(const MCDataFragment &F,
                                  const MCAssembler &Assembler,
                                  const MCSubtargetInfo *STI) {

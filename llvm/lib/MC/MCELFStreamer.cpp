@@ -107,13 +107,14 @@ static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
 }
 
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  MCSection *CurSection = getCurrentSectionOnly();
-  if (CurSection && isBundleLocked())
-    report_fatal_error("Unterminated .bundle_lock when changing a section");
-
   MCAssembler &Asm = getAssembler();
-  // Ensure the previous section gets aligned if necessary.
-  setSectionAlignmentForBundling(Asm, CurSection);
+  if (auto *F = getCurrentFragment()) {
+    if (isBundleLocked())
+      report_fatal_error("Unterminated .bundle_lock when changing a section");
+
+    // Ensure the previous section gets aligned if necessary.
+    setSectionAlignmentForBundling(Asm, F->getParent());
+  }
   auto *SectionELF = static_cast<const MCSectionELF *>(Section);
   const MCSymbol *Grp = SectionELF->getGroup();
   if (Grp)
