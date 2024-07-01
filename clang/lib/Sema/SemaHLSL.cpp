@@ -687,7 +687,8 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
       if (D->isImplicit())
         continue;
 
-      // namespace or export declaration - add to the list to be scanned later
+      // for namespace or export declaration add the context to the list to be
+      // scanned later
       if (llvm::dyn_cast<NamespaceDecl>(D) || llvm::dyn_cast<ExportDecl>(D)) {
         DeclContextsToScan.push_back(llvm::dyn_cast<DeclContext>(D));
         continue;
