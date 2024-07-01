@@ -623,7 +623,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
-- Clang now has an improved error message when trying to capture a class member variable for lambda function expressions.
+- Clang now has an improved error message for captures that refer to a class member.
+  Fixes #GH94764.
 
 - Clang now diagnoses unsupported class declarations for ``std::initializer_list<E>`` when they are
   used rather than when they are needed for constant evaluation or when code is generated for them.
