@@ -115,7 +115,6 @@ public:
   }
 
   virtual bool evaluateTargetFixup(const MCAssembler &Asm,
-                                   const MCAsmLayout &Layout,
                                    const MCFixup &Fixup, const MCFragment *DF,
                                    const MCValue &Target,
                                    const MCSubtargetInfo *STI, uint64_t &Value,
