@@ -15,6 +15,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlanSingleThreadTimeout.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -36,12 +37,31 @@ ThreadPlanStepOverRange::ThreadPlanStepOverRange(
     : ThreadPlanStepRange(ThreadPlan::eKindStepOverRange,
                           "Step range stepping over", thread, range,
                           addr_context, stop_others),
-      ThreadPlanShouldStopHere(this), m_first_resume(true) {
+      ThreadPlanShouldStopHere(this), m_first_resume(true),
+      m_run_mode(stop_others) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 }
 
 ThreadPlanStepOverRange::~ThreadPlanStepOverRange() = default;
+
+void ThreadPlanStepOverRange::ResetSingleThreadTimeout() {
+  if (m_run_mode != lldb::eOnlyThisThread)
+    return;
+
+  // Do not create timeout if we are not stopping other threads.
+  if (!GetThread().GetCurrentPlan()->StopOthers())
+    return;
+
+  Thread &thread = GetThread();
+  auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
+  ThreadPlanSP thread_plan_sp(timeout_plan);
+  auto status = thread.QueueThreadPlan(thread_plan_sp,
+                                        /*abort_other_plans*/ false);
+  Log *log = GetLog(LLDBLog::Step);
+  LLDB_LOGF(log,
+            "ThreadPlanSingleThreadTimeout pushing a new one");
+}
 
 void ThreadPlanStepOverRange::GetDescription(Stream *s,
                                              lldb::DescriptionLevel level) {
@@ -122,6 +142,11 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
   }
   // Fall back to symbol if we have no decision from comp_unit/function/block.
   return m_addr_context.symbol && m_addr_context.symbol == context.symbol;
+}
+
+void ThreadPlanStepOverRange::SetStopOthers(bool stop_others) {
+  if (!stop_others)
+    m_stop_others = RunMode::eAllThreads;
 }
 
 bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
@@ -411,6 +436,6 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       }
     }
   }
-
+  ResetSingleThreadTimeout();
   return true;
 }

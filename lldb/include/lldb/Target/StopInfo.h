@@ -119,6 +119,10 @@ public:
                                    bool silently_continue = false);
 
   static lldb::StopInfoSP
+  CreateStopReasonWithInterrupt(Thread &thread, int signo,
+                                    const char *description);
+
+  static lldb::StopInfoSP
   CreateStopReasonWithSignal(Thread &thread, int signo,
                              const char *description = nullptr,
                              std::optional<int> code = std::nullopt);
