@@ -520,7 +520,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 }
 
 bool RISCVAsmBackend::evaluateTargetFixup(
-    const MCAssembler &Asm, const MCAsmLayout &Layout, const MCFixup &Fixup,
+    const MCAssembler &Asm, const MCFixup &Fixup,
     const MCFragment *DF, const MCValue &Target, const MCSubtargetInfo *STI,
     uint64_t &Value, bool &WasForced) {
   const MCFixup *AUIPCFixup;
@@ -570,7 +570,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   if (!IsResolved)
     return false;
 
-  Value = Layout.getSymbolOffset(SA) + AUIPCTarget.getConstant();
+  Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
   if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
