@@ -2446,7 +2446,10 @@ bool Type::isSizelessBuiltinType() const {
       // WebAssembly reference types
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-      return true;
+      // HLSL intangible types
+      // #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case
+      // BuiltinType::Id: #include "clang/Basic/HLSLIntangibleTypes.def"
+      //       return true;
     default:
       return false;
     }
