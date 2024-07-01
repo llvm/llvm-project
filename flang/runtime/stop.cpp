@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+static Fortran::runtime::Lock lock;
 extern "C" {
 
 static void DescribeIEEESignaledExceptions() {
@@ -52,7 +53,8 @@ static void CloseAllExternalUnits(const char *why) {
 
 [[noreturn]] void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
-  CloseAllExternalUnits("STOP statement");
+
+  Fortran::runtime::CriticalSection critical{lock};
   if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
     quiet = true;
   }
@@ -64,12 +66,13 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
+  CloseAllExternalUnits("STOP statement");
   std::exit(code);
 }
 
 [[noreturn]] void RTNAME(StopStatementText)(
     const char *code, std::size_t length, bool isErrorStop, bool quiet) {
-  CloseAllExternalUnits("STOP statement");
+  Fortran::runtime::CriticalSection critical{lock};
   if (!quiet) {
     if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
       std::fprintf(stderr, "%.*s\n", static_cast<int>(length), code);
@@ -79,6 +82,7 @@ static void CloseAllExternalUnits(const char *why) {
     }
     DescribeIEEESignaledExceptions();
   }
+  CloseAllExternalUnits("STOP statement");
   if (isErrorStop) {
     std::exit(EXIT_FAILURE);
   } else {
