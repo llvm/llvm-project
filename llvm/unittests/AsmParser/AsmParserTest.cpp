@@ -412,7 +412,7 @@ TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
   EXPECT_EQ(Mod2->getDataLayout(), FixedDL);
 }
 
-TEST(AsmParserTest, DIExpressionAtBeginningWithSlotMappingParsing) {
+TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   LLVMContext Ctx;
   SMDiagnostic Error;
   StringRef Source =
@@ -437,24 +437,27 @@ TEST(AsmParserTest, DIExpressionAtBeginningWithSlotMappingParsing) {
 
   DIExpression *Expr;
 
-  Expr = parseDIExpressionAtBeginning("i32", Read, Error, M, &Mapping);
+  Expr = parseDIExpressionBodyAtBeginning("()", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 0u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(0)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 1u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning("i32", Read, Error, M, &Mapping);
   ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
 
-  Expr = parseDIExpressionAtBeginning("!DIExpression()", Read, Error, M, &Mapping);
-  ASSERT_TRUE(Expr);
-  ASSERT_EQ(Expr->getNumElements(), 0);
-
-  Expr = parseDIExpressionAtBeginning("!DIExpression(0)", Read, Error, M, &Mapping);
-  ASSERT_TRUE(Expr);
-  ASSERT_EQ(Expr->getNumElements(), 1);
-
-  Expr = parseDIExpressionAtBeginning("!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
-  ASSERT_TRUE(Expr);
-  ASSERT_EQ(Expr->getNumElements(), 3);
-
-  Expr = parseDIExpressionAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
-  ASSERT_TRUE(Expr);
-  ASSERT_EQ(Expr->getNumElements(), 3);
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning("!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
 }
 
 } // end anonymous namespace

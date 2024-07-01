@@ -124,15 +124,15 @@ bool LLParser::parseTypeAtBeginning(Type *&Ty, unsigned &Read,
   return false;
 }
 
-bool LLParser::parseDIExpressionAtBeginning(MDNode *&Result, unsigned &Read,
-                                            const SlotMapping *Slots) {
+bool LLParser::parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
+                                                const SlotMapping *Slots) {
   restoreParsingState(Slots);
   Lex.Lex();
 
   Read = 0;
   SMLoc Start = Lex.getLoc();
   Result = nullptr;
-  bool Status = parseDIExpression(Result, /*IsDistinct=*/false);
+  bool Status = parseDIExpressionBody(Result, /*IsDistinct=*/false);
   SMLoc End = Lex.getLoc();
   Read = End.getPointer() - Start.getPointer();
 
@@ -5839,12 +5839,9 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
-/// parseDIExpression:
-///   ::= !DIExpression(0, 7, -1)
-bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
-  if (Lex.getKind() == lltok::MetadataVar)
-    Lex.Lex();
-
+/// parseDIExpressionBody:
+///   ::= (0, 7, -1)
+bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
 
@@ -5885,6 +5882,16 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
 
   Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
   return false;
+}
+
+/// parseDIExpression:
+///   ::= !DIExpression(0, 7, -1)
+bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
+  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  assert(Lex.getStrVal() == "DIExpression" && "Expected '!DIExpression'");
+  Lex.Lex();
+
+  return parseDIExpressionBody(Result, IsDistinct);
 }
 
 /// ParseDIArgList:

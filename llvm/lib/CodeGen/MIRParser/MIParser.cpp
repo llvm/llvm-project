@@ -2303,9 +2303,9 @@ bool MIParser::parseMDNode(MDNode *&Node) {
 
 bool MIParser::parseDIExpression(MDNode *&Expr) {
   unsigned Read;
-  Expr = llvm::parseDIExpressionAtBeginning(CurrentSource, Read, Error,
-                                            *PFS.MF.getFunction().getParent(),
-                                            &PFS.IRSlots);
+  Expr = llvm::parseDIExpressionBodyAtBeginning(
+      CurrentSource, Read, Error, *PFS.MF.getFunction().getParent(),
+      &PFS.IRSlots);
   CurrentSource = CurrentSource.slice(Read, StringRef::npos);
   lex();
   if (!Expr)

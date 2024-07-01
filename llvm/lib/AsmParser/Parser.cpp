@@ -226,16 +226,17 @@ Type *llvm::parseTypeAtBeginning(StringRef Asm, unsigned &Read,
   return Ty;
 }
 
-DIExpression *llvm::parseDIExpressionAtBeginning(StringRef Asm, unsigned &Read,
-                                                 SMDiagnostic &Err,
-                                                 const Module &M,
-                                                 const SlotMapping *Slots) {
+DIExpression *llvm::parseDIExpressionBodyAtBeginning(StringRef Asm,
+                                                     unsigned &Read,
+                                                     SMDiagnostic &Err,
+                                                     const Module &M,
+                                                     const SlotMapping *Slots) {
   SourceMgr SM;
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Asm);
   SM.AddNewSourceBuffer(std::move(Buf), SMLoc());
   MDNode *MD;
   if (LLParser(Asm, SM, Err, const_cast<Module *>(&M), nullptr, M.getContext())
-          .parseDIExpressionAtBeginning(MD, Read, Slots))
+          .parseDIExpressionBodyAtBeginning(MD, Read, Slots))
     return nullptr;
   return dyn_cast<DIExpression>(MD);
 }

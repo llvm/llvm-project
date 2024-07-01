@@ -203,9 +203,10 @@ Type *parseType(StringRef Asm, SMDiagnostic &Err, const Module &M,
 Type *parseTypeAtBeginning(StringRef Asm, unsigned &Read, SMDiagnostic &Err,
                            const Module &M, const SlotMapping *Slots = nullptr);
 
-DIExpression *parseDIExpressionAtBeginning(StringRef Asm, unsigned &Read,
-                                           SMDiagnostic &Err, const Module &M,
-                                           const SlotMapping *Slots);
+DIExpression *parseDIExpressionBodyAtBeginning(StringRef Asm, unsigned &Read,
+                                               SMDiagnostic &Err,
+                                               const Module &M,
+                                               const SlotMapping *Slots);
 
 } // End llvm namespace
 
