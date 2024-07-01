@@ -3520,6 +3520,11 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
+  auto checkDecl = [&]() -> bool {
+    bool NeedsOp = VD->isLocalVarDecl() && VD->isStaticLocal();
+    return !NeedsOp || this->emitCheckDecl(VD, VD);
+  };
+
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
@@ -3527,20 +3532,22 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
 
       if (VarT) {
         if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*VarT, GlobalIndex, VD);
+          return checkDecl() && false;
+
+        return checkDecl() && this->emitInitGlobal(*VarT, GlobalIndex, VD);
       }
-      return this->visitGlobalInitializer(Init, GlobalIndex);
+
+      return checkDecl() && this->visitGlobalInitializer(Init, GlobalIndex);
     };
 
     // We've already seen and initialized this global.
     if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
       if (P.getPtrGlobal(*GlobalIndex).isInitialized())
-        return true;
+        return checkDecl();
 
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.
-      return Init && initGlobal(*GlobalIndex);
+      return Init && checkDecl() && initGlobal(*GlobalIndex);
     }
 
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
@@ -3548,9 +3555,10 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
     if (!GlobalIndex)
       return false;
 
-    return !Init || initGlobal(*GlobalIndex);
+    return !Init || (checkDecl() && initGlobal(*GlobalIndex));
   } else {
     VariableScope<Emitter> LocalScope(this, VD);
+
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
           VD, *VarT, VD->getType().isConstQualified());
