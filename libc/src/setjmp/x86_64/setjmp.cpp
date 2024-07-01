@@ -16,22 +16,13 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
-  register __UINT64_TYPE__ rbx __asm__("rbx");
-  register __UINT64_TYPE__ r12 __asm__("r12");
-  register __UINT64_TYPE__ r13 __asm__("r13");
-  register __UINT64_TYPE__ r14 __asm__("r14");
-  register __UINT64_TYPE__ r15 __asm__("r15");
-
-  // We want to store the register values as is. So, we will suppress the
-  // compiler warnings about the uninitialized variables declared above.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuninitialized"
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->rbx) : "r"(rbx) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r12) : "r"(r12) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r13) : "r"(r13) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r14) : "r"(r14) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r15) : "r"(r15) :);
-#pragma GCC diagnostic pop
+  asm("mov %%rbx, %[rbx]\n\t"
+      "mov %%r12, %[r12]\n\t"
+      "mov %%r13, %[r13]\n\t"
+      "mov %%r14, %[r14]\n\t"
+      "mov %%r15, %[r15]"
+      : [rbx] "=m"(buf->rbx), [r12] "=m"(buf->r12), [r13] "=m"(buf->r13),
+        [r14] "=m"(buf->r14), [r15] "=m"(buf->r15));
 
   // We want the rbp of the caller, which is what __builtin_frame_address(1)
   // should return. But, compilers generate a warning that calling
