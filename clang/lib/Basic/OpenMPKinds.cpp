@@ -804,8 +804,7 @@ void clang::getOpenMPCaptureRegions(
       // but when they're constituents of a compound directive, and other
       // leafs from that directive have specific regions, then these directives
       // add no additional regions.
-      MayNeedUnknownRegion = true;
-      break;
+      return true;
     default:
       llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
       llvm_unreachable("Unexpected directive");
