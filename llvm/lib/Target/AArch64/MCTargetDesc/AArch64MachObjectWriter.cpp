@@ -42,9 +42,8 @@ public:
       : MCMachObjectTargetWriter(!IsILP32 /* is64Bit */, CPUType, CPUSubtype) {}
 
   void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
-                        const MCAsmLayout &Layout, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+                        const MCFragment *Fragment, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 };
 
 } // end anonymous namespace
@@ -148,13 +147,12 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
 }
 
 void AArch64MachObjectWriter::recordRelocation(
-    MachObjectWriter *Writer, MCAssembler &Asm, const MCAsmLayout &Layout,
-    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
-    uint64_t &FixedValue) {
+    MachObjectWriter *Writer, MCAssembler &Asm, const MCFragment *Fragment,
+    const MCFixup &Fixup, MCValue Target, uint64_t &FixedValue) {
   unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
 
   // See <reloc.h>.
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment);
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment);
   unsigned Log2Size = 0;
   int64_t Value = 0;
   unsigned Index = 0;
@@ -227,8 +225,8 @@ void AArch64MachObjectWriter::recordRelocation(
     //    ... _foo@got - Ltmp0
     if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOT &&
         Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None &&
-        Layout.getSymbolOffset(*B) ==
-            Layout.getFragmentOffset(Fragment) + Fixup.getOffset()) {
+        Asm.getSymbolOffset(*B) ==
+            Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
       Type = MachO::ARM64_RELOC_POINTER_TO_GOT;
       IsPCRel = 1;
@@ -280,12 +278,18 @@ void AArch64MachObjectWriter::recordRelocation(
       return;
     }
 
-    Value += (!A->getFragment() ? 0 : Writer->getSymbolAddress(*A, Layout)) -
-             (!A_Base || !A_Base->getFragment() ? 0 : Writer->getSymbolAddress(
-                                                          *A_Base, Layout));
-    Value -= (!B->getFragment() ? 0 : Writer->getSymbolAddress(*B, Layout)) -
-             (!B_Base || !B_Base->getFragment() ? 0 : Writer->getSymbolAddress(
-                                                          *B_Base, Layout));
+    Value +=
+        (!A->getFragment() ? 0
+                           : Writer->getSymbolAddress(*A, *Asm.getLayout())) -
+        (!A_Base || !A_Base->getFragment()
+             ? 0
+             : Writer->getSymbolAddress(*A_Base, *Asm.getLayout()));
+    Value -=
+        (!B->getFragment() ? 0
+                           : Writer->getSymbolAddress(*B, *Asm.getLayout())) -
+        (!B_Base || !B_Base->getFragment()
+             ? 0
+             : Writer->getSymbolAddress(*B_Base, *Asm.getLayout()));
 
     Type = MachO::ARM64_RELOC_UNSIGNED;
 
@@ -341,8 +345,7 @@ void AArch64MachObjectWriter::recordRelocation(
 
       // Add the local offset, if needed.
       if (Base != Symbol)
-        Value +=
-            Layout.getSymbolOffset(*Symbol) - Layout.getSymbolOffset(*Base);
+        Value += Asm.getSymbolOffset(*Symbol) - Asm.getSymbolOffset(*Base);
     } else if (Symbol->isInSection()) {
       if (!CanUseLocalRelocation) {
         Asm.getContext().reportError(
@@ -355,10 +358,10 @@ void AArch64MachObjectWriter::recordRelocation(
       // The index is the section ordinal (1-based).
       const MCSection &Sec = Symbol->getSection();
       Index = Sec.getOrdinal() + 1;
-      Value += Writer->getSymbolAddress(*Symbol, Layout);
+      Value += Writer->getSymbolAddress(*Symbol, *Asm.getLayout());
 
       if (IsPCRel)
-        Value -= Writer->getFragmentAddress(Fragment, Layout) +
+        Value -= Writer->getFragmentAddress(Fragment, *Asm.getLayout()) +
                  Fixup.getOffset() + (1ULL << Log2Size);
     } else {
       llvm_unreachable(

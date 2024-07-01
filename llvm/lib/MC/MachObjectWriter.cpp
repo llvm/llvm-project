@@ -502,8 +502,8 @@ void MachObjectWriter::recordRelocation(MCAssembler &Asm,
     return;
   }
 
-  TargetObjectWriter->recordRelocation(this, Asm, Layout, Fragment, Fixup,
-                                       Target, FixedValue);
+  TargetObjectWriter->recordRelocation(this, Asm, Fragment, Fixup, Target,
+                                       FixedValue);
 }
 
 void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
