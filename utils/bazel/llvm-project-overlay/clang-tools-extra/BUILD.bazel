@@ -1,0 +1,21 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//:vars.bzl", "LLVM_VERSION_MAJOR")
+load("//clang:defs.bzl", "BUILTIN_HEADERS_GEN_DIR")
+load("defs.bzl", "symlink")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+symlink(
+    name = "builtin_headers",
+    srcs = ["//clang:builtin_headers_gen"],
+    destination = "lib/clang/{0}/include".format(LLVM_VERSION_MAJOR),
+    partition = BUILTIN_HEADERS_GEN_DIR,
+)
