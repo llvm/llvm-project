@@ -109,6 +109,10 @@ class MachObjectWriter : public MCObjectWriter {
 
   SectionAddrMap SectionAddress;
 
+  // List of sections in layout order. Virtual sections are after non-virtual
+  // sections.
+  SmallVector<MCSection *, 0> SectionOrder;
+
   /// @}
   /// \name Symbol Table Data
   /// @{
@@ -149,6 +153,9 @@ public:
 
   bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
+  const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
+    return SectionOrder;
+  }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
@@ -156,10 +163,10 @@ public:
   }
   uint64_t getSymbolAddress(const MCSymbol &S, const MCAsmLayout &Layout) const;
 
-  uint64_t getFragmentAddress(const MCFragment *Fragment,
-                              const MCAsmLayout &Layout) const;
+  uint64_t getFragmentAddress(const MCAssembler &Asm,
+                              const MCFragment *Fragment) const;
 
-  uint64_t getPaddingSize(const MCSection *SD, const MCAsmLayout &Layout) const;
+  uint64_t getPaddingSize(const MCAssembler &Asm, const MCSection *SD) const;
 
   const MCSymbol *getAtom(const MCSymbol &S) const;
 
@@ -191,7 +198,7 @@ public:
                                uint64_t SectionDataSize, uint32_t MaxProt,
                                uint32_t InitProt);
 
-  void writeSection(const MCAsmLayout &Layout, const MCSection &Sec,
+  void writeSection(const MCAssembler &Asm, const MCSection &Sec,
                     uint64_t VMAddr, uint64_t FileOffset, unsigned Flags,
                     uint64_t RelocationsStart, unsigned NumRelocations);
 
@@ -249,11 +256,9 @@ public:
                           std::vector<MachSymbolData> &ExternalSymbolData,
                           std::vector<MachSymbolData> &UndefinedSymbolData);
 
-  void computeSectionAddresses(const MCAssembler &Asm,
-                               const MCAsmLayout &Layout);
+  void computeSectionAddresses(const MCAssembler &Asm);
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,

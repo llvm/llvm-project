@@ -644,13 +644,6 @@ public:
     return false;
   }
 
-  /// Simple predicate for targets where !Resolved implies requiring relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
-  }
-
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {
     assert(HexagonMCInstrInfo::isBundle(Inst) &&
@@ -713,9 +706,9 @@ public:
   void finishLayout(MCAssembler const &Asm,
                     MCAsmLayout &Layout) const override {
     SmallVector<MCFragment *> Frags;
-    for (auto *I : Layout.getSectionOrder()) {
+    for (MCSection &Sec : Asm) {
       Frags.clear();
-      for (MCFragment &F : *I)
+      for (MCFragment &F : Sec)
         Frags.push_back(&F);
       for (size_t J = 0, E = Frags.size(); J != E; ++J) {
         switch (Frags[J]->getKind()) {
@@ -756,7 +749,7 @@ public:
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
-              I->setHasLayout(false);
+              Sec.setHasLayout(false);
               Size = 0; // Only look back one instruction
               break;
             }

@@ -204,8 +204,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
                   MCFixupKindInfo::FKF_IsTarget;
 
   if (IsTarget)
-    return getBackend().evaluateTargetFixup(*this, *Layout, Fixup, DF, Target,
-                                            STI, Value, WasForced);
+    return getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI,
+                                            Value, WasForced);
 
   unsigned FixupFlags = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags;
   bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
@@ -381,15 +381,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   llvm_unreachable("invalid fragment kind");
 }
 
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
-  // Compute the section layout order. Virtual sections must go last.
-  for (MCSection &Sec : Asm)
-    if (!Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-  for (MCSection &Sec : Asm)
-    if (Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-}
+MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {}
 
 // Compute the amount of padding required before the fragment \p F to
 // obey bundling restrictions, where \p FOffset is the fragment's offset in
@@ -494,10 +486,6 @@ uint64_t MCAssembler::getFragmentOffset(const MCFragment &F) const {
   return F.Offset;
 }
 
-uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
-  return Assembler.getFragmentOffset(*F);
-}
-
 // Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAssembler &Asm, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
@@ -558,10 +546,6 @@ uint64_t MCAssembler::getSymbolOffset(const MCSymbol &S) const {
   return Val;
 }
 
-uint64_t MCAsmLayout::getSymbolOffset(const MCSymbol &S) const {
-  return Assembler.getSymbolOffset(S);
-}
-
 const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
   assert(Layout);
   if (!Symbol.isVariable())
@@ -598,17 +582,11 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 
   return &ASym;
 }
-const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
-  return Assembler.getBaseSymbol(Symbol);
-}
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
   // The size is the last fragment's end offset.
   const MCFragment &F = *Sec.curFragList()->Tail;
   return getFragmentOffset(F) + computeFragmentSize(F);
-}
-uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
-  return Assembler.getSectionAddressSize(*Sec);
 }
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
@@ -616,9 +594,6 @@ uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
   if (Sec.isVirtualSection())
     return 0;
   return getSectionAddressSize(Sec);
-}
-uint64_t MCAsmLayout::getSectionFileSize(const MCSection *Sec) const {
-  return Assembler.getSectionFileSize(*Sec);
 }
 
 bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {
@@ -968,31 +943,26 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       errs() << "assembler backend - pre-layout\n--\n";
       dump(); });
 
-  // Create dummy fragments and assign section ordinals.
+  // Assign section ordinals.
   unsigned SectionIndex = 0;
-  for (MCSection &Sec : *this)
+  for (MCSection &Sec : *this) {
     Sec.setOrdinal(SectionIndex++);
 
-  // Assign layout order indices to sections and fragments.
-  for (unsigned i = 0, e = Layout.getSectionOrder().size(); i != e; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
-    Sec->setLayoutOrder(i);
-
     // Chain together fragments from all subsections.
-    if (Sec->Subsections.size() > 1) {
+    if (Sec.Subsections.size() > 1) {
       MCDummyFragment Dummy;
       MCFragment *Tail = &Dummy;
-      for (auto &[_, List] : Sec->Subsections) {
+      for (auto &[_, List] : Sec.Subsections) {
         assert(List.Head);
         Tail->Next = List.Head;
         Tail = List.Tail;
       }
-      Sec->Subsections.clear();
-      Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
-      Sec->CurFragList = &Sec->Subsections[0].second;
+      Sec.Subsections.clear();
+      Sec.Subsections.push_back({0u, {Dummy.getNext(), Tail}});
+      Sec.CurFragList = &Sec.Subsections[0].second;
 
       unsigned FragmentIndex = 0;
-      for (MCFragment &Frag : *Sec)
+      for (MCFragment &Frag : Sec)
         Frag.setLayoutOrder(FragmentIndex++);
     }
   }
@@ -1022,7 +992,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 
   // Allow the object writer a chance to perform post-layout binding (for
   // example, to set the index fields in the symbol data).
-  getWriter().executePostLayoutBinding(*this, Layout);
+  getWriter().executePostLayoutBinding(*this);
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {

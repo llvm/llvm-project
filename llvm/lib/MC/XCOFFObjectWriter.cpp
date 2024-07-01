@@ -351,7 +351,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
 
   void reset() override;
 
-  void executePostLayoutBinding(MCAssembler &, const MCAsmLayout &) override;
+  void executePostLayoutBinding(MCAssembler &) override;
 
   void recordRelocation(MCAssembler &, const MCFragment *, const MCFixup &,
                         MCValue, uint64_t &) override;
@@ -559,8 +559,7 @@ static MCSectionXCOFF *getContainingCsect(const MCSymbolXCOFF *XSym) {
   return XSym->getRepresentedCsect();
 }
 
-void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                                 const MCAsmLayout &Layout) {
+void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   for (const auto &S : Asm) {
     const auto *MCSec = cast<const MCSectionXCOFF>(&S);
     assert(!SectionMap.contains(MCSec) && "Cannot add a section twice.");
@@ -656,7 +655,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     Strings.add(Vers);
 
   Strings.finalize();
-  assignAddressesAndIndices(Asm, Layout);
+  assignAddressesAndIndices(Asm, *Asm.getLayout());
 }
 
 void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
@@ -1478,7 +1477,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
       for (auto &Csect : *Group) {
         const MCSectionXCOFF *MCSec = Csect.MCSec;
         Csect.Address = alignTo(Address, MCSec->getAlign());
-        Csect.Size = Layout.getSectionAddressSize(MCSec);
+        Csect.Size = Asm.getSectionAddressSize(*MCSec);
         Address = Csect.Address + Csect.Size;
         Csect.SymbolTableIndex = SymbolTableIndex;
         SymbolIndexMap[MCSec->getQualNameSymbol()] = Csect.SymbolTableIndex;
@@ -1492,7 +1491,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
           if (Entry != ExceptionSection.ExceptionTable.end()) {
             hasExceptEntry = true;
             for (auto &TrapEntry : Entry->second.Entries) {
-              TrapEntry.TrapAddress = Layout.getSymbolOffset(*(Sym.MCSym)) +
+              TrapEntry.TrapAddress = Asm.getSymbolOffset(*(Sym.MCSym)) +
                                       TrapEntry.Trap->getOffset();
             }
           }
@@ -1561,7 +1560,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
 
     // Section size.
     // For DWARF section, we must use the real size which may be not aligned.
-    DwarfSection.Size = DwarfSect.Size = Layout.getSectionAddressSize(MCSec);
+    DwarfSection.Size = DwarfSect.Size = Asm.getSectionAddressSize(*MCSec);
 
     Address = DwarfSection.Address + DwarfSection.Size;
 
