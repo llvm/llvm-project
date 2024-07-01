@@ -1825,20 +1825,6 @@ void GroupedConvNDOp::getEffects(
   return detail::convolution_impl::getEffects(*this, effects);
 }
 
-ArrayAttr GroupedConvNDOp::getIndexingMaps() {
-  ArrayAttr cached = (*this)->getAttrOfType<ArrayAttr>(
-      LinalgDialect::kMemoizedIndexingMapsAttrName);
-  if (cached)
-    return cached;
-
-  cached = detail::grouped_convolution_impl::createCommonIndexingMaps(
-      getContext(), getSpatialRank(), getLayoutsEnums(), getStridesVector(),
-      getDilationsVector());
-
-  (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
-  return cached;
-}
-
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//

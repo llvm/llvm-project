@@ -203,9 +203,10 @@ def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInter
   let verify = [{ return detail::verifyGroupedConvolutionInterface($_op); }];
   let methods = [
     InterfaceMethod<[{
-      Returns the groups position for the input.
+      Returns the layouts of each operand (image, kernel, init).  Each layout is represented
+      by a vector of `GroupedConvDim`s.
     }],
-    "SmallVector<SmallVector<::mlir::utils::GroupedConvDim>>", "getLayoutsEnums", (ins)
+    "SmallVector<SmallVector<::mlir::utils::GroupedConvDim>>", "getOperandConvDims", (ins)
     >,
     InterfaceMethod<[{
       Returns the groups position for the input.
@@ -222,55 +223,39 @@ def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInter
     }],
     "int64_t", "getOutputChannelPosition", (ins)
     >,
-    InterfaceMethod<[{
-      Get number of groups. 
-    }],
-    "int64_t", "getNumGroups", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getInputGroupsPosition() - 1];
-    }]>,
-    InterfaceMethod<[{
-      Get number of input channels. 
-    }],
-    "int64_t", "getNumInputChannels", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getInputChannelPosition()];
-    }]>,
-    InterfaceMethod<[{
-      Get number of output channels. 
-    }],
-    "int64_t", "getNumOutputChannels", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-      return cast<ShapedType>($_op.getDpsInits()[0].getType()).getShape()[$_op.getOutputChannelPosition()];
-    }]>,
-    InterfaceMethod<[{
-      Returns indexing maps for any spatial dimension.
-    }],
-    "::mlir::ArrayAttr", "getIteratorTypes", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-        return detail::grouped_convolution_impl::getIteratorTypes($_op);
-      }]>,
-    InterfaceMethod<[{
-      Returns strides.
-    }],
-    "::llvm::SmallVector<int64_t, 2>", "getStridesVector", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-        return detail::convolution_impl::getStrides($_op);
-    }]>,
-    InterfaceMethod<[{
-      Returns dilations.
-    }],
-    "::llvm::SmallVector<int64_t, 2>", "getDilationsVector", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-        return detail::convolution_impl::getDilations($_op);
-    }]>
   ];
+
+  let extraSharedClassDeclaration = [{
+    // Get number of groups.
+    int64_t getNumGroups() {
+      return cast<ShapedType>(
+        cast<::mlir::linalg::ConvolutionOpInterface>(
+          $_op.getOperation()).image().getType())
+            .getShape()[$_op.getInputGroupsPosition()];
+    }
+    // Get number of input channels. 
+    int64_t getNumInputChannels() {
+      return cast<ShapedType>(
+        cast<::mlir::linalg::ConvolutionOpInterface>(
+          $_op.getOperation()).image().getType()).getShape()[$_op.getInputChannelPosition()];
+    }
+    // Get number of output channels. 
+    int64_t getNumOutputChannels() {
+      return cast<ShapedType>($_op->getOperand(2).getType()).getShape()[$_op.getOutputChannelPosition()];
+    }
+    // Returns iterator tyes.
+    ::mlir::ArrayAttr getIteratorTypes() {
+        return detail::grouped_convolution_impl::getIteratorTypes($_op);
+    }
+    // Returns strides.
+    ::llvm::SmallVector<int64_t, 2> getStridesVector() {
+        return detail::convolution_impl::getStrides($_op);
+    }
+    // Returns dilations.
+    ::llvm::SmallVector<int64_t, 2> getDilationsVector() {
+        return detail::convolution_impl::getDilations($_op);
+    }
+  }];
 }
 
 def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {

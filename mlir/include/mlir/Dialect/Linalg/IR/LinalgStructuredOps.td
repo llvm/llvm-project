@@ -392,7 +392,7 @@ def GroupedConvNDOp : LinalgStructuredBase_Op<"grouped_conv_nd",
   [AttrSizedOperandSegments, LinalgGroupedConvolutionOpInterface]> {
     
   let summary = [{
-    Performs N-D grouped convolution with switchable channel position; either first or last.
+    Performs N-D grouped convolution with parametrizable operand layouts.
   }];
   let description = [{
     Allows any number of spatial dimensions but treats all of them as contiguous.  Throughout, `S`,
@@ -490,14 +490,27 @@ def GroupedConvNDOp : LinalgStructuredBase_Op<"grouped_conv_nd",
       MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
 
       // Implement functions necessary for LinalgOp.
-      ArrayAttr getIndexingMaps();
+      ::mlir::ArrayAttr getIndexingMaps() {
+        ::mlir::ArrayAttr cached = (*this)->getAttrOfType<::mlir::ArrayAttr>(
+            LinalgDialect::kMemoizedIndexingMapsAttrName);
+        if (cached)
+          return cached;
+
+        cached = detail::grouped_convolution_impl::createCommonIndexingMaps(
+            getContext(), getSpatialRank(), getOperandConvDims(), getStridesVector(),
+            getDilationsVector());
+
+        (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+        return cached;
+      }
+
 
       // Implement functions necessary for GroupedConvolutionOpInterface
       int64_t getSpatialRank() {
         return detail::grouped_convolution_impl::getSpatialRank(*this);
       }
 
-      SmallVector<SmallVector<::mlir::utils::GroupedConvDim>> getLayoutsEnums() {
+      SmallVector<SmallVector<::mlir::utils::GroupedConvDim>> getOperandConvDims() {
         SmallVector<SmallVector<::mlir::utils::GroupedConvDim>> layouts;
         for (auto attr : (*this).getLayoutsAttr().getValue()) {
           std::string layoutStr = cast<StringAttr>(attr).getValue().str();
@@ -513,15 +526,24 @@ def GroupedConvNDOp : LinalgStructuredBase_Op<"grouped_conv_nd",
       }
 
       int64_t getOutputChannelPosition() {
-          return 2;
+        std::string layoutStr = cast<StringAttr>((*this).getLayoutsAttr().getValue()[2]).getValue().str();
+        size_t pos = layoutStr.find("f");
+        assert(pos != ::std::string::npos);
+        return pos;
       }
 
       int64_t getInputChannelPosition() {
-          return 2;
+        std::string layoutStr = cast<StringAttr>((*this).getLayoutsAttr().getValue()[0]).getValue().str();
+        size_t pos = layoutStr.find("c");
+        assert(pos != ::std::string::npos);
+        return pos;
       }
 
       int64_t getInputGroupsPosition() {
-          return 1;
+        std::string layoutStr = cast<StringAttr>((*this).getLayoutsAttr().getValue()[0]).getValue().str();
+        size_t pos = layoutStr.find("g");
+        assert(pos != ::std::string::npos);
+        return pos;
       }
     }];
 }

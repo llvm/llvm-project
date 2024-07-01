@@ -880,12 +880,12 @@ mlir::linalg::detail::verifyGroupedConvolutionInterface(Operation *op) {
     return failure();
   if (GroupedConvolutionOpInterface conv =
           dyn_cast<GroupedConvolutionOpInterface>(op)) {
-    const auto imageType = conv.image().getType().dyn_cast<ShapedType>();
+    const auto imageType = cast<ShapedType>(conv.image().getType());
     const auto imageRank = imageType.getRank();
     const auto kernelRank =
-        conv.filter().getType().cast<ShapedType>().getRank();
+        cast<ShapedType>(conv.filter().getType()).getRank();
     const auto initType =
-        cast<LinalgOp>(op).getDpsInits()[0].getType().dyn_cast<ShapedType>();
+        cast<ShapedType>(cast<LinalgOp>(op).getDpsInits()[0].getType());
     const auto initRank = initType.getRank();
     if (imageRank != kernelRank || imageRank != initRank)
       return op->emitError(
