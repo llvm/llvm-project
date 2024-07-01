@@ -48,9 +48,7 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6C.s -o atomic_abi_A6C.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A7.s -o atomic_abi_A7.o
 # RUN: not ld.lld atomic_abi_A6C.o atomic_abi_A7.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_ERROR --implicit-check-not=error:
-# ATOMIC_ABI_ERROR: error: atomic abi mismatch for .riscv.attributes
-# ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A6C.o:(.riscv.attributes): atomic_abi=1
-# ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A7.o:(.riscv.attributes): atomic_abi=3
+# ATOMIC_ABI_ERROR: error: atomic_abi_A6C.o:(.riscv.attributes) has atomic_abi=1 but atomic_abi_A7.o:(.riscv.attributes) has atomic_abi=3
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6S.s -o atomic_abi_A6S.o
 # RUN: ld.lld atomic_abi_A6S.o atomic_abi_A6C.o -o atomic_abi_A6C_A6S

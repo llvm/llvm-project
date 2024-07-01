@@ -1088,65 +1088,51 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
                         const InputSectionBase *oldSection,
                         const InputSectionBase *newSection, unsigned int oldTag,
                         unsigned int newTag) {
-  using RISCVAttrs::RISCVAtomicAbiTag;
+  using RISCVAttrs::RISCVAtomicAbiTag::AtomicABI;
   // Same tags stay the same, and UNKNOWN is compatible with anything
-  if (oldTag == newTag ||
-      newTag == static_cast<unsigned>(RISCVAtomicAbiTag::UNKNOWN))
+  if (oldTag == newTag || newTag == AtomicABI::UNKNOWN)
     return;
 
-  auto reportAbiError = [&]() {
-    errorOrWarn("atomic abi mismatch for " + oldSection->name + "\n>>> " +
-                toString(oldSection) + ": atomic_abi=" + Twine(oldTag) +
-                "\n>>> " + toString(newSection) +
-                ": atomic_abi=" + Twine(newTag));
-  };
-
-  switch (static_cast<RISCVAtomicAbiTag>(oldTag)) {
-  case RISCVAtomicAbiTag::UNKNOWN:
+  switch (oldTag) {
+  case AtomicABI::UNKNOWN:
     it->getSecond() = newTag;
     return;
-  case RISCVAtomicAbiTag::A6C:
-    switch (static_cast<RISCVAtomicAbiTag>(newTag)) {
-    case RISCVAtomicAbiTag::A6S:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
+  case AtomicABI::A6C:
+    switch (newTag) {
+    case AtomicABI::A6S:
+      it->getSecond() = AtomicABI::A6C;
       return;
-    case RISCVAtomicAbiTag::A7:
-      reportAbiError();
+    case AtomicABI::A7:
+      errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
+                  " but " + toString(newSection) +
+                  " has atomic_abi=" + Twine(newTag));
       return;
-    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
-    case RISCVAttrs::RISCVAtomicAbiTag::A6C:
-      break;
     };
-    break;
 
-  case RISCVAtomicAbiTag::A6S:
-    switch (static_cast<RISCVAtomicAbiTag>(newTag)) {
-    case RISCVAtomicAbiTag::A6C:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A6C);
+  case AtomicABI::A6S:
+    switch (newTag) {
+    case AtomicABI::A6C:
+      it->getSecond() = AtomicABI::A6C;
       return;
-    case RISCVAtomicAbiTag::A7:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
+    case AtomicABI::A7:
+      it->getSecond() = AtomicABI::A7;
       return;
-    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
-    case RISCVAttrs::RISCVAtomicAbiTag::A6S:
-      break;
     };
-    break;
 
-  case RISCVAtomicAbiTag::A7:
-    switch (static_cast<RISCVAtomicAbiTag>(newTag)) {
-    case RISCVAtomicAbiTag::A6S:
-      it->getSecond() = static_cast<unsigned>(RISCVAtomicAbiTag::A7);
+  case AtomicABI::A7:
+    switch (newTag) {
+    case AtomicABI::A6S:
+      it->getSecond() = AtomicABI::A7;
       return;
-    case RISCVAtomicAbiTag::A6C:
-      reportAbiError();
+    case AtomicABI::A6C:
+      errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
+                  " but " + toString(newSection) +
+                  " has atomic_abi=" + Twine(newTag));
       return;
-    case RISCVAttrs::RISCVAtomicAbiTag::UNKNOWN:
-    case RISCVAttrs::RISCVAtomicAbiTag::A7:
-      break;
     };
+  default:
+    llvm_unreachable("unknown AtomicABI");
   };
-  llvm_unreachable("unknown AtomicABI");
 }
 
 static RISCVAttributesSection *
