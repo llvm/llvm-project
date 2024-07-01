@@ -26,5 +26,5 @@ types:
   - type_name: pthread_key_t
   - type_name: pthread_condattr_t
 enums: []
-functions: []
 objects: []
+functions: []

@@ -1,4 +1,4 @@
-header: sys-wait.h #sys/wait.h
+header: sys-wait.h
 macros: []
 types:
   - type_name: siginfo_t
