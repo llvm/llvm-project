@@ -15,10 +15,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/properties/types.h"
-#include "test/UnitTest/FPMatcher.h"
 
-#include "hdr/math_macros.h"
-#include <memory>
 #include <stdint.h>
 
 #include "mpfr_inc.h"
@@ -437,6 +434,23 @@ public:
     return result;
   }
 
+  MPFRNumber sinpi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+
+    mpfr_sinpi(result.value, value, mpfr_rounding);
+#else
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_sin(result.value, value_pi.value, mpfr_rounding);
+#endif
+
+    return result;
+  }
+
   MPFRNumber sinh() const {
     MPFRNumber result(*this);
     mpfr_sinh(result.value, value, mpfr_rounding);
@@ -677,6 +691,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.roundeven();
   case Operation::Sin:
     return mpfrInput.sin();
+  case Operation::Sinpi:
+    return mpfrInput.sinpi();
   case Operation::Sinh:
     return mpfrInput.sinh();
   case Operation::Sqrt:

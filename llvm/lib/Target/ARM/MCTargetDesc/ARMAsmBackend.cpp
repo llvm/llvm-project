@@ -337,9 +337,8 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
   return nullptr;
 }
 
-bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                                         const MCRelaxableFragment *DF,
-                                         const MCAsmLayout &Layout) const {
+bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                         uint64_t Value) const {
   return reasonForFixupRelaxation(Fixup, Value);
 }
 

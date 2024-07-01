@@ -51,6 +51,7 @@ enum class Operation : int {
   Round,
   RoundEven,
   Sin,
+  Sinpi,
   Sinh,
   Sqrt,
   Tan,
