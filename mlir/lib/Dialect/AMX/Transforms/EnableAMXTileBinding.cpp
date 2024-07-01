@@ -186,7 +186,7 @@ private:
     bool isConflict(const PaletteInfo &rhs);
   };
   struct TileScope {
-    // The BlockSeg here is inclusive (including end Op)
+    // The BlockSeg here is inclusive (containing `end` Op)
     BlockSeg seg;
     PaletteInfo pi;
     TileScope() { clear(); }
@@ -199,7 +199,7 @@ private:
   // Storing needed palette info for each concerned Op
   DenseMap<Operation *, PaletteInfo> neededPalette;
   // Storing the usage scope for each concerned tile Op
-  // The BlockSeg here is inclusive (including end Op)
+  // The BlockSeg here is inclusive (containing `end` Op)
   DenseMap<Operation *, BlockSeg> tileUsage;
   // Storing final tile scope results for injecting tilecfg/tilerelease
   SmallVector<TileScope, 10> tileScopes;
@@ -221,7 +221,7 @@ private:
   std::optional<PaletteInfo> getPalette(BlockSeg seg);
 
   void doTileScope(Block &block);
-  // The BlockSeg here is exclusive (excluding end Op)
+  // The input BlockSeg here is exclusive (not containing `end` Op)
   void doTileScope(BlockSeg seg);
   void doTileScope(Operation *op);
 
@@ -269,7 +269,8 @@ bool TileScopeAnalysis::PaletteInfo::isConflict(const PaletteInfo &rhs) {
   }
 }
 
-static bool isConcernedScfOp(Operation *op) {
+// Currently we only operate on scf Ops
+static bool isConcernedControlFlowOp(Operation *op) {
   return llvm::isa<scf::ExecuteRegionOp>(op) || llvm::isa<scf::ForOp>(op) ||
          llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::IfOp>(op) ||
          llvm::isa<scf::IndexSwitchOp>(op) || llvm::isa<scf::ParallelOp>(op) ||
@@ -294,8 +295,7 @@ TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
     if (!isParallelOp(op))
       return;
 
-    if (llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op) ||
-        llvm::isa<omp::ParallelOp>(op) || llvm::isa<omp::WsloopOp>(op)) {
+    if (llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op)) {
       while (op != root) {
         addParallelOp(op);
         op = op->getParentOp();
@@ -348,7 +348,7 @@ PaletteInfo TileScopeAnalysis::collectPalette(Operation *op) {
     return iter->second;
 
   // For now, we only concern certain control flow Ops and tile Ops
-  if (isConcernedScfOp(op))
+  if (isConcernedControlFlowOp(op))
     return collectPaletteForScf(op);
   if (isTileOp(op))
     return collectPaletteForTile(op);
@@ -505,7 +505,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
 
     Block::iterator nextIterIfMerge;
     std::optional<PaletteInfo> pi = std::null_opt;
-    if (isConcernedScfOp(currOp)) {
+    if (isConcernedControlFlowOp(currOp)) {
       pi = getPalette(currOp);
       nextIterIfMerge = currIter;
       nextIterIfMerge++;
@@ -517,7 +517,8 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
       }
       pi = getPalette(iter->second);
       if (pi && pi->overflow) {
-        // This means the binding info exceeds the hardware capability
+        // This means the binding info in tile Ops exceeds the hardware
+        // capability
         isValidAnalysis = false;
         return;
       }
@@ -529,24 +530,26 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
       continue;
     }
 
-#define ADD_PREVIOUS_SCOPE()                                                   \
-  auto prevIter = currIter;                                                    \
-  prevIter--;                                                                  \
-  currScope.seg = BlockSeg(*currSegStart, prevIter);                           \
-  tileScopes.push_back(currScope);                                             \
-  currScope.clear();                                                           \
-  currSegStart = std::null_opt;
+#define TRY_ADD_PREVIOUS_SCOPE()                                               \
+  if (currSegStart && *currSegStart != currIter) {                             \
+    auto prevIter = currIter;                                                  \
+    prevIter--;                                                                \
+    currScope.seg = BlockSeg(*currSegStart, prevIter);                         \
+    tileScopes.push_back(currScope);                                           \
+    currScope.clear();                                                         \
+    currSegStart = std::null_opt;                                              \
+  }
 
     if (pi->overflow) {
       // Only scf Ops could go through this possibility
-      if (currSegStart && *currSegStart != currIter) {
-        ADD_PREVIOUS_SCOPE()
-      }
+      TRY_ADD_PREVIOUS_SCOPE();
       doTileScope(currOp);
       currIter++;
     } else {
       if (currScope.pi.isConflict(*pi)) {
-        ADD_PREVIOUS_SCOPE();
+        TRY_ADD_PREVIOUS_SCOPE();
+        currScope.pi = *pi;
+        currSegStart = currIter;
         currIter++;
       } else {
         currScope.pi.merge(*pi);
@@ -555,11 +558,39 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
     }
   }
 
-  ADD_PREVIOUS_SCOPE();
+  TRY_ADD_PREVIOUS_SCOPE();
 }
 
 void TileScopeAnalysis::doTileScope(Operation *op) {
-  // TODO: do tile scope for scf here
+  // This func try to collect tile scopes for a single control flow Op
+  // This func is not for tile Ops
+  if (isTileOp(op))
+    return;
+  // Ops that invoke this func are either parallelOps or scfOps with overflowed
+  // paletteInfo, and neither of them can form a tile scope by itself, so we
+  // omit checking self-formed tile scope in this func
+  if (llvm::isa<scf::ExecuteRegionOp>(op) || llvm::isa<scf::ForOp>(op) ||
+      llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op)) {
+    auto &block = op->getRegion(0).front();
+    doTileScope(BlockSeg(block.begin(), block.end()));
+  } else if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
+    auto &ifBlock = op->getThenRegion().front();
+    auto &elseBlock = op->getElseRegion().front();
+    doTileScope(BlockSeg(ifBlock.begin(), ifBlock.end()));
+    doTileScope(BlockSeg(elseBlock.begin(), elseBlock.end()));
+  } else if (auto indexOp = dyn_cast<scf::IndexSwitchOp>(op)) {
+    auto &defaultBlock = indexOp.getDefaultRegion().front();
+    doTileScope(BlockSeg(defaultBlock.begin(), defaultBlock.end()));
+    for (auto &caseRegion : indexOp.getCaseRegions()) {
+      auto &caseBlock = indexOp.getDefaultRegion().front();
+      doTileScope(BlockSeg(caseBlock.begin(), caseBlock.end()));
+    }
+  } else if (auto whileOp = dyn_cast<scf::WhileOp>(op)) {
+    auto &beforeBlock = whileOp.getRegion(0).front();
+    auto &afterBlock = whileOp.getRegion(1).front();
+    doTileScope(BlockSeg(beforeBlock.begin(), beforeBlock.end()));
+    doTileScope(BlockSeg(afterBlock.begin(), afterBlock.end()));
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -669,7 +700,40 @@ public:
 
 struct EnableAMXTileBindingPass
     : public impl::EnableAMXTileBindingBase<EnableAMXTileBindingPass> {
+private:
+  bool isViableTileOps() {
+    Operation *root = getOperation();
+    auto func = dyn_cast<func::FuncOp>(root);
+    if (!func)
+      return false;
+
+    bool isViable = true;
+    func->walk<WalkOrder::PreOrder>([this](Operation *op) {
+      if (!isViable)
+        return;
+      if (!isTileOp(op))
+        return;
+      auto probe = op->getParentOp();
+      while (probe != root) {
+        if (!isConcernedControlFlowOp(probe)) {
+          isViable = false;
+          break;
+        }
+        probe = probe->getParentOp();
+      }
+    });
+    return isViable;
+  }
+
+  LLVM::GlobalOp getOrCreateGlobalPalette(const PaletteInfo &pi) {}
+
+public:
   void runOnOperation() override {
+    // Ensure that tile Ops are not wrapped by out-of-scope Ops, else cannot do
+    // enabling
+    if (!isViableTileOps())
+      return;
+
     // 0. Get AnalyseInfo for each concerned Value (Does not allow mixed used of
     // tmul & normal vector operations)
     TileBindingAnalysis &bindingAna = getAnalysis<TileBindingAnalysis>();
@@ -691,7 +755,26 @@ struct EnableAMXTileBindingPass
     if (!scopeAna.isValid())
       return;
 
-    // 3. insert tile config/release according to tile scopes
+    // 3. Insert tile config/release according to tile scopes
+    OpBuilder builder(getOperation());
+    for (auto &scope : tileScopes) {
+      assert(!scope.pi.overflow && "Expecting legal AMX palette info");
+      auto paletteGlobal = getOrCreateGlobalPalette(scope.pi);
+      assert(paletteGlobal && "Failed to create global palette");
+
+      Operation *begin = &(*scope.seg.begin());
+      Loc loc = begin->getLoc();
+
+      builder.setInsertionPoint(begin);
+      Value paletteGlobalPtr =
+          builder.create<LLVM::AddressOfOp>(loc, paletteGlobal);
+      builder.create<amx::x86_amx_ldtilecfg_plain>(loc, paletteGlobalPtr);
+
+      Operation *end = &(*scope.seg.end());
+      loc = end->getLoc();
+      builder.setInsertionPointAfter(end);
+      builder.create<amx::x86_amx_tilerelease_plain>(loc);
+    }
   }
 };
 
