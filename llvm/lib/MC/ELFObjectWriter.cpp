@@ -108,8 +108,8 @@ struct ELFWriter {
     DwoOnly,
   } Mode;
 
-  static uint64_t symbolValue(const MCSymbol &Sym, const MCAssembler &Asm);
-  static bool isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
+  static uint64_t symbolValue(const MCAssembler &Asm, const MCSymbol &Sym);
+  static bool isInSymtab(const MCAssembler &Asm, const MCSymbolELF &Symbol,
                          bool Used, bool Renamed);
 
   /// Helper struct for containing some precomputed information on symbols.
@@ -168,8 +168,8 @@ public:
 
   void writeHeader(const MCAssembler &Asm);
 
-  void writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
-                   ELFSymbolData &MSD, const MCAsmLayout &Layout);
+  void writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
+                   uint32_t StringIndex, ELFSymbolData &MSD);
 
   // Start and end offset of each section
   using SectionOffsetsTy =
@@ -183,7 +183,7 @@ public:
   /// \param Asm - The assembler.
   /// \param SectionIndexMap - Maps a section to its index.
   /// \param RevGroupMap - Maps a signature symbol to the group section.
-  void computeSymbolTable(MCAssembler &Asm, const MCAsmLayout &Layout,
+  void computeSymbolTable(MCAssembler &Asm,
                           const SectionIndexMapTy &SectionIndexMap,
                           const RevGroupMapTy &RevGroupMap,
                           SectionOffsetsTy &SectionOffsets);
@@ -193,7 +193,7 @@ public:
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
 
-  void writeSectionHeader(const MCAsmLayout &Layout,
+  void writeSectionHeader(const MCAssembler &Asm,
                           const SectionIndexMapTy &SectionIndexMap,
                           const SectionOffsetsTy &SectionOffsets);
 
@@ -453,7 +453,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   W.write<uint16_t>(StringTableIndex);
 }
 
-uint64_t ELFWriter::symbolValue(const MCSymbol &Sym, const MCAssembler &Asm) {
+uint64_t ELFWriter::symbolValue(const MCAssembler &Asm, const MCSymbol &Sym) {
   if (Sym.isCommon())
     return Sym.getCommonAlignment()->value();
 
@@ -515,11 +515,11 @@ static bool isIFunc(const MCSymbolELF *Symbol) {
   return true;
 }
 
-void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
-                            ELFSymbolData &MSD, const MCAsmLayout &Layout) {
+void ELFWriter::writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
+                            uint32_t StringIndex, ELFSymbolData &MSD) {
   const auto &Symbol = cast<MCSymbolELF>(*MSD.Symbol);
   const MCSymbolELF *Base =
-      cast_or_null<MCSymbolELF>(Layout.getBaseSymbol(Symbol));
+      cast_or_null<MCSymbolELF>(Asm.getBaseSymbol(Symbol));
 
   // This has to be in sync with when computeSymbolTable uses SHN_ABS or
   // SHN_COMMON.
@@ -540,7 +540,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   uint8_t Visibility = Symbol.getVisibility();
   uint8_t Other = Symbol.getOther() | Visibility;
 
-  uint64_t Value = symbolValue(*MSD.Symbol, Layout.getAssembler());
+  uint64_t Value = symbolValue(Asm, *MSD.Symbol);
   uint64_t Size = 0;
 
   const MCExpr *ESize = MSD.Symbol->getSize();
@@ -567,7 +567,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
 
   if (ESize) {
     int64_t Res;
-    if (!ESize->evaluateKnownAbsolute(Res, Layout))
+    if (!ESize->evaluateKnownAbsolute(Res, *Asm.getLayout()))
       report_fatal_error("Size expression must be absolute.");
     Size = Res;
   }
@@ -577,7 +577,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
                      IsReserved);
 }
 
-bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
+bool ELFWriter::isInSymtab(const MCAssembler &Asm, const MCSymbolELF &Symbol,
                            bool Used, bool Renamed) {
   if (Symbol.isVariable()) {
     const MCExpr *Expr = Symbol.getVariableValue();
@@ -599,7 +599,7 @@ bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
 
   if (Symbol.isVariable() && Symbol.isUndefined()) {
     // FIXME: this is here just to diagnose the case of a var = commmon_sym.
-    Layout.getBaseSymbol(Symbol);
+    Asm.getBaseSymbol(Symbol);
     return false;
   }
 
@@ -612,10 +612,10 @@ bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
   return true;
 }
 
-void ELFWriter::computeSymbolTable(
-    MCAssembler &Asm, const MCAsmLayout &Layout,
-    const SectionIndexMapTy &SectionIndexMap, const RevGroupMapTy &RevGroupMap,
-    SectionOffsetsTy &SectionOffsets) {
+void ELFWriter::computeSymbolTable(MCAssembler &Asm,
+                                   const SectionIndexMapTy &SectionIndexMap,
+                                   const RevGroupMapTy &RevGroupMap,
+                                   SectionOffsetsTy &SectionOffsets) {
   MCContext &Ctx = Asm.getContext();
   SymbolTableWriter Writer(*this, is64Bit());
 
@@ -646,7 +646,7 @@ void ELFWriter::computeSymbolTable(
     bool WeakrefUsed = Symbol.isWeakrefUsedInReloc();
     bool isSignature = Symbol.isSignature();
 
-    if (!isInSymtab(Layout, Symbol, Used || WeakrefUsed || isSignature,
+    if (!isInSymtab(Asm, Symbol, Used || WeakrefUsed || isSignature,
                     OWriter.Renames.count(&Symbol)))
       continue;
 
@@ -756,7 +756,7 @@ void ELFWriter::computeSymbolTable(
                                ? 0
                                : StrTabBuilder.getOffset(MSD.Name);
     MSD.Symbol->setIndex(Index++);
-    writeSymbol(Writer, StringIndex, MSD, Layout);
+    writeSymbol(Asm, Writer, StringIndex, MSD);
   }
   for (; FileNameIt != FileNames.end(); ++FileNameIt) {
     Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
@@ -771,7 +771,7 @@ void ELFWriter::computeSymbolTable(
   for (ELFSymbolData &MSD : ExternalSymbolData) {
     unsigned StringIndex = StrTabBuilder.getOffset(MSD.Name);
     MSD.Symbol->setIndex(Index++);
-    writeSymbol(Writer, StringIndex, MSD, Layout);
+    writeSymbol(Asm, Writer, StringIndex, MSD);
     assert(MSD.Symbol->getBinding() != ELF::STB_LOCAL);
   }
 
@@ -1033,9 +1033,9 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
                    Section.getEntrySize());
 }
 
-void ELFWriter::writeSectionHeader(
-    const MCAsmLayout &Layout, const SectionIndexMapTy &SectionIndexMap,
-    const SectionOffsetsTy &SectionOffsets) {
+void ELFWriter::writeSectionHeader(const MCAssembler &Asm,
+                                   const SectionIndexMapTy &SectionIndexMap,
+                                   const SectionOffsetsTy &SectionOffsets) {
   const unsigned NumSections = SectionTable.size();
 
   // Null section first.
@@ -1055,7 +1055,7 @@ void ELFWriter::writeSectionHeader(
         SectionOffsets.find(Section)->second;
     uint64_t Size;
     if (Type == ELF::SHT_NOBITS)
-      Size = Layout.getSectionAddressSize(Section);
+      Size = Asm.getSectionAddressSize(*Section);
     else
       Size = Offsets.second - Offsets.first;
 
@@ -1065,7 +1065,6 @@ void ELFWriter::writeSectionHeader(
 }
 
 uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
-  auto &Layout = *Asm.getLayout();
   uint64_t StartOffset = W.OS.tell();
 
   MCContext &Ctx = Asm.getContext();
@@ -1157,8 +1156,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
     }
 
     // Compute symbol table information.
-    computeSymbolTable(Asm, Layout, SectionIndexMap, RevGroupMap,
-                       SectionOffsets);
+    computeSymbolTable(Asm, SectionIndexMap, RevGroupMap, SectionOffsets);
 
     for (MCSectionELF *RelSection : Relocations) {
       // Remember the offset into the file for this section.
@@ -1188,7 +1186,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
   const uint64_t SectionHeaderOffset = align(is64Bit() ? Align(8) : Align(4));
 
   // ... then the section header table ...
-  writeSectionHeader(Layout, SectionIndexMap, SectionOffsets);
+  writeSectionHeader(Asm, SectionIndexMap, SectionOffsets);
 
   uint16_t NumSections = support::endian::byte_swap<uint16_t>(
       (SectionTable.size() + 1 >= ELF::SHN_LORESERVE) ? (uint16_t)ELF::SHN_UNDEF
