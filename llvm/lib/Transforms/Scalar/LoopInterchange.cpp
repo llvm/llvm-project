@@ -20,6 +20,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -84,13 +85,16 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
-                                     ScalarEvolution *SE) {
+                                     ScalarEvolution *SE, LoopInfo *LI) {
   using ValueVector = SmallVector<Value *, 16>;
 
   ValueVector MemInstr;
 
-  // For each block.
-  for (BasicBlock *BB : L->blocks()) {
+  // Traverse blocks in fixed RPOT order, regardless of their storage in the
+  // loop info, as it may be arbitrary.
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(LI);
+  for (BasicBlock *BB : RPOT) {
     // Scan the BB and collect legal loads and stores.
     for (Instruction &I : *BB) {
       if (!isa<Instruction>(I))
@@ -115,18 +119,14 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
       std::vector<char> Dep;
-      Instruction *Src = cast<Instruction>(*I);
-      Instruction *Dst = cast<Instruction>(*J);
+      Instruction *Src = cast<Instruction>(*J);
+      Instruction *Dst = cast<Instruction>(*I);
       // Ignore Input dependencies.
       if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
         continue;
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst, true)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
-        // If the direction vector is negative, normalize it to
-        // make it non-negative.
-        if (D->normalize(SE))
-          LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
         LLVM_DEBUG(StringRef DepType =
                        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
                    dbgs() << "Found " << DepType
@@ -438,7 +438,7 @@ struct LoopInterchange {
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
     if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
-                                  OuterMostLoop, DI, SE)) {
+                                  OuterMostLoop, DI, SE, LI)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
     }
