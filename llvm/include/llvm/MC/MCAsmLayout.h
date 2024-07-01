@@ -54,15 +54,6 @@ public:
   /// \name Utility Functions
   /// @{
 
-  /// Get the address space size of the given section, as it effects
-  /// layout. This may differ from the size reported by \see
-  /// getSectionFileSize() by not including section tail padding.
-  uint64_t getSectionAddressSize(const MCSection *Sec) const;
-
-  /// Get the data size of the given section, as emitted to the object
-  /// file. This may include additional padding, or be 0 for virtual sections.
-  uint64_t getSectionFileSize(const MCSection *Sec) const;
-
   /// Variant that reports a fatal error if the offset is not computable.
   uint64_t getSymbolOffset(const MCSymbol &S) const;
 

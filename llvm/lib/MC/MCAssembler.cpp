@@ -603,18 +603,12 @@ uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
   const MCFragment &F = *Sec.curFragList()->Tail;
   return getFragmentOffset(F) + computeFragmentSize(F);
 }
-uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
-  return Assembler.getSectionAddressSize(*Sec);
-}
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
   // Virtual sections have no file size.
   if (Sec.isVirtualSection())
     return 0;
   return getSectionAddressSize(Sec);
-}
-uint64_t MCAsmLayout::getSectionFileSize(const MCSection *Sec) const {
-  return Assembler.getSectionFileSize(*Sec);
 }
 
 bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {

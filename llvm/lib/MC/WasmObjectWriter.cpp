@@ -1062,7 +1062,7 @@ uint32_t WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
   for (const WasmFunction &Func : Functions) {
     auto *FuncSection = static_cast<MCSectionWasm *>(Func.Section);
 
-    int64_t Size = Layout.getSectionAddressSize(FuncSection);
+    int64_t Size = Asm.getSectionAddressSize(*FuncSection);
     encodeULEB128(Size, W->OS);
     FuncSection->setSectionOffset(W->OS.tell() - Section.ContentsOffset);
     Asm.writeSectionData(W->OS, FuncSection);
