@@ -81,10 +81,11 @@ bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
   return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }
 
-uint64_t MachObjectWriter::getFragmentAddress(const MCFragment *Fragment,
-                                              const MCAsmLayout &Layout) const {
+uint64_t
+MachObjectWriter::getFragmentAddress(const MCAssembler &Asm,
+                                     const MCFragment *Fragment) const {
   return getSectionAddress(Fragment->getParent()) +
-         Layout.getFragmentOffset(Fragment);
+         Asm.getFragmentOffset(*Fragment);
 }
 
 uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
@@ -117,17 +118,17 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
   }
 
   return getSectionAddress(S.getFragment()->getParent()) +
-         Layout.getSymbolOffset(S);
+         Layout.getAssembler().getSymbolOffset(S);
 }
 
-uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
-                                          const MCAsmLayout &Layout) const {
-  uint64_t EndAddr = getSectionAddress(Sec) + Layout.getSectionAddressSize(Sec);
+uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
+                                          const MCSection *Sec) const {
+  uint64_t EndAddr = getSectionAddress(Sec) + Asm.getSectionAddressSize(*Sec);
   unsigned Next = Sec->getLayoutOrder() + 1;
-  if (Next >= Layout.getSectionOrder().size())
+  if (Next >= Asm.getLayout()->getSectionOrder().size())
     return 0;
 
-  const MCSection &NextSec = *Layout.getSectionOrder()[Next];
+  const MCSection &NextSec = *Asm.getLayout()->getSectionOrder()[Next];
   if (NextSec.isVirtualSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
@@ -244,17 +245,17 @@ void MachObjectWriter::writeSegmentLoadCommand(
   assert(W.OS.tell() - Start == SegmentLoadCommandSize);
 }
 
-void MachObjectWriter::writeSection(const MCAsmLayout &Layout,
+void MachObjectWriter::writeSection(const MCAssembler &Asm,
                                     const MCSection &Sec, uint64_t VMAddr,
                                     uint64_t FileOffset, unsigned Flags,
                                     uint64_t RelocationsStart,
                                     unsigned NumRelocations) {
-  uint64_t SectionSize = Layout.getSectionAddressSize(&Sec);
+  uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
   const MCSectionMachO &Section = cast<MCSectionMachO>(Sec);
 
   // The offset is unused for virtual sections.
   if (Section.isVirtualSection()) {
-    assert(Layout.getSectionFileSize(&Sec) == 0 && "Invalid file size!");
+    assert(Asm.getSectionFileSize(Sec) == 0 && "Invalid file size!");
     FileOffset = 0;
   }
 
@@ -668,24 +669,22 @@ void MachObjectWriter::computeSymbolTable(
   }
 }
 
-void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm,
-                                               const MCAsmLayout &Layout) {
+void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
   uint64_t StartAddress = 0;
-  for (const MCSection *Sec : Layout.getSectionOrder()) {
+  for (const MCSection *Sec : Asm.getLayout()->getSectionOrder()) {
     StartAddress = alignTo(StartAddress, Sec->getAlign());
     SectionAddress[Sec] = StartAddress;
-    StartAddress += Layout.getSectionAddressSize(Sec);
+    StartAddress += Asm.getSectionAddressSize(*Sec);
 
     // Explicitly pad the section to match the alignment requirements of the
     // following one. This is for 'gas' compatibility, it shouldn't
     /// strictly be necessary.
-    StartAddress += getPaddingSize(Sec, Layout);
+    StartAddress += getPaddingSize(Asm, Sec);
   }
 }
 
-void MachObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                                const MCAsmLayout &Layout) {
-  computeSectionAddresses(Asm, Layout);
+void MachObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
+  computeSectionAddresses(Asm);
 
   // Create symbol data for any indirect symbols.
   bindIndirectSymbols(Asm);
@@ -762,8 +761,8 @@ void MachObjectWriter::populateAddrSigSection(MCAssembler &Asm) {
   }
 }
 
-uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
+uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   uint64_t StartOffset = W.OS.tell();
 
   populateAddrSigSection(Asm);
@@ -788,8 +787,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   }
 
   unsigned NumSections = Asm.size();
-  const MCAssembler::VersionInfoType &VersionInfo =
-    Layout.getAssembler().getVersionInfo();
+  const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
@@ -808,7 +806,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   }
 
   const MCAssembler::VersionInfoType &TargetVariantVersionInfo =
-      Layout.getAssembler().getDarwinTargetVariantVersionInfo();
+      Asm.getDarwinTargetVariantVersionInfo();
 
   // Add the target variant version info load command size, if used.
   if (TargetVariantVersionInfo.Major != 0) {
@@ -857,9 +855,9 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   uint64_t VMSize = 0;
   for (const MCSection &Sec : Asm) {
     uint64_t Address = getSectionAddress(&Sec);
-    uint64_t Size = Layout.getSectionAddressSize(&Sec);
-    uint64_t FileSize = Layout.getSectionFileSize(&Sec);
-    FileSize += getPaddingSize(&Sec, Layout);
+    uint64_t Size = Asm.getSectionAddressSize(Sec);
+    uint64_t FileSize = Asm.getSectionFileSize(Sec);
+    FileSize += getPaddingSize(Asm, &Sec);
 
     VMSize = std::max(VMSize, Address + Size);
 
@@ -895,7 +893,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
     unsigned Flags = Sec.getTypeAndAttributes();
     if (Sec.hasInstructions())
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
-    writeSection(Layout, Sec, getSectionAddress(&Sec), SectionStart, Flags,
+    writeSection(Asm, Sec, getSectionAddress(&Sec), SectionStart, Flags,
                  RelocTableEnd, NumRelocs);
     RelocTableEnd += NumRelocs * sizeof(MachO::any_relocation_info);
   }
@@ -995,9 +993,9 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
 
   // Write the actual section data.
   for (const MCSection &Sec : Asm) {
-    Asm.writeSectionData(W.OS, &Sec, Layout);
+    Asm.writeSectionData(W.OS, &Sec);
 
-    uint64_t Pad = getPaddingSize(&Sec, Layout);
+    uint64_t Pad = getPaddingSize(Asm, &Sec);
     W.OS.write_zeros(Pad);
   }
 

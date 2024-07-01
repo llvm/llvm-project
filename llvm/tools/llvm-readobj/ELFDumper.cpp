@@ -378,6 +378,7 @@ protected:
 
   DynRegionInfo DynRelRegion;
   DynRegionInfo DynRelaRegion;
+  DynRegionInfo DynCrelRegion;
   DynRegionInfo DynRelrRegion;
   DynRegionInfo DynPLTRelRegion;
   std::optional<DynRegionInfo> DynSymRegion;
@@ -1915,7 +1916,7 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
                            ScopedPrinter &Writer)
     : ObjDumper(Writer, O.getFileName()), ObjF(O), Obj(O.getELFFile()),
       FileName(O.getFileName()), DynRelRegion(O, *this),
-      DynRelaRegion(O, *this), DynRelrRegion(O, *this),
+      DynRelaRegion(O, *this), DynCrelRegion(O, *this), DynRelrRegion(O, *this),
       DynPLTRelRegion(O, *this), DynSymTabShndxRegion(O, *this),
       DynamicTable(O, *this) {
   if (!O.IsContentValid())
@@ -2074,6 +2075,9 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       DynRelaRegion.EntSize = Dyn.getVal();
       DynRelaRegion.EntSizePrintName = "DT_RELAENT value";
       break;
+    case ELF::DT_CREL:
+      DynCrelRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
+      break;
     case ELF::DT_SONAME:
       SONameOffset = Dyn.getVal();
       break;
@@ -2114,6 +2118,8 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
         DynPLTRelRegion.EntSize = sizeof(Elf_Rel);
       else if (Dyn.getVal() == DT_RELA)
         DynPLTRelRegion.EntSize = sizeof(Elf_Rela);
+      else if (Dyn.getVal() == DT_CREL)
+        DynPLTRelRegion.EntSize = 1;
       else
         reportUniqueWarning(Twine("unknown DT_PLTREL value of ") +
                             Twine((uint64_t)Dyn.getVal()));
@@ -2439,6 +2445,8 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
       return "REL";
     if (Value == DT_RELA)
       return "RELA";
+    if (Value == DT_CREL)
+      return "CREL";
     [[fallthrough]];
   case DT_PLTGOT:
   case DT_HASH:
@@ -2453,6 +2461,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_FINI_ARRAY:
   case DT_PREINIT_ARRAY:
   case DT_DEBUG:
+  case DT_CREL:
   case DT_VERDEF:
   case DT_VERNEED:
   case DT_VERSYM:
@@ -3851,14 +3860,15 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
 
 template <class ELFT>
 static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
-                                   const typename ELFT::Ehdr &EHeader) {
+                                   const typename ELFT::Ehdr &EHeader,
+                                   uint64_t CrelHdr = 0) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
   if (ELFT::Is64Bits)
     OS << "    Offset             Info             Type               Symbol's "
           "Value  Symbol's Name";
   else
     OS << " Offset     Info    Type                Sym. Value  Symbol's Name";
-  if (IsRela)
+  if (IsRela || (SType == ELF::SHT_CREL && (CrelHdr & CREL_HDR_ADDEND)))
     OS << " + Addend";
   OS << "\n";
 }
@@ -3868,7 +3878,10 @@ void GNUELFDumper<ELFT>::printDynamicRelocHeader(unsigned Type, StringRef Name,
                                                  const DynRegionInfo &Reg) {
   uint64_t Offset = Reg.Addr - this->Obj.base();
   OS << "\n'" << Name.str().c_str() << "' relocation section at offset 0x"
-     << utohexstr(Offset, /*LowerCase=*/true) << " contains " << Reg.Size << " bytes:\n";
+     << utohexstr(Offset, /*LowerCase=*/true);
+  if (Type != ELF::SHT_CREL)
+    OS << " contains " << Reg.Size << " bytes";
+  OS << ":\n";
   printRelocHeaderFields<ELFT>(OS, Type, this->Obj.getHeader());
 }
 
@@ -3876,7 +3889,8 @@ template <class ELFT>
 static bool isRelocationSec(const typename ELFT::Shdr &Sec,
                             const typename ELFT::Ehdr &EHeader) {
   return Sec.sh_type == ELF::SHT_REL || Sec.sh_type == ELF::SHT_RELA ||
-         Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_REL ||
+         Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_CREL ||
+         Sec.sh_type == ELF::SHT_ANDROID_REL ||
          Sec.sh_type == ELF::SHT_ANDROID_RELA ||
          Sec.sh_type == ELF::SHT_ANDROID_RELR ||
          (EHeader.e_machine == EM_AARCH64 &&
@@ -3900,6 +3914,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       if (!RelasOrErr)
         return RelasOrErr.takeError();
       return RelasOrErr->size();
+    }
+
+    if (Sec.sh_type == ELF::SHT_CREL) {
+      Expected<ArrayRef<uint8_t>> ContentsOrErr =
+          this->Obj.getSectionContents(Sec);
+      if (!ContentsOrErr)
+        return ContentsOrErr.takeError();
+      auto NumOrErr = this->Obj.getCrelHeader(*ContentsOrErr);
+      if (!NumOrErr)
+        return NumOrErr.takeError();
+      return *NumOrErr / 8;
     }
 
     if (PrintAsRelr(Sec)) {
@@ -3935,8 +3960,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     if (PrintAsRelr(Sec)) {
       printRelr(Sec);
     } else {
-      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
-      this->printRelocationsHelper(Sec);
+      uint64_t CrelHdr = 0;
+      // For CREL, read the header and call printRelocationsHelper only if
+      // GetEntriesNum(Sec) succeeded.
+      if (Sec.sh_type == ELF::SHT_CREL && EntriesNum != "<?>") {
+        CrelHdr = cantFail(this->Obj.getCrelHeader(
+            cantFail(this->Obj.getSectionContents(Sec))));
+      }
+      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader(),
+                                   CrelHdr);
+      if (Sec.sh_type != ELF::SHT_CREL || EntriesNum != "<?>")
+        this->printRelocationsHelper(Sec);
     }
   }
   if (!HasRelocSections)
@@ -4899,6 +4933,34 @@ void ELFDumper<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
   const bool IsMips64EL = this->Obj.isMips64EL();
+  auto DumpCrelRegion = [&](DynRegionInfo &Region) {
+    // While the size is unknown, a valid CREL has at least one byte. We can
+    // check whether Addr is in bounds, and then decode CREL until the file
+    // end.
+    Region.Size = Region.EntSize = 1;
+    if (!Region.template getAsArrayRef<uint8_t>().empty()) {
+      const uint64_t Offset =
+          Region.Addr - reinterpret_cast<const uint8_t *>(
+                            ObjF.getMemoryBufferRef().getBufferStart());
+      const uint64_t ObjSize = ObjF.getMemoryBufferRef().getBufferSize();
+      auto RelsOrRelas =
+          Obj.decodeCrel(ArrayRef<uint8_t>(Region.Addr, ObjSize - Offset));
+      if (!RelsOrRelas) {
+        reportUniqueWarning(toString(RelsOrRelas.takeError()));
+      } else {
+        for (const Elf_Rel &R : RelsOrRelas->first)
+          printDynamicReloc(Relocation<ELFT>(R, false));
+        for (const Elf_Rela &R : RelsOrRelas->second)
+          printDynamicReloc(Relocation<ELFT>(R, false));
+      }
+    }
+  };
+
+  if (this->DynCrelRegion.Addr) {
+    printDynamicRelocHeader(ELF::SHT_CREL, "CREL", this->DynCrelRegion);
+    DumpCrelRegion(this->DynCrelRegion);
+  }
+
   if (this->DynRelaRegion.Size > 0) {
     printDynamicRelocHeader(ELF::SHT_RELA, "RELA", this->DynRelaRegion);
     for (const Elf_Rela &Rela :
@@ -4927,6 +4989,8 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
       for (const Elf_Rela &Rela :
            this->DynPLTRelRegion.template getAsArrayRef<Elf_Rela>())
         printDynamicReloc(Relocation<ELFT>(Rela, IsMips64EL));
+    } else if (this->DynPLTRelRegion.EntSize == 1) {
+      DumpCrelRegion(this->DynPLTRelRegion);
     } else {
       printDynamicRelocHeader(ELF::SHT_REL, "PLT", this->DynPLTRelRegion);
       for (const Elf_Rel &Rel :
@@ -6419,6 +6483,17 @@ void ELFDumper<ELFT>::forEachRelocationDo(
     for (const Elf_Rel &R : Obj.decode_relrs(*RangeOrErr))
       RelRelaFn(Relocation<ELFT>(R, IsMips64EL), RelNdx++, Sec,
                 /*SymTab=*/nullptr);
+    break;
+  }
+  case ELF::SHT_CREL: {
+    if (auto RelsOrRelas = Obj.crels(Sec)) {
+      for (const Elf_Rel &R : RelsOrRelas->first)
+        RelRelaFn(Relocation<ELFT>(R, false), RelNdx++, Sec, SymTab);
+      for (const Elf_Rela &R : RelsOrRelas->second)
+        RelRelaFn(Relocation<ELFT>(R, false), RelNdx++, Sec, SymTab);
+    } else {
+      Warn(RelsOrRelas.takeError());
+    }
     break;
   }
   case ELF::SHT_ANDROID_REL:

@@ -14,9 +14,7 @@
 
 namespace llvm {
 class MCAssembler;
-class MCFragment;
 class MCSection;
-class MCSymbol;
 
 /// Encapsulates the layout of an assembly file at a particular point in time.
 ///
@@ -45,34 +43,6 @@ public:
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
-
-  /// @}
-  /// \name Fragment Layout Data
-  /// @{
-
-  /// Get the offset of the given fragment inside its containing section.
-  uint64_t getFragmentOffset(const MCFragment *F) const;
-
-  /// @}
-  /// \name Utility Functions
-  /// @{
-
-  /// Get the address space size of the given section, as it effects
-  /// layout. This may differ from the size reported by \see
-  /// getSectionFileSize() by not including section tail padding.
-  uint64_t getSectionAddressSize(const MCSection *Sec) const;
-
-  /// Get the data size of the given section, as emitted to the object
-  /// file. This may include additional padding, or be 0 for virtual sections.
-  uint64_t getSectionFileSize(const MCSection *Sec) const;
-
-  /// Variant that reports a fatal error if the offset is not computable.
-  uint64_t getSymbolOffset(const MCSymbol &S) const;
-
-  /// If this symbol is equivalent to A + Constant, return A.
-  const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
-
-  /// @}
 };
 
 } // end namespace llvm

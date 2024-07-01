@@ -971,8 +971,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   }
 
   // The layout is done. Mark every fragment as valid.
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection &Section = *Layout.getSectionOrder()[i];
+  for (MCSection &Section : Asm) {
     Asm.getFragmentOffset(*Section.curFragList()->Tail);
     Asm.computeFragmentSize(*Section.curFragList()->Tail);
   }
