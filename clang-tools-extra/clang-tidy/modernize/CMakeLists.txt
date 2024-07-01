@@ -23,6 +23,7 @@ add_clang_library(clangTidyModernizeModule
   RedundantVoidArgCheck.cpp
   ReplaceAutoPtrCheck.cpp
   ReplaceDisallowCopyAndAssignMacroCheck.cpp
+  ReplaceMemcpyWithStdCopy.cpp
   ReplaceRandomShuffleCheck.cpp
   ReturnBracedInitListCheck.cpp
   ShrinkToFitCheck.cpp

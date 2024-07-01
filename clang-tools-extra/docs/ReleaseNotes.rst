@@ -383,6 +383,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-starts-ends-with>` check to also handle
   calls to ``compare`` method.
 
+- New :doc:`modernize-replace-memcpy-with-stdcopy
+  <clang-tidy/checks/modernize-replace-memcpy-by-stdcopy>` check.
+
+  Replaces all occurrences of the C ``memcpy`` function by ``std::copy``.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to not crash if the
   format string parameter of the function to be replaced is not of the
