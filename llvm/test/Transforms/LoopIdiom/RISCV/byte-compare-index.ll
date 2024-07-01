@@ -2,6 +2,7 @@
 ; RUN: opt -passes=loop-idiom-vectorize -mtriple=riscv64-unknown-linux-gnu -loop-idiom-vectorize-style=predicated -mattr=+v -S < %s | FileCheck %s
 ; RUN: opt -passes=loop-idiom-vectorize -mtriple=riscv64-unknown-linux-gnu -loop-idiom-vectorize-style=predicated -loop-idiom-vectorize-bytecmp-vf=64 -mattr=+v -S < %s | FileCheck %s --check-prefix=LMUL8
 ; RUN: opt -passes='loop(loop-idiom-vectorize),simplifycfg' -mtriple=riscv64-unknown-linux-gnu -loop-idiom-vectorize-style=predicated -mattr=+v -S < %s | FileCheck %s --check-prefix=LOOP-DEL
+; RUN: opt -passes=loop-idiom-vectorize -mtriple=riscv64-unknown-linux-gnu -loop-idiom-vectorize-style=masked -mattr=+v -S < %s | FileCheck %s --check-prefix=MASKED
 
 define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; CHECK-LABEL: define i32 @compare_bytes_simple(
@@ -251,6 +252,101 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; LOOP-DEL:       while.end:
 ; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VECTOR_LOOP_INC]] ], [ [[TMP28]], [[MISMATCH_VECTOR_LOOP_FOUND]] ]
 ; LOOP-DEL-NEXT:    ret i32 [[MISMATCH_RESULT]]
+;
+; MASKED-LABEL: define i32 @compare_bytes_simple(
+; MASKED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], 1
+; MASKED-NEXT:    br label [[MISMATCH_MIN_IT_CHECK:%.*]]
+; MASKED:       mismatch_min_it_check:
+; MASKED-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; MASKED-NEXT:    [[TMP2:%.*]] = zext i32 [[N]] to i64
+; MASKED-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[TMP0]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP3]], label [[MISMATCH_MEM_CHECK:%.*]], label [[MISMATCH_LOOP_PRE:%.*]], !prof [[PROF0:![0-9]+]]
+; MASKED:       mismatch_mem_check:
+; MASKED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; MASKED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; MASKED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; MASKED-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; MASKED-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP7]], 12
+; MASKED-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP10]], 12
+; MASKED-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP6]], 12
+; MASKED-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 12
+; MASKED-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP12]], [[TMP13]]
+; MASKED-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP14]], [[TMP15]]
+; MASKED-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[TMP17]]
+; MASKED-NEXT:    br i1 [[TMP18]], label [[MISMATCH_LOOP_PRE]], label [[MISMATCH_VEC_LOOP_PREHEADER:%.*]], !prof [[PROF1:![0-9]+]]
+; MASKED:       mismatch_vec_loop_preheader:
+; MASKED-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP1]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
+; MASKED-NEXT:    [[TMP21:%.*]] = mul nuw nsw i64 [[TMP20]], 16
+; MASKED-NEXT:    br label [[MISMATCH_VEC_LOOP:%.*]]
+; MASKED:       mismatch_vec_loop:
+; MASKED-NEXT:    [[MISMATCH_VEC_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP19]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP30:%.*]], [[MISMATCH_VEC_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_INDEX:%.*]] = phi i64 [ [[TMP1]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP29:%.*]], [[MISMATCH_VEC_LOOP_INC]] ]
+; MASKED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP23:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP25:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP24]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP26:%.*]] = icmp ne <vscale x 16 x i8> [[TMP23]], [[TMP25]]
+; MASKED-NEXT:    [[TMP27:%.*]] = select <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i1> [[TMP26]], <vscale x 16 x i1> zeroinitializer
+; MASKED-NEXT:    [[TMP28:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP27]])
+; MASKED-NEXT:    br i1 [[TMP28]], label [[MISMATCH_VEC_LOOP_FOUND:%.*]], label [[MISMATCH_VEC_LOOP_INC]]
+; MASKED:       mismatch_vec_loop_inc:
+; MASKED-NEXT:    [[TMP29]] = add nuw nsw i64 [[MISMATCH_VEC_INDEX]], [[TMP21]]
+; MASKED-NEXT:    [[TMP30]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP29]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP31:%.*]] = extractelement <vscale x 16 x i1> [[TMP30]], i64 0
+; MASKED-NEXT:    br i1 [[TMP31]], label [[MISMATCH_VEC_LOOP]], label [[MISMATCH_END:%.*]]
+; MASKED:       mismatch_vec_loop_found:
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP27]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_LAST_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[MISMATCH_VEC_LOOP_PRED]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_INDEX:%.*]] = phi i64 [ [[MISMATCH_VEC_INDEX]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[TMP32:%.*]] = and <vscale x 16 x i1> [[MISMATCH_VEC_LAST_LOOP_PRED]], [[MISMATCH_VEC_FOUND_PRED]]
+; MASKED-NEXT:    [[TMP33:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[TMP32]], i1 true)
+; MASKED-NEXT:    [[TMP34:%.*]] = zext i32 [[TMP33]] to i64
+; MASKED-NEXT:    [[TMP35:%.*]] = add nuw nsw i64 [[MISMATCH_VEC_FOUND_INDEX]], [[TMP34]]
+; MASKED-NEXT:    [[TMP36:%.*]] = trunc i64 [[TMP35]] to i32
+; MASKED-NEXT:    br label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_pre:
+; MASKED-NEXT:    br label [[MISMATCH_LOOP:%.*]]
+; MASKED:       mismatch_loop:
+; MASKED-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
+; MASKED-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
+; MASKED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
+; MASKED-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
+; MASKED-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_inc:
+; MASKED-NEXT:    [[TMP43]] = add i32 [[MISMATCH_INDEX]], 1
+; MASKED-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP44]], label [[MISMATCH_END]], label [[MISMATCH_LOOP]]
+; MASKED:       mismatch_end:
+; MASKED-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; MASKED-NEXT:    br i1 true, label [[BYTE_COMPARE:%.*]], label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[MISMATCH_END]] ], [ [[MISMATCH_RESULT]], [[WHILE_BODY:%.*]] ]
+; MASKED-NEXT:    [[INC:%.*]] = add i32 [[LEN_ADDR]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[MISMATCH_RESULT]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP45:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP46:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP45]], [[TMP46]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; MASKED:       byte.compare:
+; MASKED-NEXT:    br label [[WHILE_END]]
+; MASKED:       while.end:
+; MASKED-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], [[WHILE_COND]] ], [ [[MISMATCH_RESULT]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    ret i32 [[INC_LCSSA]]
 ;
 entry:
   br label %while.cond
@@ -523,6 +619,101 @@ define i32 @compare_bytes_signed_wrap(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; LOOP-DEL:       while.end:
 ; LOOP-DEL-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VECTOR_LOOP_INC]] ], [ [[TMP28]], [[MISMATCH_VECTOR_LOOP_FOUND]] ]
 ; LOOP-DEL-NEXT:    ret i32 [[MISMATCH_RESULT]]
+;
+; MASKED-LABEL: define i32 @compare_bytes_signed_wrap(
+; MASKED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], 1
+; MASKED-NEXT:    br label [[MISMATCH_MIN_IT_CHECK:%.*]]
+; MASKED:       mismatch_min_it_check:
+; MASKED-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; MASKED-NEXT:    [[TMP2:%.*]] = zext i32 [[N]] to i64
+; MASKED-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[TMP0]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP3]], label [[MISMATCH_MEM_CHECK:%.*]], label [[MISMATCH_LOOP_PRE:%.*]], !prof [[PROF0]]
+; MASKED:       mismatch_mem_check:
+; MASKED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; MASKED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; MASKED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; MASKED-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; MASKED-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP7]], 12
+; MASKED-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP10]], 12
+; MASKED-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP6]], 12
+; MASKED-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 12
+; MASKED-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP12]], [[TMP13]]
+; MASKED-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP14]], [[TMP15]]
+; MASKED-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[TMP17]]
+; MASKED-NEXT:    br i1 [[TMP18]], label [[MISMATCH_LOOP_PRE]], label [[MISMATCH_VEC_LOOP_PREHEADER:%.*]], !prof [[PROF1]]
+; MASKED:       mismatch_vec_loop_preheader:
+; MASKED-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP1]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
+; MASKED-NEXT:    [[TMP21:%.*]] = mul nuw nsw i64 [[TMP20]], 16
+; MASKED-NEXT:    br label [[MISMATCH_VEC_LOOP:%.*]]
+; MASKED:       mismatch_vec_loop:
+; MASKED-NEXT:    [[MISMATCH_VEC_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP19]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP30:%.*]], [[MISMATCH_VEC_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_INDEX:%.*]] = phi i64 [ [[TMP1]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP29:%.*]], [[MISMATCH_VEC_LOOP_INC]] ]
+; MASKED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP23:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP25:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP24]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP26:%.*]] = icmp ne <vscale x 16 x i8> [[TMP23]], [[TMP25]]
+; MASKED-NEXT:    [[TMP27:%.*]] = select <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i1> [[TMP26]], <vscale x 16 x i1> zeroinitializer
+; MASKED-NEXT:    [[TMP28:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP27]])
+; MASKED-NEXT:    br i1 [[TMP28]], label [[MISMATCH_VEC_LOOP_FOUND:%.*]], label [[MISMATCH_VEC_LOOP_INC]]
+; MASKED:       mismatch_vec_loop_inc:
+; MASKED-NEXT:    [[TMP29]] = add nuw nsw i64 [[MISMATCH_VEC_INDEX]], [[TMP21]]
+; MASKED-NEXT:    [[TMP30]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP29]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP31:%.*]] = extractelement <vscale x 16 x i1> [[TMP30]], i64 0
+; MASKED-NEXT:    br i1 [[TMP31]], label [[MISMATCH_VEC_LOOP]], label [[MISMATCH_END:%.*]]
+; MASKED:       mismatch_vec_loop_found:
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP27]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_LAST_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[MISMATCH_VEC_LOOP_PRED]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_INDEX:%.*]] = phi i64 [ [[MISMATCH_VEC_INDEX]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[TMP32:%.*]] = and <vscale x 16 x i1> [[MISMATCH_VEC_LAST_LOOP_PRED]], [[MISMATCH_VEC_FOUND_PRED]]
+; MASKED-NEXT:    [[TMP33:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[TMP32]], i1 true)
+; MASKED-NEXT:    [[TMP34:%.*]] = zext i32 [[TMP33]] to i64
+; MASKED-NEXT:    [[TMP35:%.*]] = add nuw nsw i64 [[MISMATCH_VEC_FOUND_INDEX]], [[TMP34]]
+; MASKED-NEXT:    [[TMP36:%.*]] = trunc i64 [[TMP35]] to i32
+; MASKED-NEXT:    br label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_pre:
+; MASKED-NEXT:    br label [[MISMATCH_LOOP:%.*]]
+; MASKED:       mismatch_loop:
+; MASKED-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
+; MASKED-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
+; MASKED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
+; MASKED-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
+; MASKED-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_inc:
+; MASKED-NEXT:    [[TMP43]] = add nsw i32 [[MISMATCH_INDEX]], 1
+; MASKED-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP44]], label [[MISMATCH_END]], label [[MISMATCH_LOOP]]
+; MASKED:       mismatch_end:
+; MASKED-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; MASKED-NEXT:    br i1 true, label [[BYTE_COMPARE:%.*]], label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[MISMATCH_END]] ], [ [[MISMATCH_RESULT]], [[WHILE_BODY:%.*]] ]
+; MASKED-NEXT:    [[INC:%.*]] = add nsw i32 [[LEN_ADDR]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[MISMATCH_RESULT]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP45:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP46:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP45]], [[TMP46]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; MASKED:       byte.compare:
+; MASKED-NEXT:    br label [[WHILE_END]]
+; MASKED:       while.end:
+; MASKED-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], [[WHILE_COND]] ], [ [[MISMATCH_RESULT]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    ret i32 [[INC_LCSSA]]
 ;
 ; NO-TRANSFORM-LABEL: define i32 @compare_bytes_signed_wrap(
 ; NO-TRANSFORM-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) {
@@ -842,6 +1033,112 @@ define i32 @compare_bytes_simple_end_ne_found(ptr %a, ptr %b, ptr %c, ptr %d, i3
 ; LOOP-DEL-NEXT:    [[SPEC_SELECT4:%.*]] = select i1 [[TMP37]], ptr [[D]], ptr [[C]]
 ; LOOP-DEL-NEXT:    store i32 [[SPEC_SELECT]], ptr [[SPEC_SELECT4]], align 4
 ; LOOP-DEL-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+; MASKED-LABEL: define i32 @compare_bytes_simple_end_ne_found(
+; MASKED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], 1
+; MASKED-NEXT:    br label [[MISMATCH_MIN_IT_CHECK:%.*]]
+; MASKED:       mismatch_min_it_check:
+; MASKED-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; MASKED-NEXT:    [[TMP2:%.*]] = zext i32 [[N]] to i64
+; MASKED-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[TMP0]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP3]], label [[MISMATCH_MEM_CHECK:%.*]], label [[MISMATCH_LOOP_PRE:%.*]], !prof [[PROF0]]
+; MASKED:       mismatch_mem_check:
+; MASKED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; MASKED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; MASKED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; MASKED-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; MASKED-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP7]], 12
+; MASKED-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP10]], 12
+; MASKED-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP6]], 12
+; MASKED-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 12
+; MASKED-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP12]], [[TMP13]]
+; MASKED-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP14]], [[TMP15]]
+; MASKED-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[TMP17]]
+; MASKED-NEXT:    br i1 [[TMP18]], label [[MISMATCH_LOOP_PRE]], label [[MISMATCH_VEC_LOOP_PREHEADER:%.*]], !prof [[PROF1]]
+; MASKED:       mismatch_vec_loop_preheader:
+; MASKED-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP1]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
+; MASKED-NEXT:    [[TMP21:%.*]] = mul nuw nsw i64 [[TMP20]], 16
+; MASKED-NEXT:    br label [[MISMATCH_VEC_LOOP:%.*]]
+; MASKED:       mismatch_vec_loop:
+; MASKED-NEXT:    [[MISMATCH_VEC_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP19]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP30:%.*]], [[MISMATCH_VEC_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_INDEX:%.*]] = phi i64 [ [[TMP1]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP29:%.*]], [[MISMATCH_VEC_LOOP_INC]] ]
+; MASKED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP23:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP25:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP24]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP26:%.*]] = icmp ne <vscale x 16 x i8> [[TMP23]], [[TMP25]]
+; MASKED-NEXT:    [[TMP27:%.*]] = select <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i1> [[TMP26]], <vscale x 16 x i1> zeroinitializer
+; MASKED-NEXT:    [[TMP28:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP27]])
+; MASKED-NEXT:    br i1 [[TMP28]], label [[MISMATCH_VEC_LOOP_FOUND:%.*]], label [[MISMATCH_VEC_LOOP_INC]]
+; MASKED:       mismatch_vec_loop_inc:
+; MASKED-NEXT:    [[TMP29]] = add nuw nsw i64 [[MISMATCH_VEC_INDEX]], [[TMP21]]
+; MASKED-NEXT:    [[TMP30]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP29]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP31:%.*]] = extractelement <vscale x 16 x i1> [[TMP30]], i64 0
+; MASKED-NEXT:    br i1 [[TMP31]], label [[MISMATCH_VEC_LOOP]], label [[MISMATCH_END:%.*]]
+; MASKED:       mismatch_vec_loop_found:
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP27]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_LAST_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[MISMATCH_VEC_LOOP_PRED]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_INDEX:%.*]] = phi i64 [ [[MISMATCH_VEC_INDEX]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[TMP32:%.*]] = and <vscale x 16 x i1> [[MISMATCH_VEC_LAST_LOOP_PRED]], [[MISMATCH_VEC_FOUND_PRED]]
+; MASKED-NEXT:    [[TMP33:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[TMP32]], i1 true)
+; MASKED-NEXT:    [[TMP34:%.*]] = zext i32 [[TMP33]] to i64
+; MASKED-NEXT:    [[TMP35:%.*]] = add nuw nsw i64 [[MISMATCH_VEC_FOUND_INDEX]], [[TMP34]]
+; MASKED-NEXT:    [[TMP36:%.*]] = trunc i64 [[TMP35]] to i32
+; MASKED-NEXT:    br label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_pre:
+; MASKED-NEXT:    br label [[MISMATCH_LOOP:%.*]]
+; MASKED:       mismatch_loop:
+; MASKED-NEXT:    [[MISMATCH_INDEX3:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX3]] to i64
+; MASKED-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
+; MASKED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
+; MASKED-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
+; MASKED-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_inc:
+; MASKED-NEXT:    [[TMP43]] = add i32 [[MISMATCH_INDEX3]], 1
+; MASKED-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP44]], label [[MISMATCH_END]], label [[MISMATCH_LOOP]]
+; MASKED:       mismatch_end:
+; MASKED-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX3]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; MASKED-NEXT:    br i1 true, label [[BYTE_COMPARE:%.*]], label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[MISMATCH_END]] ], [ [[MISMATCH_RESULT]], [[WHILE_BODY:%.*]] ]
+; MASKED-NEXT:    [[INC:%.*]] = add i32 [[LEN_ADDR]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[MISMATCH_RESULT]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP45:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP46:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP45]], [[TMP46]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_FOUND:%.*]]
+; MASKED:       while.found:
+; MASKED-NEXT:    [[MISMATCH_INDEX1:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    [[FOUND_PTR:%.*]] = phi ptr [ [[C]], [[WHILE_BODY]] ], [ [[C]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    br label [[END:%.*]]
+; MASKED:       byte.compare:
+; MASKED-NEXT:    [[TMP47:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP47]], label [[WHILE_END]], label [[WHILE_FOUND]]
+; MASKED:       while.end:
+; MASKED-NEXT:    [[MISMATCH_INDEX2:%.*]] = phi i32 [ [[N]], [[WHILE_COND]] ], [ [[N]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    [[END_PTR:%.*]] = phi ptr [ [[D]], [[WHILE_COND]] ], [ [[D]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    br label [[END]]
+; MASKED:       end:
+; MASKED-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[MISMATCH_INDEX1]], [[WHILE_FOUND]] ], [ [[MISMATCH_INDEX2]], [[WHILE_END]] ]
+; MASKED-NEXT:    [[STORE_PTR:%.*]] = phi ptr [ [[END_PTR]], [[WHILE_END]] ], [ [[FOUND_PTR]], [[WHILE_FOUND]] ]
+; MASKED-NEXT:    store i32 [[MISMATCH_INDEX]], ptr [[STORE_PTR]], align 4
+; MASKED-NEXT:    ret i32 [[MISMATCH_INDEX]]
 ;
 ; NO-TRANSFORM-LABEL: define i32 @compare_bytes_simple_end_ne_found(
 ; NO-TRANSFORM-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) {
@@ -1174,6 +1471,107 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; LOOP-DEL-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VECTOR_LOOP_INC]] ], [ [[TMP28]], [[MISMATCH_VECTOR_LOOP_FOUND]] ]
 ; LOOP-DEL-NEXT:    ret i32 [[INC_LCSSA]]
 ;
+; MASKED-LABEL: define i32 @compare_bytes_extra_cmp(
+; MASKED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    [[CMP_X:%.*]] = icmp ult i32 [[N]], [[X]]
+; MASKED-NEXT:    br i1 [[CMP_X]], label [[PH:%.*]], label [[WHILE_END:%.*]]
+; MASKED:       ph:
+; MASKED-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], 1
+; MASKED-NEXT:    br label [[MISMATCH_MIN_IT_CHECK:%.*]]
+; MASKED:       mismatch_min_it_check:
+; MASKED-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; MASKED-NEXT:    [[TMP2:%.*]] = zext i32 [[N]] to i64
+; MASKED-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[TMP0]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP3]], label [[MISMATCH_MEM_CHECK:%.*]], label [[MISMATCH_LOOP_PRE:%.*]], !prof [[PROF0]]
+; MASKED:       mismatch_mem_check:
+; MASKED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; MASKED-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; MASKED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; MASKED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
+; MASKED-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; MASKED-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; MASKED-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP7]], 12
+; MASKED-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP10]], 12
+; MASKED-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP6]], 12
+; MASKED-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 12
+; MASKED-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP12]], [[TMP13]]
+; MASKED-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP14]], [[TMP15]]
+; MASKED-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[TMP17]]
+; MASKED-NEXT:    br i1 [[TMP18]], label [[MISMATCH_LOOP_PRE]], label [[MISMATCH_VEC_LOOP_PREHEADER:%.*]], !prof [[PROF1]]
+; MASKED:       mismatch_vec_loop_preheader:
+; MASKED-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP1]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
+; MASKED-NEXT:    [[TMP21:%.*]] = mul nuw nsw i64 [[TMP20]], 16
+; MASKED-NEXT:    br label [[MISMATCH_VEC_LOOP:%.*]]
+; MASKED:       mismatch_vec_loop:
+; MASKED-NEXT:    [[MISMATCH_VEC_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP19]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP30:%.*]], [[MISMATCH_VEC_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_INDEX:%.*]] = phi i64 [ [[TMP1]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP29:%.*]], [[MISMATCH_VEC_LOOP_INC]] ]
+; MASKED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP23:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP25:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP24]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP26:%.*]] = icmp ne <vscale x 16 x i8> [[TMP23]], [[TMP25]]
+; MASKED-NEXT:    [[TMP27:%.*]] = select <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i1> [[TMP26]], <vscale x 16 x i1> zeroinitializer
+; MASKED-NEXT:    [[TMP28:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP27]])
+; MASKED-NEXT:    br i1 [[TMP28]], label [[MISMATCH_VEC_LOOP_FOUND:%.*]], label [[MISMATCH_VEC_LOOP_INC]]
+; MASKED:       mismatch_vec_loop_inc:
+; MASKED-NEXT:    [[TMP29]] = add nuw nsw i64 [[MISMATCH_VEC_INDEX]], [[TMP21]]
+; MASKED-NEXT:    [[TMP30]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP29]], i64 [[TMP2]])
+; MASKED-NEXT:    [[TMP31:%.*]] = extractelement <vscale x 16 x i1> [[TMP30]], i64 0
+; MASKED-NEXT:    br i1 [[TMP31]], label [[MISMATCH_VEC_LOOP]], label [[MISMATCH_END:%.*]]
+; MASKED:       mismatch_vec_loop_found:
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP27]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_LAST_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[MISMATCH_VEC_LOOP_PRED]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_INDEX:%.*]] = phi i64 [ [[MISMATCH_VEC_INDEX]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[TMP32:%.*]] = and <vscale x 16 x i1> [[MISMATCH_VEC_LAST_LOOP_PRED]], [[MISMATCH_VEC_FOUND_PRED]]
+; MASKED-NEXT:    [[TMP33:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[TMP32]], i1 true)
+; MASKED-NEXT:    [[TMP34:%.*]] = zext i32 [[TMP33]] to i64
+; MASKED-NEXT:    [[TMP35:%.*]] = add nuw nsw i64 [[MISMATCH_VEC_FOUND_INDEX]], [[TMP34]]
+; MASKED-NEXT:    [[TMP36:%.*]] = trunc i64 [[TMP35]] to i32
+; MASKED-NEXT:    br label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_pre:
+; MASKED-NEXT:    br label [[MISMATCH_LOOP:%.*]]
+; MASKED:       mismatch_loop:
+; MASKED-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ [[TMP0]], [[MISMATCH_LOOP_PRE]] ], [ [[TMP43:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[TMP37:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
+; MASKED-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP39:%.*]] = load i8, ptr [[TMP38]], align 1
+; MASKED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP37]]
+; MASKED-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP40]], align 1
+; MASKED-NEXT:    [[TMP42:%.*]] = icmp eq i8 [[TMP39]], [[TMP41]]
+; MASKED-NEXT:    br i1 [[TMP42]], label [[MISMATCH_LOOP_INC]], label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_inc:
+; MASKED-NEXT:    [[TMP43]] = add i32 [[MISMATCH_INDEX]], 1
+; MASKED-NEXT:    [[TMP44:%.*]] = icmp eq i32 [[TMP43]], [[N]]
+; MASKED-NEXT:    br i1 [[TMP44]], label [[MISMATCH_END]], label [[MISMATCH_LOOP]]
+; MASKED:       mismatch_end:
+; MASKED-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ [[N]], [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ [[N]], [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP36]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; MASKED-NEXT:    br i1 true, label [[BYTE_COMPARE:%.*]], label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[MISMATCH_END]] ], [ [[MISMATCH_RESULT]], [[WHILE_BODY:%.*]] ]
+; MASKED-NEXT:    [[INC:%.*]] = add i32 [[LEN_ADDR]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], [[N]]
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[MISMATCH_RESULT]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP45:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP46:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP45]], [[TMP46]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END_LOOPEXIT]]
+; MASKED:       byte.compare:
+; MASKED-NEXT:    br label [[WHILE_END_LOOPEXIT]]
+; MASKED:       while.end.loopexit:
+; MASKED-NEXT:    [[INC_LCSSA1:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_COND]] ], [ [[MISMATCH_RESULT]], [[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    br label [[WHILE_END]]
+; MASKED:       while.end:
+; MASKED-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[INC_LCSSA1]], [[WHILE_END_LOOPEXIT]] ]
+; MASKED-NEXT:    ret i32 [[INC_LCSSA]]
+;
 ; NO-TRANSFORM-LABEL: define i32 @compare_bytes_extra_cmp(
 ; NO-TRANSFORM-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) {
 ; NO-TRANSFORM-NEXT:  entry:
@@ -1422,6 +1820,100 @@ define void @compare_bytes_cleanup_block(ptr %src1, ptr %src2) {
 ; LOOP-DEL:       common.ret:
 ; LOOP-DEL-NEXT:    ret void
 ;
+; MASKED-LABEL: define void @compare_bytes_cleanup_block(
+; MASKED-SAME: ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR0]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    br label [[MISMATCH_MIN_IT_CHECK:%.*]]
+; MASKED:       mismatch_min_it_check:
+; MASKED-NEXT:    br i1 false, label [[MISMATCH_MEM_CHECK:%.*]], label [[MISMATCH_LOOP_PRE:%.*]], !prof [[PROF0]]
+; MASKED:       mismatch_mem_check:
+; MASKED-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[SRC1]], i64 1
+; MASKED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[SRC2]], i64 1
+; MASKED-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
+; MASKED-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; MASKED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC1]], i64 0
+; MASKED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC2]], i64 0
+; MASKED-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; MASKED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; MASKED-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP3]], 12
+; MASKED-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP6]], 12
+; MASKED-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP2]], 12
+; MASKED-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP7]], 12
+; MASKED-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP8]], [[TMP9]]
+; MASKED-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP10]], [[TMP11]]
+; MASKED-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
+; MASKED-NEXT:    br i1 [[TMP14]], label [[MISMATCH_LOOP_PRE]], label [[MISMATCH_VEC_LOOP_PREHEADER:%.*]], !prof [[PROF1]]
+; MASKED:       mismatch_vec_loop_preheader:
+; MASKED-NEXT:    [[TMP15:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 1, i64 0)
+; MASKED-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
+; MASKED-NEXT:    [[TMP17:%.*]] = mul nuw nsw i64 [[TMP16]], 16
+; MASKED-NEXT:    br label [[MISMATCH_VEC_LOOP:%.*]]
+; MASKED:       mismatch_vec_loop:
+; MASKED-NEXT:    [[MISMATCH_VEC_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP15]], [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP26:%.*]], [[MISMATCH_VEC_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_INDEX:%.*]] = phi i64 [ 1, [[MISMATCH_VEC_LOOP_PREHEADER]] ], [ [[TMP25:%.*]], [[MISMATCH_VEC_LOOP_INC]] ]
+; MASKED-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[SRC1]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP18]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[MISMATCH_VEC_INDEX]]
+; MASKED-NEXT:    [[TMP21:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP20]], i32 1, <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i8> zeroinitializer)
+; MASKED-NEXT:    [[TMP22:%.*]] = icmp ne <vscale x 16 x i8> [[TMP19]], [[TMP21]]
+; MASKED-NEXT:    [[TMP23:%.*]] = select <vscale x 16 x i1> [[MISMATCH_VEC_LOOP_PRED]], <vscale x 16 x i1> [[TMP22]], <vscale x 16 x i1> zeroinitializer
+; MASKED-NEXT:    [[TMP24:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP23]])
+; MASKED-NEXT:    br i1 [[TMP24]], label [[MISMATCH_VEC_LOOP_FOUND:%.*]], label [[MISMATCH_VEC_LOOP_INC]]
+; MASKED:       mismatch_vec_loop_inc:
+; MASKED-NEXT:    [[TMP25]] = add nuw nsw i64 [[MISMATCH_VEC_INDEX]], [[TMP17]]
+; MASKED-NEXT:    [[TMP26]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP25]], i64 0)
+; MASKED-NEXT:    [[TMP27:%.*]] = extractelement <vscale x 16 x i1> [[TMP26]], i64 0
+; MASKED-NEXT:    br i1 [[TMP27]], label [[MISMATCH_VEC_LOOP]], label [[MISMATCH_END:%.*]]
+; MASKED:       mismatch_vec_loop_found:
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_PRED:%.*]] = phi <vscale x 16 x i1> [ [[TMP23]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_LAST_LOOP_PRED:%.*]] = phi <vscale x 16 x i1> [ [[MISMATCH_VEC_LOOP_PRED]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[MISMATCH_VEC_FOUND_INDEX:%.*]] = phi i64 [ [[MISMATCH_VEC_INDEX]], [[MISMATCH_VEC_LOOP]] ]
+; MASKED-NEXT:    [[TMP28:%.*]] = and <vscale x 16 x i1> [[MISMATCH_VEC_LAST_LOOP_PRED]], [[MISMATCH_VEC_FOUND_PRED]]
+; MASKED-NEXT:    [[TMP29:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[TMP28]], i1 true)
+; MASKED-NEXT:    [[TMP30:%.*]] = zext i32 [[TMP29]] to i64
+; MASKED-NEXT:    [[TMP31:%.*]] = add nuw nsw i64 [[MISMATCH_VEC_FOUND_INDEX]], [[TMP30]]
+; MASKED-NEXT:    [[TMP32:%.*]] = trunc i64 [[TMP31]] to i32
+; MASKED-NEXT:    br label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_pre:
+; MASKED-NEXT:    br label [[MISMATCH_LOOP:%.*]]
+; MASKED:       mismatch_loop:
+; MASKED-NEXT:    [[MISMATCH_INDEX:%.*]] = phi i32 [ 1, [[MISMATCH_LOOP_PRE]] ], [ [[TMP39:%.*]], [[MISMATCH_LOOP_INC:%.*]] ]
+; MASKED-NEXT:    [[TMP33:%.*]] = zext i32 [[MISMATCH_INDEX]] to i64
+; MASKED-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[SRC1]], i64 [[TMP33]]
+; MASKED-NEXT:    [[TMP35:%.*]] = load i8, ptr [[TMP34]], align 1
+; MASKED-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[TMP33]]
+; MASKED-NEXT:    [[TMP37:%.*]] = load i8, ptr [[TMP36]], align 1
+; MASKED-NEXT:    [[TMP38:%.*]] = icmp eq i8 [[TMP35]], [[TMP37]]
+; MASKED-NEXT:    br i1 [[TMP38]], label [[MISMATCH_LOOP_INC]], label [[MISMATCH_END]]
+; MASKED:       mismatch_loop_inc:
+; MASKED-NEXT:    [[TMP39]] = add i32 [[MISMATCH_INDEX]], 1
+; MASKED-NEXT:    [[TMP40:%.*]] = icmp eq i32 [[TMP39]], 0
+; MASKED-NEXT:    br i1 [[TMP40]], label [[MISMATCH_END]], label [[MISMATCH_LOOP]]
+; MASKED:       mismatch_end:
+; MASKED-NEXT:    [[MISMATCH_RESULT:%.*]] = phi i32 [ 0, [[MISMATCH_LOOP_INC]] ], [ [[MISMATCH_INDEX]], [[MISMATCH_LOOP]] ], [ 0, [[MISMATCH_VEC_LOOP_INC]] ], [ [[TMP32]], [[MISMATCH_VEC_LOOP_FOUND]] ]
+; MASKED-NEXT:    br i1 true, label [[BYTE_COMPARE:%.*]], label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_BODY:%.*]] ], [ 0, [[MISMATCH_END]] ]
+; MASKED-NEXT:    [[INC:%.*]] = add i32 [[LEN]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], 0
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[CLEANUP_THREAD:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[MISMATCH_RESULT]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[SRC1]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP41:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP42:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP41]], [[TMP42]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[IF_END:%.*]]
+; MASKED:       byte.compare:
+; MASKED-NEXT:    [[TMP43:%.*]] = icmp eq i32 [[MISMATCH_RESULT]], 0
+; MASKED-NEXT:    br i1 [[TMP43]], label [[CLEANUP_THREAD]], label [[IF_END]]
+; MASKED:       cleanup.thread:
+; MASKED-NEXT:    ret void
+; MASKED:       if.end:
+; MASKED-NEXT:    [[RES:%.*]] = phi i32 [ [[MISMATCH_RESULT]], [[WHILE_BODY]] ], [ [[MISMATCH_RESULT]], [[BYTE_COMPARE]] ]
+; MASKED-NEXT:    ret void
+;
 ; NO-TRANSFORM-LABEL: define void @compare_bytes_cleanup_block(
 ; NO-TRANSFORM-SAME: ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) {
 ; NO-TRANSFORM-NEXT:  entry:
@@ -1546,6 +2038,29 @@ define i32 @compare_bytes_simple2(ptr %a, ptr %b, ptr %c, ptr %d, i32 %len, i32 
 ; LOOP-DEL-NEXT:    store i32 [[INC_LCSSA]], ptr [[FINAL_PTR]], align 4
 ; LOOP-DEL-NEXT:    ret i32 [[INC_LCSSA]]
 ;
+; MASKED-LABEL: define i32 @compare_bytes_simple2(
+; MASKED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    br label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; MASKED-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; MASKED:       while.end:
+; MASKED-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; MASKED-NEXT:    [[FINAL_PTR:%.*]] = phi ptr [ [[C]], [[WHILE_BODY]] ], [ [[D]], [[WHILE_COND]] ]
+; MASKED-NEXT:    store i32 [[INC_LCSSA]], ptr [[FINAL_PTR]], align 4
+; MASKED-NEXT:    ret i32 [[INC_LCSSA]]
+;
 entry:
   br label %while.cond
 
@@ -1638,6 +2153,28 @@ define i32 @compare_bytes_simple3(ptr %a, ptr %b, ptr %c, i32 %d, i32 %len, i32 
 ; LOOP-DEL-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
 ; LOOP-DEL-NEXT:    ret i32 [[FINAL_VAL]]
 ;
+; MASKED-LABEL: define i32 @compare_bytes_simple3(
+; MASKED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    br label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; MASKED-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; MASKED:       while.end:
+; MASKED-NEXT:    [[FINAL_VAL:%.*]] = phi i32 [ [[D]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; MASKED-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
+; MASKED-NEXT:    ret i32 [[FINAL_VAL]]
+;
   entry:
   br label %while.cond
 
@@ -1726,6 +2263,27 @@ define i32 @no_implicit_float(ptr %a, ptr %b, i32 %len, i32 %n) noimplicitfloat 
 ; LOOP-DEL:       while.end:
 ; LOOP-DEL-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
 ; LOOP-DEL-NEXT:    ret i32 [[INC_LCSSA]]
+;
+; MASKED-LABEL: define i32 @no_implicit_float(
+; MASKED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; MASKED-NEXT:  entry:
+; MASKED-NEXT:    br label [[WHILE_COND:%.*]]
+; MASKED:       while.cond:
+; MASKED-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; MASKED-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; MASKED-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; MASKED-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; MASKED:       while.body:
+; MASKED-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; MASKED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; MASKED-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; MASKED-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; MASKED-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; MASKED-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; MASKED:       while.end:
+; MASKED-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; MASKED-NEXT:    ret i32 [[INC_LCSSA]]
 ;
 entry:
   br label %while.cond
