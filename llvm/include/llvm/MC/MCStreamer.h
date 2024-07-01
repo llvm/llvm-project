@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCWinEH.h"
@@ -258,6 +259,8 @@ class MCStreamer {
   bool GenerateCasFriendlyDebugInfo = false;
 
 protected:
+  MCFragment *CurFrag = nullptr;
+
   MCStreamer(MCContext &Ctx);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);

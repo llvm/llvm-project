@@ -143,7 +143,8 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 }
 
 MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  return getCurrentSectionOnly()->curFragList()->Tail;
+  assert(CurFrag->getParent() == getCurrentSection().first);
+  return CurFrag;
 }
 
 static bool canReuseDataFragment(const MCDataFragment &F,
@@ -307,6 +308,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
                        {Subsection, MCSection::FragList{F, F}});
   }
   Section->CurFragList = &Subsections[I].second;
+  CurFrag = Section->CurFragList->Tail;
 
   return getAssembler().registerSection(*Section);
 }
