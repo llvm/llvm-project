@@ -3282,23 +3282,11 @@ def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
-  "%0 attribute requires parameter %1 to be %select{"
-  "int or bool"
-  "|an integer constant"
-  "|a string"
-  "|an identifier"
-  "|a constant expression"
-  "|a builtin function"
-  "|nullptr or a bool, int, or enum literal}2">;
+  "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
+  "constant|a string|an identifier|a constant expression|a builtin function}2">;
 def err_attribute_argument_type : Error<
-  "%0 attribute requires %select{"
-  "int or bool"
-  "|an integer constant"
-  "|a string"
-  "|an identifier"
-  "|a constant expression"
-  "|a builtin function"
-  "|a pointer or a bool, int, or enum literal}1">;
+  "%0 attribute requires %select{int or bool|an integer "
+  "constant|a string|an identifier}1">;
 def err_attribute_argument_out_of_range : Error<
   "%0 attribute requires integer constant between %1 and %2 inclusive">;
 def err_init_priority_object_attr : Error<
@@ -3750,8 +3738,7 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions"
-  "|functions that return bool, integer, or a pointer type}2">,
+  "|non-K&R-style functions}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
