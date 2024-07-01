@@ -809,7 +809,7 @@ void clang::getOpenMPCaptureRegions(
       llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
       llvm_unreachable("Unexpected directive");
     }
-    return MayNeedUnknownRegion;
+    return false;
   };
 
   bool MayNeedUnknownRegion = false;
