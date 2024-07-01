@@ -52,8 +52,9 @@ public:
     llvm_unreachable("unsupported from CAS");
   }
 
-  bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
+  bool useCodeAlign() const override {
+    llvm_unreachable("unsupported from CAS");
+  }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_CAS; }
 };
