@@ -9484,14 +9484,24 @@ bool TypeSystemClang::DeclContextIsContainedInLookup(
   auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
   auto *other = (clang::DeclContext *)other_opaque_decl_ctx;
 
+  // If we have an inline or anonymous namespace, then the lookup of the
+  // parent context also includes those namespace contents.
+  auto is_transparent_lookup_allowed = [](clang::DeclContext *DC) {
+    if (DC->isInlineNamespace())
+      return true;
+
+    if (auto const *NS = dyn_cast<NamespaceDecl>(DC))
+      return NS->isAnonymousNamespace();
+
+    return false;
+  };
+
   do {
     // A decl context always includes its own contents in its lookup.
     if (decl_ctx == other)
       return true;
-
-    // If we have an inline namespace, then the lookup of the parent context
-    // also includes the inline namespace contents.
-  } while (other->isInlineNamespace() && (other = other->getParent()));
+  } while (is_transparent_lookup_allowed(other) &&
+           (other = other->getParent()));
 
   return false;
 }
