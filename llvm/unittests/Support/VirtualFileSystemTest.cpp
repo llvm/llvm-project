@@ -1761,6 +1761,48 @@ TEST_F(VFSFromYAMLTest, MappedRoot) {
   EXPECT_EQ(0, NumDiagnostics);
 }
 
+TEST_F(VFSFromYAMLTest, MappedSysRoot) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addDirectory("//root/foo/bar");
+  Lower->addRegularFile("//root/foo/bar/a");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{ 'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory-remap',\n"
+                        "  'name': '/',\n"
+                        "  'external-contents': '//root/foo/bar'\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
+      new vfs::OverlayFileSystem(Lower));
+  O->pushOverlay(FS);
+
+  // file
+  ErrorOr<vfs::Status> S = O->status("/a");
+  ASSERT_FALSE(S.getError());
+  EXPECT_EQ("//root/foo/bar/a", S->getName());
+  EXPECT_TRUE(S->ExposesExternalVFSPath);
+
+  ErrorOr<vfs::Status> SLower = O->status("//root/foo/bar/a");
+  EXPECT_EQ("//root/foo/bar/a", SLower->getName());
+  EXPECT_TRUE(S->equivalent(*SLower));
+  EXPECT_FALSE(SLower->ExposesExternalVFSPath);
+
+  // file after opening
+  auto OpenedF = O->openFileForRead("/a");
+  ASSERT_FALSE(OpenedF.getError());
+  auto OpenedS = (*OpenedF)->status();
+  ASSERT_FALSE(OpenedS.getError());
+  EXPECT_EQ("//root/foo/bar/a", OpenedS->getName());
+  EXPECT_TRUE(OpenedS->ExposesExternalVFSPath);
+
+  EXPECT_EQ(0, NumDiagnostics);
+}
+
 TEST_F(VFSFromYAMLTest, RemappedDirectoryOverlay) {
   IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
   Lower->addDirectory("//root/foo");

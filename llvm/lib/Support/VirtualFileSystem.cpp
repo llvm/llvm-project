@@ -1764,6 +1764,10 @@ private:
   void uniqueOverlayTree(RedirectingFileSystem *FS,
                          RedirectingFileSystem::Entry *SrcE,
                          RedirectingFileSystem::Entry *NewParentE = nullptr) {
+    if (NewParentE) {
+      assert(NewParentE->getKind() == RedirectingFileSystem::EK_Directory &&
+             "NewParentE must be a directory entry or nullptr");
+    }
     StringRef Name = SrcE->getName();
     switch (SrcE->getKind()) {
     case RedirectingFileSystem::EK_Directory: {
@@ -1773,13 +1777,26 @@ private:
       // is parsed. This only leads to redundant walks, ignore it.
       if (!Name.empty())
         NewParentE = lookupOrCreateEntry(FS, Name, NewParentE);
+      if (NewParentE->getKind() != RedirectingFileSystem::EK_Directory) {
+        // Found non directory entry, no need to generate the left nodes.
+        break;
+      }
       for (std::unique_ptr<RedirectingFileSystem::Entry> &SubEntry :
            llvm::make_range(DE->contents_begin(), DE->contents_end()))
         uniqueOverlayTree(FS, SubEntry.get(), NewParentE);
       break;
     }
     case RedirectingFileSystem::EK_DirectoryRemap: {
-      assert(NewParentE && "Parent entry must exist");
+      // Root DirectoryRemap:
+      // name: "/"
+      // external-name: "xxxx"
+      if (!NewParentE) {
+        auto *DR = cast<RedirectingFileSystem::DirectoryRemapEntry>(SrcE);
+        FS->Roots.push_back(
+            std::make_unique<RedirectingFileSystem::DirectoryRemapEntry>(
+                Name, DR->getExternalContentsPath(), DR->getUseName()));
+        break;
+      }
       auto *DR = cast<RedirectingFileSystem::DirectoryRemapEntry>(SrcE);
       auto *DE = cast<RedirectingFileSystem::DirectoryEntry>(NewParentE);
       DE->addContent(
