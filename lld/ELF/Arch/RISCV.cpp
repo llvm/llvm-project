@@ -793,15 +793,49 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
   if (!gp)
     return;
 
-  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
+  int64_t theAddr = r.sym->getVA(r.addend);
+  uint64_t gpVA = gp->getVA();
+  if (!isInt<12>(theAddr - gpVA))
     return;
 
+  // The symbol may be accessed in multiple pieces with different addends.
+  // If we are relaxing the HI20 relocation, we need to ensure that we only
+  // relax (and delete the instruction) if all possible LO12 relocations
+  // that depend on it will be relaxable. Similarly, when relaxing the LO12
+  // relocation, we should ensure that the corresponding HI20 is also relaxed.
+  // Since relocations are not directly related to one another, we must rely on
+  // what the code generator is allowed to assume about their relationship.
+  // Namely, any LO12 relocation that relies on a HI20 relocation must not
+  // relocate an address in a different "accessible block" for an object.
+  // An "accessible block" is the block of memory with a size equal to the
+  // lower of the object's size and alignment.
+  // For example, it is legal to access an element of a naturaly aligned
+  // array of 8-byte objects with two different 4-byte loads.
+  // Element number 1 of an array of double can be accessed both as
+  // (%hi(arr+8),  %lo(arr+8), %lo(arr+12)) and
+  // (%hi(arr+12), %lo(arr+8), %lo(arr+12)).
+  // In any case, we only relax if the entire range [arr+8, arr+16) is reachable
+  // using GP-relative addressing.
+  uint32_t symAlign =
+      r.sym->getOutputSection() ? r.sym->getOutputSection()->addralign : 0;
+  int64_t symSize = r.sym->getSize();
+  uint32_t reachWindow = std::min<uint32_t>(symAlign, symSize);
+  int64_t loAddr, hiAddr;
+  if (reachWindow != 0) {
+    loAddr = (theAddr / reachWindow) * reachWindow;
+    hiAddr = loAddr + reachWindow - 1;
+  } else
+    loAddr = hiAddr = theAddr;
+
+  if (!isInt<12>(loAddr - gpVA) || !isInt<12>(hiAddr - gpVA))
+    return;
   switch (r.type) {
-  case R_RISCV_HI20:
+  case R_RISCV_HI20: {
     // Remove lui rd, %hi20(x).
     sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
     remove = 4;
     break;
+  }
   case R_RISCV_LO12_I:
     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
     break;
