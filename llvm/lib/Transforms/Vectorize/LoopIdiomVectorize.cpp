@@ -506,18 +506,15 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
                                  /*HasNSW=*/true);
 
   auto *VectorLoadType = ScalableVectorType::get(LoadType, ByteCompareVF);
-  auto *VF = ConstantInt::get(
-      I32Type, VectorLoadType->getElementCount().getKnownMinValue());
-  auto *IsScalable = ConstantInt::getBool(
-      Builder.getContext(), VectorLoadType->getElementCount().isScalable());
+  auto *VF = ConstantInt::get(I32Type, ByteCompareVF);
+  auto *IsScalable = ConstantInt::getBool(Builder.getContext(), true);
 
   Value *VL = Builder.CreateIntrinsic(Intrinsic::experimental_get_vector_length,
                                       {I64Type}, {AVL, VF, IsScalable});
   Value *GepOffset = VectorIndexPhi;
 
-  Value *VectorLhsGep = Builder.CreateGEP(LoadType, PtrA, GepOffset);
-  if (GEPA->isInBounds())
-    cast<GetElementPtrInst>(VectorLhsGep)->setIsInBounds(true);
+  Value *VectorLhsGep =
+      Builder.CreateGEP(LoadType, PtrA, GepOffset, "", GEPA->isInBounds());
   VectorType *TrueMaskTy =
       VectorType::get(Builder.getInt1Ty(), VectorLoadType->getElementCount());
   Value *AllTrueMask = Constant::getAllOnesValue(TrueMaskTy);
@@ -525,9 +522,8 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
       Intrinsic::vp_load, {VectorLoadType, VectorLhsGep->getType()},
       {VectorLhsGep, AllTrueMask, VL}, nullptr, "lhs.load");
 
-  Value *VectorRhsGep = Builder.CreateGEP(LoadType, PtrB, GepOffset);
-  if (GEPB->isInBounds())
-    cast<GetElementPtrInst>(VectorRhsGep)->setIsInBounds(true);
+  Value *VectorRhsGep =
+      Builder.CreateGEP(LoadType, PtrB, GepOffset, "", GEPB->isInBounds());
   Value *VectorRhsLoad = Builder.CreateIntrinsic(
       Intrinsic::vp_load, {VectorLoadType, VectorLhsGep->getType()},
       {VectorRhsGep, AllTrueMask, VL}, nullptr, "rhs.load");
@@ -541,11 +537,9 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
       "mismatch.cmp");
   Value *CTZ = Builder.CreateIntrinsic(
       Intrinsic::vp_cttz_elts, {ResType, VectorMatchCmp->getType()},
-      {VectorMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true), AllTrueMask,
+      {VectorMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(false), AllTrueMask,
        VL});
-  // RISC-V refines/lowers the poison returned by vp.cttz.elts to -1.
-  Value *MismatchFound =
-      Builder.CreateICmpSGE(CTZ, ConstantInt::get(ResType, 0));
+  Value *MismatchFound = Builder.CreateICmpNE(CTZ, VL);
   auto *VectorEarlyExit = BranchInst::Create(VectorLoopMismatchBlock,
                                              VectorLoopIncBlock, MismatchFound);
   Builder.Insert(VectorEarlyExit);
