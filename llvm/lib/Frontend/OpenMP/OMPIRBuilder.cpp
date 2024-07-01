@@ -6233,7 +6233,8 @@ Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
 void OpenMPIRBuilder::emitTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo,
     FunctionGenCallback &GenerateFunctionCallback, bool IsOffloadEntry,
-    Function *&OutlinedFn, Constant *&OutlinedFnID) {
+    Function *&OutlinedFn, Constant *&OutlinedFnID,
+    OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion *EntryInfoStorage) {
 
   SmallString<64> EntryFnName;
   OffloadInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
@@ -6253,20 +6254,22 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
           ? std::string(EntryFnName)
           : createPlatformSpecificName({EntryFnName, "region_id"});
 
-  OutlinedFnID = registerTargetRegionFunction(EntryInfo, OutlinedFn,
-                                              EntryFnName, EntryFnIDName);
+  OutlinedFnID = registerTargetRegionFunction(
+      EntryInfo, OutlinedFn, EntryFnName, EntryFnIDName, EntryInfoStorage);
 }
 
 Constant *OpenMPIRBuilder::registerTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo, Function *OutlinedFn,
-    StringRef EntryFnName, StringRef EntryFnIDName) {
+    StringRef EntryFnName, StringRef EntryFnIDName,
+    OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion *EntryInfoStorage) {
   if (OutlinedFn)
     setOutlinedTargetRegionFunctionAttributes(OutlinedFn);
   auto OutlinedFnID = createOutlinedFunctionID(OutlinedFn, EntryFnIDName);
   auto EntryAddr = createTargetRegionEntryAddr(OutlinedFn, EntryFnName);
   OffloadInfoManager.registerTargetRegionEntryInfo(
       EntryInfo, EntryAddr, OutlinedFnID,
-      OffloadEntriesInfoManager::OMPTargetRegionEntryTargetRegion);
+      OffloadEntriesInfoManager::OMPTargetRegionEntryTargetRegion,
+      EntryInfoStorage);
   return OutlinedFnID;
 }
 
@@ -6622,7 +6625,8 @@ static void emitTargetOutlinedFunction(
     TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
     Constant *&OutlinedFnID, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
-    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB,
+    OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion *EntryInfoStorage) {
 
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
       [&OMPBuilder, &Builder, &Inputs, &CBFunc,
@@ -6632,7 +6636,8 @@ static void emitTargetOutlinedFunction(
       };
 
   OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction, true,
-                                      OutlinedFn, OutlinedFnID);
+                                      OutlinedFn, OutlinedFnID,
+                                      EntryInfoStorage);
 }
 
 static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
@@ -6693,7 +6698,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
     int32_t NumThreads, SmallVectorImpl<Value *> &Args,
     GenMapInfoCallbackTy GenMapInfoCB,
     OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
-    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB) {
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+    OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion *EntryInfoStorage) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -6702,7 +6708,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
   Function *OutlinedFn;
   Constant *OutlinedFnID;
   emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn,
-                             OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB);
+                             OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB,
+                             EntryInfoStorage);
   if (!Config.isTargetDevice())
     emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
                    NumThreads, Args, GenMapInfoCB);
@@ -8445,7 +8452,8 @@ void OffloadEntriesInfoManager::initializeTargetRegionEntryInfo(
 
 void OffloadEntriesInfoManager::registerTargetRegionEntryInfo(
     TargetRegionEntryInfo EntryInfo, Constant *Addr, Constant *ID,
-    OMPTargetRegionEntryKind Flags) {
+    OMPTargetRegionEntryKind Flags,
+    OffloadEntryInfoTargetRegion *EntryInfoStorage) {
   assert(EntryInfo.Count == 0 && "expected default EntryInfo");
 
   // Update the EntryInfo with the next available count for this location.
@@ -8469,8 +8477,12 @@ void OffloadEntriesInfoManager::registerTargetRegionEntryInfo(
     assert(!hasTargetRegionEntryInfo(EntryInfo) &&
            "Target region entry already registered!");
     OffloadEntryInfoTargetRegion Entry(OffloadingEntriesNum, Addr, ID, Flags);
-    OffloadEntriesTargetRegion[EntryInfo] = Entry;
-    ++OffloadingEntriesNum;
+    if (EntryInfoStorage) {
+      *EntryInfoStorage = Entry;
+    } else {
+      OffloadEntriesTargetRegion[EntryInfo] = Entry;
+      ++OffloadingEntriesNum;
+    }
   }
   incrementTargetRegionEntryInfoCount(EntryInfo);
 }
