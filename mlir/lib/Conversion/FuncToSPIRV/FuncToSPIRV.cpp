@@ -82,6 +82,32 @@ public:
   }
 };
 
+class UnrealizedConversionCastOpPattern final
+    : public OpConversionPattern<UnrealizedConversionCastOp> {
+  using OpConversionPattern<UnrealizedConversionCastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(UnrealizedConversionCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Type> convertedTypes;
+    if (succeeded(getTypeConverter()->convertTypes(op.getOutputs().getTypes(),
+                                                   convertedTypes)) &&
+        convertedTypes == adaptor.getInputs().getTypes()) {
+      rewriter.replaceOp(op, adaptor.getInputs());
+      return success();
+    }
+
+    convertedTypes.clear();
+    if (succeeded(getTypeConverter()->convertTypes(
+            adaptor.getInputs().getTypes(), convertedTypes)) &&
+        convertedTypes == op.getOutputs().getType()) {
+      rewriter.replaceOp(op, adaptor.getInputs());
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -92,5 +118,7 @@ void mlir::populateFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                        RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
-  patterns.add<ReturnOpPattern, CallOpPattern>(typeConverter, context);
+  patterns
+      .add<ReturnOpPattern, CallOpPattern, UnrealizedConversionCastOpPattern>(
+          typeConverter, context);
 }
