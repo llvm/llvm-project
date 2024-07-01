@@ -12,12 +12,6 @@ else()
   set(LIBOMPTARGET_DEBUG False)
 endif()
 
-if (NOT OPENMP_STANDALONE_BUILD AND "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-  set(LIBOMPTARGET_TEST_GPU_PGO True)
-else()
-  set(LIBOMPTARGET_TEST_GPU_PGO False)
-endif()
-
 # Replace the space from user's input with ";" in case that CMake add escape
 # char into the lit command.
 string(REPLACE " " ";" LIBOMPTARGET_LIT_ARG_LIST "${LIBOMPTARGET_LIT_ARGS}")

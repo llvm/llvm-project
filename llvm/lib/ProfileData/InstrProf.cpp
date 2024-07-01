@@ -228,6 +228,12 @@ cl::opt<bool> EnableVTableValueProfiling(
              "the types of a C++ pointer. The information is used in indirect "
              "call promotion to do selective vtable-based comparison."));
 
+cl::opt<bool> EnableVTableProfileUse(
+    "enable-vtable-profile-use", cl::init(false),
+    cl::desc("If ThinLTO and WPD is enabled and this option is true, vtable "
+             "profiles will be used by ICP pass for more efficient indirect "
+             "call sequence. If false, type profiles won't be used."));
+
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
                                     bool AddSegmentInfo) {
@@ -391,7 +397,7 @@ std::string getPGOName(const GlobalVariable &V, bool InLTO) {
   // PGONameMetadata should be set by compiler at profile use time
   // and read by symtab creation to look up symbols corresponding to
   // a MD5 hash.
-  return getIRPGOObjectName(V, InLTO, /*PGONameMetadata=*/nullptr);
+  return getIRPGOObjectName(V, InLTO, V.getMetadata(getPGONameMetadataName()));
 }
 
 // See getIRPGOObjectName() for a discription of the format.
@@ -432,31 +438,13 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
   return VarName;
 }
 
-bool isGPUProfTarget(const Module &M) {
-  const auto &T = Triple(M.getTargetTriple());
-  return T.isAMDGPU() || T.isNVPTX();
-}
-
-void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
-  // If the target is a GPU, make the symbol protected so it can
-  // be read from the host device
-  if (isGPUProfTarget(M))
-    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
-  // Hide the symbol so that we correctly get a copy for each executable.
-  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
-    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
-}
-
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
-  // Ensure profiling variables on GPU are visible to be read from host
-  if (isGPUProfTarget(M))
-    Linkage = GlobalValue::ExternalLinkage;
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
-  else if (Linkage == GlobalValue::ExternalWeakLinkage)
+  if (Linkage == GlobalValue::ExternalWeakLinkage)
     Linkage = GlobalValue::LinkOnceAnyLinkage;
   else if (Linkage == GlobalValue::AvailableExternallyLinkage)
     Linkage = GlobalValue::LinkOnceODRLinkage;
@@ -470,7 +458,10 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
                          getPGOFuncNameVarName(PGOFuncName, Linkage));
 
-  setPGOFuncVisibility(M, FuncNameVar);
+  // Hide the symbol so that we correctly get a copy for each executable.
+  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
+
   return FuncNameVar;
 }
 
@@ -495,8 +486,7 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
-    if (Error E = addVTableWithName(
-            G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+    if (Error E = addVTableWithName(G, getPGOName(G, InLTO)))
       return E;
   }
 
@@ -1440,16 +1430,28 @@ MDNode *getPGOFuncNameMetadata(const Function &F) {
   return F.getMetadata(getPGOFuncNameMetadataName());
 }
 
-void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
-  // Only for internal linkage functions.
-  if (PGOFuncName == F.getName())
-      return;
-  // Don't create duplicated meta-data.
-  if (getPGOFuncNameMetadata(F))
+static void createPGONameMetadata(GlobalObject &GO, StringRef MetadataName,
+                                  StringRef PGOName) {
+  // Only for internal linkage functions or global variables. The name is not
+  // the same as PGO name for these global objects.
+  if (GO.getName() == PGOName)
     return;
-  LLVMContext &C = F.getContext();
-  MDNode *N = MDNode::get(C, MDString::get(C, PGOFuncName));
-  F.setMetadata(getPGOFuncNameMetadataName(), N);
+
+  // Don't create duplicated metadata.
+  if (GO.getMetadata(MetadataName))
+    return;
+
+  LLVMContext &C = GO.getContext();
+  MDNode *N = MDNode::get(C, MDString::get(C, PGOName));
+  GO.setMetadata(MetadataName, N);
+}
+
+void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
+  return createPGONameMetadata(F, getPGOFuncNameMetadataName(), PGOFuncName);
+}
+
+void createPGONameMetadata(GlobalObject &GO, StringRef PGOName) {
+  return createPGONameMetadata(GO, getPGONameMetadataName(), PGOName);
 }
 
 bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
