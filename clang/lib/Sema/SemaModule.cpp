@@ -855,23 +855,25 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
   //   indirectly within [...] a private-module-fragment.
-  if (!isCurrentModulePurview()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
-    D->setInvalidDecl();
-    return D;
-  } else if (currentModuleIsImplementation()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
-    Diag(ModuleScopes.back().BeginLoc,
-         diag::note_not_module_interface_add_export)
-        << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
-    D->setInvalidDecl();
-    return D;
-  } else if (ModuleScopes.back().Module->Kind ==
-             Module::PrivateModuleFragment) {
-    Diag(ExportLoc, diag::err_export_in_private_module_fragment);
-    Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
-    D->setInvalidDecl();
-    return D;
+  if (!getLangOpts().HLSL) {
+    if (!isCurrentModulePurview()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
+      D->setInvalidDecl();
+      return D;
+    } else if (currentModuleIsImplementation()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
+      Diag(ModuleScopes.back().BeginLoc,
+          diag::note_not_module_interface_add_export)
+          << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
+      D->setInvalidDecl();
+      return D;
+    } else if (ModuleScopes.back().Module->Kind ==
+              Module::PrivateModuleFragment) {
+      Diag(ExportLoc, diag::err_export_in_private_module_fragment);
+      Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
+      D->setInvalidDecl();
+      return D;
+    }
   }
 
   for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
@@ -891,7 +893,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
       //
       // Defer exporting the namespace until after we leave it, in order to
       // avoid marking all subsequent declarations in the namespace as exported.
-      if (!DeferredExportedNamespaces.insert(ND).second)
+      if (!getLangOpts().HLSL && !DeferredExportedNamespaces.insert(ND).second)
         break;
     }
   }
@@ -906,7 +908,9 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
     return D;
   }
 
-  D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+  if (!getLangOpts().HLSL)
+    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+
   return D;
 }
 
@@ -923,6 +927,16 @@ static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
 
 /// Check that it's valid to export \p D.
 static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
+
+  // HLSL: export declaration is valid only on functions
+  if (S.getLangOpts().HLSL) {
+    // Export-within-export was already diagnosed in ActOnStartExportDecl
+    if (!dyn_cast<FunctionDecl>(D) && !dyn_cast<ExportDecl>(D)) {
+      S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
+      D->setInvalidDecl();
+      return false;
+    }
+  }
 
   //  C++20 [module.interface]p3:
   //   [...] it shall not declare a name with internal linkage.
