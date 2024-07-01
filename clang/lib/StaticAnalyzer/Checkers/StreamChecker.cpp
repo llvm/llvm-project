@@ -1038,11 +1038,11 @@ static QualType getPointeeType(const MemRegion *R) {
   if (!R)
     return {};
   if (const auto *ER = dyn_cast<ElementRegion>(R))
-    return ER->getElementType()->getCanonicalTypeUnqualified();
+    return ER->getElementType();
   if (const auto *TR = dyn_cast<TypedValueRegion>(R))
-    return TR->getValueType()->getCanonicalTypeUnqualified();
+    return TR->getValueType();
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
-    return SR->getPointeeStaticType()->getCanonicalTypeUnqualified();
+    return SR->getPointeeStaticType();
   return {};
 }
 
