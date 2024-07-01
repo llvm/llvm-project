@@ -953,6 +953,9 @@ Bug Fixes to C++ Support
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 
+- Fixed a crash when substituting into constraint expressions for invalid variable templates.
+  Fixes: (`#73885 <https://github.com/llvm/llvm-project/issues/73885>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
