@@ -894,11 +894,11 @@ void MipsTargetELFStreamer::finish() {
 
   // .bss, .text and .data are always at least 16-byte aligned.
   MCSection &TextSection = *OFI.getTextSection();
-  S.changeSection(&TextSection);
+  S.switchSection(&TextSection);
   MCSection &DataSection = *OFI.getDataSection();
-  S.changeSection(&DataSection);
+  S.switchSection(&DataSection);
   MCSection &BSSSection = *OFI.getBSSSection();
-  S.changeSection(&BSSSection);
+  S.switchSection(&BSSSection);
 
   TextSection.ensureMinAlignment(Align(16));
   DataSection.ensureMinAlignment(Align(16));
