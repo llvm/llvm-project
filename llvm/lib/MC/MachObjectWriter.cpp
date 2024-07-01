@@ -121,14 +121,14 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
          Layout.getSymbolOffset(S);
 }
 
-uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
-                                          const MCAsmLayout &Layout) const {
-  uint64_t EndAddr = getSectionAddress(Sec) + Layout.getSectionAddressSize(Sec);
+uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
+                                          const MCSection *Sec) const {
+  uint64_t EndAddr = getSectionAddress(Sec) + Asm.getSectionAddressSize(*Sec);
   unsigned Next = Sec->getLayoutOrder() + 1;
-  if (Next >= Layout.getSectionOrder().size())
+  if (Next >= Asm.getLayout()->getSectionOrder().size())
     return 0;
 
-  const MCSection &NextSec = *Layout.getSectionOrder()[Next];
+  const MCSection &NextSec = *Asm.getLayout()->getSectionOrder()[Next];
   if (NextSec.isVirtualSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
@@ -245,17 +245,17 @@ void MachObjectWriter::writeSegmentLoadCommand(
   assert(W.OS.tell() - Start == SegmentLoadCommandSize);
 }
 
-void MachObjectWriter::writeSection(const MCAsmLayout &Layout,
+void MachObjectWriter::writeSection(const MCAssembler &Asm,
                                     const MCSection &Sec, uint64_t VMAddr,
                                     uint64_t FileOffset, unsigned Flags,
                                     uint64_t RelocationsStart,
                                     unsigned NumRelocations) {
-  uint64_t SectionSize = Layout.getSectionAddressSize(&Sec);
+  uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
   const MCSectionMachO &Section = cast<MCSectionMachO>(Sec);
 
   // The offset is unused for virtual sections.
   if (Section.isVirtualSection()) {
-    assert(Layout.getSectionFileSize(&Sec) == 0 && "Invalid file size!");
+    assert(Asm.getSectionFileSize(Sec) == 0 && "Invalid file size!");
     FileOffset = 0;
   }
 
@@ -679,7 +679,7 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
     // Explicitly pad the section to match the alignment requirements of the
     // following one. This is for 'gas' compatibility, it shouldn't
     /// strictly be necessary.
-    StartAddress += getPaddingSize(Sec, *Asm.getLayout());
+    StartAddress += getPaddingSize(Asm, Sec);
   }
 }
 
@@ -857,7 +857,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
     uint64_t Address = getSectionAddress(&Sec);
     uint64_t Size = Asm.getSectionAddressSize(Sec);
     uint64_t FileSize = Asm.getSectionFileSize(Sec);
-    FileSize += getPaddingSize(&Sec, Layout);
+    FileSize += getPaddingSize(Asm, &Sec);
 
     VMSize = std::max(VMSize, Address + Size);
 
@@ -893,7 +893,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
     unsigned Flags = Sec.getTypeAndAttributes();
     if (Sec.hasInstructions())
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
-    writeSection(Layout, Sec, getSectionAddress(&Sec), SectionStart, Flags,
+    writeSection(Asm, Sec, getSectionAddress(&Sec), SectionStart, Flags,
                  RelocTableEnd, NumRelocs);
     RelocTableEnd += NumRelocs * sizeof(MachO::any_relocation_info);
   }
@@ -995,7 +995,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   for (const MCSection &Sec : Asm) {
     Asm.writeSectionData(W.OS, &Sec);
 
-    uint64_t Pad = getPaddingSize(&Sec, Layout);
+    uint64_t Pad = getPaddingSize(Asm, &Sec);
     W.OS.write_zeros(Pad);
   }
 

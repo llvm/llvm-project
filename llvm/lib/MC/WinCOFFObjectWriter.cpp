@@ -172,7 +172,7 @@ private:
   COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
   COFFSection *createSection(StringRef Name);
 
-  void defineSection(MCSectionCOFF const &Sec, const MCAsmLayout &Layout);
+  void defineSection(const MCAssembler &Asm, MCSectionCOFF const &Sec);
 
   COFFSymbol *getLinkedSymbol(const MCSymbol &Symbol);
   void DefineSymbol(const MCSymbol &Symbol, MCAssembler &Assembler,
@@ -318,8 +318,8 @@ static uint32_t getAlignment(const MCSectionCOFF &Sec) {
 
 /// This function takes a section data object from the assembler
 /// and creates the associated COFF section staging object.
-void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
-                                  const MCAsmLayout &Layout) {
+void WinCOFFWriter::defineSection(const MCAssembler &Asm,
+                                  const MCSectionCOFF &MCSec) {
   COFFSection *Section = createSection(MCSec.getName());
   COFFSymbol *Symbol = createSymbol(MCSec.getName());
   Section->Symbol = Symbol;
@@ -354,8 +354,8 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
   if (UseOffsetLabels && !MCSec.empty()) {
     const uint32_t Interval = 1 << OffsetLabelIntervalBits;
     uint32_t N = 1;
-    for (uint32_t Off = Interval, E = Layout.getSectionAddressSize(&MCSec);
-         Off < E; Off += Interval) {
+    for (uint32_t Off = Interval, E = Asm.getSectionAddressSize(MCSec); Off < E;
+         Off += Interval) {
       auto Name = ("$L" + MCSec.getName() + "_" + Twine(N++)).str();
       COFFSymbol *Label = createSymbol(Name);
       Label->Section = Section;
@@ -775,7 +775,7 @@ void WinCOFFWriter::assignFileOffsets(MCAssembler &Asm,
     if (!Sec || Sec->Number == -1)
       continue;
 
-    Sec->Header.SizeOfRawData = Layout.getSectionAddressSize(&Section);
+    Sec->Header.SizeOfRawData = Asm.getSectionAddressSize(Section);
 
     if (IsPhysicalSection(Sec)) {
       Sec->Header.PointerToRawData = Offset;
@@ -841,7 +841,7 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
     if ((Mode == NonDwoOnly && isDwoSection(Section)) ||
         (Mode == DwoOnly && !isDwoSection(Section)))
       continue;
-    defineSection(static_cast<const MCSectionCOFF &>(Section), Layout);
+    defineSection(Asm, static_cast<const MCSectionCOFF &>(Section));
   }
 
   if (Mode != DwoOnly)

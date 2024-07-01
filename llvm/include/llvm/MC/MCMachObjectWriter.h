@@ -159,7 +159,7 @@ public:
   uint64_t getFragmentAddress(const MCAssembler &Asm,
                               const MCFragment *Fragment) const;
 
-  uint64_t getPaddingSize(const MCSection *SD, const MCAsmLayout &Layout) const;
+  uint64_t getPaddingSize(const MCAssembler &Asm, const MCSection *SD) const;
 
   const MCSymbol *getAtom(const MCSymbol &S) const;
 
@@ -191,7 +191,7 @@ public:
                                uint64_t SectionDataSize, uint32_t MaxProt,
                                uint32_t InitProt);
 
-  void writeSection(const MCAsmLayout &Layout, const MCSection &Sec,
+  void writeSection(const MCAssembler &Asm, const MCSection &Sec,
                     uint64_t VMAddr, uint64_t FileOffset, unsigned Flags,
                     uint64_t RelocationsStart, unsigned NumRelocations);
 

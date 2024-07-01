@@ -1477,7 +1477,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
       for (auto &Csect : *Group) {
         const MCSectionXCOFF *MCSec = Csect.MCSec;
         Csect.Address = alignTo(Address, MCSec->getAlign());
-        Csect.Size = Layout.getSectionAddressSize(MCSec);
+        Csect.Size = Asm.getSectionAddressSize(*MCSec);
         Address = Csect.Address + Csect.Size;
         Csect.SymbolTableIndex = SymbolTableIndex;
         SymbolIndexMap[MCSec->getQualNameSymbol()] = Csect.SymbolTableIndex;
@@ -1560,7 +1560,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
 
     // Section size.
     // For DWARF section, we must use the real size which may be not aligned.
-    DwarfSection.Size = DwarfSect.Size = Layout.getSectionAddressSize(MCSec);
+    DwarfSection.Size = DwarfSect.Size = Asm.getSectionAddressSize(*MCSec);
 
     Address = DwarfSection.Address + DwarfSection.Size;
 
