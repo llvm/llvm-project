@@ -77,6 +77,13 @@ EnableRescheduling("twoaddr-reschedule",
                    cl::desc("Coalesce copies by rescheduling (default=true)"),
                    cl::init(true), cl::Hidden);
 
+// Limit the number of rescheduling visits to dependent instructions.
+// FIXME: Arbitrary limit to reduce compile time cost.
+static cl::opt<unsigned> MaxVisits(
+    "twoaddr-visit-limit", cl::Hidden, cl::init(10),
+    cl::desc(
+        "Maximum number of rescheduling visits to dependent instructions"));
+
 // Limit the number of dataflow edges to traverse when evaluating the benefit
 // of commuting operands.
 static cl::opt<unsigned> MaxDataFlowEdge(
@@ -921,7 +928,7 @@ bool TwoAddressInstructionPass::rescheduleMIBelowKill(
     // Debug or pseudo instructions cannot be counted against the limit.
     if (OtherMI.isDebugOrPseudoInstr())
       continue;
-    if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
+    if (NumVisited > MaxVisits)
       return false;
     ++NumVisited;
     if (OtherMI.hasUnmodeledSideEffects() || OtherMI.isCall() ||
@@ -1087,14 +1094,14 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
     }
   }
 
-  // Check if the reschedule will not break depedencies.
+  // Check if the reschedule will not break dependencies.
   unsigned NumVisited = 0;
   for (MachineInstr &OtherMI :
        make_range(mi, MachineBasicBlock::iterator(KillMI))) {
     // Debug or pseudo instructions cannot be counted against the limit.
     if (OtherMI.isDebugOrPseudoInstr())
       continue;
-    if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
+    if (NumVisited > MaxVisits)
       return false;
     ++NumVisited;
     if (OtherMI.hasUnmodeledSideEffects() || OtherMI.isCall() ||
