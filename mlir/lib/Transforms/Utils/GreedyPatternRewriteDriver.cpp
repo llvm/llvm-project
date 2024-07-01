@@ -376,6 +376,11 @@ protected:
   llvm::SmallDenseSet<Operation *, 4> strictModeFilteredOps;
 
 private:
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  /// Return "true" if the given op is guaranteed to be out of scope.
+  bool isOutOfScope(Operation *op) const;
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
   /// Look over the provided operands for any defining operations that should
   /// be re-added to the worklist. This function should be called when an
   /// operation is modified or removed, as it may trigger further
@@ -432,6 +437,28 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
   rewriter.setListener(this);
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 }
+
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+bool GreedyPatternRewriteDriver::isOutOfScope(Operation *op) const {
+  // No op is out of scope if no scope was set.
+  if (!config.scope)
+    return false;
+  // Check if the given op and the scope region are part of the same IR tree.
+  // The parent op into which the given op was inserted may be unlinked, in
+  // which case we do not consider the given op to be out of scope. (That parent
+  // op will likely be inserted later, together with all its nested ops.)
+  Region *r = config.scope;
+  while (r) {
+    if (r->findAncestorOpInRegion(*op) || r->getParentOp() == op)
+      break;
+    r = r->getParentRegion();
+  }
+  if (!r)
+    return false;
+  // Op is out of scope if it is not within the scope region.
+  return !config.scope->findAncestorOpInRegion(*op);
+}
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
 bool GreedyPatternRewriteDriver::processWorklist() {
 #ifndef NDEBUG
@@ -646,6 +673,8 @@ void GreedyPatternRewriteDriver::addToWorklist(Operation *op) {
         addSingleOpToWorklist(op);
       return;
     }
+    // TODO: Unlinked ops are currently not added to the worklist if a `scope`
+    // is specified.
     if (region == nullptr)
       return;
   } while ((op = region->getParentOp()));
@@ -674,6 +703,13 @@ void GreedyPatternRewriteDriver::notifyOperationInserted(
     logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
                        << ")\n";
   });
+
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  if (config.scope && isOutOfScope(op))
+    llvm::report_fatal_error(
+        "greedy pattern rewrite inserted op into region that is out of scope");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
   if (config.listener)
     config.listener->notifyOperationInserted(op, previous);
   if (config.strictMode == GreedyRewriteStrictness::ExistingAndNewOps)
@@ -682,10 +718,24 @@ void GreedyPatternRewriteDriver::notifyOperationInserted(
 }
 
 void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
+  // TODO: This notification should also be triggered when moving an op into
+  // this op.
   LLVM_DEBUG({
     logger.startLine() << "** Modified: '" << op->getName() << "'(" << op
                        << ")\n";
   });
+
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  if (config.scope) {
+    // Modifying attributes of the op that owns the scope region is allowed
+    // when using the applyPatternsAndFoldGreedily(Operation *) entry point.
+    if (op != config.scope->getParentOp() && isOutOfScope(op)) {
+      llvm::report_fatal_error("greedy pattern rewrite modified op within "
+                               "region that is out of scope");
+    }
+  }
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
   if (config.listener)
     config.listener->notifyOperationModified(op);
   addToWorklist(op);
@@ -730,16 +780,11 @@ void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
                        << ")\n";
   });
 
-#ifndef NDEBUG
-  // Only ops that are within the configured scope are added to the worklist of
-  // the greedy pattern rewriter. Moreover, the parent op of the scope region is
-  // the part of the IR that is taken into account for the "expensive checks".
-  // A greedy pattern rewrite is not allowed to erase the parent op of the scope
-  // region, as that would break the worklist handling and the expensive checks.
-  if (config.scope && config.scope->getParentOp() == op)
-    llvm_unreachable(
-        "scope region must not be erased during greedy pattern rewrite");
-#endif // NDEBUG
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  if (config.scope && isOutOfScope(op))
+    llvm::report_fatal_error(
+        "greedy pattern rewrite removed op from region that is out of scope");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   if (config.listener)
     config.listener->notifyOperationErased(op);
@@ -897,15 +942,21 @@ LogicalResult
 mlir::applyPatternsAndFoldGreedily(Region &region,
                                    const FrozenRewritePatternSet &patterns,
                                    GreedyRewriteConfig config, bool *changed) {
-  // The top-level operation must be known to be isolated from above to
-  // prevent performing canonicalizations on operations defined at or above
-  // the region containing 'op'.
-  assert(region.getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-         "patterns can only be applied to operations IsolatedFromAbove");
-
   // Set scope if not specified.
   if (!config.scope)
     config.scope = &region;
+
+  // Make sure that the specified region on which the greedy rewrite should
+  // operate is in scope.
+  assert(config.scope->isAncestor(&region) && "input region must be in scope");
+
+  // The scope of a greedy pattern rewrite must be IsolatedFromAbove. Ops that
+  // are out of scope are never added to the worklist and any out-of-scope IR
+  // modifications trigger an assertion when expensive expensive checks are
+  // enabled (as long as the rewriter API is used correctly).
+  assert(
+      config.scope->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+      "greedy pattern rewrite scope must be IsolatedFromAbove");
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   if (failed(verify(config.scope->getParentOp())))
@@ -983,7 +1034,8 @@ LogicalResult MultiOpPatternRewriteDriver::simplify(ArrayRef<Operation *> ops,
   return success(worklist.empty());
 }
 
-/// Find the region that is the closest common ancestor of all given ops.
+/// Find the IsolateFromAbove region that is the closest common ancestor of all
+/// given ops.
 ///
 /// Note: This function returns `nullptr` if there is a top-level op among the
 /// given list of ops.
@@ -993,6 +1045,7 @@ static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
   if (ops.size() == 1)
     return ops.front()->getParentRegion();
 
+  // Find the closest region that contains all ops.
   Region *region = ops.front()->getParentRegion();
   ops = ops.drop_front();
   int sz = ops.size();
@@ -1009,6 +1062,12 @@ static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
       break;
     region = region->getParentRegion();
   }
+
+  // Find the closest IsolatedFromAbove region.
+  while (region &&
+         !region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+    region = region->getParentRegion();
+
   return region;
 }
 
@@ -1029,8 +1088,16 @@ LogicalResult mlir::applyOpPatternsAndFold(
     // there is a top-level op among `ops`.
     config.scope = findCommonAncestor(ops);
   } else {
-    // If a scope was provided, make sure that all ops are in scope.
+    // If a scope was provided, make sure that it is IsolatedFromAbove and that
+    // all ops are in scope.
 #ifndef NDEBUG
+    // The scope of a greedy pattern rewrite must be IsolatedFromAbove. Ops that
+    // are out of scope are never added to the worklist and any out-of-scope IR
+    // modifications trigger an assertion when expensive expensive checks are
+    // enabled (as long as the rewriter API is used correctly).
+    assert(
+        config.scope->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+        "greedy pattern rewrite scope must be IsolatedFromAbove");
     bool allOpsInScope = llvm::all_of(ops, [&](Operation *op) {
       return static_cast<bool>(config.scope->findAncestorOpInRegion(*op));
     });
