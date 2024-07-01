@@ -53,10 +53,10 @@ def yaml_to_classes(yaml_data):
         standards = (function_data.get("standards", None),)
         header.add_function(
             Function(
-                standards,
                 function_data["return_type"],
                 function_data["name"],
                 arguments,
+                standards,
                 guard,
                 attributes,
             )
@@ -118,14 +118,13 @@ def parse_function_details(details):
     attributes = attributes.split(",") if attributes != "null" else []
 
     return Function(
-        name=name,
-        standards=standards,
         return_type=return_type,
+        name=name,
         arguments=arguments,
+        standards=standards,
         guard=guard if guard != "null" else None,
-        attributes=attributes if attributes else None,
+        attributes=attributes if attributes else []
     )
-
 
 def add_function_to_yaml(yaml_file, function_details):
     """
