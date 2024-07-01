@@ -1,14 +1,15 @@
-//===---- X86FixupStackProtector.cpp Fix Stack Protector Call ----------===//
+//===---- X86FixupBufferSecurityCheck.cpp Fix Buffer Security Check Call
+//----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Stack Protector implementation inserts platform specific callback into code.
-// For windows __security_check_cookie call gets call everytime function is
-// return without fixup. Since this function is defined in runtime library, it
-// incures cost of call in dll which simply does comparison and returns most
+// Buffer Security Check implementation inserts platform specific callback into
+// code. For windows __security_check_cookie call gets call everytime function
+// is return without fixup. Since this function is defined in runtime library,
+// it incures cost of call in dll which simply does comparison and returns most
 // time. With Fixup, We selective move to call in DLL only if comparison fails.
 //===----------------------------------------------------------------------===//
 
@@ -25,17 +26,19 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-fixup-spcall"
+#define DEBUG_TYPE "x86-fixup-bscheck"
 
 namespace {
 
-class X86FixupStackProtectorPass : public MachineFunctionPass {
+class X86WinFixupBufferSecurityCheckPass : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86FixupStackProtectorPass() : MachineFunctionPass(ID) {}
+  X86WinFixupBufferSecurityCheckPass() : MachineFunctionPass(ID) {}
 
-  StringRef getPassName() const override { return "X86 Fixup Stack Protector"; }
+  StringRef getPassName() const override {
+    return "X86 Fixup Buffer Security Check";
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -44,7 +47,7 @@ public:
 
   void getGuardCheckSequence(MachineBasicBlock *CurMBB, MachineInstr *CheckCall,
                              MachineInstr *SeqMI[5]);
- 
+
   void SplitBasicBlock(MachineBasicBlock *CurMBB, MachineBasicBlock *NewRetMBB,
                        MachineBasicBlock::iterator SplitIt);
 
@@ -58,23 +61,24 @@ public:
 };
 } // end anonymous namespace
 
-char X86FixupStackProtectorPass::ID = 0;
+char X86WinFixupBufferSecurityCheckPass::ID = 0;
 
-INITIALIZE_PASS(X86FixupStackProtectorPass, DEBUG_TYPE, DEBUG_TYPE, false,
-                false)
+INITIALIZE_PASS(X86WinFixupBufferSecurityCheckPass, DEBUG_TYPE, DEBUG_TYPE,
+                false, false)
 
-FunctionPass *llvm::createX86FixupStackProtectorPass() {
-  return new X86FixupStackProtectorPass();
+FunctionPass *llvm::createX86WinFixupBufferSecurityCheckPass() {
+  return new X86WinFixupBufferSecurityCheckPass();
 }
 
-void X86FixupStackProtectorPass::SplitBasicBlock(
+void X86WinFixupBufferSecurityCheckPass::SplitBasicBlock(
     MachineBasicBlock *CurMBB, MachineBasicBlock *NewRetMBB,
     MachineBasicBlock::iterator SplitIt) {
   NewRetMBB->splice(NewRetMBB->end(), CurMBB, SplitIt, CurMBB->end());
 }
 
 std::pair<MachineBasicBlock *, MachineInstr *>
-X86FixupStackProtectorPass::getSecurityCheckerBasicBlock(MachineFunction &MF) {
+X86WinFixupBufferSecurityCheckPass::getSecurityCheckerBasicBlock(
+    MachineFunction &MF) {
   MachineBasicBlock::reverse_iterator RBegin, REnd;
 
   for (auto &MBB : llvm::reverse(MF)) {
@@ -96,7 +100,7 @@ X86FixupStackProtectorPass::getSecurityCheckerBasicBlock(MachineFunction &MF) {
   return std::make_pair(nullptr, nullptr);
 }
 
-void X86FixupStackProtectorPass::getGuardCheckSequence(
+void X86WinFixupBufferSecurityCheckPass::getGuardCheckSequence(
     MachineBasicBlock *CurMBB, MachineInstr *CheckCall,
     MachineInstr *SeqMI[5]) {
 
@@ -128,9 +132,9 @@ void X86FixupStackProtectorPass::getGuardCheckSequence(
 }
 
 std::pair<MachineInstr *, MachineInstr *>
-X86FixupStackProtectorPass::CreateFailCheckSequence(MachineBasicBlock *CurMBB,
-                                                    MachineBasicBlock *FailMBB,
-                                                    MachineInstr *SeqMI[5]) {
+X86WinFixupBufferSecurityCheckPass::CreateFailCheckSequence(
+    MachineBasicBlock *CurMBB, MachineBasicBlock *FailMBB,
+    MachineInstr *SeqMI[5]) {
 
   auto MF = CurMBB->getParent();
 
@@ -162,13 +166,13 @@ X86FixupStackProtectorPass::CreateFailCheckSequence(MachineBasicBlock *CurMBB,
   return std::make_pair(CMI.getInstr(), JMI.getInstr());
 }
 
-void X86FixupStackProtectorPass::FinishBlock(MachineBasicBlock *MBB) {
+void X86WinFixupBufferSecurityCheckPass::FinishBlock(MachineBasicBlock *MBB) {
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *MBB);
 }
 
-void X86FixupStackProtectorPass::FinishFunction(MachineBasicBlock *FailMBB,
-                                                MachineBasicBlock *NewRetMBB) {
+void X86WinFixupBufferSecurityCheckPass::FinishFunction(
+    MachineBasicBlock *FailMBB, MachineBasicBlock *NewRetMBB) {
   FailMBB->getParent()->RenumberBlocks();
   // FailMBB includes call to MSCV RT  where is __security_check_cookie
   // function is called. This function uses regcall and it expects cookie
@@ -179,7 +183,8 @@ void X86FixupStackProtectorPass::FinishFunction(MachineBasicBlock *FailMBB,
   FinishBlock(NewRetMBB);
 }
 
-bool X86FixupStackProtectorPass::runOnMachineFunction(MachineFunction &MF) {
+bool X86WinFixupBufferSecurityCheckPass::runOnMachineFunction(
+    MachineFunction &MF) {
   bool Changed = false;
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
 

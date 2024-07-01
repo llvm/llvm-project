@@ -48,7 +48,7 @@ set(sources
   X86AvoidStoreForwardingBlocks.cpp
   X86DynAllocaExpander.cpp
   X86FixupSetCC.cpp
-  X86FixupStackProtector.cpp
+  X86WinFixupBufferSecurityCheck.cpp
   X86FlagsCopyLowering.cpp
   X86FloatingPoint.cpp
   X86FrameLowering.cpp
