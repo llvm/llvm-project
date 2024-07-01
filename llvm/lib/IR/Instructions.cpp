@@ -1190,7 +1190,7 @@ static Align computeAllocaDefaultAlign(Type *Ty, InsertPosition Pos) {
   BasicBlock *BB = Pos.getBasicBlock();
   assert(BB->getParent() &&
          "BB must be in a Function when alignment not provided!");
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
   return DL.getPrefTypeAlign(Ty);
 }
 
@@ -1248,7 +1248,7 @@ static Align computeLoadStoreDefaultAlign(Type *Ty, InsertPosition Pos) {
   BasicBlock *BB = Pos.getBasicBlock();
   assert(BB->getParent() &&
          "BB must be in a Function when alignment not provided!");
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
   return DL.getABITypeAlign(Ty);
 }
 
@@ -4002,11 +4002,7 @@ void SwitchInstProfUpdateWrapper::init() {
   if (!ProfileData)
     return;
 
-  // FIXME: This check belongs in ProfDataUtils. Its almost equivalent to
-  // getValidBranchWeightMDNode(), but the need to use llvm_unreachable
-  // makes them slightly different.
-  if (ProfileData->getNumOperands() !=
-      SI.getNumSuccessors() + getBranchWeightOffset(ProfileData)) {
+  if (getNumBranchWeights(*ProfileData) != SI.getNumSuccessors()) {
     llvm_unreachable("number of prof branch_weights metadata operands does "
                      "not correspond to number of succesors");
   }

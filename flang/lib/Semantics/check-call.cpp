@@ -67,11 +67,9 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         messages.Say(
             "Coarray argument requires an explicit interface"_err_en_US);
       }
-      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-        if (details->IsAssumedRank()) {
-          messages.Say(
-              "Assumed rank argument requires an explicit interface"_err_en_US);
-        }
+      if (evaluate::IsAssumedRank(symbol)) {
+        messages.Say(
+            "Assumed rank argument requires an explicit interface"_err_en_US);
       }
       if (symbol.attrs().test(Attr::ASYNCHRONOUS)) {
         messages.Say(

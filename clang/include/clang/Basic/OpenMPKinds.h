@@ -368,6 +368,14 @@ bool needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind);
 /// is restricted only to memory order clauses of "OMPC_acquire",
 /// "OMPC_relaxed" and "OMPC_seq_cst".
 bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
+
+/// Checks if the specified directive is considered as "executable". This
+/// combines the OpenMP categories of "executable" and "subsidiary", plus
+/// any other directives that should be treated as executable.
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
 }
 
 #endif
