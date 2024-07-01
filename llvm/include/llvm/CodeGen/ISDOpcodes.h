@@ -647,6 +647,14 @@ enum NodeType {
   /// non-constant operands.
   STEP_VECTOR,
 
+  /// VECTOR_COMPRESS(Vec, Mask, Passthru)
+  /// consecutively place vector elements based on mask
+  /// e.g., vec = {A, B, C, D} and mask = {1, 0, 1, 0}
+  ///         --> {A, C, ?, ?} where ? is undefined
+  /// If passthru is defined, ?s are replaced with elements from passthru.
+  /// If passthru is undef, ?s remain undefined.
+  VECTOR_COMPRESS,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
@@ -1301,14 +1309,6 @@ enum NodeType {
   // OutChain = MSTORE(Value, BasePtr, Mask)
   MLOAD,
   MSTORE,
-
-  // MASKED_COMPRESS(Vec, Mask, Passthru)
-  // consecutively place vector elements based on mask
-  // e.g., vec = {A, B, C, D} and mask = {1, 0, 1, 0}
-  //         --> {A, C, ?, ?} where ? is undefined
-  // If passthru is defined, ?s are replaced with elements from passthru.
-  // If passthru is undef, ?s remain undefined.
-  MASKED_COMPRESS,
 
   // Masked gather and scatter - load and store operations for a vector of
   // random addresses with additional mask operand that prevents memory

@@ -11336,7 +11336,7 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                      MachinePointerInfo::getUnknownStack(MF));
 }
 
-SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
+SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Node);
   SDValue Vec = Node->getOperand(0);

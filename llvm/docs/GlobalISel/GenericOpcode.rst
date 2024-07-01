@@ -710,7 +710,7 @@ The type of the operand must be equal to or larger than the vector element
 type. If the operand is larger than the vector element type, the scalar is
 implicitly truncated to the vector element type.
 
-G_MASKED_COMPRESS
+G_VECTOR_COMPRESS
 ^^^^^^^^^^^^^^^^^
 
 Given an input vector, a mask vector, and a passthru vector, continuously place

@@ -7507,7 +7507,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
-  case ISD::MASKED_COMPRESS: {
+  case ISD::VECTOR_COMPRESS: {
     EVT VecVT = N1.getValueType();
     [[maybe_unused]] EVT MaskVT = N2.getValueType();
     [[maybe_unused]] EVT PassthruVT = N3.getValueType();

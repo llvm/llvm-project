@@ -1501,7 +1501,7 @@ def G_SPLAT_VECTOR: GenericInstruction {
 }
 
 // Generic masked compress.
-def G_MASKED_COMPRESS: GenericInstruction {
+def G_VECTOR_COMPRESS: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$vec, type1:$mask, type0:$passthru);
   let hasSideEffects = false;

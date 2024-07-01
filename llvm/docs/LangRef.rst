@@ -19235,9 +19235,9 @@ the follow sequence of operations:
 The ``mask`` operand will apply to at least the gather and scatter operations.
 
 
-.. _int_masked_compress:
+.. _int_vector_compress:
 
-'``llvm.masked.compress.*``' Intrinsics
+'``llvm.experimental.vector.compress.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 LLVM provides an intrinsic for compressing data within a vector based on a selection mask.
@@ -19252,8 +19252,8 @@ The remaining lanes are filled with values from ``passthru``.
 
 :: code-block:: llvm
 
-      declare <8 x i32> @llvm.masked.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>, <8 x i32> <passthru>)
-      declare <16 x float> @llvm.masked.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>, <16 x float> undef)
+      declare <8 x i32> @llvm.experimental.vector.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>, <8 x i32> <passthru>)
+      declare <16 x float> @llvm.experimental.vector.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>, <16 x float> undef)
 
 Overview:
 """""""""
@@ -19294,7 +19294,7 @@ The input and passthru vectors must have the same type.
 Semantics:
 """"""""""
 
-The ``llvm.masked.compress`` intrinsic compresses data within a vector.
+The ``llvm.experimental.vector.compress`` intrinsic compresses data within a vector.
 It collects elements from possibly non-adjacent lanes of a vector and place
 them contiguously in the result vector based on a selection mask and fill the
 remaining lanes with values from ``passthru``.

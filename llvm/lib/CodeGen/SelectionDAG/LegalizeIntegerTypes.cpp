@@ -87,8 +87,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MGATHER:     Res = PromoteIntRes_MGATHER(cast<MaskedGatherSDNode>(N));
     break;
-  case ISD::MASKED_COMPRESS:
-    Res = PromoteIntRes_MASKED_COMPRESS(N);
+  case ISD::VECTOR_COMPRESS:
+    Res = PromoteIntRes_VECTOR_COMPRESS(N);
     break;
   case ISD::SELECT:
   case ISD::VSELECT:
@@ -971,10 +971,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
   return Res;
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_MASKED_COMPRESS(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_COMPRESS(SDNode *N) {
   SDValue Vec = GetPromotedInteger(N->getOperand(0));
   SDValue Passthru = GetPromotedInteger(N->getOperand(2));
-  return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
+  return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
                      N->getOperand(1), Passthru);
 }
 
@@ -1926,8 +1926,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                                                  OpNo); break;
   case ISD::MSCATTER: Res = PromoteIntOp_MSCATTER(cast<MaskedScatterSDNode>(N),
                                                   OpNo); break;
-  case ISD::MASKED_COMPRESS:
-    Res = PromoteIntOp_MASKED_COMPRESS(N, OpNo);
+  case ISD::VECTOR_COMPRESS:
+    Res = PromoteIntOp_VECTOR_COMPRESS(N, OpNo);
     break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
@@ -2423,14 +2423,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
                               N->getIndexType(), TruncateStore);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_MASKED_COMPRESS(SDNode *N,
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_COMPRESS(SDNode *N,
                                                        unsigned OpNo) {
-  assert(OpNo == 1 && "Can only promote MASKED_COMPRESS mask.");
+  assert(OpNo == 1 && "Can only promote VECTOR_COMPRESS mask.");
   SDValue Vec = N->getOperand(0);
   EVT VT = Vec.getValueType();
   SDValue Passthru = N->getOperand(2);
   SDValue Mask = PromoteTargetBoolean(N->getOperand(1), VT);
-  return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
+  return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {

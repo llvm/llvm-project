@@ -28,7 +28,7 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    st1.s { v0 }[3], [x11]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> undef)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> undef)
     ret <4 x i32> %out
 }
 
@@ -78,7 +78,7 @@ define <4 x i32> @test_compress_v4i32_with_passthru(<4 x i32> %vec, <4 x i1> %ma
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> %passthru)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> %passthru)
     ret <4 x i32> %out
 }
 
@@ -97,7 +97,7 @@ define <2 x double> @test_compress_v2f64(<2 x double> %vec, <2 x i1> %mask) {
 ; CHECK-NEXT:    st1.d { v0 }[1], [x8]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
-    %out = call <2 x double> @llvm.masked.compress.v2f64(<2 x double> %vec, <2 x i1> %mask, <2 x double> undef)
+    %out = call <2 x double> @llvm.experimental.vector.compress.v2f64(<2 x double> %vec, <2 x i1> %mask, <2 x double> undef)
     ret <2 x double> %out
 }
 
@@ -197,7 +197,7 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 ; CHECK-NEXT:    st1.b { v0 }[15], [x8]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
-    %out = call <16 x i8> @llvm.masked.compress(<16 x i8> %vec, <16 x i1> %mask, <16 x i8> undef)
+    %out = call <16 x i8> @llvm.experimental.vector.compress(<16 x i8> %vec, <16 x i1> %mask, <16 x i8> undef)
     ret <16 x i8> %out
 }
 
@@ -249,7 +249,7 @@ define <8 x i32> @test_compress_large(<8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-NEXT:    st1.s { v1 }[3], [x8]
 ; CHECK-NEXT:    ldp q0, q1, [sp], #32
 ; CHECK-NEXT:    ret
-    %out = call <8 x i32> @llvm.masked.compress(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> undef)
+    %out = call <8 x i32> @llvm.experimental.vector.compress(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> undef)
     ret <8 x i32> %out
 }
 
@@ -262,7 +262,7 @@ define <4 x i32> @test_compress_all_const() {
 ; CHECK-NEXT:    ldr q0, [x8, lCPI5_0@PAGEOFF]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> <i32 3, i32 5, i32 7, i32 9>,
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> <i32 3, i32 5, i32 7, i32 9>,
                                                 <4 x i1>   <i1 0,  i1 1,  i1 0,  i1 1>,
                                                 <4 x i32> undef)
     ret <4 x i32> %out
@@ -273,7 +273,7 @@ define <4 x i32> @test_compress_const_mask(<4 x i32> %vec) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov.s v0[1], v0[3]
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 undef, i1 0, i1 1>, <4 x i32> undef)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 undef, i1 0, i1 1>, <4 x i32> undef)
     ret <4 x i32> %out
 }
 
@@ -284,7 +284,7 @@ define <4 x i32> @test_compress_const_mask_passthrough(<4 x i32> %vec, <4 x i32>
 ; CHECK-NEXT:    mov.s v1[0], v0[0]
 ; CHECK-NEXT:    mov.16b v0, v1
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 undef, i1 0, i1 1>, <4 x i32> %passthru)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 undef, i1 0, i1 1>, <4 x i32> %passthru)
     ret <4 x i32> %out
 }
 
@@ -297,7 +297,7 @@ define <4 x i32> @test_compress_const_mask_const_passthrough(<4 x i32> %vec) {
 ; CHECK-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-NEXT:    mov.s v0[3], w8
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
     ret <4 x i32> %out
 }
 
@@ -308,21 +308,21 @@ define <4 x i32> @test_compress_const_splat1_mask(<4 x i32> %ignore, <4 x i32> %
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov.16b v0, v1
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> splat (i1 -1), <4 x i32> undef)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> splat (i1 -1), <4 x i32> undef)
     ret <4 x i32> %out
 }
 define <4 x i32> @test_compress_const_splat0_mask(<4 x i32> %ignore, <4 x i32> %vec) {
 ; CHECK-LABEL: test_compress_const_splat0_mask:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> undef)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> undef)
     ret <4 x i32> %out
 }
 define <4 x i32> @test_compress_undef_mask(<4 x i32> %ignore, <4 x i32> %vec) {
 ; CHECK-LABEL: test_compress_undef_mask:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> undef, <4 x i32> undef)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> undef, <4 x i32> undef)
     ret <4 x i32> %out
 }
 define <4 x i32> @test_compress_const_splat0_mask_with_passthru(<4 x i32> %ignore, <4 x i32> %vec, <4 x i32> %passthru) {
@@ -330,14 +330,14 @@ define <4 x i32> @test_compress_const_splat0_mask_with_passthru(<4 x i32> %ignor
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> %passthru)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> %passthru)
     ret <4 x i32> %out
 }
 define <4 x i32> @test_compress_const_splat0_mask_without_passthru(<4 x i32> %ignore, <4 x i32> %vec) {
 ; CHECK-LABEL: test_compress_const_splat0_mask_without_passthru:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> undef)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> undef)
     ret <4 x i32> %out
 }
 
@@ -369,7 +369,7 @@ define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-    %out = call <4 x i8> @llvm.masked.compress(<4 x i8> %vec, <4 x i1> %mask, <4 x i8> undef)
+    %out = call <4 x i8> @llvm.experimental.vector.compress(<4 x i8> %vec, <4 x i1> %mask, <4 x i8> undef)
     ret <4 x i8> %out
 }
 
@@ -401,7 +401,7 @@ define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mas
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-    %out = call <4 x i4> @llvm.masked.compress(<4 x i4> %vec, <4 x i1> %mask, <4 x i4> undef)
+    %out = call <4 x i4> @llvm.experimental.vector.compress(<4 x i4> %vec, <4 x i1> %mask, <4 x i4> undef)
     ret <4 x i4> %out
 }
 
@@ -436,7 +436,7 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) {
 ; CHECK-NEXT:    st1.s { v0 }[3], [x10]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
-    %out = call <3 x i32> @llvm.masked.compress(<3 x i32> %vec, <3 x i1> %mask, <3 x i32> undef)
+    %out = call <3 x i32> @llvm.experimental.vector.compress(<3 x i32> %vec, <3 x i1> %mask, <3 x i32> undef)
     ret <3 x i32> %out
 }
 
@@ -469,6 +469,6 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; CHECK-NEXT:    umov.h w2, v0[2]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-    %out = call <3 x i3> @llvm.masked.compress(<3 x i3> %vec, <3 x i1> %mask, <3 x i3> undef)
+    %out = call <3 x i3> @llvm.experimental.vector.compress(<3 x i3> %vec, <3 x i1> %mask, <3 x i3> undef)
     ret <3 x i3> %out
 }

@@ -449,7 +449,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
-  case ISD::MASKED_COMPRESS:
+  case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
@@ -1118,8 +1118,8 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
-  case ISD::MASKED_COMPRESS:
-    Results.push_back(TLI.expandMASKED_COMPRESS(Node, DAG));
+  case ISD::VECTOR_COMPRESS:
+    Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
     return;
   }
 
