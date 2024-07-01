@@ -1201,7 +1201,7 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case RISCVAttrs::PRIV_SPEC_REVISION:
         break;
 
-      case llvm::RISCVAttrs::AttrType::ATOMIC_ABI:
+      case RISCVAttrs::AttrType::ATOMIC_ABI:
         if (auto i = parser.getAttributeValue(tag.attr)) {
           auto r = merged.intAttr.try_emplace(tag.attr, *i);
           if (r.second)
