@@ -177,21 +177,21 @@ bool RISCVISAInfo::addExtension(StringRef ExtName,
 }
 
 static StringRef getExtensionTypeDesc(StringRef Ext) {
-  if (Ext.starts_with("s"))
+  if (Ext.starts_with('s'))
     return "standard supervisor-level extension";
-  if (Ext.starts_with("x"))
+  if (Ext.starts_with('x'))
     return "non-standard user-level extension";
-  if (Ext.starts_with("z"))
+  if (Ext.starts_with('z'))
     return "standard user-level extension";
   return StringRef();
 }
 
 static StringRef getExtensionType(StringRef Ext) {
-  if (Ext.starts_with("s"))
+  if (Ext.starts_with('s'))
     return "s";
-  if (Ext.starts_with("x"))
+  if (Ext.starts_with('x'))
     return "x";
-  if (Ext.starts_with("z"))
+  if (Ext.starts_with('z'))
     return "z";
   return StringRef();
 }
@@ -287,7 +287,7 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
   return Features;
 }
 
-static Error getStringErrorForInvalidExt(std::string_view ExtName) {
+static Error getStringErrorForInvalidExt(StringRef ExtName) {
   if (ExtName.size() == 1) {
     return createStringError(errc::invalid_argument,
                              "unsupported standard user-level extension '" +
@@ -521,87 +521,6 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   return std::move(ISAInfo);
 }
 
-static Error processMultiLetterExtension(
-    StringRef RawExt,
-    MapVector<std::string, RISCVISAUtils::ExtensionVersion,
-              std::map<std::string, unsigned>> &SeenExtMap,
-    bool IgnoreUnknown, bool EnableExperimentalExtension,
-    bool ExperimentalExtensionVersionCheck) {
-  StringRef Type = getExtensionType(RawExt);
-  StringRef Desc = getExtensionTypeDesc(RawExt);
-  auto Pos = findLastNonVersionCharacter(RawExt) + 1;
-  StringRef Name(RawExt.substr(0, Pos));
-  StringRef Vers(RawExt.substr(Pos));
-
-  if (Type.empty()) {
-    if (IgnoreUnknown)
-      return Error::success();
-    return createStringError(errc::invalid_argument,
-                             "invalid extension prefix '" + RawExt + "'");
-  }
-
-  if (!IgnoreUnknown && Name.size() == Type.size())
-    return createStringError(errc::invalid_argument,
-                             Desc + " name missing after '" + Type + "'");
-
-  unsigned Major, Minor, ConsumeLength;
-  if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
-                                   EnableExperimentalExtension,
-                                   ExperimentalExtensionVersionCheck)) {
-    if (IgnoreUnknown) {
-      consumeError(std::move(E));
-      return Error::success();
-    }
-    return E;
-  }
-
-  // Check if duplicated extension.
-  if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
-    return createStringError(errc::invalid_argument,
-                             "duplicated " + Desc + " '" + Name + "'");
-
-  if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
-    return Error::success();
-
-  SeenExtMap[Name.str()] = {Major, Minor};
-  return Error::success();
-}
-
-static Error processSingleLetterExtension(
-    StringRef &RawExt,
-    MapVector<std::string, RISCVISAUtils::ExtensionVersion,
-              std::map<std::string, unsigned>> &SeenExtMap,
-    bool IgnoreUnknown, bool EnableExperimentalExtension,
-    bool ExperimentalExtensionVersionCheck) {
-  unsigned Major, Minor, ConsumeLength;
-  StringRef Name = RawExt.take_front(1);
-  RawExt.consume_front(Name);
-  if (auto E = getExtensionVersion(Name, RawExt, Major, Minor, ConsumeLength,
-                                   EnableExperimentalExtension,
-                                   ExperimentalExtensionVersionCheck)) {
-    if (IgnoreUnknown) {
-      consumeError(std::move(E));
-      RawExt = RawExt.substr(ConsumeLength);
-      return Error::success();
-    }
-    return E;
-  }
-
-  RawExt = RawExt.substr(ConsumeLength);
-
-  // Check if duplicated extension.
-  if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
-    return createStringError(errc::invalid_argument,
-                             "duplicated standard user-level extension '" +
-                                 Name + "'");
-
-  if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
-    return Error::success();
-
-  SeenExtMap[Name.str()] = {Major, Minor};
-  return Error::success();
-}
-
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                               bool ExperimentalExtensionVersionCheck,
@@ -738,11 +657,12 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     Exts = Exts.slice(Idx, StringRef::npos);
 
     do {
+      StringRef Name, Vers, Desc;
       if (RISCVISAUtils::AllStdExts.contains(Ext.front())) {
-        if (auto E = processSingleLetterExtension(
-                Ext, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
-                ExperimentalExtensionVersionCheck))
-          return std::move(E);
+        Name = Ext.take_front(1);
+        Ext = Ext.drop_front();
+        Vers = Ext;
+        Desc = "standard user-level extension";
       } else if (Ext.front() == 'z' || Ext.front() == 's' ||
                  Ext.front() == 'x') {
         // Handle other types of extensions other than the standard
@@ -753,19 +673,49 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         // These extensions start with 'z', 's', 'x' prefixes, might have a
         // version number (major, minor) and are separated by a single
         // underscore '_'. We do not enforce a canonical order for them.
-        if (auto E = processMultiLetterExtension(
-                Ext, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
-                ExperimentalExtensionVersionCheck))
-          return std::move(E);
-        // Multi-letter extension must be separate following extension with
-        // underscore
-        break;
+        StringRef Type = getExtensionType(Ext);
+        Desc = getExtensionTypeDesc(Ext);
+        auto Pos = findLastNonVersionCharacter(Ext) + 1;
+        Name = Ext.substr(0, Pos);
+        Vers = Ext.substr(Pos);
+        Ext = StringRef();
+
+        assert(!Type.empty() && "Empty type?");
+        if (!IgnoreUnknown && Name.size() == Type.size())
+          return createStringError(errc::invalid_argument,
+                                   Desc + " name missing after '" + Type + "'");
       } else {
         // FIXME: Could it be ignored by IgnoreUnknown?
         return createStringError(errc::invalid_argument,
                                  "invalid standard user-level extension '" +
                                      Twine(Ext.front()) + "'");
       }
+
+      unsigned Major, Minor, ConsumeLength;
+      if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
+                                       EnableExperimentalExtension,
+                                       ExperimentalExtensionVersionCheck)) {
+        if (IgnoreUnknown) {
+          consumeError(std::move(E));
+          if (Name.size() == 1)
+            Ext = Ext.substr(ConsumeLength);
+          continue;
+        }
+        return E;
+      }
+
+      if (Name.size() == 1)
+        Ext = Ext.substr(ConsumeLength);
+
+      // Check if duplicated extension.
+      if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
+        return createStringError(errc::invalid_argument,
+                                 "duplicated " + Desc + " '" + Name + "'");
+
+      if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
+        continue;
+
+      SeenExtMap[Name.str()] = {Major, Minor};
     } while (!Ext.empty());
   }
 
@@ -890,9 +840,9 @@ void RISCVISAInfo::updateImplication() {
 
   // This loop may execute over 1 iteration since implication can be layered
   // Exits loop if no more implication is applied
-  SmallSetVector<StringRef, 16> WorkList;
+  SmallVector<StringRef, 16> WorkList;
   for (auto const &Ext : Exts)
-    WorkList.insert(Ext.first);
+    WorkList.push_back(Ext.first);
 
   while (!WorkList.empty()) {
     StringRef ExtName = WorkList.pop_back_val();
@@ -901,13 +851,11 @@ void RISCVISAInfo::updateImplication() {
     std::for_each(Range.first, Range.second,
                   [&](const ImpliedExtsEntry &Implied) {
                     const char *ImpliedExt = Implied.ImpliedExt;
-                    if (WorkList.count(ImpliedExt))
-                      return;
                     if (Exts.count(ImpliedExt))
                       return;
                     auto Version = findDefaultVersion(ImpliedExt);
                     addExtension(ImpliedExt, *Version);
-                    WorkList.insert(ImpliedExt);
+                    WorkList.push_back(ImpliedExt);
                   });
   }
 

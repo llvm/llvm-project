@@ -85,9 +85,10 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
   }
 
   if (RiscvAbiAttr && STI.hasFeature(RISCV::FeatureStdExtA)) {
-    unsigned AtomicABITag = STI.hasFeature(RISCV::FeatureTrailingSeqCstFence)
-                                ? RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6S
-                                : RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6C;
+    unsigned AtomicABITag =
+        static_cast<unsigned>(STI.hasFeature(RISCV::FeatureTrailingSeqCstFence)
+                                  ? RISCVAttrs::RISCVAtomicAbiTag::A6S
+                                  : RISCVAttrs::RISCVAtomicAbiTag::A6C);
     emitAttribute(RISCVAttrs::ATOMIC_ABI, AtomicABITag);
   }
 }

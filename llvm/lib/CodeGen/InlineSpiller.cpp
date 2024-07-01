@@ -70,8 +70,6 @@ STATISTIC(NumFolded,          "Number of folded stack accesses");
 STATISTIC(NumFoldedLoads,     "Number of folded loads");
 STATISTIC(NumRemats,          "Number of rematerialized defs for spilling");
 
-static cl::opt<bool> DisableHoisting("disable-spill-hoist", cl::Hidden,
-                                     cl::desc("Disable inline spill hoisting"));
 static cl::opt<bool>
 RestrictStatepointRemat("restrict-statepoint-remat",
                        cl::init(false), cl::Hidden,

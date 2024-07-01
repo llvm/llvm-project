@@ -45,6 +45,8 @@ constexpr int Failed2 = Failed1 + 1; // both-error {{must be initialized by a co
 static_assert(Failed2 == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{initializer of 'Failed2' is not a constant expression}}
 
+const int x = *(volatile int*)0x1234;
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");
@@ -1210,6 +1212,18 @@ constexpr int externvar1() { // both-error {{never produces a constant expressio
   extern char arr[]; // ref-note {{declared here}}
    return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
                   // expected-note {{indexing of array without known bound}}
+}
+
+namespace StmtExprs {
+  constexpr int foo() {
+     ({
+       int i;
+       for (i = 0; i < 76; i++) {}
+       i; // both-warning {{expression result unused}}
+    });
+    return 76;
+  }
+  static_assert(foo() == 76, "");
 }
 #endif
 

@@ -108,7 +108,7 @@ struct ELFWriter {
     DwoOnly,
   } Mode;
 
-  static uint64_t SymbolValue(const MCSymbol &Sym, const MCAsmLayout &Layout);
+  static uint64_t symbolValue(const MCSymbol &Sym, const MCAssembler &Asm);
   static bool isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
                          bool Used, bool Renamed);
 
@@ -254,9 +254,9 @@ public:
     return true;
   }
 
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override;
   bool usesRela(const MCSectionELF &Sec) const;
 
   void executePostLayoutBinding(MCAssembler &Asm,
@@ -454,16 +454,15 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   W.write<uint16_t>(StringTableIndex);
 }
 
-uint64_t ELFWriter::SymbolValue(const MCSymbol &Sym,
-                                const MCAsmLayout &Layout) {
+uint64_t ELFWriter::symbolValue(const MCSymbol &Sym, const MCAssembler &Asm) {
   if (Sym.isCommon())
     return Sym.getCommonAlignment()->value();
 
   uint64_t Res;
-  if (!Layout.getSymbolOffset(Sym, Res))
+  if (!Asm.getSymbolOffset(Sym, Res))
     return 0;
 
-  if (Layout.getAssembler().isThumbFunc(&Sym))
+  if (Asm.isThumbFunc(&Sym))
     Res |= 1;
 
   return Res;
@@ -542,7 +541,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   uint8_t Visibility = Symbol.getVisibility();
   uint8_t Other = Symbol.getOther() | Visibility;
 
-  uint64_t Value = SymbolValue(*MSD.Symbol, Layout);
+  uint64_t Value = symbolValue(*MSD.Symbol, Layout.getAssembler());
   uint64_t Size = 0;
 
   const MCExpr *ESize = MSD.Symbol->getSize();
@@ -1411,7 +1410,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
 }
 
 void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout,
                                        const MCFragment *Fragment,
                                        const MCFixup &Fixup, MCValue Target,
                                        uint64_t &FixedValue) {
@@ -1420,7 +1418,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                  MCFixupKindInfo::FKF_IsPCRel;
   const MCSectionELF &FixupSection = cast<MCSectionELF>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
-  uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+  uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   MCContext &Ctx = Asm.getContext();
 
   if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
@@ -1442,7 +1440,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
     assert(!IsPCRel && "should have been folded");
     IsPCRel = true;
-    C += FixupOffset - Layout.getSymbolOffset(SymB);
+    C += FixupOffset - Asm.getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -1475,7 +1473,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   uint64_t Addend = 0;
 
   FixedValue = !RelocateWithSymbol && SymA && !SymA->isUndefined()
-                   ? C + Layout.getSymbolOffset(*SymA)
+                   ? C + Asm.getSymbolOffset(*SymA)
                    : C;
   if (usesRela(FixupSection)) {
     Addend = FixedValue;
@@ -1521,8 +1519,7 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
         SymA.getType() == ELF::STT_GNU_IFUNC)
       return false;
   }
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
-                                                                InSet, IsPCRel);
+  return &SymA.getSection() == FB.getParent();
 }
 
 std::unique_ptr<MCObjectWriter>

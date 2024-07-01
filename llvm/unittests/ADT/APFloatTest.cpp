@@ -631,6 +631,100 @@ TEST(APFloatTest, Maximum) {
   EXPECT_TRUE(std::isnan(maximum(nan, f1).convertToDouble()));
 }
 
+TEST(APFloatTest, MinimumNumber) {
+  APFloat f1(1.0);
+  APFloat f2(2.0);
+  APFloat zp(0.0);
+  APFloat zn(-0.0);
+  APInt intPayload_89ab(64, 0x89ab);
+  APInt intPayload_cdef(64, 0xcdef);
+  APFloat nan_0123[2] = {APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123),
+                         APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123)};
+  APFloat mnan_4567[2] = {APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567),
+                          APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567)};
+  APFloat nan_89ab[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), false, &intPayload_89ab),
+      APFloat::getNaN(APFloat::IEEEdouble(), false, 0x89ab)};
+  APFloat mnan_cdef[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
+      APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
+
+  EXPECT_TRUE(f1.bitwiseIsEqual(minimumnum(f1, f2)));
+  EXPECT_TRUE(f1.bitwiseIsEqual(minimumnum(f2, f1)));
+  EXPECT_TRUE(zn.bitwiseIsEqual(minimumnum(zp, zn)));
+  EXPECT_TRUE(zn.bitwiseIsEqual(minimumnum(zn, zp)));
+
+  EXPECT_TRUE(minimumnum(zn, zp).isNegative());
+  EXPECT_TRUE(minimumnum(zp, zn).isNegative());
+  EXPECT_TRUE(minimumnum(zn, zn).isNegative());
+  EXPECT_FALSE(minimumnum(zp, zp).isNegative());
+
+  for (APFloat n : {nan_0123[0], mnan_4567[0], nan_89ab[0], mnan_cdef[0]})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = minimumnum(f, n);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+      res = minimumnum(n, f);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+    }
+
+  // When NaN vs NaN, we should keep payload/sign of either one.
+  for (auto n1 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef})
+    for (auto n2 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef}) {
+      APFloat res = minimumnum(n1[0], n2[0]);
+      EXPECT_TRUE(res.bitwiseIsEqual(n1[1]) || res.bitwiseIsEqual(n2[1]));
+      EXPECT_FALSE(res.isSignaling());
+    }
+}
+
+TEST(APFloatTest, MaximumNumber) {
+  APFloat f1(1.0);
+  APFloat f2(2.0);
+  APFloat zp(0.0);
+  APFloat zn(-0.0);
+  APInt intPayload_89ab(64, 0x89ab);
+  APInt intPayload_cdef(64, 0xcdef);
+  APFloat nan_0123[2] = {APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123),
+                         APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123)};
+  APFloat mnan_4567[2] = {APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567),
+                          APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567)};
+  APFloat nan_89ab[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), false, &intPayload_89ab),
+      APFloat::getNaN(APFloat::IEEEdouble(), false, 0x89ab)};
+  APFloat mnan_cdef[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
+      APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
+
+  EXPECT_TRUE(f2.bitwiseIsEqual(maximumnum(f1, f2)));
+  EXPECT_TRUE(f2.bitwiseIsEqual(maximumnum(f2, f1)));
+  EXPECT_TRUE(zp.bitwiseIsEqual(maximumnum(zp, zn)));
+  EXPECT_TRUE(zp.bitwiseIsEqual(maximumnum(zn, zp)));
+
+  EXPECT_FALSE(maximumnum(zn, zp).isNegative());
+  EXPECT_FALSE(maximumnum(zp, zn).isNegative());
+  EXPECT_TRUE(maximumnum(zn, zn).isNegative());
+  EXPECT_FALSE(maximumnum(zp, zp).isNegative());
+
+  for (APFloat n : {nan_0123[0], mnan_4567[0], nan_89ab[0], mnan_cdef[0]})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = maximumnum(f, n);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+      res = maximumnum(n, f);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+    }
+
+  // When NaN vs NaN, we should keep payload/sign of either one.
+  for (auto n1 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef})
+    for (auto n2 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef}) {
+      APFloat res = maximumnum(n1[0], n2[0]);
+      EXPECT_TRUE(res.bitwiseIsEqual(n1[1]) || res.bitwiseIsEqual(n2[1]));
+      EXPECT_FALSE(res.isSignaling());
+    }
+}
+
 TEST(APFloatTest, Denormal) {
   APFloat::roundingMode rdmd = APFloat::rmNearestTiesToEven;
 
@@ -5414,8 +5508,8 @@ TEST(APFloatTest, ConvertE4M3FNToE5M2) {
   EXPECT_TRUE(losesInfo);
   EXPECT_EQ(status, APFloat::opInexact);
 
-  // Convert E4M3 denormal to E5M2 normal. Should not be truncated, despite the
-  // destination format having one fewer significand bit
+  // Convert E4M3FN denormal to E5M2 normal. Should not be truncated, despite
+  // the destination format having one fewer significand bit
   test = APFloat(APFloat::Float8E4M3FN(), "0x1.Cp-7");
   status = test.convert(APFloat::Float8E5M2(), APFloat::rmNearestTiesToEven,
                         &losesInfo);
@@ -5553,8 +5647,8 @@ TEST(APFloatTest, Float8E4M3FNAdd) {
     int category;
     APFloat::roundingMode roundingMode = APFloat::rmNearestTiesToEven;
   } AdditionTests[] = {
-      // Test addition operations involving NaN, overflow, and the max E4M3
-      // value (448) because E4M3 differs from IEEE-754 types in these regards
+      // Test addition operations involving NaN, overflow, and the max E4M3FN
+      // value (448) because E4M3FN differs from IEEE-754 types in these regards
       {FromStr("448"), FromStr("16"), "448", APFloat::opInexact,
        APFloat::fcNormal},
       {FromStr("448"), FromStr("18"), "NaN",
@@ -6184,8 +6278,8 @@ TEST(APFloatTest, ConvertE4M3FNUZToE5M2FNUZ) {
   EXPECT_TRUE(losesInfo);
   EXPECT_EQ(status, APFloat::opInexact);
 
-  // Convert E4M3 denormal to E5M2 normal. Should not be truncated, despite the
-  // destination format having one fewer significand bit
+  // Convert E4M3FNUZ denormal to E5M2 normal. Should not be truncated, despite
+  // the destination format having one fewer significand bit
   losesInfo = true;
   test = APFloat(APFloat::Float8E4M3FNUZ(), "0x1.Cp-8");
   status = test.convert(APFloat::Float8E5M2FNUZ(), APFloat::rmNearestTiesToEven,
