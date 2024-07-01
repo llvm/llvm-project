@@ -4159,6 +4159,17 @@ void AsmPrinter::emitStackMaps() {
     SM.serializeToStackMapSection();
 }
 
+void AsmPrinter::addAsmPrinterHandler(
+    std::unique_ptr<AsmPrinterHandler> Handler) {
+  Handlers.insert(Handlers.begin(), std::move(Handler));
+  NumUserHandlers++;
+}
+
+void AsmPrinter::addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler) {
+  DebugHandlers.insert(DebugHandlers.begin(), std::move(Handler));
+  NumUserDebugHandlers++;
+}
+
 /// Pin vtable to this file.
 AsmPrinterHandler::~AsmPrinterHandler() = default;
 

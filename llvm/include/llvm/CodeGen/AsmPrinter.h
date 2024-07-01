@@ -19,8 +19,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/AsmPrinterHandler.h"
-#include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -35,12 +33,14 @@
 namespace llvm {
 
 class AddrLabelMap;
+class AsmPrinterHandler;
 class BasicBlock;
 class BlockAddress;
 class Constant;
 class ConstantArray;
 class ConstantPtrAuth;
 class DataLayout;
+class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
@@ -519,15 +519,9 @@ public:
   // Overridable Hooks
   //===------------------------------------------------------------------===//
 
-  void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler) {
-    Handlers.insert(Handlers.begin(), std::move(Handler));
-    NumUserHandlers++;
-  }
+  void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler);
 
-  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler) {
-    DebugHandlers.insert(DebugHandlers.begin(), std::move(Handler));
-    NumUserDebugHandlers++;
-  }
+  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler);
 
   // Targets can, or in the case of EmitInstruction, must implement these to
   // customize output.
