@@ -2513,7 +2513,8 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
   for (const auto *Field : record->fields()) {
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
-    if (!Field->isBitField() && !Field->isZeroSize(CGM.getContext())) {
+    if (!Field->isBitField() &&
+        !isEmptyFieldForLayout(CGM.getContext(), Field)) {
       unsigned fieldIndex = layout.getLLVMFieldNo(Field);
       elements[fieldIndex] = CGM.EmitNullConstant(Field->getType());
     }
