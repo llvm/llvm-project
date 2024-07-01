@@ -129,12 +129,12 @@ public:
                                 mlir::omp::ReductionClauseOps &result) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processUseDeviceAddr(
-      mlir::omp::UseDeviceClauseOps &result,
+      mlir::omp::UseDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
   bool processUseDevicePtr(
-      mlir::omp::UseDeviceClauseOps &result,
+      mlir::omp::UseDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;

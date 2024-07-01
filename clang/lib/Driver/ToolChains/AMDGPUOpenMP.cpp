@@ -415,8 +415,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     CC1Args.push_back(OneFeature.data());
   }
 
-  CC1Args.push_back("-fcuda-is-device");
-
   if (DriverArgs.hasFlag(options::OPT_fgpu_approx_transcendentals,
                          options::OPT_fno_gpu_approx_transcendentals, false))
     CC1Args.push_back("-fcuda-approx-transcendentals");
@@ -447,6 +445,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     CC1Args.append({"-fvisibility", "hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+
+  CC1Args.push_back("-fcuda-is-device");
 
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
