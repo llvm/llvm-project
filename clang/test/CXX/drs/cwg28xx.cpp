@@ -153,6 +153,8 @@ void g() {
 namespace cwg2881 { // cwg2881: 19 ready 2024-06-26
 
 #if __cplusplus >= 202302L
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winaccessible-base"
 
 template <typename T> struct A : T {};
 template <typename T> struct B : T {};
@@ -216,7 +218,7 @@ void f() {
   o.decltype(L2)::operator()();
 }
 
-int main() {
+void f2() {
   int x = 0;
   auto lambda = [x] (this auto self) { return x; };
   using Lambda = decltype(lambda);
@@ -228,6 +230,43 @@ int main() {
   d(); // expected-error {{must derive publicly from the lambda}}
 }
 
+template <typename L>
+struct Private : private L {
+  using L::operator();
+  Private(L l) : L(l) {}
+};
+
+template<typename T>
+struct Indirect : T {
+  using T::operator();
+};
+
+template<typename T>
+struct Ambiguous : Indirect<T>, T {
+  using Indirect<T>::operator();
+};
+
+template <typename L>
+constexpr auto f3(L l) -> decltype(Private<L>{l}()) { return l(); }
+// expected-note@-1 {{must derive publicly from the lambda}}
+
+template <typename L>
+constexpr auto f4(L l) -> decltype(Ambiguous<L>{{l}, l}()) { return l(); }
+// expected-note@-1 {{is inaccessible due to ambiguity}}
+
+template<typename T>
+concept is_callable = requires(T t) { { t() }; };
+
+void g() {
+  int x = 0;
+  auto lambda = [x](this auto self) {};
+  f3(lambda); // expected-error {{no matching function for call to 'f3'}}
+  f4(lambda); // expected-error {{no matching function for call to 'f4'}}
+  static_assert(!is_callable<Private<decltype(lambda)>>);
+  static_assert(!is_callable<Ambiguous<decltype(lambda)>>);
+}
+
+#pragma clang diagnostic pop
 #endif
 
 } // namespace cwg2881
