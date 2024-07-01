@@ -351,7 +351,7 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 32 * 4 / ElemWidth;
 
   return (ElemWidth == 8)                              ? 4
-         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
+         : (ElemWidth == 16)                           ? 2
          : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
                                                        : 1;
 }
