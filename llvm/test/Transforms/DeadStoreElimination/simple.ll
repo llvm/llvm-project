@@ -204,9 +204,8 @@ define void @test_matrix_store(i64 %stride) {
 declare void @may_unwind()
 define ptr @test_malloc_no_escape_before_return() {
 ; CHECK-LABEL: @test_malloc_no_escape_before_return(
-; CHECK-NEXT:    [[PTR:%.*]] = tail call ptr @malloc(i64 4)
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @calloc(i64 1, i64 4)
 ; CHECK-NEXT:    call void @may_unwind()
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %ptr = tail call ptr @malloc(i64 4)
@@ -236,10 +235,9 @@ define ptr @test_custom_malloc_no_escape_before_return() {
 
 define ptr addrspace(1) @test13_addrspacecast() {
 ; CHECK-LABEL: @test13_addrspacecast(
-; CHECK-NEXT:    [[P:%.*]] = tail call ptr @malloc(i64 4)
+; CHECK-NEXT:    [[P:%.*]] = call ptr @calloc(i64 1, i64 4)
 ; CHECK-NEXT:    [[P_AC:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
 ; CHECK-NEXT:    call void @may_unwind()
-; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[P_AC]], align 4
 ; CHECK-NEXT:    ret ptr addrspace(1) [[P_AC]]
 ;
   %p = tail call ptr @malloc(i64 4)
