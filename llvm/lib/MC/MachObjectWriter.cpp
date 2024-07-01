@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -130,6 +131,36 @@ uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
   if (NextSec.isVirtualSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
+}
+
+static bool isSymbolLinkerVisible(const MCSymbol &Symbol) {
+  // Non-temporary labels should always be visible to the linker.
+  if (!Symbol.isTemporary())
+    return true;
+
+  if (Symbol.isUsedInReloc())
+    return true;
+
+  return false;
+}
+
+const MCSymbol *MachObjectWriter::getAtom(const MCSymbol &S) const {
+  // Linker visible symbols define atoms.
+  if (isSymbolLinkerVisible(S))
+    return &S;
+
+  // Absolute and undefined symbols have no defining atom.
+  if (!S.isInSection())
+    return nullptr;
+
+  // Non-linker visible symbols in sections which can't be atomized have no
+  // defining atom.
+  if (!MCAsmInfoDarwin::isSectionAtomizableBySymbols(
+          *S.getFragment()->getParent()))
+    return nullptr;
+
+  // Otherwise, return the atom for the containing fragment.
+  return S.getFragment()->getAtom();
 }
 
 void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
