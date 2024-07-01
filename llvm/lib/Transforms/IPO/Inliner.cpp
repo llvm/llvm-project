@@ -565,6 +565,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     ++NumDeleted;
   }
 
+  Advisor.onPassExit(C);
+
   if (!Changed)
     return PreservedAnalyses::all();
 
