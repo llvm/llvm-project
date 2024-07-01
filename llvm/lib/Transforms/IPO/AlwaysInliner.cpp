@@ -37,7 +37,7 @@ bool AlwaysInlineImpl(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI) {
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
-  SmallVector<Function *, 16> InlinedFunctions;
+  SmallVector<Function *, 16> InlinedComdatFunctions;
 
   for (Function &F : make_early_inc_range(M)) {
     if (F.isPresplitCoroutine())
@@ -91,7 +91,7 @@ bool AlwaysInlineImpl(
       // re-walking the rest of the module and avoids dealing with any
       // iterator invalidation issues while deleting functions.
       if (F.hasComdat()) {
-        InlinedFunctions.push_back(&F);
+        InlinedComdatFunctions.push_back(&F);
       } else {
         M.getFunctionList().erase(F);
         Changed = true;
@@ -99,21 +99,12 @@ bool AlwaysInlineImpl(
     }
   }
 
-  // Delete the non-comdat ones from the module and also from our vector.
-  auto *NonComdatBegin =
-      partition(InlinedFunctions, [&](Function *F) { return F->hasComdat(); });
-  for (Function *F : make_range(NonComdatBegin, InlinedFunctions.end())) {
-    M.getFunctionList().erase(F);
-    Changed = true;
-  }
-  InlinedFunctions.erase(NonComdatBegin, InlinedFunctions.end());
-
-  if (!InlinedFunctions.empty()) {
+  if (!InlinedComdatFunctions.empty()) {
     // Now we just have the comdat functions. Filter out the ones whose comdats
     // are not actually dead.
-    filterDeadComdatFunctions(InlinedFunctions);
+    filterDeadComdatFunctions(InlinedComdatFunctions);
     // The remaining functions are actually dead.
-    for (Function *F : InlinedFunctions) {
+    for (Function *F : InlinedComdatFunctions) {
       M.getFunctionList().erase(F);
       Changed = true;
     }
