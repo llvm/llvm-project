@@ -957,7 +957,7 @@ MCAssembler::handleFixup(MCFragment &F, const MCFixup &Fixup,
     // The fixup was unresolved, we need a relocation. Inform the object
     // writer of the relocation, and give it an opportunity to adjust the
     // fixup value if need be.
-    getWriter().recordRelocation(*this, *Layout, &F, Fixup, Target, FixedValue);
+    getWriter().recordRelocation(*this, &F, Fixup, Target, FixedValue);
   }
   return std::make_tuple(Target, FixedValue, IsResolved);
 }
