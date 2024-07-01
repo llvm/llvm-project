@@ -87,9 +87,8 @@ bool AlwaysInlineImpl(
 
     F.removeDeadConstantUsers();
     if (F.hasFnAttribute(Attribute::AlwaysInline) && F.isDefTriviallyDead()) {
-      // Remember to try and delete this function afterward. This both avoids
-      // re-walking the rest of the module and avoids dealing with any
-      // iterator invalidation issues while deleting functions.
+      // Remember to try and delete this function afterward. This allows to call
+      // filterDeadComdatFunctions() only once.
       if (F.hasComdat()) {
         InlinedComdatFunctions.push_back(&F);
       } else {
