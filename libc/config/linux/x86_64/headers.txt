@@ -52,4 +52,5 @@ set(TARGET_PUBLIC_HEADERS
 
     # XXX
     libc.include.sys_statvfs
+    libc.include.dlfcn
 )

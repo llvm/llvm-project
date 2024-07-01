@@ -277,3 +277,9 @@ add_macro_header(
   HDR
     stdckdint-macros.h
 )
+
+add_macro_header(
+  dlfcn_macros
+  HDR
+    dlfcn-macros.h
+)

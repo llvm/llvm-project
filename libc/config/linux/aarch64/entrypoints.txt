@@ -315,6 +315,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
     libc.src.sys.ioctl.ioctl
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
