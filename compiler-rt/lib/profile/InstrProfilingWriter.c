@@ -59,6 +59,7 @@ static void llvmInitBufferIO(ProfBufferIO *BufferIO, ProfDataWriter *FileWriter,
   BufferIO->BufferStart = Buffer;
   BufferIO->BufferSz = BufferSz;
   BufferIO->CurOffset = 0;
+  BufferIO->FlushedSize = 0;
 }
 
 COMPILER_RT_VISIBILITY ProfBufferIO *
@@ -108,6 +109,12 @@ lprofBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data, uint32_t Size) {
 }
 
 COMPILER_RT_VISIBILITY int lprofBufferIOFlush(ProfBufferIO *BufferIO) {
+  /* If this is a 'counter' buffer, just keep track of how much got flushed. */
+  if (BufferIO->FileWriter == NULL) {
+    BufferIO->FlushedSize += BufferIO->CurOffset;
+    BufferIO->CurOffset = 0;
+    return 0;
+  }
   if (BufferIO->CurOffset) {
     ProfDataIOVec IO[] = {
         {BufferIO->BufferStart, sizeof(uint8_t), BufferIO->CurOffset, 0}};
@@ -213,6 +220,37 @@ static int writeOneValueProfData(ProfBufferIO *BufferIO,
   /* All done report success.  */
   return 0;
 }
+
+/* Compute size of VPData, without actually writing it. This function follows
+ * the logic of writeValueProfData below it. It is used for predicting how big
+ * a buffer is needed to store the ValueProfileData.
+ * Note that this function returns -1 as an error indicator and 0 is
+ * a potentially valid value.
+ */
+int64_t
+__llvm_profile_getSizeOfValueProfData(VPDataReaderType *VPDataReader,
+                                      const __llvm_profile_data *DataBegin,
+                                      const __llvm_profile_data *DataEnd) {
+  const __llvm_profile_data *DI = 0;
+  ProfBufferIO *BufferIO = lprofCreateBufferIO(NULL);
+  // This BufferIO is a special struct just for counting how much is being
+  // 'written'. The backing Writer is NULL. It collects number of bytes
+  // in CurOffset, and finally in FlushedSize.
+
+  for (DI = DataBegin; DI < DataEnd; DI++) {
+    if (writeOneValueProfData(BufferIO, VPDataReader, DI)) {
+      return -1;
+    }
+  }
+  if (lprofBufferIOFlush(BufferIO) != 0)
+    return -1;
+
+  int64_t rv = BufferIO->FlushedSize;
+  lprofDeleteBufferIO(BufferIO);
+  return rv;
+}
+
+
 
 static int writeValueProfData(ProfDataWriter *Writer,
                               VPDataReaderType *VPDataReader,
