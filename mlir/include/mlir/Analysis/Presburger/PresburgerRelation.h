@@ -164,12 +164,9 @@ public:
   /// All local variables in both sets must correspond to floor divisions.
   bool isEqual(const PresburgerRelation &set) const;
 
-  /// Return true if all the sets in the union are known to be integer empty
-  /// false otherwise.
-  bool isIntegerEmpty() const;
-
-  /// Return true if there is no disjunct, false otherwise.
-  bool isObviouslyEmpty() const;
+  /// Check if the given relation/polyhedron is empty. The emptiness guarantees
+  /// depend on the solver used.
+  bool isEmpty(SolverKind kind) const;
 
   /// Return true if the set is known to have one unconstrained disjunct, false
   /// otherwise.
