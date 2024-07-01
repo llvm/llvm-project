@@ -23,22 +23,10 @@ std::string lld::getLLDVersion() {
 #else
 #define LLD_VENDOR_DISPLAY
 #endif
+#if defined(LLVM_REPOSITORY) || defined(LLVM_REVISION)
+  return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING " (" LLVM_REPOSITORY
+                            " " LLVM_REVISION ")";
+#endif
   return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING;
 #undef LLD_VENDOR_DISPLAY
-}
-
-std::string lld::getLLVMRepositoryPath() {
-#ifdef LLVM_REPOSITORY
-  return LLVM_REPOSITORY;
-#else
-  return "";
-#endif
-}
-
-std::string lld::getLLVMRevision() {
-#ifdef LLVM_REVISION
-  return LLVM_REVISION;
-#else
-  return "";
-#endif
 }
