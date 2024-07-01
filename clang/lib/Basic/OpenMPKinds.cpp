@@ -747,8 +747,10 @@ void clang::getOpenMPCaptureRegions(
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
   assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
 
-  auto getRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
+  auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
     assert(isLeafConstruct(LKind) && "Epecting leaf directive");
+    // Whether a leaf would require OMPD_unknown if it occured on its own.
+    bool MayNeedUnknownRegion = false;
     switch (LKind) {
     case OMPD_metadirective:
       CaptureRegions.push_back(OMPD_metadirective);
@@ -783,6 +785,8 @@ void clang::getOpenMPCaptureRegions(
       if (!CaptureRegions.empty() &&
           !llvm::is_contained(CaptureRegions, OMPD_parallel))
         CaptureRegions.push_back(OMPD_parallel);
+      else
+        MayNeedUnknownRegion = true;
       break;
     case OMPD_dispatch:
     case OMPD_distribute:
@@ -800,19 +804,23 @@ void clang::getOpenMPCaptureRegions(
       // but when they're constituents of a compound directive, and other
       // leafs from that directive have specific regions, then these directives
       // add no additional regions.
+      MayNeedUnknownRegion = true;
       break;
     default:
       llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
       llvm_unreachable("Unexpected directive");
     }
+    return MayNeedUnknownRegion;
   };
 
+  bool MayNeedUnknownRegion = false;
   for (OpenMPDirectiveKind L : getLeafConstructsOrSelf(DKind))
-    getRegionsForLeaf(L);
+    MayNeedUnknownRegion |= GetRegionsForLeaf(L);
 
-  // If no regions were added, then only the leafs using "unknown" were
-  // present. Push a single OMPD_unknown as the capture region.
-  if (CaptureRegions.empty())
+  // We need OMPD_unknown when no regions were added, and specific leaf
+  // constructs were present. Push a single OMPD_unknown as the capture
+  /// region.
+  if (CaptureRegions.empty() && MayNeedUnknownRegion)
     CaptureRegions.push_back(OMPD_unknown);
 
   // OMPD_unknown is only expected as the only region. If other regions
