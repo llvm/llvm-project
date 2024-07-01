@@ -706,8 +706,14 @@ set(LLVM_UBSAN_FLAGS
 set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
   "Path to fuzzing library for linking with fuzz targets")
 
-option(LLVM_USE_SPLIT_DWARF
-  "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
+# Turn on split-dwarf by default for Linux, take effect on Debug/RelWithDbgInfo builds only.
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    option(LLVM_USE_SPLIT_DWARF
+        "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." ON)
+else()
+    option(LLVM_USE_SPLIT_DWARF
+        "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
+endif()
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
