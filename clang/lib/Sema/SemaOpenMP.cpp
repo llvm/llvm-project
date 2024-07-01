@@ -6357,6 +6357,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
     Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
     OpenMPDirectiveKind PrevMappedDirective) {
+  assert(isOpenMPExecutableDirective(Kind) && "Unexpected directive category");
+
   StmtResult Res = StmtError();
   OpenMPBindClauseKind BindKind = OMPC_BIND_unknown;
   llvm::SmallVector<OMPClause *> ClausesWithoutBind;

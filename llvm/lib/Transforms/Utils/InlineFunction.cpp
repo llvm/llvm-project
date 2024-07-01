@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
@@ -56,6 +57,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -1976,16 +1978,28 @@ void llvm::updateProfileCallee(
           ? 0
           : PriorEntryCount + EntryDelta;
 
+  auto updateVTableProfWeight = [](CallBase *CB, const uint64_t NewEntryCount,
+                                   const uint64_t PriorEntryCount) {
+    Instruction *VPtr = PGOIndirectCallVisitor::tryGetVTableInstruction(CB);
+    if (VPtr)
+      scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+  };
+
   // During inlining ?
   if (VMap) {
     uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
     for (auto Entry : *VMap) {
       if (isa<CallInst>(Entry.first))
-        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
+        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second)) {
           CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(CI, CloneEntryCount, PriorEntryCount);
+        }
+
       if (isa<InvokeInst>(Entry.first))
-        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second))
+        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second)) {
           II->updateProfWeight(CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(II, CloneEntryCount, PriorEntryCount);
+        }
     }
   }
 
@@ -1996,10 +2010,14 @@ void llvm::updateProfileCallee(
       // No need to update the callsite if it is pruned during inlining.
       if (!VMap || VMap->count(&BB))
         for (Instruction &I : BB) {
-          if (CallInst *CI = dyn_cast<CallInst>(&I))
+          if (CallInst *CI = dyn_cast<CallInst>(&I)) {
             CI->updateProfWeight(NewEntryCount, PriorEntryCount);
-          if (InvokeInst *II = dyn_cast<InvokeInst>(&I))
+            updateVTableProfWeight(CI, NewEntryCount, PriorEntryCount);
+          }
+          if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
             II->updateProfWeight(NewEntryCount, PriorEntryCount);
+            updateVTableProfWeight(II, NewEntryCount, PriorEntryCount);
+          }
         }
   }
 }
