@@ -143,7 +143,8 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 }
 
 MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  assert(CurFrag->getParent() == getCurrentSection().first);
+  assert(!getCurrentSection().first ||
+         CurFrag->getParent() == getCurrentSection().first);
   return CurFrag;
 }
 
