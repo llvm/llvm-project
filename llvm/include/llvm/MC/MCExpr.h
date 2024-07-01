@@ -16,7 +16,6 @@
 namespace llvm {
 
 class MCAsmInfo;
-class MCAsmLayout;
 class MCAssembler;
 class MCContext;
 class MCFixup;
@@ -101,7 +100,10 @@ public:
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
 
-  bool evaluateKnownAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
+  /// Aggressive variant of evaluateAsRelocatable when relocations are
+  /// unavailable (e.g. .fill). Expects callers to handle errors when true is
+  /// returned.
+  bool evaluateKnownAbsolute(int64_t &Res, const MCAssembler &Asm) const;
 
   /// Try to evaluate the expression to a relocatable value, i.e. an
   /// expression of the fixed form (a - b + constant).
