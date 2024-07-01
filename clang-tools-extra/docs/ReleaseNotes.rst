@@ -72,6 +72,9 @@ Code actions
 - The tweak for turning unscoped into scoped enums now removes redundant prefixes
   from the enum values.
 
+- The abbreviate function template tweak was introduced.
+  It allows converting function templates to their abbreviated form using auto parameters.
+
 Signature help
 ^^^^^^^^^^^^^^
 
