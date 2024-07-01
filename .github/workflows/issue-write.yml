@@ -33,10 +33,12 @@ jobs:
           artifact-name: workflow-args
 
       - name: Unpack Artifact
+        if: steps.download-artifact.outputs.artifact-id != ''
         run: |
           unzip ${{ steps.download-artifact.outputs.filename }}
 
       - name: 'Comment on PR'
+        if: steps.download-artifact.outputs.artifact-id != ''
         uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -145,5 +147,7 @@ jobs:
             });
 
       - name: Dump comments file
-        if: always()
+        if: >-
+          always() &&
+          steps.download-artifact.outputs.artifact-id != ''
         run: cat comments
