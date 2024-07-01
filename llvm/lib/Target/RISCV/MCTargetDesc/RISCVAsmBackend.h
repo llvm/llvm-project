@@ -68,12 +68,6 @@ public:
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
-  }
-
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
                                     const MCFixup &Fixup, bool Resolved,
                                     uint64_t Value,
