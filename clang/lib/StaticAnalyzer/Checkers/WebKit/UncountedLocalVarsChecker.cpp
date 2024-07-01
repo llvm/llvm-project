@@ -13,7 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ParentMapContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -119,29 +119,26 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const UncountedLocalVarsChecker *Checker;
 
       TrivialFunctionAnalysis TFA;
 
-      using Base = RecursiveASTVisitor<LocalVisitor>;
-
       explicit LocalVisitor(const UncountedLocalVarsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool VisitVarDecl(VarDecl *V) {
+      bool VisitVarDecl(VarDecl *V) override {
         auto *Init = V->getInit();
         if (Init && V->isLocalVarDecl())
           Checker->visitVarDecl(V, Init);
         return true;
       }
 
-      bool VisitBinaryOperator(const BinaryOperator *BO) {
+      bool VisitBinaryOperator(BinaryOperator *BO) override {
         if (BO->isAssignmentOp()) {
           if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
             if (auto *V = dyn_cast<VarDecl>(VarRef->getDecl()))
@@ -151,33 +148,33 @@ public:
         return true;
       }
 
-      bool TraverseIfStmt(IfStmt *IS) {
+      bool TraverseIfStmt(IfStmt *IS) override {
         if (!TFA.isTrivial(IS))
-          return Base::TraverseIfStmt(IS);
+          return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
         return true;
       }
 
-      bool TraverseForStmt(ForStmt *FS) {
+      bool TraverseForStmt(ForStmt *FS) override {
         if (!TFA.isTrivial(FS))
-          return Base::TraverseForStmt(FS);
+          return DynamicRecursiveASTVisitor::TraverseForStmt(FS);
         return true;
       }
 
-      bool TraverseCXXForRangeStmt(CXXForRangeStmt *FRS) {
+      bool TraverseCXXForRangeStmt(CXXForRangeStmt *FRS) override {
         if (!TFA.isTrivial(FRS))
-          return Base::TraverseCXXForRangeStmt(FRS);
+          return DynamicRecursiveASTVisitor::TraverseCXXForRangeStmt(FRS);
         return true;
       }
 
-      bool TraverseWhileStmt(WhileStmt *WS) {
+      bool TraverseWhileStmt(WhileStmt *WS) override {
         if (!TFA.isTrivial(WS))
-          return Base::TraverseWhileStmt(WS);
+          return DynamicRecursiveASTVisitor::TraverseWhileStmt(WS);
         return true;
       }
 
-      bool TraverseCompoundStmt(CompoundStmt *CS) {
+      bool TraverseCompoundStmt(CompoundStmt *CS) override {
         if (!TFA.isTrivial(CS))
-          return Base::TraverseCompoundStmt(CS);
+          return DynamicRecursiveASTVisitor::TraverseCompoundStmt(CS);
         return true;
       }
     };

@@ -19,6 +19,7 @@ class ASTContext;
 ///   - Visiting attributes
 ///   - Post-order traversal
 ///   - Overriding WalkUpFromX
+///   - Overriding dataTraverseStmtPre/Post()
 ///
 /// \see RecursiveASTVisitor
 class DynamicRecursiveASTVisitor {
@@ -180,6 +181,18 @@ public:
   bool WalkUpFromStmt(Stmt *S) { return VisitStmt(S); }
   bool WalkUpFromType(Type *T) { return VisitType(T); }
   bool WalkUpFromTypeLoc(TypeLoc TL) { return VisitTypeLoc(TL); }
+
+  /*/// Invoked before visiting a statement or expression via data recursion.
+  ///
+  /// \returns false to skip visiting the node, true otherwise.
+  virtual bool dataTraverseStmtPre(Stmt *S) { return true; }
+
+  /// Invoked after visiting a statement or expression via data recursion.
+  /// This is not invoked if the previously invoked \c dataTraverseStmtPre
+  /// returned false.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool dataTraverseStmtPost(Stmt *S) { return true; }*/
 
   /*// Declare Traverse*() and friends for attributes.
 #define DYNAMIC_ATTR_VISITOR_DECLS

@@ -12,7 +12,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -43,24 +43,22 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const UncountedCallArgsChecker *Checker;
       explicit LocalVisitor(const UncountedCallArgsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
         if (isRefType(safeGetName(Decl)))
           return true;
-        return RecursiveASTVisitor<LocalVisitor>::TraverseClassTemplateDecl(
-            Decl);
+        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
       }
 
-      bool VisitCallExpr(const CallExpr *CE) {
+      bool VisitCallExpr(CallExpr *CE) override {
         Checker->visitCallExpr(CE);
         return true;
       }

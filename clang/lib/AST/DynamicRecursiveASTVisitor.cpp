@@ -102,6 +102,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
     return Visitor.TraverseNestedNameSpecifierLoc(NNS);
   }
 
+
+  /*bool dataTraverseStmtPre(Stmt *S) { return Visitor.dataTraverseStmtPre(S); }
+  bool dataTraverseStmtPost(Stmt *S) { return Visitor.dataTraverseStmtPost(S); }*/
+
   /// Visit a node.
   bool VisitAttr(Attr *A) { return Visitor.VisitAttr(A); }
   bool VisitDecl(Decl *D) { return Visitor.VisitDecl(D); }
