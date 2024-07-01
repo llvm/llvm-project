@@ -33,11 +33,12 @@ define i8 @out8(i8 %x, i8 %y, i8 %mask) {
 define i16 @out16(i16 %x, i16 %y, i16 %mask) {
 ; CHECK-NOBMI-LABEL: out16:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movl %edx, %eax
+; CHECK-NOBMI-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NOBMI-NEXT:    andl %edx, %edi
-; CHECK-NOBMI-NEXT:    notl %eax
-; CHECK-NOBMI-NEXT:    andl %esi, %eax
-; CHECK-NOBMI-NEXT:    orl %edi, %eax
+; CHECK-NOBMI-NEXT:    notl %edx
+; CHECK-NOBMI-NEXT:    andl %esi, %edx
+; CHECK-NOBMI-NEXT:    leal (%rdx,%rdi), %eax
 ; CHECK-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
