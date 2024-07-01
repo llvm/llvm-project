@@ -244,7 +244,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
   MCValue Value = MaxBytesToEmit >= InsertedNopBytes
                       ? MCValue::get(InsertedNopBytes)
                       : createExtendedValue();
-  Asm.getWriter().recordRelocation(Asm, Layout, &AF, Fixup, Value, FixedValue);
+  Asm.getWriter().recordRelocation(Asm, &AF, Fixup, Value, FixedValue);
 
   return true;
 }
@@ -504,8 +504,8 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
   auto &Asm = Layout.getAssembler();
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FB, B, FixedValueB);
+  Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }

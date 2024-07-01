@@ -293,9 +293,9 @@ private:
 
   void writeHeader(const MCAssembler &Asm);
 
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override;
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
@@ -481,7 +481,6 @@ void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 }
 
 void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
@@ -491,7 +490,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
   const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
-  uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+  uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   MCContext &Ctx = Asm.getContext();
   bool IsLocRel = false;
 
@@ -521,7 +520,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
     IsLocRel = true;
-    C += FixupOffset - Layout.getSymbolOffset(SymB);
+    C += FixupOffset - Asm.getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -578,7 +577,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     if (!SectionSymbol)
       report_fatal_error("section symbol is required for relocation");
 
-    C += Layout.getSymbolOffset(*SymA);
+    C += Asm.getSymbolOffset(*SymA);
     SymA = cast<MCSymbolWasm>(SectionSymbol);
   }
 
@@ -1647,7 +1646,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         // For each data symbol, export it in the symtab as a reference to the
         // corresponding Wasm data segment.
         wasm::WasmDataReference Ref = wasm::WasmDataReference{
-            DataSection.getSegmentIndex(), Layout.getSymbolOffset(WS),
+            DataSection.getSegmentIndex(), Asm.getSymbolOffset(WS),
             static_cast<uint64_t>(Size)};
         assert(DataLocations.count(&WS) == 0);
         DataLocations[&WS] = Ref;
@@ -1749,7 +1748,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         LLVM_DEBUG(dbgs() << "  -> index:" << WasmIndex << "\n");
       } else if (Base->isData()) {
         auto &DataSection = static_cast<MCSectionWasm &>(WS.getSection());
-        uint64_t Offset = Layout.getSymbolOffset(S);
+        uint64_t Offset = Asm.getSymbolOffset(S);
         int64_t Size = 0;
         // For data symbol alias we use the size of the base symbol as the
         // size of the alias.  When an offset from the base is involved this
@@ -1763,7 +1762,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
             std::min(static_cast<uint64_t>(Size), Segment.Data.size() - Offset);
         wasm::WasmDataReference Ref = wasm::WasmDataReference{
             DataSection.getSegmentIndex(),
-            static_cast<uint32_t>(Layout.getSymbolOffset(S)),
+            static_cast<uint32_t>(Asm.getSymbolOffset(S)),
             static_cast<uint32_t>(Size)};
         DataLocations[&WS] = Ref;
         LLVM_DEBUG(dbgs() << "  -> index:" << Ref.Segment << "\n");
