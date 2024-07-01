@@ -12,10 +12,7 @@
 #include <sys/mman.h>
 #endif
 
-// #include "config.h"
-// FIXME: CMake - include when cmake system is ready.
-// Remove #define HAVE_SYSCONF 1 line.
-#define HAVE_SYSCONF 1
+#include "config.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -50,11 +47,11 @@ COMPILER_RT_ABI void __enable_execute_stack(void *addr) {
 #if __APPLE__
   // On Darwin, pagesize is always 4096 bytes
   const uintptr_t pageSize = 4096;
-#elif !defined(HAVE_SYSCONF)
-#error "HAVE_SYSCONF not defined! See enable_execute_stack.c"
+#elif !defined(COMPILER_RT_HAS_SYSCONF)
+#error "COMPILER_RT_HAS_SYSCONF not defined! See enable_execute_stack.c"
 #else
   const uintptr_t pageSize = sysconf(_SC_PAGESIZE);
-#endif // __APPLE__
+#endif
 
   const uintptr_t pageAlignMask = ~(pageSize - 1);
   uintptr_t p = (uintptr_t)addr;
