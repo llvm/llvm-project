@@ -19263,11 +19263,6 @@ All selected elements are written into adjacent lanes in the result vector,
 from lower to higher.
 The mask holds an entry for each vector lane, and is used to select elements
 to be kept.
-If a mask entry if undefined or poison, it is treated as "false", i.e., the
-element is not selected.
-If ``passthru`` is undefined, the number of valid lanes is equal to the number
-of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values
-are undefined.
 If a ``passthru`` vector is given, all remaining lanes are filled with the
 corresponding lane's value from ``passthru``.
 The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is
@@ -19302,6 +19297,11 @@ This intrinsic performs the logic of the following C++ example.
 All values in ``out`` after the last selected one are undefined if
 ``passthru`` is undefined.
 If all entries in the ``mask`` are 0, the ``out`` vector is ``passthru``.
+If any element of the mask is poison, all elements of the result are poison.
+Otherwise, if any element of the mask is undef, all elements of the result are undef.
+If ``passthru`` is undefined, the number of valid lanes is equal to the number
+of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values
+are undefined.
 
 .. code-block:: cpp
 
