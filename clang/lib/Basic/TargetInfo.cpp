@@ -728,8 +728,15 @@ bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info) const {
   if (*Name != '=' && *Name != '+')
     return false;
 
-  if (*Name == '+')
+  if (*Name == '+') {
     Info.setIsReadWrite();
+    // To align with GCC asm: "=f" is not allowed, the
+    // operand constraints must select a class with a single reg.
+    auto Flag = Name + 1;
+    if (Flag && *Flag == 'f') {
+      return false;
+    }
+  }
 
   Name++;
   while (*Name) {
