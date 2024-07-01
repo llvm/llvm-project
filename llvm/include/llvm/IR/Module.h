@@ -435,6 +435,10 @@ public:
   /// exist, return null.
   Function *getFunction(StringRef Name) const;
 
+  /// Look up the specified function in the module symbol table.
+  /// If the function does not exist, then bail out.
+  Function *getRequiredFunction(StringRef Name) const;
+
 /// @}
 /// @name Global Variable Accessors
 /// @{

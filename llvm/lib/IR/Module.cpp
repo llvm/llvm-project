@@ -194,6 +194,18 @@ Function *Module::getFunction(StringRef Name) const {
   return dyn_cast_or_null<Function>(getNamedValue(Name));
 }
 
+// getRequiredFunction - Look up the specified function in the module symbol
+// table. If the function does not exist, bail out.
+//
+Function *Module::getRequiredFunction(StringRef Name) const {
+  Function *F = getFunction(Name);
+  if (!F)
+    report_fatal_error(Twine("Required function '@") + Name +
+                       "' not found on module '" + getName() + "'!");
+
+  return F;
+}
+
 //===----------------------------------------------------------------------===//
 // Methods for easy access to the global variables in the module.
 //
