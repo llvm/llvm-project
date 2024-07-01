@@ -759,6 +759,8 @@ Bug Fixes in This Version
   negatives where the analysis failed to detect unchecked access to guarded
   data.
 
+- ``typeof_unqual`` now properly removes type qualifiers from arrays and their element types. (#GH92667)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
