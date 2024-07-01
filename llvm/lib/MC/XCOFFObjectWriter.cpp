@@ -1491,7 +1491,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
           if (Entry != ExceptionSection.ExceptionTable.end()) {
             hasExceptEntry = true;
             for (auto &TrapEntry : Entry->second.Entries) {
-              TrapEntry.TrapAddress = Layout.getSymbolOffset(*(Sym.MCSym)) +
+              TrapEntry.TrapAddress = Asm.getSymbolOffset(*(Sym.MCSym)) +
                                       TrapEntry.Trap->getOffset();
             }
           }
