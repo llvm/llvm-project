@@ -65,9 +65,7 @@ struct __fn {
 };
 } // namespace __count_if
 
-inline namespace __cpo {
 inline constexpr auto count_if = __count_if::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

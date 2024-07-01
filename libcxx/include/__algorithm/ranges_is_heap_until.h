@@ -67,9 +67,7 @@ struct __fn {
 
 } // namespace __is_heap_until
 
-inline namespace __cpo {
 inline constexpr auto is_heap_until = __is_heap_until::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
