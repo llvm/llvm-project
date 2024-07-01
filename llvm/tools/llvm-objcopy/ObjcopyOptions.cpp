@@ -580,7 +580,7 @@ static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
     return createStringError(LMAValue.getError(),
                              "bad format for " + OptionName + ": value after " +
                                  ArgValue.slice(0, 2) + " is " + StringValue +
-                                 " when it should be integer");
+                                 " when it should be an integer");
   return *LMAValue;
 }
 
