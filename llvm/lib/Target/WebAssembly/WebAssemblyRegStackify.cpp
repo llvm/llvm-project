@@ -714,12 +714,12 @@ public:
     RangeTy &Range = Worklist.back();
     MachineOperand &Op = *Range.begin();
     Range = drop_begin(Range);
-    if (Op.isReg()) {
+    if (Op.isReg())
       cur_stack_depth--;
-    }
-    if (Range.empty()) {
+
+    if (Range.empty())
       Worklist.pop_back();
-    }
+
     assert(cur_stack_depth >= 0);
     assert((Worklist.empty() || !Worklist.back().empty()) &&
            "Empty ranges shouldn't remain in the worklist");
@@ -729,9 +729,8 @@ public:
   template <typename T> int getNumRegs(const T &Range) {
     int num = 0;
     for (auto it = Range.begin(); it != Range.end(); it++) {
-      if (it->isReg()) {
+      if (it->isReg())
         num++;
-      }
     }
     return num;
   }
@@ -825,7 +824,6 @@ public:
       Operand1 = TargetInstrInfo::CommuteAnyOperandIndex;
       if (TII->findCommutedOpIndices(*Insert, Operand0, Operand1)) {
         // Tentatively commute the operands and try again.
-        LLVM_DEBUG(dbgs() << "Commute insert\n");
         TII->commuteInstruction(*Insert, /*NewMI=*/false, Operand0, Operand1);
         TreeWalker.resetTopOperands(Insert);
         TentativelyCommuting = true;
@@ -877,7 +875,6 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       // operands off the stack in LIFO order.
       CommutingState Commuting;
       TreeWalkerState TreeWalker(Insert);
-      LLVM_DEBUG(dbgs() << "Walk instruction"; Insert->dump());
       while (!TreeWalker.done()) {
         MachineOperand &Use = TreeWalker.pop();
 
@@ -885,7 +882,6 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (!Use.isReg())
           continue;
 
-        // here only pop reg in stack.
         Register Reg = Use.getReg();
         assert(Use.isUse() && "explicit_uses() should only iterate over uses");
         assert(!Use.isImplicit() &&
