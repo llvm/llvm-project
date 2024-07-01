@@ -568,6 +568,12 @@ static bool processCmpIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
     II->eraseFromParent();
     return true;
   }
+  if (LHS_CR.icmp(ICmpInst::ICMP_EQ, RHS_CR)) {
+    ++NumCmpIntr;
+    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 0));
+    II->eraseFromParent();
+    return true;
+  }
 
   return false;
 }
