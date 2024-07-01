@@ -137,5 +137,6 @@ struct on_member_ptr_fn_ptr_ty {
 
 struct on_member_ptr_fn_ty {
   int size;
+  // expected-error@+1{{'sized_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'fn_ty' (aka 'void (int)') is a function type}}
   fn_ty * ptr __sized_by_or_null(size);
 };
