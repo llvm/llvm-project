@@ -911,7 +911,11 @@ template <typename InputType, typename OutputType>
 void explain_binary_operation_one_output_error(
     Operation op, const BinaryInput<InputType> &input, OutputType libc_result,
     double ulp_tolerance, RoundingMode rounding) {
+<<<<<<< HEAD
   unsigned int precision = get_precision<InputType>(ulp_tolerance);
+=======
+  unsigned int precision = get_precision<OutputType>(ulp_tolerance);
+>>>>>>> b228914691b5 (format code)
   MPFRNumber mpfrX(input.x, precision);
   MPFRNumber mpfrY(input.y, precision);
   FPBits<InputType> xbits(input.x);
