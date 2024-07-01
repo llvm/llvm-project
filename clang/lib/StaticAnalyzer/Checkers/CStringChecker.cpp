@@ -359,12 +359,12 @@ REGISTER_MAP_WITH_PROGRAMSTATE(CStringLength, const MemRegion *, SVal)
 // Individual checks and utility methods.
 //===----------------------------------------------------------------------===//
 
-std::pair<ProgramStateRef , ProgramStateRef >
+std::pair<ProgramStateRef, ProgramStateRef>
 CStringChecker::assumeZero(CheckerContext &C, ProgramStateRef State, SVal V,
                            QualType Ty) {
   std::optional<DefinedSVal> val = V.getAs<DefinedSVal>();
   if (!val)
-    return std::pair<ProgramStateRef , ProgramStateRef >(State, State);
+    return std::pair<ProgramStateRef, ProgramStateRef>(State, State);
 
   SValBuilder &svalBuilder = C.getSValBuilder();
   DefinedOrUnknownSVal zero = svalBuilder.makeZeroVal(Ty);
