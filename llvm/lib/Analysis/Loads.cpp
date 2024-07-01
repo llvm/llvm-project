@@ -769,3 +769,19 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
 
   return isPointerAlwaysReplaceable(From, To, DL);
 }
+
+bool llvm::isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
+                                         DominatorTree *DT,
+                                         AssumptionCache *AC) {
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      LoadInst *LI = dyn_cast<LoadInst>(&I);
+      if (LI) {
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC))
+          return false;
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
+        return false;
+    }
+  }
+  return true;
+}
