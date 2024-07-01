@@ -643,6 +643,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     // Standard procedure call with fir.call.
     auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
                                             funcSymbolAttr, operands);
+    if (caller.characterize().IsBindC())
+      call.setIsBindC(true);
+
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
       callResult = call.getResult(0);
@@ -1454,21 +1457,16 @@ static PreparedDummyArgument prepareProcedurePointerActualArgument(
   return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
 }
 
-/// Lower calls to user procedures with actual arguments that have been
-/// pre-lowered but not yet prepared according to the interface.
-/// This can be called for elemental procedures, but only with scalar
-/// arguments: if there are array arguments, it must be provided with
-/// the array argument elements value and will return the corresponding
-/// scalar result value.
-static std::optional<hlfir::EntityWithAttributes>
-genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
-            Fortran::lower::CallerInterface &caller,
-            mlir::FunctionType callSiteType, CallContext &callContext) {
+/// Prepare arguments of calls to user procedures with actual arguments that
+/// have been pre-lowered but not yet prepared according to the interface.
+void prepareUserCallArguments(
+    Fortran::lower::PreparedActualArguments &loweredActuals,
+    Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,
+    CallContext &callContext, llvm::SmallVector<CallCleanUp> &callCleanUps) {
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   mlir::Location loc = callContext.loc;
   bool mustRemapActualToDummyDescriptors = false;
   fir::FirOpBuilder &builder = callContext.getBuilder();
-  llvm::SmallVector<CallCleanUp> callCleanUps;
   for (auto [preparedActual, arg] :
        llvm::zip(loweredActuals, caller.getPassedArguments())) {
     mlir::Type argTy = callSiteType.getInput(arg.firArgument);
@@ -1626,11 +1624,30 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     } break;
     }
   }
+
   // Handle cases where caller must allocate the result or a fir.box for it.
   if (mustRemapActualToDummyDescriptors)
     remapActualToDummyDescriptors(loc, callContext.converter,
                                   callContext.symMap, loweredActuals, caller,
                                   callContext.isBindcCall());
+}
+
+/// Lower calls to user procedures with actual arguments that have been
+/// pre-lowered but not yet prepared according to the interface.
+/// This can be called for elemental procedures, but only with scalar
+/// arguments: if there are array arguments, it must be provided with
+/// the array argument elements value and will return the corresponding
+/// scalar result value.
+static std::optional<hlfir::EntityWithAttributes>
+genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
+            Fortran::lower::CallerInterface &caller,
+            mlir::FunctionType callSiteType, CallContext &callContext) {
+  mlir::Location loc = callContext.loc;
+  llvm::SmallVector<CallCleanUp> callCleanUps;
+  fir::FirOpBuilder &builder = callContext.getBuilder();
+
+  prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
+                           callCleanUps);
 
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
@@ -2205,8 +2222,45 @@ public:
   mlir::Value computeDynamicCharacterResultLength(
       Fortran::lower::PreparedActualArguments &loweredActuals,
       CallContext &callContext) {
-    TODO(callContext.loc,
-         "compute elemental function result length parameters in HLFIR");
+    fir::FirOpBuilder &builder = callContext.getBuilder();
+    mlir::Location loc = callContext.loc;
+    auto &converter = callContext.converter;
+    mlir::Type idxTy = builder.getIndexType();
+    llvm::SmallVector<CallCleanUp> callCleanUps;
+
+    prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
+                             callCleanUps);
+
+    callContext.symMap.pushScope();
+
+    // Map prepared argument to dummy symbol to be able to lower spec expr.
+    for (const auto &arg : caller.getPassedArguments()) {
+      const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
+      assert(sym && "expect symbol for dummy argument");
+      auto input = caller.getInput(arg);
+      fir::ExtendedValue exv = Fortran::lower::translateToExtendedValue(
+          loc, builder, hlfir::Entity{input}, callContext.stmtCtx);
+      fir::FortranVariableOpInterface variableIface = hlfir::genDeclare(
+          loc, builder, exv, "dummy.tmp", fir::FortranVariableFlagsAttr{});
+      callContext.symMap.addVariableDefinition(*sym, variableIface);
+    }
+
+    auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
+      mlir::Value convertExpr = builder.createConvert(
+          loc, idxTy,
+          fir::getBase(converter.genExprValue(expr, callContext.stmtCtx)));
+      return fir::factory::genMaxWithZero(builder, loc, convertExpr);
+    };
+
+    llvm::SmallVector<mlir::Value> lengths;
+    caller.walkResultLengths(
+        [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+          assert(!isAssumedSizeExtent && "result cannot be assumed-size");
+          lengths.emplace_back(lowerSpecExpr(e));
+        });
+    callContext.symMap.popScope();
+    assert(lengths.size() == 1 && "expect 1 length parameter for the result");
+    return lengths[0];
   }
 
   mlir::Value getPolymorphicResultMold(

@@ -102,8 +102,7 @@ public:
 
   void writeIndex(
       const ModuleSummaryIndex *Index,
-      const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex,
-      const GVSummaryPtrSet *DecSummaries);
+      const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex);
 };
 
 /// Write the specified module to the specified raw output stream.
@@ -148,12 +147,10 @@ void writeThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
 /// where it will be written in a new bitcode block. This is used when
 /// writing the combined index file for ThinLTO. When writing a subset of the
 /// index for a distributed backend, provide the \p ModuleToSummariesForIndex
-/// map. \p DecSummaries specifies the set of summaries for which the
-/// corresponding value should be imported as a declaration (prototype).
+/// map.
 void writeIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out,
                       const std::map<std::string, GVSummaryMapTy>
-                          *ModuleToSummariesForIndex = nullptr,
-                      const GVSummaryPtrSet *DecSummaries = nullptr);
+                          *ModuleToSummariesForIndex = nullptr);
 
 /// If EmbedBitcode is set, save a copy of the llvm IR as data in the
 ///  __LLVM,__bitcode section (.llvmbc on non-MacOS).

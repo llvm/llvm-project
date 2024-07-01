@@ -76,7 +76,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     // Parenthesize names that start with $ so that they don't look like
     // absolute names.
     bool UseParens = MAI && MAI->useParensForDollarSignNames() && !InParens &&
-                     !Sym.getName().empty() && Sym.getName()[0] == '$';
+                     Sym.getName().starts_with('$');
 
     if (UseParens) {
       OS << '(';

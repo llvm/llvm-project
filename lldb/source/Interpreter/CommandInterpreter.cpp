@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <cstdlib>
 #include <limits>
 #include <memory>
@@ -1909,6 +1910,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item = std::make_shared<StructuredData::Dictionary>();
     transcript_item->AddStringItem("command", command_line);
+    transcript_item->AddIntegerItem(
+        "timestampInEpochSeconds",
+        std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
     m_transcript.AddItem(transcript_item);
   }
 
@@ -2056,6 +2062,14 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         log, "HandleCommand, command line after removing command name(s): '%s'",
         remainder.c_str());
 
+    // To test whether or not transcript should be saved, `transcript_item` is
+    // used instead of `GetSaveTrasncript()`. This is because the latter will
+    // fail when the command is "settings set interpreter.save-transcript true".
+    if (transcript_item) {
+      transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
+      transcript_item->AddStringItem("commandArguments", remainder);
+    }
+
     ElapsedTime elapsed(execute_time);
     cmd_obj->Execute(remainder.c_str(), result);
   }
@@ -2072,7 +2086,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item->AddStringItem("output", result.GetOutputData());
     transcript_item->AddStringItem("error", result.GetErrorData());
-    transcript_item->AddFloatItem("seconds", execute_time.get().count());
+    transcript_item->AddFloatItem("durationInSeconds",
+                                  execute_time.get().count());
   }
 
   return result.Succeeded();
@@ -2692,7 +2707,8 @@ enum {
   eHandleCommandFlagEchoCommentCommand = (1u << 3),
   eHandleCommandFlagPrintResult = (1u << 4),
   eHandleCommandFlagPrintErrors = (1u << 5),
-  eHandleCommandFlagStopOnCrash = (1u << 6)
+  eHandleCommandFlagStopOnCrash = (1u << 6),
+  eHandleCommandFlagAllowRepeats = (1u << 7)
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
@@ -3114,14 +3130,19 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  if (!is_interactive) {
+  const bool allow_repeats =
+      io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
+
+  if (!is_interactive && !allow_repeats) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the
     // previous command and cause any errors to occur (like redefining an
     // alias, get an error and stop parsing the commands file).
+    // But obey the AllowRepeats flag if the user has set it.
     if (line.empty())
       return;
-
+  }
+  if (!is_interactive) {
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
@@ -3235,6 +3256,8 @@ bool CommandInterpreter::SaveTranscript(
   if (output_file == std::nullopt || output_file->empty()) {
     std::string now = llvm::to_string(std::chrono::system_clock::now());
     std::replace(now.begin(), now.end(), ' ', '_');
+    // Can't have file name with colons on Windows
+    std::replace(now.begin(), now.end(), ':', '-');
     const std::string file_name = "lldb_session_" + now + ".log";
 
     FileSpec save_location = GetSaveSessionDirectory();
@@ -3371,6 +3394,8 @@ CommandInterpreter::GetIOHandler(bool force_create,
         flags |= eHandleCommandFlagPrintResult;
       if (options->m_print_errors != eLazyBoolNo)
         flags |= eHandleCommandFlagPrintErrors;
+      if (options->m_allow_repeats == eLazyBoolYes)
+        flags |= eHandleCommandFlagAllowRepeats;
     } else {
       flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult |
               eHandleCommandFlagPrintErrors;

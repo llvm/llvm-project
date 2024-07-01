@@ -3534,6 +3534,7 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   }
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::tan:
   case Intrinsic::pow: {
     MVT RetVT;
     if (!isTypeLegal(II->getType(), RetVT))
@@ -3542,11 +3543,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (RetVT != MVT::f32 && RetVT != MVT::f64)
       return false;
 
-    static const RTLIB::Libcall LibCallTable[3][2] = {
-      { RTLIB::SIN_F32, RTLIB::SIN_F64 },
-      { RTLIB::COS_F32, RTLIB::COS_F64 },
-      { RTLIB::POW_F32, RTLIB::POW_F64 }
-    };
+    static const RTLIB::Libcall LibCallTable[4][2] = {
+        {RTLIB::SIN_F32, RTLIB::SIN_F64},
+        {RTLIB::COS_F32, RTLIB::COS_F64},
+        {RTLIB::TAN_F32, RTLIB::TAN_F64},
+        {RTLIB::POW_F32, RTLIB::POW_F64}};
     RTLIB::Libcall LC;
     bool Is64Bit = RetVT == MVT::f64;
     switch (II->getIntrinsicID()) {
@@ -3558,8 +3559,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     case Intrinsic::cos:
       LC = LibCallTable[1][Is64Bit];
       break;
-    case Intrinsic::pow:
+    case Intrinsic::tan:
       LC = LibCallTable[2][Is64Bit];
+      break;
+    case Intrinsic::pow:
+      LC = LibCallTable[3][Is64Bit];
       break;
     }
 

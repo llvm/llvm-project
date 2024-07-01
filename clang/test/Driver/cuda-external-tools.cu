@@ -1,8 +1,5 @@
 // Tests that ptxas and fatbinary are invoked correctly during CUDA
 // compilation.
-//
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
 
 // Regular compiles with -O{0,1,2,3,4,fast}.  -O4 and -Ofast map to ptxas O3.
 // RUN: %clang -### --target=x86_64-linux-gnu -O0 -c %s 2>&1 \

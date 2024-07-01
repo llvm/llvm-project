@@ -188,6 +188,8 @@ public:
   iterator end() { return Fragments.end(); }
   const_iterator end() const { return Fragments.end(); }
 
+  void addFragment(MCFragment &F) { Fragments.push_back(&F); }
+
   MCSection::iterator getSubsectionInsertionPoint(unsigned Subsection);
 
   void dump() const;

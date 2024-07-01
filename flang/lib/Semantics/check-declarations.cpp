@@ -704,29 +704,48 @@ void CheckHelper::CheckObjectEntity(
     if (InPure() && !IsStmtFunction(DEREF(innermostSymbol_)) &&
         !IsPointer(symbol) && !IsIntentIn(symbol) &&
         !symbol.attrs().test(Attr::VALUE)) {
-      if (InFunction()) { // C1583
-        messages_.Say(
-            "non-POINTER dummy argument of pure function must be INTENT(IN) or VALUE"_err_en_US);
-      } else if (IsIntentOut(symbol)) {
+      const char *what{InFunction() ? "function" : "subroutine"};
+      bool ok{true};
+      if (IsIntentOut(symbol)) {
         if (type && type->IsPolymorphic()) { // C1588
           messages_.Say(
-              "An INTENT(OUT) dummy argument of a pure subroutine may not be polymorphic"_err_en_US);
+              "An INTENT(OUT) dummy argument of a pure %s may not be polymorphic"_err_en_US,
+              what);
+          ok = false;
         } else if (derived) {
           if (FindUltimateComponent(*derived, [](const Symbol &x) {
                 const DeclTypeSpec *type{x.GetType()};
                 return type && type->IsPolymorphic();
               })) { // C1588
             messages_.Say(
-                "An INTENT(OUT) dummy argument of a pure subroutine may not have a polymorphic ultimate component"_err_en_US);
+                "An INTENT(OUT) dummy argument of a pure %s may not have a polymorphic ultimate component"_err_en_US,
+                what);
+            ok = false;
           }
           if (HasImpureFinal(symbol)) { // C1587
             messages_.Say(
-                "An INTENT(OUT) dummy argument of a pure subroutine may not have an impure FINAL subroutine"_err_en_US);
+                "An INTENT(OUT) dummy argument of a pure %s may not have an impure FINAL subroutine"_err_en_US,
+                what);
+            ok = false;
           }
         }
       } else if (!IsIntentInOut(symbol)) { // C1586
         messages_.Say(
-            "non-POINTER dummy argument of pure subroutine must have INTENT() or VALUE attribute"_err_en_US);
+            "non-POINTER dummy argument of pure %s must have INTENT() or VALUE attribute"_warn_en_US,
+            what);
+        ok = false;
+      }
+      if (ok && InFunction()) {
+        if (context_.IsEnabled(common::LanguageFeature::RelaxedPureDummy)) {
+          if (context_.ShouldWarn(common::LanguageFeature::RelaxedPureDummy) &&
+              !InModuleFile() && !InElemental()) {
+            messages_.Say(
+                "non-POINTER dummy argument of pure function should be INTENT(IN) or VALUE"_warn_en_US);
+          }
+        } else {
+          messages_.Say(
+              "non-POINTER dummy argument of pure function must be INTENT(IN) or VALUE"_err_en_US);
+        }
       }
     }
     if (auto ignoreTKR{GetIgnoreTKR(symbol)}; !ignoreTKR.empty()) {
@@ -798,7 +817,7 @@ void CheckHelper::CheckObjectEntity(
             "A dummy argument of an ELEMENTAL procedure may not be a POINTER"_err_en_US);
       }
       if (!symbol.attrs().HasAny(Attrs{Attr::VALUE, Attr::INTENT_IN,
-              Attr::INTENT_INOUT, Attr::INTENT_OUT})) { // C15102
+              Attr::INTENT_INOUT, Attr::INTENT_OUT})) { // F'2023 C15120
         messages_.Say(
             "A dummy argument of an ELEMENTAL procedure must have an INTENT() or VALUE attribute"_err_en_US);
       }

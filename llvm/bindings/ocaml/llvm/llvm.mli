@@ -1136,16 +1136,6 @@ val const_nuw_mul : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
 
-(** [const_icmp pred c1 c2] returns the constant comparison of two integer
-    constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getICmp]. *)
-val const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-
-(** [const_fcmp pred c1 c2] returns the constant comparison of two floating
-    point constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getFCmp]. *)
-val const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
-
 (** [const_shl c1 c2] returns the constant integer [c1] left-shifted by the
     constant integer [c2].
     See the method [llvm::ConstantExpr::getShl]. *)

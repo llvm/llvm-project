@@ -560,10 +560,15 @@ def : InstAlias<"mov $simm13, %tbr", (WRTBRri G0, simm13Op:$simm13), 0>;
 
 // End of Section A.3
 
-// or imm, reg, rd -> or reg, imm, rd
-// Nonstandard GNU extension.
-let EmitPriority = 0 in
+
+// Nonstandard GNU extensions.
+let EmitPriority = 0 in {
+  // or imm, reg, rd -> or reg, imm, rd
   def : InstAlias<"or $simm13, $rs1, $rd", (ORri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
+
+  // addc/addx imm, reg, rd -> or reg, imm, rd
+  def : InstAlias<"addx $simm13, $rs1, $rd", (ADDCri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
+}
 
 // wr reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 // (aka: omit the first arg when it's g0. This is not in the manual, but is

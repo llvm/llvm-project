@@ -128,6 +128,14 @@ bool findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
   return true;
 }
 
+static std::optional<unsigned>
+findOneNVVMAnnotation(const GlobalValue &GV, const std::string &PropName) {
+  unsigned RetVal;
+  if (findOneNVVMAnnotation(&GV, PropName, RetVal))
+    return RetVal;
+  return std::nullopt;
+}
+
 bool findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                            std::vector<unsigned> &retval) {
   auto &AC = getAnnotationCache();
@@ -252,32 +260,57 @@ std::string getSamplerName(const Value &val) {
   return std::string(val.getName());
 }
 
-bool getMaxNTIDx(const Function &F, unsigned &x) {
-  return findOneNVVMAnnotation(&F, "maxntidx", x);
+std::optional<unsigned> getMaxNTIDx(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidx");
 }
 
-bool getMaxNTIDy(const Function &F, unsigned &y) {
-  return findOneNVVMAnnotation(&F, "maxntidy", y);
+std::optional<unsigned> getMaxNTIDy(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidy");
 }
 
-bool getMaxNTIDz(const Function &F, unsigned &z) {
-  return findOneNVVMAnnotation(&F, "maxntidz", z);
+std::optional<unsigned> getMaxNTIDz(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidz");
+}
+
+std::optional<unsigned> getMaxNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. The PTX ISA states the
+  // following (11.4.2. Performance-Tuning Directives: .maxntid):
+  //
+  //  Note that this directive guarantees that the total number of threads does
+  //  not exceed the maximum, but does not guarantee that the limit in any
+  //  particular dimension is not exceeded.
+  std::optional<unsigned> MaxNTIDx = getMaxNTIDx(F);
+  std::optional<unsigned> MaxNTIDy = getMaxNTIDy(F);
+  std::optional<unsigned> MaxNTIDz = getMaxNTIDz(F);
+  if (MaxNTIDx || MaxNTIDy || MaxNTIDz)
+    return MaxNTIDx.value_or(1) * MaxNTIDy.value_or(1) * MaxNTIDz.value_or(1);
+  return std::nullopt;
 }
 
 bool getMaxClusterRank(const Function &F, unsigned &x) {
   return findOneNVVMAnnotation(&F, "maxclusterrank", x);
 }
 
-bool getReqNTIDx(const Function &F, unsigned &x) {
-  return findOneNVVMAnnotation(&F, "reqntidx", x);
+std::optional<unsigned> getReqNTIDx(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidx");
 }
 
-bool getReqNTIDy(const Function &F, unsigned &y) {
-  return findOneNVVMAnnotation(&F, "reqntidy", y);
+std::optional<unsigned> getReqNTIDy(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidy");
 }
 
-bool getReqNTIDz(const Function &F, unsigned &z) {
-  return findOneNVVMAnnotation(&F, "reqntidz", z);
+std::optional<unsigned> getReqNTIDz(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidz");
+}
+
+std::optional<unsigned> getReqNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  std::optional<unsigned> ReqNTIDx = getReqNTIDx(F);
+  std::optional<unsigned> ReqNTIDy = getReqNTIDy(F);
+  std::optional<unsigned> ReqNTIDz = getReqNTIDz(F);
+  if (ReqNTIDx || ReqNTIDy || ReqNTIDz)
+    return ReqNTIDx.value_or(1) * ReqNTIDy.value_or(1) * ReqNTIDz.value_or(1);
+  return std::nullopt;
 }
 
 bool getMinCTASm(const Function &F, unsigned &x) {

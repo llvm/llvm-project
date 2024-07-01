@@ -1438,7 +1438,7 @@ class ExecutionSession {
 
 public:
   /// For reporting errors.
-  using ErrorReporter = std::function<void(Error)>;
+  using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
   using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;

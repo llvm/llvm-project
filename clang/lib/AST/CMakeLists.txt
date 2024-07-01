@@ -87,6 +87,7 @@ add_clang_library(clangAST
   Interp/Record.cpp
   Interp/Source.cpp
   Interp/State.cpp
+  Interp/MemberPointer.cpp
   Interp/InterpShared.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp

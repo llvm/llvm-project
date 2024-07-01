@@ -14,6 +14,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
@@ -1083,6 +1084,201 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   }
 
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
+}
+
+namespace {
+struct IntrinToName {
+  uint32_t Id;
+  int32_t FullName;
+  int32_t ShortName;
+};
+} // unnamed namespace
+
+static bool BuiltinAliasValid(unsigned BuiltinID, StringRef AliasName,
+                              ArrayRef<IntrinToName> Map,
+                              const char *IntrinNames) {
+  AliasName.consume_front("__arm_");
+  const IntrinToName *It =
+      llvm::lower_bound(Map, BuiltinID, [](const IntrinToName &L, unsigned Id) {
+        return L.Id < Id;
+      });
+  if (It == Map.end() || It->Id != BuiltinID)
+    return false;
+  StringRef FullName(&IntrinNames[It->FullName]);
+  if (AliasName == FullName)
+    return true;
+  if (It->ShortName == -1)
+    return false;
+  StringRef ShortName(&IntrinNames[It->ShortName]);
+  return AliasName == ShortName;
+}
+
+bool SemaARM::MveAliasValid(unsigned BuiltinID, StringRef AliasName) {
+#include "clang/Basic/arm_mve_builtin_aliases.inc"
+  // The included file defines:
+  // - ArrayRef<IntrinToName> Map
+  // - const char IntrinNames[]
+  return BuiltinAliasValid(BuiltinID, AliasName, Map, IntrinNames);
+}
+
+bool SemaARM::CdeAliasValid(unsigned BuiltinID, StringRef AliasName) {
+#include "clang/Basic/arm_cde_builtin_aliases.inc"
+  return BuiltinAliasValid(BuiltinID, AliasName, Map, IntrinNames);
+}
+
+bool SemaARM::SveAliasValid(unsigned BuiltinID, StringRef AliasName) {
+  if (getASTContext().BuiltinInfo.isAuxBuiltinID(BuiltinID))
+    BuiltinID = getASTContext().BuiltinInfo.getAuxBuiltinID(BuiltinID);
+  return BuiltinID >= AArch64::FirstSVEBuiltin &&
+         BuiltinID <= AArch64::LastSVEBuiltin;
+}
+
+bool SemaARM::SmeAliasValid(unsigned BuiltinID, StringRef AliasName) {
+  if (getASTContext().BuiltinInfo.isAuxBuiltinID(BuiltinID))
+    BuiltinID = getASTContext().BuiltinInfo.getAuxBuiltinID(BuiltinID);
+  return BuiltinID >= AArch64::FirstSMEBuiltin &&
+         BuiltinID <= AArch64::LastSMEBuiltin;
+}
+
+void SemaARM::handleBuiltinAliasAttr(Decl *D, const ParsedAttr &AL) {
+  ASTContext &Context = getASTContext();
+  if (!AL.isArgIdent(0)) {
+    Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->Ident;
+  unsigned BuiltinID = Ident->getBuiltinID();
+  StringRef AliasName = cast<FunctionDecl>(D)->getIdentifier()->getName();
+
+  bool IsAArch64 = Context.getTargetInfo().getTriple().isAArch64();
+  if ((IsAArch64 && !SveAliasValid(BuiltinID, AliasName) &&
+       !SmeAliasValid(BuiltinID, AliasName)) ||
+      (!IsAArch64 && !MveAliasValid(BuiltinID, AliasName) &&
+       !CdeAliasValid(BuiltinID, AliasName))) {
+    Diag(AL.getLoc(), diag::err_attribute_arm_builtin_alias);
+    return;
+  }
+
+  D->addAttr(::new (Context) ArmBuiltinAliasAttr(Context, AL, Ident));
+}
+
+static bool checkNewAttrMutualExclusion(
+    Sema &S, const ParsedAttr &AL, const FunctionProtoType *FPT,
+    FunctionType::ArmStateValue CurrentState, StringRef StateName) {
+  auto CheckForIncompatibleAttr =
+      [&](FunctionType::ArmStateValue IncompatibleState,
+          StringRef IncompatibleStateName) {
+        if (CurrentState == IncompatibleState) {
+          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+              << (std::string("'__arm_new(\"") + StateName.str() + "\")'")
+              << (std::string("'") + IncompatibleStateName.str() + "(\"" +
+                  StateName.str() + "\")'")
+              << true;
+          AL.setInvalid();
+        }
+      };
+
+  CheckForIncompatibleAttr(FunctionType::ARM_In, "__arm_in");
+  CheckForIncompatibleAttr(FunctionType::ARM_Out, "__arm_out");
+  CheckForIncompatibleAttr(FunctionType::ARM_InOut, "__arm_inout");
+  CheckForIncompatibleAttr(FunctionType::ARM_Preserves, "__arm_preserves");
+  return AL.isInvalid();
+}
+
+void SemaARM::handleNewAttr(Decl *D, const ParsedAttr &AL) {
+  if (!AL.getNumArgs()) {
+    Diag(AL.getLoc(), diag::err_missing_arm_state) << AL;
+    AL.setInvalid();
+    return;
+  }
+
+  std::vector<StringRef> NewState;
+  if (const auto *ExistingAttr = D->getAttr<ArmNewAttr>()) {
+    for (StringRef S : ExistingAttr->newArgs())
+      NewState.push_back(S);
+  }
+
+  bool HasZA = false;
+  bool HasZT0 = false;
+  for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, I, StateName, &LiteralLoc))
+      return;
+
+    if (StateName == "za")
+      HasZA = true;
+    else if (StateName == "zt0")
+      HasZT0 = true;
+    else {
+      Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      AL.setInvalid();
+      return;
+    }
+
+    if (!llvm::is_contained(NewState, StateName)) // Avoid adding duplicates.
+      NewState.push_back(StateName);
+  }
+
+  if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
+    FunctionType::ArmStateValue ZAState =
+        FunctionType::getArmZAState(FPT->getAArch64SMEAttributes());
+    if (HasZA && ZAState != FunctionType::ARM_None &&
+        checkNewAttrMutualExclusion(SemaRef, AL, FPT, ZAState, "za"))
+      return;
+    FunctionType::ArmStateValue ZT0State =
+        FunctionType::getArmZT0State(FPT->getAArch64SMEAttributes());
+    if (HasZT0 && ZT0State != FunctionType::ARM_None &&
+        checkNewAttrMutualExclusion(SemaRef, AL, FPT, ZT0State, "zt0"))
+      return;
+  }
+
+  D->dropAttr<ArmNewAttr>();
+  D->addAttr(::new (getASTContext()) ArmNewAttr(
+      getASTContext(), AL, NewState.data(), NewState.size()));
+}
+
+void SemaARM::handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL) {
+  if (getLangOpts().CPlusPlus && !D->getDeclContext()->isExternCContext()) {
+    Diag(AL.getLoc(), diag::err_attribute_not_clinkage) << AL;
+    return;
+  }
+
+  const auto *FD = cast<FunctionDecl>(D);
+  if (!FD->isExternallyVisible()) {
+    Diag(AL.getLoc(), diag::warn_attribute_cmse_entry_static);
+    return;
+  }
+
+  D->addAttr(::new (getASTContext()) CmseNSEntryAttr(getASTContext(), AL));
+}
+
+void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
+  // Check the attribute arguments.
+  if (AL.getNumArgs() > 1) {
+    Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 1;
+    return;
+  }
+
+  StringRef Str;
+  SourceLocation ArgLoc;
+
+  if (AL.getNumArgs() == 0)
+    Str = "";
+  else if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
+    return;
+
+  ARMInterruptAttr::InterruptType Kind;
+  if (!ARMInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
+    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+        << AL << Str << ArgLoc;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 ARMInterruptAttr(getASTContext(), AL, Kind));
 }
 
 } // namespace clang

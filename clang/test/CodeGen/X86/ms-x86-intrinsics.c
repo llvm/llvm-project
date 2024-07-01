@@ -63,6 +63,31 @@ unsigned __int64 test__emulu(unsigned int a, unsigned int b) {
 // CHECK: [[RES:%[0-9]+]] = mul nuw i64 [[Y]], [[X]]
 // CHECK: ret i64 [[RES]]
 
+
+int test_inp(unsigned short port) {
+  return _inp(port);
+}
+// CHECK-LABEL: i32 @test_inp(i16 noundef
+// CHECK-SAME:  [[PORT:%.*]])
+// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-NEXT:  ret i32 [[TMP0]]
+
+unsigned short test_inpw(unsigned short port) {
+  return _inpw(port);
+}
+// CHECK-LABEL: i16 @test_inpw(i16 noundef
+// CHECK-SAME:  [[PORT:%.*]])
+// CHECK:       [[TMP0:%.*]] = tail call i16 asm sideeffect "inw ${1:w}, ${0:w}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-NEXT:  ret i16 [[TMP0]]
+
+unsigned long test_inpd(unsigned short port) {
+  return _inpd(port);
+}
+// CHECK-LABEL: i32 @test_inpd(i16 noundef
+// CHECK-SAME:  [[PORT:%.*]])
+// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inl ${1:w}, ${0:k}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-NEXT:  ret i32 [[TMP0]]
+
 #if defined(__x86_64__)
 
 char test__readgsbyte(unsigned long Offset) {

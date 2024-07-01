@@ -1,5 +1,5 @@
-# Check that jump table detection does not fail on a false
-# reference to a jump table.
+## Check that jump table detection does not fail on a false
+## reference to a jump table.
 
 # REQUIRES: system-linux
 

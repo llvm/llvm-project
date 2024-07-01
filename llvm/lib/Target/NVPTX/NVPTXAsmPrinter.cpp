@@ -542,30 +542,24 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // If the NVVM IR has some of reqntid* specified, then output
   // the reqntid directive, and set the unspecified ones to 1.
   // If none of Reqntid* is specified, don't output reqntid directive.
-  unsigned Reqntidx, Reqntidy, Reqntidz;
-  Reqntidx = Reqntidy = Reqntidz = 1;
-  bool ReqSpecified = false;
-  ReqSpecified |= getReqNTIDx(F, Reqntidx);
-  ReqSpecified |= getReqNTIDy(F, Reqntidy);
-  ReqSpecified |= getReqNTIDz(F, Reqntidz);
+  std::optional<unsigned> Reqntidx = getReqNTIDx(F);
+  std::optional<unsigned> Reqntidy = getReqNTIDy(F);
+  std::optional<unsigned> Reqntidz = getReqNTIDz(F);
 
-  if (ReqSpecified)
-    O << ".reqntid " << Reqntidx << ", " << Reqntidy << ", " << Reqntidz
-      << "\n";
+  if (Reqntidx || Reqntidy || Reqntidz)
+    O << ".reqntid " << Reqntidx.value_or(1) << ", " << Reqntidy.value_or(1)
+      << ", " << Reqntidz.value_or(1) << "\n";
 
   // If the NVVM IR has some of maxntid* specified, then output
   // the maxntid directive, and set the unspecified ones to 1.
   // If none of maxntid* is specified, don't output maxntid directive.
-  unsigned Maxntidx, Maxntidy, Maxntidz;
-  Maxntidx = Maxntidy = Maxntidz = 1;
-  bool MaxSpecified = false;
-  MaxSpecified |= getMaxNTIDx(F, Maxntidx);
-  MaxSpecified |= getMaxNTIDy(F, Maxntidy);
-  MaxSpecified |= getMaxNTIDz(F, Maxntidz);
+  std::optional<unsigned> Maxntidx = getMaxNTIDx(F);
+  std::optional<unsigned> Maxntidy = getMaxNTIDy(F);
+  std::optional<unsigned> Maxntidz = getMaxNTIDz(F);
 
-  if (MaxSpecified)
-    O << ".maxntid " << Maxntidx << ", " << Maxntidy << ", " << Maxntidz
-      << "\n";
+  if (Maxntidx || Maxntidy || Maxntidz)
+    O << ".maxntid " << Maxntidx.value_or(1) << ", " << Maxntidy.value_or(1)
+      << ", " << Maxntidz.value_or(1) << "\n";
 
   unsigned Mincta = 0;
   if (getMinCTASm(F, Mincta))

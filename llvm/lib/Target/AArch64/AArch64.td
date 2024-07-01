@@ -85,6 +85,10 @@ def SMEUnsupported : AArch64Unsupported {
                       SME2Unsupported.F);
 }
 
+def MTEUnsupported : AArch64Unsupported {
+  let F = [HasMTE];
+}
+
 let F = [HasPAuth, HasPAuthLR] in
 def PAUnsupported : AArch64Unsupported;
 
@@ -109,6 +113,7 @@ include "AArch64SchedNeoverseN1.td"
 include "AArch64SchedNeoverseN2.td"
 include "AArch64SchedNeoverseV1.td"
 include "AArch64SchedNeoverseV2.td"
+include "AArch64SchedOryon.td"
 
 include "AArch64Processors.td"
 

@@ -55,7 +55,7 @@ public:
   ProfOStream(raw_string_ostream &STR)
       : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
 
-  uint64_t tell() { return OS.tell(); }
+  [[nodiscard]] uint64_t tell() const { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
   void write32(uint32_t V) { LE.write<uint32_t>(V); }
   void writeByte(uint8_t V) { LE.write<uint8_t>(V); }
@@ -454,8 +454,8 @@ static uint64_t writeMemProfRecords(
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
     memprof::MemProfSchema *Schema, memprof::IndexedVersion Version,
-    llvm::DenseMap<memprof::CallStackId, uint32_t> *MemProfCallStackIndexes =
-        nullptr) {
+    llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
+        *MemProfCallStackIndexes = nullptr) {
   memprof::RecordWriterTrait RecordWriter(Schema, Version,
                                           MemProfCallStackIndexes);
   OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
@@ -491,19 +491,43 @@ static uint64_t writeMemProfFrames(
 
 // Serialize MemProfFrameData.  Return the mapping from FrameIds to their
 // indexes within the frame array.
-static llvm::DenseMap<memprof::FrameId, uint32_t> writeMemProfFrameArray(
+static llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
+writeMemProfFrameArray(
     ProfOStream &OS,
-    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
   // Mappings from FrameIds to array indexes.
-  llvm::DenseMap<memprof::FrameId, uint32_t> MemProfFrameIndexes;
+  llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes;
 
-  // Sort the FrameIDs for stability.
+  // Compute the order in which we serialize Frames.  The order does not matter
+  // in terms of correctness, but we still compute it for deserialization
+  // performance.  Specifically, if we serialize frequently used Frames one
+  // after another, we have better cache utilization.  For two Frames that
+  // appear equally frequently, we break a tie by serializing the one that tends
+  // to appear earlier in call stacks.  We implement the tie-breaking mechanism
+  // by computing the sum of indexes within call stacks for each Frame.  If we
+  // still have a tie, then we just resort to compare two FrameIds, which is
+  // just for stability of output.
   std::vector<std::pair<memprof::FrameId, const memprof::Frame *>> FrameIdOrder;
   FrameIdOrder.reserve(MemProfFrameData.size());
   for (const auto &[Id, Frame] : MemProfFrameData)
     FrameIdOrder.emplace_back(Id, &Frame);
   assert(MemProfFrameData.size() == FrameIdOrder.size());
-  llvm::sort(FrameIdOrder);
+  llvm::sort(FrameIdOrder,
+             [&](const std::pair<memprof::FrameId, const memprof::Frame *> &L,
+                 const std::pair<memprof::FrameId, const memprof::Frame *> &R) {
+               const auto &SL = FrameHistogram[L.first];
+               const auto &SR = FrameHistogram[R.first];
+               // Popular FrameIds should come first.
+               if (SL.Count != SR.Count)
+                 return SL.Count > SR.Count;
+               // If they are equally popular, then the one that tends to appear
+               // earlier in call stacks should come first.
+               if (SL.PositionSum != SR.PositionSum)
+                 return SL.PositionSum < SR.PositionSum;
+               // Compare their FrameIds for sort stability.
+               return L.first < R.first;
+             });
 
   // Serialize all frames while creating mappings from linear IDs to FrameIds.
   uint64_t Index = 0;
@@ -536,26 +560,23 @@ static uint64_t writeMemProfCallStacks(
   return CallStackTableGenerator.Emit(OS.OS);
 }
 
-static llvm::DenseMap<memprof::CallStackId, uint32_t>
+static llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
 writeMemProfCallStackArray(
     ProfOStream &OS,
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
         &MemProfCallStackData,
-    llvm::DenseMap<memprof::FrameId, uint32_t> &MemProfFrameIndexes) {
-  llvm::DenseMap<memprof::CallStackId, uint32_t> MemProfCallStackIndexes;
+    llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
+        &MemProfFrameIndexes,
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
+  llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
+      MemProfCallStackIndexes;
 
-  MemProfCallStackIndexes.reserve(MemProfCallStackData.size());
-  uint64_t CallStackBase = OS.tell();
-  for (const auto &[CSId, CallStack] : MemProfCallStackData) {
-    uint64_t CallStackIndex = (OS.tell() - CallStackBase) / sizeof(uint32_t);
-    MemProfCallStackIndexes.insert({CSId, CallStackIndex});
-    const llvm::SmallVector<memprof::FrameId> CS = CallStack;
-    OS.write32(CS.size());
-    for (const auto F : CS) {
-      assert(MemProfFrameIndexes.contains(F));
-      OS.write32(MemProfFrameIndexes[F]);
-    }
-  }
+  memprof::CallStackRadixTreeBuilder Builder;
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+                FrameHistogram);
+  for (auto I : Builder.getRadixArray())
+    OS.write32(I);
+  MemProfCallStackIndexes = Builder.takeCallStackPos();
 
   // Release the memory of this vector as it is no longer needed.
   MemProfCallStackData.clear();
@@ -691,8 +712,8 @@ static Error writeMemProfV2(ProfOStream &OS,
 // uint64_t Schema entry 1
 // ....
 // uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfFrameData
-// OnDiskChainedHashTable MemProfCallStackData
+// Frames serialized one after another
+// Call stacks encoded as a radix tree
 // OnDiskChainedHashTable MemProfRecordData
 static Error writeMemProfV3(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
@@ -708,13 +729,17 @@ static Error writeMemProfV3(ProfOStream &OS,
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  llvm::DenseMap<memprof::FrameId, uint32_t> MemProfFrameIndexes =
-      writeMemProfFrameArray(OS, MemProfData.FrameData);
+  llvm::DenseMap<memprof::FrameId, memprof::FrameStat> FrameHistogram =
+      memprof::computeFrameHistogram(MemProfData.CallStackData);
+  assert(MemProfData.FrameData.size() == FrameHistogram.size());
+
+  llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes =
+      writeMemProfFrameArray(OS, MemProfData.FrameData, FrameHistogram);
 
   uint64_t CallStackPayloadOffset = OS.tell();
-  llvm::DenseMap<memprof::CallStackId, uint32_t> MemProfCallStackIndexes =
-      writeMemProfCallStackArray(OS, MemProfData.CallStackData,
-                                 MemProfFrameIndexes);
+  llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
+      MemProfCallStackIndexes = writeMemProfCallStackArray(
+          OS, MemProfData.CallStackData, MemProfFrameIndexes, FrameHistogram);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =
@@ -898,7 +923,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   BinaryIds.erase(std::unique(BinaryIds.begin(), BinaryIds.end()),
                   BinaryIds.end());
 
-  for (auto BI : BinaryIds) {
+  for (const auto &BI : BinaryIds) {
     // Increment by binary id length data type size.
     BinaryIdsSectionSize += sizeof(uint64_t);
     // Increment by binary id data length, aligned to 8 bytes.
@@ -907,7 +932,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Write binary ids section size.
   OS.write(BinaryIdsSectionSize);
 
-  for (auto BI : BinaryIds) {
+  for (const auto &BI : BinaryIds) {
     uint64_t BILen = BI.size();
     // Write binary id length.
     OS.write(BILen);

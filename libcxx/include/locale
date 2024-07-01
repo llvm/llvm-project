@@ -986,12 +986,12 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
     // the leading character excluding the sign must be a decimal digit
     if (!__is_leading_parsed) {
       if (__a_end - __a >= 1 && __a[0] != '-' && __a[0] != '+') {
-        if ('0' <= __a[0] && __a[0] <= '9')
+        if (('0' <= __a[0] && __a[0] <= '9') || __a[0] == '.')
           __is_leading_parsed = true;
         else
           break;
       } else if (__a_end - __a >= 2 && (__a[0] == '-' || __a[0] == '+')) {
-        if ('0' <= __a[1] && __a[1] <= '9')
+        if (('0' <= __a[1] && __a[1] <= '9') || __a[1] == '.')
           __is_leading_parsed = true;
         else
           break;

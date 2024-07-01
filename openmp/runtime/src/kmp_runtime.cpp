@@ -3972,7 +3972,7 @@ int __kmp_register_root(int initial_thread) {
   __kmp_root_counter++;
 
 #if OMPT_SUPPORT
-  if (!initial_thread && ompt_enabled.enabled) {
+  if (ompt_enabled.enabled) {
 
     kmp_info_t *root_thread = ompt_get_thread();
 

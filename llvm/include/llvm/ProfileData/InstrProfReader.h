@@ -665,9 +665,8 @@ private:
   const unsigned char *CallStackBase = nullptr;
 
   Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
-                        uint64_t FirstWord, memprof::IndexedVersion Version);
-  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr,
-                      memprof::IndexedVersion Version);
+                        uint64_t FirstWord);
+  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;
@@ -709,7 +708,7 @@ private:
   const uint8_t *BinaryIdsStart = nullptr;
 
   // Index to the current record in the record array.
-  unsigned RecordIndex;
+  unsigned RecordIndex = 0;
 
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
@@ -722,7 +721,7 @@ public:
       std::unique_ptr<MemoryBuffer> DataBuffer,
       std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr)
       : DataBuffer(std::move(DataBuffer)),
-        RemappingBuffer(std::move(RemappingBuffer)), RecordIndex(0) {}
+        RemappingBuffer(std::move(RemappingBuffer)) {}
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 

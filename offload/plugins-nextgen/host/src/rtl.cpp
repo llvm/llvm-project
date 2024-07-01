@@ -418,7 +418,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
-  Expected<bool> isELFCompatible(StringRef) const override { return true; }
+  Expected<bool> isELFCompatible(uint32_t, StringRef) const override {
+    return true;
+  }
 
   Triple::ArchType getTripleArch() const override {
 #if defined(__x86_64__)

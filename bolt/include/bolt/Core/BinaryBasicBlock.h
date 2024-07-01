@@ -115,7 +115,7 @@ private:
   unsigned Index{InvalidIndex};
 
   /// Index in the current layout.
-  mutable unsigned LayoutIndex{InvalidIndex};
+  unsigned LayoutIndex{InvalidIndex};
 
   /// Number of pseudo instructions in this block.
   uint32_t NumPseudos{0};
@@ -891,7 +891,7 @@ public:
   }
 
   /// Set layout index. To be used by BinaryFunction.
-  void setLayoutIndex(unsigned Index) const { LayoutIndex = Index; }
+  void setLayoutIndex(unsigned Index) { LayoutIndex = Index; }
 
   /// Needed by graph traits.
   BinaryFunction *getParent() const { return getFunction(); }
