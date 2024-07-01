@@ -55,14 +55,14 @@ label_true:
 
 int test4(int out1, int out2) {
   // CHECK-LABEL: define{{.*}} i32 @test4(
-  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${5:l}", "={si},={di},r,0,1,!i,!i
+  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${5:l}", "={si},={di},r,{si},{di},!i,!i
   // CHECK: to label %asm.fallthrough [label %label_true.split, label %loop.split]
   // CHECK-LABEL: asm.fallthrough:
   if (out1 < out2)
     asm volatile goto("jne %l5" : "+S"(out1), "+D"(out2) : "r"(out1) :: label_true, loop);
   else
     asm volatile goto("jne %l7" : "+S"(out1), "+D"(out2) : "r"(out1), "r"(out2) :: label_true, loop);
-  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${7:l}", "={si},={di},r,r,0,1,!i,!i
+  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${7:l}", "={si},={di},r,r,{si},{di},!i,!i
   // CHECK: to label %asm.fallthrough6 [label %label_true.split11, label %loop.split14]
   // CHECK-LABEL: asm.fallthrough6:
   return out1 + out2;
@@ -92,7 +92,7 @@ t_err:
 
 int test6(int out1) {
   // CHECK-LABEL: define{{.*}} i32 @test6(
-  // CHECK: callbr i32 asm sideeffect "testl $0, $0; testl $1, $1; jne ${3:l}", "={si},r,0,!i,!i,{{.*}}
+  // CHECK: callbr i32 asm sideeffect "testl $0, $0; testl $1, $1; jne ${3:l}", "={si},r,{si},!i,!i,{{.*}}
   // CHECK: to label %asm.fallthrough [label %label_true.split, label %landing.split]
   // CHECK-LABEL: asm.fallthrough:
   // CHECK-LABEL: landing:
