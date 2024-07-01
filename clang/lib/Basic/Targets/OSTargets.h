@@ -649,10 +649,8 @@ protected:
     Builder.defineMacro("__TOS_AIX__");
     Builder.defineMacro("__HOS_AIX__");
 
-    if (Opts.C11) {
-      Builder.defineMacro("__STDC_NO_ATOMICS__");
+    if (Opts.C11)
       Builder.defineMacro("__STDC_NO_THREADS__");
-    }
 
     if (Opts.EnableAIXExtendedAltivecABI)
       Builder.defineMacro("__EXTABI__");
