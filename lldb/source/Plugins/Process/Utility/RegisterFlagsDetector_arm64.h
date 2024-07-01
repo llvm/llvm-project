@@ -17,12 +17,12 @@ namespace lldb_private {
 
 struct RegisterInfo;
 
-/// This class manages the storage and detection of register field information
-/// for Arm64 Linux and FreeBSD registers. The same register may have different
-/// fields on different CPUs. This class abstracts out the field detection
-/// process so we can use it on live processes and core files.
+/// This class manages the storage and detection of register field information.
+/// The same register may have different fields on different CPUs. This class
+/// abstracts out the field detection process so we can use it on live processes
+/// and core files.
 ///
-/// The general way to use this class is:
+/// The way to use this class is:
 /// * Make an instance somewhere that will last as long as the debug session
 ///   (because your final register info will point to this instance).
 /// * Read hardware capabilities from a core note, binary, prctl, etc.
