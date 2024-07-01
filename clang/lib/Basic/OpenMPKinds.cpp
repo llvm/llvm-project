@@ -750,7 +750,6 @@ void clang::getOpenMPCaptureRegions(
   auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
     assert(isLeafConstruct(LKind) && "Epecting leaf directive");
     // Whether a leaf would require OMPD_unknown if it occured on its own.
-    bool MayNeedUnknownRegion = false;
     switch (LKind) {
     case OMPD_metadirective:
       CaptureRegions.push_back(OMPD_metadirective);
