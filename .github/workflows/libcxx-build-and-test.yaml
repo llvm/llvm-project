@@ -82,6 +82,18 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+      # Install the artifacts for to a dummy directory and capture them as artifacts to be downloaded and consumed
+      # elsewhere.
+      - name: install-artifacts
+        run: |
+          cmake --build build/${{matrix.config}} -- install
+      - name: upload-installation
+        if: matrix.config == 'generic-cxx26'  # Upload artifacts even if the build or test suite fails
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.config }}-installation
+          path: |
+            build/${{matrix.config}}/install
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-runners-8-set
@@ -126,6 +138,7 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+
   stage3:
     if: github.repository_owner == 'llvm'
     needs: [ stage1, stage2 ]
