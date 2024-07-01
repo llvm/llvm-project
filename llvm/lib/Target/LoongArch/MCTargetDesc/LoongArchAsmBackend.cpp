@@ -206,8 +206,8 @@ bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
 // addend represent alignment and the other bits of addend represent the
 // maximum number of bytes to emit. The maximum number of bytes is zero
 // means ignore the emit limit.
-bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
-    MCAssembler &Asm, const MCAsmLayout &Layout, MCAlignFragment &AF) {
+bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
+                                                        MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
   if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
     return false;
@@ -451,7 +451,7 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
+bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                                   const MCFragment &F,
                                                   const MCFixup &Fixup,
                                                   const MCValue &Target,
@@ -503,9 +503,9 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
   MCValue B = MCValue::get(Target.getSymB());
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
-  auto &Asm = Layout.getAssembler();
-  Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
+  auto &Assembler = const_cast<MCAssembler &>(Asm);
+  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }
