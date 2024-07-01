@@ -285,3 +285,8 @@ endif()
 if(MLIR_STANDALONE_BUILD)
   llvm_distribution_add_targets()
 endif()
+
+# FIXME: Currently depends on utility functions inside clang.
+if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(MLIR_ENABLE_REWRITE ON CACHE BOOL "mlir-rewrite enabled")
+endif()

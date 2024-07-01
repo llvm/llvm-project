@@ -210,6 +210,13 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
   )
 endif()
 
+# FIXME: Currently depends on utility functions inside clang.
+if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-rewrite
+  )
+endif()
+
 # This target can be used to just build the dependencies
 # for the check-mlir target without executing the tests.
 # This is useful for bots when splitting the build step

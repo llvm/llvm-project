@@ -149,6 +149,10 @@ if config.mlir_run_arm_sme_tests:
         )
     )
 
+if config.enable_mlir_rewrite:
+    tools.extend(["mlir-rewrite"])
+    config.available_features.add('mlir-rewrite')
+
 # The following tools are optional
 tools.extend(
     [
