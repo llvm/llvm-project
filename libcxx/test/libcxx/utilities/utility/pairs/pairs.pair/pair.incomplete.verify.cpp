@@ -9,7 +9,7 @@
 #include <vector>
 
 struct Test {
-  std::vector<std::pair<int, Test>> v;
+  std::vector<std::pair<int, Test> > v;
 };
 
 std::pair<int, Test> p;
