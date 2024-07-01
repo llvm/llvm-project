@@ -265,8 +265,10 @@ char clz52[__builtin_clzg((unsigned __int128)0x1) == BITSIZE(__int128) - 1 ? 1 :
 char clz53[__builtin_clzg((unsigned __int128)0x1, 42) == BITSIZE(__int128) - 1 ? 1 : -1];
 char clz54[__builtin_clzg((unsigned __int128)0xf) == BITSIZE(__int128) - 4 ? 1 : -1];
 char clz55[__builtin_clzg((unsigned __int128)0xf, 42) == BITSIZE(__int128) - 4 ? 1 : -1];
-char clz56[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1))) == 0 ? 1 : -1];
-char clz57[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1)), 42) == 0 ? 1 : -1];
+char clz56[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1))) == 0 ? 1 : -1]; // expected-warning {{variable length array folded to constant array as an extension}}
+                                                                                             // expected-note@-1 {{shift count 127 >= width of type 'int' (32 bits)}}
+char clz57[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1)), 42) == 0 ? 1 : -1]; // expected-warning {{variable length array folded to constant array as an extension}}
+                                                                                                 // expected-note@-1 {{shift count 127 >= width of type 'int' (32 bits)}}
 #endif
 int clz58 = __builtin_clzg((unsigned _BitInt(128))0); // expected-error {{not a compile-time constant}}
 char clz59[__builtin_clzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
@@ -274,8 +276,10 @@ char clz60[__builtin_clzg((unsigned _BitInt(128))0x1) == BITSIZE(_BitInt(128)) -
 char clz61[__builtin_clzg((unsigned _BitInt(128))0x1, 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
 char clz62[__builtin_clzg((unsigned _BitInt(128))0xf) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
 char clz63[__builtin_clzg((unsigned _BitInt(128))0xf, 42) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
-char clz64[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1))) == 0 ? 1 : -1];
-char clz65[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1)), 42) == 0 ? 1 : -1];
+char clz64[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1))) == 0 ? 1 : -1]; // expected-warning {{variable length array folded to constant array as an extension}}
+                                                                                                     // expected-note@-1 {{shift count 127 >= width of type 'int' (32 bits)}}
+char clz65[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1)), 42) == 0 ? 1 : -1]; // expected-warning {{variable length array folded to constant array as an extension}}
+                                                                                                         // expected-note@-1 {{shift count 127 >= width of type 'int' (32 bits)}}
 
 char ctz1[__builtin_ctz(1) == 0 ? 1 : -1];
 char ctz2[__builtin_ctz(8) == 3 ? 1 : -1];
