@@ -29,12 +29,10 @@ public:
   LIBC_INLINE static void refresh_cache() { cache = get_uncached(); }
   LIBC_INLINE static pid_t get() {
 #if LIBC_COPT_ENABLE_PID_CACHE
-    if (LIBC_UNLIKELY(fork_inflight))
-      return get_uncached();
-    return cache;
-#else
-    return get_uncached();
+    if (LIBC_LIKELY(!fork_inflight))
+      return cache;
 #endif
+    return get_uncached();
   }
 };
 
