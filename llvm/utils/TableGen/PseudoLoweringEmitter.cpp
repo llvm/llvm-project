@@ -76,8 +76,8 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
   unsigned OpsAdded = 0;
   for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
     if (DefInit *DI = dyn_cast<DefInit>(Dag->getArg(i))) {
-      // Physical register reference. Explicit check for the special case
-      // "zero_reg" definition.
+      // Physical register reference.
+      // Explicit check for the special case "zero_reg" definition.
       if (DI->getDef()->isSubClassOf("Register") ||
           DI->getDef()->getName() == "zero_reg") {
         OperandMap[BaseIdx + i].Kind = OpData::Reg;
@@ -88,23 +88,26 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
 
       // Normal operands should always have the same type, or we have a
       // problem.
-      // FIXME: We probably shouldn't ever get a non-zero BaseIdx here.
-      assert(BaseIdx == 0 && "Named subargument in pseudo expansion?!");
+
       // FIXME: Are the message operand types backward?
-      if (DI->getDef() != Insn.Operands[BaseIdx + i].Rec) {
+      if (DI->getDef() != Insn.Operands[i].Rec) {
         PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
                             "', operand type '" + DI->getDef()->getName() +
                             "' does not match expansion operand type '" +
-                            Insn.Operands[BaseIdx + i].Rec->getName() + "'");
+                            Insn.Operands[i].Rec->getName() + "'");
         PrintFatalNote(DI->getDef(),
                        "Value was assigned at the following location:");
       }
       // Source operand maps to destination operand. The Data element
       // will be filled in later, just set the Kind for now. Do it
       // for each corresponding MachineInstr operand, not just the first.
-      for (unsigned I = 0, E = Insn.Operands[i].MINumOperands; I != E; ++I)
+      for (unsigned I = 0, E = Insn.Operands[i].MINumOperands; I != E; ++I) {
         OperandMap[BaseIdx + i + I].Kind = OpData::Operand;
+      }
       OpsAdded += Insn.Operands[i].MINumOperands;
+      if (Insn.Operands[i].MINumOperands > 0)
+        BaseIdx += Insn.Operands[i].MINumOperands - 1;
+
     } else if (IntInit *II = dyn_cast<IntInit>(Dag->getArg(i))) {
       OperandMap[BaseIdx + i].Kind = OpData::Imm;
       OperandMap[BaseIdx + i].Data.Imm = II->getValue();
@@ -164,21 +167,21 @@ void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
                    "Result was assigned at the following location:");
   }
 
-  if (Insn.Operands.size() != Dag->getNumArgs()) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator '" + Operator->getName() +
-                        "' has the wrong number of operands");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
-
   unsigned NumMIOperands = 0;
   for (unsigned i = 0, e = Insn.Operands.size(); i != e; ++i)
     NumMIOperands += Insn.Operands[i].MINumOperands;
   IndexedMap<OpData> OperandMap;
   OperandMap.grow(NumMIOperands);
 
-  addDagOperandMapping(Rec, Dag, Insn, OperandMap, 0);
+  unsigned NumOps = addDagOperandMapping(Rec, Dag, Insn, OperandMap, 0);
+
+  if (NumOps < Dag->getNumArgs()) {
+    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
+                        "', result operator '" + Operator->getName() +
+                        "' has the wrong number of operands");
+    PrintFatalNote(Rec->getValue("ResultInst"),
+                   "Result was assigned at the following location:");
+  }
 
   // If there are more operands that weren't in the DAG, they have to
   // be operands that have default values, or we have an error. Currently,
@@ -196,7 +199,7 @@ void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
     SourceOperands[SourceInsn.Operands[i].Name] = i;
 
   LLVM_DEBUG(dbgs() << "  Operand mapping:\n");
-  for (unsigned i = 0, e = Insn.Operands.size(); i != e; ++i) {
+  for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
     // We've already handled constant values. Just map instruction operands
     // here.
     if (OperandMap[Insn.Operands[i].MIOperandNo].Kind != OpData::Operand)
