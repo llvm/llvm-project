@@ -269,8 +269,7 @@ public:
   bool isSymbolLinkerVisible(const MCSymbol &SD) const;
 
   /// Emit the section contents to \p OS.
-  void writeSectionData(raw_ostream &OS, const MCSection *Section,
-                        const MCAsmLayout &Layout) const;
+  void writeSectionData(raw_ostream &OS, const MCSection *Section) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
   bool isThumbFunc(const MCSymbol *Func) const;

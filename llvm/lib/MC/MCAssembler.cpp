@@ -204,8 +204,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
                   MCFixupKindInfo::FKF_IsTarget;
 
   if (IsTarget)
-    return getBackend().evaluateTargetFixup(*this, *Layout, Fixup, DF, Target,
-                                            STI, Value, WasForced);
+    return getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI,
+                                            Value, WasForced);
 
   unsigned FixupFlags = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags;
   bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
@@ -494,10 +494,6 @@ uint64_t MCAssembler::getFragmentOffset(const MCFragment &F) const {
   return F.Offset;
 }
 
-uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
-  return Assembler.getFragmentOffset(*F);
-}
-
 // Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAssembler &Asm, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
@@ -558,10 +554,6 @@ uint64_t MCAssembler::getSymbolOffset(const MCSymbol &S) const {
   return Val;
 }
 
-uint64_t MCAsmLayout::getSymbolOffset(const MCSymbol &S) const {
-  return Assembler.getSymbolOffset(S);
-}
-
 const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
   assert(Layout);
   if (!Symbol.isVariable())
@@ -598,17 +590,11 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 
   return &ASym;
 }
-const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
-  return Assembler.getBaseSymbol(Symbol);
-}
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
   // The size is the last fragment's end offset.
   const MCFragment &F = *Sec.curFragList()->Tail;
   return getFragmentOffset(F) + computeFragmentSize(F);
-}
-uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
-  return Assembler.getSectionAddressSize(*Sec);
 }
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
@@ -616,9 +602,6 @@ uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
   if (Sec.isVirtualSection())
     return 0;
   return getSectionAddressSize(Sec);
-}
-uint64_t MCAsmLayout::getSectionFileSize(const MCSection *Sec) const {
-  return Assembler.getSectionFileSize(*Sec);
 }
 
 bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {
@@ -667,7 +650,7 @@ void MCAssembler::writeFragmentPadding(raw_ostream &OS,
 
 /// Write the fragment \p F to the output file.
 static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
-                          const MCAsmLayout &Layout, const MCFragment &F) {
+                          const MCFragment &F) {
   // FIXME: Embed in fragments instead?
   uint64_t FragmentSize = Asm.computeFragmentSize(F);
 
@@ -884,13 +867,13 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
          "The stream should advance by fragment size");
 }
 
-void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
-                                   const MCAsmLayout &Layout) const {
+void MCAssembler::writeSectionData(raw_ostream &OS,
+                                   const MCSection *Sec) const {
   assert(getBackendPtr() && "Expected assembler backend");
 
   // Ignore virtual sections.
   if (Sec->isVirtualSection()) {
-    assert(Layout.getSectionFileSize(Sec) == 0 && "Invalid size for section!");
+    assert(getSectionFileSize(*Sec) == 0 && "Invalid size for section!");
 
     // Check that contents are only things legal inside a virtual section.
     for (const MCFragment &F : *Sec) {
@@ -938,10 +921,10 @@ void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
   (void)Start;
 
   for (const MCFragment &F : *Sec)
-    writeFragment(OS, *this, Layout, F);
+    writeFragment(OS, *this, F);
 
   assert(getContext().hadError() ||
-         OS.tell() - Start == Layout.getSectionAddressSize(Sec));
+         OS.tell() - Start == getSectionAddressSize(*Sec));
 }
 
 std::tuple<MCValue, uint64_t, bool>
@@ -1022,7 +1005,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 
   // Allow the object writer a chance to perform post-layout binding (for
   // example, to set the index fields in the symbol data).
-  getWriter().executePostLayoutBinding(*this, Layout);
+  getWriter().executePostLayoutBinding(*this);
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
@@ -1109,7 +1092,7 @@ void MCAssembler::Finish() {
   layout(Layout);
 
   // Write the object file.
-  stats::ObjectBytes += getWriter().writeObject(*this, Layout);
+  stats::ObjectBytes += getWriter().writeObject(*this);
 
   this->Layout = nullptr;
 }

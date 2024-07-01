@@ -111,9 +111,6 @@ static bool checkPositiveIntArgument(Sema &S, const AttrInfo &AI, const Expr *Ex
   return true;
 }
 
-/// Check if the argument \p E is a ASCII string literal. If not emit an error
-/// and return false, otherwise set \p Str to the value of the string literal
-/// and return true.
 bool Sema::checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
                                           const Expr *E, StringRef &Str,
                                           SourceLocation *ArgLocation) {
@@ -131,10 +128,6 @@ bool Sema::checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
   return true;
 }
 
-/// Check if the argument \p ArgNum of \p Attr is a ASCII string literal.
-/// If not emit an error and return false. If the argument is an identifier it
-/// will emit an error with a fixit hint and treat it as if it was a string
-/// literal.
 bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
                                           StringRef &Str,
                                           SourceLocation *ArgLocation) {
@@ -2843,15 +2836,6 @@ SectionAttr *Sema::mergeSectionAttr(Decl *D, const AttributeCommonInfo &CI,
   return ::new (Context) SectionAttr(Context, CI, Name);
 }
 
-/// Used to implement to perform semantic checking on
-/// attribute((section("foo"))) specifiers.
-///
-/// In this case, "foo" is passed in to be checked.  If the section
-/// specifier is invalid, return an Error that indicates the problem.
-///
-/// This is a simple quality of implementation feature to catch errors
-/// and give good diagnostics in cases when the assembler or code generator
-/// would otherwise reject the section specifier.
 llvm::Error Sema::isValidSectionSpecifier(StringRef SecName) {
   if (!Context.getTargetInfo().getTriple().isOSDarwin())
     return llvm::Error::success();
@@ -2964,8 +2948,6 @@ static void handleCodeSegAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(CSA);
 }
 
-// Check for things we'd like to warn about. Multiversioning issues are
-// handled later in the process, once we know how many exist.
 bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
@@ -3027,7 +3009,6 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   return false;
 }
 
-// Check Target Version attrs
 bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
                                   StringRef &AttrStr, bool &isDefault) {
   enum FirstParam { Unsupported };
@@ -5066,8 +5047,6 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   return false;
 }
 
-/// Checks a regparm attribute, returning true if it is ill-formed and
-/// otherwise setting numParams to the appropriate value.
 bool Sema::CheckRegparmAttr(const ParsedAttr &AL, unsigned &numParams) {
   if (AL.isInvalid())
     return true;
@@ -7253,8 +7232,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   }
 }
 
-/// ProcessDeclAttributeList - Apply all the decl attributes in the specified
-/// attribute list to the specified decl, ignoring any type attributes.
 void Sema::ProcessDeclAttributeList(
     Scope *S, Decl *D, const ParsedAttributesView &AttrList,
     const ProcessDeclAttributeOptions &Options) {
@@ -7328,8 +7305,6 @@ void Sema::ProcessDeclAttributeList(
   }
 }
 
-// Helper for delayed processing TransparentUnion or BPFPreserveAccessIndexAttr
-// attribute.
 void Sema::ProcessDeclAttributeDelayed(Decl *D,
                                        const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList)
@@ -7344,8 +7319,6 @@ void Sema::ProcessDeclAttributeDelayed(Decl *D,
     BPF().handlePreserveAIRecord(cast<RecordDecl>(D));
 }
 
-// Annotation attributes are the only attributes allowed after an access
-// specifier.
 bool Sema::ProcessAccessDeclAttributeList(
     AccessSpecDecl *ASDecl, const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList) {
@@ -7380,9 +7353,6 @@ static void checkUnusedDeclAttributes(Sema &S, const ParsedAttributesView &A) {
   }
 }
 
-/// checkUnusedDeclAttributes - Given a declarator which is not being
-/// used to build a declaration, complain about any decl attributes
-/// which might be lying around on it.
 void Sema::checkUnusedDeclAttributes(Declarator &D) {
   ::checkUnusedDeclAttributes(*this, D.getDeclarationAttributes());
   ::checkUnusedDeclAttributes(*this, D.getDeclSpec().getAttributes());
@@ -7391,8 +7361,6 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
     ::checkUnusedDeclAttributes(*this, D.getTypeObject(i).getAttrs());
 }
 
-/// DeclClonePragmaWeak - clone existing decl (maybe definition),
-/// \#pragma weak needs a non-definition decl and source may not have one.
 NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
                                      SourceLocation Loc) {
   assert(isa<FunctionDecl>(ND) || isa<VarDecl>(ND));
@@ -7437,8 +7405,6 @@ NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
   return NewD;
 }
 
-/// DeclApplyPragmaWeak - A declaration (maybe definition) needs \#pragma weak
-/// applied to it, possibly with an alias.
 void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
   if (W.getAlias()) { // clone decl, impersonate __attribute(weak,alias(...))
     IdentifierInfo *NDId = ND->getIdentifier();
@@ -7657,9 +7623,6 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
   } while ((pool = pool->getParent()));
 }
 
-/// Given a set of delayed diagnostics, re-emit them as if they had
-/// been delayed in the current context instead of in the given pool.
-/// Essentially, this just moves them to the current pool.
 void Sema::redelayDiagnostics(DelayedDiagnosticPool &pool) {
   DelayedDiagnosticPool *curPool = DelayedDiagnostics.getCurrentPool();
   assert(curPool && "re-emitting in undelayed context not supported");
