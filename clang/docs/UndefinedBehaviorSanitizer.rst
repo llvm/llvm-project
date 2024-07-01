@@ -218,7 +218,7 @@ Available checks are:
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
-     ``float-divide-by-zero``, ``unsigned-integer-overflow``,
+     ``float-divide-by-zero``, ``unsigned-integer-overflow``, ``unsigned-shift-base``,
      ``implicit-conversion``, ``local-bounds`` and the ``nullability-*`` group
      of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
@@ -241,7 +241,7 @@ You can also use the following check groups:
   -  ``-fsanitize=integer``: Checks for undefined or suspicious integer
      behavior (e.g. unsigned integer overflow).
      Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
-     ``shift``, ``integer-divide-by-zero``,
+     ``unsigned-shift-base``, ``shift``, ``integer-divide-by-zero``,
      ``implicit-unsigned-integer-truncation``,
      ``implicit-signed-integer-truncation``, and
      ``implicit-integer-sign-change``.
