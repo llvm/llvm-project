@@ -123,8 +123,9 @@ def parse_function_details(details):
         arguments=arguments,
         standards=standards,
         guard=guard if guard != "null" else None,
-        attributes=attributes if attributes else []
+        attributes=attributes if attributes else [],
     )
+
 
 def add_function_to_yaml(yaml_file, function_details):
     """
