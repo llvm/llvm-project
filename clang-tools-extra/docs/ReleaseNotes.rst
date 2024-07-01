@@ -72,6 +72,9 @@ Code actions
 - The tweak for turning unscoped into scoped enums now removes redundant prefixes
   from the enum values.
 
+- The inline concept requirement tweak was introduced.
+  It allows inlining of simple require clauses into the template declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
