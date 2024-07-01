@@ -125,10 +125,10 @@ uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
                                           const MCSection *Sec) const {
   uint64_t EndAddr = getSectionAddress(Sec) + Asm.getSectionAddressSize(*Sec);
   unsigned Next = Sec->getLayoutOrder() + 1;
-  if (Next >= Asm.getLayout()->getSectionOrder().size())
+  if (Next >= SectionOrder.size())
     return 0;
 
-  const MCSection &NextSec = *Asm.getLayout()->getSectionOrder()[Next];
+  const MCSection &NextSec = *SectionOrder[Next];
   if (NextSec.isVirtualSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
@@ -670,8 +670,24 @@ void MachObjectWriter::computeSymbolTable(
 }
 
 void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
+  // Assign layout order indices to sections.
+  unsigned i = 0;
+  // Compute the section layout order. Virtual sections must go last.
+  for (MCSection &Sec : Asm) {
+    if (!Sec.isVirtualSection()) {
+      SectionOrder.push_back(&Sec);
+      Sec.setLayoutOrder(i++);
+    }
+  }
+  for (MCSection &Sec : Asm) {
+    if (Sec.isVirtualSection()) {
+      SectionOrder.push_back(&Sec);
+      Sec.setLayoutOrder(i++);
+    }
+  }
+
   uint64_t StartAddress = 0;
-  for (const MCSection *Sec : Asm.getLayout()->getSectionOrder()) {
+  for (const MCSection *Sec : SectionOrder) {
     StartAddress = alignTo(StartAddress, Sec->getAlign());
     SectionAddress[Sec] = StartAddress;
     StartAddress += Asm.getSectionAddressSize(*Sec);

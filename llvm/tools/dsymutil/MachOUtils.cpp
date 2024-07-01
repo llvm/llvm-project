@@ -326,14 +326,13 @@ static void transferSegmentAndSections(
 static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t FileOffset,
                                uint64_t FileSize, unsigned NumSections,
                                 MachObjectWriter &Writer) {
-  auto &Layout = *Asm.getLayout();
   Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
                                  alignTo(FileSize, 0x1000), FileOffset,
                                  FileSize, /* MaxProt */ 7,
                                  /* InitProt =*/3);
 
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
+  for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
+    MCSection *Sec = Writer.getSectionOrder()[i];
     if (!Asm.getSectionFileSize(*Sec))
       continue;
 
@@ -491,8 +490,8 @@ bool generateDsymCompanion(
   unsigned NumDwarfSections = 0;
   uint64_t DwarfSegmentSize = 0;
 
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
+  for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
+    MCSection *Sec = Writer.getSectionOrder()[i];
     if (Sec->begin() == Sec->end())
       continue;
 
