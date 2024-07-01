@@ -178,12 +178,14 @@ public:
   virtual void relaxInstruction(MCInst &Inst,
                                 const MCSubtargetInfo &STI) const {};
 
-  virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                                  MCAsmLayout &Layout, bool &WasRelaxed) const {
+  virtual bool relaxDwarfLineAddr(const MCAssembler &Asm,
+                                  MCDwarfLineAddrFragment &DF,
+                                  bool &WasRelaxed) const {
     return false;
   }
 
-  virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+  virtual bool relaxDwarfCFA(const MCAssembler &Asm,
+                             MCDwarfCallFrameFragment &DF,
                              bool &WasRelaxed) const {
     return false;
   }
@@ -191,7 +193,7 @@ public:
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
   virtual std::pair<bool, bool>
-  relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout, int64_t &Value) const {
+  relaxLEB128(const MCAssembler &Asm, MCLEBFragment &LF, int64_t &Value) const {
     return std::make_pair(false, false);
   }
 
