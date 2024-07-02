@@ -626,9 +626,11 @@ private:
           }
         }
       }
+    }
 
-      // If this node has both dependants and dependencies then add it to the
-      // worklist to propagate the dependencies to the dependants.
+    // Add blocks with both dependants and dependencies to the worklist to
+    // propagate dependencies to dependants.
+    for (auto &[B, BI] : BlockInfos) {
       if (!BI.Dependants.empty() && !BI.Dependencies.empty())
         WorkList.push_back(B);
     }

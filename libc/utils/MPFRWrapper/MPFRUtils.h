@@ -51,6 +51,7 @@ enum class Operation : int {
   Round,
   RoundEven,
   Sin,
+  Sinpi,
   Sinh,
   Sqrt,
   Tan,
@@ -71,9 +72,11 @@ enum class Operation : int {
   // output.
   BeginBinaryOperationsSingleOutput,
   Atan2,
+  Div,
   Fmod,
   Hypot,
   Pow,
+  Fmul,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
@@ -129,8 +132,33 @@ struct AreMatchingBinaryInputAndBinaryOutput<BinaryInput<T>, BinaryOutput<T>> {
   static constexpr bool VALUE = cpp::is_floating_point_v<T>;
 };
 
+template <typename T> struct IsBinaryInput {
+  static constexpr bool VALUE = false;
+};
+
+template <typename T> struct IsBinaryInput<BinaryInput<T>> {
+  static constexpr bool VALUE = true;
+};
+
+template <typename T> struct IsTernaryInput {
+  static constexpr bool VALUE = false;
+};
+
+template <typename T> struct IsTernaryInput<TernaryInput<T>> {
+  static constexpr bool VALUE = true;
+};
+
+template <typename T> struct MakeScalarInput : cpp::type_identity<T> {};
+
 template <typename T>
-bool compare_unary_operation_single_output(Operation op, T input, T libc_output,
+struct MakeScalarInput<BinaryInput<T>> : cpp::type_identity<T> {};
+
+template <typename T>
+struct MakeScalarInput<TernaryInput<T>> : cpp::type_identity<T> {};
+
+template <typename InputType, typename OutputType>
+bool compare_unary_operation_single_output(Operation op, InputType input,
+                                           OutputType libc_output,
                                            double ulp_tolerance,
                                            RoundingMode rounding);
 template <typename T>
@@ -145,21 +173,23 @@ bool compare_binary_operation_two_outputs(Operation op,
                                           double ulp_tolerance,
                                           RoundingMode rounding);
 
-template <typename T>
+template <typename InputType, typename OutputType>
 bool compare_binary_operation_one_output(Operation op,
-                                         const BinaryInput<T> &input,
-                                         T libc_output, double ulp_tolerance,
+                                         const BinaryInput<InputType> &input,
+                                         OutputType libc_output,
+                                         double ulp_tolerance,
                                          RoundingMode rounding);
 
-template <typename T>
+template <typename InputType, typename OutputType>
 bool compare_ternary_operation_one_output(Operation op,
-                                          const TernaryInput<T> &input,
-                                          T libc_output, double ulp_tolerance,
+                                          const TernaryInput<InputType> &input,
+                                          OutputType libc_output,
+                                          double ulp_tolerance,
                                           RoundingMode rounding);
 
-template <typename T>
-void explain_unary_operation_single_output_error(Operation op, T input,
-                                                 T match_value,
+template <typename InputType, typename OutputType>
+void explain_unary_operation_single_output_error(Operation op, InputType input,
+                                                 OutputType match_value,
                                                  double ulp_tolerance,
                                                  RoundingMode rounding);
 template <typename T>
@@ -172,19 +202,15 @@ void explain_binary_operation_two_outputs_error(
     const BinaryOutput<T> &match_value, double ulp_tolerance,
     RoundingMode rounding);
 
-template <typename T>
-void explain_binary_operation_one_output_error(Operation op,
-                                               const BinaryInput<T> &input,
-                                               T match_value,
-                                               double ulp_tolerance,
-                                               RoundingMode rounding);
+template <typename InputType, typename OutputType>
+void explain_binary_operation_one_output_error(
+    Operation op, const BinaryInput<InputType> &input, OutputType match_value,
+    double ulp_tolerance, RoundingMode rounding);
 
-template <typename T>
-void explain_ternary_operation_one_output_error(Operation op,
-                                                const TernaryInput<T> &input,
-                                                T match_value,
-                                                double ulp_tolerance,
-                                                RoundingMode rounding);
+template <typename InputType, typename OutputType>
+void explain_ternary_operation_one_output_error(
+    Operation op, const TernaryInput<InputType> &input, OutputType match_value,
+    double ulp_tolerance, RoundingMode rounding);
 
 template <Operation op, bool silent, typename InputType, typename OutputType>
 class MPFRMatcher : public testing::Matcher<OutputType> {
@@ -212,7 +238,8 @@ public:
   bool is_silent() const override { return silent; }
 
 private:
-  template <typename T> bool match(T in, T out) {
+  template <typename InType, typename OutType>
+  bool match(InType in, OutType out) {
     return compare_unary_operation_single_output(op, in, out, ulp_tolerance,
                                                  rounding);
   }
@@ -222,7 +249,8 @@ private:
                                                rounding);
   }
 
-  template <typename T> bool match(const BinaryInput<T> &in, T out) {
+  template <typename T, typename U>
+  bool match(const BinaryInput<T> &in, U out) {
     return compare_binary_operation_one_output(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -233,12 +261,14 @@ private:
                                                 rounding);
   }
 
-  template <typename T> bool match(const TernaryInput<T> &in, T out) {
+  template <typename InType, typename OutType>
+  bool match(const TernaryInput<InType> &in, OutType out) {
     return compare_ternary_operation_one_output(op, in, out, ulp_tolerance,
                                                 rounding);
   }
 
-  template <typename T> void explain_error(T in, T out) {
+  template <typename InType, typename OutType>
+  void explain_error(InType in, OutType out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
                                                 rounding);
   }
@@ -254,12 +284,14 @@ private:
                                                rounding);
   }
 
-  template <typename T> void explain_error(const BinaryInput<T> &in, T out) {
+  template <typename T, typename U>
+  void explain_error(const BinaryInput<T> &in, U out) {
     explain_binary_operation_one_output_error(op, in, out, ulp_tolerance,
                                               rounding);
   }
 
-  template <typename T> void explain_error(const TernaryInput<T> &in, T out) {
+  template <typename InType, typename OutType>
+  void explain_error(const TernaryInput<InType> &in, OutType out) {
     explain_ternary_operation_one_output_error(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -271,6 +303,21 @@ private:
 // types.
 template <Operation op, typename InputType, typename OutputType>
 constexpr bool is_valid_operation() {
+  constexpr bool IS_NARROWING_OP =
+      (op == Operation::Sqrt && cpp::is_floating_point_v<InputType> &&
+       cpp::is_floating_point_v<OutputType> &&
+       sizeof(OutputType) <= sizeof(InputType)) ||
+      ((op == Operation::Div || op == Operation::Fmul) &&
+       internal::IsBinaryInput<InputType>::VALUE &&
+       cpp::is_floating_point_v<
+           typename internal::MakeScalarInput<InputType>::type> &&
+       cpp::is_floating_point_v<OutputType>) ||
+      (op == Operation::Fma && internal::IsTernaryInput<InputType>::VALUE &&
+       cpp::is_floating_point_v<
+           typename internal::MakeScalarInput<InputType>::type> &&
+       cpp::is_floating_point_v<OutputType>);
+  if (IS_NARROWING_OP)
+    return true;
   return (Operation::BeginUnaryOperationsSingleOutput < op &&
           op < Operation::EndUnaryOperationsSingleOutput &&
           cpp::is_same_v<InputType, OutputType> &&

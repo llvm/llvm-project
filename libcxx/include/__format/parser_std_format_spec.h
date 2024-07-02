@@ -1155,8 +1155,8 @@ __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __col
   // When Unicode isn't supported assume ASCII and every code unit is one code
   // point. In ASCII the estimated column width is always one. Thus there's no
   // need for rounding.
-  size_t __width_ = std::min(__str.size(), __maximum);
-  return {__width_, __str.begin() + __width_};
+  size_t __width = std::min(__str.size(), __maximum);
+  return {__width, __str.begin() + __width};
 }
 
 #  endif // !defined(_LIBCPP_HAS_NO_UNICODE)

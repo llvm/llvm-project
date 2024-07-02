@@ -309,8 +309,24 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Default([](Type) { llvm_unreachable("unexpected 'gpu' type kind"); });
 }
 
+static LogicalResult verifyKnownLaunchSizeAttr(Operation *op,
+                                               NamedAttribute attr) {
+  auto array = dyn_cast<DenseI32ArrayAttr>(attr.getValue());
+  if (!array)
+    return op->emitOpError(Twine(attr.getName()) +
+                           " must be a dense i32 array");
+  if (array.size() != 3)
+    return op->emitOpError(Twine(attr.getName()) +
+                           " must contain exactly 3 elements");
+  return success();
+}
+
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
                                                    NamedAttribute attr) {
+  if (attr.getName() == getKnownBlockSizeAttrHelper().getName())
+    return verifyKnownLaunchSizeAttr(op, attr);
+  if (attr.getName() == getKnownGridSizeAttrHelper().getName())
+    return verifyKnownLaunchSizeAttr(op, attr);
   if (!llvm::isa<UnitAttr>(attr.getValue()) ||
       attr.getName() != getContainerModuleAttrName())
     return success();
@@ -1081,11 +1097,13 @@ BlockArgument LaunchOp::addPrivateAttribution(Type type, Location loc) {
 //===----------------------------------------------------------------------===//
 
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
-                         GPUFuncOp kernelFunc, KernelDim3 gridSize,
+                         SymbolRefAttr kernelSymbol, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
                          ValueRange asyncDependencies,
                          std::optional<KernelDim3> clusterSize) {
+  assert(kernelSymbol.getNestedReferences().size() == 1 &&
+         "expected a symbol reference with a single nested reference");
   result.addOperands(asyncDependencies);
   if (asyncTokenType)
     result.types.push_back(builder.getType<AsyncTokenType>());
@@ -1098,10 +1116,6 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
   result.addOperands(kernelOperands);
-  auto kernelModule = kernelFunc->getParentOfType<GPUModuleOp>();
-  auto kernelSymbol =
-      SymbolRefAttr::get(kernelModule.getNameAttr(),
-                         {SymbolRefAttr::get(kernelFunc.getNameAttr())});
 
   Properties &prop = result.getOrAddProperties<Properties>();
   prop.kernel = kernelSymbol;
@@ -1120,6 +1134,21 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.operandSegmentSizes[segmentSizesLen - 2] =
       static_cast<int32_t>(kernelOperands.size());
   prop.operandSegmentSizes[segmentSizesLen - 1] = 0;
+}
+
+void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
+                         GPUFuncOp kernelFunc, KernelDim3 gridSize,
+                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
+                         ValueRange kernelOperands, Type asyncTokenType,
+                         ValueRange asyncDependencies,
+                         std::optional<KernelDim3> clusterSize) {
+  auto kernelModule = kernelFunc->getParentOfType<GPUModuleOp>();
+  auto kernelSymbol =
+      SymbolRefAttr::get(kernelModule.getNameAttr(),
+                         {SymbolRefAttr::get(kernelFunc.getNameAttr())});
+  build(builder, result, kernelSymbol, gridSize, getBlockSize,
+        dynamicSharedMemorySize, kernelOperands, asyncTokenType,
+        asyncDependencies, clusterSize);
 }
 
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
@@ -1676,27 +1705,6 @@ LogicalResult GPUFuncOp::verifyBody() {
   return success();
 }
 
-static LogicalResult verifyKnownLaunchSizeAttr(gpu::GPUFuncOp op,
-                                               StringRef attrName) {
-  auto maybeAttr = op->getAttr(attrName);
-  if (!maybeAttr)
-    return success();
-  auto array = llvm::dyn_cast<DenseI32ArrayAttr>(maybeAttr);
-  if (!array)
-    return op.emitOpError(attrName + " must be a dense i32 array");
-  if (array.size() != 3)
-    return op.emitOpError(attrName + " must contain exactly 3 elements");
-  return success();
-}
-
-LogicalResult GPUFuncOp::verify() {
-  if (failed(verifyKnownLaunchSizeAttr(*this, getKnownBlockSizeAttrName())))
-    return failure();
-  if (failed(verifyKnownLaunchSizeAttr(*this, getKnownGridSizeAttrName())))
-    return failure();
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
@@ -1730,12 +1738,11 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, ArrayAttr targets,
                         Attribute offloadingHandler) {
   ensureTerminator(*result.addRegion(), builder, result.location);
-  result.attributes.push_back(builder.getNamedAttr(
-      ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 
   Properties &props = result.getOrAddProperties<Properties>();
   if (targets)
     props.targets = targets;
+  props.setSymName(builder.getStringAttr(name));
   props.offloadingHandler = offloadingHandler;
 }
 
@@ -1751,11 +1758,11 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
   ArrayAttr targetsAttr;
 
-  if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes))
+  if (parser.parseSymbolName(nameAttr))
     return failure();
 
   Properties &props = result.getOrAddProperties<Properties>();
+  props.setSymName(nameAttr);
 
   // Parse the optional offloadingHandler
   if (succeeded(parser.parseOptionalLess())) {

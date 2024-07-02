@@ -84,7 +84,9 @@ public:
     auto oldBoxType = mlir::cast<fir::BaseBoxType>(
         fir::unwrapRefType(rebox.getBox().getType()));
     auto newDerivedType = mlir::dyn_cast<fir::RecordType>(newEleType);
-    if (newDerivedType && (newEleType != oldBoxType.unwrapInnerType()) &&
+    if (newDerivedType && !fir::isPolymorphicType(newBoxType) &&
+        (fir::isPolymorphicType(oldBoxType) ||
+         (newEleType != oldBoxType.unwrapInnerType())) &&
         !fir::isPolymorphicType(newBoxType)) {
       newDtype = builder.create<fir::TypeDescOp>(
           loc, mlir::TypeAttr::get(newDerivedType));
@@ -150,7 +152,8 @@ public:
     patterns.insert<ReboxAssumedRankConv>(context, &symbolTable, kindMap);
     patterns.insert<IsAssumedSizeConv>(context, &symbolTable, kindMap);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
     (void)applyPatternsAndFoldGreedily(mod, std::move(patterns), config);
   }
 };

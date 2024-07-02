@@ -1664,23 +1664,26 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
-static constexpr std::array ExplicitAttributes{
-    StringLiteral("aarch64_pstate_sm_enabled"),
+static constexpr std::array kExplicitAttributes{
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_inout_za"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_preserves_za"),
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
-    StringLiteral("aarch64_new_za"),
-    StringLiteral("aarch64_preserves_za"),
-    StringLiteral("aarch64_in_za"),
-    StringLiteral("aarch64_out_za"),
-    StringLiteral("aarch64_inout_za"),
-    StringLiteral("vscale_range"),
+    StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("alwaysinline"),
+    StringLiteral("approx-func-fp-math"),
     StringLiteral("frame-pointer"),
-    StringLiteral("target-features"),
-    StringLiteral("unsafe-fp-math"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
-    StringLiteral("approx-func-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("noinline"),
+    StringLiteral("optnone"),
+    StringLiteral("target-features"),
+    StringLiteral("unsafe-fp-math"),
+    StringLiteral("vscale_range"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1709,7 +1712,7 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
     auto keyAttr = StringAttr::get(context, attrName);
 
     // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
-    if (llvm::is_contained(ExplicitAttributes, attrName))
+    if (llvm::is_contained(kExplicitAttributes, attrName))
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1744,6 +1747,13 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
   processPassthroughAttrs(func, funcOp);
+
+  if (func->hasFnAttribute(llvm::Attribute::NoInline))
+    funcOp.setNoInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::AlwaysInline))
+    funcOp.setAlwaysInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
+    funcOp.setOptimizeNone(true);
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
