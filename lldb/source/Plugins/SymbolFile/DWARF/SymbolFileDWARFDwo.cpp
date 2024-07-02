@@ -97,9 +97,11 @@ uint64_t SymbolFileDWARFDwo::GetDebugInfoSize(bool load_all_debug_info) {
 }
 
 bool SymbolFileDWARFDwo::ParseVendorDWARFOpcode(
-    uint8_t op, const lldb_private::DataExtractor &opcodes,
-    lldb::offset_t &offset, std::vector<lldb_private::Value> &stack) const {
-  return GetBaseSymbolFile().ParseVendorDWARFOpcode(op, opcodes, offset, stack);
+    uint8_t op, RegisterContext *reg_ctx, const DataExtractor &opcodes,
+    const lldb::RegisterKind reg_kind, lldb::offset_t &offset,
+    std::vector<Value> &stack, Status *error_ptr) const {
+  return GetBaseSymbolFile().ParseVendorDWARFOpcode(
+      op, reg_ctx, opcodes, reg_kind, offset, stack, error_ptr);
 }
 
 SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {

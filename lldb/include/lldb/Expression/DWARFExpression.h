@@ -152,6 +152,10 @@ public:
 
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op) const;
 
+  static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                               lldb::RegisterKind reg_kind,
+                                               uint32_t reg_num, Value &value);
+
 private:
   /// A data extractor capable of reading opcode bytes
   DataExtractor m_data;
