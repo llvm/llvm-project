@@ -20194,7 +20194,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.add``' intrinsic performs integer addition (:ref:`add <i_add>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20241,7 +20241,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.sub``' intrinsic performs integer subtraction
-(:ref:`sub <i_sub>`)  of the first and second vector argument on each enabled
+(:ref:`sub <i_sub>`)  of the first and second vector arguments on each enabled
 lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20289,7 +20289,7 @@ operation.
 Semantics:
 """"""""""
 The '``llvm.vp.mul``' intrinsic performs integer multiplication
-(:ref:`mul <i_mul>`) of the first and second vector argument on each enabled
+(:ref:`mul <i_mul>`) of the first and second vector arguments on each enabled
 lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20337,7 +20337,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.sdiv``' intrinsic performs signed division (:ref:`sdiv <i_sdiv>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20385,7 +20385,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.udiv``' intrinsic performs unsigned division
-(:ref:`udiv <i_udiv>`) of the first and second vector argument on each enabled
+(:ref:`udiv <i_udiv>`) of the first and second vector arguments on each enabled
 lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20434,7 +20434,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.srem``' intrinsic computes the remainder of the signed division
-(:ref:`srem <i_srem>`) of the first and second vector argument on each enabled
+(:ref:`srem <i_srem>`) of the first and second vector arguments on each enabled
 lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20483,7 +20483,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.urem``' intrinsic computes the remainder of the unsigned division
-(:ref:`urem <i_urem>`) of the first and second vector argument on each enabled
+(:ref:`urem <i_urem>`) of the first and second vector arguments on each enabled
 lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20872,7 +20872,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.smax``' intrinsic performs integer signed maximum (:ref:`smax <int_smax>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20920,7 +20920,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.smin``' intrinsic performs integer signed minimum (:ref:`smin <int_smin>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20968,7 +20968,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.umax``' intrinsic performs integer unsigned maximum (:ref:`umax <int_umax>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -21016,7 +21016,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.umin``' intrinsic performs integer unsigned minimum (:ref:`umin <int_umin>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -21064,7 +21064,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.copysign``' intrinsic performs floating-point copysign (:ref:`copysign <int_copysign>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21113,7 +21113,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.minnum``' intrinsic performs floating-point minimum (:ref:`minnum <i_minnum>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21162,7 +21162,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.maxnum``' intrinsic performs floating-point maximum (:ref:`maxnum <i_maxnum>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21211,7 +21211,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.minimum``' intrinsic performs floating-point minimum (:ref:`minimum <i_minimum>`)
-of the first and second vector argument on each enabled lane, the result being 
+of the first and second vector arguments on each enabled lane, the result being 
 NaN if either argument is a NaN. -0.0 is considered to be less than +0.0 for this
 intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
 The operation is performed in the default floating-point environment.
@@ -21261,9 +21261,9 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.maximum``' intrinsic performs floating-point maximum (:ref:`maximum <i_maximum>`)
-of the first and second vector argument on each enabled lane, the result being 
+of the first and second vector arguments on each enabled lane, the result being
 NaN if either argument is a NaN. -0.0 is considered to be less than +0.0 for this
-intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 The operation is performed in the default floating-point environment.
 
 Examples:
@@ -21311,7 +21311,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.fadd``' intrinsic performs floating-point addition (:ref:`fadd <i_fadd>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21360,7 +21360,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.fsub``' intrinsic performs floating-point subtraction (:ref:`fsub <i_fsub>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21409,7 +21409,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.fmul``' intrinsic performs floating-point multiplication (:ref:`fmul <i_fmul>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21458,7 +21458,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.fdiv``' intrinsic performs floating-point division (:ref:`fdiv <i_fdiv>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21507,7 +21507,7 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.frem``' intrinsic performs floating-point remainder (:ref:`frem <i_frem>`)
-of the first and second vector argument on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
