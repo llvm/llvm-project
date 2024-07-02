@@ -76,8 +76,8 @@ enum class Operation : int {
   Fmod,
   Hypot,
   Pow,
-  EndBinaryOperationsSingleOutput,
   Fmul,
+  EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
   // input and produce two outputs. The first output is a floating nubmer of
@@ -145,11 +145,6 @@ template <typename T> struct IsTernaryInput {
 };
 
 template <typename T> struct IsTernaryInput<TernaryInput<T>> {
-  static constexpr bool VALUE = true;
-};
-
-
-template <typename T> struct IsBinaryInput<BinaryInput<T>> {
   static constexpr bool VALUE = true;
 };
 
@@ -249,8 +244,8 @@ private:
                                                  rounding);
   }
 
-  template <typename InType>
-  bool match(InType in, const BinaryOutput<InType> &out) {
+  template <typename T>
+  bool match(T in, const BinaryOutput<T> &out) {
     return compare_unary_operation_two_outputs(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -285,9 +280,9 @@ private:
                                               rounding);
   }
 
-  template <typename InType>
-  void explain_error(const BinaryInput<InType> &in,
-                     const BinaryOutput<InType> &out) {
+  template <typename T>
+  void explain_error(const BinaryInput<T> &in,
+                     const BinaryOutput<T> &out) {
     explain_binary_operation_two_outputs_error(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -315,15 +310,13 @@ constexpr bool is_valid_operation() {
       (op == Operation::Sqrt && cpp::is_floating_point_v<InputType> &&
        cpp::is_floating_point_v<OutputType> &&
        sizeof(OutputType) <= sizeof(InputType)) ||
-    (op == Operation::Div && internal::IsBinaryInput<InputType>::VALUE &&
+    ((op == Operation::Div || op == Operation::Fmul) && internal::IsBinaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
        cpp::is_floating_point_v<OutputType>) ||
       (op == Operation::Fma && internal::IsTernaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
-       cpp::is_floating_point_v<OutputType>) ||
-      (op == Operation::Fmul && internal::IsBinaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<OutputType>);
   if (IS_NARROWING_OP)
     return true;
