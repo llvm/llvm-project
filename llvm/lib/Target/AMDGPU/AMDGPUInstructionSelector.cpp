@@ -131,6 +131,16 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   Register SrcReg = Src.getReg();
 
   if (isVCC(DstReg, *MRI)) {
+    // In planned update of calling convention, i1 arguments/returns are
+    // assigned to SGPRs without promoting to i32. The following if statement
+    // allows insturctions such as "%0:sreg_64_xexec(s1) = COPY $sgpr4_sgpr5"
+    // to be accepted.
+    if (SrcReg.isPhysical() && SrcReg != AMDGPU::SCC) {
+      const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(DstReg);
+      if (DstRC)
+        return DstRC->contains(SrcReg);
+    }
+
     if (SrcReg == AMDGPU::SCC) {
       const TargetRegisterClass *RC
         = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
