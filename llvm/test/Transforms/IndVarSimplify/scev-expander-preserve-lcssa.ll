@@ -107,16 +107,14 @@ define void @test2(i16 %x)  {
 ; CHECK-NEXT:    i16 43, label [[FOR_COND]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[I_0_LCSSA2:%.*]] = phi i32 [ 0, [[FOR_COND]] ]
-; CHECK-NEXT:    [[CMP8243:%.*]] = icmp sgt i32 [[I_0_LCSSA2]], 0
-; CHECK-NEXT:    br i1 [[CMP8243]], label [[FOR_BODY84_PREHEADER:%.*]], label [[RETURN]]
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY84_PREHEADER:%.*]], label [[RETURN]]
 ; CHECK:       for.body84.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY84:%.*]]
 ; CHECK:       for.body84:
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[IF_END106:%.*]], label [[RETURN_LOOPEXIT:%.*]]
 ; CHECK:       if.end106:
-; CHECK-NEXT:    br i1 false, label [[FOR_BODY84]], label [[RETURN_LOOPEXIT]]
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY84]], label [[RETURN_LOOPEXIT]]
 ; CHECK:       return.loopexit:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return.loopexit1:
@@ -228,8 +226,7 @@ define void @test4(ptr %ptr) {
 ; CHECK:       for.body1208.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY1208:%.*]]
 ; CHECK:       for.body1208:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[FOR_BODY1208_LR_PH]] ], [ [[TMP1:%.*]], [[FOR_INC1498:%.*]] ]
-; CHECK-NEXT:    [[M_0804:%.*]] = phi i32 [ 1, [[FOR_BODY1208_LR_PH]] ], [ [[INC1499:%.*]], [[FOR_INC1498]] ]
+; CHECK-NEXT:    [[M_0804:%.*]] = phi i32 [ 1, [[FOR_BODY1208_LR_PH]] ], [ [[INC1499:%.*]], [[FOR_INC1498:%.*]] ]
 ; CHECK-NEXT:    [[IDXPROM1212:%.*]] = zext i32 [[M_0804]] to i64
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @get.i32()
 ; CHECK-NEXT:    [[CMP1215:%.*]] = icmp eq i32 0, [[V]]
@@ -256,13 +253,9 @@ define void @test4(ptr %ptr) {
 ; CHECK-NEXT:    [[CMP1358:%.*]] = icmp eq i32 [[V_2]], 0
 ; CHECK-NEXT:    br i1 [[CMP1358]], label [[IF_THEN1360:%.*]], label [[FOR_INC1498]]
 ; CHECK:       if.then1360:
-; CHECK-NEXT:    [[DOTLCSSA2:%.*]] = phi i32 [ [[TMP0]], [[IF_ELSE1351]] ]
-; CHECK-NEXT:    [[M_0804_LCSSA1:%.*]] = phi i32 [ [[M_0804]], [[IF_ELSE1351]] ]
-; CHECK-NEXT:    [[CMP1392:%.*]] = icmp slt i32 [[M_0804_LCSSA1]], [[DOTLCSSA2]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.inc1498:
 ; CHECK-NEXT:    [[INC1499]] = add nuw nsw i32 [[M_0804]], 1
-; CHECK-NEXT:    [[TMP1]] = load i32, ptr [[PTR]], align 8
 ; CHECK-NEXT:    br label [[FOR_BODY1208]]
 ; CHECK:       if.then1504:
 ; CHECK-NEXT:    unreachable
@@ -495,17 +488,13 @@ define void @test7(ptr %ptr) {
 ; CHECK:       while.body:
 ; CHECK-NEXT:    br label [[FOR_BODY1208:%.*]]
 ; CHECK:       for.body1208:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ undef, [[WHILE_BODY]] ], [ [[TMP1:%.*]], [[FOR_INC1498:%.*]] ]
-; CHECK-NEXT:    [[M_048:%.*]] = phi i32 [ 1, [[WHILE_BODY]] ], [ [[INC1499:%.*]], [[FOR_INC1498]] ]
+; CHECK-NEXT:    [[M_048:%.*]] = phi i32 [ 1, [[WHILE_BODY]] ], [ [[INC1499:%.*]], [[FOR_INC1498:%.*]] ]
 ; CHECK-NEXT:    [[IDXPROM1212:%.*]] = zext i32 [[M_048]] to i64
 ; CHECK-NEXT:    [[XPOS1214:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 [[IDXPROM1212]]
 ; CHECK-NEXT:    [[V_1:%.*]] = call i32 @get.i32()
 ; CHECK-NEXT:    [[CMP1215:%.*]] = icmp eq i32 0, [[V_1]]
 ; CHECK-NEXT:    br i1 [[CMP1215]], label [[IF_THEN1217:%.*]], label [[IF_ELSE1351:%.*]]
 ; CHECK:       if.then1217:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP0]], [[FOR_BODY1208]] ]
-; CHECK-NEXT:    [[M_048_LCSSA:%.*]] = phi i32 [ [[M_048]], [[FOR_BODY1208]] ]
-; CHECK-NEXT:    [[CMP1249_NOT_NOT:%.*]] = icmp slt i32 [[M_048_LCSSA]], [[DOTLCSSA]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1351:
 ; CHECK-NEXT:    [[CMP1358:%.*]] = icmp eq i32 0, undef
@@ -526,7 +515,6 @@ define void @test7(ptr %ptr) {
 ; CHECK-NEXT:    br label [[IF_END1824:%.*]]
 ; CHECK:       for.inc1498:
 ; CHECK-NEXT:    [[INC1499]] = add nuw nsw i32 [[M_048]], 1
-; CHECK-NEXT:    [[TMP1]] = load i32, ptr undef, align 8
 ; CHECK-NEXT:    br label [[FOR_BODY1208]]
 ; CHECK:       if.end1824:
 ; CHECK-NEXT:    br label [[WHILE_BODY]]

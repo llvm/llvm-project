@@ -62,13 +62,18 @@ namespace {
     bool Changed = false;
     bool RunUnswitching = false;
 
+    // When following the def-use chains, it can go outside the loop.
+    // Strict upper bound on number of traversed out-of-loop blocks.
+    unsigned MaxDepthOutOfLoop;
+
   public:
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
                    LoopInfo *LI, const TargetTransformInfo *TTI,
                    SCEVExpander &Rewriter,
-                   SmallVectorImpl<WeakTrackingVH> &Dead)
+                   SmallVectorImpl<WeakTrackingVH> &Dead,
+                   unsigned MaxDepthOutOfLoop = 1)
         : L(Loop), LI(LI), SE(SE), DT(DT), TTI(TTI), Rewriter(Rewriter),
-          DeadInsts(Dead) {
+          DeadInsts(Dead), MaxDepthOutOfLoop(MaxDepthOutOfLoop) {
       assert(LI && "IV simplification requires LoopInfo");
     }
 
@@ -80,10 +85,11 @@ namespace {
     /// all simplifications to users of an IV.
     void simplifyUsers(PHINode *CurrIV, IVVisitor *V = nullptr);
 
-    void pushIVUsers(Instruction *Def,
-                     SmallPtrSet<Instruction *, 16> &Simplified,
-                     SmallVectorImpl<std::pair<Instruction *, Instruction *>>
-                         &SimpleIVUsers);
+    void pushIVUsers(
+        Instruction *Def, SmallPtrSet<Instruction *, 16> &Simplified,
+        SmallVectorImpl<std::tuple<Instruction *, Instruction *, unsigned>>
+            &SimpleIVUsers,
+        unsigned OutOfLoopChainCounter);
 
     Value *foldIVUser(Instruction *UseInst, Instruction *IVOperand);
 
@@ -517,8 +523,8 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
         !DT->isReachableFromEntry(cast<Instruction>(U)->getParent()))
       continue;
     ICmpInst *ICI = dyn_cast<ICmpInst>(U);
-    if (!ICI) return false;
-    assert(L->contains(ICI->getParent()) && "LCSSA form broken?");
+    if (!ICI)
+      return false;
     if (!(ICI->getOperand(0) == TI && L->isLoopInvariant(ICI->getOperand(1))) &&
         !(ICI->getOperand(1) == TI && L->isLoopInvariant(ICI->getOperand(0))))
       return false;
@@ -551,7 +557,7 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   };
   // Replace all comparisons against trunc with comparisons against IV.
   for (auto *ICI : ICmpUsers) {
-    bool IsSwapped = L->isLoopInvariant(ICI->getOperand(0));
+    bool IsSwapped = ICI->getOperand(0) != TI;
     auto *Op1 = IsSwapped ? ICI->getOperand(0) : ICI->getOperand(1);
     IRBuilder<> Builder(ICI);
     Value *Ext = nullptr;
@@ -849,7 +855,9 @@ bool SimplifyIndvar::strengthenRightShift(BinaryOperator *BO,
 /// Add all uses of Def to the current IV's worklist.
 void SimplifyIndvar::pushIVUsers(
     Instruction *Def, SmallPtrSet<Instruction *, 16> &Simplified,
-    SmallVectorImpl<std::pair<Instruction *, Instruction *>> &SimpleIVUsers) {
+    SmallVectorImpl<std::tuple<Instruction *, Instruction *, unsigned>>
+        &SimpleIVUsers,
+    unsigned OutOfLoopChainCounter) {
   for (User *U : Def->users()) {
     Instruction *UI = cast<Instruction>(U);
 
@@ -860,16 +868,22 @@ void SimplifyIndvar::pushIVUsers(
     if (UI == Def)
       continue;
 
-    // Only change the current Loop, do not change the other parts (e.g. other
-    // Loops).
-    if (!L->contains(UI))
+    // Avoid adding Defs that SCEV expand to themselves, e.g. the LoopPhis
+    // of the outer loops.
+    if (!DT->dominates(L->getHeader(), UI->getParent()))
       continue;
 
     // Do not push the same instruction more than once.
     if (!Simplified.insert(UI).second)
       continue;
 
-    SimpleIVUsers.push_back(std::make_pair(UI, Def));
+    unsigned Counter =
+        L->contains(UI)
+            ? 0 // reset depth if we go back inside the loop.
+            : OutOfLoopChainCounter + (UI->getParent() != Def->getParent());
+
+    if (!MaxDepthOutOfLoop || Counter < MaxDepthOutOfLoop)
+      SimpleIVUsers.push_back(std::make_tuple(UI, Def, Counter));
   }
 }
 
@@ -914,17 +928,17 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
   SmallPtrSet<Instruction*,16> Simplified;
 
   // Use-def pairs if IV users waiting to be processed for CurrIV.
-  SmallVector<std::pair<Instruction*, Instruction*>, 8> SimpleIVUsers;
+  SmallVector<std::tuple<Instruction *, Instruction *, unsigned>, 8>
+      SimpleIVUsers;
 
   // Push users of the current LoopPhi. In rare cases, pushIVUsers may be
   // called multiple times for the same LoopPhi. This is the proper thing to
   // do for loop header phis that use each other.
-  pushIVUsers(CurrIV, Simplified, SimpleIVUsers);
+  pushIVUsers(CurrIV, Simplified, SimpleIVUsers, 0);
 
   while (!SimpleIVUsers.empty()) {
-    std::pair<Instruction*, Instruction*> UseOper =
-      SimpleIVUsers.pop_back_val();
-    Instruction *UseInst = UseOper.first;
+    auto [UseInst, IVOperand, OutOfLoopChainCounter] =
+        SimpleIVUsers.pop_back_val();
 
     // If a user of the IndVar is trivially dead, we prefer just to mark it dead
     // rather than try to do some complex analysis or transformation (such as
@@ -948,11 +962,11 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     if ((isa<PtrToIntInst>(UseInst)) || (isa<TruncInst>(UseInst)))
       for (Use &U : UseInst->uses()) {
         Instruction *User = cast<Instruction>(U.getUser());
-        if (replaceIVUserWithLoopInvariant(User))
+        if (DT->dominates(L->getHeader(), User->getParent()) &&
+            replaceIVUserWithLoopInvariant(User))
           break; // done replacing
       }
 
-    Instruction *IVOperand = UseOper.second;
     for (unsigned N = 0; IVOperand; ++N) {
       assert(N <= Simplified.size() && "runaway iteration");
       (void) N;
@@ -966,7 +980,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
       continue;
 
     if (eliminateIVUser(UseInst, IVOperand)) {
-      pushIVUsers(IVOperand, Simplified, SimpleIVUsers);
+      pushIVUsers(IVOperand, Simplified, SimpleIVUsers, OutOfLoopChainCounter);
       continue;
     }
 
@@ -974,14 +988,15 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
       if (strengthenBinaryOp(BO, IVOperand)) {
         // re-queue uses of the now modified binary operator and fall
         // through to the checks that remain.
-        pushIVUsers(IVOperand, Simplified, SimpleIVUsers);
+        pushIVUsers(IVOperand, Simplified, SimpleIVUsers,
+                    OutOfLoopChainCounter);
       }
     }
 
     // Try to use integer induction for FPToSI of float induction directly.
     if (replaceFloatIVWithIntegerIV(UseInst)) {
       // Re-queue the potentially new direct uses of IVOperand.
-      pushIVUsers(IVOperand, Simplified, SimpleIVUsers);
+      pushIVUsers(IVOperand, Simplified, SimpleIVUsers, OutOfLoopChainCounter);
       continue;
     }
 
@@ -991,7 +1006,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
       continue;
     }
     if (isSimpleIVUser(UseInst, L, SE)) {
-      pushIVUsers(UseInst, Simplified, SimpleIVUsers);
+      pushIVUsers(UseInst, Simplified, SimpleIVUsers, OutOfLoopChainCounter);
     }
   }
 }
@@ -1005,13 +1020,13 @@ void IVVisitor::anchor() { }
 ///  Returns a pair where the first entry indicates that the function makes
 ///  changes and the second entry indicates that it introduced new opportunities
 ///  for loop unswitching.
-std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
-                                        DominatorTree *DT, LoopInfo *LI,
-                                        const TargetTransformInfo *TTI,
-                                        SmallVectorImpl<WeakTrackingVH> &Dead,
-                                        SCEVExpander &Rewriter, IVVisitor *V) {
+std::pair<bool, bool>
+simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
+                  LoopInfo *LI, const TargetTransformInfo *TTI,
+                  SmallVectorImpl<WeakTrackingVH> &Dead, SCEVExpander &Rewriter,
+                  unsigned MaxDepthOutOfLoop, IVVisitor *V) {
   SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, TTI,
-                     Rewriter, Dead);
+                     Rewriter, Dead, MaxDepthOutOfLoop);
   SIV.simplifyUsers(CurrIV, V);
   return {SIV.hasChanged(), SIV.runUnswitching()};
 }
