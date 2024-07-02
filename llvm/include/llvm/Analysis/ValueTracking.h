@@ -100,6 +100,12 @@ KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                        const KnownBits &KnownRHS,
                                        unsigned Depth, const SimplifyQuery &SQ);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond, Value *Arm,
+                                 bool Invert, unsigned Depth,
+                                 const SimplifyQuery &Q);
+
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                          const WithCache<const Value *> &RHSCache,

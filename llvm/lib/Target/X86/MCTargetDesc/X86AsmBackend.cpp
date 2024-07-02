@@ -13,7 +13,6 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -186,9 +185,8 @@ public:
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup,
+                            uint64_t Value) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -203,7 +201,7 @@ public:
   bool padInstructionEncoding(MCRelaxableFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
 
-  void finishLayout(MCAssembler const &Asm, MCAsmLayout &Layout) const override;
+  void finishLayout(const MCAssembler &Asm) const override;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -743,9 +741,7 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
 }
 
 bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                         uint64_t Value,
-                                         const MCRelaxableFragment *DF,
-                                         const MCAsmLayout &Layout) const {
+                                         uint64_t Value) const {
   // Relax if the value is too big for a (signed) i8.
   return !isInt<8>(Value);
 }
@@ -860,8 +856,7 @@ bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
   return Changed;
 }
 
-void X86AsmBackend::finishLayout(MCAssembler const &Asm,
-                                 MCAsmLayout &Layout) const {
+void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
@@ -917,7 +912,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       }
 
 #ifndef NDEBUG
-      const uint64_t OrigOffset = Layout.getFragmentOffset(&F);
+      const uint64_t OrigOffset = Asm.getFragmentOffset(F);
 #endif
       const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
@@ -950,7 +945,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
         cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
 
 #ifndef NDEBUG
-      const uint64_t FinalOffset = Layout.getFragmentOffset(&F);
+      const uint64_t FinalOffset = Asm.getFragmentOffset(F);
       const uint64_t FinalSize = Asm.computeFragmentSize(F);
       assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
              "can't move start of next fragment!");
@@ -971,9 +966,8 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   }
 
   // The layout is done. Mark every fragment as valid.
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection &Section = *Layout.getSectionOrder()[i];
-    Layout.getFragmentOffset(&*Section.curFragList()->Tail);
+  for (MCSection &Section : Asm) {
+    Asm.getFragmentOffset(*Section.curFragList()->Tail);
     Asm.computeFragmentSize(*Section.curFragList()->Tail);
   }
 }

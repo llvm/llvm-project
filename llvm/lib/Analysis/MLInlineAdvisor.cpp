@@ -211,7 +211,6 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
   // care about the nature of the Edge (call or ref). `FunctionLevels`-wise, we
   // record them at the same level as the original node (this is a choice, may
   // need revisiting).
-  NodeCount -= static_cast<int64_t>(NodesInLastSCC.size());
   while (!NodesInLastSCC.empty()) {
     const auto *N = *NodesInLastSCC.begin();
     NodesInLastSCC.erase(N);
@@ -220,14 +219,15 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
       assert(!N->getFunction().isDeclaration());
       continue;
     }
-    ++NodeCount;
     EdgeCount += getLocalCalls(N->getFunction());
     const auto NLevel = FunctionLevels.at(N);
     for (const auto &E : *(*N)) {
       const auto *AdjNode = &E.getNode();
       assert(!AdjNode->isDead() && !AdjNode->getFunction().isDeclaration());
       auto I = AllNodes.insert(AdjNode);
+      // We've discovered a new function.
       if (I.second) {
+        ++NodeCount;
         NodesInLastSCC.insert(AdjNode);
         FunctionLevels[AdjNode] = NLevel;
       }
