@@ -1075,7 +1075,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
   RevGroupMapTy RevGroupMap;
   SectionIndexMapTy SectionIndexMap;
 
-  std::map<const MCSymbol *, std::vector<const MCSectionELF *>> GroupMembers;
+  DenseMap<const MCSymbol *, SmallVector<const MCSectionELF *, 0>> GroupMembers;
 
   // Write out the ELF header ...
   writeHeader(Asm);
@@ -1111,7 +1111,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
         Group->setAlignment(Align(4));
         Groups.push_back(Group);
       }
-      std::vector<const MCSectionELF *> &Members =
+      SmallVector<const MCSectionELF *, 0> &Members =
           GroupMembers[SignatureSymbol];
       Members.push_back(&Section);
       if (RelSection)
