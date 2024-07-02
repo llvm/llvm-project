@@ -13,7 +13,9 @@
 
 #include "ABIInfo.h"
 #include "CIRCXXABI.h"
+#include "LowerFunction.h"
 #include "LowerFunctionInfo.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace mlir {
@@ -28,6 +30,11 @@ bool classifyReturnType(const CIRCXXABI &CXXABI, LowerFunctionInfo &FI,
   }
 
   return CXXABI.classifyReturnType(FI);
+}
+
+bool isAggregateTypeForABI(Type T) {
+  assert(!::cir::MissingFeatures::functionMemberPointerType());
+  return !LowerFunction::hasScalarEvaluationKind(T);
 }
 
 Type useFirstFieldIfTransparentUnion(Type Ty) {
