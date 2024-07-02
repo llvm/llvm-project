@@ -1835,6 +1835,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         continue;
       if (!config->relocatable)
         sym->binding = sym->computeBinding();
+      if (sym->isLocal() && sym->isUndefined())
+        continue;
       if (in.symTab)
         in.symTab->addSymbol(sym);
 
@@ -2109,6 +2111,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
 // gold provide the feature, and used by many programs.
 template <class ELFT>
 void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
+  if (script->isDiscarded(&osec))
+    return;
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
