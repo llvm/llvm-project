@@ -1785,6 +1785,11 @@ builtin_headers = glob(
     "lib/Headers/openmp_wrappers/new",
 ]
 
+filegroup(
+    name = "builtin_headers_files",
+    srcs = builtin_headers,
+)
+
 genrule(
     name = "builtin_headers_gen",
     srcs = builtin_headers,
