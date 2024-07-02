@@ -338,28 +338,6 @@ inline BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
-///
-/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
-                                   const char *Suffix, DominatorTree *DT,
-                                   LoopInfo *LI = nullptr,
-                                   MemorySSAUpdater *MSSAU = nullptr,
-                                   bool PreserveLCSSA = false);
-
-/// This method introduces at least one new basic block into the function and
-/// moves some of the predecessors of BB to be predecessors of the new block.
-/// The new predecessors are indicated by the Preds array. The new block is
-/// given a suffix of 'Suffix'. Returns new basic block to which predecessors
-/// from Preds are now pointing.
-///
-/// If BB is a landingpad block then additional basicblock might be introduced.
-/// It will have Suffix+".split_lp". See SplitLandingPadPredecessors for more
-/// details on this case.
-///
-/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
-/// no other analyses. In particular, it does not preserve LoopSimplify
-/// (because it's complicated to handle the case where one of the edges being
-/// split is an exit of a loop with other exits).
 BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
                                    const char *Suffix,
                                    DomTreeUpdater *DTU = nullptr,

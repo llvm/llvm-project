@@ -407,10 +407,11 @@ bb1:
 )IR");
   Function *F = M->getFunction("basic_func");
   DominatorTree DT(*F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
   // Make sure the dominator tree is properly updated if calling this on the
   // entry block.
-  SplitBlockPredecessors(&F->getEntryBlock(), {}, "split.entry", &DT);
+  SplitBlockPredecessors(&F->getEntryBlock(), {}, "split.entry", &DTU);
   EXPECT_TRUE(DT.verify());
 }
 
