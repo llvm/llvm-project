@@ -40,7 +40,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
@@ -3508,9 +3507,8 @@ void RewriteInstance::emitAndLink() {
   updateOutputValues(*Linker);
 
   if (opts::UpdateDebugSections) {
-    MCAsmLayout FinalLayout(
-        static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
-    DebugInfoRewriter->updateLineTableOffsets(FinalLayout);
+    DebugInfoRewriter->updateLineTableOffsets(
+        static_cast<MCObjectStreamer &>(*Streamer).getAssembler());
   }
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())

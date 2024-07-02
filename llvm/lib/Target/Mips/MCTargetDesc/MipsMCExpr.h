@@ -9,7 +9,6 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCEXPR_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCEXPR_H
 
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCValue.h"
 
