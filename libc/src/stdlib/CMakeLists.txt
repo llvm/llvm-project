@@ -526,7 +526,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdlib.strtof
     libc.src.errno.errno
-    .llvm-libc-types.locale_t
+    libc.include.llvm-libc-types.locale_t
 )
 
 add_entrypoint_object(
@@ -538,7 +538,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdlib.strtod
     libc.src.errno.errno
-    .llvm-libc-types.locale_t
+    libc.include.llvm-libc-types.locale_t
 )
 
 add_entrypoint_object(
@@ -550,7 +550,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdlib.strtold
     libc.src.errno.errno
-    .llvm-libc-types.locale_t
+    libc.include.llvm-libc-types.locale_t
 )
 
 add_entrypoint_object(
@@ -562,5 +562,5 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdlib.strtoull_l
     libc.src.errno.errno
-    .llvm-libc-types.locale_t
+    libc.include.llvm-libc-types.locale_t
 )
