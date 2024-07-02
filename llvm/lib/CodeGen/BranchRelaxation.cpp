@@ -103,6 +103,8 @@ class BranchRelaxation : public MachineFunctionPass {
   MachineBasicBlock *splitBlockBeforeInstr(MachineInstr &MI,
                                            MachineBasicBlock *DestBB);
   void adjustBlockOffsets(MachineBasicBlock &Start);
+  void adjustBlockOffsets(MachineBasicBlock &Start,
+                          MachineFunction::iterator End);
   bool isBlockInRange(const MachineInstr &MI, const MachineBasicBlock &BB) const;
 
   bool fixupConditionalBranch(MachineInstr &MI);
@@ -227,9 +229,14 @@ unsigned BranchRelaxation::getInstrOffset(const MachineInstr &MI) const {
 }
 
 void BranchRelaxation::adjustBlockOffsets(MachineBasicBlock &Start) {
+  adjustBlockOffsets(Start, MF->end());
+}
+
+void BranchRelaxation::adjustBlockOffsets(MachineBasicBlock &Start,
+                                          MachineFunction::iterator End) {
   unsigned PrevNum = Start.getNumber();
   for (auto &MBB :
-       make_range(std::next(MachineFunction::iterator(Start)), MF->end())) {
+       make_range(std::next(MachineFunction::iterator(Start)), End)) {
     unsigned Num = MBB.getNumber();
     // Get the offset and known bits at the end of the layout predecessor.
     // Include the alignment of the current block.
@@ -314,8 +321,8 @@ BranchRelaxation::splitBlockBeforeInstr(MachineInstr &MI,
   // block, it may contain a tablejump.
   BlockInfo[NewBB->getNumber()].Size = computeBlockSize(*NewBB);
 
-  // All BBOffsets following these blocks must be modified.
-  adjustBlockOffsets(*OrigBB);
+  // Update the offset of the new block.
+  adjustBlockOffsets(*OrigBB, std::next(NewBB->getIterator()));
 
   // Need to fix live-in lists if we track liveness.
   if (TRI->trackLivenessAfterRegAlloc(*MF))
@@ -384,11 +391,17 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
 
   auto finalizeBlockChanges = [&](MachineBasicBlock *MBB,
                                   MachineBasicBlock *NewBB) {
-    // Keep the block offsets up to date.
-    adjustBlockOffsets(*MBB);
+    if (NewBB == nullptr)
+      return;
+
+    // Keep the block offsets approximately up to date. While they will be
+    // slight underestimates, we will update them appropriately in the next
+    // pass.
+    adjustBlockOffsets(*std::prev(NewBB->getIterator()),
+                       std::next(NewBB->getIterator()));
 
     // Need to fix live-in lists if we track liveness.
-    if (NewBB && TRI->trackLivenessAfterRegAlloc(*MF))
+    if (TRI->trackLivenessAfterRegAlloc(*MF))
       computeAndAddLiveIns(LiveRegs, *NewBB);
   };
 
@@ -438,6 +451,7 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
                << ".\n");
     TrampolineInsertionPoint->setIsEndSection(NewBB->isEndSection());
     MF->erase(NewBB);
+    NewBB = nullptr;
   }
 
   // Add an unconditional branch to the destination and invert the branch
@@ -590,7 +604,7 @@ bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
                             RS.get());
 
   BlockInfo[BranchBB->getNumber()].Size = computeBlockSize(*BranchBB);
-  adjustBlockOffsets(*MBB);
+  adjustBlockOffsets(*MBB, std::next(BranchBB->getIterator()));
 
   // If RestoreBB is required, place it appropriately.
   if (!RestoreBB->empty()) {
@@ -601,6 +615,8 @@ bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
       MachineBasicBlock *NewBB = createNewBlockAfter(*TrampolineInsertionPoint);
       TII->insertUnconditionalBranch(*NewBB, DestBB, DebugLoc());
       BlockInfo[NewBB->getNumber()].Size = computeBlockSize(*NewBB);
+      adjustBlockOffsets(*TrampolineInsertionPoint,
+                         std::next(NewBB->getIterator()));
 
       // New trampolines should be inserted after NewBB.
       TrampolineInsertionPoint = NewBB;
@@ -636,8 +652,8 @@ bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
       computeAndAddLiveIns(LiveRegs, *RestoreBB);
     // Compute the restore block size.
     BlockInfo[RestoreBB->getNumber()].Size = computeBlockSize(*RestoreBB);
-    // Update the offset starting from the previous block.
-    adjustBlockOffsets(*PrevBB);
+    // Update the estimated offset for the restore block.
+    adjustBlockOffsets(*PrevBB, DestBB->getIterator());
 
     // Fix up section information for RestoreBB and DestBB
     RestoreBB->setSectionID(DestBB->getSectionID());
@@ -716,6 +732,13 @@ bool BranchRelaxation::relaxBranchInstructions() {
         Next = MBB.getFirstTerminator();
       }
     }
+  }
+
+  // If we relaxed a branch, subsequent block offsets may be underestimated.
+  // Recompute them to guarantee that we relax any branches that we pushed out
+  // of range.
+  if (Changed) {
+    adjustBlockOffsets(MF->front());
   }
 
   return Changed;
