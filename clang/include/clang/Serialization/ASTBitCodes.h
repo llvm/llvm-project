@@ -26,6 +26,7 @@
 #include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Bitstream/BitCodes.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 
@@ -70,40 +71,63 @@ using DeclID = DeclIDBase::DeclID;
 
 /// An ID number that refers to a type in an AST file.
 ///
-/// The ID of a type is partitioned into two parts: the lower
-/// three bits are used to store the const/volatile/restrict
-/// qualifiers (as with QualType) and the upper bits provide a
-/// type index. The type index values are partitioned into two
+/// The ID of a type is partitioned into three parts:
+/// - the lower three bits are used to store the const/volatile/restrict
+///   qualifiers (as with QualType).
+/// - the next 29 bits provide a type index in the corresponding
+///   module file.
+/// - the upper 32 bits provide a module file index.
+///
+/// The type index values are partitioned into two
 /// sets. The values below NUM_PREDEF_TYPE_IDs are predefined type
 /// IDs (based on the PREDEF_TYPE_*_ID constants), with 0 as a
-/// placeholder for "no type". Values from NUM_PREDEF_TYPE_IDs are
-/// other types that have serialized representations.
-using TypeID = uint32_t;
+/// placeholder for "no type". The module file index for predefined
+/// types are always 0 since they don't belong to any modules.
+/// Values from NUM_PREDEF_TYPE_IDs are other types that have
+/// serialized representations.
+using TypeID = uint64_t;
+/// Same with TypeID except that the LocalTypeID is only meaningful
+/// with the corresponding ModuleFile.
+///
+/// FIXME: Make TypeID and LocalTypeID a class to improve the type
+/// safety.
+using LocalTypeID = TypeID;
 
 /// A type index; the type ID with the qualifier bits removed.
+/// Keep structure alignment 32-bit since the blob is assumed as 32-bit
+/// aligned.
 class TypeIdx {
+  uint32_t ModuleFileIndex = 0;
   uint32_t Idx = 0;
 
 public:
   TypeIdx() = default;
-  explicit TypeIdx(uint32_t index) : Idx(index) {}
 
-  uint32_t getIndex() const { return Idx; }
+  explicit TypeIdx(uint32_t ModuleFileIdx, uint32_t Idx)
+      : ModuleFileIndex(ModuleFileIdx), Idx(Idx) {}
+
+  uint32_t getModuleFileIndex() const { return ModuleFileIndex; }
+
+  uint64_t getValue() const { return ((uint64_t)ModuleFileIndex << 32) | Idx; }
 
   TypeID asTypeID(unsigned FastQuals) const {
     if (Idx == uint32_t(-1))
       return TypeID(-1);
 
-    return (Idx << Qualifiers::FastWidth) | FastQuals;
+    unsigned Index = (Idx << Qualifiers::FastWidth) | FastQuals;
+    return ((uint64_t)ModuleFileIndex << 32) | Index;
   }
 
   static TypeIdx fromTypeID(TypeID ID) {
     if (ID == TypeID(-1))
-      return TypeIdx(-1);
+      return TypeIdx(0, -1);
 
-    return TypeIdx(ID >> Qualifiers::FastWidth);
+    return TypeIdx(ID >> 32, (ID & llvm::maskTrailingOnes<TypeID>(32)) >>
+                                 Qualifiers::FastWidth);
   }
 };
+
+static_assert(alignof(TypeIdx) == 4);
 
 /// A structure for putting "fast"-unqualified QualTypes into a
 /// DenseMap.  This uses the standard pointer hash function.

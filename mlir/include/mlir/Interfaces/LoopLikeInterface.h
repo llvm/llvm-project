@@ -48,6 +48,39 @@ public:
 };
 
 } // namespace OpTrait
+
+// Gathers all maximal sub-blocks of operations that do not themselves
+// include a `OpTy` (an operation could have a descendant `OpTy` though
+// in its tree). Ignores the block terminators.
+template <typename OpTy>
+struct JamBlockGatherer {
+  // Store iterators to the first and last op of each sub-block found.
+  SmallVector<std::pair<Block::iterator, Block::iterator>> subBlocks;
+
+  // This is a linear time walk.
+  void walk(Operation *op) {
+    for (Region &region : op->getRegions())
+      for (Block &block : region)
+        walk(block);
+  }
+
+  void walk(Block &block) {
+    assert(!block.empty() && block.back().hasTrait<OpTrait::IsTerminator>() &&
+           "expected block to have a terminator");
+    for (Block::iterator it = block.begin(), e = std::prev(block.end());
+         it != e;) {
+      Block::iterator subBlockStart = it;
+      while (it != e && !isa<OpTy>(&*it))
+        ++it;
+      if (it != subBlockStart)
+        subBlocks.emplace_back(subBlockStart, std::prev(it));
+      // Process all for ops that appear next.
+      while (it != e && isa<OpTy>(&*it))
+        walk(&*it++);
+    }
+  }
+};
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -56,5 +89,25 @@ public:
 
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LoopLikeInterface.h.inc"
+
+namespace mlir {
+/// A function that rewrites `target`'s terminator as a teminator obtained by
+/// fusing `source` into `target`.
+using FuseTerminatorFn =
+    function_ref<void(RewriterBase &rewriter, LoopLikeOpInterface source,
+                      LoopLikeOpInterface &target, IRMapping mapping)>;
+
+/// Returns a fused `LoopLikeOpInterface` created by fusing `source` to
+/// `target`.  The `NewYieldValuesFn` callback is used to pass to the
+/// `replaceWithAdditionalYields` interface method to replace the loop with a
+/// new loop with (possibly) additional yields, while the `FuseTerminatorFn`
+/// callback is repsonsible for updating the fused loop terminator.
+LoopLikeOpInterface createFused(LoopLikeOpInterface target,
+                                LoopLikeOpInterface source,
+                                RewriterBase &rewriter,
+                                NewYieldValuesFn newYieldValuesFn,
+                                FuseTerminatorFn fuseTerminatorFn);
+
+} // namespace mlir
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE_H_

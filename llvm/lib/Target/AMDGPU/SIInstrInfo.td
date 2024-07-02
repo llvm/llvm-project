@@ -34,6 +34,21 @@ def SIEncodingFamily {
 }
 
 //===----------------------------------------------------------------------===//
+// Subtarget info
+//===----------------------------------------------------------------------===//
+
+class GFXGen<Predicate pred, string dn, string suffix, int sub> {
+  Predicate AssemblerPredicate = pred;
+  string DecoderNamespace = dn;
+  string Suffix = suffix;
+  int Subtarget = sub;
+}
+
+def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
+def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
+
+//===----------------------------------------------------------------------===//
 // SI DAG Nodes
 //===----------------------------------------------------------------------===//
 
@@ -2230,7 +2245,8 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 64)   : AVLdSt_64,
           !eq(RC.Size, 96)   : AVLdSt_96,
           !eq(RC.Size, 128)  : AVLdSt_128,
-          !eq(RC.Size, 160)  : AVLdSt_160);
+          !eq(RC.Size, 160)  : AVLdSt_160,
+          !eq(RC.Size, 1024) : AVLdSt_1024);
 }
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
