@@ -137,6 +137,11 @@ Changes to the AMDGPU Backend
   :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
   `fmax` with addrspace(3) instead.
 
+* Removed ``llvm.amdgcn.flat.atomic.fadd`` and
+  ``llvm.amdgcn.global.atomic.fadd`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd` and
+  addrspace(0) or addrspace(1) instead.
+
 Changes to the ARM Backend
 --------------------------
 
