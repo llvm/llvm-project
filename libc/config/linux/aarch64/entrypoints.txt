@@ -321,6 +321,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dlfcn.dlerror
     libc.src.dlfcn.dladdr
     libc.src.link.dl_iterate_phdr
+    libc.src.dirent.closedir
+    libc.src.dirent.dirfd
+    libc.src.dirent.opendir
+    libc.src.dirent.readdir
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
