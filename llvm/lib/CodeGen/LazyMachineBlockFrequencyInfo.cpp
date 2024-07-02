@@ -23,7 +23,7 @@ using namespace llvm;
 
 INITIALIZE_PASS_BEGIN(LazyMachineBlockFrequencyInfoPass, DEBUG_TYPE,
                       "Lazy Machine Block Frequency Analysis", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(LazyMachineBlockFrequencyInfoPass, DEBUG_TYPE,
                     "Lazy Machine Block Frequency Analysis", true, true)
@@ -43,7 +43,7 @@ void LazyMachineBlockFrequencyInfoPass::print(raw_ostream &OS,
 
 void LazyMachineBlockFrequencyInfoPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineBranchProbabilityInfo>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -62,7 +62,7 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
     return *MBFI;
   }
 
-  auto &MBPI = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  auto &MBPI = getAnalysis<MachineBranchProbabilityInfo>();
   auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
   auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
   auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;

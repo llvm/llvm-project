@@ -426,7 +426,7 @@ public:
   }
   CRLogicalOpInfo createCRLogicalOpInfo(MachineInstr &MI);
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<MachineBranchProbabilityInfo>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -570,7 +570,7 @@ void PPCReduceCRLogicals::initialize(MachineFunction &MFParam) {
   MF = &MFParam;
   MRI = &MF->getRegInfo();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
 
   AllCRLogicalOps.clear();
 }
