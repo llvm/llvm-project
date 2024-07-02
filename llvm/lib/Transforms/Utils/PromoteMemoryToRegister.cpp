@@ -41,6 +41,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
@@ -1121,6 +1122,17 @@ NextIteration:
         // Add N incoming values to the PHI node.
         for (unsigned i = 0; i != NumEdges; ++i)
           APN->addIncoming(IncomingVals[AllocaNo], Pred);
+
+        // For the  sequence `return X > 0.0 ? X : -X`, it is expected that this
+        // results in fabs intrinsic. However, without no-signed-zeros(nsz) flag
+        // on the phi node generated at this stage, fabs folding does not
+        // happen. So, we try to infer nsz flag from the function attributes to
+        // enable this fabs folding.
+        if (APN->isComplete() && isa<FPMathOperator>(APN) &&
+            BB->getParent()
+                ->getFnAttribute("no-signed-zeros-fp-math")
+                .getValueAsBool())
+          APN->setHasNoSignedZeros(true);
 
         // The currently active variable for this block is now the PHI.
         IncomingVals[AllocaNo] = APN;
