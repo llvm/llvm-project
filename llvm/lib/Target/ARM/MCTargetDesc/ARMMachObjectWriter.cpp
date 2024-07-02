@@ -12,7 +12,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -158,7 +157,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, *Asm.getLayout());
+  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
   uint32_t Value2 = 0;
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
@@ -175,7 +174,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_HALF_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), *Asm.getLayout());
+    Value2 = Writer->getSymbolAddress(B->getSymbol(), Asm);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -267,7 +266,7 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, *Asm.getLayout());
+  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
@@ -285,7 +284,7 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), *Asm.getLayout());
+    Value2 = Writer->getSymbolAddress(B->getSymbol(), Asm);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
