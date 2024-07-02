@@ -2799,7 +2799,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                   m_Shl(m_Value(), m_ConstantInt())))))) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
     return replaceInstUsesWith(
-        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.isInBounds()));
+        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags()));
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
