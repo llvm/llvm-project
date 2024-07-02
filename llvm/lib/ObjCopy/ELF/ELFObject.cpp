@@ -2706,6 +2706,15 @@ Error BinaryWriter::finalize() {
     if (Sec.Type != SHT_NOBITS && Sec.Size > 0) {
       Sec.Offset = Sec.Addr - MinAddr;
       TotalSize = std::max(TotalSize, Sec.Offset + Sec.Size);
+
+      // More or less, this makes sense to do for 32-bit targets.
+      if (DisableHugeSectionOffset and not Obj.Is64Bits) {
+        int FilePosition = Sec.Offset;
+        if (FilePosition < 0)
+          return createStringError(errc::file_too_large,
+                                   "writing section " + Sec.Name +
+                                       " at huge (ie negative) file offset");
+      }
     }
 
   Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);

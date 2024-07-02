@@ -1,0 +1,27 @@
+# RUN: yaml2obj %s --docnum=1 -o %t
+# RUN: not llvm-objcopy -O binary %t %t2 --disable-huge-section-offset 2>&1 | FileCheck %s
+
+# CHECK: writing section .high_addr at huge (ie negative) file offset
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_MIPS
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    Content:         "00112233445566778899AABBCCDDEEFF"
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x2000
+    Content:         "112233445566778899AABBCCDDEEFF00"
+  - Name:            .high_addr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x80001000
+    Content:         "2233445566778899AABBCCDDEEFF0011"

@@ -942,6 +942,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.ExtractMainPartition =
       InputArgs.hasArg(OBJCOPY_extract_main_partition);
   ELFConfig.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
+  ELFConfig.DisableHugeSectionOffset =
+      InputArgs.hasArg(OBJCOPY_disable_huge_section_offsets);
   Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
   if (auto *Arg =
           InputArgs.getLastArg(OBJCOPY_discard_all, OBJCOPY_discard_locals)) {

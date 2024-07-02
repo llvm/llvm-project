@@ -176,11 +176,12 @@ static std::unique_ptr<Writer> createELFWriter(const CommonConfig &Config,
 }
 
 static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
+                                            const ELFConfig &ELFConfig,
                                             Object &Obj, raw_ostream &Out,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
   case FileFormat::Binary:
-    return std::make_unique<BinaryWriter>(Obj, Out, Config);
+    return std::make_unique<BinaryWriter>(Obj, Out, Config, ELFConfig);
   case FileFormat::IHex:
     return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
   case FileFormat::SREC:
@@ -794,10 +795,10 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   return Error::success();
 }
 
-static Error writeOutput(const CommonConfig &Config, Object &Obj,
-                         raw_ostream &Out, ElfType OutputElfType) {
+static Error writeOutput(const CommonConfig &Config, const ELFConfig &ELFConfig,
+                         Object &Obj, raw_ostream &Out, ElfType OutputElfType) {
   std::unique_ptr<Writer> Writer =
-      createWriter(Config, Obj, Out, OutputElfType);
+      createWriter(Config, ELFConfig, Obj, Out, OutputElfType);
   if (Error E = Writer->finalize())
     return E;
   return Writer->write();
@@ -815,7 +816,7 @@ Error objcopy::elf::executeObjcopyOnIHex(const CommonConfig &Config,
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
   if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
-  return writeOutput(Config, **Obj, Out, OutputElfType);
+  return writeOutput(Config, ELFConfig, **Obj, Out, OutputElfType);
 }
 
 Error objcopy::elf::executeObjcopyOnRawBinary(const CommonConfig &Config,
@@ -833,7 +834,7 @@ Error objcopy::elf::executeObjcopyOnRawBinary(const CommonConfig &Config,
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
   if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
-  return writeOutput(Config, **Obj, Out, OutputElfType);
+  return writeOutput(Config, ELFConfig, **Obj, Out, OutputElfType);
 }
 
 Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
@@ -853,7 +854,7 @@ Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
   if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
 
-  if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))
+  if (Error E = writeOutput(Config, ELFConfig, **Obj, Out, OutputElfType))
     return createFileError(Config.InputFilename, std::move(E));
 
   return Error::success();
