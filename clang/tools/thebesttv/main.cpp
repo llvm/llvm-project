@@ -529,8 +529,9 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
                       const std::string &type, int sourceIndex,
                       ordered_json &jResults) {
 
-    auto removeNpeBadSource = [&] {
-        // 根据有缺陷的 source，删除可疑的 source
+    // 根据有缺陷的 source 位置，删除可疑的 source
+    auto removeNpeBadSource = [](const std::string &sourceFile,
+                                 int sourceLine) {
         auto &npeSuspectedSources = Global.npeSuspectedSources;
         for (auto it = npeSuspectedSources.begin();
              it != npeSuspectedSources.end();) {
@@ -539,9 +540,8 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
             int beginLine = loc["beginLine"];
             int endLine = loc["endLine"];
 
-            auto &fromFile = Global.functionLocations[from.fid].file;
-            if (beginLine <= fromLine && fromLine <= endLine &&
-                file == fromFile) {
+            if (beginLine <= sourceLine && sourceLine <= endLine &&
+                file == sourceFile) {
                 logger.info("Removing suspected good source: {}:{}:{}", file,
                             beginLine, loc["beginColumn"]);
                 it = npeSuspectedSources.erase(it);
@@ -590,11 +590,14 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         if (!found)
             logger.warn("Unable to find any path for NPE fix version!");
 
-        removeNpeBadSource();
+        auto &fromFile = Global.functionLocations[from.fid].file;
+        removeNpeBadSource(fromFile, fromLine);
     } else if (type == "npe-bad-source") {
         logger.info("Removing bad NPE source ...");
         requireTrue(from.isValid());
-        removeNpeBadSource();
+
+        auto &fromFile = Global.functionLocations[from.fid].file;
+        removeNpeBadSource(fromFile, fromLine);
     } else {
         logger.info("Handle unknown type: {}", type);
         requireTrue(from.isValid());
