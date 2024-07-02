@@ -312,6 +312,7 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   // SCC.
   if (CalleeWasDeleted) {
     --NodeCount;
+    NodesInLastSCC.erase(CG.lookup(*Callee));
     DeadFunctions.insert(Callee);
   } else {
     NewCallerAndCalleeEdges +=
