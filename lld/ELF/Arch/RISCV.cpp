@@ -1134,6 +1134,10 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case RISCVAttrs::PRIV_SPEC_MINOR:
       case RISCVAttrs::PRIV_SPEC_REVISION:
         break;
+
+      case RISCVAttrs::AttrType::ATOMIC_ABI:
+        // TODO: Handle ATOMIC_ABI tag merging
+        continue;
       }
 
       // Fallback for deprecated priv_spec* and other unknown attributes: retain
