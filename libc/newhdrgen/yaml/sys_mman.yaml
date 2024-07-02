@@ -1,7 +1,5 @@
-#known as sys/mman in POSIX 
 header: sys-mman.h
 standards: POSIX
-macros: []
 macros: []
 types:
   - type_name: mode_t
