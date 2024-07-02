@@ -651,6 +651,8 @@ Improvements to Clang's diagnostics
   that will be destroyed at the end of the full expression.
   Fixes #GH54492.
 
+- Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
