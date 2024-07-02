@@ -91,6 +91,10 @@ export namespace std {
 
   using std::function;
 
+#if _LIBCPP_STD_VER >= 26
+  using std::function_ref;
+#endif // _LIBCPP_STD_VER >= 26
+
   using std::swap;
 
   using std::operator==;
