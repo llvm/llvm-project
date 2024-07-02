@@ -9,7 +9,7 @@
 ;     sizes: 16, 31, 32
 
 
-define void @memcpy_p0_p0_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p0_p0_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -69,7 +69,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p0_p0_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -129,7 +129,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p0_p0_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -235,7 +235,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p0_p0_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -340,7 +340,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p0_p0_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -449,7 +449,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p0_p0_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -557,7 +557,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p0_p0_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -593,7 +593,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p0_p0_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -629,7 +629,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p0_p0_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -689,7 +689,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p0_p0_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -749,7 +749,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p0_p0_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -809,7 +809,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p0_p0_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -869,7 +869,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p0_p0_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -883,7 +883,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p0_p0_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -897,7 +897,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p0_p0_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -960,7 +960,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p0_p0_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -986,7 +986,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p0_p0_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1004,7 +1004,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p0_p0_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1022,7 +1022,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p0_p0_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1036,7 +1036,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p0_p0_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1050,7 +1050,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p0_p0_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1113,7 +1113,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p0_p0_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1140,7 +1140,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p0_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p0_p0_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1158,7 +1158,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p0_p0_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1176,7 +1176,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p0_p1_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1236,7 +1236,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p0_p1_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1296,7 +1296,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p0_p1_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1402,7 +1402,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p0_p1_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1507,7 +1507,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p0_p1_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1616,7 +1616,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p0_p1_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1724,7 +1724,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p0_p1_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1760,7 +1760,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p0_p1_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1796,7 +1796,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p0_p1_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1856,7 +1856,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p0_p1_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1916,7 +1916,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p0_p1_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1976,7 +1976,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p0_p1_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2036,7 +2036,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p0_p1_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2050,7 +2050,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p0_p1_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2064,7 +2064,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p0_p1_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2105,7 +2105,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p0_p1_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2131,7 +2131,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p0_p1_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2149,7 +2149,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p0_p1_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2167,7 +2167,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p0_p1_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2181,7 +2181,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p0_p1_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2195,7 +2195,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p0_p1_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2236,7 +2236,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p0_p1_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2263,7 +2263,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p1_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p0_p1_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2281,7 +2281,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p0_p1_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2299,7 +2299,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p0_p3_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2358,7 +2358,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p0_p3_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2417,7 +2417,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p0_p3_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2518,7 +2518,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p0_p3_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2595,7 +2595,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p0_p3_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2700,7 +2700,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p0_p3_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2779,7 +2779,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p0_p3_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2814,7 +2814,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p0_p3_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2849,7 +2849,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p0_p3_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2908,7 +2908,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p0_p3_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2967,7 +2967,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p0_p3_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3026,7 +3026,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p0_p3_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3085,7 +3085,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p0_p3_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3099,7 +3099,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p0_p3_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3113,7 +3113,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p0_p3_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3153,7 +3153,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p0_p3_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3177,7 +3177,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p0_p3_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3194,7 +3194,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p0_p3_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3211,7 +3211,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p0_p3_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3225,7 +3225,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p0_p3_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3239,7 +3239,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p0_p3_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3279,7 +3279,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p0_p3_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3303,7 +3303,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p3_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p0_p3_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3320,7 +3320,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p0_p3_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3337,7 +3337,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p0_p4_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3397,7 +3397,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p0_p4_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3457,7 +3457,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p0_p4_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3562,7 +3562,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p0_p4_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3667,7 +3667,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p0_p4_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3776,7 +3776,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p0_p4_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3884,7 +3884,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p0_p4_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3919,7 +3919,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p0_p4_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3955,7 +3955,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p0_p4_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4015,7 +4015,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p0_p4_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4075,7 +4075,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p0_p4_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4135,7 +4135,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p0_p4_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4195,7 +4195,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p0_p4_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4209,7 +4209,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p0_p4_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4223,7 +4223,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p0_p4_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4263,7 +4263,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p0_p4_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4289,7 +4289,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p0_p4_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4306,7 +4306,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p0_p4_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4324,7 +4324,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p0_p4_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4338,7 +4338,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p0_p4_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4352,7 +4352,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p0_p4_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4392,7 +4392,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p0_p4_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4419,7 +4419,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4436,7 +4436,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4454,7 +4454,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p0_p5_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4514,7 +4514,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz16_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p0_p5_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4574,7 +4574,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p0_p5_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4678,7 +4678,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz31_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p0_p5_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4783,7 +4783,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p0_p5_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4891,7 +4891,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz32_align_1_1(ptr addrspace(0) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p0_p5_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4999,7 +4999,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p0_p5_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5035,7 +5035,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz16_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p0_p5_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5071,7 +5071,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p0_p5_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5131,7 +5131,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz31_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p0_p5_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5191,7 +5191,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p0_p5_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5251,7 +5251,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz32_align_2_2(ptr addrspace(0) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p0_p5_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5311,7 +5311,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p0_p5_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5329,7 +5329,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz16_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p0_p5_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5347,7 +5347,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p0_p5_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5405,7 +5405,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz31_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p0_p5_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5433,7 +5433,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p0_p5_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5457,7 +5457,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz32_align_8_8(ptr addrspace(0) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p0_p5_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5481,7 +5481,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p0_p5_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5499,7 +5499,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz16_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p0_p5_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5517,7 +5517,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p0_p5_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5575,7 +5575,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz31_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p0_p5_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5603,7 +5603,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p0_p5_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p0_p5_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5627,7 +5627,7 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz32_align_16_16(ptr addrspace(0) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p0_p5_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p0_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5651,7 +5651,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p1_p0_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5697,7 +5697,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p1_p0_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5743,7 +5743,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p1_p0_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5827,7 +5827,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p1_p0_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5911,7 +5911,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p1_p0_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5994,7 +5994,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p1_p0_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6077,7 +6077,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p1_p0_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6105,7 +6105,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p1_p0_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6133,7 +6133,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p1_p0_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6189,7 +6189,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p1_p0_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6235,7 +6235,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p1_p0_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6278,7 +6278,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p1_p0_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6321,7 +6321,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p1_p0_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6334,7 +6334,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p1_p0_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6347,7 +6347,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p1_p0_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6398,7 +6398,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p1_p0_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6423,7 +6423,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p1_p0_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6440,7 +6440,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p1_p0_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6457,7 +6457,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p1_p0_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6470,7 +6470,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p1_p0_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6483,7 +6483,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p1_p0_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6534,7 +6534,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p1_p0_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6560,7 +6560,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p0_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p1_p0_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6577,7 +6577,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p1_p0_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6594,7 +6594,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p1_p1_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6607,7 +6607,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p1_p1_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6620,7 +6620,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p1_p1_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6640,7 +6640,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p1_p1_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6663,7 +6663,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p1_p1_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6680,7 +6680,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p1_p1_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6697,7 +6697,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p1_p1_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6710,7 +6710,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p1_p1_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6723,7 +6723,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p1_p1_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6743,7 +6743,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p1_p1_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6766,7 +6766,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p1_p1_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6783,7 +6783,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p1_p1_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6800,7 +6800,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p1_p1_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6813,7 +6813,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p1_p1_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6826,7 +6826,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p1_p1_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6843,7 +6843,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p1_p1_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6868,7 +6868,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p1_p1_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6885,7 +6885,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p1_p1_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6902,7 +6902,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p1_p1_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6915,7 +6915,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p1_p1_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6928,7 +6928,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p1_p1_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6945,7 +6945,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p1_p1_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6971,7 +6971,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p1_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p1_p1_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6988,7 +6988,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p1_p1_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7005,7 +7005,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p1_p3_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7018,7 +7018,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p1_p3_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7031,7 +7031,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p1_p3_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7050,7 +7050,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p1_p3_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7075,7 +7075,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p1_p3_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7091,7 +7091,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p1_p3_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7107,7 +7107,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p1_p3_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7120,7 +7120,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p1_p3_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7133,7 +7133,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p1_p3_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7152,7 +7152,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p1_p3_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7177,7 +7177,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p1_p3_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7193,7 +7193,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p1_p3_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7209,7 +7209,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p1_p3_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7222,7 +7222,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p1_p3_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7235,7 +7235,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p1_p3_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7251,7 +7251,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p1_p3_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7273,7 +7273,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p1_p3_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7289,7 +7289,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p1_p3_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7305,7 +7305,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p1_p3_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7318,7 +7318,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p1_p3_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7331,7 +7331,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p1_p3_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7347,7 +7347,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p1_p3_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7369,7 +7369,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p3_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p1_p3_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7385,7 +7385,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p1_p3_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7401,7 +7401,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7414,7 +7414,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7427,7 +7427,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p1_p4_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7447,7 +7447,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p1_p4_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7470,7 +7470,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p1_p4_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7487,7 +7487,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p1_p4_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7504,7 +7504,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p1_p4_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7517,7 +7517,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p1_p4_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7530,7 +7530,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p1_p4_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7550,7 +7550,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p1_p4_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7573,7 +7573,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p1_p4_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7590,7 +7590,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p1_p4_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7607,7 +7607,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p1_p4_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7620,7 +7620,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p1_p4_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7633,7 +7633,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p1_p4_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7649,7 +7649,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p1_p4_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7674,7 +7674,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p1_p4_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7690,7 +7690,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p1_p4_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7707,7 +7707,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p1_p4_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7720,7 +7720,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p1_p4_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7733,7 +7733,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p1_p4_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7749,7 +7749,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p1_p4_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7775,7 +7775,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7791,7 +7791,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7808,7 +7808,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p1_p5_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7856,7 +7856,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz16_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p1_p5_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7904,7 +7904,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p1_p5_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7989,7 +7989,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p1_p5_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8075,7 +8075,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p1_p5_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8160,7 +8160,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz32_align_1_1(ptr addrspace(1) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p1_p5_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8245,7 +8245,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p1_p5_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8273,7 +8273,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz16_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p1_p5_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8301,7 +8301,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p1_p5_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8357,7 +8357,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p1_p5_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8404,7 +8404,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p1_p5_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8449,7 +8449,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz32_align_2_2(ptr addrspace(1) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p1_p5_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8494,7 +8494,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p1_p5_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8511,7 +8511,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz16_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p1_p5_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8528,7 +8528,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p1_p5_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8582,7 +8582,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p1_p5_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8610,7 +8610,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p1_p5_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8633,7 +8633,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz32_align_8_8(ptr addrspace(1) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p1_p5_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8656,7 +8656,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p1_p5_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8673,7 +8673,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz16_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p1_p5_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8690,7 +8690,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p1_p5_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8744,7 +8744,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p1_p5_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8772,7 +8772,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p5_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p1_p5_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8795,7 +8795,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz32_align_16_16(ptr addrspace(1) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p1_p5_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p1_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8818,7 +8818,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p3_p0_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8865,7 +8865,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p3_p0_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8912,7 +8912,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p3_p0_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8997,7 +8997,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p3_p0_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9084,7 +9084,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p3_p0_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9168,7 +9168,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p3_p0_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9252,7 +9252,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p3_p0_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9281,7 +9281,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p3_p0_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9310,7 +9310,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p3_p0_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9366,7 +9366,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p3_p0_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9414,7 +9414,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p3_p0_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9459,7 +9459,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p3_p0_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9504,7 +9504,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p3_p0_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9518,7 +9518,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p3_p0_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9532,7 +9532,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p3_p0_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9584,7 +9584,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p3_p0_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9609,7 +9609,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p3_p0_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9627,7 +9627,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p3_p0_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9645,7 +9645,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p3_p0_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9659,7 +9659,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p3_p0_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9673,7 +9673,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p3_p0_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9725,7 +9725,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p3_p0_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9752,7 +9752,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p0_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p3_p0_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9770,7 +9770,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p3_p0_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9788,7 +9788,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p3_p1_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9802,7 +9802,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p3_p1_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9816,7 +9816,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p3_p1_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9837,7 +9837,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p3_p1_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9862,7 +9862,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p3_p1_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9880,7 +9880,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p3_p1_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9898,7 +9898,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p3_p1_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9912,7 +9912,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p3_p1_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9926,7 +9926,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p3_p1_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9947,7 +9947,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p3_p1_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9972,7 +9972,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p3_p1_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -9990,7 +9990,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p3_p1_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10008,7 +10008,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p3_p1_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10022,7 +10022,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p3_p1_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10036,7 +10036,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p3_p1_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10054,7 +10054,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p3_p1_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10079,7 +10079,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p3_p1_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10097,7 +10097,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p3_p1_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10115,7 +10115,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p3_p1_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10129,7 +10129,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p3_p1_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10143,7 +10143,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p3_p1_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10161,7 +10161,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p3_p1_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10186,7 +10186,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p1_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p3_p1_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10204,7 +10204,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p3_p1_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10222,7 +10222,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p3_p3_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10236,7 +10236,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p3_p3_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10250,7 +10250,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p3_p3_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10270,7 +10270,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p3_p3_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10296,7 +10296,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p3_p3_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10313,7 +10313,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p3_p3_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10330,7 +10330,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p3_p3_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10344,7 +10344,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p3_p3_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10358,7 +10358,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p3_p3_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10378,7 +10378,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p3_p3_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10404,7 +10404,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p3_p3_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10421,7 +10421,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p3_p3_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10438,7 +10438,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p3_p3_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10452,7 +10452,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p3_p3_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10466,7 +10466,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p3_p3_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10483,7 +10483,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p3_p3_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10509,7 +10509,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p3_p3_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10526,7 +10526,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p3_p3_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10543,7 +10543,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p3_p3_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10557,7 +10557,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p3_p3_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10571,7 +10571,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p3_p3_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10588,7 +10588,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p3_p3_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10614,7 +10614,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p3_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p3_p3_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10631,7 +10631,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p3_p3_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10648,7 +10648,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p3_p4_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10662,7 +10662,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p3_p4_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10676,7 +10676,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p3_p4_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10697,7 +10697,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p3_p4_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10722,7 +10722,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p3_p4_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10740,7 +10740,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p3_p4_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10758,7 +10758,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p3_p4_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10772,7 +10772,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p3_p4_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10786,7 +10786,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p3_p4_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10807,7 +10807,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p3_p4_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10832,7 +10832,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p3_p4_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10850,7 +10850,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p3_p4_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10868,7 +10868,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p3_p4_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10882,7 +10882,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p3_p4_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10896,7 +10896,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p3_p4_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10914,7 +10914,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p3_p4_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10939,7 +10939,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p3_p4_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10957,7 +10957,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p3_p4_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10975,7 +10975,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p3_p4_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -10989,7 +10989,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p3_p4_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11003,7 +11003,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p3_p4_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11021,7 +11021,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p3_p4_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11046,7 +11046,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p4_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p3_p4_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11064,7 +11064,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p3_p4_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11082,7 +11082,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p3_p5_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11131,7 +11131,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz16_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p3_p5_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11180,7 +11180,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p3_p5_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11266,7 +11266,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p3_p5_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11354,7 +11354,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p3_p5_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11440,7 +11440,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz32_align_1_1(ptr addrspace(3) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p3_p5_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11526,7 +11526,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p3_p5_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11555,7 +11555,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz16_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p3_p5_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11584,7 +11584,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p3_p5_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11641,7 +11641,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p3_p5_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11690,7 +11690,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p3_p5_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11736,7 +11736,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz32_align_2_2(ptr addrspace(3) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p3_p5_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11782,7 +11782,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p3_p5_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11800,7 +11800,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz16_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p3_p5_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11818,7 +11818,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p3_p5_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11873,7 +11873,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p3_p5_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11904,7 +11904,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p3_p5_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11928,7 +11928,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz32_align_8_8(ptr addrspace(3) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p3_p5_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11952,7 +11952,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p3_p5_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11970,7 +11970,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz16_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p3_p5_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -11988,7 +11988,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p3_p5_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12043,7 +12043,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p3_p5_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12073,7 +12073,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p3_p5_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p3_p5_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12097,7 +12097,7 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz32_align_16_16(ptr addrspace(3) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p3_p5_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p3_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12121,7 +12121,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p5_p0_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12180,7 +12180,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p5_p0_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12239,7 +12239,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p5_p0_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12344,7 +12344,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p5_p0_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12448,7 +12448,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memcpy_p5_p0_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12556,7 +12556,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(0) align 1 readonly  %src) {
+define void @memmove_p5_p0_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12663,7 +12663,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p5_p0_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12698,7 +12698,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p5_p0_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12733,7 +12733,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p5_p0_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12792,7 +12792,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p5_p0_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12851,7 +12851,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memcpy_p5_p0_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12910,7 +12910,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(0) align 2 readonly  %src) {
+define void @memmove_p5_p0_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12969,7 +12969,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p5_p0_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -12985,7 +12985,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p5_p0_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13001,7 +13001,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p5_p0_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13066,7 +13066,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p5_p0_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13098,7 +13098,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memcpy_p5_p0_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13121,7 +13121,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(0) align 8 readonly  %src) {
+define void @memmove_p5_p0_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13144,7 +13144,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p5_p0_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13160,7 +13160,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p5_p0_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13176,7 +13176,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p5_p0_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13241,7 +13241,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p5_p0_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13270,7 +13270,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p0_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memcpy_p5_p0_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13293,7 +13293,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(0) align 16 readonly  %src) {
+define void @memmove_p5_p0_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13316,7 +13316,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p5_p1_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13375,7 +13375,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p5_p1_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13434,7 +13434,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p5_p1_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13538,7 +13538,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p5_p1_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13642,7 +13642,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memcpy_p5_p1_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13749,7 +13749,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(1) align 1 readonly  %src) {
+define void @memmove_p5_p1_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13856,7 +13856,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p5_p1_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13891,7 +13891,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p5_p1_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13926,7 +13926,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p5_p1_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13985,7 +13985,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p5_p1_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14044,7 +14044,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memcpy_p5_p1_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14103,7 +14103,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(1) align 2 readonly  %src) {
+define void @memmove_p5_p1_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14162,7 +14162,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p5_p1_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14178,7 +14178,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p5_p1_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14194,7 +14194,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p5_p1_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14237,7 +14237,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p5_p1_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14265,7 +14265,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memcpy_p5_p1_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14288,7 +14288,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(1) align 8 readonly  %src) {
+define void @memmove_p5_p1_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14311,7 +14311,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p5_p1_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14327,7 +14327,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p5_p1_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14343,7 +14343,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p5_p1_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14386,7 +14386,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p5_p1_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14414,7 +14414,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p1_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memcpy_p5_p1_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14437,7 +14437,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(1) align 16 readonly  %src) {
+define void @memmove_p5_p1_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14460,7 +14460,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p5_p3_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14518,7 +14518,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p5_p3_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14576,7 +14576,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p5_p3_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14665,7 +14665,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p5_p3_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14741,7 +14741,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memcpy_p5_p3_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14824,7 +14824,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(3) align 1 readonly  %src) {
+define void @memmove_p5_p3_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14902,7 +14902,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p5_p3_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14936,7 +14936,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p5_p3_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -14970,7 +14970,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p5_p3_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15028,7 +15028,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p5_p3_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15086,7 +15086,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memcpy_p5_p3_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15144,7 +15144,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(3) align 2 readonly  %src) {
+define void @memmove_p5_p3_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15202,7 +15202,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p5_p3_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15218,7 +15218,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p5_p3_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15234,7 +15234,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p5_p3_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15276,7 +15276,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p5_p3_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15305,7 +15305,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memcpy_p5_p3_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15327,7 +15327,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(3) align 8 readonly  %src) {
+define void @memmove_p5_p3_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15349,7 +15349,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p5_p3_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15365,7 +15365,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p5_p3_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15381,7 +15381,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p5_p3_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15423,7 +15423,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p5_p3_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15452,7 +15452,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p3_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memcpy_p5_p3_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15474,7 +15474,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(3) align 16 readonly  %src) {
+define void @memmove_p5_p3_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15496,7 +15496,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p5_p4_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15555,7 +15555,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p5_p4_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15614,7 +15614,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p5_p4_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15718,7 +15718,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p5_p4_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15822,7 +15822,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memcpy_p5_p4_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15929,7 +15929,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(4) align 1 readonly  %src) {
+define void @memmove_p5_p4_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16036,7 +16036,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p5_p4_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16071,7 +16071,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p5_p4_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16106,7 +16106,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p5_p4_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16165,7 +16165,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p5_p4_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16224,7 +16224,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memcpy_p5_p4_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16283,7 +16283,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(4) align 2 readonly  %src) {
+define void @memmove_p5_p4_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16342,7 +16342,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p5_p4_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16358,7 +16358,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p5_p4_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16374,7 +16374,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p5_p4_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16417,7 +16417,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p5_p4_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16445,7 +16445,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memcpy_p5_p4_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16468,7 +16468,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(4) align 8 readonly  %src) {
+define void @memmove_p5_p4_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16491,7 +16491,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p5_p4_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16507,7 +16507,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p5_p4_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16523,7 +16523,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p5_p4_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16566,7 +16566,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p5_p4_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16594,7 +16594,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p4_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memcpy_p5_p4_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16617,7 +16617,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(4) align 16 readonly  %src) {
+define void @memmove_p5_p4_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16640,7 +16640,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p5_p5_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16699,7 +16699,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz16_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p5_p5_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16758,7 +16758,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p5_p5_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16861,7 +16861,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz31_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p5_p5_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -16965,7 +16965,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memcpy_p5_p5_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17072,7 +17072,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_1_1(ptr addrspace(5) align 1  %dst, ptr addrspace(5) align 1 readonly  %src) {
+define void @memmove_p5_p5_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17179,7 +17179,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p5_p5_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17214,7 +17214,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz16_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p5_p5_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17249,7 +17249,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p5_p5_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17308,7 +17308,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz31_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p5_p5_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17367,7 +17367,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memcpy_p5_p5_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17426,7 +17426,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_2_2(ptr addrspace(5) align 2  %dst, ptr addrspace(5) align 2 readonly  %src) {
+define void @memmove_p5_p5_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17485,7 +17485,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p5_p5_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17508,7 +17508,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz16_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p5_p5_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17531,7 +17531,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p5_p5_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17602,7 +17602,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz31_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p5_p5_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz31_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17640,7 +17640,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memcpy_p5_p5_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17675,7 +17675,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_8_8(ptr addrspace(5) align 8  %dst, ptr addrspace(5) align 8 readonly  %src) {
+define void @memmove_p5_p5_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17710,7 +17710,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p5_p5_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17733,7 +17733,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz16_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p5_p5_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17756,7 +17756,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p5_p5_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17827,7 +17827,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz31_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p5_p5_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz31_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17865,7 +17865,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p5_p5_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memcpy_p5_p5_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17900,7 +17900,7 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_16_16(ptr addrspace(5) align 16  %dst, ptr addrspace(5) align 16 readonly  %src) {
+define void @memmove_p5_p5_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memmove_p5_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

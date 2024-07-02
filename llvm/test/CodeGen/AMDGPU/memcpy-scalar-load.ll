@@ -5,7 +5,7 @@
 ; Testing codegen for memcpy and memmove with scalar reads.
 
 
-define void @memcpy_p1_p4_sz16_align_4_4(ptr addrspace(1) align 4  %dst, ptr addrspace(4) align 4 readonly inreg %src) {
+define void @memcpy_p1_p4_sz16_align_4_4(ptr addrspace(1) align 4 %dst, ptr addrspace(4) align 4 readonly inreg %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -22,7 +22,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz16_align_4_4(ptr addrspace(1) align 4  %dst, ptr addrspace(4) align 4 readonly inreg %src) {
+define void @memmove_p1_p4_sz16_align_4_4(ptr addrspace(1) align 4 %dst, ptr addrspace(4) align 4 readonly inreg %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz16_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -39,7 +39,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz31_align_4_4(ptr addrspace(1) align 4  %dst, ptr addrspace(4) align 4 readonly inreg %src) {
+define void @memcpy_p1_p4_sz31_align_4_4(ptr addrspace(1) align 4 %dst, ptr addrspace(4) align 4 readonly inreg %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -60,7 +60,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_4_4(ptr addrspace(1) align 4  %dst, ptr addrspace(4) align 4 readonly inreg %src) {
+define void @memmove_p1_p4_sz31_align_4_4(ptr addrspace(1) align 4 %dst, ptr addrspace(4) align 4 readonly inreg %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz31_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -87,7 +87,7 @@ entry:
   ret void
 }
 
-define void @memcpy_p1_p4_sz32_align_4_4(ptr addrspace(1) align 4  %dst, ptr addrspace(4) align 4 readonly inreg %src) {
+define void @memcpy_p1_p4_sz32_align_4_4(ptr addrspace(1) align 4 %dst, ptr addrspace(4) align 4 readonly inreg %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -109,7 +109,7 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_4_4(ptr addrspace(1) align 4  %dst, ptr addrspace(4) align 4 readonly inreg %src) {
+define void @memmove_p1_p4_sz32_align_4_4(ptr addrspace(1) align 4 %dst, ptr addrspace(4) align 4 readonly inreg %src) {
 ; CHECK-LABEL: memmove_p1_p4_sz32_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
