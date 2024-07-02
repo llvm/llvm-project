@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_IRDL_IRDLREGISTRATION_H
 #define MLIR_DIALECT_IRDL_IRDLREGISTRATION_H
 
-#include "llvm/Support/LogicalResult.h"
 namespace llvm {
 struct LogicalResult;
 } // namespace llvm
