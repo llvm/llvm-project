@@ -97,6 +97,10 @@ private:
       return &It->second;
     return nullptr;
   }
+  void getFilteredAnchorList(const AnchorMap &IRAnchors,
+                             const AnchorMap &ProfileAnchors,
+                             AnchorList &FilteredIRAnchorsList,
+                             AnchorList &FilteredProfileAnchorList);
   void runOnFunction(Function &F);
   void findIRAnchors(const Function &F, AnchorMap &IRAnchors);
   void findProfileAnchors(const FunctionSamples &FS, AnchorMap &ProfileAnchors);
