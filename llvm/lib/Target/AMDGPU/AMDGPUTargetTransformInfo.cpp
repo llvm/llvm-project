@@ -306,6 +306,18 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
+  if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(Tp)) {
+    if (DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
+      unsigned ElCount = VTy->getElementCount().getFixedValue();
+      return ElCount / 4;
+    }
+  }
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  return LT.first.isValid() ? *LT.first.getValue() : 0;
+}
+
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.
@@ -337,9 +349,11 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2
-       : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-       : 1;
+
+  return (ElemWidth == 8)                              ? 4
+         : (ElemWidth == 16)                           ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+                                                       : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -1113,14 +1127,15 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, VT, Index, SubTp);
 
-  // Larger vector widths may require additional instructions, but are
-  // typically cheaper than scalarized versions.
-  unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+  unsigned ScalarSize = DL.getTypeSizeInBits(VT->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      DL.getTypeSizeInBits(VT->getElementType()) == 16) {
-    bool HasVOP3P = ST->hasVOP3PInsts();
+      (ScalarSize == 16 || ScalarSize == 8)) {
+    // Larger vector widths may require additional instructions, but are
+    // typically cheaper than scalarized versions.
+    unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
     unsigned RequestedElts =
         count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
+    unsigned EltsPerReg = 32 / ScalarSize;
     if (RequestedElts == 0)
       return 0;
     switch (Kind) {
@@ -1129,9 +1144,9 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     case TTI::SK_PermuteSingleSrc: {
       // With op_sel VOP3P instructions freely can access the low half or high
       // half of a register, so any swizzle of two elements is free.
-      if (HasVOP3P && NumVectorElts == 2)
+      if (ST->hasVOP3PInsts() && ScalarSize == 16 && NumVectorElts == 2)
         return 0;
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
       // SK_Broadcast just reuses the same mask
       unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
       return NumPerms + NumPermMasks;
@@ -1143,12 +1158,12 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return 0;
       // Insert/extract subvectors only require shifts / extract code to get the
       // relevant bits
-      return alignTo(RequestedElts, 2) / 2;
+      return alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
     }
     case TTI::SK_PermuteTwoSrc:
     case TTI::SK_Splice:
     case TTI::SK_Select: {
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
       // SK_Select just reuses the same mask
       unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
       return NumPerms + NumPermMasks;
