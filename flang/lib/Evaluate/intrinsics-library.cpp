@@ -772,7 +772,7 @@ static bool VerifyGammaLikeArgument(
         someReal->u)};
     if (!isValid) {
       context.messages().Say(
-          "argument must not be a negative integer or zero"_en_US);
+          "argument must not be a negative integer or zero"_warn_en_US);
     }
     return isValid;
   }
@@ -797,7 +797,7 @@ static bool VerifyAtan2LikeArguments(
         someReal->u)};
     if (!isValid) {
       context.messages().Say(
-          "'x' and 'y' arguments must not be both zero"_en_US);
+          "'x' and 'y' arguments must not be both zero"_warn_en_US);
     }
     return isValid;
   }
