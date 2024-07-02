@@ -484,7 +484,7 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
 static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
                               uint64_t OldOffsetInBits, uint64_t OldSizeInBits,
                               uint64_t NewSizeInBits, bool IsOverwriteEnd) {
-  const DataLayout &DL = Inst->getModule()->getDataLayout();
+  const DataLayout &DL = Inst->getDataLayout();
   uint64_t DeadSliceSizeInBits = OldSizeInBits - NewSizeInBits;
   uint64_t DeadSliceOffsetInBits =
       OldOffsetInBits + (IsOverwriteEnd ? NewSizeInBits : 0);
@@ -870,7 +870,7 @@ struct DSEState {
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
            const LoopInfo &LI)
       : F(F), AA(AA), EI(DT, &LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
-        PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()), LI(LI) {
+        PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;

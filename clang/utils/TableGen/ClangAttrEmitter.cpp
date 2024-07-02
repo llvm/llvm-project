@@ -2578,6 +2578,32 @@ static void emitClangAttrIdentifierArgList(RecordKeeper &Records, raw_ostream &O
   OS << "#endif // CLANG_ATTR_IDENTIFIER_ARG_LIST\n\n";
 }
 
+// Emits the indexed-argument-is-identifier property for attributes.
+static void emitClangAttrStrictIdentifierArgAtIndexList(RecordKeeper &Records,
+                                                        raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST)\n";
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+
+  for (const auto *Attr : Attrs) {
+    if (!Attr->getValueAsBit("StrictEnumParameters"))
+      continue;
+    // Determine whether the first argument is an identifier.
+    std::vector<Record *> Args = Attr->getValueAsListOfDefs("Args");
+    uint64_t enumAtIndex = 0;
+    for (size_t i = 0; i < Args.size(); i++) {
+      enumAtIndex |= ((uint64_t)isIdentifierArgument(Args[0])) << i;
+    }
+    if (!enumAtIndex)
+      continue;
+
+    // All these spellings take an identifier argument.
+    forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", " << enumAtIndex << "ull)\n";
+    });
+  }
+  OS << "#endif // CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST\n\n";
+}
+
 static bool keywordThisIsaIdentifierInArgument(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
          llvm::StringSwitch<bool>(
@@ -4959,6 +4985,7 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records, raw_ostream &OS) {
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
   emitClangAttrLateParsedExperimentalList(Records, OS);
+  emitClangAttrStrictIdentifierArgAtIndexList(Records, OS);
 }
 
 void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,

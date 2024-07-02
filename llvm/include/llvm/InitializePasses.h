@@ -182,7 +182,7 @@ void initializeMIRPrintingPassPass(PassRegistry&);
 void initializeMachineBlockFrequencyInfoPass(PassRegistry&);
 void initializeMachineBlockPlacementPass(PassRegistry&);
 void initializeMachineBlockPlacementStatsPass(PassRegistry&);
-void initializeMachineBranchProbabilityInfoPass(PassRegistry&);
+void initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 void initializeMachineCFGPrinterPass(PassRegistry &);
 void initializeMachineCSEPass(PassRegistry&);
 void initializeMachineCombinerPass(PassRegistry&);

@@ -304,6 +304,7 @@ add_entrypoint_object(
   DEPENDS
     .rand_util
     libc.include.stdlib
+    libc.src.__support.threads.sleep
 )
 
 add_entrypoint_object(

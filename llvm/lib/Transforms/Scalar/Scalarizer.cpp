@@ -1107,7 +1107,7 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
     return false;
 
   std::optional<VectorLayout> Layout = getVectorLayout(
-      LI.getType(), LI.getAlign(), LI.getModule()->getDataLayout());
+      LI.getType(), LI.getAlign(), LI.getDataLayout());
   if (!Layout)
     return false;
 
@@ -1133,7 +1133,7 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
 
   Value *FullValue = SI.getValueOperand();
   std::optional<VectorLayout> Layout = getVectorLayout(
-      FullValue->getType(), SI.getAlign(), SI.getModule()->getDataLayout());
+      FullValue->getType(), SI.getAlign(), SI.getDataLayout());
   if (!Layout)
     return false;
 
