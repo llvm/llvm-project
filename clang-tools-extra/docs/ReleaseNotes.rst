@@ -169,6 +169,12 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
+- New :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a ranges version instead.
+
 - New :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check.
 
