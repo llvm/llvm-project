@@ -53,6 +53,7 @@ Getting Started with libc++
    Status/PSTL
    Status/Ranges
    Status/Spaceship
+   Status/SpecialMath
    Status/Zip
 
 
@@ -71,7 +72,7 @@ iOS, watchOS, and tvOS, Google Search, the Android operating system, and FreeBSD
 user base of over 1 billion daily active users.
 
 Since its inception, libc++ has focused on delivering high performance, standards-conformance, and portability. It has
-been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14, 
+been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14,
 with C++17, C++20, C++23, and C++26 features being actively developed and making steady progress.
 
 libc++ is continuously integrated and tested on a wide range of platforms and configurations, ensuring its reliability
