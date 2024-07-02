@@ -1917,6 +1917,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       normalSymbols.push_back(symbol);
     }
   }
+  // interface.symbols() order is non-deterministic.
+  llvm::sort(normalSymbols,
+             [](auto *l, auto *r) { return l->getName() < r->getName(); });
 
   // TODO(compnerd) filter out symbols based on the target platform
   for (const auto *symbol : normalSymbols) {
