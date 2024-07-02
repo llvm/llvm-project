@@ -252,6 +252,32 @@ mlir::computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
   return res;
 }
 
+SmallVector<int64_t>
+mlir::removePermutation(ArrayRef<int64_t> inputPerm,
+                        ArrayRef<int64_t> removePositions) {
+  assert(inputPerm.size() >= removePositions.size() &&
+         "expect inputPerm size large than position to remove");
+  SmallVector<int64_t> res;
+  for (unsigned inputIndex = 0; inputIndex < inputPerm.size(); inputIndex++) {
+    int64_t targetIndex = inputPerm[inputIndex];
+    bool shouldRemove = false;
+    for (unsigned removeIndex = 0; removeIndex < removePositions.size();
+         removeIndex++) {
+      if (removePositions[removeIndex] == inputPerm[inputIndex]) {
+        shouldRemove = true;
+        break;
+      }
+      if (removePositions[removeIndex] < inputPerm[inputIndex]) {
+        targetIndex--;
+      }
+    }
+    if (!shouldRemove) {
+      res.push_back(targetIndex);
+    }
+  }
+  return res;
+}
+
 SmallVector<int64_t> mlir::getI64SubArray(ArrayAttr arrayAttr,
                                           unsigned dropFront,
                                           unsigned dropBack) {
