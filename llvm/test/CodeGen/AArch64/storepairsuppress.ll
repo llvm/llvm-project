@@ -39,165 +39,165 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    ldp s2, s3, [x8]
 ; SUPPRESS-NEXT:    ldp s4, s5, [x8, #8]
 ; SUPPRESS-NEXT:    fmul s6, s5, s1
-; SUPPRESS-NEXT:    fmul s1, s4, s1
-; SUPPRESS-NEXT:    fnmsub s4, s4, s0, s6
-; SUPPRESS-NEXT:    fmadd s0, s5, s0, s1
-; SUPPRESS-NEXT:    fadd s1, s4, s2
-; SUPPRESS-NEXT:    fadd s5, s0, s3
-; SUPPRESS-NEXT:    stp s1, s5, [x8]
-; SUPPRESS-NEXT:    fsub s2, s2, s4
-; SUPPRESS-NEXT:    fsub s0, s3, s0
+; SUPPRESS-NEXT:    fnmsub s6, s4, s0, s6
+; SUPPRESS-NEXT:    fadd s7, s6, s2
+; SUPPRESS-NEXT:    fmadd s16, s4, s1, s3
+; SUPPRESS-NEXT:    fmadd s16, s5, s0, s16
+; SUPPRESS-NEXT:    stp s7, s16, [x8]
+; SUPPRESS-NEXT:    fsub s2, s2, s6
+; SUPPRESS-NEXT:    fmsub s1, s4, s1, s3
+; SUPPRESS-NEXT:    fmsub s0, s5, s0, s1
 ; SUPPRESS-NEXT:    stp s2, s0, [x8, #8]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
-; SUPPRESS-NEXT:    ldp s3, s4, [x9]
-; SUPPRESS-NEXT:    ldp s6, s7, [x8, #16]
-; SUPPRESS-NEXT:    ldp s16, s17, [x8, #24]
-; SUPPRESS-NEXT:    fmul s18, s17, s4
-; SUPPRESS-NEXT:    fmul s4, s16, s4
-; SUPPRESS-NEXT:    fnmsub s16, s16, s3, s18
-; SUPPRESS-NEXT:    fmadd s3, s17, s3, s4
-; SUPPRESS-NEXT:    fadd s4, s16, s6
-; SUPPRESS-NEXT:    fadd s17, s3, s7
-; SUPPRESS-NEXT:    stp s4, s17, [x8, #16]
-; SUPPRESS-NEXT:    fsub s6, s6, s16
-; SUPPRESS-NEXT:    fsub s3, s7, s3
-; SUPPRESS-NEXT:    stp s6, s3, [x8, #24]
+; SUPPRESS-NEXT:    ldp s1, s3, [x9]
+; SUPPRESS-NEXT:    ldp s4, s5, [x8, #16]
+; SUPPRESS-NEXT:    ldp s6, s17, [x8, #24]
+; SUPPRESS-NEXT:    fmul s18, s17, s3
+; SUPPRESS-NEXT:    fnmsub s18, s6, s1, s18
+; SUPPRESS-NEXT:    fadd s19, s18, s4
+; SUPPRESS-NEXT:    fmadd s20, s6, s3, s5
+; SUPPRESS-NEXT:    fmadd s20, s17, s1, s20
+; SUPPRESS-NEXT:    stp s19, s20, [x8, #16]
+; SUPPRESS-NEXT:    fsub s4, s4, s18
+; SUPPRESS-NEXT:    fmsub s3, s6, s3, s5
+; SUPPRESS-NEXT:    fmsub s1, s17, s1, s3
+; SUPPRESS-NEXT:    stp s4, s1, [x8, #24]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
-; SUPPRESS-NEXT:    ldp s7, s16, [x9]
-; SUPPRESS-NEXT:    fmul s18, s16, s17
-; SUPPRESS-NEXT:    fmul s17, s7, s17
-; SUPPRESS-NEXT:    fnmsub s7, s7, s4, s18
-; SUPPRESS-NEXT:    fmadd s4, s16, s4, s17
-; SUPPRESS-NEXT:    fadd s16, s7, s1
-; SUPPRESS-NEXT:    fadd s17, s4, s5
-; SUPPRESS-NEXT:    stp s16, s17, [x8]
-; SUPPRESS-NEXT:    fsub s1, s1, s7
-; SUPPRESS-NEXT:    fsub s4, s5, s4
-; SUPPRESS-NEXT:    stp s1, s4, [x8, #16]
+; SUPPRESS-NEXT:    ldp s3, s5, [x9]
+; SUPPRESS-NEXT:    fmul s6, s5, s20
+; SUPPRESS-NEXT:    fnmsub s6, s3, s19, s6
+; SUPPRESS-NEXT:    fadd s17, s6, s7
+; SUPPRESS-NEXT:    fmadd s18, s3, s20, s16
+; SUPPRESS-NEXT:    fmadd s18, s5, s19, s18
+; SUPPRESS-NEXT:    stp s17, s18, [x8]
+; SUPPRESS-NEXT:    fsub s6, s7, s6
+; SUPPRESS-NEXT:    fmsub s3, s3, s20, s16
+; SUPPRESS-NEXT:    fmsub s3, s5, s19, s3
+; SUPPRESS-NEXT:    stp s6, s3, [x8, #16]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    lsl x9, x3, #4
 ; SUPPRESS-NEXT:    add x10, x10, x9
-; SUPPRESS-NEXT:    ldp s1, s4, [x10]
-; SUPPRESS-NEXT:    fmul s5, s4, s3
-; SUPPRESS-NEXT:    fmul s3, s1, s3
-; SUPPRESS-NEXT:    fnmsub s1, s1, s6, s5
-; SUPPRESS-NEXT:    fmadd s3, s4, s6, s3
-; SUPPRESS-NEXT:    fadd s4, s1, s2
-; SUPPRESS-NEXT:    fadd s5, s3, s0
-; SUPPRESS-NEXT:    stp s4, s5, [x8, #8]
-; SUPPRESS-NEXT:    fsub s1, s2, s1
-; SUPPRESS-NEXT:    fsub s0, s0, s3
-; SUPPRESS-NEXT:    stp s1, s0, [x8, #24]
+; SUPPRESS-NEXT:    ldp s3, s5, [x10]
+; SUPPRESS-NEXT:    fmul s6, s5, s1
+; SUPPRESS-NEXT:    fnmsub s6, s3, s4, s6
+; SUPPRESS-NEXT:    fadd s7, s6, s2
+; SUPPRESS-NEXT:    fmadd s16, s3, s1, s0
+; SUPPRESS-NEXT:    fmadd s16, s5, s4, s16
+; SUPPRESS-NEXT:    stp s7, s16, [x8, #8]
+; SUPPRESS-NEXT:    fsub s2, s2, s6
+; SUPPRESS-NEXT:    fmsub s0, s3, s1, s0
+; SUPPRESS-NEXT:    fmsub s0, s5, s4, s0
+; SUPPRESS-NEXT:    stp s2, s0, [x8, #24]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    ldp s0, s1, [x10]
 ; SUPPRESS-NEXT:    ldp s2, s3, [x8, #32]
 ; SUPPRESS-NEXT:    ldp s4, s5, [x8, #40]
 ; SUPPRESS-NEXT:    fmul s6, s5, s1
-; SUPPRESS-NEXT:    fmul s1, s4, s1
-; SUPPRESS-NEXT:    fnmsub s4, s4, s0, s6
-; SUPPRESS-NEXT:    fmadd s0, s5, s0, s1
-; SUPPRESS-NEXT:    fadd s1, s4, s2
-; SUPPRESS-NEXT:    fadd s5, s0, s3
-; SUPPRESS-NEXT:    stp s1, s5, [x8, #32]
-; SUPPRESS-NEXT:    fsub s2, s2, s4
-; SUPPRESS-NEXT:    fsub s3, s3, s0
-; SUPPRESS-NEXT:    stp s2, s3, [x8, #40]
+; SUPPRESS-NEXT:    fnmsub s6, s4, s0, s6
+; SUPPRESS-NEXT:    fadd s7, s6, s2
+; SUPPRESS-NEXT:    fmadd s16, s4, s1, s3
+; SUPPRESS-NEXT:    fmadd s16, s5, s0, s16
+; SUPPRESS-NEXT:    stp s7, s16, [x8, #32]
+; SUPPRESS-NEXT:    fsub s6, s2, s6
+; SUPPRESS-NEXT:    fmsub s1, s4, s1, s3
+; SUPPRESS-NEXT:    fmsub s1, s5, s0, s1
+; SUPPRESS-NEXT:    stp s6, s1, [x8, #40]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
-; SUPPRESS-NEXT:    ldp s0, s4, [x10]
-; SUPPRESS-NEXT:    ldp s6, s7, [x8, #48]
-; SUPPRESS-NEXT:    ldp s16, s17, [x8, #56]
-; SUPPRESS-NEXT:    fmul s18, s17, s4
-; SUPPRESS-NEXT:    fmul s4, s16, s4
-; SUPPRESS-NEXT:    fnmsub s16, s16, s0, s18
-; SUPPRESS-NEXT:    fmadd s0, s17, s0, s4
-; SUPPRESS-NEXT:    fadd s4, s16, s6
-; SUPPRESS-NEXT:    fadd s17, s0, s7
-; SUPPRESS-NEXT:    stp s4, s17, [x8, #48]
-; SUPPRESS-NEXT:    fsub s6, s6, s16
-; SUPPRESS-NEXT:    fsub s0, s7, s0
-; SUPPRESS-NEXT:    stp s6, s0, [x8, #56]
+; SUPPRESS-NEXT:    ldp s0, s2, [x10]
+; SUPPRESS-NEXT:    ldp s3, s4, [x8, #48]
+; SUPPRESS-NEXT:    ldp s5, s17, [x8, #56]
+; SUPPRESS-NEXT:    fmul s18, s17, s2
+; SUPPRESS-NEXT:    fnmsub s18, s5, s0, s18
+; SUPPRESS-NEXT:    fadd s19, s18, s3
+; SUPPRESS-NEXT:    fmadd s20, s5, s2, s4
+; SUPPRESS-NEXT:    fmadd s20, s17, s0, s20
+; SUPPRESS-NEXT:    stp s19, s20, [x8, #48]
+; SUPPRESS-NEXT:    fsub s18, s3, s18
+; SUPPRESS-NEXT:    fmsub s2, s5, s2, s4
+; SUPPRESS-NEXT:    fmsub s4, s17, s0, s2
+; SUPPRESS-NEXT:    stp s18, s4, [x8, #56]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
-; SUPPRESS-NEXT:    ldp s7, s16, [x10]
-; SUPPRESS-NEXT:    fmul s18, s16, s17
-; SUPPRESS-NEXT:    fmul s17, s7, s17
-; SUPPRESS-NEXT:    fnmsub s7, s7, s4, s18
-; SUPPRESS-NEXT:    fmadd s4, s16, s4, s17
-; SUPPRESS-NEXT:    fadd s16, s7, s1
-; SUPPRESS-NEXT:    fadd s17, s4, s5
-; SUPPRESS-NEXT:    stp s16, s17, [x8, #32]
-; SUPPRESS-NEXT:    fsub s7, s1, s7
-; SUPPRESS-NEXT:    fsub s4, s5, s4
-; SUPPRESS-NEXT:    stp s7, s4, [x8, #48]
+; SUPPRESS-NEXT:    ldp s0, s3, [x10]
+; SUPPRESS-NEXT:    fmul s2, s3, s20
+; SUPPRESS-NEXT:    fnmsub s2, s0, s19, s2
+; SUPPRESS-NEXT:    fadd s5, s2, s7
+; SUPPRESS-NEXT:    fmadd s17, s0, s20, s16
+; SUPPRESS-NEXT:    fmadd s17, s3, s19, s17
+; SUPPRESS-NEXT:    stp s5, s17, [x8, #32]
+; SUPPRESS-NEXT:    fsub s2, s7, s2
+; SUPPRESS-NEXT:    fmsub s0, s0, s20, s16
+; SUPPRESS-NEXT:    fmsub s3, s3, s19, s0
+; SUPPRESS-NEXT:    stp s2, s3, [x8, #48]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x10, x9
-; SUPPRESS-NEXT:    ldp s1, s5, [x9]
-; SUPPRESS-NEXT:    fmul s18, s5, s0
-; SUPPRESS-NEXT:    fmul s0, s1, s0
-; SUPPRESS-NEXT:    fnmsub s1, s1, s6, s18
-; SUPPRESS-NEXT:    fmadd s5, s5, s6, s0
-; SUPPRESS-NEXT:    fadd s6, s1, s2
-; SUPPRESS-NEXT:    fadd s18, s5, s3
-; SUPPRESS-NEXT:    stp s6, s18, [x8, #40]
-; SUPPRESS-NEXT:    fsub s0, s2, s1
-; SUPPRESS-NEXT:    fsub s1, s3, s5
+; SUPPRESS-NEXT:    ldp s7, s16, [x9]
+; SUPPRESS-NEXT:    fmul s0, s16, s4
+; SUPPRESS-NEXT:    fnmsub s0, s7, s18, s0
+; SUPPRESS-NEXT:    fadd s19, s0, s6
+; SUPPRESS-NEXT:    fmadd s20, s7, s4, s1
+; SUPPRESS-NEXT:    fmadd s20, s16, s18, s20
+; SUPPRESS-NEXT:    stp s19, s20, [x8, #40]
+; SUPPRESS-NEXT:    fsub s0, s6, s0
+; SUPPRESS-NEXT:    fmsub s1, s7, s4, s1
+; SUPPRESS-NEXT:    fmsub s1, s16, s18, s1
 ; SUPPRESS-NEXT:    stp s0, s1, [x8, #56]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
-; SUPPRESS-NEXT:    ldp s2, s3, [x9]
-; SUPPRESS-NEXT:    ldp s5, s19, [x8]
-; SUPPRESS-NEXT:    fmul s20, s17, s3
-; SUPPRESS-NEXT:    fmul s3, s16, s3
-; SUPPRESS-NEXT:    fnmsub s16, s16, s2, s20
-; SUPPRESS-NEXT:    fmadd s2, s17, s2, s3
-; SUPPRESS-NEXT:    fadd s3, s16, s5
-; SUPPRESS-NEXT:    fadd s17, s2, s19
-; SUPPRESS-NEXT:    stp s3, s17, [x8]
-; SUPPRESS-NEXT:    fsub s3, s5, s16
-; SUPPRESS-NEXT:    fsub s2, s19, s2
-; SUPPRESS-NEXT:    stp s3, s2, [x8, #32]
+; SUPPRESS-NEXT:    ldp s4, s6, [x9]
+; SUPPRESS-NEXT:    ldp s7, s16, [x8]
+; SUPPRESS-NEXT:    fmul s18, s17, s6
+; SUPPRESS-NEXT:    fnmsub s18, s5, s4, s18
+; SUPPRESS-NEXT:    fadd s21, s18, s7
+; SUPPRESS-NEXT:    fmadd s22, s5, s6, s16
+; SUPPRESS-NEXT:    fmadd s22, s17, s4, s22
+; SUPPRESS-NEXT:    stp s21, s22, [x8]
+; SUPPRESS-NEXT:    fsub s7, s7, s18
+; SUPPRESS-NEXT:    fmsub s5, s5, s6, s16
+; SUPPRESS-NEXT:    fmsub s4, s17, s4, s5
+; SUPPRESS-NEXT:    stp s7, s4, [x8, #32]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x9, w3, sxtw #3
-; SUPPRESS-NEXT:    ldp s2, s3, [x9]
-; SUPPRESS-NEXT:    ldp s5, s16, [x8, #8]
-; SUPPRESS-NEXT:    fmul s17, s18, s3
-; SUPPRESS-NEXT:    fmul s3, s6, s3
-; SUPPRESS-NEXT:    fnmsub s6, s6, s2, s17
-; SUPPRESS-NEXT:    fmadd s2, s18, s2, s3
-; SUPPRESS-NEXT:    fadd s3, s6, s5
-; SUPPRESS-NEXT:    fadd s17, s2, s16
-; SUPPRESS-NEXT:    stp s3, s17, [x8, #8]
-; SUPPRESS-NEXT:    fsub s3, s5, s6
-; SUPPRESS-NEXT:    fsub s2, s16, s2
-; SUPPRESS-NEXT:    stp s3, s2, [x8, #40]
+; SUPPRESS-NEXT:    ldp s4, s5, [x9]
+; SUPPRESS-NEXT:    ldp s6, s7, [x8, #8]
+; SUPPRESS-NEXT:    fmul s16, s20, s5
+; SUPPRESS-NEXT:    fnmsub s16, s19, s4, s16
+; SUPPRESS-NEXT:    fadd s17, s16, s6
+; SUPPRESS-NEXT:    fmadd s18, s19, s5, s7
+; SUPPRESS-NEXT:    fmadd s18, s20, s4, s18
+; SUPPRESS-NEXT:    stp s17, s18, [x8, #8]
+; SUPPRESS-NEXT:    fsub s6, s6, s16
+; SUPPRESS-NEXT:    fmsub s5, s19, s5, s7
+; SUPPRESS-NEXT:    fmsub s4, s20, s4, s5
+; SUPPRESS-NEXT:    stp s6, s4, [x8, #40]
 ; SUPPRESS-NEXT:    lsl x9, x3, #33
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x10, x9, asr #29
-; SUPPRESS-NEXT:    ldp s2, s3, [x9]
-; SUPPRESS-NEXT:    ldp s5, s6, [x8, #16]
-; SUPPRESS-NEXT:    fmul s16, s4, s3
-; SUPPRESS-NEXT:    fmul s3, s7, s3
-; SUPPRESS-NEXT:    fnmsub s7, s7, s2, s16
-; SUPPRESS-NEXT:    fmadd s2, s4, s2, s3
-; SUPPRESS-NEXT:    fadd s3, s7, s5
-; SUPPRESS-NEXT:    fadd s4, s2, s6
-; SUPPRESS-NEXT:    stp s3, s4, [x8, #16]
-; SUPPRESS-NEXT:    fsub s3, s5, s7
-; SUPPRESS-NEXT:    fsub s2, s6, s2
-; SUPPRESS-NEXT:    stp s3, s2, [x8, #48]
+; SUPPRESS-NEXT:    ldp s4, s5, [x9]
+; SUPPRESS-NEXT:    ldp s6, s7, [x8, #16]
+; SUPPRESS-NEXT:    fmul s16, s3, s5
+; SUPPRESS-NEXT:    fnmsub s16, s2, s4, s16
+; SUPPRESS-NEXT:    fadd s17, s16, s6
+; SUPPRESS-NEXT:    fmadd s18, s2, s5, s7
+; SUPPRESS-NEXT:    fmadd s18, s3, s4, s18
+; SUPPRESS-NEXT:    stp s17, s18, [x8, #16]
+; SUPPRESS-NEXT:    fsub s6, s6, s16
+; SUPPRESS-NEXT:    fmsub s2, s2, s5, s7
+; SUPPRESS-NEXT:    fmsub s2, s3, s4, s2
+; SUPPRESS-NEXT:    stp s6, s2, [x8, #48]
 ; SUPPRESS-NEXT:    add w9, w3, w3, lsl #1
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x10, w9, sxtw #3
 ; SUPPRESS-NEXT:    ldp s2, s3, [x9]
 ; SUPPRESS-NEXT:    ldp s4, s5, [x8, #24]
 ; SUPPRESS-NEXT:    fmul s6, s1, s3
-; SUPPRESS-NEXT:    fmul s3, s0, s3
-; SUPPRESS-NEXT:    fnmsub s0, s0, s2, s6
-; SUPPRESS-NEXT:    fmadd s1, s1, s2, s3
-; SUPPRESS-NEXT:    fadd s2, s0, s4
-; SUPPRESS-NEXT:    fadd s3, s1, s5
-; SUPPRESS-NEXT:    stp s2, s3, [x8, #24]
-; SUPPRESS-NEXT:    fsub s0, s4, s0
-; SUPPRESS-NEXT:    fsub s1, s5, s1
-; SUPPRESS-NEXT:    stp s0, s1, [x8, #56]
+; SUPPRESS-NEXT:    fnmsub s6, s0, s2, s6
+; SUPPRESS-NEXT:    fadd s7, s6, s4
+; SUPPRESS-NEXT:    fmadd s16, s0, s3, s5
+; SUPPRESS-NEXT:    fmadd s16, s1, s2, s16
+; SUPPRESS-NEXT:    stp s7, s16, [x8, #24]
+; SUPPRESS-NEXT:    fsub s4, s4, s6
+; SUPPRESS-NEXT:    fmsub s0, s0, s3, s5
+; SUPPRESS-NEXT:    fmsub s0, s1, s2, s0
+; SUPPRESS-NEXT:    stp s4, s0, [x8, #56]
 ; SUPPRESS-NEXT:    ret
 ;
 ; NOSUPPRESS-LABEL: load_store_units_critical:
@@ -208,165 +208,165 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; NOSUPPRESS-NEXT:    ldp s2, s3, [x8]
 ; NOSUPPRESS-NEXT:    ldp s4, s5, [x8, #8]
 ; NOSUPPRESS-NEXT:    fmul s6, s5, s1
-; NOSUPPRESS-NEXT:    fmul s1, s4, s1
-; NOSUPPRESS-NEXT:    fnmsub s4, s4, s0, s6
-; NOSUPPRESS-NEXT:    fmadd s0, s5, s0, s1
-; NOSUPPRESS-NEXT:    fadd s1, s4, s2
-; NOSUPPRESS-NEXT:    fadd s5, s0, s3
-; NOSUPPRESS-NEXT:    stp s1, s5, [x8]
-; NOSUPPRESS-NEXT:    fsub s2, s2, s4
-; NOSUPPRESS-NEXT:    fsub s0, s3, s0
+; NOSUPPRESS-NEXT:    fnmsub s6, s4, s0, s6
+; NOSUPPRESS-NEXT:    fadd s7, s6, s2
+; NOSUPPRESS-NEXT:    fmadd s16, s4, s1, s3
+; NOSUPPRESS-NEXT:    fmadd s16, s5, s0, s16
+; NOSUPPRESS-NEXT:    stp s7, s16, [x8]
+; NOSUPPRESS-NEXT:    fsub s2, s2, s6
+; NOSUPPRESS-NEXT:    fmsub s1, s4, s1, s3
+; NOSUPPRESS-NEXT:    fmsub s0, s5, s0, s1
 ; NOSUPPRESS-NEXT:    stp s2, s0, [x8, #8]
 ; NOSUPPRESS-NEXT:    ldr x9, [x0, #8]
-; NOSUPPRESS-NEXT:    ldp s3, s4, [x9]
-; NOSUPPRESS-NEXT:    ldp s6, s7, [x8, #16]
-; NOSUPPRESS-NEXT:    ldp s16, s17, [x8, #24]
-; NOSUPPRESS-NEXT:    fmul s18, s17, s4
-; NOSUPPRESS-NEXT:    fmul s4, s16, s4
-; NOSUPPRESS-NEXT:    fnmsub s16, s16, s3, s18
-; NOSUPPRESS-NEXT:    fmadd s3, s17, s3, s4
-; NOSUPPRESS-NEXT:    fadd s4, s16, s6
-; NOSUPPRESS-NEXT:    fadd s17, s3, s7
-; NOSUPPRESS-NEXT:    stp s4, s17, [x8, #16]
-; NOSUPPRESS-NEXT:    fsub s6, s6, s16
-; NOSUPPRESS-NEXT:    fsub s3, s7, s3
-; NOSUPPRESS-NEXT:    stp s6, s3, [x8, #24]
+; NOSUPPRESS-NEXT:    ldp s1, s3, [x9]
+; NOSUPPRESS-NEXT:    ldp s4, s5, [x8, #16]
+; NOSUPPRESS-NEXT:    ldp s6, s17, [x8, #24]
+; NOSUPPRESS-NEXT:    fmul s18, s17, s3
+; NOSUPPRESS-NEXT:    fnmsub s18, s6, s1, s18
+; NOSUPPRESS-NEXT:    fadd s19, s18, s4
+; NOSUPPRESS-NEXT:    fmadd s20, s6, s3, s5
+; NOSUPPRESS-NEXT:    fmadd s20, s17, s1, s20
+; NOSUPPRESS-NEXT:    stp s19, s20, [x8, #16]
+; NOSUPPRESS-NEXT:    fsub s4, s4, s18
+; NOSUPPRESS-NEXT:    fmsub s3, s6, s3, s5
+; NOSUPPRESS-NEXT:    fmsub s1, s17, s1, s3
+; NOSUPPRESS-NEXT:    stp s4, s1, [x8, #24]
 ; NOSUPPRESS-NEXT:    ldr x9, [x0, #8]
-; NOSUPPRESS-NEXT:    ldp s7, s16, [x9]
-; NOSUPPRESS-NEXT:    fmul s18, s16, s17
-; NOSUPPRESS-NEXT:    fmul s17, s7, s17
-; NOSUPPRESS-NEXT:    fnmsub s7, s7, s4, s18
-; NOSUPPRESS-NEXT:    fmadd s4, s16, s4, s17
-; NOSUPPRESS-NEXT:    fadd s16, s7, s1
-; NOSUPPRESS-NEXT:    fadd s17, s4, s5
-; NOSUPPRESS-NEXT:    stp s16, s17, [x8]
-; NOSUPPRESS-NEXT:    fsub s1, s1, s7
-; NOSUPPRESS-NEXT:    fsub s4, s5, s4
-; NOSUPPRESS-NEXT:    stp s1, s4, [x8, #16]
+; NOSUPPRESS-NEXT:    ldp s3, s5, [x9]
+; NOSUPPRESS-NEXT:    fmul s6, s5, s20
+; NOSUPPRESS-NEXT:    fnmsub s6, s3, s19, s6
+; NOSUPPRESS-NEXT:    fadd s17, s6, s7
+; NOSUPPRESS-NEXT:    fmadd s18, s3, s20, s16
+; NOSUPPRESS-NEXT:    fmadd s18, s5, s19, s18
+; NOSUPPRESS-NEXT:    stp s17, s18, [x8]
+; NOSUPPRESS-NEXT:    fsub s6, s7, s6
+; NOSUPPRESS-NEXT:    fmsub s3, s3, s20, s16
+; NOSUPPRESS-NEXT:    fmsub s3, s5, s19, s3
+; NOSUPPRESS-NEXT:    stp s6, s3, [x8, #16]
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; NOSUPPRESS-NEXT:    lsl x9, x3, #4
 ; NOSUPPRESS-NEXT:    add x10, x10, x9
-; NOSUPPRESS-NEXT:    ldp s1, s4, [x10]
-; NOSUPPRESS-NEXT:    fmul s5, s4, s3
-; NOSUPPRESS-NEXT:    fmul s3, s1, s3
-; NOSUPPRESS-NEXT:    fnmsub s1, s1, s6, s5
-; NOSUPPRESS-NEXT:    fmadd s3, s4, s6, s3
-; NOSUPPRESS-NEXT:    fadd s4, s1, s2
-; NOSUPPRESS-NEXT:    fadd s5, s3, s0
-; NOSUPPRESS-NEXT:    stp s4, s5, [x8, #8]
-; NOSUPPRESS-NEXT:    fsub s1, s2, s1
-; NOSUPPRESS-NEXT:    fsub s0, s0, s3
-; NOSUPPRESS-NEXT:    stp s1, s0, [x8, #24]
+; NOSUPPRESS-NEXT:    ldp s3, s5, [x10]
+; NOSUPPRESS-NEXT:    fmul s6, s5, s1
+; NOSUPPRESS-NEXT:    fnmsub s6, s3, s4, s6
+; NOSUPPRESS-NEXT:    fadd s7, s6, s2
+; NOSUPPRESS-NEXT:    fmadd s16, s3, s1, s0
+; NOSUPPRESS-NEXT:    fmadd s16, s5, s4, s16
+; NOSUPPRESS-NEXT:    stp s7, s16, [x8, #8]
+; NOSUPPRESS-NEXT:    fsub s2, s2, s6
+; NOSUPPRESS-NEXT:    fmsub s0, s3, s1, s0
+; NOSUPPRESS-NEXT:    fmsub s0, s5, s4, s0
+; NOSUPPRESS-NEXT:    stp s2, s0, [x8, #24]
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; NOSUPPRESS-NEXT:    ldp s0, s1, [x10]
 ; NOSUPPRESS-NEXT:    ldp s2, s3, [x8, #32]
 ; NOSUPPRESS-NEXT:    ldp s4, s5, [x8, #40]
 ; NOSUPPRESS-NEXT:    fmul s6, s5, s1
-; NOSUPPRESS-NEXT:    fmul s1, s4, s1
-; NOSUPPRESS-NEXT:    fnmsub s4, s4, s0, s6
-; NOSUPPRESS-NEXT:    fmadd s0, s5, s0, s1
-; NOSUPPRESS-NEXT:    fadd s1, s4, s2
-; NOSUPPRESS-NEXT:    fadd s5, s0, s3
-; NOSUPPRESS-NEXT:    stp s1, s5, [x8, #32]
-; NOSUPPRESS-NEXT:    fsub s2, s2, s4
-; NOSUPPRESS-NEXT:    fsub s3, s3, s0
-; NOSUPPRESS-NEXT:    stp s2, s3, [x8, #40]
+; NOSUPPRESS-NEXT:    fnmsub s6, s4, s0, s6
+; NOSUPPRESS-NEXT:    fadd s7, s6, s2
+; NOSUPPRESS-NEXT:    fmadd s16, s4, s1, s3
+; NOSUPPRESS-NEXT:    fmadd s16, s5, s0, s16
+; NOSUPPRESS-NEXT:    stp s7, s16, [x8, #32]
+; NOSUPPRESS-NEXT:    fsub s6, s2, s6
+; NOSUPPRESS-NEXT:    fmsub s1, s4, s1, s3
+; NOSUPPRESS-NEXT:    fmsub s1, s5, s0, s1
+; NOSUPPRESS-NEXT:    stp s6, s1, [x8, #40]
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
-; NOSUPPRESS-NEXT:    ldp s0, s4, [x10]
-; NOSUPPRESS-NEXT:    ldp s6, s7, [x8, #48]
-; NOSUPPRESS-NEXT:    ldp s16, s17, [x8, #56]
-; NOSUPPRESS-NEXT:    fmul s18, s17, s4
-; NOSUPPRESS-NEXT:    fmul s4, s16, s4
-; NOSUPPRESS-NEXT:    fnmsub s16, s16, s0, s18
-; NOSUPPRESS-NEXT:    fmadd s0, s17, s0, s4
-; NOSUPPRESS-NEXT:    fadd s4, s16, s6
-; NOSUPPRESS-NEXT:    fadd s17, s0, s7
-; NOSUPPRESS-NEXT:    stp s4, s17, [x8, #48]
-; NOSUPPRESS-NEXT:    fsub s6, s6, s16
-; NOSUPPRESS-NEXT:    fsub s0, s7, s0
-; NOSUPPRESS-NEXT:    stp s6, s0, [x8, #56]
+; NOSUPPRESS-NEXT:    ldp s0, s2, [x10]
+; NOSUPPRESS-NEXT:    ldp s3, s4, [x8, #48]
+; NOSUPPRESS-NEXT:    ldp s5, s17, [x8, #56]
+; NOSUPPRESS-NEXT:    fmul s18, s17, s2
+; NOSUPPRESS-NEXT:    fnmsub s18, s5, s0, s18
+; NOSUPPRESS-NEXT:    fadd s19, s18, s3
+; NOSUPPRESS-NEXT:    fmadd s20, s5, s2, s4
+; NOSUPPRESS-NEXT:    fmadd s20, s17, s0, s20
+; NOSUPPRESS-NEXT:    stp s19, s20, [x8, #48]
+; NOSUPPRESS-NEXT:    fsub s18, s3, s18
+; NOSUPPRESS-NEXT:    fmsub s2, s5, s2, s4
+; NOSUPPRESS-NEXT:    fmsub s4, s17, s0, s2
+; NOSUPPRESS-NEXT:    stp s18, s4, [x8, #56]
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
-; NOSUPPRESS-NEXT:    ldp s7, s16, [x10]
-; NOSUPPRESS-NEXT:    fmul s18, s16, s17
-; NOSUPPRESS-NEXT:    fmul s17, s7, s17
-; NOSUPPRESS-NEXT:    fnmsub s7, s7, s4, s18
-; NOSUPPRESS-NEXT:    fmadd s4, s16, s4, s17
-; NOSUPPRESS-NEXT:    fadd s16, s7, s1
-; NOSUPPRESS-NEXT:    fadd s17, s4, s5
-; NOSUPPRESS-NEXT:    stp s16, s17, [x8, #32]
-; NOSUPPRESS-NEXT:    fsub s7, s1, s7
-; NOSUPPRESS-NEXT:    fsub s4, s5, s4
-; NOSUPPRESS-NEXT:    stp s7, s4, [x8, #48]
+; NOSUPPRESS-NEXT:    ldp s0, s3, [x10]
+; NOSUPPRESS-NEXT:    fmul s2, s3, s20
+; NOSUPPRESS-NEXT:    fnmsub s2, s0, s19, s2
+; NOSUPPRESS-NEXT:    fadd s5, s2, s7
+; NOSUPPRESS-NEXT:    fmadd s17, s0, s20, s16
+; NOSUPPRESS-NEXT:    fmadd s17, s3, s19, s17
+; NOSUPPRESS-NEXT:    stp s5, s17, [x8, #32]
+; NOSUPPRESS-NEXT:    fsub s2, s7, s2
+; NOSUPPRESS-NEXT:    fmsub s0, s0, s20, s16
+; NOSUPPRESS-NEXT:    fmsub s3, s3, s19, s0
+; NOSUPPRESS-NEXT:    stp s2, s3, [x8, #48]
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; NOSUPPRESS-NEXT:    add x9, x10, x9
-; NOSUPPRESS-NEXT:    ldp s1, s5, [x9]
-; NOSUPPRESS-NEXT:    fmul s18, s5, s0
-; NOSUPPRESS-NEXT:    fmul s0, s1, s0
-; NOSUPPRESS-NEXT:    fnmsub s1, s1, s6, s18
-; NOSUPPRESS-NEXT:    fmadd s5, s5, s6, s0
-; NOSUPPRESS-NEXT:    fadd s6, s1, s2
-; NOSUPPRESS-NEXT:    fadd s18, s5, s3
-; NOSUPPRESS-NEXT:    stp s6, s18, [x8, #40]
-; NOSUPPRESS-NEXT:    fsub s0, s2, s1
-; NOSUPPRESS-NEXT:    fsub s1, s3, s5
+; NOSUPPRESS-NEXT:    ldp s7, s16, [x9]
+; NOSUPPRESS-NEXT:    fmul s0, s16, s4
+; NOSUPPRESS-NEXT:    fnmsub s0, s7, s18, s0
+; NOSUPPRESS-NEXT:    fadd s19, s0, s6
+; NOSUPPRESS-NEXT:    fmadd s20, s7, s4, s1
+; NOSUPPRESS-NEXT:    fmadd s20, s16, s18, s20
+; NOSUPPRESS-NEXT:    stp s19, s20, [x8, #40]
+; NOSUPPRESS-NEXT:    fsub s0, s6, s0
+; NOSUPPRESS-NEXT:    fmsub s1, s7, s4, s1
+; NOSUPPRESS-NEXT:    fmsub s1, s16, s18, s1
 ; NOSUPPRESS-NEXT:    stp s0, s1, [x8, #56]
 ; NOSUPPRESS-NEXT:    ldr x9, [x0, #8]
-; NOSUPPRESS-NEXT:    ldp s2, s3, [x9]
-; NOSUPPRESS-NEXT:    ldp s5, s19, [x8]
-; NOSUPPRESS-NEXT:    fmul s20, s17, s3
-; NOSUPPRESS-NEXT:    fmul s3, s16, s3
-; NOSUPPRESS-NEXT:    fnmsub s16, s16, s2, s20
-; NOSUPPRESS-NEXT:    fmadd s2, s17, s2, s3
-; NOSUPPRESS-NEXT:    fadd s3, s16, s5
-; NOSUPPRESS-NEXT:    fadd s17, s2, s19
-; NOSUPPRESS-NEXT:    stp s3, s17, [x8]
-; NOSUPPRESS-NEXT:    fsub s3, s5, s16
-; NOSUPPRESS-NEXT:    fsub s2, s19, s2
-; NOSUPPRESS-NEXT:    stp s3, s2, [x8, #32]
+; NOSUPPRESS-NEXT:    ldp s4, s6, [x9]
+; NOSUPPRESS-NEXT:    ldp s7, s16, [x8]
+; NOSUPPRESS-NEXT:    fmul s18, s17, s6
+; NOSUPPRESS-NEXT:    fnmsub s18, s5, s4, s18
+; NOSUPPRESS-NEXT:    fadd s21, s18, s7
+; NOSUPPRESS-NEXT:    fmadd s22, s5, s6, s16
+; NOSUPPRESS-NEXT:    fmadd s22, s17, s4, s22
+; NOSUPPRESS-NEXT:    stp s21, s22, [x8]
+; NOSUPPRESS-NEXT:    fsub s7, s7, s18
+; NOSUPPRESS-NEXT:    fmsub s5, s5, s6, s16
+; NOSUPPRESS-NEXT:    fmsub s4, s17, s4, s5
+; NOSUPPRESS-NEXT:    stp s7, s4, [x8, #32]
 ; NOSUPPRESS-NEXT:    ldr x9, [x0, #8]
 ; NOSUPPRESS-NEXT:    add x9, x9, w3, sxtw #3
-; NOSUPPRESS-NEXT:    ldp s2, s3, [x9]
-; NOSUPPRESS-NEXT:    ldp s5, s16, [x8, #8]
-; NOSUPPRESS-NEXT:    fmul s17, s18, s3
-; NOSUPPRESS-NEXT:    fmul s3, s6, s3
-; NOSUPPRESS-NEXT:    fnmsub s6, s6, s2, s17
-; NOSUPPRESS-NEXT:    fmadd s2, s18, s2, s3
-; NOSUPPRESS-NEXT:    fadd s3, s6, s5
-; NOSUPPRESS-NEXT:    fadd s17, s2, s16
-; NOSUPPRESS-NEXT:    stp s3, s17, [x8, #8]
-; NOSUPPRESS-NEXT:    fsub s3, s5, s6
-; NOSUPPRESS-NEXT:    fsub s2, s16, s2
-; NOSUPPRESS-NEXT:    stp s3, s2, [x8, #40]
+; NOSUPPRESS-NEXT:    ldp s4, s5, [x9]
+; NOSUPPRESS-NEXT:    ldp s6, s7, [x8, #8]
+; NOSUPPRESS-NEXT:    fmul s16, s20, s5
+; NOSUPPRESS-NEXT:    fnmsub s16, s19, s4, s16
+; NOSUPPRESS-NEXT:    fadd s17, s16, s6
+; NOSUPPRESS-NEXT:    fmadd s18, s19, s5, s7
+; NOSUPPRESS-NEXT:    fmadd s18, s20, s4, s18
+; NOSUPPRESS-NEXT:    stp s17, s18, [x8, #8]
+; NOSUPPRESS-NEXT:    fsub s6, s6, s16
+; NOSUPPRESS-NEXT:    fmsub s5, s19, s5, s7
+; NOSUPPRESS-NEXT:    fmsub s4, s20, s4, s5
+; NOSUPPRESS-NEXT:    stp s6, s4, [x8, #40]
 ; NOSUPPRESS-NEXT:    lsl x9, x3, #33
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; NOSUPPRESS-NEXT:    add x9, x10, x9, asr #29
-; NOSUPPRESS-NEXT:    ldp s2, s3, [x9]
-; NOSUPPRESS-NEXT:    ldp s5, s6, [x8, #16]
-; NOSUPPRESS-NEXT:    fmul s16, s4, s3
-; NOSUPPRESS-NEXT:    fmul s3, s7, s3
-; NOSUPPRESS-NEXT:    fnmsub s7, s7, s2, s16
-; NOSUPPRESS-NEXT:    fmadd s2, s4, s2, s3
-; NOSUPPRESS-NEXT:    fadd s3, s7, s5
-; NOSUPPRESS-NEXT:    fadd s4, s2, s6
-; NOSUPPRESS-NEXT:    stp s3, s4, [x8, #16]
-; NOSUPPRESS-NEXT:    fsub s3, s5, s7
-; NOSUPPRESS-NEXT:    fsub s2, s6, s2
-; NOSUPPRESS-NEXT:    stp s3, s2, [x8, #48]
+; NOSUPPRESS-NEXT:    ldp s4, s5, [x9]
+; NOSUPPRESS-NEXT:    ldp s6, s7, [x8, #16]
+; NOSUPPRESS-NEXT:    fmul s16, s3, s5
+; NOSUPPRESS-NEXT:    fnmsub s16, s2, s4, s16
+; NOSUPPRESS-NEXT:    fadd s17, s16, s6
+; NOSUPPRESS-NEXT:    fmadd s18, s2, s5, s7
+; NOSUPPRESS-NEXT:    fmadd s18, s3, s4, s18
+; NOSUPPRESS-NEXT:    stp s17, s18, [x8, #16]
+; NOSUPPRESS-NEXT:    fsub s6, s6, s16
+; NOSUPPRESS-NEXT:    fmsub s2, s2, s5, s7
+; NOSUPPRESS-NEXT:    fmsub s2, s3, s4, s2
+; NOSUPPRESS-NEXT:    stp s6, s2, [x8, #48]
 ; NOSUPPRESS-NEXT:    add w9, w3, w3, lsl #1
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; NOSUPPRESS-NEXT:    add x9, x10, w9, sxtw #3
 ; NOSUPPRESS-NEXT:    ldp s2, s3, [x9]
 ; NOSUPPRESS-NEXT:    ldp s4, s5, [x8, #24]
 ; NOSUPPRESS-NEXT:    fmul s6, s1, s3
-; NOSUPPRESS-NEXT:    fmul s3, s0, s3
-; NOSUPPRESS-NEXT:    fnmsub s0, s0, s2, s6
-; NOSUPPRESS-NEXT:    fmadd s1, s1, s2, s3
-; NOSUPPRESS-NEXT:    fadd s2, s0, s4
-; NOSUPPRESS-NEXT:    fadd s3, s1, s5
-; NOSUPPRESS-NEXT:    stp s2, s3, [x8, #24]
-; NOSUPPRESS-NEXT:    fsub s0, s4, s0
-; NOSUPPRESS-NEXT:    fsub s1, s5, s1
-; NOSUPPRESS-NEXT:    stp s0, s1, [x8, #56]
+; NOSUPPRESS-NEXT:    fnmsub s6, s0, s2, s6
+; NOSUPPRESS-NEXT:    fadd s7, s6, s4
+; NOSUPPRESS-NEXT:    fmadd s16, s0, s3, s5
+; NOSUPPRESS-NEXT:    fmadd s16, s1, s2, s16
+; NOSUPPRESS-NEXT:    stp s7, s16, [x8, #24]
+; NOSUPPRESS-NEXT:    fsub s4, s4, s6
+; NOSUPPRESS-NEXT:    fmsub s0, s0, s3, s5
+; NOSUPPRESS-NEXT:    fmsub s0, s1, s2, s0
+; NOSUPPRESS-NEXT:    stp s4, s0, [x8, #56]
 ; NOSUPPRESS-NEXT:    ret
 bb:
   %shl = shl i64 %arg3, 1
