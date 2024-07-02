@@ -55,6 +55,8 @@ function(_get_common_compile_options output_var flags)
         list(APPEND compile_options "-nostdinc")
       endif()
       if(LIBC_TARGET_OS_IS_LINUX)
+        # We use -idirafter to avoid preempting libc's own headers in case the
+        # directory (e.g. /usr/include) contains other headers.
         list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
       endif()
     endif()
