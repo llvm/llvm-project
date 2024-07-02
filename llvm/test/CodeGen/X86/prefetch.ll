@@ -6,16 +6,11 @@
 ; RUN: llc < %s -mtriple=i686-- -mcpu=slm | FileCheck %s -check-prefix=X86-PRFCHWSSE
 ; RUN: llc < %s -mtriple=i686-- -mcpu=btver2 | FileCheck %s -check-prefix=X86-PRFCHWSSE
 ; RUN: llc < %s -mtriple=i686-- -mcpu=btver2 -mattr=-prfchw | FileCheck %s -check-prefix=X86-SSE
-; RUN: llc < %s -mtriple=i686-- -mattr=+3dnow | FileCheck %s -check-prefix=X86-3DNOW
-; RUN: llc < %s -mtriple=i686-- -mattr=+3dnow,+prfchw | FileCheck %s -check-prefix=X86-3DNOW
+; RUN: llc < %s -mtriple=i686-- -mattr=+prfchw | FileCheck %s -check-prefix=X86-PRFCHWSSE
 
 ; Rules:
-; 3dnow by itself get you just the single prefetch instruction with no hints
 ; sse provides prefetch0/1/2/nta
-; supporting prefetchw, but not 3dnow implicitly provides prefetcht0/1/2/nta regardless of sse setting as we need something to fall back to for the non-write hint.
-; 3dnow prefetch instruction will only get used if you have no other prefetch instructions enabled
-
-; rdar://10538297
+; supporting prefetchw implicitly provides prefetcht0/1/2/nta as well, as we need something to fall back to for the non-write hint.
 
 define void @t(ptr %ptr) nounwind  {
 ; X86-SSE-LABEL: t:
@@ -43,19 +38,7 @@ define void @t(ptr %ptr) nounwind  {
 ; X86-PRFCHWSSE-NEXT:    prefetchw (%eax)
 ; X86-PRFCHWSSE-NEXT:    prefetchw (%eax)
 ; X86-PRFCHWSSE-NEXT:    retl
-;
-; X86-3DNOW-LABEL: t:
-; X86-3DNOW:       # %bb.0: # %entry
-; X86-3DNOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-3DNOW-NEXT:    prefetch (%eax)
-; X86-3DNOW-NEXT:    prefetch (%eax)
-; X86-3DNOW-NEXT:    prefetch (%eax)
-; X86-3DNOW-NEXT:    prefetch (%eax)
-; X86-3DNOW-NEXT:    prefetchw (%eax)
-; X86-3DNOW-NEXT:    prefetchw (%eax)
-; X86-3DNOW-NEXT:    prefetchw (%eax)
-; X86-3DNOW-NEXT:    prefetchw (%eax)
-; X86-3DNOW-NEXT:    retl
+
 entry:
   tail call void @llvm.prefetch( ptr %ptr, i32 0, i32 1, i32 1 )
   tail call void @llvm.prefetch( ptr %ptr, i32 0, i32 2, i32 1 )

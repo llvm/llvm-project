@@ -481,7 +481,7 @@ defm WriteAESKeyGen : X86SchedWritePair<ReadAfterVecXLd>; // Key Generation.
 // Carry-less multiplication instructions.
 defm WriteCLMul : X86SchedWritePair<ReadAfterVecXLd>;
 
-// EMMS/FEMMS
+// EMMS
 def WriteEMMS : SchedWrite;
 
 // Load/store MXCSR

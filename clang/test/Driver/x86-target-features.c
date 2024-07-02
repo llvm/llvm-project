@@ -8,8 +8,13 @@
 
 // RUN: %clang --target=i386 -march=i386 -mmmx -m3dnow -m3dnowa %s -### 2>&1 | FileCheck -check-prefix=MMX %s
 // RUN: %clang --target=i386 -march=i386 -mno-mmx -mno-3dnow -mno-3dnowa %s -### 2>&1 | FileCheck -check-prefix=NO-MMX %s
-// MMX: "-target-feature" "+mmx" "-target-feature" "+3dnow" "-target-feature" "+3dnowa"
-// NO-MMX: "-target-feature" "-mmx" "-target-feature" "-3dnow" "-target-feature" "-3dnowa"
+// MMX: warning: the clang compiler does not support '-m3dnowa'
+// MMX: warning: the clang compiler does not support '-m3dnow'
+// MMX-NOT: "3dnow"
+// MMX: "-target-feature" "+mmx"
+// MMX-NOT: "3dnow"
+// NO-MMX-NOT: warning
+// NO-MMX: "-target-feature" "-mmx"
 
 // RUN: %clang --target=i386 -march=i386 -msse -msse2 -msse3 -mssse3 -msse4a -msse4.1 -msse4.2 %s -### 2>&1 | FileCheck -check-prefix=SSE %s
 // RUN: %clang --target=i386 -march=i386 -mno-sse -mno-sse2 -mno-sse3 -mno-ssse3 -mno-sse4a -mno-sse4.1 -mno-sse4.2 %s -### 2>&1 | FileCheck -check-prefix=NO-SSE %s
