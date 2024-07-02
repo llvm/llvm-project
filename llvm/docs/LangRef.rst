@@ -25637,7 +25637,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.fadd``' intrinsic returns the sum of its
-two operands.
+two arguments.
 
 
 Arguments:
@@ -25653,8 +25653,8 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating-point sum of the two value operands and has
-the same type as the operands.
+The value produced is the floating-point sum of the two value arguments and has
+the same type as the arguments.
 
 
 '``llvm.experimental.constrained.fsub``' Intrinsic
@@ -25674,7 +25674,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.fsub``' intrinsic returns the difference
-of its two operands.
+of its two arguments.
 
 
 Arguments:
@@ -25690,8 +25690,8 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating-point difference of the two value operands
-and has the same type as the operands.
+The value produced is the floating-point difference of the two value arguments
+and has the same type as the arguments.
 
 
 '``llvm.experimental.constrained.fmul``' Intrinsic
@@ -25711,7 +25711,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.fmul``' intrinsic returns the product of
-its two operands.
+its two arguments.
 
 
 Arguments:
@@ -25727,8 +25727,8 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating-point product of the two value operands and
-has the same type as the operands.
+The value produced is the floating-point product of the two value arguments and
+has the same type as the arguments.
 
 
 '``llvm.experimental.constrained.fdiv``' Intrinsic
@@ -25748,7 +25748,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.fdiv``' intrinsic returns the quotient of
-its two operands.
+its two arguments.
 
 
 Arguments:
@@ -25764,8 +25764,8 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating-point quotient of the two value operands and
-has the same type as the operands.
+The value produced is the floating-point quotient of the two value arguments and
+has the same type as the arguments.
 
 
 '``llvm.experimental.constrained.frem``' Intrinsic
@@ -25785,7 +25785,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.frem``' intrinsic returns the remainder
-from the division of its two operands.
+from the division of its two arguments.
 
 
 Arguments:
@@ -25804,7 +25804,7 @@ Semantics:
 """"""""""
 
 The value produced is the floating-point remainder from the division of the two
-value operands and has the same type as the operands.  The remainder has the
+value arguments and has the same type as the arguments.  The remainder has the
 same sign as the dividend.
 
 '``llvm.experimental.constrained.fma``' Intrinsic
@@ -25824,7 +25824,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.fma``' intrinsic returns the result of a
-fused-multiply-add operation on its operands.
+fused-multiply-add operation on its arguments.
 
 Arguments:
 """"""""""
@@ -25839,8 +25839,8 @@ as described above.
 Semantics:
 """"""""""
 
-The result produced is the product of the first two operands added to the third
-operand computed with infinite precision, and then rounded to the target
+The result produced is the product of the first two arguments added to the third
+argument computed with infinite precision, and then rounded to the target
 precision.
 
 '``llvm.experimental.constrained.fptoui``' Intrinsic
@@ -25874,7 +25874,7 @@ Semantics:
 """"""""""
 
 The result produced is an unsigned integer converted from the floating
-point operand. The value is truncated, so it is rounded towards zero.
+point argument. The value is truncated, so it is rounded towards zero.
 
 '``llvm.experimental.constrained.fptosi``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -25907,7 +25907,7 @@ Semantics:
 """"""""""
 
 The result produced is a signed integer converted from the floating
-point operand. The value is truncated, so it is rounded towards zero.
+point argument. The value is truncated, so it is rounded towards zero.
 
 '``llvm.experimental.constrained.uitofp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -25943,7 +25943,7 @@ Semantics:
 
 An inexact floating-point exception will be raised if rounding is required.
 Any result produced is a floating point value converted from the input
-integer operand.
+integer argument.
 
 '``llvm.experimental.constrained.sitofp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -25979,7 +25979,7 @@ Semantics:
 
 An inexact floating-point exception will be raised if rounding is required.
 Any result produced is a floating point value converted from the input
-integer operand.
+integer argument.
 
 '``llvm.experimental.constrained.fptrunc``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26015,7 +26015,7 @@ Semantics:
 """"""""""
 
 The result produced is a floating point value truncated to be smaller in size
-than the operand.
+than the argument.
 
 '``llvm.experimental.constrained.fpext``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26049,7 +26049,7 @@ Semantics:
 """"""""""
 
 The result produced is a floating point value extended to be larger in size
-than the operand. All restrictions that apply to the fpext instruction also
+than the argument. All restrictions that apply to the fpext instruction also
 apply to this intrinsic.
 
 '``llvm.experimental.constrained.fcmp``' and '``llvm.experimental.constrained.fcmps``' Intrinsics
@@ -26074,13 +26074,13 @@ Overview:
 
 The '``llvm.experimental.constrained.fcmp``' and
 '``llvm.experimental.constrained.fcmps``' intrinsics return a boolean
-value or vector of boolean values based on comparison of its operands.
+value or vector of boolean values based on comparison of its arguments.
 
-If the operands are floating-point scalars, then the result type is a
+If the arguments are floating-point scalars, then the result type is a
 boolean (:ref:`i1 <t_integer>`).
 
-If the operands are floating-point vectors, then the result type is a
-vector of boolean with the same number of elements as the operands being
+If the arguments are floating-point vectors, then the result type is a
+vector of boolean with the same number of elements as the arguments being
 compared.
 
 The '``llvm.experimental.constrained.fcmp``' intrinsic performs a quiet
@@ -26115,8 +26115,8 @@ to perform. It must be a metadata string with one of the following values:
 - "``une``": unordered or not equal
 - "``uno``": unordered (either nans)
 
-*Ordered* means that neither operand is a NAN while *unordered* means
-that either operand may be a NAN.
+*Ordered* means that neither argument is a NAN while *unordered* means
+that either argument may be a NAN.
 
 The fourth argument specifies the exception behavior as described above.
 
@@ -26124,44 +26124,44 @@ Semantics:
 """"""""""
 
 ``op1`` and ``op2`` are compared according to the condition code given
-as the third argument. If the operands are vectors, then the
+as the third argument. If the arguments are vectors, then the
 vectors are compared element by element. Each comparison performed
 always yields an :ref:`i1 <t_integer>` result, as follows:
 
 .. _fcmp_md_cc_sem:
 
-- "``oeq``": yields ``true`` if both operands are not a NAN and ``op1``
+- "``oeq``": yields ``true`` if both arguments are not a NAN and ``op1``
   is equal to ``op2``.
-- "``ogt``": yields ``true`` if both operands are not a NAN and ``op1``
+- "``ogt``": yields ``true`` if both arguments are not a NAN and ``op1``
   is greater than ``op2``.
-- "``oge``": yields ``true`` if both operands are not a NAN and ``op1``
+- "``oge``": yields ``true`` if both arguments are not a NAN and ``op1``
   is greater than or equal to ``op2``.
-- "``olt``": yields ``true`` if both operands are not a NAN and ``op1``
+- "``olt``": yields ``true`` if both arguments are not a NAN and ``op1``
   is less than ``op2``.
-- "``ole``": yields ``true`` if both operands are not a NAN and ``op1``
+- "``ole``": yields ``true`` if both arguments are not a NAN and ``op1``
   is less than or equal to ``op2``.
-- "``one``": yields ``true`` if both operands are not a NAN and ``op1``
+- "``one``": yields ``true`` if both arguments are not a NAN and ``op1``
   is not equal to ``op2``.
-- "``ord``": yields ``true`` if both operands are not a NAN.
-- "``ueq``": yields ``true`` if either operand is a NAN or ``op1`` is
+- "``ord``": yields ``true`` if both arguments are not a NAN.
+- "``ueq``": yields ``true`` if either argument is a NAN or ``op1`` is
   equal to ``op2``.
-- "``ugt``": yields ``true`` if either operand is a NAN or ``op1`` is
+- "``ugt``": yields ``true`` if either argument is a NAN or ``op1`` is
   greater than ``op2``.
-- "``uge``": yields ``true`` if either operand is a NAN or ``op1`` is
+- "``uge``": yields ``true`` if either argument is a NAN or ``op1`` is
   greater than or equal to ``op2``.
-- "``ult``": yields ``true`` if either operand is a NAN or ``op1`` is
+- "``ult``": yields ``true`` if either argument is a NAN or ``op1`` is
   less than ``op2``.
-- "``ule``": yields ``true`` if either operand is a NAN or ``op1`` is
+- "``ule``": yields ``true`` if either argument is a NAN or ``op1`` is
   less than or equal to ``op2``.
-- "``une``": yields ``true`` if either operand is a NAN or ``op1`` is
+- "``une``": yields ``true`` if either argument is a NAN or ``op1`` is
   not equal to ``op2``.
-- "``uno``": yields ``true`` if either operand is a NAN.
+- "``uno``": yields ``true`` if either argument is a NAN.
 
 The quiet comparison operation performed by
 '``llvm.experimental.constrained.fcmp``' will only raise an exception
-if either operand is a SNAN.  The signaling comparison operation
+if either argument is a SNAN.  The signaling comparison operation
 performed by '``llvm.experimental.constrained.fcmps``' will raise an
-exception if either operand is a NAN (QNAN or SNAN). Such an exception
+exception if either argument is a NAN (QNAN or SNAN). Such an exception
 does not preclude a result being produced (e.g. exception might only
 set a flag), therefore the distinction between ordered and unordered
 comparisons is also relevant for the
@@ -26297,8 +26297,8 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.pow``' intrinsic returns the first operand
-raised to the (positive or negative) power specified by the second operand.
+The '``llvm.experimental.constrained.pow``' intrinsic returns the first argument
+raised to the (positive or negative) power specified by the second argument.
 
 Arguments:
 """"""""""
@@ -26334,8 +26334,8 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.powi``' intrinsic returns the first operand
-raised to the (positive or negative) power specified by the second operand. The
+The '``llvm.experimental.constrained.powi``' intrinsic returns the first argument
+raised to the (positive or negative) power specified by the second argument. The
 order of evaluation of multiplications is not defined. When a vector of
 floating-point type is used, the second argument remains a scalar integer value.
 
@@ -26415,7 +26415,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.sin``' intrinsic returns the sine of the
-first operand.
+first argument.
 
 Arguments:
 """"""""""
@@ -26429,7 +26429,7 @@ behavior as described above.
 Semantics:
 """"""""""
 
-This function returns the sine of the specified operand, returning the
+This function returns the sine of the specified argument, returning the
 same values as the libm ``sin`` functions would, and handles error
 conditions in the same way.
 
@@ -26451,7 +26451,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.cos``' intrinsic returns the cosine of the
-first operand.
+first argument.
 
 Arguments:
 """"""""""
@@ -26465,7 +26465,7 @@ behavior as described above.
 Semantics:
 """"""""""
 
-This function returns the cosine of the specified operand, returning the
+This function returns the cosine of the specified argument, returning the
 same values as the libm ``cos`` functions would, and handles error
 conditions in the same way.
 
@@ -26487,7 +26487,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.tan``' intrinsic returns the tangent of the
-first operand.
+first argument.
 
 Arguments:
 """"""""""
@@ -26501,7 +26501,7 @@ behavior as described above.
 Semantics:
 """"""""""
 
-This function returns the tangent of the specified operand, returning the
+This function returns the tangent of the specified argument, returning the
 same values as the libm ``tan`` functions would, and handles error
 conditions in the same way.
 
@@ -26700,8 +26700,8 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.rint``' intrinsic returns the first
-operand rounded to the nearest integer. It may raise an inexact floating-point
-exception if the operand is not an integer.
+argument rounded to the nearest integer. It may raise an inexact floating-point
+exception if the argument is not an integer.
 
 Arguments:
 """"""""""
@@ -26739,8 +26739,8 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.lrint``' intrinsic returns the first
-operand rounded to the nearest integer. An inexact floating-point exception
-will be raised if the operand is not an integer. An invalid exception is
+argument rounded to the nearest integer. An inexact floating-point exception
+will be raised if the argument is not an integer. An invalid exception is
 raised if the result is too large to fit into a supported integer type,
 and in this case the result is undefined.
 
@@ -26787,8 +26787,8 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.llrint``' intrinsic returns the first
-operand rounded to the nearest integer. An inexact floating-point exception
-will be raised if the operand is not an integer. An invalid exception is
+argument rounded to the nearest integer. An inexact floating-point exception
+will be raised if the argument is not an integer. An invalid exception is
 raised if the result is too large to fit into a supported integer type,
 and in this case the result is undefined.
 
@@ -26835,8 +26835,8 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.nearbyint``' intrinsic returns the first
-operand rounded to the nearest integer. It will not raise an inexact
-floating-point exception if the operand is not an integer.
+argument rounded to the nearest integer. It will not raise an inexact
+floating-point exception if the argument is not an integer.
 
 
 Arguments:
@@ -27002,7 +27002,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.ceil``' intrinsic returns the ceiling of the
-first operand.
+first argument.
 
 Arguments:
 """"""""""
@@ -27035,7 +27035,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.floor``' intrinsic returns the floor of the
-first operand.
+first argument.
 
 Arguments:
 """"""""""
@@ -27068,7 +27068,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.round``' intrinsic returns the first
-operand rounded to the nearest integer.
+argument rounded to the nearest integer.
 
 Arguments:
 """"""""""
@@ -27101,7 +27101,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.roundeven``' intrinsic returns the first
-operand rounded to the nearest integer in floating-point format, rounding
+argument rounded to the nearest integer in floating-point format, rounding
 halfway cases to even (that is, to the nearest value that is an even integer),
 regardless of the current rounding direction.
 
@@ -27118,7 +27118,7 @@ Semantics:
 
 This function implements IEEE-754 operation ``roundToIntegralTiesToEven``. It
 also behaves in the same way as C standard function ``roundeven`` and can signal
-the invalid operation exception for a SNAN operand.
+the invalid operation exception for a SNAN argument.
 
 
 '``llvm.experimental.constrained.lround``' Intrinsic
@@ -27137,8 +27137,8 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.lround``' intrinsic returns the first
-operand rounded to the nearest integer with ties away from zero.  It will
-raise an inexact floating-point exception if the operand is not an integer.
+argument rounded to the nearest integer with ties away from zero.  It will
+raise an inexact floating-point exception if the argument is not an integer.
 An invalid exception is raised if the result is too large to fit into a
 supported integer type, and in this case the result is undefined.
 
@@ -27175,8 +27175,8 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.llround``' intrinsic returns the first
-operand rounded to the nearest integer with ties away from zero. It will
-raise an inexact floating-point exception if the operand is not an integer.
+argument rounded to the nearest integer with ties away from zero. It will
+raise an inexact floating-point exception if the argument is not an integer.
 An invalid exception is raised if the result is too large to fit into a
 supported integer type, and in this case the result is undefined.
 
@@ -27213,8 +27213,8 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.trunc``' intrinsic returns the first
-operand rounded to the nearest integer not larger in magnitude than the
-operand.
+argument rounded to the nearest integer not larger in magnitude than the
+argument.
 
 Arguments:
 """"""""""
