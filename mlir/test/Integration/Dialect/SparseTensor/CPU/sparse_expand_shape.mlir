@@ -180,17 +180,17 @@ module {
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
     //
-    %m0 = vector.transfer_read %expand0[%c0, %c0], %df: tensor<3x4xf64>, vector<3x4xf64>
+    %m0 = vector.transfer_read %expand0[%c0, %c0], %df {in_bounds=[false, false]}: tensor<3x4xf64>, vector<3x4xf64>
     vector.print %m0 : vector<3x4xf64>
-    %m1 = vector.transfer_read %expand1[%c0, %c0], %df: tensor<3x4xf64>, vector<3x4xf64>
+    %m1 = vector.transfer_read %expand1[%c0, %c0], %df {in_bounds=[false, false]}: tensor<3x4xf64>, vector<3x4xf64>
     vector.print %m1 : vector<3x4xf64>
-    %m4 = vector.transfer_read %expand4[%c0, %c0, %c0], %df: tensor<3x2x2xf64>, vector<3x2x2xf64>
+    %m4 = vector.transfer_read %expand4[%c0, %c0, %c0], %df {in_bounds=[false, false, false]}: tensor<3x2x2xf64>, vector<3x2x2xf64>
     vector.print %m4 : vector<3x2x2xf64>
-    %m5 = vector.transfer_read %expand5[%c0, %c0, %c0], %df: tensor<3x2x2xf64>, vector<3x2x2xf64>
+    %m5 = vector.transfer_read %expand5[%c0, %c0, %c0], %df {in_bounds=[false, false, false]}: tensor<3x2x2xf64>, vector<3x2x2xf64>
     vector.print %m5 : vector<3x2x2xf64>
-    %m8 = vector.transfer_read %expand8[%c0, %c0, %c0], %df: tensor<?x2x?xf64>, vector<3x2x2xf64>
+    %m8 = vector.transfer_read %expand8[%c0, %c0, %c0], %df {in_bounds=[false, false, false]}: tensor<?x2x?xf64>, vector<3x2x2xf64>
     vector.print %m8 : vector<3x2x2xf64>
-    %m9 = vector.transfer_read %expand9[%c0, %c0, %c0], %df: tensor<?x2x?xf64>, vector<3x2x2xf64>
+    %m9 = vector.transfer_read %expand9[%c0, %c0, %c0], %df {in_bounds=[false, false, false]}: tensor<?x2x?xf64>, vector<3x2x2xf64>
     vector.print %m9 : vector<3x2x2xf64>
 
     //

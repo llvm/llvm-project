@@ -187,6 +187,23 @@ bool AffineMap::isMinorIdentityWithBroadcasting(
   return true;
 }
 
+void AffineMap::getBroadcastDims(
+    SmallVectorImpl<unsigned> *broadcastedDims) const {
+  if (broadcastedDims)
+    broadcastedDims->clear();
+  for (const auto &idxAndExpr : llvm::enumerate(getResults())) {
+    unsigned resIdx = idxAndExpr.index();
+    AffineExpr expr = idxAndExpr.value();
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
+      // Each result may be either a constant 0 (broadcasted dimension).
+      if (constExpr.getValue() != 0)
+        continue;
+      if (broadcastedDims)
+        broadcastedDims->push_back(resIdx);
+    }
+  }
+}
+
 /// Return true if this affine map can be converted to a minor identity with
 /// broadcast by doing a permute. Return a permutation (there may be
 /// several) to apply to get to a minor identity with broadcasts.

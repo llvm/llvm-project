@@ -11,7 +11,7 @@ func.func @transfer_read_dims_match_contiguous(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst :
+  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst {in_bounds=[false, false, false, false]} :
     memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
   return %v : vector<5x4x3x2xi8>
 }
@@ -33,7 +33,7 @@ func.func @transfer_read_dims_match_contiguous_empty_stride(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst :
+  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst {in_bounds=[false, false, false, false]} :
     memref<5x4x3x2xi8>, vector<5x4x3x2xi8>
   return %v : vector<5x4x3x2xi8>
 }
@@ -58,7 +58,7 @@ func.func @transfer_read_dims_mismatch_contiguous(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst :
+  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst {in_bounds=[false, false, false, false]} :
     memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<1x1x2x2xi8>
   return %v : vector<1x1x2x2xi8>
 }
@@ -163,7 +163,7 @@ func.func @transfer_read_dims_mismatch_non_contiguous_slice(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst :
+  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst {in_bounds=[false, false, false, false]} :
     memref<5x4x3x2xi8>, vector<2x1x2x2xi8>
   return %v : vector<2x1x2x2xi8>
 }
@@ -181,7 +181,7 @@ func.func @transfer_read_0d(
     %arg : memref<i8>) -> vector<i8> {
 
   %cst = arith.constant 0 : i8
-  %0 = vector.transfer_read %arg[], %cst : memref<i8>, vector<i8>
+  %0 = vector.transfer_read %arg[], %cst {in_bounds=[]} : memref<i8>, vector<i8>
   return %0 : vector<i8>
 }
 
@@ -202,7 +202,7 @@ func.func @transfer_read_non_contiguous_src(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst :
+  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst {in_bounds=[false, false, false, false]} :
     memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
   return %v : vector<5x4x3x2xi8>
 }
@@ -227,7 +227,7 @@ func.func @transfer_write_dims_match_contiguous(
     %vec : vector<5x4x3x2xi8>) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] :
+  vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0] {in_bounds=[false, false, false, false]} :
     vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
   return
 }
@@ -249,7 +249,7 @@ func.func @transfer_write_dims_match_contiguous_empty_stride(
     %vec : vector<5x4x3x2xi8>) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] :
+  vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0] {in_bounds=[false, false, false, false]} :
     vector<5x4x3x2xi8>, memref<5x4x3x2xi8>
   return
 }
@@ -271,7 +271,7 @@ func.func @transfer_write_dims_mismatch_contiguous(
     %vec : vector<1x1x2x2xi8>) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] :
+  vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0] {in_bounds=[false, false, false, false]} :
     vector<1x1x2x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
   return
 }
@@ -379,7 +379,7 @@ func.func @transfer_write_dims_mismatch_non_contiguous_slice(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0] :
+  vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0] {in_bounds=[false, false, false, false]} :
     vector<2x1x2x2xi8>, memref<5x4x3x2xi8>
   return
 }
@@ -397,7 +397,7 @@ func.func @transfer_write_0d(
     %arg : memref<i8>,
     %vec : vector<i8>) {
 
-  vector.transfer_write %vec, %arg[] : vector<i8>, memref<i8>
+  vector.transfer_write %vec, %arg[] {in_bounds=[]} : vector<i8>, memref<i8>
   return
 }
 
@@ -418,7 +418,7 @@ func.func @transfer_write_non_contiguous_src(
     %vec : vector<5x4x3x2xi8>) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0] :
+  vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0] {in_bounds=[false, false, false, false]} :
    vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>
   return
 }

@@ -205,7 +205,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   memref.dealloc %[[alloc]]
 //       CHECK:   return %[[r]]
 func.func @vector_mask(%t: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?xf32> {
-  %r = vector.mask %m0 { vector.transfer_write %val, %t[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
+  %r = vector.mask %m0 { vector.transfer_write %val, %t[%idx] {in_bounds = [false]}: vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
   return %r : tensor<?xf32>
 }
 

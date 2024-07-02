@@ -281,13 +281,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[CF0:.*]] = arith.constant 0.0{{0*e\+00}} : f16
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [%[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_SIZE2]]] [1, 1, 1] : memref<?x?x?xf16> to memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>>
-// CHECK: %[[LOADED_VAL:.*]] = vector.transfer_read %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]], %[[CF0]] {permutation_map = #[[$PERMUTATION_MAP]]} : memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>>, vector<4x2xf16>
+// CHECK: %[[LOADED_VAL:.*]] = vector.transfer_read %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]], %[[CF0]] {in_bounds = [false, false], permutation_map = #[[$PERMUTATION_MAP]]} : memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>>, vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
 func.func @test_transfer_read_op(%base : memref<?x?x?xf16>,
     %offset0 : index, %offset1: index, %offset2: index)
     -> vector<4x2xf16> {
   %cf0 = arith.constant 0.0 : f16
-  %loaded_val = vector.transfer_read %base[%offset0, %offset1, %offset2], %cf0 { permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : memref<?x?x?xf16>, vector<4x2xf16>
+  %loaded_val = vector.transfer_read %base[%offset0, %offset1, %offset2], %cf0 { in_bounds = [false, false], permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : memref<?x?x?xf16>, vector<4x2xf16>
   return %loaded_val : vector<4x2xf16>
 }
 
@@ -313,13 +313,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME: %[[DYN_OFFSET1:[^:]*]]: index,
 // CHECK-SAME: %[[DYN_OFFSET2:[^:]*]]: index)
 // CHECK: %[[CF0:.*]] = arith.constant 0.0{{0*e\+00}} : f16
-// CHECK: %[[LOADED_VAL:.*]] = vector.transfer_read %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]], %[[CF0]] {permutation_map = #[[$PERMUTATION_MAP]]} : tensor<?x?x?xf16>, vector<4x2xf16>
+// CHECK: %[[LOADED_VAL:.*]] = vector.transfer_read %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]], %[[CF0]] {in_bounds = [false, false], permutation_map = #[[$PERMUTATION_MAP]]} : tensor<?x?x?xf16>, vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
 func.func @test_transfer_read_op_with_tensor(%base : tensor<?x?x?xf16>,
     %offset0 : index, %offset1: index, %offset2: index)
     -> vector<4x2xf16> {
   %cf0 = arith.constant 0.0 : f16
-  %loaded_val = vector.transfer_read %base[%offset0, %offset1, %offset2], %cf0 { permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : tensor<?x?x?xf16>, vector<4x2xf16>
+  %loaded_val = vector.transfer_read %base[%offset0, %offset1, %offset2], %cf0 { in_bounds = [false, false], permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : tensor<?x?x?xf16>, vector<4x2xf16>
   return %loaded_val : vector<4x2xf16>
 }
 
@@ -352,12 +352,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[VCF0:.*]] = arith.constant dense<0.0{{0*e\+00}}> : vector<4x2xf16>
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [%[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_SIZE2]]] [1, 1, 1] : memref<?x?x?xf16> to memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>>
-// CHECK: vector.transfer_write %[[VCF0]], %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {permutation_map = #[[$PERMUTATION_MAP]]} : vector<4x2xf16>, memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>>
+// CHECK: vector.transfer_write %[[VCF0]], %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false], permutation_map = #[[$PERMUTATION_MAP]]} : vector<4x2xf16>, memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>>
 // CHECK: return
 func.func @test_transfer_write_op(%base : memref<?x?x?xf16>,
     %offset0 : index, %offset1: index, %offset2: index) {
   %vcf0 = arith.constant dense<0.000000e+00> : vector<4x2xf16>
-  vector.transfer_write %vcf0, %base[%offset0, %offset1, %offset2] { permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : vector<4x2xf16>, memref<?x?x?xf16>
+  vector.transfer_write %vcf0, %base[%offset0, %offset1, %offset2] { in_bounds = [false, false], permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : vector<4x2xf16>, memref<?x?x?xf16>
   return
 }
 
@@ -391,12 +391,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[VCF0:.*]] = arith.constant dense<0.0{{0*e\+00}}> : vector<4x2xf16>
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [%[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_SIZE2]]] [1, 1, 1] : memref<?x?x?xf16, strided<[329, 26, 12], offset: ?>> to memref<?x?x?xf16, strided<[329, 26, 12], offset: ?>>
-// CHECK: vector.transfer_write %[[VCF0]], %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {permutation_map = #[[$PERMUTATION_MAP]]} : vector<4x2xf16>, memref<?x?x?xf16, strided<[329, 26, 12], offset: ?>>
+// CHECK: vector.transfer_write %[[VCF0]], %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [false, false], permutation_map = #[[$PERMUTATION_MAP]]} : vector<4x2xf16>, memref<?x?x?xf16, strided<[329, 26, 12], offset: ?>>
 // CHECK: return
 func.func @test_transfer_write_op_with_strides(%base : memref<?x?x?xf16, strided<[329, 26, 12], offset: ?>>,
     %offset0 : index, %offset1: index, %offset2: index) {
   %vcf0 = arith.constant dense<0.000000e+00> : vector<4x2xf16>
-  vector.transfer_write %vcf0, %base[%offset0, %offset1, %offset2] { permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : vector<4x2xf16>, memref<?x?x?xf16, strided<[329, 26, 12], offset: ?>>
+  vector.transfer_write %vcf0, %base[%offset0, %offset1, %offset2] { in_bounds = [false, false], permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : vector<4x2xf16>, memref<?x?x?xf16, strided<[329, 26, 12], offset: ?>>
   return
 }
 
@@ -422,12 +422,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME: %[[DYN_OFFSET1:[^:]*]]: index,
 // CHECK-SAME: %[[DYN_OFFSET2:[^:]*]]: index)
 // CHECK-DAG: %[[VCF0:.*]] = arith.constant dense<0.0{{0*e\+00}}> : vector<4x2xf16>
-// CHECK: %[[RES:.*]] = vector.transfer_write %[[VCF0]], %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] {permutation_map = #[[$PERMUTATION_MAP]]} : vector<4x2xf16>, tensor<?x?x?xf16>
+// CHECK: %[[RES:.*]] = vector.transfer_write %[[VCF0]], %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] {in_bounds = [false, false], permutation_map = #[[$PERMUTATION_MAP]]} : vector<4x2xf16>, tensor<?x?x?xf16>
 // CHECK: return %[[RES]] : tensor<?x?x?xf16>
 func.func @test_transfer_write_op_with_tensor(%base : tensor<?x?x?xf16>,
     %offset0 : index, %offset1: index, %offset2: index) -> tensor<?x?x?xf16> {
   %vcf0 = arith.constant dense<0.000000e+00> : vector<4x2xf16>
-  %res = vector.transfer_write %vcf0, %base[%offset0, %offset1, %offset2] { permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : vector<4x2xf16>, tensor<?x?x?xf16>
+  %res = vector.transfer_write %vcf0, %base[%offset0, %offset1, %offset2] { in_bounds = [false, false], permutation_map = affine_map<(d0,d1,d2) -> (d2,d0)> } : vector<4x2xf16>, tensor<?x?x?xf16>
   return %res : tensor<?x?x?xf16>
 }
 

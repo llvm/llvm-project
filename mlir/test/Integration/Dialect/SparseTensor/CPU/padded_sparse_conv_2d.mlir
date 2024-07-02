@@ -125,7 +125,7 @@ func.func @main() {
   // CHECK-SAME:  ( ( 180 ), ( 240 ), ( 300 ), ( 300 ), ( 300 ), ( 300 ), ( 240 ), ( 180 ) ),
   // CHECK-SAME:  ( ( 144 ), ( 192 ), ( 240 ), ( 240 ), ( 240 ), ( 240 ), ( 192 ), ( 144 ) ),
   // CHECK-SAME:  ( ( 108 ), ( 144 ), ( 180 ), ( 180 ), ( 180 ), ( 180 ), ( 144 ), ( 108 ) ) ) )
-  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero
+  %dense_v = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
       : tensor<3x8x8x1xf32>, vector<3x8x8x1xf32>
   vector.print %dense_v : vector<3x8x8x1xf32>
 
@@ -153,7 +153,7 @@ func.func @main() {
   // CHECK-SAME:     ( ( 180 ), ( 240 ), ( 300 ), ( 300 ), ( 300 ), ( 300 ), ( 240 ), ( 180 ) ),
   // CHECK-SAME:     ( ( 144 ), ( 192 ), ( 240 ), ( 240 ), ( 240 ), ( 240 ), ( 192 ), ( 144 ) ),
   // CHECK-SAME:     ( ( 108 ), ( 144 ), ( 180 ), ( 180 ), ( 180 ), ( 180 ), ( 144 ), ( 108 ) ) ) )
-  %CDCC_NHWC_v = vector.transfer_read %CDCC_NHWC_ret[%c0, %c0, %c0, %c0], %zero
+  %CDCC_NHWC_v = vector.transfer_read %CDCC_NHWC_ret[%c0, %c0, %c0, %c0], %zero {in_bounds=[false, false, false, false]}
       : tensor<3x8x8x1xf32>, vector<3x8x8x1xf32>
   vector.print %CDCC_NHWC_v : vector<3x8x8x1xf32>
 

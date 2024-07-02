@@ -85,7 +85,7 @@ module {
     // CHECK-SAME: ( -254, 0, 256, -300, -30, -6 ),
     // CHECK-SAME: ( 1397, 0, -1408, 100, 10, 33 ) )
     //
-    %v = vector.transfer_read %0[%c0, %c0], %i0
+    %v = vector.transfer_read %0[%c0, %c0], %i0 {in_bounds=[false, false]}
       : tensor<5x6xi32>, vector<5x6xi32>
     vector.print %v : vector<5x6xi32>
 

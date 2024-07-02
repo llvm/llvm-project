@@ -226,23 +226,23 @@ module {
     // CHECK-NEXT: values : ( 1, 3, 5, 7, 9, 21, 23, 25, 27, 29, 41, 43, 45, 47, 49 )
     // CHECK-NEXT: ----
     //
-    %v0 = vector.transfer_read %collapse0[%c0], %df: tensor<12xf64>, vector<12xf64>
+    %v0 = vector.transfer_read %collapse0[%c0], %df {in_bounds=[false]}: tensor<12xf64>, vector<12xf64>
     vector.print %v0 : vector<12xf64>
-    %v1 = vector.transfer_read %collapse1[%c0], %df: tensor<12xf64>, vector<12xf64>
+    %v1 = vector.transfer_read %collapse1[%c0], %df {in_bounds=[false]}: tensor<12xf64>, vector<12xf64>
     vector.print %v1 : vector<12xf64>
     sparse_tensor.print %collapse2 : tensor<12xf64, #SparseVector>
     sparse_tensor.print %collapse3 : tensor<12xf64, #SparseVector>
 
-    %v4 = vector.transfer_read %collapse4[%c0, %c0], %df: tensor<6x10xf64>, vector<6x10xf64>
+    %v4 = vector.transfer_read %collapse4[%c0, %c0], %df {in_bounds=[false, false]}: tensor<6x10xf64>, vector<6x10xf64>
     vector.print %v4 : vector<6x10xf64>
-    %v5 = vector.transfer_read %collapse5[%c0, %c0], %df: tensor<6x10xf64>, vector<6x10xf64>
+    %v5 = vector.transfer_read %collapse5[%c0, %c0], %df {in_bounds=[false, false]}: tensor<6x10xf64>, vector<6x10xf64>
     vector.print %v5 : vector<6x10xf64>
     sparse_tensor.print %collapse6 : tensor<6x10xf64, #SparseMatrix>
     sparse_tensor.print %collapse7 : tensor<6x10xf64, #SparseMatrix>
 
-    %v8 = vector.transfer_read %collapse8[%c0, %c0], %df: tensor<?x?xf64>, vector<6x10xf64>
+    %v8 = vector.transfer_read %collapse8[%c0, %c0], %df {in_bounds=[false, false]}: tensor<?x?xf64>, vector<6x10xf64>
     vector.print %v8 : vector<6x10xf64>
-    %v9 = vector.transfer_read %collapse9[%c0, %c0], %df: tensor<?x?xf64>, vector<6x10xf64>
+    %v9 = vector.transfer_read %collapse9[%c0, %c0], %df {in_bounds=[false, false]}: tensor<?x?xf64>, vector<6x10xf64>
     vector.print %v9 : vector<6x10xf64>
     sparse_tensor.print %collapse10 : tensor<?x?xf64, #SparseMatrix>
     sparse_tensor.print %collapse11 : tensor<?x?xf64, #SparseMatrix>

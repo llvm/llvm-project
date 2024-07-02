@@ -303,7 +303,7 @@ module {
     sparse_tensor.print %2 : tensor<?xf64, #SparseVector>
     sparse_tensor.print %3 : tensor<?x?xf64, #DCSR>
     sparse_tensor.print %4 : tensor<?x?xf64, #DCSR>
-    %v = vector.transfer_read %5[%c0], %cmu: tensor<?xi32>, vector<32xi32>
+    %v = vector.transfer_read %5[%c0], %cmu {in_bounds=[false]} : tensor<?xi32>, vector<32xi32>
     vector.print %v : vector<32xi32>
 
     // Release the resources.

@@ -117,11 +117,11 @@ func.func @func_without_tensor_args(%v : vector<10xf32>) -> () {
 
   %c0 = arith.constant 0 : index
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-  %1 = vector.transfer_write %v, %0[%c0] : vector<10xf32>, tensor<10xf32>
+  %1 = vector.transfer_write %v, %0[%c0] {in_bounds=[false]} : vector<10xf32>, tensor<10xf32>
 
   %cst = arith.constant 0.0 : f32
   // CHECK: vector.transfer_read %[[alloc]]
-  %r = vector.transfer_read %1[%c0], %cst : tensor<10xf32>, vector<11xf32>
+  %r = vector.transfer_read %1[%c0], %cst {in_bounds=[false]} : tensor<10xf32>, vector<11xf32>
 
   vector.print %r : vector<11xf32>
   return
@@ -593,7 +593,7 @@ func.func @transfer_read(
   %f0 = arith.constant 0.0 : f32
 
 //       CHECK: %[[RES:.*]] = vector.transfer_read {{.*}} : memref<?xf32, strided{{.*}}>, vector<4xf32>
-  %0 = vector.transfer_read %A[%c0], %f0 : tensor<?xf32>, vector<4xf32>
+  %0 = vector.transfer_read %A[%c0], %f0 {in_bounds=[false]} : tensor<?xf32>, vector<4xf32>
 
 //       CHECK: return %[[RES]] : vector<4xf32>
   return %0 : vector<4xf32>
@@ -646,7 +646,7 @@ func.func @to_memref_op_unsupported(
 
   // CHECK: vector.transfer_read %[[arg0]]
   %cst = arith.constant 0.0 : f32
-  %r1 = vector.transfer_read %t1[%idx3], %cst : tensor<?xf32>, vector<5xf32>
+  %r1 = vector.transfer_read %t1[%idx3], %cst {in_bounds=[false]} : tensor<?xf32>, vector<5xf32>
 
   return %r1 : vector<5xf32>
 }

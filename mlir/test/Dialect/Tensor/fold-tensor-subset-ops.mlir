@@ -69,7 +69,7 @@ func.func @fold_extract_slice_with_transfer_read_0d(
     -> vector<f32> {
   %f1 = arith.constant 1.0 : f32
   %0 = tensor.extract_slice %arg0[%arg1, %arg2][1, 1][1, 1] : tensor<12x32xf32> to tensor<f32>
-  %1 = vector.transfer_read %0[], %f1 : tensor<f32>, vector<f32>
+  %1 = vector.transfer_read %0[], %f1 {in_bounds = []} : tensor<f32>, vector<f32>
   return %1 : vector<f32>
 }
 //      CHECK: func @fold_extract_slice_with_transfer_read_0d

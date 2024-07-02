@@ -187,14 +187,14 @@ module {
     // CHECK-NEXT: ( ( 0, 0, 0, 0 ), ( 0, 2, 2, 3 ), ( 0, 2, 12, 24 ) )
     // CHECK-NEXT: ( ( 1, 2, 3, 4 ), ( 2, 4, 4, 5 ), ( 3, 4, 7, 9 ) )
     //
-    %vv0 = vector.transfer_read %0[%c0], %du: tensor<8xi64>, vector<8xi64>
-    %vv1 = vector.transfer_read %1[%c0], %du: tensor<8xi64>, vector<8xi64>
-    %vv2 = vector.transfer_read %2[%c0], %du: tensor<8xi64>, vector<8xi64>
-    %vv3 = vector.transfer_read %3[%c0], %du: tensor<8xi64>, vector<8xi64>
-    %vv4 = vector.transfer_read %4[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
-    %vv5 = vector.transfer_read %5[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
-    %vv6 = vector.transfer_read %6[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
-    %vv7 = vector.transfer_read %7[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
+    %vv0 = vector.transfer_read %0[%c0], %du {in_bounds=[false]}: tensor<8xi64>, vector<8xi64>
+    %vv1 = vector.transfer_read %1[%c0], %du {in_bounds=[false]}: tensor<8xi64>, vector<8xi64>
+    %vv2 = vector.transfer_read %2[%c0], %du {in_bounds=[false]}: tensor<8xi64>, vector<8xi64>
+    %vv3 = vector.transfer_read %3[%c0], %du {in_bounds=[false]}: tensor<8xi64>, vector<8xi64>
+    %vv4 = vector.transfer_read %4[%c0,%c0], %du {in_bounds=[false, false]}: tensor<3x4xi64>, vector<3x4xi64>
+    %vv5 = vector.transfer_read %5[%c0,%c0], %du {in_bounds=[false, false]}: tensor<3x4xi64>, vector<3x4xi64>
+    %vv6 = vector.transfer_read %6[%c0,%c0], %du {in_bounds=[false, false]}: tensor<3x4xi64>, vector<3x4xi64>
+    %vv7 = vector.transfer_read %7[%c0,%c0], %du {in_bounds=[false, false]}: tensor<3x4xi64>, vector<3x4xi64>
     vector.print %vv0 : vector<8xi64>
     vector.print %vv1 : vector<8xi64>
     vector.print %vv2 : vector<8xi64>

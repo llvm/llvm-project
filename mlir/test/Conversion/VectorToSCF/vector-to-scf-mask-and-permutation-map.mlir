@@ -12,7 +12,7 @@
 //       CHECK:   scf.for {{.*}} {
 //       CHECK:     scf.if {{.*}} {
 //       CHECK:       %[[MASK_LOADED:.*]] = memref.load %[[MASK_CASTED]][%{{.*}}] : memref<4xvector<9xi1>>
-//       CHECK:       %[[READ:.*]] = vector.transfer_read %{{.*}}, %{{.*}}, %[[MASK_LOADED]] : memref<?x?xf32>, vector<9xf32>
+//       CHECK:       %[[READ:.*]] = vector.transfer_read %{{.*}}, %{{.*}}, %[[MASK_LOADED]] {in_bounds = [false]} : memref<?x?xf32>, vector<9xf32>
 //       CHECK:       memref.store %[[READ]], %{{.*}} : memref<4xvector<9xf32>>
 //       CHECK:     }
 //       CHECK:   }
@@ -29,7 +29,7 @@ func.func @transfer_read_2d_mask_transposed(
                                 [1, 1, 1, 1, 1, 1, 1, 0, 1],
                                 [0, 0, 1, 0, 1, 1, 1, 0, 1]]> : vector<4x9xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
-      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} :
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [false, false]} :
     memref<?x?xf32>, vector<9x4xf32>
   return %f : vector<9x4xf32>
 }

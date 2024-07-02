@@ -50,7 +50,7 @@ func.func @main() {
   // CHECK-NEXT:  [4,   104,   204,   304,   404,   504],
   // CHECK-NEXT:  [5,   105,   205,   305,   405,   505]]
 
-  %init = vector.transfer_read %0[%c1, %c1], %cst : memref<?x?xf32>, vector<5x5xf32>
+  %init = vector.transfer_read %0[%c1, %c1], %cst {in_bounds=[false, false]} : memref<?x?xf32>, vector<5x5xf32>
   vector.print %init : vector<5x5xf32>
   // 5x5 block rooted at {1, 1}
   // CHECK-NEXT:  ( ( 101, 201, 301, 401, 501 ),
@@ -59,7 +59,7 @@ func.func @main() {
   // CHECK-SAME:    ( 104, 204, 304, 404, 504 ),
   // CHECK-SAME:    ( 105, 205, 305, 405, 505 ) )
 
-  %1 = vector.transfer_read %0[%c1, %c1], %cst {permutation_map = #map0} : memref<?x?xf32>, vector<5x5xf32>
+  %1 = vector.transfer_read %0[%c1, %c1], %cst {permutation_map = #map0, in_bounds = [false, false]} : memref<?x?xf32>, vector<5x5xf32>
   vector.print %1 : vector<5x5xf32>
   // Transposed 5x5 block rooted @{1, 1} in memory.
   // CHECK-NEXT:  ( ( 101, 102, 103, 104, 105 ),
@@ -69,9 +69,9 @@ func.func @main() {
   // CHECK-SAME:    ( 501, 502, 503, 504, 505 ) )
 
   // Transpose-write the transposed 5x5 block @{0, 0} in memory.
-  vector.transfer_write %1, %0[%c0, %c0] {permutation_map = #map0} : vector<5x5xf32>, memref<?x?xf32>
+  vector.transfer_write %1, %0[%c0, %c0] {permutation_map = #map0, in_bounds = [false, false]} : vector<5x5xf32>, memref<?x?xf32>
 
-  %2 = vector.transfer_read %0[%c1, %c1], %cst : memref<?x?xf32>, vector<5x5xf32>
+  %2 = vector.transfer_read %0[%c1, %c1], %cst {in_bounds=[false, false]} : memref<?x?xf32>, vector<5x5xf32>
   vector.print %2 : vector<5x5xf32>
   // New 5x5 block rooted @{1, 1} in memory.
   // Here we expect the boundaries from the original data
@@ -83,7 +83,7 @@ func.func @main() {
   // CHECK-SAME:    ( 205, 305, 405, 505, 504 ),
   // CHECK-SAME:    ( 105, 205, 305, 405, 505 ) )
 
-  %3 = vector.transfer_read %0[%c2, %c3], %cst : memref<?x?xf32>, vector<5x5xf32>
+  %3 = vector.transfer_read %0[%c2, %c3], %cst {in_bounds=[false, false]} : memref<?x?xf32>, vector<5x5xf32>
   vector.print %3 : vector<5x5xf32>
   // New 5x5 block rooted @{2, 3} in memory.
   // CHECK-NEXT: ( ( 403, 503, 502, -42, -42 ),
@@ -92,7 +92,7 @@ func.func @main() {
   // CHECK-SAME:   ( 305, 405, 505, -42, -42 ),
   // CHECK-SAME:   ( -42, -42, -42, -42, -42 ) )
 
-  %4 = vector.transfer_read %0[%c2, %c3], %cst {permutation_map = #map0} : memref<?x?xf32>, vector<5x5xf32>
+  %4 = vector.transfer_read %0[%c2, %c3], %cst {permutation_map = #map0, in_bounds = [false, false]} : memref<?x?xf32>, vector<5x5xf32>
   vector.print %4 : vector<5x5xf32>
   // Transposed 5x5 block rooted @{2, 3} in memory.
   // CHECK-NEXT: ( ( 403, 404, 405, 305, -42 ),
@@ -101,7 +101,7 @@ func.func @main() {
   // CHECK-SAME:   ( -42, -42, -42, -42, -42 ),
   // CHECK-SAME:   ( -42, -42, -42, -42, -42 ) )
 
-  %5 = vector.transfer_read %0[%c2, %c3], %cst {permutation_map = #map1} : memref<?x?xf32>, vector<5xf32>
+  %5 = vector.transfer_read %0[%c2, %c3], %cst {permutation_map = #map1, in_bounds = [false]} : memref<?x?xf32>, vector<5xf32>
   vector.print %5 : vector<5xf32>
   // CHECK-NEXT: ( 403, 503, 502, -42, -42 )
 

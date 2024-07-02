@@ -237,11 +237,11 @@ module {
                  -> (tensor<2xi32>, tensor<3x2xi32>), tensor<3xf64>, (i32, i64), index
 
     // CHECK-NEXT: ( 1, 2, 3 )
-    %vd = vector.transfer_read %d[%c0], %f0 : tensor<3xf64>, vector<3xf64>
+    %vd = vector.transfer_read %d[%c0], %f0 {in_bounds=[false]} : tensor<3xf64>, vector<3xf64>
     vector.print %vd : vector<3xf64>
 
     // CHECK-NEXT: ( ( 1, 2 ), ( 5, 6 ), ( 7, 8 ) )
-    %vi = vector.transfer_read %i[%c0, %c0], %i0 : tensor<3x2xi32>, vector<3x2xi32>
+    %vi = vector.transfer_read %i[%c0, %c0], %i0 {in_bounds=[false, false]} : tensor<3x2xi32>, vector<3x2xi32>
     vector.print %vi : vector<3x2xi32>
 
     // CHECK-NEXT: 3
@@ -256,7 +256,7 @@ module {
                  -> (tensor<3xi32>, tensor<3xi32>), tensor<4xf64>, (i32, i64), index
 
     // CHECK-NEXT: ( 1, 2, 3 )
-    %vd_csr = vector.transfer_read %rd_csr[%c0], %f0 : tensor<4xf64>, vector<3xf64>
+    %vd_csr = vector.transfer_read %rd_csr[%c0], %f0 {in_bounds=[false]} : tensor<4xf64>, vector<3xf64>
     vector.print %vd_csr : vector<3xf64>
 
     // CHECK-NEXT: 3
@@ -271,14 +271,14 @@ module {
                     -> (tensor<4xindex>, tensor<6x2xindex>), tensor<6xf64>, (i32, tensor<i64>), index
 
     // CHECK-NEXT: ( 1, 2, 3, 4, 5 )
-    %vbd = vector.transfer_read %bd[%c0], %f0 : tensor<6xf64>, vector<5xf64>
+    %vbd = vector.transfer_read %bd[%c0], %f0 {in_bounds=[false]} : tensor<6xf64>, vector<5xf64>
     vector.print %vbd : vector<5xf64>
 
     // CHECK-NEXT: 5
     vector.print %ld : index
 
     // CHECK-NEXT: ( ( 1, 2 ), ( 5, 6 ), ( 7, 8 ), ( 2, 3 ), ( 4, 2 ), ( {{.*}}, {{.*}} ) )
-    %vbi = vector.transfer_read %bi[%c0, %c0], %c0 : tensor<6x2xindex>, vector<6x2xindex>
+    %vbi = vector.transfer_read %bi[%c0, %c0], %c0 {in_bounds=[false, false]} : tensor<6x2xindex>, vector<6x2xindex>
     vector.print %vbi : vector<6x2xindex>
 
     // CHECK-NEXT: 10

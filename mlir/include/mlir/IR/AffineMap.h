@@ -155,6 +155,10 @@ public:
   bool isMinorIdentityWithBroadcasting(
       SmallVectorImpl<unsigned> *broadcastedDims = nullptr) const;
 
+  // TODO: Document
+  void
+  getBroadcastDims(SmallVectorImpl<unsigned> *broadcastedDims = nullptr) const;
+
   /// Return true if this affine map can be converted to a minor identity with
   /// broadcast by doing a permute. Return a permutation (there may be
   /// several) to apply to get to a minor identity with broadcasts.

@@ -4,7 +4,7 @@ func.func @transfer_read_rank_reducing(
       %arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>) -> vector<3x2xi8> {
     %c0 = arith.constant 0 : index
     %cst = arith.constant 0 : i8
-    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst :
+    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst {in_bounds=[false, false]} :
       memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>, vector<3x2xi8>
     return %v : vector<3x2xi8>
 }
@@ -16,7 +16,7 @@ func.func @transfer_read_rank_reducing(
 
 func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>, %vec : vector<3x2xi8>) {
     %c0 = arith.constant 0 : index
-    vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] :
+    vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] {in_bounds = [false, false]}:
       vector<3x2xi8>, memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>
     return
 }
@@ -30,7 +30,7 @@ func.func @transfer_read_and_vector_rank_reducing(
       %arg : memref<1x1x3x2x1xf32>) -> vector<3x2x1xf32> {
     %c0 = arith.constant 0 : index
     %cst = arith.constant 0.0 : f32
-    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0, %c0], %cst :
+    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0, %c0], %cst {in_bounds=[false, false, false]} :
       memref<1x1x3x2x1xf32>, vector<3x2x1xf32>
     return %v : vector<3x2x1xf32>
 }
@@ -44,7 +44,7 @@ func.func @transfer_write_and_vector_rank_reducing(
       %arg : memref<1x1x3x2x1xf32>,
       %vec : vector<3x2x1xf32>) {
     %c0 = arith.constant 0 : index
-    vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0, %c0] :
+    vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0, %c0] {in_bounds = [false, false, false]}:
       vector<3x2x1xf32>, memref<1x1x3x2x1xf32>
     return
 }
@@ -58,7 +58,7 @@ func.func @transfer_read_and_vector_rank_reducing_to_0d(
       %arg : memref<1x1x1x1x1xf32>) -> vector<1x1x1xf32> {
     %c0 = arith.constant 0 : index
     %cst = arith.constant 0.0 : f32
-    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0, %c0], %cst :
+    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0, %c0], %cst {in_bounds=[false, false, false]} :
       memref<1x1x1x1x1xf32>, vector<1x1x1xf32>
     return %v : vector<1x1x1xf32>
 }
@@ -72,7 +72,7 @@ func.func @transfer_write_and_vector_rank_reducing_to_0d(
       %arg : memref<1x1x1x1x1xf32>,
       %vec : vector<1x1x1xf32>) {
     %c0 = arith.constant 0 : index
-    vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0, %c0] :
+    vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0, %c0] {in_bounds = [false, false, false]} :
       vector<1x1x1xf32>, memref<1x1x1x1x1xf32>
     return
 }
@@ -152,7 +152,7 @@ func.func @masked_transfer_write_and_vector_rank_reducing(
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %mask = vector.create_mask %c1, %mask_dim1, %c1, %mask_dim2, %c1 : vector<1x3x1x16x1xi1>
-    vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0, %c0, %c0], %mask :
+    vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0, %c0, %c0], %mask  {in_bounds = [false, false, false, false, false]} :
       vector<1x3x1x16x1xf32>, memref<1x1x3x1x16x1xf32>
     return
 }
