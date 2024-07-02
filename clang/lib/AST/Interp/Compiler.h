@@ -39,6 +39,7 @@ template <class Emitter> class SourceLocScope;
 template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
+template <class Emitter> class StmtExprScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -334,6 +335,7 @@ private:
   friend class LoopScope<Emitter>;
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
+  friend class StmtExprScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -397,6 +399,8 @@ protected:
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
+
+  bool InStmtExpr = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
