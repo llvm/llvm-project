@@ -309,7 +309,7 @@ public:
                                        QualType SrcRecordTy,
                                        QualType DestRecordTy,
                                        mlir::cir::PointerType DestCIRTy,
-                                       bool isRefCast, mlir::Value Src) = 0;
+                                       bool isRefCast, Address Src) = 0;
 };
 
 /// Creates and Itanium-family ABI

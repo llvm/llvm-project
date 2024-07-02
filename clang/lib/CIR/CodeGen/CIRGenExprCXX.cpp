@@ -1094,9 +1094,14 @@ static mlir::Value buildDynamicCastToNull(CIRGenFunction &CGF,
   mlir::Value NullPtrValue = CGF.getBuilder().getNullPtr(DestCIRTy, Loc);
 
   if (!DestTy->isPointerType()) {
+    auto *CurrentRegion = CGF.getBuilder().getBlock()->getParent();
     /// C++ [expr.dynamic.cast]p9:
     ///   A failed cast to reference type throws std::bad_cast
     CGF.CGM.getCXXABI().buildBadCastCall(CGF, Loc);
+
+    // The call to bad_cast will terminate the current block. Create a new block
+    // to hold any follow up code.
+    CGF.getBuilder().createBlock(CurrentRegion, CurrentRegion->end());
   }
 
   return NullPtrValue;
@@ -1138,6 +1143,5 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
 
   auto destCirTy = mlir::cast<mlir::cir::PointerType>(ConvertType(destTy));
   return CGM.getCXXABI().buildDynamicCast(*this, loc, srcRecordTy, destRecordTy,
-                                          destCirTy, isRefCast,
-                                          ThisAddr.getPointer());
+                                          destCirTy, isRefCast, ThisAddr);
 }
