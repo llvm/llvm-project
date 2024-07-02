@@ -235,7 +235,7 @@ def SysSocketAPI : PublicAPI<"sys/socket.h"> {
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
-  let Types = ["rlim_t", "struct rlimit"];
+  let Types = ["rlim_t", "struct rlimit", "struct rusage"];
 }
 
 def SysStatAPI : PublicAPI<"sys/stat.h"> {

@@ -325,6 +325,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.sys.resource.getrusage
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
