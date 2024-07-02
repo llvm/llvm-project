@@ -35,6 +35,8 @@ class OutputSection;
 class SectionBase;
 class ThunkSection;
 struct OutputDesc;
+struct SectionClass;
+struct SectionClassDesc;
 
 // This represents an r-value in the linker script.
 struct ExprValue {
@@ -78,7 +80,8 @@ enum SectionsCommandKind {
   AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  ByteKind, // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  ClassKind,
 };
 
 struct SectionCommand {
@@ -198,9 +201,12 @@ class InputSectionDescription : public SectionCommand {
 
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
-                          uint64_t withoutFlags = 0)
+                          uint64_t withoutFlags = 0, StringRef classRef = {})
       : SectionCommand(InputSectionKind), filePat(filePattern),
-        withFlags(withFlags), withoutFlags(withoutFlags) {}
+        withFlags(withFlags), withoutFlags(withoutFlags), classRef(classRef) {
+    assert((filePattern.empty() || classRef.empty()) &&
+           "file pattern and class reference are mutually exclusive");
+  }
 
   static bool classof(const SectionCommand *c) {
     return c->kind == InputSectionKind;
@@ -228,6 +234,10 @@ public:
   // SectionPatterns can be filtered with the INPUT_SECTION_FLAGS command.
   uint64_t withFlags;
   uint64_t withoutFlags;
+
+  // If present, input section matching uses class membership instead of file
+  // and section patterns (mutually exclusive).
+  StringRef classRef;
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
@@ -288,8 +298,7 @@ class LinkerScript final {
 
   SmallVector<InputSectionBase *, 0>
   computeInputSections(const InputSectionDescription *,
-                       ArrayRef<InputSectionBase *>,
-                       const OutputSection &outCmd);
+                       ArrayRef<InputSectionBase *>, const SectionBase &outCmd);
 
   SmallVector<InputSectionBase *, 0> createInputSectionList(OutputSection &cmd);
 
@@ -418,6 +427,11 @@ public:
     PotentialSpillSection *tail;
   };
   llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
+
+  // Named lists of input sections that can be collectively referenced in output
+  // section descriptions. Multiple references allow for sections to spill from
+  // one output section to another.
+  llvm::StringMap<SectionClassDesc *> sectionClasses;
 };
 
 struct ScriptWrapper {

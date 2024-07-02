@@ -137,6 +137,25 @@ struct OutputDesc final : SectionCommand {
   }
 };
 
+// A list of input sections that can be referenced in output descriptions.
+// Multiple references allow sections to spill from one output section to the
+// next.
+struct SectionClass final : public SectionBase {
+  SmallVector<InputSectionDescription *, 0> commands;
+  bool assigned = false;
+
+  SectionClass(StringRef name) : SectionBase(Class, name, 0, 0, 0, 0, 0, 0) {}
+  static bool classof(const SectionBase *s) { return s->kind() == Class; }
+};
+
+struct SectionClassDesc : SectionCommand {
+  SectionClass sc;
+
+  SectionClassDesc(StringRef name) : SectionCommand(ClassKind), sc(name) {}
+
+  static bool classof(const SectionCommand *c) { return c->kind == ClassKind; }
+};
+
 int getPriority(StringRef s);
 
 InputSection *getFirstInputSection(const OutputSection *os);
