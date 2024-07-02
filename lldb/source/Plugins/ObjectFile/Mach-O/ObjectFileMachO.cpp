@@ -6215,18 +6215,14 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
   const bool warn_multiple = true;
 
   if (log) {
-    std::string binary_description;
-    if (GetFileSpec()) {
-      binary_description += "path='";
-      binary_description += GetFileSpec().GetPath();
-      binary_description += "' ";
-    }
+    StreamString logmsg;
+    logmsg << "ObjectFileMachO::SetLoadAddress ";
+    if (GetFileSpec())
+      logmsg << "path='" << GetFileSpec().GetPath() << "' ";
     if (GetUUID()) {
-      binary_description += "uuid=";
-      binary_description += GetUUID().GetAsString();
+      logmsg << "uuid=" << GetUUID().GetAsString();
     }
-    LLDB_LOGF(log, "ObjectFileMachO::SetLoadAddress %s",
-              binary_description.c_str());
+    LLDB_LOGF(log, "%s", logmsg.GetData());
   }
   if (value_is_offset) {
     // "value" is an offset to apply to each top level segment
