@@ -3141,21 +3141,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     return LV;
   }
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
-    LValue LV = EmitFunctionDeclLValue(*this, E, FD);
-
-    // Emit debuginfo for the function declaration if the target wants to.
-    if (getContext().getTargetInfo().allowDebugInfoForExternalRef()) {
-      if (CGDebugInfo *DI = CGM.getModuleDebugInfo()) {
-        auto *Fn =
-            cast<llvm::Function>(LV.getPointer(*this)->stripPointerCasts());
-        if (!Fn->getSubprogram())
-          DI->EmitFunctionDecl(FD, FD->getLocation(), T, Fn);
-      }
-    }
-
-    return LV;
-  }
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+    return EmitFunctionDeclLValue(*this, E, FD);
 
   // FIXME: While we're emitting a binding from an enclosing scope, all other
   // DeclRefExprs we see should be implicitly treated as if they also refer to

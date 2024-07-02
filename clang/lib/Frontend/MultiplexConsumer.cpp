@@ -357,7 +357,7 @@ void MultiplexConsumer::CompleteTentativeDefinition(VarDecl *D) {
     Consumer->CompleteTentativeDefinition(D);
 }
 
-void MultiplexConsumer::CompleteExternalDeclaration(VarDecl *D) {
+void MultiplexConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   for (auto &Consumer : Consumers)
     Consumer->CompleteExternalDeclaration(D);
 }
