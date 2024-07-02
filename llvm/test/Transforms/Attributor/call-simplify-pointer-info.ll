@@ -36,8 +36,8 @@ define i8 @call_simplifiable_1() {
 ; TUNIT-LABEL: define {{[^@]+}}@call_simplifiable_1
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; TUNIT-NEXT:    [[I0:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 2
+; TUNIT-NEXT:    [[BYTES1:%.*]] = alloca [1 x i8], align 1
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [1 x i8], ptr [[BYTES1]], i64 0
 ; TUNIT-NEXT:    ret i8 2
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -93,9 +93,9 @@ define i8 @call_simplifiable_2() {
 ; TUNIT-LABEL: define {{[^@]+}}@call_simplifiable_2
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; TUNIT-NEXT:    [[I0:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 2
-; TUNIT-NEXT:    [[I1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 3
+; TUNIT-NEXT:    [[BYTES1:%.*]] = alloca [2 x i8], align 1
+; TUNIT-NEXT:    [[NEWGEP2:%.*]] = getelementptr [2 x i8], ptr [[BYTES1]], i64 0
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [2 x i8], ptr [[BYTES1]], i64 1
 ; TUNIT-NEXT:    ret i8 4
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -125,8 +125,8 @@ define i8 @call_simplifiable_3() {
 ; TUNIT-LABEL: define {{[^@]+}}@call_simplifiable_3
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 2
+; TUNIT-NEXT:    [[BYTES1:%.*]] = alloca [1 x i8], align 1
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [1 x i8], ptr [[BYTES1]], i64 0
 ; TUNIT-NEXT:    ret i8 2
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -198,13 +198,13 @@ define i8 @call_partially_simplifiable_1() {
 ; TUNIT-LABEL: define {{[^@]+}}@call_partially_simplifiable_1
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 2
-; TUNIT-NEXT:    store i8 2, ptr [[I2]], align 2
-; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 3
-; TUNIT-NEXT:    store i8 3, ptr [[I3]], align 1
-; TUNIT-NEXT:    [[I4:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 4
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @sum_two_different_loads(ptr nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[I2]], ptr nocapture nofree noundef nonnull readonly dereferenceable(1021) [[I3]]) #[[ATTR3]]
+; TUNIT-NEXT:    [[BYTES1:%.*]] = alloca [3 x i8], align 1
+; TUNIT-NEXT:    [[NEWGEP2:%.*]] = getelementptr [3 x i8], ptr [[BYTES1]], i64 0
+; TUNIT-NEXT:    store i8 2, ptr [[NEWGEP2]], align 2
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [3 x i8], ptr [[BYTES1]], i64 2
+; TUNIT-NEXT:    store i8 3, ptr [[NEWGEP]], align 1
+; TUNIT-NEXT:    [[NEWGEP3:%.*]] = getelementptr [3 x i8], ptr [[BYTES1]], i64 1
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @sum_two_different_loads(ptr nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[NEWGEP2]], ptr nocapture nofree noundef nonnull readonly dereferenceable(1021) [[NEWGEP]]) #[[ATTR3]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
