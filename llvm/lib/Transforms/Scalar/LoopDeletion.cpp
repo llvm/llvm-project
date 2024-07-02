@@ -273,9 +273,9 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       if (LiveEdges.count({ Pred, BB })) {
         HasLivePreds = true;
         Value *Incoming = PN.getIncomingValueForBlock(Pred);
-        // Skip undefs. If they are present, we can assume they are equal to
-        // the non-undef input.
-        if (isa<UndefValue>(Incoming))
+        // Skip poison. If they are present, we can assume they are equal to
+        // the non-poison input.
+        if (isa<PoisonValue>(Incoming))
           continue;
         // Two inputs.
         if (OnlyInput && OnlyInput != Incoming)
@@ -284,8 +284,8 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       }
 
     assert(HasLivePreds && "No live predecessors?");
-    // If all incoming live value were undefs, return undef.
-    return OnlyInput ? OnlyInput : UndefValue::get(PN.getType());
+    // If all incoming live value were poison, return poison.
+    return OnlyInput ? OnlyInput : PoisonValue::get(PN.getType());
   };
   DenseMap<Value *, Value *> FirstIterValue;
 
