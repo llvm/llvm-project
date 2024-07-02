@@ -1255,4 +1255,14 @@ constexpr int StmtExprEval() {
   return 1;
 }
 static_assert(StmtExprEval() == 2, "");
+
+constexpr int ReturnInStmtExpr() { // both-error {{never produces a constant expression}}
+  return ({
+      return 1; // both-note 2{{this use of statement expressions is not supported in a constant expression}}
+      2;
+      });
+}
+static_assert(ReturnInStmtExpr() == 1, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{in call to}}
+
 #endif
