@@ -1317,6 +1317,12 @@ bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
 }
 
+TargetTransformInfo::ReductionShuffle
+TargetTransformInfo::getPreferredExpandedReductionShuffle(
+    const IntrinsicInst *II) const {
+  return TTIImpl->getPreferredExpandedReductionShuffle(II);
+}
+
 unsigned TargetTransformInfo::getGISelRematGlobalCost() const {
   return TTIImpl->getGISelRematGlobalCost();
 }

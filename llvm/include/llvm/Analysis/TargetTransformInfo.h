@@ -1705,6 +1705,13 @@ public:
   /// into a shuffle sequence.
   bool shouldExpandReduction(const IntrinsicInst *II) const;
 
+  enum struct ReductionShuffle { SplitHalf, Pairwise };
+
+  /// \returns The shuffle sequence pattern used to expand the given reduction
+  /// intrinsic.
+  ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const;
+
   /// \returns the size cost of rematerializing a GlobalValue address relative
   /// to a stack reload.
   unsigned getGISelRematGlobalCost() const;
@@ -2156,6 +2163,8 @@ public:
   virtual bool preferEpilogueVectorization() const = 0;
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
+  virtual ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const = 0;
   virtual unsigned getGISelRematGlobalCost() const = 0;
   virtual unsigned getMinTripCountTailFoldingThreshold() const = 0;
   virtual bool enableScalableVectorization() const = 0;
@@ -2896,6 +2905,11 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
     return Impl.shouldExpandReduction(II);
+  }
+
+  ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const override {
+    return Impl.getPreferredExpandedReductionShuffle(II);
   }
 
   unsigned getGISelRematGlobalCost() const override {
