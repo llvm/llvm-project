@@ -5357,7 +5357,6 @@ llvm/include/llvm/MC/MCAsmInfoELF.h
 llvm/include/llvm/MC/MCAsmInfoGOFF.h
 llvm/include/llvm/MC/MCAsmInfoWasm.h
 llvm/include/llvm/MC/MCAsmInfoXCOFF.h
-llvm/include/llvm/MC/MCAsmLayout.h
 llvm/include/llvm/MC/MCCodeView.h
 llvm/include/llvm/MC/MCContext.h
 llvm/include/llvm/MC/MCFixedLenDisassembler.h

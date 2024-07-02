@@ -772,7 +772,7 @@ void StructurizeCFG::simplifyAffectedPhis() {
   bool Changed;
   do {
     Changed = false;
-    SimplifyQuery Q(Func->getParent()->getDataLayout());
+    SimplifyQuery Q(Func->getDataLayout());
     Q.DT = DT;
     // Setting CanUseUndef to true might extend value liveness, set it to false
     // to achieve better register pressure.

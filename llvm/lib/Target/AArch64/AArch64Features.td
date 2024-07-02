@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 // A SubtargetFeature that represents one or more Architecture Extensions, as
-// defined by the Arm ARM and tipically identified by a 'FEAT_*' name.
+// defined by the Arm ARM and typically identified by a 'FEAT_*' name.
 // Each Extension record defines an ExtensionInfo entry in the Target Parser
 // with a corresponding 'AEK_*' entry in the ArchExtKind enum.
 class Extension<

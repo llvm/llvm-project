@@ -311,8 +311,8 @@ struct Alias {
   StringRef Name;
 };
 
-inline constexpr Alias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
-                                       {"grace", "neoverse-v2"}};
+#define EMIT_CPU_ALIAS
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 const ExtensionInfo &getExtensionByID(ArchExtKind(ExtID));
 
@@ -352,7 +352,7 @@ uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
 void PrintSupportedExtensions();
 
-void printEnabledExtensions(std::set<StringRef> EnabledFeatureNames);
+void printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames);
 
 } // namespace AArch64
 } // namespace llvm

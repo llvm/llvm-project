@@ -765,7 +765,7 @@ static bool buildAtomicCompareExchangeInst(
   return true;
 }
 
-/// Helper function for building an atomic load instruction.
+/// Helper function for building atomic instructions.
 static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                                MachineIRBuilder &MIRBuilder,
                                SPIRVGlobalRegistry *GR) {
@@ -790,13 +790,36 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   MemSemanticsReg = buildMemSemanticsReg(MemSemanticsReg, PtrRegister,
                                          Semantics, MIRBuilder, GR);
   MRI->setRegClass(Call->Arguments[1], &SPIRV::IDRegClass);
+  Register ValueReg = Call->Arguments[1];
+  Register ValueTypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  // support cl_ext_float_atomics
+  if (Call->ReturnType->getOpcode() == SPIRV::OpTypeFloat) {
+    if (Opcode == SPIRV::OpAtomicIAdd) {
+      Opcode = SPIRV::OpAtomicFAddEXT;
+    } else if (Opcode == SPIRV::OpAtomicISub) {
+      // Translate OpAtomicISub applied to a floating type argument to
+      // OpAtomicFAddEXT with the negative value operand
+      Opcode = SPIRV::OpAtomicFAddEXT;
+      Register NegValueReg =
+          MRI->createGenericVirtualRegister(MRI->getType(ValueReg));
+      MRI->setRegClass(NegValueReg, &SPIRV::IDRegClass);
+      GR->assignSPIRVTypeToVReg(Call->ReturnType, NegValueReg,
+                                MIRBuilder.getMF());
+      MIRBuilder.buildInstr(TargetOpcode::G_FNEG)
+          .addDef(NegValueReg)
+          .addUse(ValueReg);
+      insertAssignInstr(NegValueReg, nullptr, Call->ReturnType, GR, MIRBuilder,
+                        MIRBuilder.getMF().getRegInfo());
+      ValueReg = NegValueReg;
+    }
+  }
   MIRBuilder.buildInstr(Opcode)
       .addDef(Call->ReturnRegister)
-      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(ValueTypeReg)
       .addUse(PtrRegister)
       .addUse(ScopeRegister)
       .addUse(MemSemanticsReg)
-      .addUse(Call->Arguments[1]);
+      .addUse(ValueReg);
   return true;
 }
 

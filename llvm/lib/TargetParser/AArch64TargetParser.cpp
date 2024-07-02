@@ -89,10 +89,14 @@ StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
 
 void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const auto &C : CpuInfos)
-      Values.push_back(C.Name);
+    Values.push_back(C.Name);
 
   for (const auto &Alias : CpuAliases)
-    Values.push_back(Alias.AltName);
+    // The apple-latest alias is backend only, do not expose it to clang's -mcpu.
+    if (Alias.AltName != "apple-latest")
+      Values.push_back(Alias.AltName);
+
+  llvm::sort(Values);
 }
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {
@@ -175,7 +179,7 @@ void AArch64::PrintSupportedExtensions() {
 }
 
 void
-AArch64::printEnabledExtensions(std::set<StringRef> EnabledFeatureNames) {
+AArch64::printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames) {
   outs() << "Extensions enabled for the given AArch64 target\n\n"
          << "    " << left_justify("Architecture Feature(s)", 55)
          << "Description\n";
