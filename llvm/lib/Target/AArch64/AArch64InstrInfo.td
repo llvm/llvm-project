@@ -1823,6 +1823,10 @@ let Predicates = [HasPAuth] in {
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
                                  imm:$Disc, tcGPR64:$AddrDisc)>;
 
+  def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
+               Sched<[WriteI, ReadI]> {
+    let Defs = [X16];
+  }
 }
 
 // v9.5-A pointer authentication extensions
