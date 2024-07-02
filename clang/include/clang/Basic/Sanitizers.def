@@ -37,6 +37,9 @@
 #endif
 
 
+// RealtimeSanitizer
+SANITIZER("realtime", Realtime)
+
 // AddressSanitizer
 SANITIZER("address", Address)
 

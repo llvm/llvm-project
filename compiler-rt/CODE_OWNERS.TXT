@@ -67,3 +67,7 @@ D: ThreadSanitizer
 N: Bill Wendling
 E: isanbard@gmail.com
 D: Profile runtime library
+
+N: Christopher Apple, David Trevelyan
+E: cja-private@pm.me, realtime.sanitizer@gmail.com
+D: Realtime Sanitizer (RTSan)
