@@ -342,6 +342,10 @@ static cl::opt<bool, true> EnableLowerModuleLDS(
     cl::location(AMDGPUTargetMachine::EnableLowerModuleLDS), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool> EnableSwLowerLDS("amdgpu-enable-sw-lower-lds",
+                                      cl::desc("Enable sw lower lds pass"),
+                                      cl::init(true), cl::Hidden);
+
 static cl::opt<bool> EnablePreRAOptimizations(
     "amdgpu-enable-pre-ra-optimizations",
     cl::desc("Enable Pre-RA optimizations pass"), cl::init(true),
@@ -729,6 +733,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         }
 
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      });
+
+  PB.registerOptimizerLastEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
+        if (EnableSwLowerLDS)
+          PM.addPass(AMDGPUSwLowerLDSPass());
       });
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
