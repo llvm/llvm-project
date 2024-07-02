@@ -619,7 +619,7 @@ class RegisterCommandsTestCase(TestBase):
         self.expect("register info x30", substrs=["Name: lr (x30)"])
 
     @skipIfXmlSupportMissing
-    @skipUnlessPlatform(["linux"])
+    @skipUnlessPlatform(["linux", "freebsd"])
     @skipIf(archs=no_match(["aarch64"]))
     def test_register_read_fields(self):
         """Test that when debugging a live process, we see the fields of certain
