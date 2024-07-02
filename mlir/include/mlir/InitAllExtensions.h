@@ -14,6 +14,7 @@
 #ifndef MLIR_INITALLEXTENSIONS_H_
 #define MLIR_INITALLEXTENSIONS_H_
 
+#include "Conversion/MPIToLLVM/MPIToLLVM.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
@@ -62,6 +63,7 @@ inline void registerAllExtensions(DialectRegistry &registry) {
   registerConvertFuncToLLVMInterface(registry);
   index::registerConvertIndexToLLVMInterface(registry);
   registerConvertMathToLLVMInterface(registry);
+  mpi::registerConvertMPIToLLVMInterface(registry);
   registerConvertMemRefToLLVMInterface(registry);
   registerConvertNVVMToLLVMInterface(registry);
   ub::registerConvertUBToLLVMInterface(registry);
