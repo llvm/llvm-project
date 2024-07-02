@@ -24,8 +24,6 @@ class MemoryBuffer;
 } // namespace llvm
 
 namespace mlir {
-struct LogicalResult;
-
 using ChunkBufferHandler = function_ref<LogicalResult(
     std::unique_ptr<llvm::MemoryBuffer> chunkBuffer, raw_ostream &os)>;
 

@@ -498,7 +498,7 @@ public:
                ProfileSummaryInfo *PSI = nullptr,
                OptimizationRemarkEmitter *ORE = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
-        PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()), ORE(ORE),
+        PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
         CandidateCall(Call) {}
 
   InlineResult analyze();
@@ -2999,7 +2999,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // alloca, the inlined code would need to be adjusted to handle that the
   // argument is in the alloca address space (so it is a little bit complicated
   // to solve).
-  unsigned AllocaAS = Callee->getParent()->getDataLayout().getAllocaAddrSpace();
+  unsigned AllocaAS = Callee->getDataLayout().getAllocaAddrSpace();
   for (unsigned I = 0, E = Call.arg_size(); I != E; ++I)
     if (Call.isByValArgument(I)) {
       PointerType *PTy = cast<PointerType>(Call.getArgOperand(I)->getType());

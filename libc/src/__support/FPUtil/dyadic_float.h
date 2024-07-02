@@ -110,7 +110,7 @@ template <size_t Bits> struct DyadicFloat {
               .get_val();
       // volatile prevents constant propagation that would result in infinity
       // always being returned no matter the current rounding mode.
-      volatile T two(2.0);
+      volatile T two = static_cast<T>(2.0);
       T r = two * d_hi;
 
       // TODO: Whether rounding down the absolute value to max_normal should
@@ -156,13 +156,13 @@ template <size_t Bits> struct DyadicFloat {
       // d_lo is denormal, but the output is normal.
       int scale_up_exponent = 1 - exp_lo;
       T scale_up_factor =
-          FPBits<T>::create_value(sign,
+          FPBits<T>::create_value(Sign::POS,
                                   static_cast<output_bits_t>(
                                       FPBits<T>::EXP_BIAS + scale_up_exponent),
                                   IMPLICIT_MASK)
               .get_val();
       T scale_down_factor =
-          FPBits<T>::create_value(sign,
+          FPBits<T>::create_value(Sign::POS,
                                   static_cast<output_bits_t>(
                                       FPBits<T>::EXP_BIAS - scale_up_exponent),
                                   IMPLICIT_MASK)

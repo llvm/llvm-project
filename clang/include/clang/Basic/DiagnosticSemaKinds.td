@@ -3283,23 +3283,11 @@ def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
-  "%0 attribute requires parameter %1 to be %select{"
-  "int or bool"
-  "|an integer constant"
-  "|a string"
-  "|an identifier"
-  "|a constant expression"
-  "|a builtin function"
-  "|nullptr or a bool, int, or enum literal}2">;
+  "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
+  "constant|a string|an identifier|a constant expression|a builtin function}2">;
 def err_attribute_argument_type : Error<
-  "%0 attribute requires %select{"
-  "int or bool"
-  "|an integer constant"
-  "|a string"
-  "|an identifier"
-  "|a constant expression"
-  "|a builtin function"
-  "|a pointer or a bool, int, or enum literal}1">;
+  "%0 attribute requires %select{int or bool|an integer "
+  "constant|a string|an identifier}1">;
 def err_attribute_argument_out_of_range : Error<
   "%0 attribute requires integer constant between %1 and %2 inclusive">;
 def err_init_priority_object_attr : Error<
@@ -3751,8 +3739,7 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions"
-  "|functions that return bool, integer, or a pointer type}2">,
+  "|non-K&R-style functions}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
@@ -5390,7 +5377,7 @@ def err_not_class_template_specialization : Error<
   "cannot specialize a %select{dependent template|template template "
   "parameter}0">;
 def ext_explicit_specialization_storage_class : ExtWarn<
-  "explicit specialization cannot have a storage class">;
+  "explicit specialization cannot have a storage class">, InGroup<ExplicitSpecializationStorageClass>;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
   " %select{member|friend}0 function template specialization">;
@@ -8205,6 +8192,8 @@ let CategoryName = "Lambda Issue" in {
     "'&' must precede a capture when the capture default is '='">;
   def err_capture_does_not_name_variable : Error<
     "%0 in capture list does not name a variable">;
+  def err_capture_class_member_does_not_name_variable : Error<
+    "class member %0 cannot appear in capture list as it is not a variable">;
   def err_capture_non_automatic_variable : Error<
     "%0 cannot be captured because it does not have automatic storage "
     "duration">;
@@ -10121,6 +10110,11 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
+def warn_dangling_pointer_assignment : Warning<
+   "object backing the pointer %0 "
+   "will be destroyed at the end of the full-expression">,
+   InGroup<DanglingAssignment>;
+
 def warn_unsupported_lifetime_extension : Warning<
   "lifetime extension of "
   "%select{temporary|backing array of initializer list}0 created "
@@ -11118,7 +11112,7 @@ def err_omp_loop_variable_type : Error<
 def err_omp_loop_incr_not_compatible : Error<
   "increment expression must cause %0 to %select{decrease|increase}1 "
   "on each iteration of OpenMP for loop">;
-def note_omp_loop_cond_requres_compatible_incr : Note<
+def note_omp_loop_cond_requires_compatible_incr : Note<
   "loop step is expected to be %select{negative|positive}0 due to this condition">;
 def err_omp_loop_diff_cxx : Error<
   "could not calculate number of iterations calling 'operator-' with "
@@ -11181,16 +11175,12 @@ def err_omp_several_directives_in_region : Error<
 def note_omp_previous_directive : Note<
   "previous '%0' directive used here">;
 def err_omp_sections_not_compound_stmt : Error<
-  "the statement for '#pragma omp sections' must be a compound statement">;
-def err_omp_parallel_sections_not_compound_stmt : Error<
-  "the statement for '#pragma omp parallel sections' must be a compound statement">;
+  "the statement for '#pragma omp %0' must be a compound statement">;
 def err_omp_orphaned_section_directive : Error<
   "%select{orphaned 'omp section' directives are prohibited, it|'omp section' directive}0"
   " must be closely nested to a sections region%select{|, not a %1 region}0">;
 def err_omp_sections_substmt_not_section : Error<
-  "statement in 'omp sections' directive must be enclosed into a section region">;
-def err_omp_parallel_sections_substmt_not_section : Error<
-  "statement in 'omp parallel sections' directive must be enclosed into a section region">;
+  "statement in 'omp %0' directive must be enclosed into a section region">;
 def err_omp_parallel_reduction_in_task_firstprivate : Error<
   "argument of a reduction clause of a %0 construct must not appear in a firstprivate clause on a task construct">;
 def err_omp_atomic_read_not_expression_statement : Error<
@@ -12334,6 +12324,9 @@ def warn_hlsl_availability : Warning<
 def warn_hlsl_availability_unavailable :
   Warning<err_unavailable.Summary>,
   InGroup<HLSLAvailability>, DefaultError;
+
+def err_hlsl_export_not_on_function : Error<
+  "export declaration can only be used on functions">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
