@@ -1306,9 +1306,8 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   auto &Lex = LexicalDecls[DC];
   if (!Lex.first) {
     Lex = std::make_pair(
-        &M, llvm::ArrayRef(
-                reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
-                Blob.size() / sizeof(DeclID)));
+        &M, llvm::ArrayRef(reinterpret_cast<const uint32_t *>(Blob.data()),
+                           Blob.size() / sizeof(uint32_t)));
   }
   DC->setHasExternalLexicalStorage(true);
   return false;
@@ -3422,8 +3421,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
-          reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
-          static_cast<unsigned int>(Blob.size() / sizeof(DeclID)));
+          reinterpret_cast<const uint32_t *>(Blob.data()),
+          static_cast<unsigned int>(Blob.size() / sizeof(uint32_t)));
       TULexicalDecls.push_back(std::make_pair(&F, Contents));
       TU->setHasExternalLexicalStorage(true);
       break;
@@ -3696,7 +3695,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case VTABLE_USES:
-      if (Record.size() % 3 != 0)
+      if (Record.size() % (DeclIDSerialiazedSize + 1 + 1) != 0)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "Invalid VTABLE_USES record");
 
@@ -3714,8 +3713,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case PENDING_IMPLICIT_INSTANTIATIONS:
-
-      if (Record.size() % 2 != 0)
+      if (Record.size() % (DeclIDSerialiazedSize + 1) != 0)
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
             "Invalid PENDING_IMPLICIT_INSTANTIATIONS block");
@@ -3728,7 +3726,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case SEMA_DECL_REFS:
-      if (Record.size() != 3)
+      if (Record.size() != 3 * serialization::DeclIDSerialiazedSize)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "Invalid SEMA_DECL_REFS block");
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
@@ -3786,7 +3784,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     }
 
     case DECL_UPDATE_OFFSETS:
-      if (Record.size() % 2 != 0)
+      if (Record.size() % (DeclIDSerialiazedSize + 1) != 0)
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
             "invalid DECL_UPDATE_OFFSETS block in AST file");
@@ -3803,7 +3801,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD: {
-      if (Record.size() % 3 != 0)
+      if (Record.size() % (DeclIDSerialiazedSize + 2) != 0)
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
             "invalid DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD block in AST "
@@ -3898,7 +3896,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case UNDEFINED_BUT_USED:
-      if (Record.size() % 2 != 0)
+      if (Record.size() % (DeclIDSerialiazedSize + 1) != 0)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "invalid undefined-but-used record");
       for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
@@ -7893,7 +7891,10 @@ GlobalDeclID ASTReader::ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,
     return GlobalDeclID(0);
   }
 
-  return getGlobalDeclID(F, LocalDeclID::get(*this, F, Record[Idx++]));
+  uint32_t ModuleFileIndex = Record[Idx++];
+  uint32_t LocalDeclIndex = Record[Idx++];
+  return getGlobalDeclID(
+      F, LocalDeclID::get(*this, F, ModuleFileIndex, LocalDeclIndex));
 }
 
 /// Resolve the offset of a statement into a statement.
@@ -7922,25 +7923,26 @@ void ASTReader::FindExternalLexicalDecls(
     SmallVectorImpl<Decl *> &Decls) {
   bool PredefsVisited[NUM_PREDEF_DECL_IDS] = {};
 
-  auto Visit = [&] (ModuleFile *M, LexicalContents LexicalDecls) {
-    assert(LexicalDecls.size() % 2 == 0 && "expected an even number of entries");
-    for (int I = 0, N = LexicalDecls.size(); I != N; I += 2) {
+  auto Visit = [&](ModuleFile *M, LexicalContents LexicalDecls) {
+    assert(LexicalDecls.size() % 3 == 0 && "incorrect number of entries");
+    for (int I = 0, N = LexicalDecls.size(); I != N; I += 3) {
       auto K = (Decl::Kind)+LexicalDecls[I];
       if (!IsKindWeWant(K))
         continue;
 
-      auto ID = (DeclID) + LexicalDecls[I + 1];
+      LocalDeclID ID =
+          LocalDeclID::get(*this, *M, LexicalDecls[I + 1], LexicalDecls[I + 2]);
 
       // Don't add predefined declarations to the lexical context more
       // than once.
       if (ID < NUM_PREDEF_DECL_IDS) {
-        if (PredefsVisited[ID])
+        if (PredefsVisited[ID.getRawValue()])
           continue;
 
-        PredefsVisited[ID] = true;
+        PredefsVisited[ID.getRawValue()] = true;
       }
 
-      if (Decl *D = GetLocalDecl(*M, LocalDeclID::get(*this, *M, ID))) {
+      if (Decl *D = GetLocalDecl(*M, ID)) {
         assert(D->getKind() == K && "wrong kind for lexical decl");
         if (!DC->isDeclInLexicalTraversal(D))
           Decls.push_back(D);
@@ -8837,7 +8839,7 @@ void ASTReader::ReadLateParsedTemplates(
         &LPTMap) {
   for (auto &LPT : LateParsedTemplates) {
     ModuleFile *FMod = LPT.first;
-    RecordDataImpl &LateParsed = LPT.second;
+    RecordData &LateParsed = LPT.second;
     for (unsigned Idx = 0, N = LateParsed.size(); Idx < N;
          /* In loop */) {
       FunctionDecl *FD = ReadDeclAs<FunctionDecl>(*FMod, LateParsed, Idx);

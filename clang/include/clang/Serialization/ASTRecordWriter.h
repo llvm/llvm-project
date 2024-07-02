@@ -234,10 +234,37 @@ public:
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D) {
+#ifndef NDEBUG
+    unsigned OldSize = size();
+    Writer->AddDeclRef(D, *Record);
+    assert(size() - OldSize == serialization::DeclIDSerialiazedSize);
+    return;
+#endif
     return Writer->AddDeclRef(D, *Record);
   }
   void writeDeclRef(const Decl *D) {
     AddDeclRef(D);
+  }
+
+  void writeNullDeclRef() {
+#ifndef NDEBUG
+    unsigned OldSize = size();
+#endif
+
+    push_back(0);
+    push_back(0);
+
+#ifndef NDEBUG
+    assert(size() - OldSize == serialization::DeclIDSerialiazedSize);
+#endif
+  }
+
+  template <class DeclKind> void writeDeclArray(ArrayRef<DeclKind *> Array) {
+    unsigned ElementNum = Array.size();
+    push_back(ElementNum * serialization::DeclIDSerialiazedSize);
+
+    for (DeclKind *D : Array)
+      AddDeclRef(D);
   }
 
   /// Emit a declaration name.
