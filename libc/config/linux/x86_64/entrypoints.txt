@@ -351,7 +351,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtod_l
     libc.src.stdlib.strtold_l
     libc.src.stdlib.strtoull_l
- 
+    libc.src.stdlib.strtoll_l
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

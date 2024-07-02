@@ -564,3 +564,15 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.include.llvm-libc-types.locale_t
 )
+
+add_entrypoint_object(
+  strtoll_l
+  SRCS
+    strtoll_l.cpp
+  HDRS
+    strtoll_l.h
+  DEPENDS
+    libc.src.stdlib.strtoll
+    libc.src.errno.errno
+    libc.include.llvm-libc-types.locale_t
+)
