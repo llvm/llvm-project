@@ -46,6 +46,7 @@ class MCRelaxableFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
+class MCAsmLayout;
 class MCContext;
 class MCCodeEmitter;
 class MCFragment;
@@ -115,7 +116,7 @@ private:
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCObjectWriter> Writer;
 
-  bool HasLayout = false;
+  MCAsmLayout *Layout = nullptr;
   bool RelaxAll = false;
   bool SubsectionsViaSymbols = false;
   bool IncrementalLinkerCompatible = false;
@@ -340,7 +341,7 @@ public:
   void Finish();
 
   // Layout all section and prepare them for emission.
-  void layout();
+  void layout(MCAsmLayout &Layout);
 
   // FIXME: This does not belong here.
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
@@ -353,7 +354,8 @@ public:
     IncrementalLinkerCompatible = Value;
   }
 
-  bool hasLayout() const { return HasLayout; }
+  MCAsmLayout *getLayout() const { return Layout; }
+  bool hasLayout() const { return Layout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 

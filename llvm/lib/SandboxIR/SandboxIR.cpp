@@ -10,10 +10,9 @@
 #include "llvm/Support/Debug.h"
 #include <sstream>
 
-using namespace llvm;
-using namespace sandboxir;
+using namespace llvm::sandboxir;
 
-sandboxir::Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
+Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
     : SubclassID(SubclassID), Val(Val), Ctx(Ctx) {
 #ifndef NDEBUG
   UID = 0; // FIXME: Once SBContext is available.
@@ -21,17 +20,17 @@ sandboxir::Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
 }
 
 #ifndef NDEBUG
-std::string sandboxir::Value::getName() const {
+std::string Value::getName() const {
   std::stringstream SS;
   SS << "SB" << UID << ".";
   return SS.str();
 }
 
-void sandboxir::Value::dumpCommonHeader(raw_ostream &OS) const {
+void Value::dumpCommonHeader(raw_ostream &OS) const {
   OS << getName() << " " << getSubclassIDStr(SubclassID) << " ";
 }
 
-void sandboxir::Value::dumpCommonFooter(raw_ostream &OS) const {
+void Value::dumpCommonFooter(raw_ostream &OS) const {
   OS.indent(2) << "Val: ";
   if (Val)
     OS << *Val;
@@ -40,26 +39,26 @@ void sandboxir::Value::dumpCommonFooter(raw_ostream &OS) const {
   OS << "\n";
 }
 
-void sandboxir::Value::dumpCommonPrefix(raw_ostream &OS) const {
+void Value::dumpCommonPrefix(raw_ostream &OS) const {
   if (Val)
     OS << *Val;
   else
     OS << "NULL ";
 }
 
-void sandboxir::Value::dumpCommonSuffix(raw_ostream &OS) const {
+void Value::dumpCommonSuffix(raw_ostream &OS) const {
   OS << " ; " << getName() << " (" << getSubclassIDStr(SubclassID) << ") "
      << this;
 }
 
-void sandboxir::Value::printAsOperandCommon(raw_ostream &OS) const {
+void Value::printAsOperandCommon(raw_ostream &OS) const {
   if (Val)
     Val->printAsOperand(OS);
   else
     OS << "NULL ";
 }
 
-void sandboxir::User::dumpCommonHeader(raw_ostream &OS) const {
+void User::dumpCommonHeader(raw_ostream &OS) const {
   Value::dumpCommonHeader(OS);
   // TODO: This is incomplete
 }
