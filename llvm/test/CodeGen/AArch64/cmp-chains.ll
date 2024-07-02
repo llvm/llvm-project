@@ -258,3 +258,34 @@ define i32 @neg_range_int(i32 %a, i32 %b, i32 %c) {
   ret i32 %retval.0
 }
 
+; (b > -3 || a < -(c | 1))
+define i32 @neg_range_int_cmn(i32 %a, i32 %b, i32 %c) {
+; SDISEL-LABEL: neg_range_int_cmn:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    orr w8, w2, #0x1
+; SDISEL-NEXT:    cmn w0, w8
+; SDISEL-NEXT:    ccmn w1, #3, #0, le
+; SDISEL-NEXT:    csel w0, w1, w0, gt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_cmn:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    orr w8, w2, #0x1
+; GISEL-NEXT:    cmn w1, #3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    cset w9, gt
+; GISEL-NEXT:    cmp w8, w0
+; GISEL-NEXT:    cset w8, gt
+; GISEL-NEXT:    orr w8, w9, w8
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    tst w8, #0x1
+; GISEL-NEXT:    csel w0, w1, w0, ne
+; GISEL-NEXT:    ret
+  %or = or i32 %c, 1
+  %sub = sub nsw i32 0, %or
+  %cmp = icmp sgt i32 %b, -3
+  %cmp1 = icmp sgt i32 %sub, %a
+  %1 = select i1 %cmp, i1 true, i1 %cmp1
+  %ret = select i1 %1, i32 %b, i32 %a
+  ret i32 %ret
+}

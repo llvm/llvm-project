@@ -262,4 +262,18 @@ define <4 x i65> @sign_4xi65(<4 x i65> %a) {
   ret <4 x i65> %res
 }
 
+define i32 @or_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: or_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    cmn w1, w8
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
+  %3 = or i32 %x, 1
+  %4 = sub nsw i32 0, %3
+  %5 = icmp sgt i32 %4, %y
+  %6 = zext i1 %5 to i32
+  ret i32 %6
+}
+
 declare void @use_4xi1(<4 x i1>)

@@ -3401,9 +3401,11 @@ static bool isLegalArithImmed(uint64_t C) {
 // So, finally, the only LLVM-native comparisons that don't mention C and V
 // are SETEQ and SETNE. They're the only ones we can safely use CMN for in
 // the absence of information about op2.
-static bool isCMN(SDValue Op, ISD::CondCode CC) {
+static bool isCMN(SDValue Op, SDValue CheckedVal, ISD::CondCode CC,
+                  SelectionDAG &DAG) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
-         (CC == ISD::SETEQ || CC == ISD::SETNE);
+         (CC == ISD::SETEQ || CC == ISD::SETNE ||
+          DAG.isKnownNeverZero(CheckedVal));
 }
 
 static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
@@ -3448,15 +3450,26 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // register to WZR/XZR if it ends up being unused.
   unsigned Opcode = AArch64ISD::SUBS;
 
-  if (isCMN(RHS, CC)) {
+  if (RHS.getOpcode() == ISD::SUB && isCMN(RHS, RHS.getOperand(1), CC, DAG)) {
     // Can we combine a (CMP op1, (sub 0, op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
     RHS = RHS.getOperand(1);
-  } else if (isCMN(LHS, CC)) {
+  } else if (isCMN(LHS, RHS, CC, DAG) && !isUnsignedIntSetCC(CC) &&
+             isCMN(LHS, LHS.getOperand(1), CC, DAG)) {
     // As we are looking for EQ/NE compares, the operands can be commuted ; can
     // we combine a (CMP (sub 0, op1), op2) into a CMN instruction ?
+    // Not swapping operands, but negation requires inversion
+    CC = ISD::getSetCCSwappedOperands(CC);
     Opcode = AArch64ISD::ADDS;
     LHS = LHS.getOperand(1);
+  } else if (LHS.getOpcode() == ISD::SUB &&
+             isCMN(LHS, LHS.getOperand(1), CC, DAG)) {
+    // As we are looking for EQ/NE compares, the operands can be commuted ; can
+    // we combine a (CMP (sub 0, op1), op2) into a CMN instruction ?
+    LHS = LHS.getOperand(1);
+    std::swap(LHS, RHS);
+    CC = ISD::getSetCCSwappedOperands(CC);
+    Opcode = AArch64ISD::ADDS;
   } else if (isNullConstant(RHS) && !isUnsignedIntSetCC(CC)) {
     if (LHS.getOpcode() == ISD::AND) {
       // Similarly, (CMP (and X, Y), 0) can be implemented with a TST
@@ -3556,10 +3569,21 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
     }
   } else if (RHS.getOpcode() == ISD::SUB) {
     SDValue SubOp0 = RHS.getOperand(0);
-    if (isNullConstant(SubOp0) && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+    if (isNullConstant(SubOp0) && (CC == ISD::SETEQ || CC == ISD::SETNE ||
+                                   DAG.isKnownNeverZero(RHS.getOperand(1)))) {
       // See emitComparison() on why we can only do this for SETEQ and SETNE.
       Opcode = AArch64ISD::CCMN;
       RHS = RHS.getOperand(1);
+    }
+  } else if (LHS.getOpcode() == ISD::SUB) {
+    SDValue SubOp0 = LHS.getOperand(0);
+    if (isNullConstant(SubOp0) && (CC == ISD::SETEQ || CC == ISD::SETNE ||
+                                   DAG.isKnownNeverZero(LHS.getOperand(1)))) {
+      // See emitComparison() on why we can only do this for SETEQ and SETNE.
+      LHS = LHS.getOperand(1);
+      std::swap(LHS, RHS);
+      CC = ISD::getSetCCSwappedOperands(CC);
+      Opcode = AArch64ISD::CCMN;
     }
   }
   if (Opcode == 0)
@@ -3813,8 +3837,10 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                              const SDLoc &dl) {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     EVT VT = RHS.getValueType();
-    uint64_t C = RHSC->getZExtValue();
+    APInt CU = RHSC->getAPIntValue();
+    uint64_t C = CU.abs().getZExtValue();
     if (!isLegalArithImmed(C)) {
+      C = CU.getZExtValue();
       // Constant does not fit, try adjusting it by one?
       switch (CC) {
       default:
@@ -3876,10 +3902,18 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w13, w12
   // can be turned into:
   //    cmp     w12, w11, lsl #1
-  if (!isa<ConstantSDNode>(RHS) || !isLegalArithImmed(RHS->getAsZExtVal())) {
-    SDValue TheLHS = isCMN(LHS, CC) ? LHS.getOperand(1) : LHS;
-
-    if (getCmpOperandFoldingProfit(TheLHS) > getCmpOperandFoldingProfit(RHS)) {
+  if (!isa<ConstantSDNode>(RHS) ||
+      !isLegalArithImmed(RHS->getAsAPIntVal().abs().getZExtValue())) {
+    bool IsLHSCMN =
+        !isa<ConstantSDNode>(LHS) && isCMN(LHS, LHS.getOperand(1), CC, DAG);
+    bool IsRHSCMN =
+        !isa<ConstantSDNode>(RHS) && isCMN(RHS, RHS.getOperand(1), CC, DAG);
+    SDValue TheLHS = IsLHSCMN ? LHS.getOperand(1) : LHS;
+    SDValue TheRHS = IsRHSCMN ? RHS.getOperand(1) : RHS;
+    // We save a neg when we do cmn instead of cmp, so add 1 if that is what we
+    // did.
+    if ((getCmpOperandFoldingProfit(TheLHS) + (IsLHSCMN ? 1 : 0)) >
+        getCmpOperandFoldingProfit(TheRHS) + (IsRHSCMN ? 1 : 0)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
