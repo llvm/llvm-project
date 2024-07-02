@@ -327,7 +327,7 @@ int main(int argc, char **argv) {
   // information.
   std::string ActivePrefix, ActiveBinDir, ActiveIncludeDir, ActiveLibDir,
               ActiveCMakeDir;
-  std::string ActiveIncludeOption;
+  std::vector<std::string> ActiveIncludeOptions;
   if (IsInDevelopmentTree) {
     ActiveIncludeDir = std::string(LLVM_SRC_ROOT) + "/include";
     ActivePrefix = CurrentExecPrefix;
@@ -353,11 +353,8 @@ int main(int argc, char **argv) {
     }
 
     // We need to include files from both the source and object trees.
-    raw_string_ostream OS(ActiveIncludeOption);
-    OS << "-I";
-    sys::printArg(OS, ActiveIncludeDir, /*Quote=*/true);
-    OS << " -I";
-    sys::printArg(OS, ActiveObjRoot + "/include", /*Quote=*/true);
+    ActiveIncludeOptions.push_back(ActiveIncludeDir);
+    ActiveIncludeOptions.push_back(ActiveObjRoot + "/include");
   } else {
     ActivePrefix = CurrentExecPrefix;
     {
@@ -376,9 +373,7 @@ int main(int argc, char **argv) {
       sys::fs::make_absolute(ActivePrefix, Path);
       ActiveCMakeDir = std::string(Path);
     }
-    raw_string_ostream OS(ActiveIncludeOption);
-    OS << "-I";
-    sys::printArg(OS, ActiveIncludeDir, /*Quote=*/true);
+    ActiveIncludeOptions.push_back(ActiveIncludeDir);
   }
 
   /// We only use `shared library` mode in cases where the static library form
@@ -407,8 +402,8 @@ int main(int argc, char **argv) {
       std::replace(ActiveBinDir.begin(), ActiveBinDir.end(), '/', '\\');
       std::replace(ActiveLibDir.begin(), ActiveLibDir.end(), '/', '\\');
       std::replace(ActiveCMakeDir.begin(), ActiveCMakeDir.end(), '/', '\\');
-      std::replace(ActiveIncludeOption.begin(), ActiveIncludeOption.end(), '/',
-                   '\\');
+      for (auto &Include : ActiveIncludeOptions)
+        std::replace(Include.begin(), Include.end(), '/', '\\');
     }
     SharedDir = ActiveBinDir;
     StaticDir = ActiveLibDir;
@@ -510,6 +505,20 @@ int main(int argc, char **argv) {
   };
 
   raw_ostream &OS = outs();
+
+  // Render include paths and associated flags
+  auto RenderFlags = [&](StringRef Flags) {
+    bool First = true;
+    for (auto &Include : ActiveIncludeOptions) {
+      if (!First)
+        OS << ' ';
+      OS << "-I";
+      sys::printArg(OS, Include, /*Quote=*/true);
+      First = false;
+    }
+    OS << ' ' << Flags << '\n';
+  };
+
   for (int i = 1; i != argc; ++i) {
     StringRef Arg = argv[i];
 
@@ -533,11 +542,11 @@ int main(int argc, char **argv) {
         sys::printArg(OS, ActiveCMakeDir, /*Quote=*/true);
         OS << '\n';
       } else if (Arg == "--cppflags") {
-        OS << ActiveIncludeOption << ' ' << LLVM_CPPFLAGS << '\n';
+        RenderFlags(LLVM_CPPFLAGS);
       } else if (Arg == "--cflags") {
-        OS << ActiveIncludeOption << ' ' << LLVM_CFLAGS << '\n';
+        RenderFlags(LLVM_CFLAGS);
       } else if (Arg == "--cxxflags") {
-        OS << ActiveIncludeOption << ' ' << LLVM_CXXFLAGS << '\n';
+        RenderFlags(LLVM_CXXFLAGS);
       } else if (Arg == "--ldflags") {
         OS << ((HostTriple.isWindowsMSVCEnvironment()) ? "-LIBPATH:" : "-L");
         sys::printArg(OS, ActiveLibDir, /*Quote=*/true);
