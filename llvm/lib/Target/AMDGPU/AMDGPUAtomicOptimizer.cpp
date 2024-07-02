@@ -651,9 +651,8 @@ static Constant *getIdentityValueForAtomicOp(Type *const Ty,
   case AtomicRMWInst::FSub:
     return ConstantFP::get(C, APFloat::getZero(Ty->getFltSemantics(), false));
   case AtomicRMWInst::FMin:
-    return ConstantFP::get(C, APFloat::getInf(Ty->getFltSemantics(), false));
   case AtomicRMWInst::FMax:
-    return ConstantFP::get(C, APFloat::getInf(Ty->getFltSemantics(), true));
+    return ConstantFP::get(C, APFloat::getNaN(Ty->getFltSemantics()));
   }
 }
 
