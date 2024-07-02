@@ -23,6 +23,7 @@
     __cpp_lib_ranges_chunk                                  202202L [C++23]
     __cpp_lib_ranges_chunk_by                               202202L [C++23]
     __cpp_lib_ranges_concat                                 202403L [C++26]
+    __cpp_lib_ranges_enumerate                              202302L [C++23]
     __cpp_lib_ranges_join_with                              202202L [C++23]
     __cpp_lib_ranges_repeat                                 202207L [C++23]
     __cpp_lib_ranges_slide                                  202202L [C++23]
@@ -61,6 +62,10 @@
 
 # ifdef __cpp_lib_ranges_concat
 #   error "__cpp_lib_ranges_concat should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_join_with
@@ -113,6 +118,10 @@
 #   error "__cpp_lib_ranges_concat should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
 # endif
@@ -161,6 +170,10 @@
 
 # ifdef __cpp_lib_ranges_concat
 #   error "__cpp_lib_ranges_concat should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_join_with
@@ -214,6 +227,10 @@
 
 # ifdef __cpp_lib_ranges_concat
 #   error "__cpp_lib_ranges_concat should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_join_with
@@ -291,6 +308,13 @@
 
 # ifdef __cpp_lib_ranges_concat
 #   error "__cpp_lib_ranges_concat should not be defined before c++26"
+# endif
+
+# ifndef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_enumerate != 202302L
+#   error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -419,6 +443,13 @@
 #   ifdef __cpp_lib_ranges_concat
 #     error "__cpp_lib_ranges_concat should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_enumerate != 202302L
+#   error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

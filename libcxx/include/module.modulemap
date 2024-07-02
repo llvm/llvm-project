@@ -1712,6 +1712,7 @@ module std_private_ranges_empty                      [system] { header "__ranges
 module std_private_ranges_empty_view                 [system] { header "__ranges/empty_view.h" }
 module std_private_ranges_enable_borrowed_range      [system] { header "__ranges/enable_borrowed_range.h" }
 module std_private_ranges_enable_view                [system] { header "__ranges/enable_view.h" }
+module std_private_ranges_enumerate_view             [system] { header "__ranges/enumerate_view.h" }
 module std_private_ranges_filter_view                [system] {
   header "__ranges/filter_view.h"
   export std_private_ranges_range_adaptor
