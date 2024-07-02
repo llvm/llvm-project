@@ -303,7 +303,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(const MCAssembler &Asm,
                                                        MCLEBFragment &LF,
                                                        int64_t &Value) const {
   const MCExpr &Expr = LF.getValue();
-  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm.getLayout()))
+  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Asm))
     return std::make_pair(false, false);
   LF.getFixups().push_back(
       MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
@@ -313,7 +313,6 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(const MCAssembler &Asm,
 bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
                                              MCDwarfLineAddrFragment &DF,
                                              bool &WasRelaxed) const {
-  auto &Layout = *Asm.getLayout();
   MCContext &C = Asm.getContext();
 
   int64_t LineDelta = DF.getLineDelta();
@@ -323,9 +322,9 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
@@ -389,9 +388,9 @@ bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
 
   auto &Layout = *Asm.getLayout();
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 

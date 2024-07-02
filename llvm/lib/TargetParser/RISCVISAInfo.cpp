@@ -171,11 +171,6 @@ findDefaultVersion(StringRef ExtName) {
   return std::nullopt;
 }
 
-bool RISCVISAInfo::addExtension(StringRef ExtName,
-                                RISCVISAUtils::ExtensionVersion Version) {
-  return Exts.emplace(ExtName, Version).second;
-}
-
 static StringRef getExtensionTypeDesc(StringRef Ext) {
   if (Ext.starts_with('s'))
     return "standard supervisor-level extension";
@@ -431,7 +426,7 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
       continue;
 
     if (Add)
-      ISAInfo->addExtension(ExtName, ExtensionInfoIterator->Version);
+      ISAInfo->Exts[ExtName.str()] = ExtensionInfoIterator->Version;
     else
       ISAInfo->Exts.erase(ExtName.str());
   }
@@ -513,7 +508,11 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
                                "'" + Twine(ExtName[0]) +
                                    "' must be followed by a letter");
 
-    if (!ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion}))
+    if (!ISAInfo->Exts
+             .emplace(
+                 ExtName.str(),
+                 RISCVISAUtils::ExtensionVersion{MajorVersion, MinorVersion})
+             .second)
       return createStringError(errc::invalid_argument,
                                "duplicate extension '" + ExtName + "'");
   }
@@ -722,11 +721,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // Check all Extensions are supported.
   for (auto &SeenExtAndVers : SeenExtMap) {
     const std::string &ExtName = SeenExtAndVers.first;
-    RISCVISAUtils::ExtensionVersion ExtVers = SeenExtAndVers.second;
 
     if (!RISCVISAInfo::isSupportedExtension(ExtName))
       return getStringErrorForInvalidExt(ExtName);
-    ISAInfo->addExtension(ExtName, ExtVers);
+    ISAInfo->Exts[ExtName] = SeenExtAndVers.second;
   }
 
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
@@ -830,7 +828,7 @@ void RISCVISAInfo::updateImplication() {
   // implied
   if (!HasE && !HasI) {
     auto Version = findDefaultVersion("i");
-    addExtension("i", *Version);
+    Exts["i"] = *Version;
   }
 
   if (HasE && HasI)
@@ -854,7 +852,7 @@ void RISCVISAInfo::updateImplication() {
                     if (Exts.count(ImpliedExt))
                       return;
                     auto Version = findDefaultVersion(ImpliedExt);
-                    addExtension(ImpliedExt, *Version);
+                    Exts[ImpliedExt] = *Version;
                     WorkList.push_back(ImpliedExt);
                   });
   }
@@ -863,7 +861,7 @@ void RISCVISAInfo::updateImplication() {
   if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
       !Exts.count("zcf")) {
     auto Version = findDefaultVersion("zcf");
-    addExtension("zcf", *Version);
+    Exts["zcf"] = *Version;
   }
 }
 
@@ -890,7 +888,7 @@ void RISCVISAInfo::updateCombination() {
           });
       if (HasAllRequiredFeatures) {
         auto Version = findDefaultVersion(CombineExt);
-        addExtension(CombineExt, *Version);
+        Exts[CombineExt.str()] = *Version;
         MadeChange = true;
       }
     }
