@@ -1055,3 +1055,35 @@ func.func @test_vectorize_unpack_no_vector_sizes_permute(%source: tensor<4x7x4xf
     transform.yield
   } 
  }
+
+   // -----
+
+// CHECK-LABEL: test_vectorize_pad_no_vector_sizes
+func.func @test_vectorize_pad_no_vector_sizes(%arg0: tensor<63x63xf32>) -> tensor<64x64xf32> {
+  %f0 = arith.constant 0.0 : f32
+  %pad = tensor.pad %arg0 low[0, 0] high[1, 1] {
+  ^bb0(%arg1: index, %arg2: index):
+    tensor.yield %f0 : f32
+  } : tensor<63x63xf32> to tensor<64x64xf32>
+  return %pad : tensor<64x64xf32>
+}
+//  CHECK-DAG: %[[cst:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c63:.*]] = arith.constant 63 : index
+//  CHECK-DAG: %[[c63_0:.*]] = arith.constant 63 : index
+//  CHECK: %[[mask:.*]] = vector.create_mask %[[c63]], %[[c63_0]] : vector<64x64xi1>
+//  CHECK: %[[read:.*]] = vector.mask %0 { vector.transfer_read {{.*}}, %cst {in_bounds = [true, true]}
+//  CHECK-SAME : tensor<63x63xf32>, vector<64x64xf32> } : vector<64x64xi1> -> vector<64x64xf32>
+//  CHECK: %[[empty:.*]] = tensor.empty() : tensor<64x64xf32>
+//  CHECK: %[[c0_1:.*]] = arith.constant 0 : index
+//  CHECK: %[[result:.*]] = vector.transfer_write %[[read]], {{.*}} {in_bounds = [true, true]} :
+//  CHECK-SAME : vector<64x64xf32>, tensor<64x64xf32>
+//  CHECK: return %[[result:.*]] : tensor<64x64xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
