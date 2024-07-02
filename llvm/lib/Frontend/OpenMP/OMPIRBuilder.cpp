@@ -5481,10 +5481,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
   BasicBlock *TargetTaskAllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "target.task.alloca");
 
-  InsertPointTy TargetTaskAllocaIP =
-      InsertPointTy(TargetTaskAllocaBB, TargetTaskAllocaBB->begin());
-  InsertPointTy TargetTaskBodyIP =
-      InsertPointTy(TargetTaskBodyBB, TargetTaskBodyBB->begin());
+  InsertPointTy TargetTaskAllocaIP(TargetTaskAllocaBB,
+                                   TargetTaskAllocaBB->begin());
+  InsertPointTy TargetTaskBodyIP(TargetTaskBodyBB, TargetTaskBodyBB->begin());
 
   OutlineInfo OI;
   OI.EntryBB = TargetTaskAllocaBB;
