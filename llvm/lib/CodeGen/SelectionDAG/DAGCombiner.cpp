@@ -17565,6 +17565,12 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
   if (CanCombineFCOPYSIGN_EXTEND_ROUND(N))
     return DAG.getNode(ISD::FCOPYSIGN, SDLoc(N), VT, N0, N1.getOperand(0));
 
+  // We only take the sign bit from the sign operand.
+  EVT SignVT = N1.getValueType();
+  if (SimplifyDemandedBits(N1,
+                           APInt::getSignMask(SignVT.getScalarSizeInBits())))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
