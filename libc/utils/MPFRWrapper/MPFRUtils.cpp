@@ -959,6 +959,9 @@ template void explain_binary_operation_one_output_error<long double>(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
 
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<double> &, float, double, RoundingMode);
+  
 template <typename InputType, typename OutputType>
 void explain_ternary_operation_one_output_error(
     Operation op, const TernaryInput<InputType> &input, OutputType libc_result,
@@ -1120,6 +1123,11 @@ template bool compare_binary_operation_one_output<double>(
 template bool compare_binary_operation_one_output<long double>(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
+template bool compare_binary_operation_one_output<double>(
+    Operation, const BinaryInput<double> &, float, double,
+    RoundingMode);
+
+  
 
 template <typename InputType, typename OutputType>
 bool compare_ternary_operation_one_output(Operation op,

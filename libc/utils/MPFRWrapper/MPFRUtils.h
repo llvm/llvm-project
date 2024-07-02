@@ -41,7 +41,6 @@ enum class Operation : int {
   Exp10,
   Expm1,
   Floor,
-  Fmul,
   Log,
   Log2,
   Log10,
@@ -78,6 +77,7 @@ enum class Operation : int {
   Hypot,
   Pow,
   EndBinaryOperationsSingleOutput,
+  Fmul,
 
   // Operations which take two floating point numbers of the same type as
   // input and produce two outputs. The first output is a floating nubmer of
@@ -148,9 +148,6 @@ template <typename T> struct IsTernaryInput<TernaryInput<T>> {
   static constexpr bool VALUE = true;
 };
 
-template <typename T> struct IsBinaryInput {
-  static constexpr bool VALUE = false;
-};
 
 template <typename T> struct IsBinaryInput<BinaryInput<T>> {
   static constexpr bool VALUE = true;
@@ -318,7 +315,7 @@ constexpr bool is_valid_operation() {
       (op == Operation::Sqrt && cpp::is_floating_point_v<InputType> &&
        cpp::is_floating_point_v<OutputType> &&
        sizeof(OutputType) <= sizeof(InputType)) ||
-      (op == Operation::Div && internal::IsBinaryInput<InputType>::VALUE &&
+    (op == Operation::Div && internal::IsBinaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
        cpp::is_floating_point_v<OutputType>) ||
