@@ -4033,7 +4033,7 @@ template <class Emitter> bool Compiler<Emitter>::visitLoopBody(const Stmt *S) {
     return true;
 
   if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
-    for (auto *InnerStmt : CS->body())
+    for (const auto *InnerStmt : CS->body())
       if (!visitStmt(InnerStmt))
         return false;
     return true;
@@ -4045,7 +4045,7 @@ template <class Emitter> bool Compiler<Emitter>::visitLoopBody(const Stmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
   BlockScope<Emitter> Scope(this);
-  for (auto *InnerStmt : S->body())
+  for (const auto *InnerStmt : S->body())
     if (!visitStmt(InnerStmt))
       return false;
   return true;
