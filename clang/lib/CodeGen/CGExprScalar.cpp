@@ -156,6 +156,10 @@ struct BinOpInfo {
     }
     return false;
   }
+
+  /// Does the BinaryOperator have the wraps attribute?
+  /// If so, we can elide overflow sanitizer checks.
+  bool hasWrappingOperand() const { return E->getType().hasWrapsAttr(); }
 };
 
 static bool MustVisitNullValue(const Expr *E) {
@@ -736,7 +740,8 @@ public:
 
   // Binary Operators.
   Value *EmitMul(const BinOpInfo &Ops) {
-    if (Ops.Ty->isSignedIntegerOrEnumerationType()) {
+    if (Ops.Ty->isSignedIntegerOrEnumerationType() &&
+        !Ops.hasWrappingOperand()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -772,7 +777,8 @@ public:
 
     if (Ops.Ty->isUnsignedIntegerType() &&
         CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
-        !CanElideOverflowCheck(CGF.getContext(), Ops))
+        !CanElideOverflowCheck(CGF.getContext(), Ops) &&
+        !Ops.hasWrappingOperand())
       return EmitOverflowCheckedBinOp(Ops);
 
     if (Ops.LHS->getType()->isFPOrFPVectorTy()) {
@@ -1104,7 +1110,7 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
   // If the comparison result is 'i1 false', then the truncation was lossy.
 
   // Do we care about this type of truncation?
-  if (!CGF.SanOpts.has(Check.second.second))
+  if (!CGF.SanOpts.has(Check.second.second) || DstType.hasWrapsAttr())
     return;
 
   llvm::Constant *StaticArgs[] = {
@@ -1336,6 +1342,14 @@ void CodeGenFunction::EmitBitfieldConversionCheck(Value *Src, QualType SrcType,
 
   bool SrcSigned = SrcType->isSignedIntegerOrEnumerationType();
   bool DstSigned = DstType->isSignedIntegerOrEnumerationType();
+
+  bool SrcWraps = SrcType.hasWrapsAttr();
+  bool DstWraps = DstType.hasWrapsAttr();
+
+  // The wraps attribute should silence any sanitizer warnings
+  // regarding truncation or overflow
+  if (SrcWraps || DstWraps)
+    return;
 
   CodeGenFunction::SanitizerScope SanScope(this);
 
@@ -2870,6 +2884,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   } else if (type->isIntegerType()) {
     QualType promotedType;
     bool canPerformLossyDemotionCheck = false;
+    BinOpInfo Ops = createBinOpInfoFromIncDec(
+        E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts()));
+
     if (CGF.getContext().isPromotableIntegerType(type)) {
       promotedType = CGF.getContext().getPromotedIntegerType(type);
       assert(promotedType != type && "Shouldn't promote to the same type.");
@@ -2926,10 +2943,12 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       // Note that signed integer inc/dec with width less than int can't
       // overflow because of promotion rules; we're just eliding a few steps
       // here.
-    } else if (E->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
+    } else if (E->canOverflow() && type->isSignedIntegerOrEnumerationType() &&
+               !Ops.hasWrappingOperand()) {
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
     } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
-               CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) {
+               CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+               !Ops.hasWrappingOperand()) {
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {
@@ -3718,7 +3737,8 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
          CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
         Ops.Ty->isIntegerType() &&
-        (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
+        (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow()) &&
+        !Ops.hasWrappingOperand()) {
       llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
       EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, true);
     } else if (CGF.SanOpts.has(SanitizerKind::FloatDivideByZero) &&
@@ -3767,7 +3787,8 @@ Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
        CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
       Ops.Ty->isIntegerType() &&
-      (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
+      (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow()) &&
+      !Ops.hasWrappingOperand()) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
     EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, false);
@@ -4132,7 +4153,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
       op.RHS->getType()->isPointerTy())
     return emitPointerArithmetic(CGF, op, CodeGenFunction::NotSubtraction);
 
-  if (op.Ty->isSignedIntegerOrEnumerationType()) {
+  if (op.Ty->isSignedIntegerOrEnumerationType() && !op.hasWrappingOperand()) {
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
       if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -4165,7 +4186,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
 
   if (op.Ty->isUnsignedIntegerType() &&
       CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
-      !CanElideOverflowCheck(CGF.getContext(), op))
+      !CanElideOverflowCheck(CGF.getContext(), op) && !op.hasWrappingOperand())
     return EmitOverflowCheckedBinOp(op);
 
   if (op.LHS->getType()->isFPOrFPVectorTy()) {
@@ -4288,7 +4309,7 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
 Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // The LHS is always a pointer if either side is.
   if (!op.LHS->getType()->isPointerTy()) {
-    if (op.Ty->isSignedIntegerOrEnumerationType()) {
+    if (op.Ty->isSignedIntegerOrEnumerationType() && !op.hasWrappingOperand()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -4321,7 +4342,8 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
     if (op.Ty->isUnsignedIntegerType() &&
         CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
-        !CanElideOverflowCheck(CGF.getContext(), op))
+        !CanElideOverflowCheck(CGF.getContext(), op) &&
+        !op.hasWrappingOperand())
       return EmitOverflowCheckedBinOp(op);
 
     if (op.LHS->getType()->isFPOrFPVectorTy()) {
@@ -4441,7 +4463,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
   bool SanitizeSignedBase = CGF.SanOpts.has(SanitizerKind::ShiftBase) &&
                             Ops.Ty->hasSignedIntegerRepresentation() &&
                             !CGF.getLangOpts().isSignedOverflowDefined() &&
-                            !CGF.getLangOpts().CPlusPlus20;
+                            !CGF.getLangOpts().CPlusPlus20 &&
+                            !Ops.hasWrappingOperand();
   bool SanitizeUnsignedBase =
       CGF.SanOpts.has(SanitizerKind::UnsignedShiftBase) &&
       Ops.Ty->hasUnsignedIntegerRepresentation();
