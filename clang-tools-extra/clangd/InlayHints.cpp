@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
@@ -21,6 +22,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceManager.h"
@@ -372,6 +374,292 @@ maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   return Params;
 }
 
+class TypeInlayHintLabelPartBuilder
+    : public TypeVisitor<TypeInlayHintLabelPartBuilder> {
+  QualType CurrentType;
+  NestedNameSpecifier *CurrentNestedNameSpecifier;
+  ASTContext &Context;
+  StringRef MainFilePath;
+  const PrintingPolicy &PP;
+  SourceManager &SM;
+  std::vector<InlayHintLabelPart> &LabelChunks;
+
+  struct CurrentTypeRAII {
+    TypeInlayHintLabelPartBuilder &Builder;
+    QualType PreviousType;
+    NestedNameSpecifier *PreviousNestedNameSpecifier;
+    CurrentTypeRAII(TypeInlayHintLabelPartBuilder &Builder, QualType New,
+                    NestedNameSpecifier *NNS = nullptr)
+        : Builder(Builder), PreviousType(Builder.CurrentType),
+          PreviousNestedNameSpecifier(Builder.CurrentNestedNameSpecifier) {
+      Builder.CurrentType = New;
+      if (NNS)
+        Builder.CurrentNestedNameSpecifier = NNS;
+    }
+    ~CurrentTypeRAII() {
+      Builder.CurrentType = PreviousType;
+      Builder.CurrentNestedNameSpecifier = PreviousNestedNameSpecifier;
+    }
+  };
+
+  void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
+                llvm::function_ref<SourceLocation()> SourceLocationGetter) {
+    std::string Label;
+    llvm::raw_string_ostream OS(Label);
+    NamePrinter(OS);
+    auto &Name = LabelChunks.emplace_back();
+    Name.value = std::move(Label);
+    Name.location = makeLocation(Context, SourceLocationGetter(), MainFilePath);
+  }
+
+  void addLabel(std::string Label) {
+    if (LabelChunks.empty()) {
+      LabelChunks.emplace_back(std::move(Label));
+      return;
+    }
+    auto &Back = LabelChunks.back();
+    if (Back.location) {
+      LabelChunks.emplace_back(std::move(Label));
+      return;
+    }
+    // Let's combine the "unclickable" pieces together.
+    Back.value += std::move(Label);
+  }
+
+  void printTemplateArgumentList(llvm::ArrayRef<TemplateArgument> Args) {
+    unsigned Size = Args.size();
+    for (unsigned I = 0; I < Size; ++I) {
+      auto &TA = Args[I];
+      if (PP.SuppressDefaultTemplateArgs && TA.getIsDefaulted())
+        continue;
+      if (I)
+        addLabel(", ");
+      printTemplateArgument(TA);
+    }
+  }
+
+  void printTemplateArgument(const TemplateArgument &TA) {
+    switch (TA.getKind()) {
+    case TemplateArgument::Pack:
+      return printTemplateArgumentList(TA.pack_elements());
+    case TemplateArgument::Type: {
+      CurrentTypeRAII Guard(*this, TA.getAsType());
+      return Visit(TA.getAsType().getTypePtr());
+    }
+    // TODO: Add support for NTTP arguments.
+    case TemplateArgument::Expression:
+    case TemplateArgument::StructuralValue:
+    case TemplateArgument::Null:
+    case TemplateArgument::Declaration:
+    case TemplateArgument::NullPtr:
+    case TemplateArgument::Integral:
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      break;
+    }
+    std::string Label;
+    llvm::raw_string_ostream OS(Label);
+    TA.print(PP, OS, /*IncludeType=*/true);
+    addLabel(std::move(Label));
+  }
+
+  void handleTemplateSpecialization(
+      TemplateName TN, llvm::ArrayRef<TemplateArgument> Args,
+      SourceLocation TemplateNameLocation = SourceLocation()) {
+    SourceLocation Location;
+    TemplateDecl *TD = nullptr;
+    auto PrintType = TemplateName::Qualified::AsWritten;
+    switch (TN.getKind()) {
+    case TemplateName::Template:
+      TD = TN.getAsTemplateDecl();
+      Location = nameLocation(*TD, SM);
+      break;
+    case TemplateName::QualifiedTemplate:
+      if (NestedNameSpecifier *NNS =
+              TN.getAsQualifiedTemplateName()->getQualifier();
+          NNS == CurrentNestedNameSpecifier) {
+        // We have handled the NNS in VisitElaboratedType(). Avoid printing it
+        // twice.
+        TN = TN.getAsQualifiedTemplateName()->getUnderlyingTemplate();
+        PrintType = TemplateName::Qualified::None;
+      }
+      break;
+    case TemplateName::OverloadedTemplate:
+    case TemplateName::AssumedTemplate:
+    case TemplateName::DependentTemplate:
+    case TemplateName::SubstTemplateTemplateParm:
+    case TemplateName::SubstTemplateTemplateParmPack:
+    case TemplateName::UsingTemplate:
+      break;
+    }
+
+    addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP, PrintType); },
+             [&] {
+               if (TemplateNameLocation.isValid())
+                 return TemplateNameLocation;
+               return Location;
+             });
+
+    addLabel("<");
+    printTemplateArgumentList(Args);
+    addLabel(">");
+  }
+
+  void maybeAddQualifiers() {
+    auto Quals = CurrentType.split().Quals;
+    if (!Quals.empty()) {
+      addLabel(Quals.getAsString());
+      addLabel(" ");
+    }
+  }
+
+  // When printing a reference, the referenced type might also be a reference.
+  // If so, we want to skip that before printing the inner type.
+  static QualType skipTopLevelReferences(QualType T) {
+    if (auto *Ref = T->getAs<ReferenceType>())
+      return skipTopLevelReferences(Ref->getPointeeTypeAsWritten());
+    return T;
+  }
+
+public:
+  TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
+                                StringRef MainFilePath,
+                                const PrintingPolicy &PP,
+                                llvm::StringRef Prefix,
+                                std::vector<InlayHintLabelPart> &LabelChunks)
+      : CurrentType(Current), CurrentNestedNameSpecifier(nullptr),
+        Context(Context), MainFilePath(MainFilePath), PP(PP),
+        SM(Context.getSourceManager()), LabelChunks(LabelChunks) {
+    LabelChunks.reserve(16);
+    if (!Prefix.empty())
+      addLabel(Prefix.str());
+  }
+
+  void VisitType(const Type *) { addLabel(CurrentType.getAsString(PP)); }
+
+  void VisitTagType(const TagType *TT) {
+    auto *D = TT->getDecl();
+    if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(D))
+      return handleTemplateSpecialization(
+          TemplateName(Specialization->getSpecializedTemplate()),
+          Specialization->getTemplateArgs().asArray());
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+        RD && !RD->getTemplateInstantiationPattern())
+      return addLabel(
+          [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
+          [&] { return nameLocation(*RD, SM); });
+    return VisitType(TT);
+  }
+
+  void VisitEnumType(const EnumType *ET) {
+    return addLabel(
+        [&](llvm::raw_ostream &OS) { return ET->getDecl()->printName(OS, PP); },
+        [&] { return nameLocation(*ET->getDecl(), SM); });
+  }
+
+  void VisitAutoType(const AutoType *AT) {
+    if (!AT->isDeduced() || AT->getDeducedType()->isDecltypeType())
+      return;
+    maybeAddQualifiers();
+    CurrentTypeRAII Guard(*this, AT->getDeducedType());
+    return Visit(AT->getDeducedType().getTypePtr());
+  }
+
+  void VisitElaboratedType(const ElaboratedType *ET) {
+    maybeAddQualifiers();
+    if (auto *NNS = ET->getQualifier()) {
+      switch (NNS->getKind()) {
+      case NestedNameSpecifier::Identifier:
+      case NestedNameSpecifier::Namespace:
+      case NestedNameSpecifier::NamespaceAlias:
+      case NestedNameSpecifier::Global:
+      case NestedNameSpecifier::Super: {
+        std::string Label;
+        llvm::raw_string_ostream OS(Label);
+        NNS->print(OS, PP);
+        addLabel(std::move(Label));
+      } break;
+      case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
+        CurrentTypeRAII Guard(
+            *this,
+            QualType(
+                NNS->getAsType(),
+                /*Quals=*/0) // Do we need cv-qualifiers on type specifiers?
+        );
+        Visit(NNS->getAsType());
+        addLabel("::");
+        break;
+      }
+    }
+    CurrentTypeRAII Guard(*this, ET->getNamedType(), ET->getQualifier());
+    return Visit(ET->getNamedType().getTypePtr());
+  }
+
+  void VisitReferenceType(const ReferenceType *RT) {
+    maybeAddQualifiers();
+    QualType Next = skipTopLevelReferences(RT->getPointeeTypeAsWritten());
+    CurrentTypeRAII Guard(*this, Next);
+    Visit(Next.getTypePtr());
+    if (Next->getPointeeType().isNull())
+      addLabel(" ");
+    if (RT->isLValueReferenceType())
+      addLabel("&");
+    if (RT->isRValueReferenceType())
+      addLabel("&&");
+  }
+
+  void VisitPointerType(const PointerType *PT) {
+    QualType Next = PT->getPointeeType();
+    std::optional<CurrentTypeRAII> Guard(std::in_place, *this, Next);
+    Visit(Next.getTypePtr());
+    if (Next->getPointeeType().isNull())
+      addLabel(" ");
+    addLabel("*");
+    Guard.reset();
+    maybeAddQualifiers();
+  }
+
+  void VisitUsingType(const UsingType *UT) {
+    addLabel([&](llvm::raw_ostream &OS) { UT->getFoundDecl()->printName(OS); },
+             [&] {
+               BaseUsingDecl *Introducer = UT->getFoundDecl()->getIntroducer();
+               if (auto *UD = dyn_cast<UsingDecl>(Introducer))
+                 return nameLocation(*UD, SM);
+               return nameLocation(*Introducer, SM);
+             });
+  }
+
+  void VisitTypedefType(const TypedefType *TT) {
+    addLabel([&](llvm::raw_ostream &OS) { TT->getDecl()->printName(OS); },
+             [&] { return nameLocation(*TT->getDecl(), SM); });
+  }
+
+  void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
+    maybeAddQualifiers();
+    SourceLocation Location;
+    if (auto *Specialization =
+            dyn_cast_if_present<ClassTemplateSpecializationDecl>(
+                TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
+      Location = nameLocation(*Specialization, SM);
+    return handleTemplateSpecialization(TST->getTemplateName(),
+                                        TST->template_arguments(), Location);
+  }
+
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
+    maybeAddQualifiers();
+    CurrentTypeRAII Guard(*this, ST->getReplacementType());
+    return Visit(ST->getReplacementType().getTypePtr());
+  }
+};
+
+unsigned lengthOfInlayHintLabelPart(llvm::ArrayRef<InlayHintLabelPart> Labels) {
+  unsigned Size = 0;
+  for (auto &P : Labels)
+    Size += P.value.size();
+  return Size;
+}
+
 struct Callee {
   // Only one of Decl or Loc is set.
   // Loc is for calls through function pointers.
@@ -386,7 +674,7 @@ public:
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
-        Resolver(AST.getHeuristicResolver()),
+        MainFilePath(AST.tuPath()), Resolver(AST.getHeuristicResolver()),
         TypeHintPolicy(this->AST.getPrintingPolicy()) {
     bool Invalid = false;
     llvm::StringRef Buf =
@@ -949,9 +1237,30 @@ private:
     addInlayHint(*LSPRange, Side, Kind, Prefix, Label, Suffix);
   }
 
+  void addInlayHint(SourceRange R, HintSide Side, InlayHintKind Kind,
+                    llvm::StringRef Prefix,
+                    std::vector<InlayHintLabelPart> Labels,
+                    llvm::StringRef Suffix) {
+    auto LSPRange = getHintRange(R);
+    if (!LSPRange)
+      return;
+
+    addInlayHint(*LSPRange, Side, Kind, Prefix, std::move(Labels), Suffix);
+  }
+
   void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix, llvm::StringRef Label,
                     llvm::StringRef Suffix) {
+    return addInlayHint(LSPRange, Side, Kind, Prefix,
+                        /*Labels=*/std::vector<InlayHintLabelPart>{Label.str()},
+                        Suffix);
+  }
+
+  void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
+                    llvm::StringRef Prefix,
+                    std::vector<InlayHintLabelPart> Labels,
+                    llvm::StringRef Suffix) {
+    assert(!Labels.empty() && "Expected non-empty labels");
     // We shouldn't get as far as adding a hint if the category is disabled.
     // We'd like to disable as much of the analysis as possible above instead.
     // Assert in debug mode but add a dynamic check in production.
@@ -977,9 +1286,27 @@ private:
       return;
     bool PadLeft = Prefix.consume_front(" ");
     bool PadRight = Suffix.consume_back(" ");
+    if (Prefix.empty() && Suffix.empty()) {
+      Results.push_back(InlayHint{LSPPos,
+                                  /*label=*/Labels, Kind, PadLeft, PadRight,
+                                  LSPRange});
+      return;
+    }
+    if (!Prefix.empty()) {
+      if (auto &Label = Labels.front(); !Label.location)
+        Label.value = Prefix.str() + Label.value;
+      else
+        Labels.insert(Labels.begin(), InlayHintLabelPart(Prefix.str()));
+    }
+    if (!Suffix.empty()) {
+      if (auto &Label = Labels.back(); !Label.location)
+        Label.value += Suffix.str();
+      else
+        Labels.push_back(InlayHintLabelPart(Suffix.str()));
+    }
     Results.push_back(InlayHint{LSPPos,
-                                /*label=*/{(Prefix + Label + Suffix).str()},
-                                Kind, PadLeft, PadRight, LSPRange});
+                                /*label=*/std::move(Labels), Kind, PadLeft,
+                                PadRight, LSPRange});
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
@@ -1005,14 +1332,22 @@ private:
     // The sugared type is more useful in some cases, and the canonical
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
-    std::string TypeName = Desugared.getAsString(TypeHintPolicy);
-    if (T != Desugared && !shouldPrintTypeHint(TypeName)) {
+    std::vector<InlayHintLabelPart> Chunks;
+    TypeInlayHintLabelPartBuilder Builder(Desugared, AST, MainFilePath,
+                                          TypeHintPolicy, Prefix, Chunks);
+    Builder.Visit(Desugared.getTypePtr());
+    if (T != Desugared && !shouldPrintTypeHint(Chunks)) {
       // If the desugared type is too long to display, fallback to the sugared
       // type.
-      TypeName = T.getAsString(TypeHintPolicy);
+      Chunks.clear();
+      TypeInlayHintLabelPartBuilder Builder(T, AST, MainFilePath,
+                                            TypeHintPolicy, Prefix, Chunks);
+      Builder.Visit(T.getTypePtr());
     }
-    if (shouldPrintTypeHint(TypeName))
-      addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, TypeName,
+    if (shouldPrintTypeHint(Chunks))
+      addInlayHint(R, HintSide::Right, InlayHintKind::Type,
+                   /*Prefix=*/"", // We have handled prefixes in the builder.
+                   std::move(Chunks),
                    /*Suffix=*/"");
   }
 
@@ -1021,9 +1356,11 @@ private:
                  /*Prefix=*/"", Text, /*Suffix=*/"=");
   }
 
-  bool shouldPrintTypeHint(llvm::StringRef TypeName) const noexcept {
+  bool shouldPrintTypeHint(
+      llvm::ArrayRef<InlayHintLabelPart> TypeLabels) const noexcept {
     return Cfg.InlayHints.TypeNameLimit == 0 ||
-           TypeName.size() < Cfg.InlayHints.TypeNameLimit;
+           lengthOfInlayHintLabelPart(TypeLabels) <
+               Cfg.InlayHints.TypeNameLimit;
   }
 
   void addBlockEndHint(SourceRange BraceRange, StringRef DeclPrefix,
@@ -1109,6 +1446,7 @@ private:
   std::optional<Range> RestrictRange;
   FileID MainFileID;
   StringRef MainFileBuf;
+  StringRef MainFilePath;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
 };

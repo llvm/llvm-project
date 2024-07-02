@@ -55,6 +55,20 @@ struct ExpectedHint {
   }
 };
 
+struct ExpectedHintLabelPiece {
+  std::string Label;
+  // Stores the name of a range annotation
+  std::optional<std::string> PointsTo = std::nullopt;
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                                       const ExpectedHintLabelPiece &Hint) {
+    Stream << Hint.Label;
+    if (Hint.PointsTo)
+      Stream << " that points to $" << Hint.PointsTo;
+    return Stream;
+  }
+};
+
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
   std::string ResultLabel = arg.joinLabels();
@@ -68,6 +82,33 @@ MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
     *result_listener << "range is " << llvm::to_string(arg.range) << " but $"
                      << Expected.RangeName << " is "
                      << llvm::to_string(Code.range(Expected.RangeName));
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P2(HintLabelPieceMatcher, Expected, Code, llvm::to_string(Expected)) {
+  std::string ResultLabel = arg.value;
+  if (ResultLabel != Expected.Label) {
+    *result_listener << "label is '" << ResultLabel << "'";
+    return false;
+  }
+  if (!Expected.PointsTo && !arg.location)
+    return true;
+  if (Expected.PointsTo && !arg.location) {
+    *result_listener << " range " << *Expected.PointsTo
+                     << " is expected, but we have nothing.";
+    return false;
+  }
+  if (!Expected.PointsTo && arg.location) {
+    *result_listener << " the link points to " << llvm::to_string(arg.location)
+                     << ", but we expect nothing.";
+    return false;
+  }
+  if (arg.location->range != Code.range(*Expected.PointsTo)) {
+    *result_listener << "range is " << llvm::to_string(arg.location->range)
+                     << " but $" << *Expected.PointsTo << " points to "
+                     << llvm::to_string(Code.range(*Expected.PointsTo));
     return false;
   }
   return true;
@@ -1635,6 +1676,168 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   assertHintsWithHeader(InlayHintKind::Type, TypeAlias, Header,
                         ExpectedHint{": Short", "short_name"},
                         ExpectedHint{": static_vector<int>", "vector_name"});
+}
+
+template <typename... Labels>
+void assertTypeLinkHints(StringRef Code, StringRef HintRange,
+                         Labels... ExpectedLabels) {
+  Annotations Source(Code);
+
+  TestTU TU = TestTU::withCode(Source.code());
+  TU.ExtraArgs.push_back("-std=c++2c");
+  auto AST = TU.build();
+
+  Config C;
+  C.InlayHints.TypeNameLimit = 0;
+  WithContextValue WithCfg(Config::Key, std::move(C));
+
+  auto Hints = hintsOfKind(AST, InlayHintKind::Type);
+  auto Hint = llvm::find_if(Hints, [&](const InlayHint &InlayHint) {
+    return InlayHint.range == Source.range(HintRange);
+  });
+  ASSERT_TRUE(Hint != Hints.end()) << "No hint was found at " << HintRange;
+  EXPECT_THAT(Hint->label,
+              ElementsAre(HintLabelPieceMatcher(ExpectedLabels, Source)...));
+}
+
+TEST(TypeHints, Links) {
+  StringRef Source(R"cpp(
+    template <class T, class U>
+    struct $Package[[Package]] {};
+
+    template <>
+    struct $SpecializationOfPackage[[Package]]<float, const int> {};
+
+    template <class... T>
+    struct $Container[[Container]] {};
+
+    template <auto... T>
+    struct $NttpContainer[[NttpContainer]] {};
+
+    enum struct $ScopedEnum[[ScopedEnum]] {
+      X = 1,
+    };
+
+    enum $Enum[[Enum]] {
+      E = 2,
+    };
+
+    namespace ns {
+      template <class T>
+      struct $Nested[[Nested]] {
+        template <class U>
+        struct $NestedClass[[Class]] {
+        };
+      };
+
+      using $NestedInt[[NestedInt]] = Nested<int>;
+    }
+
+    void basic() {
+      auto $1[[C]] = Container<Package<char, int>>();
+      auto $2[[D]] = Container<Package<float, const int>>();
+      auto $3[[E]] = Container<Container<int, int>, long>();
+      auto $4[[F]] = NttpContainer<D, E, ScopedEnum::X, Enum::E>();
+      auto $5[[G]] = ns::Nested<Container<int>>::Class<Package<char, int>>();
+    }
+
+    void compounds() {
+      auto $6[[A]] = Container<ns::Nested<int>::Class<float>&>();
+      auto $7[[B]] = Container<ns::Nested<int>::Class<float>&&>();
+      auto $8[[C]] = Container<ns::Nested<int>::Class<const Container<int>> *>();
+    }
+
+    namespace nns {
+      using ns::$UsingShadow[[NestedInt]];
+
+      void aliases() {
+        auto $9[[A]] = Container<NestedInt>();
+        auto $10[[B]] = Container<ns::NestedInt>();
+      }
+    }
+
+    auto $11[[A]] = Container<Enum, ScopedEnum>();
+
+  )cpp");
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Package", "Package"},
+                      ExpectedHintLabelPiece{"<char, int>>"});
+
+  assertTypeLinkHints(
+      Source, "2", ExpectedHintLabelPiece{": "},
+      ExpectedHintLabelPiece{"Container", "Container"},
+      ExpectedHintLabelPiece{"<"},
+      ExpectedHintLabelPiece{"Package", "SpecializationOfPackage"},
+      ExpectedHintLabelPiece{"<float, const int>>"});
+
+  assertTypeLinkHints(Source, "3", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<int, int>, long>"});
+
+  // TODO: Support links on NTTP arguments.
+  assertTypeLinkHints(Source, "4", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"NttpContainer", "NttpContainer"},
+                      ExpectedHintLabelPiece{"<D, E, ScopedEnum::X, Enum::E>"});
+
+  assertTypeLinkHints(Source, "5", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<int>>::"},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Package", "Package"},
+                      ExpectedHintLabelPiece{"<char, int>>"});
+
+  assertTypeLinkHints(Source, "6", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
+                      ExpectedHintLabelPiece{"<int>::"},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<float> &>"});
+
+  assertTypeLinkHints(Source, "7", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
+                      ExpectedHintLabelPiece{"<int>::"},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<float> &&>"});
+
+  assertTypeLinkHints(Source, "8", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
+                      ExpectedHintLabelPiece{"<int>::"},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<const "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<int>> *>"});
+
+  assertTypeLinkHints(Source, "9", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"NestedInt", "UsingShadow"},
+                      ExpectedHintLabelPiece{">"});
+
+  assertTypeLinkHints(Source, "10", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<ns::"},
+                      ExpectedHintLabelPiece{"NestedInt", "NestedInt"},
+                      ExpectedHintLabelPiece{">"});
+
+  assertTypeLinkHints(Source, "11", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Enum", "Enum"},
+                      ExpectedHintLabelPiece{", "},
+                      ExpectedHintLabelPiece{"ScopedEnum", "ScopedEnum"},
+                      ExpectedHintLabelPiece{">"});
 }
 
 TEST(DesignatorHints, Basic) {

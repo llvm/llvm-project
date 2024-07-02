@@ -45,6 +45,9 @@ bool isImplementationDetail(const Decl *D);
 /// this function.
 SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM);
 
+std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
+                                     llvm::StringRef TUPath);
+
 /// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
 /// like inline namespaces.
 std::string printQualifiedName(const NamedDecl &ND);
@@ -249,6 +252,8 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 /// whose type is a bare type parameter pack (e.g. `Args...`), or a
 /// reference to one (e.g. `Args&...` or `Args&&...`).
 bool isExpandedFromParameterPack(const ParmVarDecl *D);
+
+std::optional<URI> toURI(OptionalFileEntryRef File);
 
 } // namespace clangd
 } // namespace clang
