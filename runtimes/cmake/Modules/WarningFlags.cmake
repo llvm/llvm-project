@@ -3,6 +3,18 @@ include(HandleFlags)
 # Warning flags ===============================================================
 function(cxx_add_warning_flags target enable_werror enable_pedantic)
   target_compile_definitions(${target} PUBLIC -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+
+  # Disable linker for CMake flag compatibility checks
+  #
+  # Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+  # disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+  # for static targets; cache the target type here, and reset it after the various
+  # checks have been performed.
+  set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+  set(CMAKE_REQUIRED_LINK_OPTIONS)
+
   if (MSVC)
     # -W4 is the cl.exe/clang-cl equivalent of -Wall. (In cl.exe and clang-cl,
     # -Wall is equivalent to -Weverything in GCC style compiler drivers.)
@@ -80,4 +92,8 @@ function(cxx_add_warning_flags target enable_werror enable_pedantic)
   if (${enable_pedantic})
     target_add_compile_flags_if_supported(${target} PRIVATE -pedantic)
   endif()
+
+  # reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 endfunction()

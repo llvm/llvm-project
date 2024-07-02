@@ -333,10 +333,26 @@ function(append_if condition value)
 endfunction()
 
 macro(add_flag_if_supported flag name)
+
+  # Disable linker for CMake flag compatibility checks
+  #
+  # Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+  # disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+  # for static targets; cache the target type here, and reset it after the various
+  # checks have been performed.
+  set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+  set(CMAKE_REQUIRED_LINK_OPTIONS)
+
   check_c_compiler_flag("-Werror ${flag}" "C_SUPPORTS_${name}")
   append_if("C_SUPPORTS_${name}" "${flag}" CMAKE_C_FLAGS)
   check_cxx_compiler_flag("-Werror ${flag}" "CXX_SUPPORTS_${name}")
   append_if("CXX_SUPPORTS_${name}" "${flag}" CMAKE_CXX_FLAGS)
+
+  # reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 endmacro()
 
 function(add_flag_or_print_warning flag name)

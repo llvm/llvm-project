@@ -103,6 +103,18 @@ endmacro()
 # For each specified flag, add that compile flag to the provided target.
 # The flags are added with the given visibility, i.e. PUBLIC|PRIVATE|INTERFACE.
 function(target_add_compile_flags_if_supported target visibility)
+
+  # Disable linker for CMake flag compatibility checks
+  #
+  # Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+  # disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+  # for static targets; cache the target type here, and reset it after the various
+  # checks have been performed.
+  set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+  set(CMAKE_REQUIRED_LINK_OPTIONS)
+
   foreach(flag ${ARGN})
     mangle_name("${flag}" flagname)
     check_cxx_compiler_flag("${flag}" "CXX_SUPPORTS_${flagname}_FLAG")
@@ -110,4 +122,8 @@ function(target_add_compile_flags_if_supported target visibility)
       target_compile_options(${target} ${visibility} ${flag})
     endif()
   endforeach()
+
+  # reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 endfunction()

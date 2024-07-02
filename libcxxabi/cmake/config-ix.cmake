@@ -14,6 +14,17 @@ if (NOT LIBCXXABI_USE_COMPILER_RT)
   endif ()
 endif ()
 
+# Disable linker for CMake flag compatibility checks
+#
+# Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+# disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+# for static targets; cache the target type here, and reset it after the various
+# checks have been performed.
+set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(CMAKE_REQUIRED_LINK_OPTIONS)
+
 # libc++abi is using -nostdlib++ at the link step when available,
 # otherwise -nodefaultlibs is used. We want all our checks to also
 # use one of these options, otherwise we may end up with an inconsistency between
@@ -93,6 +104,10 @@ endif()
 
 # Check compiler flags
 check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+
+# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 
 # Check libraries
 if(FUCHSIA)
