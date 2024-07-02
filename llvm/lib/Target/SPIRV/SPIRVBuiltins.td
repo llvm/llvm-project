@@ -782,27 +782,41 @@ defm : DemangledGroupBuiltin<"group_broadcast_first", OnlySub, OpGroupNonUniform
 
 // cl_khr_subgroup_non_uniform_vote
 defm : DemangledGroupBuiltin<"group_elect", OnlySub, OpGroupNonUniformElect>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformElect", 1, 1, OpGroupNonUniformElect>;
 defm : DemangledGroupBuiltin<"group_non_uniform_all", OnlySub, OpGroupNonUniformAll>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformAll", 2, 2, OpGroupNonUniformAll>;
 defm : DemangledGroupBuiltin<"group_non_uniform_any", OnlySub, OpGroupNonUniformAny>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformAny", 2, 2, OpGroupNonUniformAny>;
 defm : DemangledGroupBuiltin<"group_non_uniform_all_equal", OnlySub, OpGroupNonUniformAllEqual>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformAllEqual", 2, 2, OpGroupNonUniformAllEqual>;
 
 // cl_khr_subgroup_ballot
 defm : DemangledGroupBuiltin<"group_ballot", OnlySub, OpGroupNonUniformBallot>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallot", 2, 2, OpGroupNonUniformBallot>;
 defm : DemangledGroupBuiltin<"group_inverse_ballot", OnlySub, OpGroupNonUniformInverseBallot>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformInverseBallot", 2, 2, OpGroupNonUniformInverseBallot>;
 defm : DemangledGroupBuiltin<"group_ballot_bit_extract", OnlySub, OpGroupNonUniformBallotBitExtract>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotBitExtract", 3, 3, OpGroupNonUniformBallotBitExtract>;
 defm : DemangledGroupBuiltin<"group_ballot_bit_count", OnlySub, OpGroupNonUniformBallotBitCount>;
 defm : DemangledGroupBuiltin<"group_ballot_inclusive_scan", OnlySub, OpGroupNonUniformBallotBitCount>;
 defm : DemangledGroupBuiltin<"group_ballot_exclusive_scan", OnlySub, OpGroupNonUniformBallotBitCount>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotBitCount", 3, 3, OpGroupNonUniformBallotBitCount>;
 defm : DemangledGroupBuiltin<"group_ballot_find_lsb", OnlySub, OpGroupNonUniformBallotFindLSB>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindLSB", 2, 2, OpGroupNonUniformBallotFindLSB>;
 defm : DemangledGroupBuiltin<"group_ballot_find_msb", OnlySub, OpGroupNonUniformBallotFindMSB>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindMSB", 2, 2, OpGroupNonUniformBallotFindMSB>;
 
 // cl_khr_subgroup_shuffle
 defm : DemangledGroupBuiltin<"group_shuffle", OnlySub, OpGroupNonUniformShuffle>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffle", 3, 3, OpGroupNonUniformShuffle>;
 defm : DemangledGroupBuiltin<"group_shuffle_xor", OnlySub, OpGroupNonUniformShuffleXor>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffleXor", 3, 3, OpGroupNonUniformShuffleXor>;
 
 // cl_khr_subgroup_shuffle_relative
 defm : DemangledGroupBuiltin<"group_shuffle_up", OnlySub, OpGroupNonUniformShuffleUp>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffleUp", 3, 3, OpGroupNonUniformShuffleUp>;
 defm : DemangledGroupBuiltin<"group_shuffle_down", OnlySub, OpGroupNonUniformShuffleDown>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformShuffleDown", 3, 3, OpGroupNonUniformShuffleDown>;
 
 defm : DemangledGroupBuiltin<"group_iadd", WorkOrSub, OpGroupIAdd>;
 defm : DemangledGroupBuiltin<"group_reduce_adds", WorkOrSub, OpGroupIAdd>;
