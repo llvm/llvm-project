@@ -173,6 +173,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__PTX__");
   Builder.defineMacro("__NVPTX__");
+  Builder.defineMacro("__PTX_VERSION__", Twine(PTXVersion));
 
   // Skip setting architecture dependent macros if undefined.
   if (GPU == OffloadArch::UNUSED && !HostTarget)
