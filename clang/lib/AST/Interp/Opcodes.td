@@ -714,6 +714,7 @@ def Dup : Opcode {
 
 // [] -> []
 def Invalid : Opcode {}
+def Unsupported : Opcode {}
 def Error : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind];
