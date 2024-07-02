@@ -16,7 +16,7 @@ MCTargetOptions::MCTargetOptions()
       MCNoWarn(false), MCNoDeprecatedWarn(false), MCNoTypeCheck(false),
       MCSaveTempLabels(false), MCIncrementalLinkerCompatible(false),
       FDPIC(false), ShowMCEncoding(false), ShowMCInst(false), AsmVerbose(false),
-      PreserveAsmComments(true), Dwarf64(false),
+      SSE2AVX(false), PreserveAsmComments(true), Dwarf64(false),
       EmitDwarfUnwind(EmitDwarfUnwindType::Default),
       MCUseDwarfDirectory(DefaultDwarfDirectory),
       EmitCompactUnwindNonCanonical(false), PPCUseFullRegisterNames(false) {}

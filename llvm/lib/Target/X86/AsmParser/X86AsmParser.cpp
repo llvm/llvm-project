@@ -58,6 +58,10 @@ static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
 
 namespace {
 
+// Including the generated SSE2AVX compression tables.
+#define GET_X86_SSE2AVX_TABLE
+#include "X86GenInstrMapping.inc"
+
 static const char OpPrecedence[] = {
     0,  // IC_OR
     1,  // IC_XOR
@@ -3745,7 +3749,27 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
+static void replaceSSE2AVXOpcode(MCInst &Inst) {
+  ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
+  unsigned Opcode = Inst.getOpcode();
+  const auto I = llvm::lower_bound(Table, Opcode);
+  if (I != Table.end() && I->OldOpc == Opcode)
+    Inst.setOpcode(I->NewOpc);
+
+  if (X86::isBLENDVPD(Opcode) || X86::isBLENDVPS(Opcode) ||
+      X86::isPBLENDVB(Opcode)) {
+    unsigned RegNo = Inst.getOperand(2).getReg();
+    Inst.addOperand(MCOperand::createReg(RegNo));
+  }
+}
+
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
+  // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
+  // replace SSE instruction with equivalent AVX instruction using mapping given
+  // in table GET_X86_SSE2AVX_TABLE
+  if (MCOptions.SSE2AVX)
+    replaceSSE2AVXOpcode(Inst);
+
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
       X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))
     return true;
