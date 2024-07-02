@@ -147,3 +147,35 @@ entry:
   %5 = icmp ult <4 x ptr> %3, %4
   ret void
 }
+
+define <4 x i1> @test5(ptr %in1, ptr %in2) {
+entry:
+  %0 = load <4 x i32>, ptr %in1, align 4
+  %1 = load <4 x i16>, ptr %in2, align 2
+  %cmp000 = icmp ugt <4 x i32> %0, zeroinitializer
+  %cmp001 = icmp ugt <4 x i32> %0, zeroinitializer
+  %cmp002 = icmp ugt <4 x i32> %0, zeroinitializer
+  %cmp003 = icmp ugt <4 x i32> %0, zeroinitializer
+  %cmp100 = icmp eq <4 x i16> %1, zeroinitializer
+  %cmp101 = icmp eq <4 x i16> %1, zeroinitializer
+  %cmp102 = icmp eq <4 x i16> %1, zeroinitializer
+  %cmp103 = icmp eq <4 x i16> %1, zeroinitializer
+  %and.cmp0 = and <4 x i1> %cmp000, %cmp100
+  %and.cmp1 = and <4 x i1> %cmp001, %cmp101
+  %and.cmp2 = and <4 x i1> %cmp002, %cmp102
+  %and.cmp3 = and <4 x i1> %cmp003, %cmp103
+  %cmp004 = icmp ugt <4 x i32> %0, zeroinitializer
+  %cmp005 = icmp ugt <4 x i32> %0, zeroinitializer
+  %cmp006 = icmp ugt <4 x i32> %0, zeroinitializer
+  %cmp007 = icmp ugt <4 x i32> %0, zeroinitializer
+  %and.cmp4 = and <4 x i1> %and.cmp0, %cmp004
+  %and.cmp5 = and <4 x i1> %and.cmp1, %cmp005
+  %and.cmp6 = and <4 x i1> %and.cmp2, %cmp006
+  %and.cmp7 = and <4 x i1> %and.cmp3, %cmp007
+  %or0 = or <4 x i1> %and.cmp5, %and.cmp4
+  %or1 = or <4 x i1> %or0, %and.cmp6
+  %or2 = or <4 x i1> %or1, %and.cmp7
+  %vbsl = select <4 x i1> %or2, <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>
+  %cmp = icmp ugt <4 x i32> %vbsl, <i32 2, i32 3, i32 4, i32 5>
+  ret <4 x i1> %cmp
+}
