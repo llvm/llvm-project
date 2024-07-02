@@ -397,6 +397,31 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
+    ${printf_deps}
+)
+
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    ../vfprintf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
+    ${printf_deps}
+)
+
+
+add_entrypoint_object(
   fgets
   SRCS
     fgets.cpp
