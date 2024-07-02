@@ -86,6 +86,17 @@ def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
   }];
 }
 
+// Ops related to OIList primitive
+def OIListTrivialProperties : TEST_Op<"oilist_with_keywords_only_properties"> {
+  let arguments = (ins UnitProperty:$keyword, UnitProperty:$otherKeyword,
+                       UnitProperty:$diffNameUnitPropertyKeyword);
+  let assemblyFormat = [{
+    oilist( `keyword` $keyword
+          | `otherKeyword` $otherKeyword
+          | `thirdKeyword` $diffNameUnitPropertyKeyword) attr-dict
+  }];
+}
+
 def OIListSimple : TEST_Op<"oilist_with_simple_args", [AttrSizedOperandSegments]> {
   let arguments = (ins Optional<AnyType>:$arg0,
                        Optional<AnyType>:$arg1,
@@ -389,6 +400,17 @@ def FormatOptionalUnitAttr : TEST_Op<"format_optional_unit_attribute"> {
 def FormatOptionalUnitAttrNoElide
     : TEST_Op<"format_optional_unit_attribute_no_elide"> {
   let arguments = (ins UnitAttr:$is_optional);
+  let assemblyFormat = "($is_optional^)? attr-dict";
+}
+
+def FormatOptionalUnitProperty : TEST_Op<"format_optional_unit_property"> {
+  let arguments = (ins UnitProperty:$is_optional);
+  let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
+}
+
+def FormatOptionalUnitPropertyNoElide
+    : TEST_Op<"format_optional_unit_property_no_elide"> {
+  let arguments = (ins UnitProperty:$is_optional);
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 

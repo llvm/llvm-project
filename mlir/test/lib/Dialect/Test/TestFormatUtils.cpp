@@ -297,11 +297,17 @@ void test::printSwitchCases(OpAsmPrinter &p, Operation *op,
 // CustomUsingPropertyInCustom
 //===----------------------------------------------------------------------===//
 
-bool test::parseUsingPropertyInCustom(OpAsmParser &parser, int64_t value[3]) {
-  return parser.parseLSquare() || parser.parseInteger(value[0]) ||
-         parser.parseComma() || parser.parseInteger(value[1]) ||
-         parser.parseComma() || parser.parseInteger(value[2]) ||
-         parser.parseRSquare();
+bool test::parseUsingPropertyInCustom(OpAsmParser &parser,
+                                      SmallVector<int64_t> &value) {
+  auto elemParser = [&]() {
+    int64_t v = 0;
+    if (failed(parser.parseInteger(v)))
+      return failure();
+    value.push_back(v);
+    return success();
+  };
+  return failed(parser.parseCommaSeparatedList(OpAsmParser::Delimiter::Square,
+                                               elemParser));
 }
 
 void test::printUsingPropertyInCustom(OpAsmPrinter &printer, Operation *op,
