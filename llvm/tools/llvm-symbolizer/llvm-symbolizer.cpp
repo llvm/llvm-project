@@ -501,7 +501,8 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
     Opts.UseDIA = false;
   }
 #endif
-  Opts.UseSymbolTable = true;
+  Opts.UseSymbolTable =
+      Args.hasFlag(OPT_use_symbol_table, OPT_no_use_symbol_table, true);
   if (Args.hasArg(OPT_cache_size_EQ))
     parseIntArg(Args, OPT_cache_size_EQ, Opts.MaxCacheSize);
   Config.PrintAddress = Args.hasArg(OPT_addresses);
