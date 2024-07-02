@@ -133,7 +133,7 @@ inline const char *ompt_get_runtime_version() {
 inline ompt_work_t ompt_get_work_schedule(enum sched_type schedule) {
   switch (SCHEDULE_WITHOUT_MODIFIERS(schedule)) {
   case kmp_sch_static_chunked:
-  case kmp_sch_static_balanced: // Chunk is calculated in the switch above
+  case kmp_sch_static_balanced:
   case kmp_sch_static_greedy:
     return ompt_work_loop_static;
   case kmp_sch_dynamic_chunked:
