@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt -verify-diagnostics | FileCheck %s --strict-whitespace
 
 // CHECK-LABEL: func private @compoundA()
 // CHECK-SAME: #test.cmpnd_a<1, !test.smpla, [5, 6]>
@@ -18,4 +18,18 @@ func.func private @qualifiedAttr() attributes {foo = #test.cmpnd_nested_outer_qu
 // CHECK-SAME: foo = 5 : index
 func.func private @overriddenAttr() attributes {
   foo = #test.override_builder<5>
+}
+
+// CHECK-LABEL: @newlineAndIndent
+// CHECK-SAME:  indent = #test.newline_and_indent<
+// CHECK-NEXT:  {{^    }}!test.newline_and_indent<    
+// CHECK-NEXT:  {{^      }}indented_content
+// CHECK-NEXT:  {{^    }}>
+// CHECK-NEXT:  {{^  }}>
+func.func private @newlineAndIndent() attributes {
+  indent = #test.newline_and_indent<
+    !test.newline_and_indent<
+      indented_content
+    >
+  >
 }

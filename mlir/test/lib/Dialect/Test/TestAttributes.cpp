@@ -281,6 +281,35 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 }
 
 //===----------------------------------------------------------------------===//
+// TestAttrNewlineAndIndent
+//===----------------------------------------------------------------------===//
+
+Attribute TestAttrNewlineAndIndentAttr::parse(::mlir::AsmParser &parser,
+                                              ::mlir::Type type) {
+  Type indentType;
+  if (parser.parseLess()) {
+    return {};
+  }
+  if (parser.parseType(indentType)) {
+    return {};
+  }
+  if (parser.parseGreater()) {
+    return {};
+  }
+  return get(parser.getContext(), indentType);
+}
+
+void TestAttrNewlineAndIndentAttr::print(::mlir::AsmPrinter &printer) const {
+  printer << "<";
+  printer.increaseIndent();
+  printer.printNewline();
+  printer << getIndentType();
+  printer.decreaseIndent();
+  printer.printNewline();
+  printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 

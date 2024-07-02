@@ -392,4 +392,9 @@ def TestRecursiveAlias
   }];
 }
 
+def TestTypeNewlineAndIndent : Test_Type<"TestTypeNewlineAndIndent"> {
+  let mnemonic = "newline_and_indent";
+  let hasCustomAssemblyFormat = 1;
+}
+
 #endif // TEST_TYPEDEFS
