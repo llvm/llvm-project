@@ -29,7 +29,9 @@
 #  include <sys/time.h> // for gettimeofday and timeval
 #endif
 
-#if defined(__APPLE__) || defined(__gnu_hurd__) || (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0)
+// GNU Hurd and OpenBSD do not implement a fully conformant suite of POSIX timers, but
+// they do have clock_gettime and CLOCK_MONOTONIC which are all we need.
+#if defined(__APPLE__) || defined(__gnu_hurd__) || defined(__OpenBSD__) || (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0)
 #  define _LIBCPP_HAS_CLOCK_GETTIME
 #endif
 
