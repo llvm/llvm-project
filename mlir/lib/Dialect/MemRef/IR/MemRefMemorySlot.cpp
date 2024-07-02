@@ -277,7 +277,7 @@ bool memref::StoreOp::canRewire(const DestructurableMemorySlot &slot,
     return false;
   Attribute index = getAttributeIndexFromIndexOperands(
       getContext(), getIndices(), getMemRefType());
-  if (!index || !slot.elementPtrs.contains(index))
+  if (!index || !slot.subelementTypes.contains(index))
     return false;
   usedIndices.insert(index);
   return true;
