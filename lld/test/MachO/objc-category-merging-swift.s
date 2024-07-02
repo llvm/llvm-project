@@ -8,55 +8,55 @@
 # RUN: %lld -arch arm64 -dylib -o cat_swift.dylib cat_swift.o -objc_category_merging
 # RUN: llvm-objdump --objc-meta-data --macho cat_swift.dylib | FileCheck %s --check-prefixes=CHECK-MERGE
 
-; CHECK-MERGE: Contents of (__DATA_CONST,__objc_classlist) section
-; CHECK-MERGE: _$s11SimpleClassAACN
-; CHECK-MERGE:            isa {{.+}} _OBJC_METACLASS_$__TtC11SimpleClass11SimpleClass
-; CHECK-MERGE:     superclass 0x0
-; CHECK-MERGE:          cache 0x0
-; CHECK-MERGE:         vtable 0x0
-; CHECK-MERGE:           data {{.+}} (struct class_ro_t *) Swift class
-; CHECK-MERGE:                     flags 0x80
-; CHECK-MERGE:             instanceStart 8
-; CHECK-MERGE:              instanceSize 8
-; CHECK-MERGE:                  reserved 0x0
-; CHECK-MERGE:                ivarLayout 0x0
-; CHECK-MERGE:                      name {{.+}} _TtC11SimpleClass11SimpleClass
-; CHECK-MERGE:               baseMethods {{.+}} (struct method_list_t *)
-; CHECK-MERGE:                    entsize 24
-; CHECK-MERGE:                      count 3
-; CHECK-MERGE:                       name {{.+}} categoryInstanceMethod
-; CHECK-MERGE:                      types {{.+}} q16@0:8
-; CHECK-MERGE:                        imp _$s11SimpleClassAAC22categoryInstanceMethodSiyFTo
-; CHECK-MERGE:                       name {{.+}} baseClassInstanceMethod
-; CHECK-MERGE:                      types {{.+}} i16@0:8
-; CHECK-MERGE:                        imp _$s11SimpleClassAAC04baseB14InstanceMethods5Int32VyFTo
-; CHECK-MERGE:                       name {{.+}} init
-; CHECK-MERGE:                      types {{.+}} @16@0:8
-; CHECK-MERGE:                        imp _$s11SimpleClassAACABycfcTo
-; CHECK-MERGE:             baseProtocols 0x0
-; CHECK-MERGE:                     ivars 0x0
-; CHECK-MERGE:            weakIvarLayout 0x0
-; CHECK-MERGE:            baseProperties 0x0
-; CHECK-MERGE: Meta Class
-; CHECK-MERGE:            isa 0x0
-; CHECK-MERGE:     superclass 0x0
-; CHECK-MERGE:          cache 0x0
-; CHECK-MERGE:         vtable 0x0
-; CHECK-MERGE:           data {{.+}} (struct class_ro_t *)
-; CHECK-MERGE:                     flags 0x81 RO_META
-; CHECK-MERGE:             instanceStart 40
-; CHECK-MERGE:              instanceSize 40
-; CHECK-MERGE:                  reserved 0x0
-; CHECK-MERGE:                ivarLayout 0x0
-; CHECK-MERGE:                      name {{.+}} _TtC11SimpleClass11SimpleClass
-; CHECK-MERGE:               baseMethods 0x0 (struct method_list_t *)
-; CHECK-MERGE:             baseProtocols 0x0
-; CHECK-MERGE:                     ivars 0x0
-; CHECK-MERGE:            weakIvarLayout 0x0
-; CHECK-MERGE:            baseProperties 0x0
-; CHECK-MERGE: Contents of (__DATA_CONST,__objc_imageinfo) section
-; CHECK-MERGE:   version 0
-; CHECK-MERGE:     flags 0x740 OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES Swift 5 or later
+; CHECK-MERGE:      Contents of (__DATA_CONST,__objc_classlist) section
+; CHECK-MERGE-NEXT: _$s11SimpleClassAACN
+; CHECK-MERGE-NEXT:            isa {{.+}} _OBJC_METACLASS_$__TtC11SimpleClass11SimpleClass
+; CHECK-MERGE-NEXT:     superclass 0x0
+; CHECK-MERGE-NEXT:          cache 0x0
+; CHECK-MERGE-NEXT:         vtable 0x0
+; CHECK-MERGE-NEXT:           data {{.+}} (struct class_ro_t *) Swift class
+; CHECK-MERGE-NEXT:                     flags 0x80
+; CHECK-MERGE-NEXT:             instanceStart 8
+; CHECK-MERGE-NEXT:              instanceSize 8
+; CHECK-MERGE-NEXT:                  reserved 0x0
+; CHECK-MERGE-NEXT:                ivarLayout 0x0
+; CHECK-MERGE-NEXT:                      name {{.+}} _TtC11SimpleClass11SimpleClass
+; CHECK-MERGE-NEXT:               baseMethods {{.+}} (struct method_list_t *)
+; CHECK-MERGE-NEXT:                    entsize 24
+; CHECK-MERGE-NEXT:                      count 3
+; CHECK-MERGE-NEXT:                       name {{.+}} categoryInstanceMethod
+; CHECK-MERGE-NEXT:                      types {{.+}} q16@0:8
+; CHECK-MERGE-NEXT:                        imp _$s11SimpleClassAAC22categoryInstanceMethodSiyFTo
+; CHECK-MERGE-NEXT:                       name {{.+}} baseClassInstanceMethod
+; CHECK-MERGE-NEXT:                      types {{.+}} i16@0:8
+; CHECK-MERGE-NEXT:                        imp _$s11SimpleClassAAC04baseB14InstanceMethods5Int32VyFTo
+; CHECK-MERGE-NEXT:                       name {{.+}} init
+; CHECK-MERGE-NEXT:                      types {{.+}} @16@0:8
+; CHECK-MERGE-NEXT:                        imp _$s11SimpleClassAACABycfcTo
+; CHECK-MERGE-NEXT:             baseProtocols 0x0
+; CHECK-MERGE-NEXT:                     ivars 0x0
+; CHECK-MERGE-NEXT:            weakIvarLayout 0x0
+; CHECK-MERGE-NEXT:            baseProperties 0x0
+; CHECK-MERGE-NEXT: Meta Class
+; CHECK-MERGE-NEXT:            isa 0x0
+; CHECK-MERGE-NEXT:     superclass 0x0
+; CHECK-MERGE-NEXT:          cache 0x0
+; CHECK-MERGE-NEXT:         vtable 0x0
+; CHECK-MERGE-NEXT:           data {{.+}} (struct class_ro_t *)
+; CHECK-MERGE-NEXT:                     flags 0x81 RO_META
+; CHECK-MERGE-NEXT:             instanceStart 40
+; CHECK-MERGE-NEXT:              instanceSize 40
+; CHECK-MERGE-NEXT:                  reserved 0x0
+; CHECK-MERGE-NEXT:                ivarLayout 0x0
+; CHECK-MERGE-NEXT:                      name {{.+}} _TtC11SimpleClass11SimpleClass
+; CHECK-MERGE-NEXT:               baseMethods 0x0 (struct method_list_t *)
+; CHECK-MERGE-NEXT:             baseProtocols 0x0
+; CHECK-MERGE-NEXT:                     ivars 0x0
+; CHECK-MERGE-NEXT:            weakIvarLayout 0x0
+; CHECK-MERGE-NEXT:            baseProperties 0x0
+; CHECK-MERGE-NEXT: Contents of (__DATA_CONST,__objc_imageinfo) section
+; CHECK-MERGE-NEXT:   version 0
+; CHECK-MERGE-NEXT:     flags 0x740 OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES Swift 5 or later
 
 ;  ================== Generated from Swift: ==================
 ;; > xcrun swiftc --version
