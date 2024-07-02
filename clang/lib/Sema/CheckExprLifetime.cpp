@@ -320,6 +320,33 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   return false;
 }
 
+// Returns true if the FD is a normal assignment operator.
+//
+// Assume that all assignment operators with a "normal" return type return
+// *this, that is, an lvalue reference that is the same type as the implicit
+// object parameter (or the LHS for a non-member operator$=).
+static bool isNormalAssignmentOperator(const FunctionDecl* FD) {
+  if (!FD)
+    return false;
+  OverloadedOperatorKind OO = FD->getDeclName().getCXXOverloadedOperator();
+  if (OO == OO_Equal || isCompoundAssignmentOperator(OO)) {
+    QualType RetT = FD->getReturnType();
+    if (RetT->isLValueReferenceType()) {
+      ASTContext &Ctx = FD->getASTContext();
+      QualType LHST;
+      auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      if (MD && MD->isCXXInstanceMember())
+        LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
+      else
+        LHST = MD->getParamDecl(0)->getType();
+      if (Ctx.hasSameType(RetT, LHST))
+        return true;
+    }
+  }
+  return false;
+}
+
+
 static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
                                     LocalVisitor Visit) {
   auto VisitPointerArg = [&](const Decl *D, Expr *Arg, bool Value) {
@@ -362,6 +389,26 @@ static void handleGslAnnotatedTypes(IndirectLocalPath &Path, Expr *Call,
         shouldTrackImplicitObjectArg(cast<CXXMethodDecl>(Callee)))
       VisitPointerArg(Callee, OCE->getArg(0),
                       !Callee->getReturnType()->isReferenceType());
+    // For assignment operators, if a pointer-type object (LHS) is assigned a
+    // pointer-type object (RHS), we further track the RHS expression to see
+    // whether it holds a temporary object that will be destroyed at the end of
+    // the full expression.
+    // This addresses the common scenario where a temporary owner-type object is
+    // assigned to a pointer-type object:
+    //
+    //   // On the RHS, we construct a temporary string_view from the string(),
+    //   // and invoke the operator=(const basic_string_view&) method.
+    //   my_string_view_var = std::string();
+    //
+    // FIXME: support assignment operator whose RHS parameter type is an owner
+    // type.
+    if (isNormalAssignmentOperator(Callee)) {
+      auto LHSType = OCE->getArg(0)->getType();
+      auto RHSType = OCE->getArg(1)->getType();
+      if (isRecordWithAttr<PointerAttr>(RHSType) &&
+          Callee->getASTContext().hasSameUnqualifiedType(LHSType, RHSType))
+        VisitPointerArg(Callee, OCE->getArg(1), true);
+    }
     return;
   } else if (auto *CE = dyn_cast<CallExpr>(Call)) {
     FunctionDecl *Callee = CE->getDirectCallee();
@@ -394,26 +441,8 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
       return true;
   }
 
-  // Assume that all assignment operators with a "normal" return type return
-  // *this, that is, an lvalue reference that is the same type as the implicit
-  // object parameter (or the LHS for a non-member operator$=).
-  OverloadedOperatorKind OO = FD->getDeclName().getCXXOverloadedOperator();
-  if (OO == OO_Equal || isCompoundAssignmentOperator(OO)) {
-    QualType RetT = FD->getReturnType();
-    if (RetT->isLValueReferenceType()) {
-      ASTContext &Ctx = FD->getASTContext();
-      QualType LHST;
-      auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isCXXInstanceMember())
-        LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
-      else
-        LHST = MD->getParamDecl(0)->getType();
-      if (Ctx.hasSameType(RetT, LHST))
-        return true;
-    }
-  }
-
-  return false;
+  // Track the implicit object parameter if this is a normal assignment operator.
+  return isNormalAssignmentOperator(FD);
 }
 
 static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
