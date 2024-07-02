@@ -1184,11 +1184,6 @@ static bool isDiscardable(const OutputSection &sec) {
   return true;
 }
 
-bool LinkerScript::isDiscarded(const OutputSection *sec) const {
-  return hasSectionsCommand && (getFirstInputSection(sec) == nullptr) &&
-         isDiscardable(*sec);
-}
-
 static void maybePropagatePhdrs(OutputSection &sec,
                                 SmallVector<StringRef, 0> &phdrs) {
   if (sec.phdrs.empty()) {
