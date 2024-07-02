@@ -2,7 +2,7 @@
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 %s -o - | FileCheck %s
 
-; Testing codegen for memcpy and memmove with vector operands for all combinations of the following parameters:
+; Testing codegen for memcpy with vector operands for all combinations of the following parameters:
 ;     destination address space: 0, 1, 3, 5
 ;     source address space: 0, 1, 3, 4, 5
 ;     alignment: 1, 2, 8, 16
@@ -66,66 +66,6 @@ define void @memcpy_p0_p0_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p0_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ubyte v4, v[2:3] offset:15
-; CHECK-NEXT:    flat_load_ubyte v5, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ubyte v6, v[2:3] offset:13
-; CHECK-NEXT:    flat_load_ubyte v7, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:11
-; CHECK-NEXT:    flat_load_ubyte v9, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ubyte v10, v[2:3] offset:9
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ubyte v12, v[2:3] offset:7
-; CHECK-NEXT:    flat_load_ubyte v13, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ubyte v14, v[2:3] offset:5
-; CHECK-NEXT:    flat_load_ubyte v15, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ubyte v16, v[2:3] offset:3
-; CHECK-NEXT:    flat_load_ubyte v17, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ubyte v18, v[2:3] offset:1
-; CHECK-NEXT:    flat_load_ubyte v2, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -232,111 +172,6 @@ define void @memcpy_p0_p0_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p0_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    flat_load_ubyte v4, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_ubyte v5, v[2:3] offset:29
-; CHECK-NEXT:    flat_load_ubyte v6, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_ubyte v7, v[2:3] offset:27
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ubyte v9, v[2:3] offset:25
-; CHECK-NEXT:    flat_load_ubyte v10, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:23
-; CHECK-NEXT:    flat_load_ubyte v12, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ubyte v13, v[2:3] offset:21
-; CHECK-NEXT:    flat_load_ubyte v14, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ubyte v15, v[2:3] offset:19
-; CHECK-NEXT:    flat_load_ubyte v16, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ubyte v17, v[2:3] offset:17
-; CHECK-NEXT:    flat_load_ubyte v18, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ubyte v19, v[2:3] offset:15
-; CHECK-NEXT:    flat_load_ubyte v20, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ubyte v21, v[2:3] offset:13
-; CHECK-NEXT:    flat_load_ubyte v22, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ubyte v23, v[2:3] offset:11
-; CHECK-NEXT:    flat_load_ubyte v24, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ubyte v25, v[2:3] offset:9
-; CHECK-NEXT:    flat_load_ubyte v26, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ubyte v27, v[2:3] offset:7
-; CHECK-NEXT:    flat_load_ubyte v28, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ubyte v29, v[2:3] offset:5
-; CHECK-NEXT:    flat_load_ubyte v30, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ubyte v31, v[2:3] offset:3
-; CHECK-NEXT:    flat_load_ubyte v32, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ubyte v33, v[2:3] offset:1
-; CHECK-NEXT:    flat_load_ubyte v2, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(30) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -449,114 +284,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    flat_load_ubyte v4, v[2:3] offset:31
-; CHECK-NEXT:    flat_load_ubyte v5, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_ubyte v6, v[2:3] offset:29
-; CHECK-NEXT:    flat_load_ubyte v7, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:27
-; CHECK-NEXT:    flat_load_ubyte v9, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ubyte v10, v[2:3] offset:25
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ubyte v12, v[2:3] offset:23
-; CHECK-NEXT:    flat_load_ubyte v13, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ubyte v14, v[2:3] offset:21
-; CHECK-NEXT:    flat_load_ubyte v15, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ubyte v16, v[2:3] offset:19
-; CHECK-NEXT:    flat_load_ubyte v17, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ubyte v18, v[2:3] offset:17
-; CHECK-NEXT:    flat_load_ubyte v19, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ubyte v20, v[2:3] offset:15
-; CHECK-NEXT:    flat_load_ubyte v21, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ubyte v22, v[2:3] offset:13
-; CHECK-NEXT:    flat_load_ubyte v23, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ubyte v24, v[2:3] offset:11
-; CHECK-NEXT:    flat_load_ubyte v25, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ubyte v26, v[2:3] offset:9
-; CHECK-NEXT:    flat_load_ubyte v27, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ubyte v28, v[2:3] offset:7
-; CHECK-NEXT:    flat_load_ubyte v29, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ubyte v30, v[2:3] offset:5
-; CHECK-NEXT:    flat_load_ubyte v31, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ubyte v32, v[2:3] offset:3
-; CHECK-NEXT:    flat_load_ubyte v33, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ubyte v34, v[2:3] offset:1
-; CHECK-NEXT:    flat_load_ubyte v2, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(31) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v34 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p0_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -590,42 +317,6 @@ define void @memcpy_p0_p0_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p0_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    flat_load_ushort v4, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ushort v5, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ushort v6, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ushort v7, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ushort v8, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ushort v9, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ushort v2, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -689,66 +380,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ubyte v4, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_ushort v5, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_ushort v6, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ushort v7, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ushort v8, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ushort v9, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ushort v11, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ushort v12, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ushort v13, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ushort v14, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ushort v15, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ushort v16, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ushort v17, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ushort v18, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ushort v2, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v18 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p0_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -809,66 +440,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ushort v4, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_ushort v5, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_ushort v6, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ushort v7, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ushort v8, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ushort v9, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ushort v11, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ushort v12, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ushort v13, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ushort v14, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ushort v15, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ushort v16, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ushort v17, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ushort v18, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ushort v2, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v18 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p0_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -880,20 +451,6 @@ define void @memcpy_p0_p0_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p0_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[2:5], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -960,32 +517,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    flat_load_dword v8, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3]
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_dword v9, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    flat_store_dword v[0:1], v8 offset:16
-; CHECK-NEXT:    flat_load_dword v8, v[2:3] offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(2)
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[8:9] offset:20
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p0_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -1004,24 +535,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p0_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -1033,20 +546,6 @@ define void @memcpy_p0_p0_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p0_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[2:5], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -1113,33 +612,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p0_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_dword v9, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    flat_store_dword v[0:1], v9 offset:16
-; CHECK-NEXT:    flat_load_dword v9, v[2:3] offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dword v[0:1], v9 offset:20
-; CHECK-NEXT:    flat_load_dword v2, v[2:3] offset:24
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(2)
-; CHECK-NEXT:    flat_store_dword v[0:1], v2 offset:24
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p0_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -1155,24 +627,6 @@ define void @memcpy_p0_p0_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p0_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p0_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p0.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -1233,66 +687,6 @@ define void @memcpy_p0_p1_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p1.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p1_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:15
-; CHECK-NEXT:    global_load_ubyte v5, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ubyte v6, v[2:3], off offset:13
-; CHECK-NEXT:    global_load_ubyte v7, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:11
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ubyte v10, v[2:3], off offset:9
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ubyte v12, v[2:3], off offset:7
-; CHECK-NEXT:    global_load_ubyte v13, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ubyte v14, v[2:3], off offset:5
-; CHECK-NEXT:    global_load_ubyte v15, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ubyte v16, v[2:3], off offset:3
-; CHECK-NEXT:    global_load_ubyte v17, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ubyte v18, v[2:3], off offset:1
-; CHECK-NEXT:    global_load_ubyte v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -1399,111 +793,6 @@ define void @memcpy_p0_p1_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p1.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p1_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ubyte v5, v[2:3], off offset:29
-; CHECK-NEXT:    global_load_ubyte v6, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ubyte v7, v[2:3], off offset:27
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:25
-; CHECK-NEXT:    global_load_ubyte v10, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:23
-; CHECK-NEXT:    global_load_ubyte v12, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ubyte v13, v[2:3], off offset:21
-; CHECK-NEXT:    global_load_ubyte v14, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ubyte v15, v[2:3], off offset:19
-; CHECK-NEXT:    global_load_ubyte v16, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ubyte v17, v[2:3], off offset:17
-; CHECK-NEXT:    global_load_ubyte v18, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ubyte v19, v[2:3], off offset:15
-; CHECK-NEXT:    global_load_ubyte v20, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ubyte v21, v[2:3], off offset:13
-; CHECK-NEXT:    global_load_ubyte v22, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ubyte v23, v[2:3], off offset:11
-; CHECK-NEXT:    global_load_ubyte v24, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ubyte v25, v[2:3], off offset:9
-; CHECK-NEXT:    global_load_ubyte v26, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ubyte v27, v[2:3], off offset:7
-; CHECK-NEXT:    global_load_ubyte v28, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ubyte v29, v[2:3], off offset:5
-; CHECK-NEXT:    global_load_ubyte v30, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ubyte v31, v[2:3], off offset:3
-; CHECK-NEXT:    global_load_ubyte v32, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ubyte v33, v[2:3], off offset:1
-; CHECK-NEXT:    global_load_ubyte v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -1616,114 +905,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:31
-; CHECK-NEXT:    global_load_ubyte v5, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ubyte v6, v[2:3], off offset:29
-; CHECK-NEXT:    global_load_ubyte v7, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:27
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ubyte v10, v[2:3], off offset:25
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v12, v[2:3], off offset:23
-; CHECK-NEXT:    global_load_ubyte v13, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ubyte v14, v[2:3], off offset:21
-; CHECK-NEXT:    global_load_ubyte v15, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ubyte v16, v[2:3], off offset:19
-; CHECK-NEXT:    global_load_ubyte v17, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ubyte v18, v[2:3], off offset:17
-; CHECK-NEXT:    global_load_ubyte v19, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ubyte v20, v[2:3], off offset:15
-; CHECK-NEXT:    global_load_ubyte v21, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ubyte v22, v[2:3], off offset:13
-; CHECK-NEXT:    global_load_ubyte v23, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ubyte v24, v[2:3], off offset:11
-; CHECK-NEXT:    global_load_ubyte v25, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ubyte v26, v[2:3], off offset:9
-; CHECK-NEXT:    global_load_ubyte v27, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ubyte v28, v[2:3], off offset:7
-; CHECK-NEXT:    global_load_ubyte v29, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ubyte v30, v[2:3], off offset:5
-; CHECK-NEXT:    global_load_ubyte v31, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ubyte v32, v[2:3], off offset:3
-; CHECK-NEXT:    global_load_ubyte v33, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ubyte v34, v[2:3], off offset:1
-; CHECK-NEXT:    global_load_ubyte v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v34 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p1_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -1757,42 +938,6 @@ define void @memcpy_p0_p1_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p1.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p1_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    global_load_ushort v4, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ushort v5, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ushort v6, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ushort v7, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ushort v8, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ushort v9, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ushort v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -1856,66 +1001,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v5, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ushort v6, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ushort v7, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ushort v8, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ushort v9, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ushort v11, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v12, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ushort v13, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ushort v14, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ushort v15, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ushort v16, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ushort v17, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ushort v18, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ushort v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v18 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p1_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -1976,66 +1061,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ushort v4, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v5, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ushort v6, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ushort v7, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ushort v8, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ushort v9, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ushort v11, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v12, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ushort v13, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ushort v14, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ushort v15, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ushort v16, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ushort v17, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ushort v18, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ushort v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v18 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p1_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -2047,20 +1072,6 @@ define void @memcpy_p0_p1_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p1.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p1_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -2105,32 +1116,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_dword v[0:1], v8 offset:16
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[8:9] offset:20
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p1_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -2149,24 +1134,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p1_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -2178,20 +1145,6 @@ define void @memcpy_p0_p1_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p1.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p1_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -2236,33 +1189,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p1_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_dword v[0:1], v9 offset:16
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dword v[0:1], v9 offset:20
-; CHECK-NEXT:    global_load_dword v2, v[2:3], off offset:24
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dword v[0:1], v2 offset:24
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p1_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -2278,24 +1204,6 @@ define void @memcpy_p0_p1_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p1.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p1_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p1_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p1.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -2355,65 +1263,6 @@ define void @memcpy_p0_p3_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p3.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p3_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v3, v2 offset:15
-; CHECK-NEXT:    ds_read_u8 v4, v2 offset:14
-; CHECK-NEXT:    ds_read_u8 v5, v2 offset:13
-; CHECK-NEXT:    ds_read_u8 v6, v2 offset:12
-; CHECK-NEXT:    ds_read_u8 v7, v2 offset:11
-; CHECK-NEXT:    ds_read_u8 v8, v2 offset:10
-; CHECK-NEXT:    ds_read_u8 v9, v2 offset:9
-; CHECK-NEXT:    ds_read_u8 v10, v2 offset:8
-; CHECK-NEXT:    ds_read_u8 v11, v2 offset:7
-; CHECK-NEXT:    ds_read_u8 v12, v2 offset:6
-; CHECK-NEXT:    ds_read_u8 v13, v2 offset:5
-; CHECK-NEXT:    ds_read_u8 v14, v2 offset:4
-; CHECK-NEXT:    ds_read_u8 v15, v2 offset:3
-; CHECK-NEXT:    ds_read_u8 v16, v2 offset:2
-; CHECK-NEXT:    ds_read_u8 v17, v2 offset:1
-; CHECK-NEXT:    ds_read_u8 v2, v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:15
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:13
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:11
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:9
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:7
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:5
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -2515,83 +1364,6 @@ define void @memcpy_p0_p3_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p3.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p3_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v3, v2 offset:24
-; CHECK-NEXT:    ds_read_u8 v4, v2 offset:25
-; CHECK-NEXT:    ds_read_u8 v5, v2 offset:26
-; CHECK-NEXT:    ds_read_u8 v6, v2 offset:27
-; CHECK-NEXT:    ds_read_u8 v7, v2 offset:28
-; CHECK-NEXT:    ds_read_u8 v8, v2 offset:29
-; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
-; CHECK-NEXT:    ds_read_u8 v10, v2 offset:16
-; CHECK-NEXT:    ds_read_u8 v11, v2 offset:17
-; CHECK-NEXT:    ds_read_u8 v12, v2 offset:18
-; CHECK-NEXT:    ds_read_u8 v13, v2 offset:19
-; CHECK-NEXT:    ds_read_u8 v14, v2 offset:20
-; CHECK-NEXT:    ds_read_u8 v15, v2 offset:21
-; CHECK-NEXT:    ds_read_u8 v16, v2 offset:22
-; CHECK-NEXT:    ds_read_u8 v17, v2 offset:23
-; CHECK-NEXT:    ds_read_u8 v18, v2 offset:8
-; CHECK-NEXT:    ds_read_u8 v19, v2 offset:9
-; CHECK-NEXT:    ds_read_u8 v20, v2 offset:10
-; CHECK-NEXT:    ds_read_u8 v21, v2 offset:11
-; CHECK-NEXT:    ds_read_u8 v22, v2 offset:12
-; CHECK-NEXT:    ds_read_u8 v23, v2 offset:13
-; CHECK-NEXT:    ds_read_u8 v24, v2 offset:14
-; CHECK-NEXT:    ds_read_u8 v25, v2 offset:15
-; CHECK-NEXT:    ds_read_u8 v26, v2
-; CHECK-NEXT:    ds_read_u8 v27, v2 offset:1
-; CHECK-NEXT:    ds_read_u8 v28, v2 offset:2
-; CHECK-NEXT:    ds_read_u8 v29, v2 offset:3
-; CHECK-NEXT:    ds_read_u8 v30, v2 offset:4
-; CHECK-NEXT:    ds_read_u8 v31, v2 offset:5
-; CHECK-NEXT:    ds_read_u8 v32, v2 offset:6
-; CHECK-NEXT:    ds_read_u8 v2, v2 offset:7
-; CHECK-NEXT:    s_waitcnt lgkmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:30
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:29
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:28
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:27
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:26
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:25
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:23
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:22
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:21
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:20
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:19
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:18
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:17
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:15
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:14
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:13
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:12
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:11
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:10
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:9
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:7
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:6
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:5
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:4
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:3
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:2
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:1
-; CHECK-NEXT:    flat_store_byte v[0:1], v26
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -2700,85 +1472,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v3, v2 offset:24
-; CHECK-NEXT:    ds_read_u8 v4, v2 offset:25
-; CHECK-NEXT:    ds_read_u8 v5, v2 offset:26
-; CHECK-NEXT:    ds_read_u8 v6, v2 offset:27
-; CHECK-NEXT:    ds_read_u8 v7, v2 offset:28
-; CHECK-NEXT:    ds_read_u8 v8, v2 offset:29
-; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
-; CHECK-NEXT:    ds_read_u8 v10, v2 offset:31
-; CHECK-NEXT:    ds_read_u8 v11, v2 offset:16
-; CHECK-NEXT:    ds_read_u8 v12, v2 offset:17
-; CHECK-NEXT:    ds_read_u8 v13, v2 offset:18
-; CHECK-NEXT:    ds_read_u8 v14, v2 offset:19
-; CHECK-NEXT:    ds_read_u8 v15, v2 offset:20
-; CHECK-NEXT:    ds_read_u8 v16, v2 offset:21
-; CHECK-NEXT:    ds_read_u8 v17, v2 offset:22
-; CHECK-NEXT:    ds_read_u8 v18, v2 offset:23
-; CHECK-NEXT:    ds_read_u8 v19, v2 offset:8
-; CHECK-NEXT:    ds_read_u8 v20, v2 offset:9
-; CHECK-NEXT:    ds_read_u8 v21, v2 offset:10
-; CHECK-NEXT:    ds_read_u8 v22, v2 offset:11
-; CHECK-NEXT:    ds_read_u8 v23, v2 offset:12
-; CHECK-NEXT:    ds_read_u8 v24, v2 offset:13
-; CHECK-NEXT:    ds_read_u8 v25, v2 offset:14
-; CHECK-NEXT:    ds_read_u8 v26, v2 offset:15
-; CHECK-NEXT:    ds_read_u8 v27, v2
-; CHECK-NEXT:    ds_read_u8 v28, v2 offset:1
-; CHECK-NEXT:    ds_read_u8 v29, v2 offset:2
-; CHECK-NEXT:    ds_read_u8 v30, v2 offset:3
-; CHECK-NEXT:    ds_read_u8 v31, v2 offset:4
-; CHECK-NEXT:    ds_read_u8 v32, v2 offset:5
-; CHECK-NEXT:    ds_read_u8 v33, v2 offset:6
-; CHECK-NEXT:    ds_read_u8 v2, v2 offset:7
-; CHECK-NEXT:    s_waitcnt lgkmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:31
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:30
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:29
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:28
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:27
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:26
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:25
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:23
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:22
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:21
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:20
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:19
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:18
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:17
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:15
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:14
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:13
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:12
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:11
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:10
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:9
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:7
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:6
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:5
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:4
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:3
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:2
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:1
-; CHECK-NEXT:    flat_store_byte v[0:1], v27
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p3_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -2811,41 +1504,6 @@ define void @memcpy_p0_p3_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p3.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p3_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u16 v3, v2 offset:14
-; CHECK-NEXT:    ds_read_u16 v4, v2 offset:12
-; CHECK-NEXT:    ds_read_u16 v5, v2 offset:10
-; CHECK-NEXT:    ds_read_u16 v6, v2 offset:8
-; CHECK-NEXT:    ds_read_u16 v7, v2 offset:6
-; CHECK-NEXT:    ds_read_u16 v8, v2 offset:4
-; CHECK-NEXT:    ds_read_u16 v9, v2 offset:2
-; CHECK-NEXT:    ds_read_u16 v2, v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v3 offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -2908,65 +1566,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v3, v2 offset:30
-; CHECK-NEXT:    ds_read_u16 v4, v2 offset:28
-; CHECK-NEXT:    ds_read_u16 v5, v2 offset:26
-; CHECK-NEXT:    ds_read_u16 v6, v2 offset:24
-; CHECK-NEXT:    ds_read_u16 v7, v2 offset:22
-; CHECK-NEXT:    ds_read_u16 v8, v2 offset:20
-; CHECK-NEXT:    ds_read_u16 v9, v2 offset:18
-; CHECK-NEXT:    ds_read_u16 v10, v2 offset:16
-; CHECK-NEXT:    ds_read_u16 v11, v2 offset:14
-; CHECK-NEXT:    ds_read_u16 v12, v2 offset:12
-; CHECK-NEXT:    ds_read_u16 v13, v2 offset:10
-; CHECK-NEXT:    ds_read_u16 v14, v2 offset:8
-; CHECK-NEXT:    ds_read_u16 v15, v2 offset:6
-; CHECK-NEXT:    ds_read_u16 v16, v2 offset:4
-; CHECK-NEXT:    ds_read_u16 v17, v2 offset:2
-; CHECK-NEXT:    ds_read_u16 v2, v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:26
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:22
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:20
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:18
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p3_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -3026,65 +1625,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u16 v3, v2 offset:30
-; CHECK-NEXT:    ds_read_u16 v4, v2 offset:28
-; CHECK-NEXT:    ds_read_u16 v5, v2 offset:26
-; CHECK-NEXT:    ds_read_u16 v6, v2 offset:24
-; CHECK-NEXT:    ds_read_u16 v7, v2 offset:22
-; CHECK-NEXT:    ds_read_u16 v8, v2 offset:20
-; CHECK-NEXT:    ds_read_u16 v9, v2 offset:18
-; CHECK-NEXT:    ds_read_u16 v10, v2 offset:16
-; CHECK-NEXT:    ds_read_u16 v11, v2 offset:14
-; CHECK-NEXT:    ds_read_u16 v12, v2 offset:12
-; CHECK-NEXT:    ds_read_u16 v13, v2 offset:10
-; CHECK-NEXT:    ds_read_u16 v14, v2 offset:8
-; CHECK-NEXT:    ds_read_u16 v15, v2 offset:6
-; CHECK-NEXT:    ds_read_u16 v16, v2 offset:4
-; CHECK-NEXT:    ds_read_u16 v17, v2 offset:2
-; CHECK-NEXT:    ds_read_u16 v2, v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v3 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:26
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:22
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:20
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:18
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p3_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -3096,20 +1636,6 @@ define void @memcpy_p0_p3_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p3.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p3_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v2 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -3153,30 +1679,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b32 v[6:7], v2 offset0:4 offset1:5
-; CHECK-NEXT:    ds_read_b32 v8, v2 offset:24
-; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
-; CHECK-NEXT:    ds_read_u16 v10, v2 offset:28
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v2 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_dwordx3 v[0:1], v[6:8] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p3_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -3194,23 +1696,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[3:6], v2 offset0:2 offset1:3
-; CHECK-NEXT:    ds_read2_b64 v[7:10], v2 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p3_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -3222,20 +1707,6 @@ define void @memcpy_p0_p3_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p3.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p3_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[2:5], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -3279,30 +1750,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p3_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b32 v[6:7], v2 offset0:4 offset1:5
-; CHECK-NEXT:    ds_read_b32 v8, v2 offset:24
-; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
-; CHECK-NEXT:    ds_read_u16 v10, v2 offset:28
-; CHECK-NEXT:    ds_read_b128 v[2:5], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_dwordx3 v[0:1], v[6:8] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p3_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -3317,23 +1764,6 @@ define void @memcpy_p0_p3_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p3.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p3_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p3_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[3:6], v2 offset:16
-; CHECK-NEXT:    ds_read_b128 v[7:10], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p3.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -3394,66 +1824,6 @@ define void @memcpy_p0_p4_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p4.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p4_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:15
-; CHECK-NEXT:    global_load_ubyte v5, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ubyte v6, v[2:3], off offset:13
-; CHECK-NEXT:    global_load_ubyte v7, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:11
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ubyte v10, v[2:3], off offset:9
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ubyte v12, v[2:3], off offset:7
-; CHECK-NEXT:    global_load_ubyte v13, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ubyte v14, v[2:3], off offset:5
-; CHECK-NEXT:    global_load_ubyte v15, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ubyte v16, v[2:3], off offset:3
-; CHECK-NEXT:    global_load_ubyte v17, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ubyte v18, v[2:3], off offset:1
-; CHECK-NEXT:    global_load_ubyte v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -3559,111 +1929,6 @@ define void @memcpy_p0_p4_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p4.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p4_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ubyte v5, v[2:3], off offset:29
-; CHECK-NEXT:    global_load_ubyte v6, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ubyte v7, v[2:3], off offset:27
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:25
-; CHECK-NEXT:    global_load_ubyte v10, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:23
-; CHECK-NEXT:    global_load_ubyte v12, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ubyte v13, v[2:3], off offset:21
-; CHECK-NEXT:    global_load_ubyte v14, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ubyte v15, v[2:3], off offset:19
-; CHECK-NEXT:    global_load_ubyte v16, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ubyte v17, v[2:3], off offset:17
-; CHECK-NEXT:    global_load_ubyte v18, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ubyte v19, v[2:3], off offset:15
-; CHECK-NEXT:    global_load_ubyte v20, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ubyte v21, v[2:3], off offset:13
-; CHECK-NEXT:    global_load_ubyte v22, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ubyte v23, v[2:3], off offset:11
-; CHECK-NEXT:    global_load_ubyte v24, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ubyte v25, v[2:3], off offset:9
-; CHECK-NEXT:    global_load_ubyte v26, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ubyte v27, v[2:3], off offset:7
-; CHECK-NEXT:    global_load_ubyte v28, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ubyte v29, v[2:3], off offset:5
-; CHECK-NEXT:    global_load_ubyte v30, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ubyte v31, v[2:3], off offset:3
-; CHECK-NEXT:    global_load_ubyte v32, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ubyte v33, v[2:3], off offset:1
-; CHECK-NEXT:    global_load_ubyte v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -3776,114 +2041,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:31
-; CHECK-NEXT:    global_load_ubyte v5, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ubyte v6, v[2:3], off offset:29
-; CHECK-NEXT:    global_load_ubyte v7, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:27
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ubyte v10, v[2:3], off offset:25
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v12, v[2:3], off offset:23
-; CHECK-NEXT:    global_load_ubyte v13, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ubyte v14, v[2:3], off offset:21
-; CHECK-NEXT:    global_load_ubyte v15, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ubyte v16, v[2:3], off offset:19
-; CHECK-NEXT:    global_load_ubyte v17, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ubyte v18, v[2:3], off offset:17
-; CHECK-NEXT:    global_load_ubyte v19, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ubyte v20, v[2:3], off offset:15
-; CHECK-NEXT:    global_load_ubyte v21, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ubyte v22, v[2:3], off offset:13
-; CHECK-NEXT:    global_load_ubyte v23, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ubyte v24, v[2:3], off offset:11
-; CHECK-NEXT:    global_load_ubyte v25, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ubyte v26, v[2:3], off offset:9
-; CHECK-NEXT:    global_load_ubyte v27, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ubyte v28, v[2:3], off offset:7
-; CHECK-NEXT:    global_load_ubyte v29, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ubyte v30, v[2:3], off offset:5
-; CHECK-NEXT:    global_load_ubyte v31, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ubyte v32, v[2:3], off offset:3
-; CHECK-NEXT:    global_load_ubyte v33, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ubyte v34, v[2:3], off offset:1
-; CHECK-NEXT:    global_load_ubyte v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v34 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p4_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -3916,42 +2073,6 @@ define void @memcpy_p0_p4_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p4.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p4_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    global_load_ushort v4, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ushort v5, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ushort v6, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ushort v7, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ushort v8, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ushort v9, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ushort v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -4015,66 +2136,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v5, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ushort v6, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ushort v7, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ushort v8, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ushort v9, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ushort v11, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v12, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ushort v13, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ushort v14, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ushort v15, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ushort v16, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ushort v17, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ushort v18, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ushort v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v18 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p4_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -4135,66 +2196,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ushort v4, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v5, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_ushort v6, v[2:3], off offset:26
-; CHECK-NEXT:    global_load_ushort v7, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ushort v8, v[2:3], off offset:22
-; CHECK-NEXT:    global_load_ushort v9, v[2:3], off offset:20
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:18
-; CHECK-NEXT:    global_load_ushort v11, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v12, v[2:3], off offset:14
-; CHECK-NEXT:    global_load_ushort v13, v[2:3], off offset:12
-; CHECK-NEXT:    global_load_ushort v14, v[2:3], off offset:10
-; CHECK-NEXT:    global_load_ushort v15, v[2:3], off offset:8
-; CHECK-NEXT:    global_load_ushort v16, v[2:3], off offset:6
-; CHECK-NEXT:    global_load_ushort v17, v[2:3], off offset:4
-; CHECK-NEXT:    global_load_ushort v18, v[2:3], off offset:2
-; CHECK-NEXT:    global_load_ushort v2, v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v18 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p4_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -4206,20 +2207,6 @@ define void @memcpy_p0_p4_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p4.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p4_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -4263,32 +2250,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_dword v[0:1], v8 offset:16
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[8:9] offset:20
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p4_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -4306,24 +2267,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p4_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -4335,20 +2278,6 @@ define void @memcpy_p0_p4_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p4.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p4_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -4392,33 +2321,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p4_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_dword v[0:1], v9 offset:16
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dword v[0:1], v9 offset:20
-; CHECK-NEXT:    global_load_dword v2, v[2:3], off offset:24
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dword v[0:1], v2 offset:24
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -4433,24 +2335,6 @@ define void @memcpy_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p4.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p4_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p4_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p4.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -4511,66 +2395,6 @@ define void @memcpy_p0_p5_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p5.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p5_sz16_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -4675,111 +2499,6 @@ define void @memcpy_p0_p5_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p5.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p5_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v22, v2, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v23, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v24, v2, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v25, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v26, v2, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v27, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v28, v2, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v29, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v30, v2, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v31, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v32, v2, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -4891,114 +2610,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v22, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v23, v2, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v24, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v25, v2, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v26, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v27, v2, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v28, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v29, v2, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v30, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v31, v2, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v32, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v33, v2, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_byte v[0:1], v21 offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_byte v[0:1], v22 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_byte v[0:1], v23 offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_byte v[0:1], v24 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_byte v[0:1], v25 offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_byte v[0:1], v26 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_byte v[0:1], v27 offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_byte v[0:1], v28 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_byte v[0:1], v29 offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v30 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_byte v[0:1], v31 offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_byte v[0:1], v32 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_byte v[0:1], v33 offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p5_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -5032,42 +2643,6 @@ define void @memcpy_p0_p5_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p5.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p5_sz16_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_ushort v3, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v4, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v5, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v6, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v7, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v8, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v9, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v2, v2, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v3 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -5131,66 +2706,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v4, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ushort v5, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ushort v6, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v7, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v9, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v11, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v12, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v13, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v14, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v15, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v16, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v17, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v2, v2, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p5_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -5251,66 +2766,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ushort v3, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v4, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ushort v5, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ushort v6, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v7, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v9, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v11, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v12, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v13, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v14, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v15, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v16, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v17, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v2, v2, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    flat_store_short v[0:1], v3 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    flat_store_short v[0:1], v4 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    flat_store_short v[0:1], v5 offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_short v[0:1], v6 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    flat_store_short v[0:1], v8 offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    flat_store_short v[0:1], v9 offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_short v[0:1], v12 offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v13 offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_short v[0:1], v14 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    flat_store_short v[0:1], v15 offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    flat_store_short v[0:1], v16 offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    flat_store_short v[0:1], v17 offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_short v[0:1], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p5_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -5326,24 +2781,6 @@ define void @memcpy_p0_p5_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p5.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p5_sz16_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -5405,34 +2842,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz31_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_dwordx3 v[0:1], v[7:9] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p5_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -5457,30 +2866,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz32_align_8_8(ptr addrspace(0) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p5_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -5496,24 +2881,6 @@ define void @memcpy_p0_p5_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p5.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p5_sz16_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -5575,34 +2942,6 @@ entry:
   ret void
 }
 
-define void @memmove_p0_p5_sz31_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    flat_store_dwordx3 v[0:1], v[7:9] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:30
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p0_p5_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p0_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -5624,30 +2963,6 @@ define void @memcpy_p0_p5_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p0.p5.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p0_p5_sz32_align_16_16(ptr addrspace(0) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p0_p5_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p0.p5.i64(ptr addrspace(0) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -5694,52 +3009,6 @@ define void @memcpy_p1_p0_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p0_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ubyte v4, v[2:3] offset:5
-; CHECK-NEXT:    flat_load_ubyte v5, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ubyte v6, v[2:3] offset:7
-; CHECK-NEXT:    flat_load_ubyte v7, v[2:3]
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:1
-; CHECK-NEXT:    flat_load_ubyte v9, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ubyte v10, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:3
-; CHECK-NEXT:    flat_load_ubyte v12, v[2:3] offset:15
-; CHECK-NEXT:    flat_load_ubyte v13, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ubyte v14, v[2:3] offset:13
-; CHECK-NEXT:    flat_load_ubyte v15, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ubyte v16, v[2:3] offset:9
-; CHECK-NEXT:    flat_load_ubyte v17, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ubyte v18, v[2:3] offset:11
-; CHECK-NEXT:    flat_load_ubyte v2, v[2:3] offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v4, 8, v10
-; CHECK-NEXT:    v_lshl_or_b32 v4, v6, 8, v5
-; CHECK-NEXT:    v_lshl_or_b32 v5, v8, 8, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v11, 8, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v12, 8, v13
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v14, 8, v15
-; CHECK-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v16, 8, v17
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v18, 8, v2
-; CHECK-NEXT:    v_lshl_or_b32 v2, v6, 16, v5
-; CHECK-NEXT:    v_lshl_or_b32 v5, v8, 16, v7
-; CHECK-NEXT:    v_lshl_or_b32 v4, v10, 16, v9
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -5827,90 +3096,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    flat_load_ubyte v4, v[2:3] offset:15
-; CHECK-NEXT:    flat_load_ubyte v5, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ubyte v6, v[2:3] offset:13
-; CHECK-NEXT:    flat_load_ubyte v7, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:23
-; CHECK-NEXT:    flat_load_ubyte v9, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ubyte v10, v[2:3] offset:21
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ubyte v12, v[2:3] offset:29
-; CHECK-NEXT:    flat_load_ubyte v13, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_ubyte v14, v[2:3] offset:27
-; CHECK-NEXT:    flat_load_ubyte v15, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ubyte v16, v[2:3] offset:25
-; CHECK-NEXT:    flat_load_ubyte v17, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ubyte v18, v[2:3] offset:19
-; CHECK-NEXT:    flat_load_ubyte v19, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ubyte v20, v[2:3] offset:17
-; CHECK-NEXT:    flat_load_ubyte v21, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ubyte v22, v[2:3] offset:11
-; CHECK-NEXT:    flat_load_ubyte v23, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ubyte v24, v[2:3] offset:9
-; CHECK-NEXT:    flat_load_ubyte v25, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ubyte v26, v[2:3] offset:7
-; CHECK-NEXT:    flat_load_ubyte v27, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ubyte v28, v[2:3] offset:5
-; CHECK-NEXT:    flat_load_ubyte v29, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ubyte v30, v[2:3] offset:1
-; CHECK-NEXT:    flat_load_ubyte v31, v[2:3]
-; CHECK-NEXT:    flat_load_ubyte v32, v[2:3] offset:3
-; CHECK-NEXT:    flat_load_ubyte v33, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ubyte v2, v[2:3] offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(29) lgkmcnt(29)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v4, 8, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(25)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v8, 8, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(23) lgkmcnt(23)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v10, 8, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(22)
-; CHECK-NEXT:    v_lshlrev_b16 v12, 8, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(19) lgkmcnt(19)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v14, 8, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(17) lgkmcnt(17)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v16, 8, v17
-; CHECK-NEXT:    v_lshl_or_b32 v16, v6, 8, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v18, 8, v19
-; CHECK-NEXT:    v_lshl_or_b32 v7, v9, 16, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(13)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v20, 8, v21
-; CHECK-NEXT:    v_lshl_or_b32 v8, v14, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    v_lshl_or_b32 v18, v22, 8, v23
-; CHECK-NEXT:    v_lshl_or_b32 v5, v4, 16, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v17, v24, 8, v25
-; CHECK-NEXT:    v_lshl_or_b32 v6, v15, 16, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    v_lshl_or_b32 v20, v26, 8, v27
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    v_lshl_or_b32 v19, v28, 8, v29
-; CHECK-NEXT:    v_lshl_or_b32 v4, v18, 16, v17
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    v_lshl_or_b32 v21, v30, 8, v31
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    v_lshl_or_b32 v22, v32, 8, v33
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v12, v12, v2
-; CHECK-NEXT:    v_lshl_or_b32 v3, v20, 16, v19
-; CHECK-NEXT:    v_lshl_or_b32 v2, v22, 16, v21
-; CHECK-NEXT:    global_store_byte v[0:1], v13, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v12, off offset:28
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p0_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -5994,89 +3179,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    flat_load_ubyte v4, v[2:3] offset:29
-; CHECK-NEXT:    flat_load_ubyte v5, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_ubyte v6, v[2:3] offset:31
-; CHECK-NEXT:    flat_load_ubyte v7, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:25
-; CHECK-NEXT:    flat_load_ubyte v9, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ubyte v10, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:27
-; CHECK-NEXT:    flat_load_ubyte v12, v[2:3] offset:15
-; CHECK-NEXT:    flat_load_ubyte v13, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ubyte v14, v[2:3] offset:13
-; CHECK-NEXT:    flat_load_ubyte v15, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ubyte v16, v[2:3] offset:23
-; CHECK-NEXT:    flat_load_ubyte v17, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ubyte v18, v[2:3] offset:21
-; CHECK-NEXT:    flat_load_ubyte v19, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ubyte v20, v[2:3] offset:19
-; CHECK-NEXT:    flat_load_ubyte v21, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ubyte v22, v[2:3] offset:17
-; CHECK-NEXT:    flat_load_ubyte v23, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ubyte v24, v[2:3] offset:11
-; CHECK-NEXT:    flat_load_ubyte v25, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ubyte v26, v[2:3] offset:9
-; CHECK-NEXT:    flat_load_ubyte v27, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ubyte v28, v[2:3] offset:7
-; CHECK-NEXT:    flat_load_ubyte v29, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ubyte v30, v[2:3] offset:5
-; CHECK-NEXT:    flat_load_ubyte v31, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ubyte v32, v[2:3] offset:1
-; CHECK-NEXT:    flat_load_ubyte v33, v[2:3]
-; CHECK-NEXT:    flat_load_ubyte v34, v[2:3] offset:3
-; CHECK-NEXT:    flat_load_ubyte v2, v[2:3] offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(25)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v4, 8, v10
-; CHECK-NEXT:    v_lshl_or_b32 v4, v6, 8, v5
-; CHECK-NEXT:    v_lshl_or_b32 v6, v8, 8, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(24) lgkmcnt(24)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v11, 8, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(22)
-; CHECK-NEXT:    v_lshl_or_b32 v12, v12, 8, v13
-; CHECK-NEXT:    s_waitcnt vmcnt(20) lgkmcnt(20)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v14, 8, v15
-; CHECK-NEXT:    v_lshl_or_b32 v5, v4, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(18) lgkmcnt(18)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v16, 8, v17
-; CHECK-NEXT:    v_lshl_or_b32 v4, v7, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(16) lgkmcnt(16)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v18, 8, v19
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v20, 8, v21
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v22, 8, v23
-; CHECK-NEXT:    v_lshl_or_b32 v3, v9, 16, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v24, 8, v25
-; CHECK-NEXT:    v_lshl_or_b32 v9, v12, 16, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v13, v26, 8, v27
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v17, v28, 8, v29
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v16, v30, 8, v31
-; CHECK-NEXT:    v_lshl_or_b32 v8, v15, 16, v13
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v18, v32, 8, v33
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v19, v34, 8, v2
-; CHECK-NEXT:    v_lshl_or_b32 v2, v11, 16, v10
-; CHECK-NEXT:    v_lshl_or_b32 v7, v17, 16, v16
-; CHECK-NEXT:    v_lshl_or_b32 v6, v19, 16, v18
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:16
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p0_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6102,34 +3204,6 @@ define void @memcpy_p1_p0_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p0_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    flat_load_ushort v4, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ushort v5, v[2:3]
-; CHECK-NEXT:    flat_load_ushort v6, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ushort v7, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ushort v8, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ushort v9, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ushort v11, v[2:3] offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v4, 16, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v9, 16, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v10, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v11, 16, v7
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -6189,52 +3263,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ushort v4, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ushort v5, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ushort v9, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ushort v11, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_ushort v6, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ushort v7, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ushort v12, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ushort v13, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ushort v14, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ushort v15, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ushort v16, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ushort v17, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ushort v18, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ushort v19, v[2:3]
-; CHECK-NEXT:    flat_load_ubyte v20, v[2:3] offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v4, 16, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v9, 16, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v6, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v12, 16, v13
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v14, 16, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v16, 16, v17
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v18, 16, v19
-; CHECK-NEXT:    global_store_short v[0:1], v11, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_byte v[0:1], v20, off offset:30
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p0_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6278,49 +3306,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ushort v4, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_ushort v5, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_ushort v6, v[2:3] offset:26
-; CHECK-NEXT:    flat_load_ushort v7, v[2:3] offset:14
-; CHECK-NEXT:    flat_load_ushort v8, v[2:3] offset:12
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:10
-; CHECK-NEXT:    flat_load_ushort v11, v[2:3] offset:8
-; CHECK-NEXT:    flat_load_ushort v9, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ushort v12, v[2:3] offset:22
-; CHECK-NEXT:    flat_load_ushort v13, v[2:3] offset:20
-; CHECK-NEXT:    flat_load_ushort v14, v[2:3] offset:18
-; CHECK-NEXT:    flat_load_ushort v15, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ushort v16, v[2:3] offset:6
-; CHECK-NEXT:    flat_load_ushort v17, v[2:3] offset:4
-; CHECK-NEXT:    flat_load_ushort v18, v[2:3] offset:2
-; CHECK-NEXT:    flat_load_ushort v19, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v4, 16, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v6, 16, v9
-; CHECK-NEXT:    v_lshl_or_b32 v9, v7, 16, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v12, 16, v13
-; CHECK-NEXT:    v_lshl_or_b32 v8, v10, 16, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v14, 16, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v16, 16, v17
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v18, 16, v19
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:16
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p0_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6331,19 +3316,6 @@ define void @memcpy_p1_p0_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p0_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[2:5], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -6398,31 +3370,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    flat_load_dword v8, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3]
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_dword v9, v[2:3] offset:24
-; CHECK-NEXT:    flat_load_ubyte v11, v[2:3] offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    global_store_dword v[0:1], v8, off offset:16
-; CHECK-NEXT:    flat_load_dword v8, v[2:3] offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    global_store_byte v[0:1], v11, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[8:9], off offset:20
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p0_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6440,23 +3387,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p0_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6467,19 +3397,6 @@ define void @memcpy_p1_p0_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p0_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[2:5], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -6534,32 +3451,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    flat_load_ubyte v8, v[2:3] offset:30
-; CHECK-NEXT:    flat_load_dword v9, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_ushort v10, v[2:3] offset:28
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:16
-; CHECK-NEXT:    flat_load_dword v9, v[2:3] offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:20
-; CHECK-NEXT:    flat_load_dword v2, v[2:3] offset:24
-; CHECK-NEXT:    global_store_byte v[0:1], v8, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off offset:24
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p0_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6577,23 +3468,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p0_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p0_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6604,19 +3478,6 @@ define void @memcpy_p1_p1_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p1_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -6640,29 +3501,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx3 v[6:8], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_byte v[0:1], v9, off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6680,23 +3518,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6707,19 +3528,6 @@ define void @memcpy_p1_p1_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p1_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -6743,29 +3551,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx3 v[6:8], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_byte v[0:1], v9, off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6783,23 +3568,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6810,19 +3578,6 @@ define void @memcpy_p1_p1_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p1_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -6843,31 +3598,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    global_store_dword v[0:1], v8, off offset:16
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_byte v[0:1], v11, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[8:9], off offset:20
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6885,23 +3615,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6912,19 +3625,6 @@ define void @memcpy_p1_p1_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p1_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -6945,32 +3645,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:16
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:20
-; CHECK-NEXT:    global_load_dword v2, v[2:3], off offset:24
-; CHECK-NEXT:    global_store_byte v[0:1], v8, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off offset:24
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p1_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -6988,23 +3662,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p1_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p1_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7015,19 +3672,6 @@ define void @memcpy_p1_p3_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p3_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[2:5], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7050,31 +3694,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b64 v[7:8], v2
-; CHECK-NEXT:    ds_read_b128 v[3:6], v2 offset:8
-; CHECK-NEXT:    ds_read_b32 v9, v2 offset:24
-; CHECK-NEXT:    ds_read_u16 v10, v2 offset:28
-; CHECK-NEXT:    ds_read_u8 v2, v2 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[7:8], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_byte v[0:1], v2, off offset:30
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7091,22 +3710,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[3:6], v2
-; CHECK-NEXT:    ds_read_b128 v[7:10], v2 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7117,19 +3720,6 @@ define void @memcpy_p1_p3_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p3_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[2:5], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7152,31 +3742,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b64 v[7:8], v2
-; CHECK-NEXT:    ds_read_b128 v[3:6], v2 offset:8
-; CHECK-NEXT:    ds_read_b32 v9, v2 offset:24
-; CHECK-NEXT:    ds_read_u16 v10, v2 offset:28
-; CHECK-NEXT:    ds_read_u8 v2, v2 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[7:8], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_byte v[0:1], v2, off offset:30
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7193,22 +3758,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[3:6], v2
-; CHECK-NEXT:    ds_read_b128 v[7:10], v2 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7219,19 +3768,6 @@ define void @memcpy_p1_p3_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p3_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v2 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7251,28 +3787,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[3:6], v2 offset1:1
-; CHECK-NEXT:    ds_read_b32 v7, v2 offset:16
-; CHECK-NEXT:    ds_read_u8 v10, v2 offset:30
-; CHECK-NEXT:    ds_read2_b32 v[8:9], v2 offset0:5 offset1:6
-; CHECK-NEXT:    ds_read_u16 v2, v2 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[7:9], off offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_short v[0:1], v2, off offset:28
-; CHECK-NEXT:    global_store_byte v[0:1], v10, off offset:30
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7289,22 +3803,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[3:6], v2 offset1:1
-; CHECK-NEXT:    ds_read2_b64 v[7:10], v2 offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7315,19 +3813,6 @@ define void @memcpy_p1_p3_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p3.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p3_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[2:5], v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7347,28 +3832,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[3:6], v2
-; CHECK-NEXT:    ds_read_b32 v7, v2 offset:16
-; CHECK-NEXT:    ds_read_u8 v10, v2 offset:30
-; CHECK-NEXT:    ds_read2_b32 v[8:9], v2 offset0:5 offset1:6
-; CHECK-NEXT:    ds_read_u16 v2, v2 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[7:9], off offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_short v[0:1], v2, off offset:28
-; CHECK-NEXT:    global_store_byte v[0:1], v10, off offset:30
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p3_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7385,22 +3848,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p3_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p3_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[3:6], v2
-; CHECK-NEXT:    ds_read_b128 v[7:10], v2 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7411,19 +3858,6 @@ define void @memcpy_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p4_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7447,29 +3881,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx3 v[6:8], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_byte v[0:1], v9, off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7487,23 +3898,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7514,19 +3908,6 @@ define void @memcpy_p1_p4_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p4_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7550,29 +3931,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v9, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx3 v[6:8], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_byte v[0:1], v9, off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7590,23 +3948,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7617,19 +3958,6 @@ define void @memcpy_p1_p4_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p4_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7649,31 +3977,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[2:3], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    global_store_dword v[0:1], v8, off offset:16
-; CHECK-NEXT:    global_load_dword v8, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_byte v[0:1], v11, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[8:9], off offset:20
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7690,23 +3993,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7717,19 +4003,6 @@ define void @memcpy_p1_p4_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p4_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7749,32 +4022,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p4_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_ubyte v8, v[2:3], off offset:30
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[2:3], off offset:28
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:16
-; CHECK-NEXT:    global_load_dword v9, v[2:3], off offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dword v[0:1], v9, off offset:20
-; CHECK-NEXT:    global_load_dword v2, v[2:3], off offset:24
-; CHECK-NEXT:    global_store_byte v[0:1], v8, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off offset:24
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -7788,23 +4035,6 @@ define void @memcpy_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p4_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p4_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -7853,54 +4083,6 @@ define void @memcpy_p1_p5_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p5_sz16_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v4, 8, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v6, 8, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v8, 8, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v10, 8, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v12, 8, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v14, 8, v13
-; CHECK-NEXT:    v_lshl_or_b32 v3, v8, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v16, 8, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v2, 8, v17
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 16, v4
-; CHECK-NEXT:    v_lshl_or_b32 v5, v9, 16, v6
-; CHECK-NEXT:    v_lshl_or_b32 v4, v11, 16, v10
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -7989,92 +4171,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v22, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v23, v2, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v24, v2, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v25, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v26, v2, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v27, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v28, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v29, v2, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v30, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v31, v2, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v32, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v33, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v4, 8, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v6, 8, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    v_lshlrev_b16 v4, 8, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v9, 8, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v11, 8, v10
-; CHECK-NEXT:    v_lshl_or_b32 v8, v3, 16, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v13, 8, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v15, 8, v14
-; CHECK-NEXT:    v_lshl_or_b32 v2, v9, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    v_lshl_or_b32 v12, v17, 8, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v13, v19, 8, v18
-; CHECK-NEXT:    v_lshl_or_b32 v3, v6, 16, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v21, 8, v20
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v23, 8, v22
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v26, 8, v25
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v24, 8, v28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v16, v29, 8, v27
-; CHECK-NEXT:    v_lshl_or_b32 v5, v11, 16, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v17, v31, 8, v30
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    v_or_b32_e32 v18, v4, v32
-; CHECK-NEXT:    v_lshl_or_b32 v4, v13, 16, v12
-; CHECK-NEXT:    v_lshl_or_b32 v7, v15, 16, v14
-; CHECK-NEXT:    v_lshl_or_b32 v6, v16, 16, v17
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_byte v[0:1], v33, off offset:30
-; CHECK-NEXT:    global_store_short v[0:1], v18, off offset:28
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p5_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -8160,91 +4256,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz32_align_1_1(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v22, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v23, v2, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v24, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v25, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v26, v2, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v27, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v28, v2, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v29, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ubyte v30, v2, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    buffer_load_ubyte v31, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v32, v2, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v33, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v4, 8, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v6, 8, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v8, 8, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v10, 8, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v12, 8, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v14, 8, v13
-; CHECK-NEXT:    v_lshl_or_b32 v3, v8, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v16, 8, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v18, 8, v17
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    v_lshl_or_b32 v13, v21, 8, v20
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v23, 8, v22
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v12, v19, 8, v25
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v26, 8, v24
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v16, v28, 8, v27
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v17, v30, 8, v29
-; CHECK-NEXT:    v_lshl_or_b32 v7, v13, 16, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v18, v32, 8, v31
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v19, v2, 8, v33
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 16, v4
-; CHECK-NEXT:    v_lshl_or_b32 v5, v9, 16, v6
-; CHECK-NEXT:    v_lshl_or_b32 v4, v11, 16, v10
-; CHECK-NEXT:    v_lshl_or_b32 v6, v14, 16, v15
-; CHECK-NEXT:    v_lshl_or_b32 v9, v17, 16, v16
-; CHECK-NEXT:    v_lshl_or_b32 v8, v19, 16, v18
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p5_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -8270,34 +4281,6 @@ define void @memcpy_p1_p5_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p5_sz16_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_ushort v4, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ushort v5, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v3, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v6, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v7, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v8, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v9, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 16, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v6, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v8, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v10, 16, v9
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -8357,53 +4340,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ushort v3, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v4, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ushort v5, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ushort v6, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v7, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v9, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v11, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v12, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v13, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v14, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v15, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v16, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v17, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v18, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v4, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v6, 16, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v9, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v11, 16, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v13, 16, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v15, 16, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v17, 16, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    global_store_short v[0:1], v18, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_byte v[0:1], v19, off offset:30
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[6:8], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p5_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -8449,51 +4385,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz32_align_2_2(ptr addrspace(1) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ushort v4, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ushort v5, v2, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v3, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v6, v2, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v7, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v8, v2, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v9, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v11, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v12, v2, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v13, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v14, v2, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v15, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ushort v16, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v17, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v18, v2, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 16, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v6, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v8, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v10, 16, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v12, 16, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v14, 16, v13
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v16, 16, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v18, 16, v17
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p5_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -8508,23 +4399,6 @@ define void @memcpy_p1_p5_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p5_sz16_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -8582,34 +4456,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_byte v[0:1], v11, off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[7:9], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p5_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -8633,29 +4479,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz32_align_8_8(ptr addrspace(1) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p5_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -8670,23 +4493,6 @@ define void @memcpy_p1_p5_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p5_sz16_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -8744,34 +4550,6 @@ entry:
   ret void
 }
 
-define void @memmove_p1_p5_sz31_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    global_store_short v[0:1], v10, off offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_byte v[0:1], v11, off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx3 v[0:1], v[7:9], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p1_p5_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p1_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -8792,29 +4570,6 @@ define void @memcpy_p1_p5_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p1_p5_sz32_align_16_16(ptr addrspace(1) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p1_p5_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -8862,53 +4617,6 @@ define void @memcpy_p3_p0_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p0.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p0_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ubyte v3, v[1:2] offset:5
-; CHECK-NEXT:    flat_load_ubyte v4, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ubyte v5, v[1:2] offset:7
-; CHECK-NEXT:    flat_load_ubyte v6, v[1:2]
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:1
-; CHECK-NEXT:    flat_load_ubyte v8, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ubyte v9, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ubyte v10, v[1:2] offset:3
-; CHECK-NEXT:    flat_load_ubyte v11, v[1:2] offset:15
-; CHECK-NEXT:    flat_load_ubyte v12, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ubyte v13, v[1:2] offset:13
-; CHECK-NEXT:    flat_load_ubyte v14, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ubyte v15, v[1:2] offset:9
-; CHECK-NEXT:    flat_load_ubyte v16, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ubyte v17, v[1:2] offset:11
-; CHECK-NEXT:    flat_load_ubyte v1, v[1:2] offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v3, 8, v9
-; CHECK-NEXT:    v_lshl_or_b32 v3, v5, 8, v4
-; CHECK-NEXT:    v_lshl_or_b32 v4, v7, 8, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v10, 8, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v11, 8, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v13, 8, v14
-; CHECK-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v15, 8, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v17, 8, v1
-; CHECK-NEXT:    v_lshl_or_b32 v1, v5, 16, v4
-; CHECK-NEXT:    v_lshl_or_b32 v4, v7, 16, v6
-; CHECK-NEXT:    v_lshl_or_b32 v3, v9, 16, v8
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -8997,93 +4705,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    flat_load_ubyte v3, v[1:2] offset:15
-; CHECK-NEXT:    flat_load_ubyte v4, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ubyte v5, v[1:2] offset:13
-; CHECK-NEXT:    flat_load_ubyte v6, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:23
-; CHECK-NEXT:    flat_load_ubyte v8, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ubyte v9, v[1:2] offset:21
-; CHECK-NEXT:    flat_load_ubyte v10, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ubyte v11, v[1:2] offset:29
-; CHECK-NEXT:    flat_load_ubyte v12, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ubyte v13, v[1:2] offset:27
-; CHECK-NEXT:    flat_load_ubyte v14, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ubyte v15, v[1:2] offset:25
-; CHECK-NEXT:    flat_load_ubyte v16, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ubyte v17, v[1:2] offset:19
-; CHECK-NEXT:    flat_load_ubyte v18, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ubyte v19, v[1:2] offset:17
-; CHECK-NEXT:    flat_load_ubyte v20, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ubyte v21, v[1:2] offset:11
-; CHECK-NEXT:    flat_load_ubyte v22, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ubyte v23, v[1:2] offset:9
-; CHECK-NEXT:    flat_load_ubyte v24, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ubyte v25, v[1:2] offset:7
-; CHECK-NEXT:    flat_load_ubyte v26, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ubyte v27, v[1:2] offset:5
-; CHECK-NEXT:    flat_load_ubyte v28, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ubyte v29, v[1:2] offset:1
-; CHECK-NEXT:    flat_load_ubyte v30, v[1:2]
-; CHECK-NEXT:    flat_load_ubyte v31, v[1:2] offset:3
-; CHECK-NEXT:    flat_load_ubyte v32, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ubyte v1, v[1:2] offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(29) lgkmcnt(29)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v3, 8, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(27) lgkmcnt(27)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v5, 8, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(25)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v7, 8, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(23) lgkmcnt(23)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v9, 8, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(22)
-; CHECK-NEXT:    v_lshlrev_b16 v11, 8, v11
-; CHECK-NEXT:    v_lshl_or_b32 v4, v3, 16, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(19) lgkmcnt(19)
-; CHECK-NEXT:    v_lshl_or_b32 v13, v13, 8, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(17) lgkmcnt(17)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v15, 8, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v17, 8, v18
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(13)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v19, 8, v20
-; CHECK-NEXT:    v_lshl_or_b32 v13, v13, 16, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v21, 8, v22
-; CHECK-NEXT:    v_lshl_or_b32 v2, v7, 16, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v23, 8, v24
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    v_lshl_or_b32 v16, v25, 8, v26
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v27, 8, v28
-; CHECK-NEXT:    v_lshl_or_b32 v3, v14, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    v_lshl_or_b32 v17, v29, 8, v30
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    v_lshl_or_b32 v18, v31, 8, v32
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v11, v11, v1
-; CHECK-NEXT:    v_lshl_or_b32 v1, v10, 16, v8
-; CHECK-NEXT:    v_lshl_or_b32 v6, v16, 16, v15
-; CHECK-NEXT:    v_lshl_or_b32 v5, v18, 16, v17
-; CHECK-NEXT:    ds_write_b8 v0, v12 offset:30
-; CHECK-NEXT:    ds_write_b32 v0, v13 offset:24
-; CHECK-NEXT:    ds_write_b16 v0, v11 offset:28
-; CHECK-NEXT:    ds_write_b64 v0, v[1:2] offset:16
-; CHECK-NEXT:    ds_write2_b64 v0, v[5:6], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p0_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9168,90 +4789,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    flat_load_ubyte v3, v[1:2] offset:29
-; CHECK-NEXT:    flat_load_ubyte v4, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ubyte v5, v[1:2] offset:31
-; CHECK-NEXT:    flat_load_ubyte v6, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:25
-; CHECK-NEXT:    flat_load_ubyte v8, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ubyte v9, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_ubyte v10, v[1:2] offset:27
-; CHECK-NEXT:    flat_load_ubyte v11, v[1:2] offset:15
-; CHECK-NEXT:    flat_load_ubyte v12, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ubyte v13, v[1:2] offset:13
-; CHECK-NEXT:    flat_load_ubyte v14, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ubyte v15, v[1:2] offset:23
-; CHECK-NEXT:    flat_load_ubyte v16, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ubyte v17, v[1:2] offset:21
-; CHECK-NEXT:    flat_load_ubyte v18, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ubyte v19, v[1:2] offset:19
-; CHECK-NEXT:    flat_load_ubyte v20, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ubyte v21, v[1:2] offset:17
-; CHECK-NEXT:    flat_load_ubyte v22, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ubyte v23, v[1:2] offset:11
-; CHECK-NEXT:    flat_load_ubyte v24, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ubyte v25, v[1:2] offset:9
-; CHECK-NEXT:    flat_load_ubyte v26, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ubyte v27, v[1:2] offset:7
-; CHECK-NEXT:    flat_load_ubyte v28, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ubyte v29, v[1:2] offset:5
-; CHECK-NEXT:    flat_load_ubyte v30, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ubyte v31, v[1:2] offset:1
-; CHECK-NEXT:    flat_load_ubyte v32, v[1:2]
-; CHECK-NEXT:    flat_load_ubyte v33, v[1:2] offset:3
-; CHECK-NEXT:    flat_load_ubyte v1, v[1:2] offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(25)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v3, 8, v9
-; CHECK-NEXT:    v_lshl_or_b32 v3, v5, 8, v4
-; CHECK-NEXT:    v_lshl_or_b32 v4, v7, 8, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(24) lgkmcnt(24)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v10, 8, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(22)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v11, 8, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(20) lgkmcnt(20)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v13, 8, v14
-; CHECK-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(18) lgkmcnt(18)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v15, 8, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(16) lgkmcnt(16)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v17, 8, v18
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v19, 8, v20
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v21, 8, v22
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v13, v23, 8, v24
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v12, v25, 8, v26
-; CHECK-NEXT:    v_lshl_or_b32 v3, v9, 16, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v27, 8, v28
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v29, 8, v30
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v16, v31, 8, v32
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v17, v33, 8, v1
-; CHECK-NEXT:    v_lshl_or_b32 v1, v5, 16, v4
-; CHECK-NEXT:    v_lshl_or_b32 v4, v7, 16, v6
-; CHECK-NEXT:    v_lshl_or_b32 v6, v11, 16, v10
-; CHECK-NEXT:    v_lshl_or_b32 v5, v13, 16, v12
-; CHECK-NEXT:    v_lshl_or_b32 v8, v15, 16, v14
-; CHECK-NEXT:    v_lshl_or_b32 v7, v17, 16, v16
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[1:2] offset0:2 offset1:3
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p0_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9278,35 +4815,6 @@ define void @memcpy_p3_p0_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p0.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p0_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    flat_load_ushort v3, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ushort v4, v[1:2]
-; CHECK-NEXT:    flat_load_ushort v5, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ushort v6, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ushort v7, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ushort v8, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ushort v10, v[1:2] offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v3, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v8, 16, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v9, 16, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v10, 16, v6
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -9366,54 +4874,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ushort v3, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ushort v4, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ushort v5, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ushort v6, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ushort v7, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_ushort v8, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ushort v10, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ushort v11, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ushort v12, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ushort v13, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ushort v14, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ushort v15, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ushort v16, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ushort v17, v[1:2]
-; CHECK-NEXT:    flat_load_ubyte v18, v[1:2] offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v3, 16, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v5, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v8, 16, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v10, 16, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v12, 16, v13
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v14, 16, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v16, 16, v17
-; CHECK-NEXT:    ds_write_b16 v0, v7 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
-; CHECK-NEXT:    ds_write_b8 v0, v18 offset:30
-; CHECK-NEXT:    ds_write_b32 v0, v8 offset:24
-; CHECK-NEXT:    ds_write_b64 v0, v[1:2] offset:16
-; CHECK-NEXT:    ds_write2_b64 v0, v[5:6], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p0_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9459,51 +4919,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ushort v3, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ushort v4, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_ushort v5, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ushort v6, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ushort v7, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ushort v8, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ushort v10, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ushort v11, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ushort v12, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ushort v13, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ushort v14, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ushort v15, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ushort v16, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ushort v17, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ushort v18, v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v3, 16, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v6, 16, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v5, 16, v10
-; CHECK-NEXT:    v_lshl_or_b32 v5, v8, 16, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v11, 16, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v13, 16, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v15, 16, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v17, 16, v18
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[1:2] offset0:2 offset1:3
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p0_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9515,20 +4930,6 @@ define void @memcpy_p3_p0_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p0.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p0_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[1:4], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -9584,31 +4985,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2]
-; CHECK-NEXT:    flat_load_dwordx3 v[7:9], v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ubyte v10, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ushort v1, v[1:2] offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(3)
-; CHECK-NEXT:    ds_write2_b32 v0, v7, v8 offset0:4 offset1:5
-; CHECK-NEXT:    ds_write_b32 v0, v9 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b8 v0, v10 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b16 v0, v1 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p0_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9627,24 +5003,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[7:10], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[9:10] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p0_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9656,20 +5014,6 @@ define void @memcpy_p3_p0_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p0.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p0_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[1:4], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[1:4]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -9725,33 +5069,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_dword v8, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    ds_write_b32 v0, v8 offset:16
-; CHECK-NEXT:    flat_load_dword v8, v[1:2] offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_write_b32 v0, v8 offset:20
-; CHECK-NEXT:    flat_load_dword v1, v[1:2] offset:24
-; CHECK-NEXT:    ds_write_b8 v0, v7 offset:30
-; CHECK-NEXT:    ds_write_b16 v0, v9 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(2)
-; CHECK-NEXT:    ds_write_b32 v0, v1 offset:24
-; CHECK-NEXT:    ds_write_b128 v0, v[3:6]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p0_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9770,24 +5087,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p0_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p0_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[7:10], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v0, v[3:6] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v0, v[7:10]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p0.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9799,20 +5098,6 @@ define void @memcpy_p3_p1_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p1.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p1_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -9837,31 +5122,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write_b64 v0, v[7:8] offset:16
-; CHECK-NEXT:    ds_write_b32 v0, v9 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9880,24 +5140,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[9:10] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9909,20 +5151,6 @@ define void @memcpy_p3_p1_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p1.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p1_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -9947,31 +5175,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write_b64 v0, v[7:8] offset:16
-; CHECK-NEXT:    ds_write_b32 v0, v9 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -9990,24 +5193,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[9:10] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10019,20 +5204,6 @@ define void @memcpy_p3_p1_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p1.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p1_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10054,31 +5225,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write2_b32 v0, v8, v9 offset0:5 offset1:6
-; CHECK-NEXT:    ds_write_b32 v0, v7 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10097,24 +5243,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[9:10] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10126,20 +5254,6 @@ define void @memcpy_p3_p1_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p1.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p1_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[1:4]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10161,31 +5275,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b32 v0, v8, v9 offset0:5 offset1:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write_b128 v0, v[3:6]
-; CHECK-NEXT:    ds_write_b32 v0, v7 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p1_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10204,24 +5293,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p1_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p1_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v0, v[3:6]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[7:10] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p1.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10233,20 +5304,6 @@ define void @memcpy_p3_p3_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p3_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[1:4], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10270,32 +5327,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v7, v1 offset:30
-; CHECK-NEXT:    ds_read_u16 v8, v1 offset:28
-; CHECK-NEXT:    ds_read_b32 v9, v1 offset:24
-; CHECK-NEXT:    ds_read_b64 v[5:6], v1 offset:16
-; CHECK-NEXT:    ds_read2_b64 v[1:4], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b8 v0, v7 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b16 v0, v8 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b32 v0, v9 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b64 v0, v[5:6] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10313,23 +5344,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v1 offset0:2 offset1:3
-; CHECK-NEXT:    ds_read2_b64 v[6:9], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[6:7], v[8:9] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10341,20 +5355,6 @@ define void @memcpy_p3_p3_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p3_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[1:4], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10378,32 +5378,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v7, v1 offset:30
-; CHECK-NEXT:    ds_read_u16 v8, v1 offset:28
-; CHECK-NEXT:    ds_read_b32 v9, v1 offset:24
-; CHECK-NEXT:    ds_read_b64 v[5:6], v1 offset:16
-; CHECK-NEXT:    ds_read2_b64 v[1:4], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b8 v0, v7 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b16 v0, v8 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b32 v0, v9 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b64 v0, v[5:6] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10421,23 +5395,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v1 offset0:2 offset1:3
-; CHECK-NEXT:    ds_read2_b64 v[6:9], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[6:7], v[8:9] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10449,20 +5406,6 @@ define void @memcpy_p3_p3_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p3_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[1:4], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10483,32 +5426,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v1 offset1:1
-; CHECK-NEXT:    ds_read2_b32 v[6:7], v1 offset0:4 offset1:5
-; CHECK-NEXT:    ds_read_b32 v8, v1 offset:24
-; CHECK-NEXT:    ds_read_u8 v9, v1 offset:30
-; CHECK-NEXT:    ds_read_u16 v1, v1 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write2_b32 v0, v6, v7 offset0:4 offset1:5
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b32 v0, v8 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b8 v0, v9 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b16 v0, v1 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10526,23 +5443,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v1 offset0:2 offset1:3
-; CHECK-NEXT:    ds_read2_b64 v[6:9], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[6:7], v[8:9] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10554,20 +5454,6 @@ define void @memcpy_p3_p3_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p3_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[1:4], v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[1:4]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10588,32 +5474,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b32 v[5:6], v1 offset0:4 offset1:5
-; CHECK-NEXT:    ds_read_b32 v7, v1 offset:24
-; CHECK-NEXT:    ds_read_u8 v8, v1 offset:30
-; CHECK-NEXT:    ds_read_u16 v9, v1 offset:28
-; CHECK-NEXT:    ds_read_b128 v[1:4], v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write2_b32 v0, v5, v6 offset0:4 offset1:5
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b32 v0, v7 offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b8 v0, v8 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b16 v0, v9 offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    ds_write_b128 v0, v[1:4]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p3_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10631,23 +5491,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p3_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p3_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[2:5], v1 offset:16
-; CHECK-NEXT:    ds_read_b128 v[6:9], v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v0, v[2:5] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v0, v[6:9]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p3.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10659,20 +5502,6 @@ define void @memcpy_p3_p4_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p4.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p4_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10697,31 +5526,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write_b64 v0, v[7:8] offset:16
-; CHECK-NEXT:    ds_write_b32 v0, v9 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10740,24 +5544,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[9:10] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10769,20 +5555,6 @@ define void @memcpy_p3_p4_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p4.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p4_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10807,31 +5579,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write_b64 v0, v[7:8] offset:16
-; CHECK-NEXT:    ds_write_b32 v0, v9 offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10850,24 +5597,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[9:10] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10879,20 +5608,6 @@ define void @memcpy_p3_p4_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p4.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p4_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -10914,31 +5629,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write2_b32 v0, v8, v9 offset0:5 offset1:6
-; CHECK-NEXT:    ds_write_b32 v0, v7 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10957,24 +5647,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write2_b64 v0, v[3:4], v[5:6] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[7:8], v[9:10] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -10986,20 +5658,6 @@ define void @memcpy_p3_p4_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p4.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p4_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[1:4]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -11021,31 +5679,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p4_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx3 v[7:9], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b32 v0, v8, v9 offset0:5 offset1:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write_b128 v0, v[3:6]
-; CHECK-NEXT:    ds_write_b32 v0, v7 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p4_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11061,24 +5694,6 @@ define void @memcpy_p3_p4_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p4.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p4_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p4_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b128 v0, v[3:6]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[7:10] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p4.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -11128,55 +5743,6 @@ define void @memcpy_p3_p5_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p5.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p5_sz16_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v3, v1, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v4, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v6, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v7, v1, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v8, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v9, v1, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v10, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v11, v1, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v12, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v13, v1, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v14, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v15, v1, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v16, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v3, 8, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v5, 8, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v7, 8, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v9, 8, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v11, 8, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v13, 8, v12
-; CHECK-NEXT:    v_lshl_or_b32 v2, v7, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v15, 8, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v1, 8, v16
-; CHECK-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
-; CHECK-NEXT:    v_lshl_or_b32 v4, v8, 16, v5
-; CHECK-NEXT:    v_lshl_or_b32 v3, v10, 16, v9
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -11266,94 +5832,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v3, v1, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v4, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v6, v1, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v7, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v8, v1, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v9, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v10, v1, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v11, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v12, v1, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v13, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v14, v1, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v15, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v16, v1, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v17, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v18, v1, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v19, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v20, v1, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v21, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v22, v1, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v23, v1, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v24, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v25, v1, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v26, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v27, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v28, v1, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v29, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v30, v1, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v31, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v32, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v3, 8, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 8, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    v_lshlrev_b16 v3, 8, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v8, 8, v7
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v10, 8, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v12, 8, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v14, 8, v13
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v16, 8, v15
-; CHECK-NEXT:    v_lshl_or_b32 v16, v2, 16, v1
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v18, 8, v17
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 16, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v20, 8, v19
-; CHECK-NEXT:    v_lshl_or_b32 v1, v7, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v22, 8, v21
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    v_lshl_or_b32 v13, v25, 8, v24
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    v_lshl_or_b32 v12, v23, 8, v27
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v28, 8, v26
-; CHECK-NEXT:    v_lshl_or_b32 v4, v9, 16, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v30, 8, v29
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    v_or_b32_e32 v17, v3, v31
-; CHECK-NEXT:    v_lshl_or_b32 v3, v11, 16, v10
-; CHECK-NEXT:    v_lshl_or_b32 v6, v13, 16, v12
-; CHECK-NEXT:    v_lshl_or_b32 v5, v14, 16, v15
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v32 offset:30
-; CHECK-NEXT:    ds_write_b32 v0, v16 offset:24
-; CHECK-NEXT:    ds_write_b16 v0, v17 offset:28
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    ds_write_b64 v0, v[5:6] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p5_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11440,92 +5918,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz32_align_1_1(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v3, v1, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v4, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v6, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v7, v1, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v8, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v9, v1, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v10, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v11, v1, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v12, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v13, v1, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v14, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v15, v1, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v16, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v17, v1, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v18, v1, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v19, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v20, v1, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v21, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v22, v1, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v23, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v24, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v25, v1, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v26, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v27, v1, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v28, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ubyte v29, v1, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    buffer_load_ubyte v30, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v31, v1, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v32, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v3, 8, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v5, 8, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v7, 8, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v9, 8, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    v_lshl_or_b32 v9, v11, 8, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    v_lshl_or_b32 v10, v13, 8, v12
-; CHECK-NEXT:    v_lshl_or_b32 v2, v7, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v15, 8, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v17, 8, v16
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    v_lshl_or_b32 v12, v20, 8, v19
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    v_lshl_or_b32 v14, v22, 8, v21
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    v_lshl_or_b32 v11, v18, 8, v24
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v13, v25, 8, v23
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v15, v27, 8, v26
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v16, v29, 8, v28
-; CHECK-NEXT:    v_lshl_or_b32 v6, v12, 16, v11
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v17, v31, 8, v30
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v18, v1, 8, v32
-; CHECK-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
-; CHECK-NEXT:    v_lshl_or_b32 v4, v8, 16, v5
-; CHECK-NEXT:    v_lshl_or_b32 v3, v10, 16, v9
-; CHECK-NEXT:    v_lshl_or_b32 v5, v13, 16, v14
-; CHECK-NEXT:    v_lshl_or_b32 v8, v16, 16, v15
-; CHECK-NEXT:    v_lshl_or_b32 v7, v18, 16, v17
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    ds_write2_b64 v0, v[5:6], v[7:8] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p5_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11552,35 +5944,6 @@ define void @memcpy_p3_p5_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p5.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p5_sz16_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_ushort v3, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ushort v4, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v2, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v5, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v7, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v8, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v9, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 16, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v7, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v9, 16, v8
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -11641,55 +6004,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ushort v2, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v3, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ushort v4, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ushort v5, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v7, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v8, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v9, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v10, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v11, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v12, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v13, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v14, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v15, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v16, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v17, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v18, v3, 16, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v5, 16, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v7, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v9, 16, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v11, 16, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v13, 16, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v15, 16, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v16 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v17 offset:30
-; CHECK-NEXT:    ds_write_b32 v0, v18 offset:24
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    ds_write_b64 v0, v[5:6] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p5_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11736,52 +6050,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz32_align_2_2(ptr addrspace(3) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ushort v3, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_ushort v4, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v2, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v5, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v7, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v8, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v9, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v10, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v11, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v12, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v13, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v14, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ushort v15, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v16, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v17, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    v_lshl_or_b32 v2, v5, 16, v2
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    v_lshl_or_b32 v3, v7, 16, v6
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    v_lshl_or_b32 v4, v9, 16, v8
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    v_lshl_or_b32 v5, v11, 16, v10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_lshl_or_b32 v6, v13, 16, v12
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_lshl_or_b32 v8, v15, 16, v14
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v7, v17, 16, v16
-; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
-; CHECK-NEXT:    ds_write2_b64 v0, v[5:6], v[7:8] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p5_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11797,24 +6065,6 @@ define void @memcpy_p3_p5_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p5.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p5_sz16_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -11873,37 +6123,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v9, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    ds_write2_b32 v0, v6, v7 offset0:5 offset1:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_write_b32 v0, v8 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_write_b16 v0, v9 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b8 v0, v1 offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p5_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11928,30 +6147,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz32_align_8_8(ptr addrspace(3) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v9, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset1:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write2_b64 v0, v[6:7], v[8:9] offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p5_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11967,24 +6162,6 @@ define void @memcpy_p3_p5_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p5.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p5_sz16_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -12043,36 +6220,6 @@ entry:
   ret void
 }
 
-define void @memmove_p3_p5_sz31_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v9, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v10, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    ds_write2_b32 v0, v7, v8 offset0:5 offset1:6
-; CHECK-NEXT:    ds_write_b32 v0, v6 offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    ds_write_b16 v0, v9 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    ds_write_b8 v0, v10 offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[2:5]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p3_p5_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p3_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -12094,30 +6241,6 @@ define void @memcpy_p3_p5_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p3.p5.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p3_p5_sz32_align_16_16(ptr addrspace(3) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p3_p5_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v9, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    ds_write_b128 v0, v[2:5]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b128 v0, v[6:9] offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p3.p5.i64(ptr addrspace(3) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -12177,65 +6300,6 @@ define void @memcpy_p5_p0_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p0_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ubyte v3, v[1:2] offset:15
-; CHECK-NEXT:    flat_load_ubyte v4, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ubyte v5, v[1:2] offset:13
-; CHECK-NEXT:    flat_load_ubyte v6, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:11
-; CHECK-NEXT:    flat_load_ubyte v8, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ubyte v9, v[1:2] offset:9
-; CHECK-NEXT:    flat_load_ubyte v10, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ubyte v11, v[1:2] offset:7
-; CHECK-NEXT:    flat_load_ubyte v12, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ubyte v13, v[1:2] offset:5
-; CHECK-NEXT:    flat_load_ubyte v14, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ubyte v15, v[1:2] offset:3
-; CHECK-NEXT:    flat_load_ubyte v16, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ubyte v17, v[1:2] offset:1
-; CHECK-NEXT:    flat_load_ubyte v1, v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -12341,110 +6405,6 @@ define void @memcpy_p5_p0_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p0_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    flat_load_ubyte v3, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ubyte v4, v[1:2] offset:29
-; CHECK-NEXT:    flat_load_ubyte v5, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_ubyte v6, v[1:2] offset:27
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ubyte v8, v[1:2] offset:25
-; CHECK-NEXT:    flat_load_ubyte v9, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ubyte v10, v[1:2] offset:23
-; CHECK-NEXT:    flat_load_ubyte v11, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ubyte v12, v[1:2] offset:21
-; CHECK-NEXT:    flat_load_ubyte v13, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ubyte v14, v[1:2] offset:19
-; CHECK-NEXT:    flat_load_ubyte v15, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ubyte v16, v[1:2] offset:17
-; CHECK-NEXT:    flat_load_ubyte v17, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ubyte v18, v[1:2] offset:15
-; CHECK-NEXT:    flat_load_ubyte v19, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ubyte v20, v[1:2] offset:13
-; CHECK-NEXT:    flat_load_ubyte v21, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ubyte v22, v[1:2] offset:11
-; CHECK-NEXT:    flat_load_ubyte v23, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ubyte v24, v[1:2] offset:9
-; CHECK-NEXT:    flat_load_ubyte v25, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ubyte v26, v[1:2] offset:7
-; CHECK-NEXT:    flat_load_ubyte v27, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ubyte v28, v[1:2] offset:5
-; CHECK-NEXT:    flat_load_ubyte v29, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ubyte v30, v[1:2] offset:3
-; CHECK-NEXT:    flat_load_ubyte v31, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ubyte v32, v[1:2] offset:1
-; CHECK-NEXT:    flat_load_ubyte v1, v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(30) lgkmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29) lgkmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28) lgkmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27) lgkmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26) lgkmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24) lgkmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23) lgkmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21) lgkmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20) lgkmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19) lgkmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18) lgkmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17) lgkmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16) lgkmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -12556,113 +6516,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    flat_load_ubyte v3, v[1:2] offset:31
-; CHECK-NEXT:    flat_load_ubyte v4, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ubyte v5, v[1:2] offset:29
-; CHECK-NEXT:    flat_load_ubyte v6, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:27
-; CHECK-NEXT:    flat_load_ubyte v8, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ubyte v9, v[1:2] offset:25
-; CHECK-NEXT:    flat_load_ubyte v10, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ubyte v11, v[1:2] offset:23
-; CHECK-NEXT:    flat_load_ubyte v12, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ubyte v13, v[1:2] offset:21
-; CHECK-NEXT:    flat_load_ubyte v14, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ubyte v15, v[1:2] offset:19
-; CHECK-NEXT:    flat_load_ubyte v16, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ubyte v17, v[1:2] offset:17
-; CHECK-NEXT:    flat_load_ubyte v18, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ubyte v19, v[1:2] offset:15
-; CHECK-NEXT:    flat_load_ubyte v20, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ubyte v21, v[1:2] offset:13
-; CHECK-NEXT:    flat_load_ubyte v22, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ubyte v23, v[1:2] offset:11
-; CHECK-NEXT:    flat_load_ubyte v24, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ubyte v25, v[1:2] offset:9
-; CHECK-NEXT:    flat_load_ubyte v26, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ubyte v27, v[1:2] offset:7
-; CHECK-NEXT:    flat_load_ubyte v28, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ubyte v29, v[1:2] offset:5
-; CHECK-NEXT:    flat_load_ubyte v30, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ubyte v31, v[1:2] offset:3
-; CHECK-NEXT:    flat_load_ubyte v32, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ubyte v33, v[1:2] offset:1
-; CHECK-NEXT:    flat_load_ubyte v1, v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(31) lgkmcnt(31)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30) lgkmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29) lgkmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28) lgkmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27) lgkmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26) lgkmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25) lgkmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24) lgkmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23) lgkmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22) lgkmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21) lgkmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20) lgkmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19) lgkmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18) lgkmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17) lgkmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16) lgkmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v33, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(0) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p0_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -12695,41 +6548,6 @@ define void @memcpy_p5_p0_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p0_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    flat_load_ushort v3, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ushort v4, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ushort v5, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ushort v6, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ushort v7, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ushort v8, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ushort v1, v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -12792,65 +6610,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ubyte v3, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ushort v4, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_ushort v5, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ushort v6, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ushort v7, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ushort v8, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ushort v10, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ushort v11, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ushort v12, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ushort v13, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ushort v14, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ushort v15, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ushort v16, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ushort v17, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ushort v1, v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_short v17, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p0_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -12910,65 +6669,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(0) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    flat_load_ushort v3, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ushort v4, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_ushort v5, v[1:2] offset:26
-; CHECK-NEXT:    flat_load_ushort v6, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ushort v7, v[1:2] offset:22
-; CHECK-NEXT:    flat_load_ushort v8, v[1:2] offset:20
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:18
-; CHECK-NEXT:    flat_load_ushort v10, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ushort v11, v[1:2] offset:14
-; CHECK-NEXT:    flat_load_ushort v12, v[1:2] offset:12
-; CHECK-NEXT:    flat_load_ushort v13, v[1:2] offset:10
-; CHECK-NEXT:    flat_load_ushort v14, v[1:2] offset:8
-; CHECK-NEXT:    flat_load_ushort v15, v[1:2] offset:6
-; CHECK-NEXT:    flat_load_ushort v16, v[1:2] offset:4
-; CHECK-NEXT:    flat_load_ushort v17, v[1:2] offset:2
-; CHECK-NEXT:    flat_load_ushort v1, v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(15) lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14) lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13) lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12) lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11) lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10) lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9) lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8) lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7) lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6) lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5) lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_short v17, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(0) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p0_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -12982,22 +6682,6 @@ define void @memcpy_p5_p0_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p0_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[1:4], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -13066,38 +6750,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    flat_load_dword v7, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_dword v8, v[1:2] offset:24
-; CHECK-NEXT:    flat_load_ubyte v9, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_ushort v10, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    flat_load_dword v1, v[1:2] offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(4) lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p0_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -13121,29 +6773,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(0) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[7:10], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(0) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p0_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -13157,22 +6786,6 @@ define void @memcpy_p5_p0_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p0_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[1:4], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -13241,35 +6854,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p0_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    flat_load_ubyte v7, v[1:2] offset:30
-; CHECK-NEXT:    flat_load_dword v8, v[1:2] offset:16
-; CHECK-NEXT:    flat_load_ushort v9, v[1:2] offset:28
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    flat_load_dword v8, v[1:2] offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    flat_load_dword v1, v[1:2] offset:24
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p0_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p0_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -13290,29 +6874,6 @@ define void @memcpy_p5_p0_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p0_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(0) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p0_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    flat_load_dwordx4 v[3:6], v[1:2] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[7:10], v[1:2]
-; CHECK-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(0) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -13372,65 +6933,6 @@ define void @memcpy_p5_p1_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p1_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:15
-; CHECK-NEXT:    global_load_ubyte v4, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ubyte v5, v[1:2], off offset:13
-; CHECK-NEXT:    global_load_ubyte v6, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ubyte v7, v[1:2], off offset:11
-; CHECK-NEXT:    global_load_ubyte v8, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:9
-; CHECK-NEXT:    global_load_ubyte v10, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ubyte v11, v[1:2], off offset:7
-; CHECK-NEXT:    global_load_ubyte v12, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ubyte v13, v[1:2], off offset:5
-; CHECK-NEXT:    global_load_ubyte v14, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ubyte v15, v[1:2], off offset:3
-; CHECK-NEXT:    global_load_ubyte v16, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ubyte v17, v[1:2], off offset:1
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -13535,110 +7037,6 @@ define void @memcpy_p5_p1_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p1_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ubyte v4, v[1:2], off offset:29
-; CHECK-NEXT:    global_load_ubyte v5, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v6, v[1:2], off offset:27
-; CHECK-NEXT:    global_load_ubyte v7, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ubyte v8, v[1:2], off offset:25
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ubyte v10, v[1:2], off offset:23
-; CHECK-NEXT:    global_load_ubyte v11, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ubyte v12, v[1:2], off offset:21
-; CHECK-NEXT:    global_load_ubyte v13, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ubyte v14, v[1:2], off offset:19
-; CHECK-NEXT:    global_load_ubyte v15, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ubyte v16, v[1:2], off offset:17
-; CHECK-NEXT:    global_load_ubyte v17, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ubyte v18, v[1:2], off offset:15
-; CHECK-NEXT:    global_load_ubyte v19, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ubyte v20, v[1:2], off offset:13
-; CHECK-NEXT:    global_load_ubyte v21, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ubyte v22, v[1:2], off offset:11
-; CHECK-NEXT:    global_load_ubyte v23, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ubyte v24, v[1:2], off offset:9
-; CHECK-NEXT:    global_load_ubyte v25, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ubyte v26, v[1:2], off offset:7
-; CHECK-NEXT:    global_load_ubyte v27, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ubyte v28, v[1:2], off offset:5
-; CHECK-NEXT:    global_load_ubyte v29, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ubyte v30, v[1:2], off offset:3
-; CHECK-NEXT:    global_load_ubyte v31, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ubyte v32, v[1:2], off offset:1
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -13749,113 +7147,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:31
-; CHECK-NEXT:    global_load_ubyte v4, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ubyte v5, v[1:2], off offset:29
-; CHECK-NEXT:    global_load_ubyte v6, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v7, v[1:2], off offset:27
-; CHECK-NEXT:    global_load_ubyte v8, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:25
-; CHECK-NEXT:    global_load_ubyte v10, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[1:2], off offset:23
-; CHECK-NEXT:    global_load_ubyte v12, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ubyte v13, v[1:2], off offset:21
-; CHECK-NEXT:    global_load_ubyte v14, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ubyte v15, v[1:2], off offset:19
-; CHECK-NEXT:    global_load_ubyte v16, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ubyte v17, v[1:2], off offset:17
-; CHECK-NEXT:    global_load_ubyte v18, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ubyte v19, v[1:2], off offset:15
-; CHECK-NEXT:    global_load_ubyte v20, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ubyte v21, v[1:2], off offset:13
-; CHECK-NEXT:    global_load_ubyte v22, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ubyte v23, v[1:2], off offset:11
-; CHECK-NEXT:    global_load_ubyte v24, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ubyte v25, v[1:2], off offset:9
-; CHECK-NEXT:    global_load_ubyte v26, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ubyte v27, v[1:2], off offset:7
-; CHECK-NEXT:    global_load_ubyte v28, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ubyte v29, v[1:2], off offset:5
-; CHECK-NEXT:    global_load_ubyte v30, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ubyte v31, v[1:2], off offset:3
-; CHECK-NEXT:    global_load_ubyte v32, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ubyte v33, v[1:2], off offset:1
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v33, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p1_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -13888,41 +7179,6 @@ define void @memcpy_p5_p1_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p1_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    global_load_ushort v3, v[1:2], off
-; CHECK-NEXT:    global_load_ushort v4, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ushort v5, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ushort v6, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ushort v7, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ushort v9, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ushort v1, v[1:2], off offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -13985,65 +7241,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ushort v4, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ushort v5, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ushort v6, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ushort v7, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ushort v9, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v11, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ushort v12, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ushort v13, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ushort v14, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ushort v15, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ushort v16, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ushort v17, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ushort v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v17, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p1_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -14103,65 +7300,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(1) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ushort v3, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ushort v4, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ushort v5, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ushort v6, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ushort v7, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ushort v9, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v11, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ushort v12, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ushort v13, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ushort v14, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ushort v15, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ushort v16, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ushort v17, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ushort v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v17, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(1) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p1_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -14175,22 +7313,6 @@ define void @memcpy_p5_p1_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p1_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -14237,34 +7359,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx3 v[5:7], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p1_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -14288,29 +7382,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(1) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(1) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p1_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -14324,22 +7395,6 @@ define void @memcpy_p5_p1_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p1_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -14386,34 +7441,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p1_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx3 v[5:7], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p1_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p1_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -14434,29 +7461,6 @@ define void @memcpy_p5_p1_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p1_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(1) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p1_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(1) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -14515,64 +7519,6 @@ define void @memcpy_p5_p3_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p3_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v2, v1 offset:15
-; CHECK-NEXT:    ds_read_u8 v3, v1 offset:14
-; CHECK-NEXT:    ds_read_u8 v4, v1 offset:13
-; CHECK-NEXT:    ds_read_u8 v5, v1 offset:12
-; CHECK-NEXT:    ds_read_u8 v6, v1 offset:11
-; CHECK-NEXT:    ds_read_u8 v7, v1 offset:10
-; CHECK-NEXT:    ds_read_u8 v8, v1 offset:9
-; CHECK-NEXT:    ds_read_u8 v9, v1 offset:8
-; CHECK-NEXT:    ds_read_u8 v10, v1 offset:7
-; CHECK-NEXT:    ds_read_u8 v11, v1 offset:6
-; CHECK-NEXT:    ds_read_u8 v12, v1 offset:5
-; CHECK-NEXT:    ds_read_u8 v13, v1 offset:4
-; CHECK-NEXT:    ds_read_u8 v14, v1 offset:3
-; CHECK-NEXT:    ds_read_u8 v15, v1 offset:2
-; CHECK-NEXT:    ds_read_u8 v16, v1 offset:1
-; CHECK-NEXT:    ds_read_u8 v1, v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -14665,82 +7611,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v2, v1 offset:24
-; CHECK-NEXT:    ds_read_u8 v3, v1 offset:25
-; CHECK-NEXT:    ds_read_u8 v4, v1 offset:26
-; CHECK-NEXT:    ds_read_u8 v5, v1 offset:27
-; CHECK-NEXT:    ds_read_u8 v6, v1 offset:28
-; CHECK-NEXT:    ds_read_u8 v7, v1 offset:29
-; CHECK-NEXT:    ds_read_u8 v8, v1 offset:30
-; CHECK-NEXT:    ds_read_u8 v9, v1 offset:16
-; CHECK-NEXT:    ds_read_u8 v10, v1 offset:17
-; CHECK-NEXT:    ds_read_u8 v11, v1 offset:18
-; CHECK-NEXT:    ds_read_u8 v12, v1 offset:19
-; CHECK-NEXT:    ds_read_u8 v13, v1 offset:20
-; CHECK-NEXT:    ds_read_u8 v14, v1 offset:21
-; CHECK-NEXT:    ds_read_u8 v15, v1 offset:22
-; CHECK-NEXT:    ds_read_u8 v16, v1 offset:23
-; CHECK-NEXT:    ds_read_u8 v17, v1 offset:8
-; CHECK-NEXT:    ds_read_u8 v18, v1 offset:9
-; CHECK-NEXT:    ds_read_u8 v19, v1 offset:10
-; CHECK-NEXT:    ds_read_u8 v20, v1 offset:11
-; CHECK-NEXT:    ds_read_u8 v21, v1 offset:12
-; CHECK-NEXT:    ds_read_u8 v22, v1 offset:13
-; CHECK-NEXT:    ds_read_u8 v23, v1 offset:14
-; CHECK-NEXT:    ds_read_u8 v24, v1 offset:15
-; CHECK-NEXT:    ds_read_u8 v25, v1
-; CHECK-NEXT:    ds_read_u8 v26, v1 offset:1
-; CHECK-NEXT:    ds_read_u8 v27, v1 offset:2
-; CHECK-NEXT:    ds_read_u8 v28, v1 offset:3
-; CHECK-NEXT:    ds_read_u8 v29, v1 offset:4
-; CHECK-NEXT:    ds_read_u8 v30, v1 offset:5
-; CHECK-NEXT:    ds_read_u8 v31, v1 offset:6
-; CHECK-NEXT:    ds_read_u8 v1, v1 offset:7
-; CHECK-NEXT:    s_waitcnt lgkmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p3_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
@@ -14824,84 +7694,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v2, v1 offset:24
-; CHECK-NEXT:    ds_read_u8 v3, v1 offset:25
-; CHECK-NEXT:    ds_read_u8 v4, v1 offset:26
-; CHECK-NEXT:    ds_read_u8 v5, v1 offset:27
-; CHECK-NEXT:    ds_read_u8 v6, v1 offset:28
-; CHECK-NEXT:    ds_read_u8 v7, v1 offset:29
-; CHECK-NEXT:    ds_read_u8 v8, v1 offset:30
-; CHECK-NEXT:    ds_read_u8 v9, v1 offset:31
-; CHECK-NEXT:    ds_read_u8 v10, v1 offset:16
-; CHECK-NEXT:    ds_read_u8 v11, v1 offset:17
-; CHECK-NEXT:    ds_read_u8 v12, v1 offset:18
-; CHECK-NEXT:    ds_read_u8 v13, v1 offset:19
-; CHECK-NEXT:    ds_read_u8 v14, v1 offset:20
-; CHECK-NEXT:    ds_read_u8 v15, v1 offset:21
-; CHECK-NEXT:    ds_read_u8 v16, v1 offset:22
-; CHECK-NEXT:    ds_read_u8 v17, v1 offset:23
-; CHECK-NEXT:    ds_read_u8 v18, v1 offset:8
-; CHECK-NEXT:    ds_read_u8 v19, v1 offset:9
-; CHECK-NEXT:    ds_read_u8 v20, v1 offset:10
-; CHECK-NEXT:    ds_read_u8 v21, v1 offset:11
-; CHECK-NEXT:    ds_read_u8 v22, v1 offset:12
-; CHECK-NEXT:    ds_read_u8 v23, v1 offset:13
-; CHECK-NEXT:    ds_read_u8 v24, v1 offset:14
-; CHECK-NEXT:    ds_read_u8 v25, v1 offset:15
-; CHECK-NEXT:    ds_read_u8 v26, v1
-; CHECK-NEXT:    ds_read_u8 v27, v1 offset:1
-; CHECK-NEXT:    ds_read_u8 v28, v1 offset:2
-; CHECK-NEXT:    ds_read_u8 v29, v1 offset:3
-; CHECK-NEXT:    ds_read_u8 v30, v1 offset:4
-; CHECK-NEXT:    ds_read_u8 v31, v1 offset:5
-; CHECK-NEXT:    ds_read_u8 v32, v1 offset:6
-; CHECK-NEXT:    ds_read_u8 v1, v1 offset:7
-; CHECK-NEXT:    s_waitcnt lgkmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p3_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -14933,40 +7725,6 @@ define void @memcpy_p5_p3_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p3_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u16 v2, v1
-; CHECK-NEXT:    ds_read_u16 v3, v1 offset:2
-; CHECK-NEXT:    ds_read_u16 v4, v1 offset:4
-; CHECK-NEXT:    ds_read_u16 v5, v1 offset:6
-; CHECK-NEXT:    ds_read_u16 v6, v1 offset:8
-; CHECK-NEXT:    ds_read_u16 v7, v1 offset:10
-; CHECK-NEXT:    ds_read_u16 v8, v1 offset:12
-; CHECK-NEXT:    ds_read_u16 v1, v1 offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_short v2, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -15028,64 +7786,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v2, v1 offset:30
-; CHECK-NEXT:    ds_read_u16 v3, v1 offset:28
-; CHECK-NEXT:    ds_read_u16 v4, v1 offset:26
-; CHECK-NEXT:    ds_read_u16 v5, v1 offset:24
-; CHECK-NEXT:    ds_read_u16 v6, v1 offset:22
-; CHECK-NEXT:    ds_read_u16 v7, v1 offset:20
-; CHECK-NEXT:    ds_read_u16 v8, v1 offset:18
-; CHECK-NEXT:    ds_read_u16 v9, v1 offset:16
-; CHECK-NEXT:    ds_read_u16 v10, v1 offset:14
-; CHECK-NEXT:    ds_read_u16 v11, v1 offset:12
-; CHECK-NEXT:    ds_read_u16 v12, v1 offset:10
-; CHECK-NEXT:    ds_read_u16 v13, v1 offset:8
-; CHECK-NEXT:    ds_read_u16 v14, v1 offset:6
-; CHECK-NEXT:    ds_read_u16 v15, v1 offset:4
-; CHECK-NEXT:    ds_read_u16 v16, v1 offset:2
-; CHECK-NEXT:    ds_read_u16 v1, v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p3_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -15144,64 +7844,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(3) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u16 v2, v1 offset:30
-; CHECK-NEXT:    ds_read_u16 v3, v1 offset:28
-; CHECK-NEXT:    ds_read_u16 v4, v1 offset:26
-; CHECK-NEXT:    ds_read_u16 v5, v1 offset:24
-; CHECK-NEXT:    ds_read_u16 v6, v1 offset:22
-; CHECK-NEXT:    ds_read_u16 v7, v1 offset:20
-; CHECK-NEXT:    ds_read_u16 v8, v1 offset:18
-; CHECK-NEXT:    ds_read_u16 v9, v1 offset:16
-; CHECK-NEXT:    ds_read_u16 v10, v1 offset:14
-; CHECK-NEXT:    ds_read_u16 v11, v1 offset:12
-; CHECK-NEXT:    ds_read_u16 v12, v1 offset:10
-; CHECK-NEXT:    ds_read_u16 v13, v1 offset:8
-; CHECK-NEXT:    ds_read_u16 v14, v1 offset:6
-; CHECK-NEXT:    ds_read_u16 v15, v1 offset:4
-; CHECK-NEXT:    ds_read_u16 v16, v1 offset:2
-; CHECK-NEXT:    ds_read_u16 v1, v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(15)
-; CHECK-NEXT:    buffer_store_short v2, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(14)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(13)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt lgkmcnt(12)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(11)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt lgkmcnt(10)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt lgkmcnt(9)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt lgkmcnt(8)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(7)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(6)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt lgkmcnt(5)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(3) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p3_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -15215,22 +7857,6 @@ define void @memcpy_p5_p3_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p3_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[1:4], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -15276,35 +7902,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b32 v[5:6], v1 offset0:4 offset1:5
-; CHECK-NEXT:    ds_read_b32 v7, v1 offset:24
-; CHECK-NEXT:    ds_read_u16 v8, v1 offset:28
-; CHECK-NEXT:    ds_read_u8 v9, v1 offset:30
-; CHECK-NEXT:    ds_read2_b64 v[1:4], v1 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p3_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -15327,28 +7924,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(3) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b64 v[2:5], v1 offset1:1
-; CHECK-NEXT:    ds_read2_b64 v[6:9], v1 offset0:2 offset1:3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(3) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p3_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -15362,22 +7937,6 @@ define void @memcpy_p5_p3_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p3_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[1:4], v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -15423,35 +7982,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p3_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read2_b32 v[5:6], v1 offset0:4 offset1:5
-; CHECK-NEXT:    ds_read_b32 v7, v1 offset:24
-; CHECK-NEXT:    ds_read_u16 v8, v1 offset:28
-; CHECK-NEXT:    ds_read_u8 v9, v1 offset:30
-; CHECK-NEXT:    ds_read_b128 v[1:4], v1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p3_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p3_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -15471,28 +8001,6 @@ define void @memcpy_p5_p3_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p3_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(3) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p3_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b128 v[2:5], v1
-; CHECK-NEXT:    ds_read_b128 v[6:9], v1 offset:16
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(3) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -15552,65 +8060,6 @@ define void @memcpy_p5_p4_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p4_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:15
-; CHECK-NEXT:    global_load_ubyte v4, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ubyte v5, v[1:2], off offset:13
-; CHECK-NEXT:    global_load_ubyte v6, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ubyte v7, v[1:2], off offset:11
-; CHECK-NEXT:    global_load_ubyte v8, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:9
-; CHECK-NEXT:    global_load_ubyte v10, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ubyte v11, v[1:2], off offset:7
-; CHECK-NEXT:    global_load_ubyte v12, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ubyte v13, v[1:2], off offset:5
-; CHECK-NEXT:    global_load_ubyte v14, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ubyte v15, v[1:2], off offset:3
-; CHECK-NEXT:    global_load_ubyte v16, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ubyte v17, v[1:2], off offset:1
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -15715,110 +8164,6 @@ define void @memcpy_p5_p4_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p4_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ubyte v4, v[1:2], off offset:29
-; CHECK-NEXT:    global_load_ubyte v5, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v6, v[1:2], off offset:27
-; CHECK-NEXT:    global_load_ubyte v7, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ubyte v8, v[1:2], off offset:25
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ubyte v10, v[1:2], off offset:23
-; CHECK-NEXT:    global_load_ubyte v11, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ubyte v12, v[1:2], off offset:21
-; CHECK-NEXT:    global_load_ubyte v13, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ubyte v14, v[1:2], off offset:19
-; CHECK-NEXT:    global_load_ubyte v15, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ubyte v16, v[1:2], off offset:17
-; CHECK-NEXT:    global_load_ubyte v17, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ubyte v18, v[1:2], off offset:15
-; CHECK-NEXT:    global_load_ubyte v19, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ubyte v20, v[1:2], off offset:13
-; CHECK-NEXT:    global_load_ubyte v21, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ubyte v22, v[1:2], off offset:11
-; CHECK-NEXT:    global_load_ubyte v23, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ubyte v24, v[1:2], off offset:9
-; CHECK-NEXT:    global_load_ubyte v25, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ubyte v26, v[1:2], off offset:7
-; CHECK-NEXT:    global_load_ubyte v27, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ubyte v28, v[1:2], off offset:5
-; CHECK-NEXT:    global_load_ubyte v29, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ubyte v30, v[1:2], off offset:3
-; CHECK-NEXT:    global_load_ubyte v31, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ubyte v32, v[1:2], off offset:1
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -15929,113 +8274,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:31
-; CHECK-NEXT:    global_load_ubyte v4, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ubyte v5, v[1:2], off offset:29
-; CHECK-NEXT:    global_load_ubyte v6, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v7, v[1:2], off offset:27
-; CHECK-NEXT:    global_load_ubyte v8, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:25
-; CHECK-NEXT:    global_load_ubyte v10, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ubyte v11, v[1:2], off offset:23
-; CHECK-NEXT:    global_load_ubyte v12, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ubyte v13, v[1:2], off offset:21
-; CHECK-NEXT:    global_load_ubyte v14, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ubyte v15, v[1:2], off offset:19
-; CHECK-NEXT:    global_load_ubyte v16, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ubyte v17, v[1:2], off offset:17
-; CHECK-NEXT:    global_load_ubyte v18, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ubyte v19, v[1:2], off offset:15
-; CHECK-NEXT:    global_load_ubyte v20, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ubyte v21, v[1:2], off offset:13
-; CHECK-NEXT:    global_load_ubyte v22, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ubyte v23, v[1:2], off offset:11
-; CHECK-NEXT:    global_load_ubyte v24, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ubyte v25, v[1:2], off offset:9
-; CHECK-NEXT:    global_load_ubyte v26, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ubyte v27, v[1:2], off offset:7
-; CHECK-NEXT:    global_load_ubyte v28, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ubyte v29, v[1:2], off offset:5
-; CHECK-NEXT:    global_load_ubyte v30, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ubyte v31, v[1:2], off offset:3
-; CHECK-NEXT:    global_load_ubyte v32, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ubyte v33, v[1:2], off offset:1
-; CHECK-NEXT:    global_load_ubyte v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v33, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(4) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p4_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -16068,41 +8306,6 @@ define void @memcpy_p5_p4_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p4_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    global_load_ushort v3, v[1:2], off
-; CHECK-NEXT:    global_load_ushort v4, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ushort v5, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ushort v6, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ushort v7, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ushort v9, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ushort v1, v[1:2], off offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -16165,65 +8368,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ubyte v3, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ushort v4, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ushort v5, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ushort v6, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ushort v7, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ushort v9, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v11, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ushort v12, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ushort v13, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ushort v14, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ushort v15, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ushort v16, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ushort v17, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ushort v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v17, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p4_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -16283,65 +8427,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(4) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    global_load_ushort v3, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_ushort v4, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ushort v5, v[1:2], off offset:26
-; CHECK-NEXT:    global_load_ushort v6, v[1:2], off offset:24
-; CHECK-NEXT:    global_load_ushort v7, v[1:2], off offset:22
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:20
-; CHECK-NEXT:    global_load_ushort v9, v[1:2], off offset:18
-; CHECK-NEXT:    global_load_ushort v10, v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v11, v[1:2], off offset:14
-; CHECK-NEXT:    global_load_ushort v12, v[1:2], off offset:12
-; CHECK-NEXT:    global_load_ushort v13, v[1:2], off offset:10
-; CHECK-NEXT:    global_load_ushort v14, v[1:2], off offset:8
-; CHECK-NEXT:    global_load_ushort v15, v[1:2], off offset:6
-; CHECK-NEXT:    global_load_ushort v16, v[1:2], off offset:4
-; CHECK-NEXT:    global_load_ushort v17, v[1:2], off offset:2
-; CHECK-NEXT:    global_load_ushort v1, v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v17, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(4) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p4_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -16355,22 +8440,6 @@ define void @memcpy_p5_p4_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p4_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -16417,34 +8486,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx3 v[5:7], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p4_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -16468,29 +8509,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(4) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(4) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p4_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -16504,22 +8522,6 @@ define void @memcpy_p5_p4_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p4_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -16566,34 +8568,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p4_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_dwordx3 v[5:7], v[1:2], off offset:16
-; CHECK-NEXT:    global_load_ushort v8, v[1:2], off offset:28
-; CHECK-NEXT:    global_load_ubyte v9, v[1:2], off offset:30
-; CHECK-NEXT:    global_load_dwordx4 v[1:4], v[1:2], off
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p4_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p4_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -16614,29 +8588,6 @@ define void @memcpy_p5_p4_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p4_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(4) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p4_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off
-; CHECK-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p4.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(4) noundef nonnull align 16 %src, i64 32, i1 false)
   ret void
 }
 
@@ -16696,65 +8647,6 @@ define void @memcpy_p5_p5_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p5_sz16_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz16_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v3, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v4, v1, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v6, v1, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v7, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v8, v1, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v9, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v10, v1, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v11, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v12, v1, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v13, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v14, v1, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v15, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v16, v1, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 16, i1 false)
   ret void
 }
 
@@ -16858,110 +8750,6 @@ define void @memcpy_p5_p5_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 31, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p5_sz31_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz31_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1e
-; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ubyte v3, v1, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v4, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v6, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v7, v1, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v8, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v9, v1, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v10, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v11, v1, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v12, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v13, v1, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v14, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v15, v1, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v16, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v17, v1, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v18, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v19, v1, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v20, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v21, v1, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v22, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v23, v1, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v24, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v25, v1, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v26, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v27, v1, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v28, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v29, v1, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v30, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v31, v1, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 31, i1 false)
   ret void
 }
 
@@ -17072,113 +8860,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_1_1(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align 1 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz32_align_1_1:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x1f
-; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    buffer_load_ubyte v3, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ubyte v4, v1, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v6, v1, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v7, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v8, v1, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v9, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v10, v1, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    buffer_load_ubyte v11, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ubyte v12, v1, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    buffer_load_ubyte v13, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ubyte v14, v1, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    buffer_load_ubyte v15, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ubyte v16, v1, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    buffer_load_ubyte v17, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v18, v1, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v19, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v20, v1, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v21, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v22, v1, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v23, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v24, v1, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v25, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v26, v1, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v27, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v28, v1, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v29, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v30, v1, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v31, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ubyte v32, v1, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:31
-; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v4, v0, s[0:3], 0 offen offset:29
-; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v6, v0, s[0:3], 0 offen offset:27
-; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v7, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v8, v0, s[0:3], 0 offen offset:25
-; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v9, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v10, v0, s[0:3], 0 offen offset:23
-; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v12, v0, s[0:3], 0 offen offset:21
-; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v13, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v14, v0, s[0:3], 0 offen offset:19
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v15, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    buffer_store_byte v16, v0, s[0:3], 0 offen offset:17
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v17, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v18, v0, s[0:3], 0 offen offset:15
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_byte v19, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_byte v20, v0, s[0:3], 0 offen offset:13
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v21, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v22, v0, s[0:3], 0 offen offset:11
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_byte v23, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_byte v24, v0, s[0:3], 0 offen offset:9
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v25, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_byte v26, v0, s[0:3], 0 offen offset:7
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v27, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v28, v0, s[0:3], 0 offen offset:5
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_byte v29, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_byte v30, v0, s[0:3], 0 offen offset:3
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_byte v31, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_byte v32, v0, s[0:3], 0 offen offset:1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p5_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz16_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -17211,41 +8892,6 @@ define void @memcpy_p5_p5_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p5_sz16_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz16_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_ushort v2, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v3, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v4, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v5, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v7, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v8, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v1, v1, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v2, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 16, i1 false)
   ret void
 }
 
@@ -17308,65 +8954,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz31_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz31_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v3, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ushort v4, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ushort v5, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v7, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v8, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v9, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v10, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v11, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v12, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v13, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v14, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v15, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v16, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v1, v1, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p5_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz32_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
@@ -17426,65 +9013,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_2_2(ptr addrspace(5) align 2 %dst, ptr addrspace(5) align 2 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz32_align_2_2:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0xf
-; CHECK-NEXT:    buffer_load_ushort v2, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v3, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ushort v4, v1, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ushort v5, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    buffer_load_ushort v7, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_ushort v8, v1, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    buffer_load_ushort v9, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ushort v10, v1, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ushort v11, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ushort v12, v1, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ushort v13, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ushort v14, v1, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ushort v15, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ushort v16, v1, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    buffer_load_ushort v1, v1, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    buffer_store_short v2, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    buffer_store_short v4, v0, s[0:3], 0 offen offset:26
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_short v5, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:22
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    buffer_store_short v7, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    buffer_store_short v8, v0, s[0:3], 0 offen offset:18
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_short v9, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_short v10, v0, s[0:3], 0 offen offset:14
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_short v11, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_short v12, v0, s[0:3], 0 offen offset:10
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v13, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_short v14, v0, s[0:3], 0 offen offset:6
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_short v15, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_short v16, v0, s[0:3], 0 offen offset:2
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 2 %dst, ptr addrspace(5) noundef nonnull align 2 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p5_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz16_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -17505,29 +9033,6 @@ define void @memcpy_p5_p5_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addr
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p5_sz16_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz16_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 16, i1 false)
   ret void
 }
 
@@ -17602,44 +9107,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz31_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz31_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v9, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p5_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz32_align_8_8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -17675,41 +9142,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_8_8(ptr addrspace(5) align 8 %dst, ptr addrspace(5) align 8 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz32_align_8_8:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 8 %dst, ptr addrspace(5) noundef nonnull align 8 %src, i64 32, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p5_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz16_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -17730,29 +9162,6 @@ define void @memcpy_p5_p5_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr a
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
-  ret void
-}
-
-define void @memmove_p5_p5_sz16_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz16_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 16, i1 false)
   ret void
 }
 
@@ -17827,44 +9236,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz31_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz31_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x8
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_ubyte v5, v1, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_ushort v6, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v9, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_byte v5, v0, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_short v6, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 31, i1 false)
-  ret void
-}
-
 define void @memcpy_p5_p5_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
 ; CHECK-LABEL: memcpy_p5_p5_sz32_align_16_16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -17900,41 +9271,6 @@ entry:
   ret void
 }
 
-define void @memmove_p5_p5_sz32_align_16_16(ptr addrspace(5) align 16 %dst, ptr addrspace(5) align 16 readonly %src) {
-; CHECK-LABEL: memmove_p5_p5_sz32_align_16_16:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v8, v1, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  tail call void @llvm.memmove.p5.p5.i64(ptr addrspace(5) noundef nonnull align 16 %dst, ptr addrspace(5) noundef nonnull align 16 %src, i64 32, i1 false)
-  ret void
-}
-
 declare void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noalias nocapture writeonly, ptr addrspace(0) noalias nocapture readonly, i64, i1 immarg) #2
 declare void @llvm.memcpy.p0.p1.i64(ptr addrspace(0) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg) #2
 declare void @llvm.memcpy.p0.p3.i64(ptr addrspace(0) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i64, i1 immarg) #2
@@ -17955,26 +9291,6 @@ declare void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noalias nocapture writeonly
 declare void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i64, i1 immarg) #2
 declare void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noalias nocapture writeonly, ptr addrspace(4) noalias nocapture readonly, i64, i1 immarg) #2
 declare void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noalias nocapture writeonly, ptr addrspace(5) noalias nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p0.p0.i64(ptr addrspace(0) nocapture writeonly, ptr addrspace(0) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p0.p1.i64(ptr addrspace(0) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p0.p3.i64(ptr addrspace(0) nocapture writeonly, ptr addrspace(3) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p0.p4.i64(ptr addrspace(0) nocapture writeonly, ptr addrspace(4) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p0.p5.i64(ptr addrspace(0) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p1.p0.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(0) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p1.p3.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(3) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p1.p4.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(4) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p3.p0.i64(ptr addrspace(3) nocapture writeonly, ptr addrspace(0) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p3.p1.i64(ptr addrspace(3) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p3.p3.i64(ptr addrspace(3) nocapture writeonly, ptr addrspace(3) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p3.p4.i64(ptr addrspace(3) nocapture writeonly, ptr addrspace(4) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p3.p5.i64(ptr addrspace(3) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p5.p0.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(0) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p5.p1.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p5.p3.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(3) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p5.p4.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(4) nocapture readonly, i64, i1 immarg) #2
-declare void @llvm.memmove.p5.p5.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #2
 
 attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
