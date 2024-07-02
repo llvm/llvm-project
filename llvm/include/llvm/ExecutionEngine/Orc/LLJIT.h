@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/ADT/SmallSet.h"
 #include <variant>
 
 namespace llvm {
@@ -620,6 +621,7 @@ public:
 private:
   orc::LLJIT &J;
   DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+  SmallPtrSet<JITDylib const *, 8> InitializedDylib;
 };
 
 } // End namespace orc

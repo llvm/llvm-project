@@ -330,6 +330,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
+  void *dlupdate(void *DSOHandle, int Mode);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, const char *Symbol);
 
@@ -375,6 +376,12 @@ private:
   Error dlopenFull(std::unique_lock<std::mutex> &JDStatesLock,
                    JITDylibState &JDS);
   Error dlopenInitialize(std::unique_lock<std::mutex> &JDStatesLock,
+                         JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
+
+  Expected<void *> dlupdateImpl(void *DSOHandle, int Mode);
+  Error dlupdateFull(std::unique_lock<std::mutex> &JDStatesLock,
+                   JITDylibState &JDS);
+  Error dlupdateInitialize(std::unique_lock<std::mutex> &JDStatesLock,
                          JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
 
   Error dlcloseImpl(void *DSOHandle);
@@ -778,6 +785,21 @@ void *MachOPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   });
   std::lock_guard<std::recursive_mutex> Lock(DyldAPIMutex);
   if (auto H = dlopenImpl(Path, Mode))
+    return *H;
+  else {
+    // FIXME: Make dlerror thread safe.
+    DLFcnError = toString(H.takeError());
+    return nullptr;
+  }
+}
+
+void *MachOPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
+  ORC_RT_DEBUG({
+    std::string S;
+    printdbg("MachOPlatform::dlupdate(%p) (%s)\n", DSOHandle, S.c_str());
+  });
+  std::lock_guard<std::recursive_mutex> Lock(DyldAPIMutex);
+  if (auto H = dlupdateImpl(DSOHandle, Mode))
     return *H;
   else {
     // FIXME: Make dlerror thread safe.
@@ -1236,6 +1258,69 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
+Expected<void *> MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
+                                                       int Mode) {
+  std::unique_lock<std::mutex> Lock(JDStatesMutex);
+
+  // Try to find JITDylib state by DSOHandle.
+  auto *JDS = getJITDylibStateByHeader(DSOHandle);
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "No registered JITDylib for " << DSOHandle;
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  if (!JDS->referenced())
+    return make_error<StringError>("dlupdate failed, JITDylib must be open.");
+
+  if (!JDS->Sealed) {
+    if (auto Err = dlupdateFull(Lock, *JDS))
+      return std::move(Err);
+  }
+
+  // Return the header address.
+  return JDS->Header;
+}
+
+Error MachOPlatformRuntimeState::dlupdateFull(
+    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS) {
+  // Call back to the JIT to push the initializers.
+  Expected<MachOJITDylibDepInfoMap> DepInfo((MachOJITDylibDepInfoMap()));
+  // Unlock so that we can accept the initializer update.
+  JDStatesLock.unlock();
+  if (auto Err = WrapperFunction<SPSExpected<SPSMachOJITDylibDepInfoMap>(
+          SPSExecutorAddr)>::call(&__orc_rt_macho_push_initializers_tag,
+                                  DepInfo, ExecutorAddr::fromPtr(JDS.Header)))
+    return Err;
+  JDStatesLock.lock();
+
+  if (!DepInfo)
+    return DepInfo.takeError();
+
+  if (auto Err = dlupdateInitialize(JDStatesLock, JDS, *DepInfo))
+    return Err;
+
+  return Error::success();
+}
+
+Error MachOPlatformRuntimeState::dlupdateInitialize(
+    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS,
+    MachOJITDylibDepInfoMap &DepInfo) {
+  ORC_RT_DEBUG({
+    printdbg("MachOPlatformRuntimeState::dlupdateInitialize(\"%s\")\n",
+             JDS.Name.c_str());
+  });
+
+  // Initialize this JITDylib.
+  if (auto Err = registerObjCRegistrationObjects(JDS))
+    return Err;
+  if (auto Err = runModInits(JDStatesLock, JDS))
+    return Err;
+
+  return Error::success();
+}
+
 Error MachOPlatformRuntimeState::dlcloseImpl(void *DSOHandle) {
   std::unique_lock<std::mutex> Lock(JDStatesMutex);
 
@@ -1507,6 +1592,10 @@ const char *__orc_rt_macho_jit_dlerror() {
 
 void *__orc_rt_macho_jit_dlopen(const char *path, int mode) {
   return MachOPlatformRuntimeState::get().dlopen(path, mode);
+}
+
+void *__orc_rt_macho_jit_dlupdate(void *dso_handle, int mode) {
+  return MachOPlatformRuntimeState::get().dlupdate(dso_handle, mode);
 }
 
 int __orc_rt_macho_jit_dlclose(void *dso_handle) {
