@@ -490,6 +490,7 @@ private:
   Defined *emitCategoryName(const std::string &name, ObjFile *objFile);
   void createSymbolReference(Defined *refFrom, const Symbol *refTo,
                              uint32_t offset, const Reloc &relocTemplate);
+  Defined *tryFindDefinedOnIsec(const InputSection *isec, uint32_t offset);
   Symbol *tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
                                    uint32_t offset);
   Defined *tryGetDefinedAtIsecOffset(const ConcatInputSection *isec,
@@ -566,7 +567,25 @@ ObjcCategoryMerger::tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
   if (!reloc)
     return nullptr;
 
-  return reloc->referent.get<Symbol *>();
+  Symbol *sym = reloc->referent.get<Symbol *>();
+
+  if (reloc->addend) {
+    assert(isa<Defined>(sym) && "Expected defined for non-zero addend");
+    Defined *definedSym = cast<Defined>(sym);
+    sym = tryFindDefinedOnIsec(definedSym->isec(),
+                               definedSym->value + reloc->addend);
+  }
+
+  return sym;
+}
+
+Defined *ObjcCategoryMerger::tryFindDefinedOnIsec(const InputSection *isec,
+                                                  uint32_t offset) {
+  for (Defined *sym : isec->symbols)
+    if ((sym->value <= offset) && (sym->value + sym->size > offset))
+      return sym;
+
+  return nullptr;
 }
 
 Defined *
@@ -1288,8 +1307,12 @@ void ObjcCategoryMerger::eraseMergedCategories() {
         continue;
 
       eraseISec(catInfo.catBodyIsec);
-
-      tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
+      // We can't erase 'catLayout.nameOffset' for Swift categories because the
+      // name will be referenced for generating relative offsets
+      // See usages of 'l_.str.11.SimpleClass' in objc-category-merging-swift.s
+      // TODO: handle the above in a smarter way
+      if (catInfo.sourceLanguage != SourceLanguage::Swift)
+        tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instanceMethodsOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
