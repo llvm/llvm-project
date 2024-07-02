@@ -17,6 +17,9 @@ class MCSymbolELF : public MCSymbol {
   /// symbol has no size this field will be NULL.
   const MCExpr *SymbolSize = nullptr;
 
+  /// Group section index for signature symbols. Set by ELFWriter.
+  mutable unsigned GroupIndex = 0;
+
 public:
   MCSymbolELF(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(SymbolKindELF, Name, isTemporary) {}
@@ -43,6 +46,9 @@ public:
 
   void setIsSignature() const;
   bool isSignature() const;
+
+  void setGroupIndex(unsigned Index) const { GroupIndex = Index; }
+  unsigned getGroupIndex() const { return GroupIndex; }
 
   void setMemtag(bool Tagged);
   bool isMemtag() const;
