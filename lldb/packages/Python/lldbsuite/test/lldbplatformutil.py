@@ -56,6 +56,10 @@ def target_is_android():
     return configuration.lldb_platform_name == "remote-android"
 
 
+def target_is_remote_linux():
+    return configuration.lldb_platform_name == "remote-linux"
+
+
 def android_device_api():
     if not hasattr(android_device_api, "result"):
         assert configuration.lldb_platform_url is not None
@@ -97,6 +101,9 @@ def finalize_build_dictionary(dictionary):
             dictionary = {}
         dictionary["OS"] = "Android"
         dictionary["PIE"] = 1
+    elif target_is_remote_linux():
+        dictionary = dictionary or {}
+        dictionary["OS"] = "Linux"
     return dictionary
 
 
