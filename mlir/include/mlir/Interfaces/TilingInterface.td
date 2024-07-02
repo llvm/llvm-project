@@ -51,7 +51,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
     For an operation to be "tiled and fused" with its (already tiled) consumer,
     an operation has to implement the following additional method (see
     description below): 
-      - `generateResultTileValue
+      - `generateResultTileValue`
+      - `getIterationDomainTileFromResultTile`
 
     For an operation to be "tiled and fused" with its (already tiled) producer,
     an operation has to implement the following additional methods (see
@@ -293,6 +294,41 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*args=*/(ins
           "OpBuilder &":$b,
           "unsigned":$operandNumber,
+          "ArrayRef<OpFoldResult> ":$offsets,
+          "ArrayRef<OpFoldResult> ":$sizes,
+          "SmallVectorImpl<OpFoldResult> &":$iterDomainOffsets,
+          "SmallVectorImpl<OpFoldResult> &":$iterDomainSizes),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to return the tile of the iteration domain based
+          on the given tile of the certain result.
+
+          This method is required to allow operations to be "tiled and fused"
+          with an (already tiled) consumer. Given a tile of an result,
+          returns the tile of the iteration space that uses this tile.
+          - `resultNumber` is the result of the producer used by the consumer.
+          - `offsets` is the offset of the slice of the producer result used by
+            the tiled implementation of the consumer.
+          - `sizes` is the size of the slice of the producer result used by the
+            consumer.
+          If fusion of the producer with the consumer is not legal for the
+          result, or if this mapping cannot be computed, the implementation 
+          should return a failure.
+          
+          For most cases `generateResultTileValue` could be a implemented using 
+          `getIterationDomainTileFromResultTile` + `getTiledImplementation` 
+          methods.
+        }],
+        /*retType=*/"::mlir::LogicalResult",
+        /*methodName=*/"getIterationDomainTileFromResultTile",
+        /*args=*/(ins
+          "OpBuilder &":$b,
+          "unsigned":$resultNumber,
           "ArrayRef<OpFoldResult> ":$offsets,
           "ArrayRef<OpFoldResult> ":$sizes,
           "SmallVectorImpl<OpFoldResult> &":$iterDomainOffsets,
