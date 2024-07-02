@@ -6016,7 +6016,7 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
   %val = load <24 x i32>, ptr %val.ptr
   %mask.src = icmp slt <24 x i32> %trigger, zeroinitializer
   %mask = and <24 x i1> %mask.src, <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>
-  call void @llvm.masked.store.v24i32.p0(<24 x i32> %val, ptr %dst, i32 immarg 1, <24 x i1> %mask)
+  call void @llvm.masked.store.v24i32.p0(<24 x i32> %val, ptr %dst, i32 1, <24 x i1> %mask)
   ret void
 }
 

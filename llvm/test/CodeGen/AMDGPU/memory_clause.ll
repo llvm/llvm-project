@@ -446,7 +446,7 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
   %val = call <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 9, float %a, float %b, <8 x i32> %desc, <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 0>, i1 false, i32 0, i32 0)
   %val0 = extractelement <2 x float> %val, i32 0
   %valadd = fadd float %load, %val0
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 1, float %valadd, float undef, float undef, float undef, i1 immarg true, i1 immarg true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %valadd, float undef, float undef, float undef, i1 true, i1 true)
   ret void
 }
 
@@ -504,7 +504,7 @@ define amdgpu_kernel void @flat_scratch_load_clause(float %a, float %b, <8 x i32
   %load0 = load float, ptr addrspace(5) %alloca
   %load1 = load float, ptr addrspace(5) %alloca2
   %valadd = fadd float %load0, %load1
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 1, float %valadd, float undef, float undef, float undef, i1 immarg true, i1 immarg true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %valadd, float undef, float undef, float undef, i1 true, i1 true)
   ret void
 }
 
