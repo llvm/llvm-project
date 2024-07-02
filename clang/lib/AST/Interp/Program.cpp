@@ -63,7 +63,7 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   // The byte length does not include the null terminator.
   unsigned I = Globals.size();
   unsigned Sz = Desc->getAllocSize();
-  auto *G = new (Allocator, Sz) Global(Desc, /*isStatic=*/true,
+  auto *G = new (Allocator, Sz) Global(Ctx.getEvalID(), Desc, /*isStatic=*/true,
                                        /*isExtern=*/false);
   G->block()->invokeCtor();
 
@@ -170,7 +170,8 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
-      Global(getCurrentDecl(), Desc, /*IsStatic=*/true, /*IsExtern=*/false);
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, /*IsStatic=*/true,
+             /*IsExtern=*/false);
   G->block()->invokeCtor();
 
   Globals.push_back(G);
@@ -231,7 +232,7 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
-      Global(getCurrentDecl(), Desc, IsStatic, IsExtern);
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, IsStatic, IsExtern);
   G->block()->invokeCtor();
 
   // Initialize InlineDescriptor fields.
