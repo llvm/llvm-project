@@ -137,7 +137,7 @@ public:
       auto dstRegIndex = op.getDstRegIndex();
       assert(dstRegIndex && "Incomplete operation attribute for tile binding");
       rewriter.replaceOpWithNewOp<amx::x86_amx_tileloadd64_plain>(
-          op, ptr, stride, *dstRegIndex);
+          op, *dstRegIndex, ptr, stride);
       return success();
     }
 
@@ -181,7 +181,7 @@ public:
       auto srcRegIndex = op.getSrcRegIndex();
       assert(srcRegIndex && "Incomplete operation attribute for tile binding");
       rewriter.replaceOpWithNewOp<amx::x86_amx_tilestored64_plain>(
-          op, ptr, stride, *srcRegIndex);
+          op, *srcRegIndex, ptr, stride);
       return success();
     }
 
