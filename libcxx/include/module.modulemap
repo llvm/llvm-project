@@ -1081,7 +1081,10 @@ module std_private_charconv_tables                  [system] { header "__charcon
 module std_private_charconv_to_chars                [system] { header "__charconv/to_chars.h" }
 module std_private_charconv_to_chars_base_10        [system] { header "__charconv/to_chars_base_10.h" }
 module std_private_charconv_to_chars_floating_point [system] { header "__charconv/to_chars_floating_point.h" }
-module std_private_charconv_to_chars_integral       [system] { header "__charconv/to_chars_integral.h" }
+module std_private_charconv_to_chars_integral       [system] {
+  header "__charconv/to_chars_integral.h"
+  export std_private_charconv_traits
+}
 module std_private_charconv_to_chars_result         [system] {
   header "__charconv/to_chars_result.h"
   export *
@@ -1130,6 +1133,7 @@ module std_private_chrono_steady_clock           [system] {
 }
 module std_private_chrono_time_zone              [system] {
   header "__chrono/time_zone.h"
+  export std_private_memory_unique_ptr
 }
 module std_private_chrono_time_zone_link         [system] {
   header "__chrono/time_zone_link.h"
@@ -1923,7 +1927,10 @@ module std_private_type_traits_is_array                                  [system
 module std_private_type_traits_is_assignable                             [system] { header "__type_traits/is_assignable.h" }
 module std_private_type_traits_is_base_of                                [system] { header "__type_traits/is_base_of.h" }
 module std_private_type_traits_is_bounded_array                          [system] { header "__type_traits/is_bounded_array.h" }
-module std_private_type_traits_is_callable                               [system] { header "__type_traits/is_callable.h" }
+module std_private_type_traits_is_callable                               [system] {
+  header "__type_traits/is_callable.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_char_like_type                         [system] { header "__type_traits/is_char_like_type.h" }
 module std_private_type_traits_is_class                                  [system] { header "__type_traits/is_class.h" }
 module std_private_type_traits_is_compound                               [system] { header "__type_traits/is_compound.h" }
@@ -1958,7 +1965,10 @@ module std_private_type_traits_is_final                                  [system
 module std_private_type_traits_is_floating_point                         [system] { header "__type_traits/is_floating_point.h" }
 module std_private_type_traits_is_function                               [system] { header "__type_traits/is_function.h" }
 module std_private_type_traits_is_fundamental                            [system] { header "__type_traits/is_fundamental.h" }
-module std_private_type_traits_is_implicitly_default_constructible       [system] { header "__type_traits/is_implicitly_default_constructible.h" }
+module std_private_type_traits_is_implicitly_default_constructible       [system] {
+  header "__type_traits/is_implicitly_default_constructible.h"
+  export std_private_type_traits_integral_constant
+}
 module std_private_type_traits_is_integral                               [system] { header "__type_traits/is_integral.h" }
 module std_private_type_traits_is_literal_type                           [system] { header "__type_traits/is_literal_type.h" }
 module std_private_type_traits_is_member_function_pointer                [system] { header "__type_traits/is_member_function_pointer.h" }

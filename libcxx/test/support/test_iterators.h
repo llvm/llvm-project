@@ -11,6 +11,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstdint>
 #include <iterator>
 #include <ranges>
 #include <stdexcept>
