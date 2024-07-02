@@ -599,8 +599,8 @@ public:
   /// chain.
   int latestCycleInChain(const SDep &Dep);
 
-  void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
-                    int *MinEnd, int *MaxStart, int II, SwingSchedulerDAG *DAG);
+  void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart, int II,
+                    SwingSchedulerDAG *DAG);
   bool insert(SUnit *SU, int StartCycle, int EndCycle, int II);
 
   /// Iterators for the cycle to instruction map.
@@ -658,6 +658,9 @@ public:
   bool isLoopCarried(const SwingSchedulerDAG *SSD, MachineInstr &Phi) const;
   bool isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD, MachineInstr *Def,
                              MachineOperand &MO) const;
+
+  bool onlyHasLoopCarriedOutputOrOrderPreds(SUnit *SU,
+                                            SwingSchedulerDAG *DAG) const;
   void print(raw_ostream &os) const;
   void dump() const;
 };
