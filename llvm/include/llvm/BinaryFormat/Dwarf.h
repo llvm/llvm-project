@@ -84,6 +84,7 @@ enum LLVMConstants : uint32_t {
   DWARF_VENDOR_PGI,
   DWARF_VENDOR_SUN,
   DWARF_VENDOR_UPC,
+  DWARF_VENDOR_META,
   ///\}
 };
 
