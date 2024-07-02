@@ -116,7 +116,7 @@ private:
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCObjectWriter> Writer;
 
-  MCAsmLayout *Layout = nullptr;
+  bool HasLayout = false;
   bool RelaxAll = false;
   bool SubsectionsViaSymbols = false;
   bool IncrementalLinkerCompatible = false;
@@ -354,8 +354,7 @@ public:
     IncrementalLinkerCompatible = Value;
   }
 
-  MCAsmLayout *getLayout() const { return Layout; }
-  bool hasLayout() const { return Layout; }
+  bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 
