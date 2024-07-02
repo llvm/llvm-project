@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/Support/VCSRevision.h"
+#include "VCSVersion.inc"
 
 using namespace llvm;
 
