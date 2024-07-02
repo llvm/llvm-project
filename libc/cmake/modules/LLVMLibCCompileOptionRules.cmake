@@ -46,6 +46,14 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
+      # Manually disable standard include paths to prevent system headers from
+      # being included.
+      if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
+        list(APPEND compile_options "-nostdlibinc")
+      else()
+        list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+        list(APPEND compile_options "-nostdinc")
+      endif()
     endif()
 
     if(LIBC_COMPILER_HAS_FIXED_POINT)
@@ -108,11 +116,6 @@ function(_get_common_compile_options output_var flags)
     elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
       list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
     endif()
-
-    # Manually disable all standard include paths and include the resource
-    # directory to prevent system headers from being included.
-    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-    list(APPEND compile_options "-nostdinc")
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
