@@ -1151,31 +1151,107 @@ libclang
 Static Analyzer
 ---------------
 
-- Fixed crashing on loops if the loop variable was declared in switch blocks
-  but not under any case blocks if ``unroll-loops=true`` analyzer config is
-  set. (#GH68819)
-- Support C++23 static operator calls. (#GH84972)
-- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
-  matched user-defined ``strerror`` and similar library functions. (GH#88181)
-- Fixed a crash when storing through an address that refers to the address of
-  a label. (GH#89185)
-
 New features
 ^^^^^^^^^^^^
+
+- The attribute ``[[clang::suppress]]`` can now be applied to declarations.
+  (#GH80371)
+
+- Support C++23 static operator calls. (#GH84972)
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
+
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions. (#GH88181)
+
+- Fixed a crash when storing through an address that refers to the address of
+  a label. (#GH89185)
+
+- Z3 crosschecking (aka. Z3 refutation) is now bounded, and can't consume
+  more total time than the eymbolic execution itself. (#GH97298)
+
 Improvements
 ^^^^^^^^^^^^
+
+- Many improvements for the ``unix.Stream`` checker, by modeling more functions
+  and improving overall diagnostic quality.
+
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stream-c>`__.
+
+- Microsoft ``__assume`` is now recognized as ``__builtin_assume``. (#GH80456)
+
+- ``unix.Malloc`` suppresses false-positives involving ``std::atomic`` values.
+  (#GH90918)
+
+- Improved modeling of ``execv``, ``execvp``, ``popen``, ``pclose`` and
+  ``realpath`` in the ``unix.StdCLibraryFunctions`` checker.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions-c>`__.
+
+- Many improvements were made to make function matching more accurate,
+  leading to fewer false positives.
+
+- Small improvements to ``optin.portability.UnixAPI``, ``core.VLASize``,
+  ``unix.BlockInCriticalSection``, ``core.NullDereference``, ``unix.Malloc``,
+  ``alpha.deadcode.UnreachableCode``, ``alpha.core.PointerSub``,
+  ``alpha.security.ArrayBoundV2`` checkers.
+
+- Many ``alpha.WebKit.*`` improvements.
 
 - Support importing C++20 modules in clang-repl.
 
 - Added support for ``TypeLoc::dump()`` for easier debugging, and improved
   textual and JSON dumping for various ``TypeLoc``-related nodes.
 
+New checkers or configuration values
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Added a new checker ``security.SetgidSetuidOrder`` which checks correct
+  usages of ``setuid`` and ``setguid`` call sequences to drop superuser
+  privileges. (#GH91445)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-setgidsetuidorder-c>`__.
+
+- Added a new checker ``optin.taint.TaintedAlloc`` which reports for passing
+  tainted ``size`` parameter to ``malloc``, ``calloc``, ``realloc``, ``alloca``
+  or to the C++ new operator. (#GH92420)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#optin-taint-taintedalloc-c-c>`__.
+
+- The ``unix.Stream`` gained the ``pedantic`` configuration option to warn for
+  not checking the return value of write operations for success or failure.
+  Enabling this may introduce a signifficant amount of false-positives.
+  (#GH87322)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stream-c>`__.
+
+- The configuration value ``ModelPosix`` now defaults to ``true`` in the
+  ``unix.StdCLibraryFunctions`` checker. (#GH80457)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions-c>`__.
+
 Moved checkers
 ^^^^^^^^^^^^^^
+
+- Moved ``alpha.cplusplus.ArrayDelete`` out of the ``alpha`` package
+  to ``cplusplus.ArrayDelete``. (#GH83985)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete-c>`__.
+
+- Moved ``alpha.unix.Stream`` out of the ``alpha`` package to
+  ``unix.Stream``. (#GH89247)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stream-c>`__.
+
+- Moved ``alpha.unix.BlockInCriticalSection`` out of the ``alpha`` package to
+  ``unix.BlockInCriticalSection``. (#GH93815)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-blockincriticalsection-c-c>`__.
+
+- Moved ``alpha.security.cert.pos.34c`` out of the ``alpha`` package to
+  ``security.PutenvStackArray``. (#GH92424, #GH93815)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c>`__.
+
+- Moved ``alpha.core.SizeofPtr`` into ``clang-tidy``
+  ``bugprone-sizeof-expression``. (#GH95118, #GH94356)
+  `Documentation <https://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-expression.html>`__.
 
 .. _release-notes-sanitizers:
 
