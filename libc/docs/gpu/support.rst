@@ -227,6 +227,7 @@ puts           |check|    |check|
 fputs          |check|    |check|
 fputc          |check|    |check|
 fwrite         |check|    |check|
+remove         |check|    |check|
 putc           |check|    |check|
 putchar        |check|    |check|
 fclose         |check|    |check|

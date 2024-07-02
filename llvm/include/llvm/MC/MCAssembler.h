@@ -71,8 +71,6 @@ struct DataRegionData {
 };
 
 class MCAssembler {
-  friend class MCAsmLayout;
-
 public:
   using SectionListType = std::vector<MCSection *>;
   using SymbolDataListType = std::vector<const MCSymbol *>;
@@ -118,7 +116,7 @@ private:
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCObjectWriter> Writer;
 
-  MCAsmLayout *Layout = nullptr;
+  bool HasLayout = false;
   bool RelaxAll = false;
   bool SubsectionsViaSymbols = false;
   bool IncrementalLinkerCompatible = false;
@@ -210,9 +208,6 @@ private:
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
-  /// finishLayout - Finalize a layout, including fragment lowering.
-  void finishLayout(MCAsmLayout &Layout);
-
   std::tuple<MCValue, uint64_t, bool>
   handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
@@ -269,8 +264,7 @@ public:
   bool isSymbolLinkerVisible(const MCSymbol &SD) const;
 
   /// Emit the section contents to \p OS.
-  void writeSectionData(raw_ostream &OS, const MCSection *Section,
-                        const MCAsmLayout &Layout) const;
+  void writeSectionData(raw_ostream &OS, const MCSection *Section) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
   bool isThumbFunc(const MCSymbol *Func) const;
@@ -360,8 +354,7 @@ public:
     IncrementalLinkerCompatible = Value;
   }
 
-  MCAsmLayout *getLayout() const { return Layout; }
-  bool hasLayout() const { return Layout; }
+  bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 
