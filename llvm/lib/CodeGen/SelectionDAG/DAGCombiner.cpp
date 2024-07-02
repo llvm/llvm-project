@@ -5279,6 +5279,13 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
           DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getAllOnesConstant(DL, VT)));
   }
 
+  // Fold shadd(x,y) -> uhadd(x,y) if both x and y are non-negative
+  if (Opcode == ISD::SHADD && !hasOperation(ISD::SHADD, VT) &&
+      (!LegalOperations || hasOperation(ISD::UHADD, VT))) {
+    if (DAG.isKnownNeverNegative(N0) && DAG.isKnownNeverNegative(N1))
+      return DAG.getNode(ISD::UHADD, DL, VT, N0, N1);
+  }
+
   return SDValue();
 }
 
