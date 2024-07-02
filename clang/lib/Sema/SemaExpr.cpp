@@ -2051,6 +2051,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   } else if (Literal.isUTF8()) {
     if (getLangOpts().Char8)
       CharTy = Context.Char8Ty;
+    else if (getLangOpts().C23)
+      CharTy = Context.UnsignedCharTy;
     Kind = StringLiteralKind::UTF8;
   } else if (Literal.isUTF16()) {
     CharTy = Context.Char16Ty;
@@ -2062,17 +2064,23 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     CharTy = Context.UnsignedCharTy;
   }
 
-  // Warn on initializing an array of char from a u8 string literal; this
-  // becomes ill-formed in C++2a.
-  if (getLangOpts().CPlusPlus && !getLangOpts().CPlusPlus20 &&
-      !getLangOpts().Char8 && Kind == StringLiteralKind::UTF8) {
-    Diag(StringTokLocs.front(), diag::warn_cxx20_compat_utf8_string);
+  // Warn on u8 string literals before C++20 and C23, whose type
+  // was an array of char before but becomes an array of char8_t.
+  // In C++20, it cannot be used where a pointer to char is expected.
+  // In C23, it might have an unexpected value if char was signed.
+  if (Kind == StringLiteralKind::UTF8 &&
+      (getLangOpts().CPlusPlus
+           ? !getLangOpts().CPlusPlus20 && !getLangOpts().Char8
+           : !getLangOpts().C23)) {
+    Diag(StringTokLocs.front(), getLangOpts().CPlusPlus
+                                    ? diag::warn_cxx20_compat_utf8_string
+                                    : diag::warn_c23_compat_utf8_string);
 
     // Create removals for all 'u8' prefixes in the string literal(s). This
-    // ensures C++2a compatibility (but may change the program behavior when
+    // ensures C++20/C23 compatibility (but may change the program behavior when
     // built by non-Clang compilers for which the execution character set is
     // not always UTF-8).
-    auto RemovalDiag = PDiag(diag::note_cxx20_compat_utf8_string_remove_u8);
+    auto RemovalDiag = PDiag(diag::note_cxx20_c23_compat_utf8_string_remove_u8);
     SourceLocation RemovalDiagLoc;
     for (const Token &Tok : StringToks) {
       if (Tok.getKind() == tok::utf8_string_literal) {
