@@ -378,6 +378,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool HasCRTBeginEndFiles =
       ToolChain.getTriple().hasEnvironment() ||
       (ToolChain.getTriple().getVendor() != llvm::Triple::MipsTechnologies);
+  const ToolChain::RuntimeLibType RLTType = ToolChain.GetRuntimeLibType(Args);
 
   ArgStringList CmdArgs;
 
@@ -625,8 +626,15 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_fsplit_stack))
         CmdArgs.push_back("--wrap=pthread_create");
 
-      if (!Args.hasArg(options::OPT_nolibc))
+      if (!Args.hasArg(options::OPT_nolibc)) {
+        if (RLTType == ToolChain::RLT_CompilerRT) {  
+          CmdArgs.push_back("--push-state");
+          CmdArgs.push_back("--no-as-needed");
+        }
         CmdArgs.push_back("-lc");
+        if (RLTType == ToolChain::RLT_CompilerRT)
+          CmdArgs.push_back("--pop-state");
+      }
 
       // Add IAMCU specific libs, if needed.
       if (IsIAMCU)
