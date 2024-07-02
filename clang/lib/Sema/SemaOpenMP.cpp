@@ -6276,7 +6276,8 @@ bool SemaOpenMP::mapLoopConstruct(
       // region. If none of those conditions hold, the binding region is not
       // defined.
       BindKind = OMPC_BIND_thread; // Default bind(thread) if binding is unknown
-      auto ParentLeafs = getLeafConstructsOrSelf(ParentDirective);
+      ArrayRef<OpenMPDirectiveKind> ParentLeafs =
+          getLeafConstructsOrSelf(ParentDirective);
 
       if (ParentDirective == OMPD_unknown) {
         Diag(DSAStack->getDefaultDSALocation(),
