@@ -1046,12 +1046,8 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   const CallingConv::ID CC = F.getCallingConv();
   const bool IsKernel =
       CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL;
-  // FIXME: Should have analysis or something rather than attribute to detect
-  // calls.
-  const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
-  // FIXME: This attribute is a hack, we just need an analysis on the function
-  // to look for allocas.
-  const bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
+  const bool NoFlatScratchInit =
+      F.hasFnAttribute("amdgpu-no-flat-scratch-init");
 
   if (IsKernel && (!F.arg_empty() || ST.getImplicitArgNumBytes(F) != 0))
     KernargSegmentPtr = true;
@@ -1079,7 +1075,7 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   // lowering.
   if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
       (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
+      (!NoFlatScratchInit || ST.enableFlatScratch()) &&
       !ST.flatScratchIsArchitected()) {
     FlatScratchInit = true;
   }
