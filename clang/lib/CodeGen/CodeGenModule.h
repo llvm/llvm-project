@@ -1837,6 +1837,8 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  llvm::Constant *zeroInitGlobalVarInitializer(llvm::Constant *Init);
 };
 
 }  // end namespace CodeGen
