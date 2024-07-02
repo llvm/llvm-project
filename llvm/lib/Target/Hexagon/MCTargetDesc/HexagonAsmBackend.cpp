@@ -756,7 +756,7 @@ public:
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
-              Layout.invalidateFragmentsFrom(&RF);
+              I->setHasLayout(false);
               Size = 0; // Only look back one instruction
               break;
             }
