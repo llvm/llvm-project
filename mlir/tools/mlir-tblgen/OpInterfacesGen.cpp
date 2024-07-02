@@ -544,7 +544,8 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   // Emit the main interface class declaration.
   os << llvm::formatv("class {0} : public ::mlir::{3}<{1}, detail::{2}> {\n"
                       "public:\n"
-                      "  using ::mlir::{3}<{1}, detail::{2}>::{3};\n",
+                      "  using ::mlir::{3}<{1}, detail::{2}>::{3};\n"
+                      "  using InterfaceTraits = detail::{2};\n",
                       interfaceName, interfaceName, interfaceTraitsName,
                       interfaceBaseType);
 
