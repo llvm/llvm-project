@@ -3917,7 +3917,8 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
 
   unsigned NumElts = VT.getVectorNumElements();
   unsigned ElemSizeInBits = ElemVT.getSizeInBits();
-  if (ElemSizeInBits >= Subtarget.getELen() || NumElts % 2 != 0)
+  if (ElemSizeInBits >= std::min(Subtarget.getELen(), Subtarget.getXLen()) ||
+      NumElts % 2 != 0)
     return SDValue();
 
   // Produce [B,A] packed into a type twice as wide.  Note that all
@@ -9391,7 +9392,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MVT ScalarVT = ContainerVT.getVectorElementType();
     if (IsUnmasked && isNullConstant(Stride) && ContainerVT.isInteger()) {
       SDValue ScalarLoad =
-          DAG.getExtLoad(ISD::ZEXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
+          DAG.getExtLoad(ISD::EXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
                          ScalarVT, Load->getMemOperand());
       Chain = ScalarLoad.getValue(1);
       Result = lowerScalarSplat(SDValue(), ScalarLoad, VL, ContainerVT, DL, DAG,

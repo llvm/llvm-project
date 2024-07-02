@@ -71,8 +71,6 @@ struct DataRegionData {
 };
 
 class MCAssembler {
-  friend class MCAsmLayout;
-
 public:
   using SectionListType = std::vector<MCSection *>;
   using SymbolDataListType = std::vector<const MCSymbol *>;
@@ -209,9 +207,6 @@ private:
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
-
-  /// finishLayout - Finalize a layout, including fragment lowering.
-  void finishLayout(MCAsmLayout &Layout);
 
   std::tuple<MCValue, uint64_t, bool>
   handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
