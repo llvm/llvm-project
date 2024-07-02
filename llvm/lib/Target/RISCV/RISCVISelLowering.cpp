@@ -1496,6 +1496,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
                          ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
                          ISD::INSERT_VECTOR_ELT, ISD::ABS});
+  if (Subtarget.hasVInstructionsAnyF())
+    setTargetDAGCombine({ISD::FADD, ISD::FSUB, ISD::FMUL});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -14152,6 +14154,13 @@ struct NodeExtensionHelper {
     case RISCVISD::VZEXT_VL:
     case RISCVISD::FP_EXTEND_VL:
       return OrigOperand.getOperand(0);
+    case ISD::SPLAT_VECTOR: {
+      SDValue Op = OrigOperand.getOperand(0);
+      if (Op.getOpcode() == ISD::FP_EXTEND)
+        return Op;
+      return OrigOperand;
+    }
+
     default:
       return OrigOperand;
     }
@@ -14290,12 +14299,15 @@ struct NodeExtensionHelper {
   /// Opcode(fpext(a), fpext(b)) -> newOpcode(a, b)
   static unsigned getFPExtOpcode(unsigned Opcode) {
     switch (Opcode) {
+    case ISD::FADD:
     case RISCVISD::FADD_VL:
     case RISCVISD::VFWADD_W_VL:
       return RISCVISD::VFWADD_VL;
+    case ISD::FSUB:
     case RISCVISD::FSUB_VL:
     case RISCVISD::VFWSUB_W_VL:
       return RISCVISD::VFWSUB_VL;
+    case ISD::FMUL:
     case RISCVISD::FMUL_VL:
       return RISCVISD::VFWMUL_VL;
     default:
@@ -14324,8 +14336,10 @@ struct NodeExtensionHelper {
     case RISCVISD::SUB_VL:
       return SupportsExt == ExtKind::SExt ? RISCVISD::VWSUB_W_VL
                                           : RISCVISD::VWSUBU_W_VL;
+    case ISD::FADD:
     case RISCVISD::FADD_VL:
       return RISCVISD::VFWADD_W_VL;
+    case ISD::FSUB:
     case RISCVISD::FSUB_VL:
       return RISCVISD::VFWSUB_W_VL;
     default:
@@ -14379,6 +14393,10 @@ struct NodeExtensionHelper {
                               APInt::getBitsSetFrom(ScalarBits, NarrowSize)))
       SupportsZExt = true;
 
+    if (Op.getOpcode() == ISD::FP_EXTEND &&
+        NarrowSize >= (Subtarget.hasVInstructionsF16() ? 16 : 32))
+      SupportsFPExt = true;
+
     EnforceOneUse = false;
   }
 
@@ -14409,6 +14427,7 @@ struct NodeExtensionHelper {
 
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
       SupportsSExt = Opc == ISD::SIGN_EXTEND;
+      SupportsFPExt = Opc == ISD::FP_EXTEND;
       break;
     }
     case RISCVISD::VZEXT_VL:
@@ -14417,9 +14436,18 @@ struct NodeExtensionHelper {
     case RISCVISD::VSEXT_VL:
       SupportsSExt = true;
       break;
-    case RISCVISD::FP_EXTEND_VL:
+    case RISCVISD::FP_EXTEND_VL: {
+      SDValue NarrowElt = OrigOperand.getOperand(0);
+      MVT NarrowVT = NarrowElt.getSimpleValueType();
+
+      if (!Subtarget.hasVInstructionsF16() &&
+          NarrowVT.getVectorElementType() == MVT::f16)
+        break;
+
       SupportsFPExt = true;
       break;
+    }
+
     case ISD::SPLAT_VECTOR:
     case RISCVISD::VMV_V_X_VL:
       fillUpExtensionSupportForSplat(Root, DAG, Subtarget);
@@ -14435,13 +14463,16 @@ struct NodeExtensionHelper {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
-    case ISD::MUL: {
+    case ISD::MUL:
       return Root->getValueType(0).isScalableVector();
-    }
-    case ISD::OR: {
+    case ISD::OR:
       return Root->getValueType(0).isScalableVector() &&
              Root->getFlags().hasDisjoint();
-    }
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
+      return Root->getValueType(0).isScalableVector() &&
+             Subtarget.hasVInstructionsAnyF();
     // Vector Widening Integer Add/Sub/Mul Instructions
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
@@ -14518,7 +14549,10 @@ struct NodeExtensionHelper {
     case ISD::SUB:
     case ISD::MUL:
     case ISD::OR:
-    case ISD::SHL: {
+    case ISD::SHL:
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL: {
       SDLoc DL(Root);
       MVT VT = Root->getSimpleValueType(0);
       return getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
@@ -14535,6 +14569,8 @@ struct NodeExtensionHelper {
     case ISD::ADD:
     case ISD::MUL:
     case ISD::OR:
+    case ISD::FADD:
+    case ISD::FMUL:
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
     case RISCVISD::VWADD_W_VL:
@@ -14544,6 +14580,7 @@ struct NodeExtensionHelper {
     case RISCVISD::VFWADD_W_VL:
       return true;
     case ISD::SUB:
+    case ISD::FSUB:
     case RISCVISD::SUB_VL:
     case RISCVISD::VWSUB_W_VL:
     case RISCVISD::VWSUBU_W_VL:
@@ -14605,6 +14642,9 @@ struct CombineResult {
     case ISD::MUL:
     case ISD::OR:
     case ISD::SHL:
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
       Merge = DAG.getUNDEF(Root->getValueType(0));
       break;
     }
@@ -14747,6 +14787,8 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   case ISD::ADD:
   case ISD::SUB:
   case ISD::OR:
+  case ISD::FADD:
+  case ISD::FSUB:
   case RISCVISD::ADD_VL:
   case RISCVISD::SUB_VL:
   case RISCVISD::FADD_VL:
@@ -14756,6 +14798,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
     // add|sub|fadd|fsub -> vwadd(u)_w|vwsub(u)_w}|vfwadd_w|vfwsub_w
     Strategies.push_back(canFoldToVW_W);
     break;
+  case ISD::FMUL:
   case RISCVISD::FMUL_VL:
     Strategies.push_back(canFoldToVWWithSameExtension);
     break;
@@ -14799,9 +14842,9 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 /// sub | sub_vl -> vwsub(u) | vwsub(u)_w
 /// mul | mul_vl -> vwmul(u) | vwmul_su
 /// shl | shl_vl -> vwsll
-/// fadd_vl ->  vfwadd | vfwadd_w
-/// fsub_vl ->  vfwsub | vfwsub_w
-/// fmul_vl ->  vfwmul
+/// fadd | fadd_vl ->  vfwadd | vfwadd_w
+/// fsub | fsub_vl ->  vfwsub | vfwsub_w
+/// fmul | fmul_vl ->  vfwmul
 /// vwadd_w(u) -> vwadd(u)
 /// vwsub_w(u) -> vwsub(u)
 /// vfwadd_w -> vfwadd
@@ -16665,7 +16708,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOpOfZExt(N, DAG))
       return V;
     break;
-  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+    return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
+  case ISD::FADD: {
+    if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+      return V;
+    [[fallthrough]];
+  }
   case ISD::UMAX:
   case ISD::UMIN:
   case ISD::SMAX:
