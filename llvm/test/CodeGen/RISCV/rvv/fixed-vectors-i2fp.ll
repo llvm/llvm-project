@@ -89,9 +89,7 @@ define void @si2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <3 x i32>, ptr %x
@@ -105,9 +103,7 @@ define void @ui2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <3 x i32>, ptr %x
@@ -119,7 +115,7 @@ define void @ui2fp_v3i32_v3f32(ptr %x, ptr %y) {
 define <3 x float> @si2fp_v3i1_v3f32(<3 x i1> %x) {
 ; CHECK-LABEL: si2fp_v3i1_v3f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v9, v8, -1, v0
 ; CHECK-NEXT:    vfwcvt.f.x.v v8, v9
@@ -277,7 +273,7 @@ define <3 x float> @ui2fp_v3i7_v3f32(<3 x i7> %x) {
 define <3 x float> @ui2fp_v3i1_v3f32(<3 x i1> %x) {
 ; CHECK-LABEL: ui2fp_v3i1_v3f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v9, v8, 1, v0
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9
