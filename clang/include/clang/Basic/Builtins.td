@@ -932,6 +932,12 @@ def IsConstantEvaluated : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool()";
 }
 
+def ClearPadding : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_clear_padding"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];
