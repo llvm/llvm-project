@@ -15,6 +15,7 @@
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -36,6 +37,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -580,6 +582,205 @@ struct ArgumentUsesTracker : public CaptureTracker {
   const SCCNodeSet &SCCNodes;
 };
 
+struct ArgumentUse {
+  Use *U;
+  std::optional<int64_t> Offset;
+};
+
+// A struct of argument access info. "Unknown" accesses are the cases like
+// unrecognized instructions, instructions that have more than one use of
+// the argument, or volatile memory accesses. "Unknown" implies "IsClobber"
+// and an empty access range.
+// Write or Read accesses can be clobbers as well for example, a Load with
+// scalable type.
+struct ArgumentAccessInfo {
+  enum AccessType { Write, Read, Unknown };
+  AccessType ArgAccessType;
+  ConstantRangeList AccessRanges;
+  bool IsClobber = false;
+};
+
+struct UsesPerBlockInfo {
+  DenseMap<Instruction *, ArgumentAccessInfo> Insts;
+  bool HasWrites;
+  bool HasClobber;
+};
+
+ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
+                                        const ArgumentUse &IU,
+                                        const DataLayout &DL) {
+  auto GetTypeAccessRange =
+      [&DL](Type *Ty,
+            std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
+    auto TypeSize = DL.getTypeStoreSize(Ty);
+    if (!TypeSize.isScalable() && Offset.has_value()) {
+      int64_t Size = TypeSize.getFixedValue();
+      return ConstantRange(APInt(64, Offset.value(), true),
+                           APInt(64, Offset.value() + Size, true));
+    }
+    return std::nullopt;
+  };
+  auto GetConstantIntRange =
+      [](Value *Length,
+         std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
+    auto *ConstantLength = dyn_cast<ConstantInt>(Length);
+    if (ConstantLength && Offset.has_value()) {
+      return ConstantRange(
+          APInt(64, Offset.value(), true),
+          APInt(64, Offset.value() + ConstantLength->getSExtValue(), true));
+    }
+    return std::nullopt;
+  };
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
+    if (&SI->getOperandUse(1) == IU.U) {
+      // Get the fixed type size of "SI". Since the access range of a write
+      // will be unioned, if "SI" doesn't have a fixed type size, we just set
+      // the access range to empty.
+      ConstantRangeList AccessRanges;
+      auto TypeAccessRange = GetTypeAccessRange(SI->getAccessType(), IU.Offset);
+      if (TypeAccessRange.has_value())
+        AccessRanges.insert(TypeAccessRange.value());
+      return {ArgumentAccessInfo::AccessType::Write, AccessRanges,
+              /*IsClobber=*/false};
+    }
+  } else if (auto *LI = dyn_cast<LoadInst>(I)) {
+    if (&LI->getOperandUse(0) == IU.U) {
+      // Get the fixed type size of "LI". Different from Write, if "LI"
+      // doesn't have a fixed type size, we conservatively set as a clobber
+      // with an empty access range.
+      auto TypeAccessRange = GetTypeAccessRange(LI->getAccessType(), IU.Offset);
+      if (TypeAccessRange.has_value())
+        return {ArgumentAccessInfo::AccessType::Read,
+                {TypeAccessRange.value()},
+                /*IsClobber=*/false};
+      else
+        return {ArgumentAccessInfo::AccessType::Read, {}, /*IsClobber=*/true};
+    }
+  } else if (auto *MemSet = dyn_cast<MemSetInst>(I)) {
+    if (!MemSet->isVolatile()) {
+      ConstantRangeList AccessRanges;
+      auto AccessRange = GetConstantIntRange(MemSet->getLength(), IU.Offset);
+      if (AccessRange.has_value())
+        AccessRanges.insert(AccessRange.value());
+      return {ArgumentAccessInfo::AccessType::Write, AccessRanges,
+              /*IsClobber=*/false};
+    }
+  } else if (auto *MemCpy = dyn_cast<MemCpyInst>(I)) {
+    if (!MemCpy->isVolatile()) {
+      if (&MemCpy->getOperandUse(0) == IU.U) {
+        ConstantRangeList AccessRanges;
+        auto AccessRange = GetConstantIntRange(MemCpy->getLength(), IU.Offset);
+        if (AccessRange.has_value())
+          AccessRanges.insert(AccessRange.value());
+        return {ArgumentAccessInfo::AccessType::Write, AccessRanges,
+                /*IsClobber=*/false};
+      } else if (&MemCpy->getOperandUse(1) == IU.U) {
+        auto AccessRange = GetConstantIntRange(MemCpy->getLength(), IU.Offset);
+        if (AccessRange.has_value())
+          return {ArgumentAccessInfo::AccessType::Read,
+                  {AccessRange.value()},
+                  /*IsClobber=*/false};
+        else
+          return {ArgumentAccessInfo::AccessType::Read, {}, /*IsClobber=*/true};
+      }
+    }
+  } else if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->isArgOperand(IU.U)) {
+      unsigned ArgNo = CB->getArgOperandNo(IU.U);
+      bool IsInitialize = CB->paramHasAttr(ArgNo, Attribute::Initializes);
+      // Argument is only not clobbered when parameter is writeonly/readnone
+      // and nocapture.
+      bool IsClobber = !(CB->onlyWritesMemory(ArgNo) &&
+                         CB->paramHasAttr(ArgNo, Attribute::NoCapture));
+      ConstantRangeList AccessRanges;
+      if (IsInitialize && IU.Offset.has_value()) {
+        Attribute Attr = CB->getParamAttr(ArgNo, Attribute::Initializes);
+        if (!Attr.isValid()) {
+          Attr = CB->getCalledFunction()->getParamAttribute(
+              ArgNo, Attribute::Initializes);
+        }
+        ConstantRangeList CBCRL = Attr.getValueAsConstantRangeList();
+        for (ConstantRange &CR : CBCRL) {
+          AccessRanges.insert(ConstantRange(CR.getLower() + IU.Offset.value(),
+                                            CR.getUpper() + IU.Offset.value()));
+        }
+        return {ArgumentAccessInfo::AccessType::Write, AccessRanges, IsClobber};
+      }
+    }
+  }
+  // Unrecognized instructions are considered clobbers.
+  return {ArgumentAccessInfo::AccessType::Unknown, {}, /*IsClobber=*/true};
+}
+
+std::pair<bool, bool> CollectArgumentUsesPerBlock(
+    Argument &A, Function &F,
+    DenseMap<const BasicBlock *, UsesPerBlockInfo> &UsesPerBlock) {
+  auto &DL = F.getParent()->getDataLayout();
+  auto PointerSize =
+      DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
+
+  bool HasAnyWrite = false;
+  bool HasWriteOutsideEntryBB = false;
+
+  BasicBlock &EntryBB = F.getEntryBlock();
+  SmallVector<ArgumentUse, 4> Worklist;
+  for (Use &U : A.uses())
+    Worklist.push_back({&U, 0});
+
+  auto UpdateUseInfo = [&UsesPerBlock](Instruction *I,
+                                       ArgumentAccessInfo Info) {
+    auto *BB = I->getParent();
+    auto &BBInfo = UsesPerBlock.getOrInsertDefault(BB);
+    bool AlreadyVisitedInst = BBInfo.Insts.contains(I);
+    auto &IInfo = BBInfo.Insts[I];
+
+    // Instructions that have more than one use of the argument are considered
+    // as clobbers.
+    if (AlreadyVisitedInst) {
+      IInfo = {ArgumentAccessInfo::AccessType::Unknown, {}, true};
+      BBInfo.HasClobber = true;
+      return false;
+    }
+
+    IInfo = Info;
+    BBInfo.HasClobber |= IInfo.IsClobber;
+    BBInfo.HasWrites |=
+        (IInfo.ArgAccessType == ArgumentAccessInfo::AccessType::Write &&
+         !IInfo.AccessRanges.empty());
+    return !IInfo.AccessRanges.empty();
+  };
+
+  // No need for a visited set because we don't look through phis, so there are
+  // no cycles.
+  while (!Worklist.empty()) {
+    ArgumentUse IU = Worklist.pop_back_val();
+    User *U = IU.U->getUser();
+    // Add GEP uses to worklist.
+    // If the GEP is not a constant GEP, set IsInitialize to false.
+    if (auto *GEP = dyn_cast<GEPOperator>(U)) {
+      APInt Offset(PointerSize, 0, /*isSigned=*/true);
+      bool IsConstGEP = GEP->accumulateConstantOffset(DL, Offset);
+      std::optional<int64_t> NewOffset = std::nullopt;
+      if (IsConstGEP && IU.Offset.has_value()) {
+        NewOffset = *IU.Offset + Offset.getSExtValue();
+      }
+      for (Use &U : GEP->uses())
+        Worklist.push_back({&U, NewOffset});
+      continue;
+    }
+
+    auto *I = cast<Instruction>(U);
+    bool HasWrite = UpdateUseInfo(I, GetArgmentAccessInfo(I, IU, DL));
+
+    HasAnyWrite |= HasWrite;
+
+    if (HasWrite && I->getParent() != &EntryBB) {
+      HasWriteOutsideEntryBB = true;
+    }
+  }
+  return {HasAnyWrite, HasWriteOutsideEntryBB};
+}
+
 } // end anonymous namespace
 
 namespace llvm {
@@ -866,9 +1067,132 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
   return true;
 }
 
+static bool inferInitializes(Argument &A, Function &F) {
+  DenseMap<const BasicBlock *, UsesPerBlockInfo> UsesPerBlock;
+  auto [HasAnyWrite, HasWriteOutsideEntryBB] =
+      CollectArgumentUsesPerBlock(A, F, UsesPerBlock);
+  // No write anywhere in the function, bail.
+  if (!HasAnyWrite)
+    return false;
+
+  BasicBlock &EntryBB = F.getEntryBlock();
+  DenseMap<const BasicBlock *, ConstantRangeList> Initialized;
+  auto VisitBlock = [&](const BasicBlock *BB) -> ConstantRangeList {
+    auto UPB = UsesPerBlock.find(BB);
+
+    // If this block has uses and none are writes, the argument is not
+    // initialized in this block.
+    if (UPB != UsesPerBlock.end() && !UPB->second.HasWrites)
+      return ConstantRangeList();
+
+    ConstantRangeList CRL;
+
+    // Start with intersection of successors.
+    // If this block has any clobbering use, we're going to clear out the
+    // ranges at some point in this block anyway, so don't bother looking at
+    // successors.
+    if (UPB == UsesPerBlock.end() || !UPB->second.HasClobber) {
+      bool HasAddedSuccessor = false;
+      for (auto *Succ : successors(BB)) {
+        if (auto SuccI = Initialized.find(Succ); SuccI != Initialized.end()) {
+          if (HasAddedSuccessor) {
+            CRL = CRL.intersectWith(SuccI->second);
+          } else {
+            CRL = SuccI->second;
+            HasAddedSuccessor = true;
+          }
+        } else {
+          CRL = ConstantRangeList();
+          break;
+        }
+      }
+    }
+
+    if (UPB != UsesPerBlock.end()) {
+      // Sort uses in this block by instruction order.
+      SmallVector<std::pair<Instruction *, ArgumentAccessInfo>, 2> Insts;
+      append_range(Insts, UPB->second.Insts);
+      sort(Insts, [](std::pair<Instruction *, ArgumentAccessInfo> &LHS,
+                     std::pair<Instruction *, ArgumentAccessInfo> &RHS) {
+        return LHS.first->comesBefore(RHS.first);
+      });
+
+      // From the end of the block to the beginning of the block, set
+      // initializes ranges.
+      for (auto [_, Info] : reverse(Insts)) {
+        if (Info.IsClobber) {
+          CRL = ConstantRangeList();
+        }
+        if (!Info.AccessRanges.empty()) {
+          if (Info.ArgAccessType == ArgumentAccessInfo::AccessType::Write) {
+            CRL = CRL.unionWith(Info.AccessRanges);
+          } else {
+            assert(Info.ArgAccessType == ArgumentAccessInfo::AccessType::Read);
+            for (const auto &ReadRange : Info.AccessRanges) {
+              CRL.subtract(ReadRange);
+            }
+          }
+        }
+      }
+    }
+    return CRL;
+  };
+
+  ConstantRangeList EntryCRL;
+  // If all write instructions are in the EntryBB, or if the EntryBB has
+  // a clobbering use, we only need to look at EntryBB.
+  bool OnlyScanEntryBlock = !HasWriteOutsideEntryBB;
+  if (!OnlyScanEntryBlock) {
+    if (auto EntryUPB = UsesPerBlock.find(&EntryBB);
+        EntryUPB != UsesPerBlock.end()) {
+      OnlyScanEntryBlock = EntryUPB->second.HasClobber;
+    }
+  }
+  if (OnlyScanEntryBlock) {
+    EntryCRL = VisitBlock(&EntryBB);
+    if (EntryCRL.empty()) {
+      return false;
+    }
+  } else {
+    // Visit successors before predecessors with a post-order walk of the
+    // blocks.
+    for (const BasicBlock *BB : post_order(&F)) {
+      ConstantRangeList CRL = VisitBlock(BB);
+      if (!CRL.empty()) {
+        Initialized[BB] = CRL;
+      }
+    }
+
+    auto EntryCRLI = Initialized.find(&EntryBB);
+    if (EntryCRLI == Initialized.end()) {
+      return false;
+    }
+
+    EntryCRL = EntryCRLI->second;
+  }
+
+  assert(!EntryCRL.empty() &&
+         "should have bailed already if EntryCRL is empty");
+
+  if (A.hasAttribute(Attribute::Initializes)) {
+    ConstantRangeList PreviousCRL =
+        A.getAttribute(Attribute::Initializes).getValueAsConstantRangeList();
+    if (PreviousCRL == EntryCRL) {
+      return false;
+    }
+    EntryCRL = EntryCRL.unionWith(PreviousCRL);
+  }
+
+  A.addAttr(Attribute::get(A.getContext(), Attribute::Initializes,
+                           EntryCRL.rangesRef()));
+
+  return true;
+}
+
 /// Deduce nocapture attributes for the SCC.
 static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
-                             SmallSet<Function *, 8> &Changed) {
+                             SmallSet<Function *, 8> &Changed,
+                             bool SkipInitializes) {
   ArgumentGraph AG;
 
   // Check each function in turn, determining which pointer arguments are not
@@ -935,6 +1259,10 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         if (R != Attribute::None)
           if (addAccessAttr(&A, R))
             Changed.insert(F);
+      }
+      if (!SkipInitializes && !A.onlyReadsMemory()) {
+        if (inferInitializes(A, *F))
+          Changed.insert(F);
       }
     }
   }
@@ -1844,13 +2172,13 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
 
   SmallSet<Function *, 8> Changed;
   if (ArgAttrsOnly) {
-    addArgumentAttrs(Nodes.SCCNodes, Changed);
+    addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/true);
     return Changed;
   }
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
   addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
-  addArgumentAttrs(Nodes.SCCNodes, Changed);
+  addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/false);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
   addWillReturn(Nodes.SCCNodes, Changed);

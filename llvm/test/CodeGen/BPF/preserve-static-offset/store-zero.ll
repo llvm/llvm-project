@@ -28,7 +28,7 @@ entry:
   ret void
 }
 
-; CHECK:      define dso_local void @bar(ptr nocapture noundef writeonly %[[p:.*]])
+; CHECK:      define dso_local void @bar(ptr nocapture noundef writeonly initializes((0, 4)) %[[p:.*]])
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   store i32 0, ptr %[[p]], align 4, !tbaa
 ; CHECK-NEXT:   ret void
