@@ -207,6 +207,14 @@ Example 7 - Addresses as symbol names:
   foz
   /tmp/test.h:1:0
 
+Example 8 - :option:`--skip-line-zero` output for an address with no line correspondence (an address associated with line zero):
+
+.. code-block:: console
+
+  $ llvm-symbolizer --obj=test.elf --skip-line-zero 0xa
+  main
+  /tmp/test/main.c:4:6 (approximate)
+
 OPTIONS
 -------
 
@@ -215,6 +223,12 @@ OPTIONS
   Add the specified offset to object file addresses when performing lookups.
   This can be used to perform lookups as if the object were relocated by the
   offset.
+
+.. option:: --skip-line-zero
+
+  If an address does not have an associated line number, use the last line
+  number from the current sequence in the line-table. Such lines are labeled
+  as "approximate" in the output as they may be misleading.
 
 .. option:: --basenames, -s
 
