@@ -643,15 +643,15 @@ declare i32 @__tgt_target_teams_nowait_mapper(ptr, i64, ptr, i32, ptr, ptr, ptr,
 
 declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
-declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
-declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 declare void @__tgt_target_data_update_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
-declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 declare i64 @__tgt_mapper_num_components(ptr)
 
@@ -1250,19 +1250,19 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK-NEXT: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+; CHECK-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+; CHECK-NEXT: declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare void @__tgt_target_data_update_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+; CHECK-NEXT: declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare i64 @__tgt_mapper_num_components(ptr)
@@ -1892,19 +1892,19 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC-NEXT: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare void @__tgt_target_data_update_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare i64 @__tgt_mapper_num_components(ptr)
@@ -2547,19 +2547,19 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT-NEXT: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; EXT: ; Function Attrs: nounwind
-; EXT-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+; EXT-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr, i32 signext, ptr, i32 signext, ptr)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare void @__tgt_target_data_end_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; EXT: ; Function Attrs: nounwind
-; EXT-NEXT: declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+; EXT-NEXT: declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr, i32 signext, ptr, i32 signext, ptr)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare void @__tgt_target_data_update_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; EXT: ; Function Attrs: nounwind
-; EXT-NEXT: declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+; EXT-NEXT: declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr, i32 signext, ptr, i32 signext, ptr)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare i64 @__tgt_mapper_num_components(ptr)
