@@ -301,7 +301,7 @@ private:
                                 const MCAsmLayout &Layout) override;
   void prepareImports(SmallVectorImpl<wasm::WasmImport> &Imports,
                       MCAssembler &Asm, const MCAsmLayout &Layout);
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 
   uint64_t writeOneObject(MCAssembler &Asm, const MCAsmLayout &Layout,
                           DwoMode Mode);
@@ -1067,7 +1067,7 @@ uint32_t WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
     int64_t Size = Layout.getSectionAddressSize(FuncSection);
     encodeULEB128(Size, W->OS);
     FuncSection->setSectionOffset(W->OS.tell() - Section.ContentsOffset);
-    Asm.writeSectionData(W->OS, FuncSection, Layout);
+    Asm.writeSectionData(W->OS, FuncSection);
   }
 
   // Apply fixups.
@@ -1248,7 +1248,7 @@ void WasmObjectWriter::writeCustomSection(WasmCustomSection &CustomSection,
   startCustomSection(Section, CustomSection.Name);
 
   Sec->setSectionOffset(W->OS.tell() - Section.ContentsOffset);
-  Asm.writeSectionData(W->OS, Sec, Layout);
+  Asm.writeSectionData(W->OS, Sec);
 
   CustomSection.OutputContentsOffset = Section.ContentsOffset;
   CustomSection.OutputIndex = Section.Index;
@@ -1438,8 +1438,8 @@ void WasmObjectWriter::prepareImports(
   }
 }
 
-uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
+uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   support::endian::Writer MainWriter(*OS, llvm::endianness::little);
   W = &MainWriter;
   if (IsSplitDwarf) {

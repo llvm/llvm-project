@@ -197,8 +197,7 @@ public:
                           const SectionIndexMapTy &SectionIndexMap,
                           const SectionOffsetsTy &SectionOffsets);
 
-  void writeSectionData(const MCAssembler &Asm, MCSection &Sec,
-                        const MCAsmLayout &Layout);
+  void writeSectionData(const MCAssembler &Asm, MCSection &Sec);
 
   void WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
                         uint64_t Address, uint64_t Offset, uint64_t Size,
@@ -207,7 +206,7 @@ public:
 
   void writeRelocations(const MCAssembler &Asm, const MCSectionELF &Sec);
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout);
+  uint64_t writeObject(MCAssembler &Asm);
   void writeSection(const SectionIndexMapTy &SectionIndexMap,
                     uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
                     const MCSectionELF &Section);
@@ -282,9 +281,9 @@ public:
       : ELFObjectWriter(std::move(MOTW)), OS(OS),
         IsLittleEndian(IsLittleEndian) {}
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override {
+  uint64_t writeObject(MCAssembler &Asm) override {
     return ELFWriter(*this, OS, IsLittleEndian, ELFWriter::AllSections)
-        .writeObject(Asm, Layout);
+        .writeObject(Asm);
   }
 
   friend struct ELFWriter;
@@ -314,11 +313,11 @@ public:
     return true;
   }
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override {
+  uint64_t writeObject(MCAssembler &Asm) override {
     uint64_t Size = ELFWriter(*this, OS, IsLittleEndian, ELFWriter::NonDwoOnly)
-                        .writeObject(Asm, Layout);
+                        .writeObject(Asm);
     Size += ELFWriter(*this, DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
-                .writeObject(Asm, Layout);
+                .writeObject(Asm);
     return Size;
   }
 };
@@ -850,8 +849,7 @@ bool ELFWriter::maybeWriteCompression(
   return true;
 }
 
-void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
-                                 const MCAsmLayout &Layout) {
+void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec) {
   MCSectionELF &Section = static_cast<MCSectionELF &>(Sec);
   StringRef SectionName = Section.getName();
   auto &Ctx = Asm.getContext();
@@ -860,13 +858,13 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
                              : DebugCompressionType::None;
   if (CompressionType == DebugCompressionType::None ||
       !SectionName.starts_with(".debug_")) {
-    Asm.writeSectionData(W.OS, &Section, Layout);
+    Asm.writeSectionData(W.OS, &Section);
     return;
   }
 
   SmallVector<char, 128> UncompressedData;
   raw_svector_ostream VecOS(UncompressedData);
-  Asm.writeSectionData(VecOS, &Section, Layout);
+  Asm.writeSectionData(VecOS, &Section);
   ArrayRef<uint8_t> Uncompressed =
       ArrayRef(reinterpret_cast<uint8_t *>(UncompressedData.data()),
                UncompressedData.size());
@@ -1066,7 +1064,8 @@ void ELFWriter::writeSectionHeader(
   }
 }
 
-uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
+uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   uint64_t StartOffset = W.OS.tell();
 
   MCContext &Ctx = Asm.getContext();
@@ -1097,7 +1096,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
     const uint64_t SecStart = align(Section.getAlign());
 
     const MCSymbolELF *SignatureSymbol = Section.getGroup();
-    writeSectionData(Asm, Section, Layout);
+    writeSectionData(Asm, Section);
 
     uint64_t SecEnd = W.OS.tell();
     SectionOffsets[&Section] = std::make_pair(SecStart, SecEnd);
