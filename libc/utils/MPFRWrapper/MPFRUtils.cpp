@@ -487,6 +487,12 @@ public:
     return result;
   }
 
+  MPFRNumber fmul(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_mul(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   cpp::string str() const {
     // 200 bytes should be more than sufficient to hold a 100-digit number
     // plus additional bytes for the decimal point, '-' sign etc.
@@ -738,6 +744,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
     return inputX.hypot(inputY);
   case Operation::Pow:
     return inputX.pow(inputY);
+  case Operation::Fmul:
+    return inputX.fmul(inputY);
   default:
     __builtin_unreachable();
   }
@@ -947,21 +955,9 @@ explain_binary_operation_one_output_error(Operation, const BinaryInput<float> &,
                                           float, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<double> &, double, double, RoundingMode);
-template void
-explain_binary_operation_one_output_error(Operation,
-                                          const BinaryInput<long double> &,
-                                          long double, double, RoundingMode);
-#ifdef LIBC_TYPES_HAS_FLOAT16
-template void explain_binary_operation_one_output_error(
-    Operation, const BinaryInput<float16> &, float16, double, RoundingMode);
-template void
-explain_binary_operation_one_output_error(Operation, const BinaryInput<float> &,
-                                          float16, double, RoundingMode);
-template void explain_binary_operation_one_output_error(
-    Operation, const BinaryInput<double> &, float16, double, RoundingMode);
-template void explain_binary_operation_one_output_error(
-    Operation, const BinaryInput<long double> &, float16, double, RoundingMode);
-#endif
+template void explain_binary_operation_one_output_error<long double>(
+    Operation, const BinaryInput<long double> &, long double, double,
+    RoundingMode);
 
 template <typename InputType, typename OutputType>
 void explain_ternary_operation_one_output_error(
@@ -1109,7 +1105,7 @@ bool compare_binary_operation_one_output(Operation op,
                                          OutputType libc_result,
                                          double ulp_tolerance,
                                          RoundingMode rounding) {
-  unsigned int precision = get_precision<InputType>(ulp_tolerance);
+  unsigned int precision = get_precision<T>(ulp_tolerance);
   MPFRNumber mpfr_result =
       binary_operation_one_output(op, input.x, input.y, precision, rounding);
   double ulp = mpfr_result.ulp(libc_result);
@@ -1117,32 +1113,13 @@ bool compare_binary_operation_one_output(Operation op,
   return (ulp <= ulp_tolerance);
 }
 
-template bool compare_binary_operation_one_output(Operation,
-                                                  const BinaryInput<float> &,
-                                                  float, double, RoundingMode);
-template bool compare_binary_operation_one_output(Operation,
-                                                  const BinaryInput<double> &,
-                                                  double, double, RoundingMode);
-template bool
-compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
-                                    long double, double, RoundingMode);
-#ifdef LIBC_TYPES_HAS_FLOAT16
-template bool compare_binary_operation_one_output(Operation,
-                                                  const BinaryInput<float16> &,
-                                                  float16, double,
-                                                  RoundingMode);
-template bool compare_binary_operation_one_output(Operation,
-                                                  const BinaryInput<float> &,
-                                                  float16, double,
-                                                  RoundingMode);
-template bool compare_binary_operation_one_output(Operation,
-                                                  const BinaryInput<double> &,
-                                                  float16, double,
-                                                  RoundingMode);
-template bool
-compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
-                                    float16, double, RoundingMode);
-#endif
+template bool compare_binary_operation_one_output<float>(
+    Operation, const BinaryInput<float> &, float, double, RoundingMode);
+template bool compare_binary_operation_one_output<double>(
+    Operation, const BinaryInput<double> &, double, double, RoundingMode);
+template bool compare_binary_operation_one_output<long double>(
+    Operation, const BinaryInput<long double> &, long double, double,
+    RoundingMode);
 
 template <typename InputType, typename OutputType>
 bool compare_ternary_operation_one_output(Operation op,
