@@ -452,6 +452,28 @@ add_entrypoint_object(
     .memory_utils.inline_memset
 )
 
+add_entrypoint_object(
+  strcoll_l
+  SRCS
+    strcoll_l.cpp
+  HDRS
+    strcoll_l.h
+  DEPENDS
+    .strcoll
+    libc.include.llvm-libc-types.locale_t
+)
+
+add_entrypoint_object(
+  strxfrm_l
+  SRCS
+    strxfrm_l.cpp
+  HDRS
+    strxfrm_l.h
+  DEPENDS
+    .strxfrm
+    libc.include.llvm-libc-types.locale_t
+)
+
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
 # - Declares an entry point,

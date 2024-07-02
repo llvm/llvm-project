@@ -199,6 +199,8 @@ add_gen_header(
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.locale_t
 )
 
 add_gen_header(
@@ -356,6 +358,17 @@ add_gen_header(
     .llvm-libc-types.pid_t
     .llvm-libc-types.posix_spawnattr_t
     .llvm-libc-types.posix_spawn_file_actions_t
+)
+
+add_gen_header(
+  locale
+  DEF_FILE locale.h.def
+  GEN_HDR locale.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_lconv
+    .llvm-libc-types.locale_t
+    .llvm-libc-macros.locale_macros
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys

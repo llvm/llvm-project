@@ -19,4 +19,8 @@
 
 #define RAND_MAX 2147483647
 
+// N.B. If current thread is utf8 then this is 4
+// otherwise it is 1. Leaving at 4 to be safe.
+#define MB_CUR_MAX 4
+
 #endif // LLVM_LIBC_MACROS_STDLIB_MACROS_H

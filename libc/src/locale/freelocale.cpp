@@ -1,4 +1,4 @@
-//===-- C standard library header ctype.h --------------------------------===//
+//===-- Implementation of freelocale --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_CTYPE_H
-#define LLVM_LIBC_CTYPE_H
+#include "freelocale.h"
+#include "src/__support/common.h"
 
-#include "__llvm-libc-common.h"
-#include "llvm-libc-types/locale_t.h"
+namespace LIBC_NAMESPACE {
 
-%%public_api()
+LLVM_LIBC_FUNCTION(void, freelocale, (locale_t)) {
+  // ...
+}
 
-#endif // LLVM_LIBC_CTYPE_H
+} // namespace LIBC_NAMESPACE
