@@ -294,12 +294,14 @@ void llvm::SplitModule(
       if (!NonEmptyModules.contains(I))
         EmptyModules.push_back(I);
     }
-    auto NextEmptyModuleIt = EmptyModules.begin();
-    for (const auto F : UnmappedFunctions) {
-      if (NextEmptyModuleIt == EmptyModules.end())
-        break;
-      ClusterIDMap.insert({F, *NextEmptyModuleIt});
-      ++NextEmptyModuleIt;
+    if (!EmptyModules.empty()) {
+      auto NextEmptyModuleIt = EmptyModules.begin();
+      for (const auto F : UnmappedFunctions) {
+        if (NextEmptyModuleIt == EmptyModules.end())
+          break;
+        ClusterIDMap.insert({F, *NextEmptyModuleIt});
+        ++NextEmptyModuleIt;
+      }
     }
   }
 
