@@ -185,12 +185,10 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       return;
     }
 
-    Value +=
-        Writer->getSymbolAddress(*A, *Asm.getLayout()) -
-        (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base, *Asm.getLayout()));
-    Value -=
-        Writer->getSymbolAddress(*B, *Asm.getLayout()) -
-        (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base, *Asm.getLayout()));
+    Value += Writer->getSymbolAddress(*A, Asm) -
+             (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base, Asm));
+    Value -= Writer->getSymbolAddress(*B, Asm) -
+             (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base, Asm));
 
     if (!A_Base)
       Index = A->getFragment()->getParent()->getOrdinal() + 1;
@@ -237,7 +235,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     } else if (Symbol->isInSection() && !Symbol->isVariable()) {
       // The index is the section ordinal (1-based).
       Index = Symbol->getFragment()->getParent()->getOrdinal() + 1;
-      Value += Writer->getSymbolAddress(*Symbol, *Asm.getLayout());
+      Value += Writer->getSymbolAddress(*Symbol, Asm);
 
       if (IsPCRel)
         Value -= FixupAddress + (1 << Log2Size);
@@ -376,7 +374,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     return false;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, *Asm.getLayout());
+  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
@@ -399,7 +397,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     // pedantic compatibility with 'as'.
     Type = A->isExternal() ? (unsigned)MachO::GENERIC_RELOC_SECTDIFF
                            : (unsigned)MachO::GENERIC_RELOC_LOCAL_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(*SB, *Asm.getLayout());
+    Value2 = Writer->getSymbolAddress(*SB, Asm);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -476,7 +474,7 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
         Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset();
     IsPCRel = 1;
     FixedValue = FixupAddress -
-                 Writer->getSymbolAddress(SymB->getSymbol(), *Asm.getLayout()) +
+                 Writer->getSymbolAddress(SymB->getSymbol(), Asm) +
                  Target.getConstant();
     FixedValue += 1ULL << Log2Size;
   } else {
