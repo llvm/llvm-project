@@ -19,7 +19,9 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.output_dir = Path(
             args.output_dir
             if args.output_dir
-            else output_dir_env if output_dir_env else "libc/newhdrgen/tests/output"
+            else output_dir_env 
+            if output_dir_env 
+            else "libc/newhdrgen/tests/output"
         )
 
         self.maxDiff = None
