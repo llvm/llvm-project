@@ -40,6 +40,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -11884,6 +11885,46 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
       << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
 }
 
+static void NoteImplicitDeductionGuide(Sema &S, FunctionDecl *Fn) {
+  auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
+  if (!DG)
+    return;
+  TemplateDecl *OriginTemplate =
+      DG->getDeclName().getCXXDeductionGuideTemplate();
+  // We want to always print synthesized deduction guides for type aliases.
+  // They would retain the explicit bit of the corresponding constructor.
+  if (!(DG->isImplicit() || (OriginTemplate && OriginTemplate->isTypeAlias())))
+    return;
+  std::string FunctionProto;
+  llvm::raw_string_ostream OS(FunctionProto);
+  FunctionTemplateDecl *Template = DG->getDescribedFunctionTemplate();
+  if (!Template) {
+    // This also could be an instantiation. Find out the primary template.
+    FunctionDecl *Pattern =
+        DG->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+    if (!Pattern) {
+      // The implicit deduction guide is built on an explicit non-template
+      // deduction guide. Currently, this might be the case only for type
+      // aliases.
+      // FIXME: Add a test once https://github.com/llvm/llvm-project/pull/96686
+      // gets merged.
+      assert(OriginTemplate->isTypeAlias() &&
+             "Non-template implicit deduction guides are only possible for "
+             "type aliases");
+      DG->print(OS);
+      S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
+          << FunctionProto;
+      return;
+    }
+    Template = Pattern->getDescribedFunctionTemplate();
+    assert(Template && "Cannot find the associated function template of "
+                       "CXXDeductionGuideDecl?");
+  }
+  Template->print(OS);
+  S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
+      << FunctionProto;
+}
+
 /// Generates a 'note' diagnostic for an overload candidate.  We've
 /// already generated a primary error at the call site.
 ///
@@ -11940,6 +11981,17 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     S.NoteOverloadCandidate(Cand->FoundDecl, Fn, Cand->getRewriteKind());
     return;
   }
+
+  // If this is a synthesized deduction guide we're deducing against, add a note
+  // for it. These deduction guides are not explicitly spelled in the source
+  // code, so simply printing a deduction failure note mentioning synthesized
+  // template parameters or pointing to the header of the surrounding RecordDecl
+  // would be confusing.
+  //
+  // We prefer adding such notes at the end of the deduction failure because
+  // duplicate code snippets appearing in the diagnostic would likely become
+  // noisy.
+  auto _ = llvm::make_scope_exit([&] { NoteImplicitDeductionGuide(S, Fn); });
 
   switch (Cand->FailureKind) {
   case ovl_fail_too_many_arguments:
