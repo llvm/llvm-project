@@ -53,7 +53,6 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyLateEHPrepare.cpp",
     "WebAssemblyLowerBrUnless.cpp",
     "WebAssemblyLowerEmscriptenEHSjLj.cpp",
-    "WebAssemblyLowerRefTypesIntPtrConv.cpp",
     "WebAssemblyMCInstLower.cpp",
     "WebAssemblyMCLowerPrePass.cpp",
     "WebAssemblyMachineFunctionInfo.cpp",

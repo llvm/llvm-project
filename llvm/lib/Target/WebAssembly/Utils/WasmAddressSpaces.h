@@ -25,10 +25,6 @@ enum WasmAddressSpace : unsigned {
   // to these pointers are lowered to global.get / global.set or local.get /
   // local.set, as appropriate.
   WASM_ADDRESS_SPACE_VAR = 1,
-  // A non-integral address space for externref values
-  WASM_ADDRESS_SPACE_EXTERNREF = 10,
-  // A non-integral address space for funcref values
-  WASM_ADDRESS_SPACE_FUNCREF = 20,
 };
 
 inline bool isDefaultAddressSpace(unsigned AS) {
