@@ -666,7 +666,7 @@ static Instruction *shrinkInsertElt(CastInst &Trunc,
   if (match(VecOp, m_Undef())) {
     // trunc   (inselt undef, X, Index) --> inselt undef,   (trunc X), Index
     // fptrunc (inselt undef, X, Index) --> inselt undef, (fptrunc X), Index
-    UndefValue *NarrowUndef = UndefValue::get(DestTy);
+    Constant *NarrowUndef = UndefValue::get(DestTy);
     Value *NarrowOp = Builder.CreateCast(Opcode, ScalarOp, DestScalarTy);
     return InsertElementInst::Create(NarrowUndef, NarrowOp, Index);
   }

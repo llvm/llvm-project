@@ -1277,8 +1277,8 @@ TEST_F(PatternMatchTest, UndefPoisonMix) {
   StructType *StTy2 = StructType::get(ScalarTy, StTy);
   StructType *StTy3 = StructType::get(StTy, ScalarTy);
   Constant *Zero = ConstantInt::getNullValue(ScalarTy);
-  UndefValue *U = UndefValue::get(ScalarTy);
-  UndefValue *P = PoisonValue::get(ScalarTy);
+  Constant *U = UndefValue::get(ScalarTy);
+  Constant *P = PoisonValue::get(ScalarTy);
 
   EXPECT_TRUE(match(ConstantVector::get({U, P}), m_Undef()));
   EXPECT_TRUE(match(ConstantVector::get({P, U}), m_Undef()));
