@@ -56,6 +56,7 @@ add_gen_header(
   DEF_FILE dlfcn.h.def
   GEN_HDR dlfcn.h
   DEPENDS
+    .llvm-libc-types.Dl_info
     .llvm-libc-macros.dlfcn_macros
     .llvm_libc_common_h
 )
@@ -365,6 +366,25 @@ add_gen_header(
     .llvm-libc-types.pid_t
     .llvm-libc-types.posix_spawnattr_t
     .llvm-libc-types.posix_spawn_file_actions_t
+)
+
+add_gen_header(
+  link
+  DEF_FILE link.h.def
+  GEN_HDR link.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_dl_phdr_info
+    .llvm-libc-types.__dl_iterate_phdr_callback_t
+    .llvm-libc-macros.link_macros
+)
+
+add_gen_header(
+  elf
+  DEF_FILE elf.h.def
+  GEN_HDR elf.h
+  DEPENDS
+    .llvm-libc-macros.elf_macros
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys

@@ -338,6 +338,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dlfcn.dlsym
     libc.src.dlfcn.dlclose
     libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dladdr
+    libc.src.link.dl_iterate_phdr
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

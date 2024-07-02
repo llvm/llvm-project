@@ -39,4 +39,6 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sched
     libc.include.sys_stat
     libc.include.dlfcn
+    libc.include.link
+    libc.include.elf
 )
