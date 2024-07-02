@@ -99,7 +99,10 @@ add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
 
+add_math_entrypoint_object(f16add)
 add_math_entrypoint_object(f16addf)
+add_math_entrypoint_object(f16addl)
+add_math_entrypoint_object(f16addf128)
 
 add_math_entrypoint_object(f16div)
 add_math_entrypoint_object(f16divf)
@@ -116,7 +119,10 @@ add_math_entrypoint_object(f16sqrtf)
 add_math_entrypoint_object(f16sqrtl)
 add_math_entrypoint_object(f16sqrtf128)
 
+add_math_entrypoint_object(f16sub)
 add_math_entrypoint_object(f16subf)
+add_math_entrypoint_object(f16subl)
+add_math_entrypoint_object(f16subf128)
 
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
