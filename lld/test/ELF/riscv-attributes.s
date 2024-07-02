@@ -52,6 +52,12 @@
 # ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A6C.o:(.riscv.attributes): atomic_abi=1
 # ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A7.o:(.riscv.attributes): atomic_abi=3
 
+## RISC-V tag merging for atomic_abi values A6C and invalid lead to an error.
+# RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_invalid.s -o atomic_abi_invalid.o
+# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_invalid.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_INVALID --implicit-check-not=error:
+# ATOMIC_ABI_INVALID: error: unknown atomic abi for .riscv.attributes
+# ATOMIC_ABI_INVALID-NEXT: >>> atomic_abi_invalid.o:(.riscv.attributes): atomic_abi=42
+
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6S.s -o atomic_abi_A6S.o
 # RUN: ld.lld atomic_abi_A6S.o atomic_abi_A6C.o -o atomic_abi_A6C_A6S
 # RUN: llvm-readobj -A atomic_abi_A6C_A6S | FileCheck %s --check-prefix=A6C_A6S
@@ -331,6 +337,9 @@
 
 #--- atomic_abi_A7.s
 .attribute atomic_abi, 3
+
+#--- atomic_abi_invalid.s
+.attribute atomic_abi, 42
 
 #      UNKNOWN_NONE: BuildAttributes {
 # UNKNOWN_NONE-NEXT:   FormatVersion: 0x41
