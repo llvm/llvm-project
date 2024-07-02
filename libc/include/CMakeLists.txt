@@ -210,6 +210,7 @@ add_gen_header(
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.locale_t
 )
 
 add_gen_header(
