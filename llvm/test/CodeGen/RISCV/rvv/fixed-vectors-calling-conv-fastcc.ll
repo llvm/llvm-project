@@ -230,7 +230,7 @@ define fastcc <32 x i32> @vector_arg_indirect_stack(i32 %0, i32 %1, i32 %2, i32 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vle32.v v16, (t2)
+; CHECK-NEXT:    vle32.v v16, (t3)
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %s = add <32 x i32> %x, %z
@@ -261,8 +261,8 @@ define fastcc <32 x i32> @pass_vector_arg_indirect_stack(<32 x i32> %x, <32 x i3
 ; CHECK-NEXT:    li a5, 5
 ; CHECK-NEXT:    li a6, 6
 ; CHECK-NEXT:    li a7, 7
-; CHECK-NEXT:    mv t2, sp
-; CHECK-NEXT:    li t3, 8
+; CHECK-NEXT:    mv t3, sp
+; CHECK-NEXT:    li t4, 8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
@@ -281,7 +281,7 @@ define fastcc <32 x i32> @vector_arg_direct_stack(i32 %0, i32 %1, i32 %2, i32 %3
 ; CHECK-LABEL: vector_arg_direct_stack:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    addi a1, sp, 8
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v24, (a1)
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
@@ -303,11 +303,13 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    sd a0, 136(sp)
+; CHECK-NEXT:    sd a0, 144(sp)
 ; CHECK-NEXT:    li a0, 13
+; CHECK-NEXT:    sd a0, 8(sp)
+; CHECK-NEXT:    li a0, 12
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    li a3, 3
@@ -315,11 +317,10 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; CHECK-NEXT:    li a5, 5
 ; CHECK-NEXT:    li a6, 6
 ; CHECK-NEXT:    li a7, 7
-; CHECK-NEXT:    li t2, 8
-; CHECK-NEXT:    li t3, 9
-; CHECK-NEXT:    li t4, 10
-; CHECK-NEXT:    li t5, 11
-; CHECK-NEXT:    li t6, 12
+; CHECK-NEXT:    li t3, 8
+; CHECK-NEXT:    li t4, 9
+; CHECK-NEXT:    li t5, 10
+; CHECK-NEXT:    li t6, 11
 ; CHECK-NEXT:    sd a0, 0(sp)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
@@ -336,7 +337,7 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 define fastcc <4 x i1> @vector_mask_arg_direct_stack(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10, i32 %11, i32 %12, i32 %13, <32 x i32> %x, <32 x i32> %y, <32 x i32> %z, <4 x i1> %m1, <4 x i1> %m2, i32 %last) {
 ; CHECK-LABEL: vector_mask_arg_direct_stack:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, sp, 136
+; CHECK-NEXT:    addi a0, sp, 144
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
