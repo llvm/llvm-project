@@ -1301,4 +1301,23 @@ to move code from (e.g.)  libc++ to the LLVM core without concern, but that code
 cannot be moved from the LLVM core to libc++ without the copyright owner's
 permission.
 
+.. _ai contributions:
+
+AI generated contributions
+--------------------------
+
+Artificial intelligence systems raise many questions around copyright that have
+yet to be answered. Our policy on AI tools is guided by our copyright policy:
+contributors are responsible for ensuring that they have the right to contribute
+code under the terms of our license, typically meaning that either they, their
+employer, or their collaborators hold the copyright. Using AI tools to
+regenerate copyrighted material does not remove the copyright, and contributors
+are responsible for ensuring that such material does not appear in their
+contributions.
+
+As such, the LLVM policy is that contributors are permitted to to use artificial
+intelligence tools to produce contributions, provided that they have the right
+to license that code under the project license. Contributions found to violate
+this policy will be removed just like any other offending contribution.
+
 .. _LLVM Discourse forums: https://discourse.llvm.org
