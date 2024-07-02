@@ -127,11 +127,9 @@ define <16 x i32> @fold_pmaddwd_512() {
 
 define <4 x i32> @elts_pmaddwd_128(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: @elts_pmaddwd_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A1:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> [[TMP1]], <8 x i16> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
   %2 = shufflevector <8 x i16> %a1, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
@@ -142,11 +140,9 @@ define <4 x i32> @elts_pmaddwd_128(<8 x i16> %a0, <8 x i16> %a1) {
 
 define <8 x i32> @elts_pmaddwd_256(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: @elts_pmaddwd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0:%.*]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[A1:%.*]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> [[TMP1]], <16 x i16> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    ret <8 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
   %1 = shufflevector <16 x i16> %a0, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %2 = shufflevector <16 x i16> %a1, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -157,11 +153,9 @@ define <8 x i32> @elts_pmaddwd_256(<16 x i16> %a0, <16 x i16> %a1) {
 
 define <16 x i32> @elts_pmaddwd_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; CHECK-LABEL: @elts_pmaddwd_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i16> [[A0:%.*]], <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i16> [[A1:%.*]], <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> [[TMP1]], <32 x i16> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i32> [[TMP3]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    ret <16 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> [[A0:%.*]], <32 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP1]], <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    ret <16 x i32> [[TMP2]]
 ;
   %1 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %2 = shufflevector <32 x i16> %a1, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
