@@ -425,14 +425,12 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForAdd(
 
 // Returns true if A matches B + C where C is constant.
 static bool matchesAdd(Value *A, Value *&B, ConstantInt *&C) {
-  return (match(A, m_Add(m_Value(B), m_ConstantInt(C))) ||
-          match(A, m_Add(m_ConstantInt(C), m_Value(B))));
+  return match(A, m_c_Add(m_Value(B), m_ConstantInt(C)));
 }
 
 // Returns true if A matches B | C where C is constant.
 static bool matchesOr(Value *A, Value *&B, ConstantInt *&C) {
-  return (match(A, m_Or(m_Value(B), m_ConstantInt(C))) ||
-          match(A, m_Or(m_ConstantInt(C), m_Value(B))));
+  return match(A, m_c_Or(m_Value(B), m_ConstantInt(C)));
 }
 
 void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForMul(
