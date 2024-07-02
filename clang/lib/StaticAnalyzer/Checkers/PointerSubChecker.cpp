@@ -49,10 +49,26 @@ public:
 };
 }
 
+static bool isArrayVar(const MemRegion *R) {
+  while (R) {
+    if (isa<VarRegion>(R))
+      return true;
+    if (const auto *ER = dyn_cast<ElementRegion>(R))
+      R = ER->getSuperRegion();
+    else
+      return false;
+  }
+  return false;
+}
+
 bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
                                          const ElementRegion *ElemReg,
                                          const MemRegion *Reg) const {
   if (!ElemReg)
+    return true;
+
+  const MemRegion *SuperReg = ElemReg->getSuperRegion();
+  if (!isArrayVar(SuperReg))
     return true;
 
   auto ReportBug = [&](const llvm::StringLiteral &Msg) {
@@ -64,7 +80,6 @@ bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
   };
 
   ProgramStateRef State = C.getState();
-  const MemRegion *SuperReg = ElemReg->getSuperRegion();
   SValBuilder &SVB = C.getSValBuilder();
 
   if (SuperReg == Reg) {
@@ -121,8 +136,9 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
   if (LR == RR)
     return;
 
-  // No warning if one operand is unknown.
-  if (isa<SymbolicRegion>(LR) || isa<SymbolicRegion>(RR))
+  // No warning if one operand is unknown or resides in a region that could be
+  // equal to the other.
+  if (LR->getSymbolicBase() || RR->getSymbolicBase())
     return;
 
   const auto *ElemLR = dyn_cast<ElementRegion>(LR);
