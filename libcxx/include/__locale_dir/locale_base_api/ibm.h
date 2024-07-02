@@ -58,11 +58,6 @@ inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __en
   return ::strtoll(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long strtol_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtol(__nptr, __endptr, __base);
-}
-
 inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtod(__nptr, __endptr);
@@ -82,11 +77,6 @@ inline _LIBCPP_HIDE_FROM_ABI unsigned long long
 strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtoull(__nptr, __endptr, __base);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long strtoul_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoul(__nptr, __endptr, __base);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI

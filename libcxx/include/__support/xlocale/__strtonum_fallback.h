@@ -42,19 +42,4 @@ inline _LIBCPP_HIDE_FROM_ABI unsigned long long strtoull_l(const char* __nptr, c
   return ::strtoull(__nptr, __endptr, __base);
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI long long wcstoll_l(const wchar_t* __nptr, wchar_t** __endptr, int __base, locale_t) {
-  return ::wcstoll(__nptr, __endptr, __base);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-wcstoull_l(const wchar_t* __nptr, wchar_t** __endptr, int __base, locale_t) {
-  return ::wcstoull(__nptr, __endptr, __base);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI long double wcstold_l(const wchar_t* __nptr, wchar_t** __endptr, locale_t) {
-  return ::wcstold(__nptr, __endptr);
-}
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-
 #endif // _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
