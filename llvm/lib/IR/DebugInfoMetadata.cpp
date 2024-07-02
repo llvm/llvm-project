@@ -34,6 +34,10 @@ cl::opt<bool> EnableFSDiscriminator(
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
 
+uint32_t DIType::getAlignInBits() const {
+  return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
+}
+
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
@@ -42,10 +46,10 @@ DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
       Fragment(DII->getExpression()->getFragmentInfo()),
       InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
 
-DebugVariable::DebugVariable(const DPValue *DPV)
-    : Variable(DPV->getVariable()),
-      Fragment(DPV->getExpression()->getFragmentInfo()),
-      InlinedAt(DPV->getDebugLoc().getInlinedAt()) {}
+DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
+    : Variable(DVR->getVariable()),
+      Fragment(DVR->getExpression()->getFragmentInfo()),
+      InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
 
 DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
     : DebugVariable(DVI->getVariable(), std::nullopt,
@@ -731,24 +735,30 @@ Constant *DIDerivedType::getDiscriminantValue() const {
   return nullptr;
 }
 
-DIDerivedType *
-DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
-                       Metadata *File, unsigned Line, Metadata *Scope,
-                       Metadata *BaseType, uint64_t SizeInBits,
-                       uint32_t AlignInBits, uint64_t OffsetInBits,
-                       std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-                       Metadata *ExtraData, Metadata *Annotations,
-                       StorageType Storage, bool ShouldCreate) {
+DIDerivedType *DIDerivedType::getImpl(
+    LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
+    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+    uint32_t AlignInBits, uint64_t OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace,
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                         ExtraData, Annotations));
+                         AlignInBits, OffsetInBits, DWARFAddressSpace,
+                         PtrAuthData, Flags, ExtraData, Annotations));
   Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
   DEFINE_GETIMPL_STORE(DIDerivedType,
                        (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
-                        DWARFAddressSpace, Flags),
+                        DWARFAddressSpace, PtrAuthData, Flags),
                        Ops);
+}
+
+std::optional<DIDerivedType::PtrAuthData>
+DIDerivedType::getPtrAuthData() const {
+  return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
+             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             : std::nullopt;
 }
 
 DICompositeType *DICompositeType::getImpl(
@@ -1394,6 +1404,8 @@ unsigned DIExpression::ExprOperand::getSize() const {
   switch (Op) {
   case dwarf::DW_OP_LLVM_convert:
   case dwarf::DW_OP_LLVM_fragment:
+  case dwarf::DW_OP_LLVM_extract_bits_sext:
+  case dwarf::DW_OP_LLVM_extract_bits_zext:
   case dwarf::DW_OP_bregx:
     return 3;
   case dwarf::DW_OP_constu:
@@ -1464,6 +1476,8 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_arg:
     case dwarf::DW_OP_LLVM_tag_offset:
+    case dwarf::DW_OP_LLVM_extract_bits_sext:
+    case dwarf::DW_OP_LLVM_extract_bits_zext:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
@@ -1663,6 +1677,41 @@ DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
       return Info;
     }
   return std::nullopt;
+}
+
+std::optional<uint64_t> DIExpression::getActiveBits(DIVariable *Var) {
+  std::optional<uint64_t> InitialActiveBits = Var->getSizeInBits();
+  std::optional<uint64_t> ActiveBits = InitialActiveBits;
+  for (auto Op : expr_ops()) {
+    switch (Op.getOp()) {
+    default:
+      // We assume the worst case for anything we don't currently handle and
+      // revert to the initial active bits.
+      ActiveBits = InitialActiveBits;
+      break;
+    case dwarf::DW_OP_LLVM_extract_bits_zext:
+    case dwarf::DW_OP_LLVM_extract_bits_sext: {
+      // We can't handle an extract whose sign doesn't match that of the
+      // variable.
+      std::optional<DIBasicType::Signedness> VarSign = Var->getSignedness();
+      bool VarSigned = (VarSign == DIBasicType::Signedness::Signed);
+      bool OpSigned = (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext);
+      if (!VarSign || VarSigned != OpSigned) {
+        ActiveBits = InitialActiveBits;
+        break;
+      }
+      [[fallthrough]];
+    }
+    case dwarf::DW_OP_LLVM_fragment:
+      // Extract or fragment narrows the active bits
+      if (ActiveBits)
+        ActiveBits = std::min(*ActiveBits, Op.getArg(1));
+      else
+        ActiveBits = Op.getArg(1);
+      break;
+    }
+  }
+  return ActiveBits;
 }
 
 void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
@@ -1870,9 +1919,9 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
     }
     Op.appendToVector(NewOps);
   }
-
   NewOps.append(Ops.begin(), Ops.end());
-  auto *result = DIExpression::get(Expr->getContext(), NewOps);
+  auto *result =
+      DIExpression::get(Expr->getContext(), NewOps)->foldConstantMath();
   assert(result->isValid() && "concatenated expression is not valid");
   return result;
 }
@@ -1880,11 +1929,12 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
 DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                                           ArrayRef<uint64_t> Ops) {
   assert(Expr && !Ops.empty() && "Can't append ops to this expression");
-  assert(none_of(Ops,
-                 [](uint64_t Op) {
-                   return Op == dwarf::DW_OP_stack_value ||
-                          Op == dwarf::DW_OP_LLVM_fragment;
-                 }) &&
+  assert(std::none_of(expr_op_iterator(Ops.begin()),
+                      expr_op_iterator(Ops.end()),
+                      [](auto Op) {
+                        return Op.getOp() == dwarf::DW_OP_stack_value ||
+                               Op.getOp() == dwarf::DW_OP_LLVM_fragment;
+                      }) &&
          "Can't append this op");
 
   // Append a DW_OP_deref after Expr's current op list if it's non-empty and
@@ -1916,6 +1966,8 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
   // Track whether it's safe to split the value at the top of the DWARF stack,
   // assuming that it'll be used as an implicit location value.
   bool CanSplitValue = true;
+  // Track whether we need to add a fragment expression to the end of Expr.
+  bool EmitFragment = true;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
@@ -1951,6 +2003,11 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
           return std::nullopt;
         break;
       case dwarf::DW_OP_LLVM_fragment: {
+        // If we've decided we don't need a fragment then give up if we see that
+        // there's already a fragment expression.
+        // FIXME: We could probably do better here
+        if (!EmitFragment)
+          return std::nullopt;
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
         uint64_t FragmentSizeInBits = Op.getArg(1);
@@ -1960,15 +2017,38 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
         OffsetInBits += FragmentOffsetInBits;
         continue;
       }
+      case dwarf::DW_OP_LLVM_extract_bits_zext:
+      case dwarf::DW_OP_LLVM_extract_bits_sext: {
+        // If we're extracting bits from inside of the fragment that we're
+        // creating then we don't have a fragment after all, and just need to
+        // adjust the offset that we're extracting from.
+        uint64_t ExtractOffsetInBits = Op.getArg(0);
+        uint64_t ExtractSizeInBits = Op.getArg(1);
+        if (ExtractOffsetInBits >= OffsetInBits &&
+            ExtractOffsetInBits + ExtractSizeInBits <=
+                OffsetInBits + SizeInBits) {
+          Ops.push_back(Op.getOp());
+          Ops.push_back(ExtractOffsetInBits - OffsetInBits);
+          Ops.push_back(ExtractSizeInBits);
+          EmitFragment = false;
+          continue;
+        }
+        // If the extracted bits aren't fully contained within the fragment then
+        // give up.
+        // FIXME: We could probably do better here
+        return std::nullopt;
+      }
       }
       Op.appendToVector(Ops);
     }
   }
   assert((!Expr->isImplicit() || CanSplitValue) && "Expr can't be split");
   assert(Expr && "Unknown DIExpression");
-  Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-  Ops.push_back(OffsetInBits);
-  Ops.push_back(SizeInBits);
+  if (EmitFragment) {
+    Ops.push_back(dwarf::DW_OP_LLVM_fragment);
+    Ops.push_back(OffsetInBits);
+    Ops.push_back(SizeInBits);
+  }
   return DIExpression::get(Expr->getContext(), Ops);
 }
 

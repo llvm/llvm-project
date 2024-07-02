@@ -10,11 +10,10 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_ARGS_H
 #define _LIBCPP___FORMAT_FORMAT_ARGS_H
 
-#include <__availability>
 #include <__config>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
-#include <__format/format_fwd.h>
+#include <__fwd/format.h>
 #include <cstddef>
 #include <cstdint>
 

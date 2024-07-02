@@ -260,25 +260,6 @@ exit:
   ret i32 %5
 }
 
-define void @foo9(i1 zeroext %0) nounwind #0 !prof !14 {
-;; Check that function with section attribute is not split.
-; MFS-DEFAULTS-LABEL: foo9
-; MFS-DEFAULTS-NOT:   foo9.cold:
-  br i1 %0, label %2, label %4, !prof !17
-
-2:                                                ; preds = %1
-  %3 = call i32 @bar()
-  br label %6
-
-4:                                                ; preds = %1
-  %5 = call i32 @baz()
-  br label %6
-
-6:                                                ; preds = %4, %2
-  %7 = tail call i32 @qux()
-  ret void
-}
-
 define i32 @foo10(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14 {
 ;; Check that nop is inserted just before the EH pad if it's beginning a section.
 ; MFS-DEFAULTS-LABEL:         foo10
@@ -564,10 +545,10 @@ define i32 @foo19(i32 %in) !prof !14 !section_prefix !15 {
 ; MFS-DEFAULTS-LABEL:        foo19
 ; MFS-DEFAULTS:              .section        .text.split.foo19
 ; MFS-DEFAULTS-NEXT:         foo19.cold:
-; MFS-DEFAULTS-X86:            .LJTI18_0
-; MFS-DEFAULTS-AARCH64-NOT:    .LJTI18_0
+; MFS-DEFAULTS-X86:            .LJTI17_0
+; MFS-DEFAULTS-AARCH64-NOT:    .LJTI17_0
 ; MFS-DEFAULTS:              .section        .rodata
-; MFS-DEFAULTS:                .LJTI18_0
+; MFS-DEFAULTS:                .LJTI17_0
   %cmp = icmp sgt i32 %in, 3
   br i1 %cmp, label %hot, label %cold_switch, !prof !17
 
@@ -637,8 +618,6 @@ declare void @_Z1fv()
 declare i32 @__gxx_personality_v0(...)
 
 @_ZTIi = external constant ptr
-
-attributes #0 = { "implicit-section-name"="nosplit" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}

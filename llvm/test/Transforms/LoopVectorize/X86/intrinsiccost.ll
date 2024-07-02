@@ -60,7 +60,7 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[IND_END24:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IND_END21:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP15]]
-; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc nuw i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END18:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST17]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 56
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
@@ -68,7 +68,7 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC15:%.*]] = and i64 [[TMP0]], 4294967288
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC15]] to i32
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw i64 [[N_VEC15]] to i32
 ; CHECK-NEXT:    [[IND_END16:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw nsw i64 [[N_VEC15]], 1
 ; CHECK-NEXT:    [[IND_END20:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP16]]
@@ -183,7 +183,7 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END24:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END21:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc nuw i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END18:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST17]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 112
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
@@ -191,7 +191,7 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC15:%.*]] = and i64 [[TMP0]], 4294967280
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC15]] to i32
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw i64 [[N_VEC15]] to i32
 ; CHECK-NEXT:    [[IND_END16:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
 ; CHECK-NEXT:    [[IND_END20:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC15]]
 ; CHECK-NEXT:    [[IND_END23:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC15]]

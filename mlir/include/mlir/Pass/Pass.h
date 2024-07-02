@@ -12,7 +12,6 @@
 #include "mlir/IR/Action.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
 #include <optional>
@@ -114,7 +113,9 @@ public:
   /// Derived classes may override this method to hook into the point at which
   /// options are initialized, but should generally always invoke this base
   /// class variant.
-  virtual LogicalResult initializeOptions(StringRef options);
+  virtual LogicalResult
+  initializeOptions(StringRef options,
+                    function_ref<LogicalResult(const Twine &)> errorHandler);
 
   /// Prints out the pass in the textual representation of pipelines. If this is
   /// an adaptor pass, print its pass managers.
@@ -353,7 +354,7 @@ private:
 template <typename OpT = void>
 class OperationPass : public Pass {
 public:
-  ~OperationPass() = default;
+  ~OperationPass() override = default;
 
 protected:
   OperationPass(TypeID passID) : Pass(passID, OpT::getOperationName()) {}
@@ -398,7 +399,7 @@ protected:
 template <>
 class OperationPass<void> : public Pass {
 public:
-  ~OperationPass() = default;
+  ~OperationPass() override = default;
 
 protected:
   OperationPass(TypeID passID) : Pass(passID) {}
@@ -459,7 +460,7 @@ public:
   static bool classof(const Pass *pass) {
     return pass->getTypeID() == TypeID::get<PassT>();
   }
-  ~PassWrapper() = default;
+  ~PassWrapper() override = default;
 
 protected:
   PassWrapper() : BaseT(TypeID::get<PassT>()) {}

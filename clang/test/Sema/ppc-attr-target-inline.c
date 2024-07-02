@@ -1,5 +1,5 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64le -target-feature +htm -fsyntax-only -emit-llvm %s -verify
+// RUN: %clang_cc1 -triple powerpc64le -target-feature +htm -emit-llvm-only %s -verify
 
 __attribute__((always_inline))
 int test1(int *x) {

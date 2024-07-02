@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "lldb/API/SBAttachInfo.h"
@@ -155,18 +156,22 @@ struct DAP {
   std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
-  std::vector<ExceptionBreakpoint> exception_breakpoints;
+  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
+  llvm::once_flag init_exception_breakpoints_flag;
   std::vector<std::string> init_commands;
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> post_run_commands;
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
+  // Map step in target id to list of function targets that user can choose.
+  llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
   // A copy of the last LaunchRequest or AttachRequest so we can reuse its
   // arguments if we get a RestartRequest.
   std::optional<llvm::json::Object> last_launch_or_attach_request;
   lldb::tid_t focus_tid;
-  std::atomic<bool> sent_terminated_event;
+  bool disconnecting = false;
+  llvm::once_flag terminated_event_flag;
   bool stop_at_entry;
   bool is_attach;
   bool enable_auto_variable_summaries;
@@ -223,6 +228,8 @@ struct DAP {
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   llvm::json::Value CreateTopLevelScopes();
+
+  void PopulateExceptionBreakpoints();
 
   /// \return
   ///   Attempt to determine if an expression is a variable expression or

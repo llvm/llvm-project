@@ -133,6 +133,24 @@ class CompilerInstance : public ModuleLoader {
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
+  /// Records the set of modules
+  class FailedModulesSet {
+    llvm::StringSet<> Failed;
+
+  public:
+    bool hasAlreadyFailed(StringRef module) { return Failed.count(module) > 0; }
+
+    void addFailed(StringRef module) { Failed.insert(module); }
+  };
+
+  /// The set of modules that failed to build.
+  ///
+  /// This pointer will be shared among all of the compiler instances created
+  /// to (re)build modules, so that once a module fails to build anywhere,
+  /// other instances will see that the module has failed and won't try to
+  /// build it again.
+  std::shared_ptr<FailedModulesSet> FailedModules;
+
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
   std::map<std::string, std::string, std::less<>> BuiltModules;
@@ -619,6 +637,24 @@ public:
   }
 
   /// @}
+  /// @name Failed modules set
+  /// @{
+
+  bool hasFailedModulesSet() const { return (bool)FailedModules; }
+
+  void createFailedModulesSet() {
+    FailedModules = std::make_shared<FailedModulesSet>();
+  }
+
+  std::shared_ptr<FailedModulesSet> getFailedModulesSetPtr() const {
+    return FailedModules;
+  }
+
+  void setFailedModulesSet(std::shared_ptr<FailedModulesSet> FMS) {
+    FailedModules = FMS;
+  }
+
+  /// }
   /// @name Output Files
   /// @{
 

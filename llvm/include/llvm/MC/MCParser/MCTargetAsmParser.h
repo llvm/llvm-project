@@ -514,9 +514,7 @@ public:
   /// by the tied-operands checks in the AsmMatcher. This method can be
   /// overridden to allow e.g. a sub- or super-register as the tied operand.
   virtual bool areEqualRegs(const MCParsedAsmOperand &Op1,
-                            const MCParsedAsmOperand &Op2) const {
-    return Op1.isReg() && Op2.isReg() && Op1.getReg() == Op2.getReg();
-  }
+                            const MCParsedAsmOperand &Op2) const;
 
   // Return whether this parser uses assignment statements with equals tokens
   virtual bool equalIsAsmAssignment() { return true; };

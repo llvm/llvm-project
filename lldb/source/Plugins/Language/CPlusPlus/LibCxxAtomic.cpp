@@ -90,7 +90,7 @@ public:
 
   ~LibcxxStdAtomicSyntheticFrontEnd() override = default;
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -124,8 +124,8 @@ bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
   return true;
 }
 
-uint32_t lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdAtomicSyntheticFrontEnd::CalculateNumChildren() {
   return m_real_child ? 1 : 0;
 }
 

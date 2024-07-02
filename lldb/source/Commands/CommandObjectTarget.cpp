@@ -784,7 +784,8 @@ public:
 
     options.SetRootValueObjectName(root_name);
 
-    valobj_sp->Dump(s, options);
+    if (llvm::Error error = valobj_sp->Dump(s, options))
+      s << "error: " << toString(std::move(error));
   }
 
   static size_t GetVariableCallback(void *baton, const char *name,
@@ -3377,7 +3378,7 @@ protected:
       case 'r': {
         size_t ref_count = 0;
         char in_shared_cache = 'Y';
-        
+
         ModuleSP module_sp(module->shared_from_this());
         if (!ModuleList::ModuleIsInCache(module))
           in_shared_cache = 'N';
@@ -4508,11 +4509,8 @@ protected:
 
     ModuleSpec module_spec;
     module_spec.GetUUID() = frame_module_sp->GetUUID();
-
-    if (FileSystem::Instance().Exists(frame_module_sp->GetPlatformFileSpec())) {
-      module_spec.GetArchitecture() = frame_module_sp->GetArchitecture();
-      module_spec.GetFileSpec() = frame_module_sp->GetPlatformFileSpec();
-    }
+    module_spec.GetArchitecture() = frame_module_sp->GetArchitecture();
+    module_spec.GetFileSpec() = frame_module_sp->GetPlatformFileSpec();
 
     if (!DownloadObjectAndSymbolFile(module_spec, result, flush)) {
       result.AppendError("unable to find debug symbols for the current frame");
@@ -4557,12 +4555,8 @@ protected:
 
       ModuleSpec module_spec;
       module_spec.GetUUID() = frame_module_sp->GetUUID();
-
-      if (FileSystem::Instance().Exists(
-              frame_module_sp->GetPlatformFileSpec())) {
-        module_spec.GetArchitecture() = frame_module_sp->GetArchitecture();
-        module_spec.GetFileSpec() = frame_module_sp->GetPlatformFileSpec();
-      }
+      module_spec.GetFileSpec() = frame_module_sp->GetPlatformFileSpec();
+      module_spec.GetArchitecture() = frame_module_sp->GetArchitecture();
 
       bool current_frame_flush = false;
       if (DownloadObjectAndSymbolFile(module_spec, result, current_frame_flush))

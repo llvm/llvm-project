@@ -11,7 +11,7 @@ declare void @use_vec(<2 x i5>)
 
 define i64 @test1(i32 %x) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[T:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
@@ -22,7 +22,7 @@ define i64 @test1(i32 %x) {
 
 define i64 @test2(i32 %x) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[T:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
@@ -33,7 +33,7 @@ define i64 @test2(i32 %x) {
 
 define i64 @test3(i32 %x) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[T:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[S:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
@@ -167,39 +167,39 @@ define <2 x i32> @test10_vec_nonuniform(<2 x i32> %i) {
   ret <2 x i32> %D
 }
 
-define <2 x i32> @test10_vec_undef0(<2 x i32> %i) {
-; CHECK-LABEL: @test10_vec_undef0(
-; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 undef>
-; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 undef>
+define <2 x i32> @test10_vec_poison0(<2 x i32> %i) {
+; CHECK-LABEL: @test10_vec_poison0(
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 poison>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
   %B = shl <2 x i8> %A, <i8 6, i8 0>
-  %C = ashr <2 x i8> %B, <i8 6, i8 undef>
+  %C = ashr <2 x i8> %B, <i8 6, i8 poison>
   %D = sext <2 x i8> %C to <2 x i32>
   ret <2 x i32> %D
 }
-define <2 x i32> @test10_vec_undef1(<2 x i32> %i) {
-; CHECK-LABEL: @test10_vec_undef1(
+define <2 x i32> @test10_vec_poison1(<2 x i32> %i) {
+; CHECK-LABEL: @test10_vec_poison1(
 ; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 undef>
 ; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 undef>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
-  %B = shl <2 x i8> %A, <i8 6, i8 undef>
+  %B = shl <2 x i8> %A, <i8 6, i8 poison>
   %C = ashr <2 x i8> %B, <i8 6, i8 0>
   %D = sext <2 x i8> %C to <2 x i32>
   ret <2 x i32> %D
 }
-define <2 x i32> @test10_vec_undef2(<2 x i32> %i) {
-; CHECK-LABEL: @test10_vec_undef2(
-; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 undef>
-; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 undef>
+define <2 x i32> @test10_vec_poison2(<2 x i32> %i) {
+; CHECK-LABEL: @test10_vec_poison2(
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 poison>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
-  %B = shl <2 x i8> %A, <i8 6, i8 undef>
-  %C = ashr <2 x i8> %B, <i8 6, i8 undef>
+  %B = shl <2 x i8> %A, <i8 6, i8 poison>
+  %C = ashr <2 x i8> %B, <i8 6, i8 poison>
   %D = sext <2 x i8> %C to <2 x i32>
   ret <2 x i32> %D
 }
@@ -385,7 +385,7 @@ define i16 @smear_set_bit_different_dest_type(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit_different_dest_type(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 24
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP1]], 31
-; CHECK-NEXT:    [[S:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[S:%.*]] = trunc nsw i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[S]]
 ;
   %t = trunc i32 %x to i8

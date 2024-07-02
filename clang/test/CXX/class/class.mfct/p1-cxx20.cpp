@@ -3,7 +3,7 @@
 // RUN: split-file %s %t
 // RUN: cd %t
 //
-// RUN: %clang_cc1 -std=c++20 no-modules.cpp -fsyntax-only -ast-dump | \
+// RUN: %clang_cc1 -std=c++20 no-modules.cpp -ast-dump | \
 // RUN: FileCheck --match-full-lines --check-prefix=CHECK-NM %s
 // RUN: %clang_cc1 -std=c++20 -xc++-user-header header-unit.h -ast-dump | \
 // RUN: FileCheck --match-full-lines --check-prefix=CHECK-HU %s

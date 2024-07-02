@@ -47,9 +47,9 @@ struct ScheduleTreeVisitor {
       return getDerived().visitSequence(Node.as<isl::schedule_node_sequence>(),
                                         std::forward<Args>(args)...);
     case isl_schedule_node_set:
+      assert(isl_schedule_node_n_children(Node.get()) >= 2);
       return getDerived().visitSet(Node.as<isl::schedule_node_set>(),
                                    std::forward<Args>(args)...);
-      assert(isl_schedule_node_n_children(Node.get()) >= 2);
     case isl_schedule_node_leaf:
       assert(isl_schedule_node_n_children(Node.get()) == 0);
       return getDerived().visitLeaf(Node.as<isl::schedule_node_leaf>(),

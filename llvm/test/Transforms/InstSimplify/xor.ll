@@ -156,6 +156,20 @@ define <2 x i4> @xor_and_or_not_undef_elt(<2 x i4> %a, <2 x i4> %b) {
   ret <2 x i4> %r
 }
 
+; but correct to propagate poison element
+
+define <2 x i4> @xor_and_or_not_poison_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @xor_and_or_not_poison_elt(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[A:%.*]], <i4 -1, i4 poison>
+; CHECK-NEXT:    ret <2 x i4> [[NOT]]
+;
+  %and = and <2 x i4> %b, %a
+  %not = xor <2 x i4> %a, <i4 -1, i4 poison>
+  %or = or <2 x i4> %not, %b
+  %r = xor <2 x i4> %or, %and
+  ret <2 x i4> %r
+}
+
 define i4 @xor_or_and_not_commute0(i4 %a, i4 %b) {
 ; CHECK-LABEL: @xor_or_and_not_commute0(
 ; CHECK-NEXT:    ret i4 [[A:%.*]]
@@ -277,11 +291,11 @@ define i4 @xor_or_and_not_wrong_val2(i4 %a, i4 %b, i4 %c) {
   ret i4 %r
 }
 
-define <2 x i4> @xor_or_and_not_undef_elt(<2 x i4> %a, <2 x i4> %b) {
-; CHECK-LABEL: @xor_or_and_not_undef_elt(
+define <2 x i4> @xor_or_and_not_poison_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @xor_or_and_not_poison_elt(
 ; CHECK-NEXT:    ret <2 x i4> [[A:%.*]]
 ;
-  %not = xor <2 x i4> %a, <i4 -1, i4 undef>
+  %not = xor <2 x i4> %a, <i4 -1, i4 poison>
   %and = and <2 x i4> %b, %not
   %or = or <2 x i4> %a, %b
   %r = xor <2 x i4> %or, %and

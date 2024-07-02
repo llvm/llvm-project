@@ -167,9 +167,13 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
                                   LastParamListWasEmpty);
 
   // Parse the actual template declaration.
-  if (Tok.is(tok::kw_concept))
-    return Actions.ConvertDeclToDeclGroup(
-        ParseConceptDefinition(TemplateInfo, DeclEnd));
+  if (Tok.is(tok::kw_concept)) {
+    Decl *ConceptDecl = ParseConceptDefinition(TemplateInfo, DeclEnd);
+    // We need to explicitly pass ConceptDecl to ParsingDeclRAIIObject, so that
+    // delayed diagnostics (e.g. warn_deprecated) have a Decl to work with.
+    ParsingTemplateParams.complete(ConceptDecl);
+    return Actions.ConvertDeclToDeclGroup(ConceptDecl);
+  }
 
   return ParseDeclarationAfterTemplate(
       Context, TemplateInfo, ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
@@ -313,10 +317,11 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
     return nullptr;
   }
 
-  IdentifierInfo *Id = Result.Identifier;
+  const IdentifierInfo *Id = Result.Identifier;
   SourceLocation IdLoc = Result.getBeginLoc();
 
-  DiagnoseAndSkipCXX11Attributes();
+  ParsedAttributes Attrs(AttrFactory);
+  MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
 
   if (!TryConsumeToken(tok::equal)) {
     Diag(Tok.getLocation(), diag::err_expected) << tok::equal;
@@ -335,8 +340,8 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
   Expr *ConstraintExpr = ConstraintExprResult.get();
   return Actions.ActOnConceptDefinition(getCurScope(),
-                                        *TemplateInfo.TemplateParams,
-                                        Id, IdLoc, ConstraintExpr);
+                                        *TemplateInfo.TemplateParams, Id, IdLoc,
+                                        ConstraintExpr, Attrs);
 }
 
 /// ParseTemplateParameters - Parses a template-parameter-list enclosed in
@@ -733,7 +738,12 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   // we introduce the type parameter into the local scope.
   SourceLocation EqualLoc;
   ParsedType DefaultArg;
+  std::optional<DelayTemplateIdDestructionRAII> DontDestructTemplateIds;
   if (TryConsumeToken(tok::equal, EqualLoc)) {
+    // The default argument might contain a lambda declaration; avoid destroying
+    // parsed template ids at the end of that declaration because they can be
+    // used in a type constraint later.
+    DontDestructTemplateIds.emplace(*this, /*DelayTemplateIdDestruction=*/true);
     // The default argument may declare template parameters, notably
     // if it contains a generic lambda, so we need to increase
     // the template depth as these parameters would not be instantiated
@@ -805,10 +815,12 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
   // identifier, comma, or greater. Provide a fixit if the identifier, comma,
   // or greater appear immediately or after 'struct'. In the latter case,
   // replace the keyword with 'class'.
+  bool TypenameKeyword = false;
   if (!TryConsumeToken(tok::kw_class)) {
     bool Replace = Tok.isOneOf(tok::kw_typename, tok::kw_struct);
     const Token &Next = Tok.is(tok::kw_struct) ? NextToken() : Tok;
     if (Tok.is(tok::kw_typename)) {
+      TypenameKeyword = true;
       Diag(Tok.getLocation(),
            getLangOpts().CPlusPlus17
                ? diag::warn_cxx14_compat_template_template_param_typename
@@ -878,10 +890,9 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
     }
   }
 
-  return Actions.ActOnTemplateTemplateParameter(getCurScope(), TemplateLoc,
-                                                ParamList, EllipsisLoc,
-                                                ParamName, NameLoc, Depth,
-                                                Position, EqualLoc, DefaultArg);
+  return Actions.ActOnTemplateTemplateParameter(
+      getCurScope(), TemplateLoc, ParamList, TypenameKeyword, EllipsisLoc,
+      ParamName, NameLoc, Depth, Position, EqualLoc, DefaultArg);
 }
 
 /// ParseNonTypeTemplateParameter - Handle the parsing of non-type
@@ -896,7 +907,8 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
   // FIXME: The type should probably be restricted in some way... Not all
   // declarators (parts of declarators?) are accepted for parameters.
   DeclSpec DS(AttrFactory);
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
+  ParsedTemplateInfo TemplateInfo;
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
                              DeclSpecContext::DSC_template_param);
 
   // Parse this as a typename.
@@ -1289,7 +1301,7 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
     // later.
     Tok.setKind(tok::annot_template_id);
 
-    IdentifierInfo *TemplateII =
+    const IdentifierInfo *TemplateII =
         TemplateName.getKind() == UnqualifiedIdKind::IK_Identifier
             ? TemplateName.Identifier
             : nullptr;
@@ -1511,6 +1523,19 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
                                 ExprArg.get(), Loc);
 }
 
+void Parser::ExpandEmbedIntoTemplateArgList(TemplateArgList &TemplateArgs) {
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ASTContext &Context = Actions.getASTContext();
+  for (auto Byte : Data->BinaryData) {
+    Expr *E = IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
+                                     Context.UnsignedCharTy, StartLoc);
+    TemplateArgs.push_back(
+        ParsedTemplateArgument(ParsedTemplateArgument::NonType, E, StartLoc));
+  }
+}
+
 /// ParseTemplateArgumentList - Parse a C++ template-argument-list
 /// (C++ [temp.names]). Returns true if there was an error.
 ///
@@ -1529,25 +1554,29 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
     if (!Template)
       return QualType();
     CalledSignatureHelp = true;
-    return Actions.ProduceTemplateArgumentSignatureHelp(Template, TemplateArgs,
-                                                        OpenLoc);
+    return Actions.CodeCompletion().ProduceTemplateArgumentSignatureHelp(
+        Template, TemplateArgs, OpenLoc);
   };
 
   do {
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
-    ParsedTemplateArgument Arg = ParseTemplateArgument();
-    SourceLocation EllipsisLoc;
-    if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
-      Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
+    if (Tok.is(tok::annot_embed)) {
+      ExpandEmbedIntoTemplateArgList(TemplateArgs);
+    } else {
+      ParsedTemplateArgument Arg = ParseTemplateArgument();
+      SourceLocation EllipsisLoc;
+      if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
+        Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
 
-    if (Arg.isInvalid()) {
-      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
-        RunSignatureHelp();
-      return true;
+      if (Arg.isInvalid()) {
+        if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+          RunSignatureHelp();
+        return true;
+      }
+
+      // Save this template argument.
+      TemplateArgs.push_back(Arg);
     }
-
-    // Save this template argument.
-    TemplateArgs.push_back(Arg);
 
     // If the next token is a comma, consume it and keep reading
     // arguments.

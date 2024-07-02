@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 
@@ -388,6 +387,13 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 void populateVectorLinearizeTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target, unsigned targetBitWidth);
+
+/// Populates patterns for linearizing ND (N >= 2) vector operations to 1D
+/// vector shuffle operations.
+void populateVectorLinearizeShuffleLikeOpsPatterns(TypeConverter &typeConverter,
+                                                   RewritePatternSet &patterns,
+                                                   ConversionTarget &target,
+                                                   unsigned targetBitWidth);
 
 } // namespace vector
 } // namespace mlir

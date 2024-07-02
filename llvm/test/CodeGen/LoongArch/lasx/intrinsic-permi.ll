@@ -36,33 +36,3 @@ entry:
   %res = call <32 x i8> @llvm.loongarch.lasx.xvpermi.q(<32 x i8> %va, <32 x i8> %vb, i32 1)
   ret <32 x i8> %res
 }
-
-define <32 x i8> @lasx_xvpermi_q_204(<32 x i8> %va, <32 x i8> %vb) nounwind {
-; CHECK-LABEL: lasx_xvpermi_q_204:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 0
-; CHECK-NEXT:    ret
-entry:
-  %res = call <32 x i8> @llvm.loongarch.lasx.xvpermi.q(<32 x i8> %va, <32 x i8> %vb, i32 204)
-  ret <32 x i8> %res
-}
-
-define <32 x i8> @lasx_xvpermi_q_221(<32 x i8> %va, <32 x i8> %vb) nounwind {
-; CHECK-LABEL: lasx_xvpermi_q_221:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 17
-; CHECK-NEXT:    ret
-entry:
-  %res = call <32 x i8> @llvm.loongarch.lasx.xvpermi.q(<32 x i8> %va, <32 x i8> %vb, i32 221)
-  ret <32 x i8> %res
-}
-
-define <32 x i8> @lasx_xvpermi_q_255(<32 x i8> %va, <32 x i8> %vb) nounwind {
-; CHECK-LABEL: lasx_xvpermi_q_255:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 51
-; CHECK-NEXT:    ret
-entry:
-  %res = call <32 x i8> @llvm.loongarch.lasx.xvpermi.q(<32 x i8> %va, <32 x i8> %vb, i32 255)
-  ret <32 x i8> %res
-}

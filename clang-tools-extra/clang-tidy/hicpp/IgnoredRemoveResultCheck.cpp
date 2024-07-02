@@ -14,9 +14,9 @@ IgnoredRemoveResultCheck::IgnoredRemoveResultCheck(llvm::StringRef Name,
                                                    ClangTidyContext *Context)
     : UnusedReturnValueCheck(Name, Context,
                              {
-                                 "::std::remove",
-                                 "::std::remove_if",
-                                 "::std::unique",
+                                 "::std::remove$",
+                                 "::std::remove_if$",
+                                 "::std::unique$",
                              }) {
   // The constructor for ClangTidyCheck needs to have been called
   // before we can access options via Options.get().

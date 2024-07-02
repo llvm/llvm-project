@@ -84,7 +84,7 @@ export_sources() {
     # Determine the release by fetching the version from LLVM's CMakeLists.txt
     # in the specified git ref.
     if [ -n "$snapshot" ]; then
-        release=$(git -C $llvm_src_dir show $snapshot:llvm/CMakeLists.txt | grep -ioP 'set\(\s*LLVM_VERSION_(MAJOR|MINOR|PATCH)\s\K[0-9]+' | paste -sd '.')
+        release=$(git -C $llvm_src_dir show $snapshot:cmake/Modules/LLVMVersion.cmake | grep -ioP 'set\(\s*LLVM_VERSION_(MAJOR|MINOR|PATCH)\s\K[0-9]+' | paste -sd '.')
     fi
     
     tag="llvmorg-$release"

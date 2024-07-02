@@ -32,7 +32,7 @@ public:
                    std::unique_ptr<MCCodeEmitter> MCE)
       : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
 
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitBytes(StringRef Data) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
@@ -75,7 +75,6 @@ public:
 MCELFStreamer *createRISCVELFStreamer(MCContext &C,
                                       std::unique_ptr<MCAsmBackend> MAB,
                                       std::unique_ptr<MCObjectWriter> MOW,
-                                      std::unique_ptr<MCCodeEmitter> MCE,
-                                      bool RelaxAll);
+                                      std::unique_ptr<MCCodeEmitter> MCE);
 }
 #endif

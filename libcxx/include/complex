@@ -258,6 +258,7 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 #include <__config>
 #include <__fwd/complex.h>
+#include <__fwd/tuple.h>
 #include <__tuple/tuple_element.h>
 #include <__tuple/tuple_size.h>
 #include <__utility/move.h>
@@ -1444,13 +1445,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x) {
 // [complex.tuple], tuple interface
 
 template <class _Tp>
-struct tuple_size;
-
-template <class _Tp>
 struct tuple_size<complex<_Tp>> : integral_constant<size_t, 2> {};
-
-template <size_t _Ip, class _Tp>
-struct tuple_element;
 
 template <size_t _Ip, class _Tp>
 struct tuple_element<_Ip, complex<_Tp>> {

@@ -430,6 +430,14 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
 }
 
 bool SIModeRegister::runOnMachineFunction(MachineFunction &MF) {
+  // Constrained FP intrinsics are used to support non-default rounding modes.
+  // strictfp attribute is required to mark functions with strict FP semantics
+  // having constrained FP intrinsics. This pass fixes up operations that uses
+  // a non-default rounding mode for non-strictfp functions. But it should not
+  // assume or modify any default rounding modes in case of strictfp functions.
+  const Function &F = MF.getFunction();
+  if (F.hasFnAttribute(llvm::Attribute::StrictFP))
+    return Changed;
   BlockInfo.resize(MF.getNumBlockIDs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();

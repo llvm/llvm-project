@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s --check-prefix=IR
 ;
 ; Check that we guard the divisions because we moved them and thereby increased
 ; their domain.

@@ -16,7 +16,7 @@
 // RUN: rm -f %t/cdb_pch.json
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_pch.json > %t/cdb_pch.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json -format experimental-full \
-// RUN:   -module-files-dir %t/build > %t/result_pch.json
+// RUN:   -module-files-dir %t/build -o %t/result_pch.json
 
 // Explicitly build the PCH:
 //

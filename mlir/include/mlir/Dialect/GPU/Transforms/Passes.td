@@ -88,8 +88,6 @@ def GpuModuleToBinaryPass
     4. `fatbinary`, `fatbin`: produces fatbinaries.
   }];
   let options = [
-    Option<"offloadingHandler", "handler", "Attribute", "nullptr",
-           "Offloading handler to be attached to the resulting binary op.">,
     Option<"toolkitPath", "toolkit", "std::string", [{""}],
            "Toolkit path.">,
     ListOption<"linkFiles", "l", "std::string",

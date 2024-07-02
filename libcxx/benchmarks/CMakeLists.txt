@@ -122,7 +122,7 @@ endif()
 add_library(           cxx-benchmarks-flags-libcxx INTERFACE)
 target_link_libraries( cxx-benchmarks-flags-libcxx INTERFACE cxx-benchmarks-flags)
 target_compile_options(cxx-benchmarks-flags-libcxx INTERFACE ${SANITIZER_FLAGS} -Wno-user-defined-literals -Wno-suggest-override)
-target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -nostdlib++ "-L${BENCHMARK_LIBCXX_INSTALL}/lib" "-L${BENCHMARK_LIBCXX_INSTALL}/lib64" ${SANITIZER_FLAGS})
+target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -lm -nostdlib++ "-L${BENCHMARK_LIBCXX_INSTALL}/lib" "-L${BENCHMARK_LIBCXX_INSTALL}/lib64" ${SANITIZER_FLAGS})
 
 set(libcxx_benchmark_targets)
 
@@ -176,12 +176,15 @@ set(BENCHMARK_TESTS
     algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
+    algorithms/fill.bench.cpp
     algorithms/for_each.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
     algorithms/min.bench.cpp
+    algorithms/minmax.bench.cpp
     algorithms/min_max_element.bench.cpp
+    algorithms/mismatch.bench.cpp
     algorithms/pop_heap.bench.cpp
     algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
@@ -217,9 +220,12 @@ set(BENCHMARK_TESTS
     lexicographical_compare_three_way.bench.cpp
     map.bench.cpp
     monotonic_buffer.bench.cpp
+    numeric/gcd.bench.cpp
     ordered_set.bench.cpp
+    shared_mutex_vs_mutex.bench.cpp
     stop_token.bench.cpp
     std_format_spec_string_unicode.bench.cpp
+    std_format_spec_string_unicode_escape.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp
     system_error.bench.cpp
@@ -246,10 +252,6 @@ endforeach()
 if (LIBCXX_INCLUDE_TESTS)
   include(AddLLVM)
 
-  if (NOT DEFINED LIBCXX_TEST_DEPS)
-    message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
-  endif()
-
   configure_lit_site_cfg(
           ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
           ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
@@ -259,6 +261,6 @@ if (LIBCXX_INCLUDE_TESTS)
   add_lit_target(check-cxx-benchmarks
           "Running libcxx benchmarks tests"
           ${CMAKE_CURRENT_BINARY_DIR}
-          DEPENDS cxx-benchmarks ${LIBCXX_TEST_DEPS}
+          DEPENDS cxx-benchmarks cxx-test-depends
           ARGS ${BENCHMARK_LIT_ARGS})
 endif()

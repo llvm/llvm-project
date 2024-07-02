@@ -18,15 +18,15 @@ define void @test(ptr %addr) {
 ; CHECK-NEXT:    add a2, a0, a1
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
 ; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    add a3, a0, a2
-; CHECK-NEXT:    vl1re64.v v9, (a3)
+; CHECK-NEXT:    vl1re64.v v9, (a0)
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    vl1re64.v v10, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs1r.v v9, (a0)
 ; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    vs1r.v v9, (a2)
-; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vs1r.v v8, (a1)
-; CHECK-NEXT:    vs1r.v v10, (a0)
+; CHECK-NEXT:    vs1r.v v10, (a2)
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0

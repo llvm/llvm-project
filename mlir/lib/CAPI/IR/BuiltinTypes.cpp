@@ -16,7 +16,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include <algorithm>
 
@@ -311,11 +310,11 @@ MlirType mlirVectorTypeGetScalableChecked(MlirLocation loc, intptr_t rank,
 }
 
 bool mlirVectorTypeIsScalable(MlirType type) {
-  return unwrap(type).cast<VectorType>().isScalable();
+  return cast<VectorType>(unwrap(type)).isScalable();
 }
 
 bool mlirVectorTypeIsDimScalable(MlirType type, intptr_t dim) {
-  return unwrap(type).cast<VectorType>().getScalableDims()[dim];
+  return cast<VectorType>(unwrap(type)).getScalableDims()[dim];
 }
 
 //===----------------------------------------------------------------------===//

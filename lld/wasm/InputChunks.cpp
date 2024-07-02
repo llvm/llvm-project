@@ -519,8 +519,8 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // If they occur in DWARF debug symbols, we want to change the pc of the
   // function to -1 to avoid overlapping with a valid range. However for the
   // debug_ranges and debug_loc sections that would conflict with the existing
-  // meaning of -1 so we use -2.  
-  if (name.equals(".debug_ranges") || name.equals(".debug_loc"))
+  // meaning of -1 so we use -2.
+  if (name == ".debug_ranges" || name == ".debug_loc")
     return UINT64_C(-2);
   if (name.starts_with(".debug_"))
     return UINT64_C(-1);

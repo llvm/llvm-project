@@ -24,7 +24,8 @@ namespace chrono {
 
 class time_zone::__impl {
 public:
-  explicit _LIBCPP_HIDE_FROM_ABI __impl(string&& __name) : __name_(std::move(__name)) {}
+  explicit _LIBCPP_HIDE_FROM_ABI __impl(string&& __name, const __tz::__rules_storage_type& __rules_db)
+      : __name_(std::move(__name)), __rules_db_(__rules_db) {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view __name() const noexcept { return __name_; }
 
@@ -33,12 +34,20 @@ public:
     return __continuations_;
   }
 
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const __tz::__rules_storage_type& __rules_db() const { return __rules_db_; }
+
 private:
   string __name_;
   // Note the first line has a name + __continuation, the other lines
   // are just __continuations. So there is always at least one item in
   // the vector.
   vector<__tz::__continuation> __continuations_;
+
+  // Continuations often depend on a set of rules. The rules are stored in
+  // parallel data structurs in tzdb_list. From the time_zone it's not possible
+  // to find its associated tzdb entry and thus not possible to find its
+  // associated rules. Therefore a link to the rules in stored in this class.
+  const __tz::__rules_storage_type& __rules_db_;
 };
 
 } // namespace chrono

@@ -20,13 +20,13 @@ program test_link
   integer, pointer :: test_ptr2
   !$omp declare target link(test_ptr2)
 
-  !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32> {name = "test_int"}
+  !CHECK-DAG: {{%.*}} = omp.map.info var_ptr({{%.*}} : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32> {name = "test_int"}
   !$omp target
     test_int = test_int + 1
   !$omp end target
 
 
-  !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<!fir.array<3xi32>>, !fir.array<3xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{%.*}}) -> !fir.ref<!fir.array<3xi32>> {name = "test_array_1d"}
+  !CHECK-DAG: {{%.*}} = omp.map.info var_ptr({{%.*}} : !fir.ref<!fir.array<3xi32>>, !fir.array<3xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{%.*}}) -> !fir.ref<!fir.array<3xi32>> {name = "test_array_1d"}
   !$omp target
     do i = 1,3
       test_array_1d(i) = i * 2
@@ -35,18 +35,18 @@ program test_link
 
   allocate(test_ptr1)
   test_ptr1 = 1
-  !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(implicit, tofrom) capture(ByRef) members({{%.*}} : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "test_ptr1"}
+  !CHECK-DAG: {{%.*}} = omp.map.info var_ptr({{%.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(implicit, tofrom) capture(ByRef) members({{%.*}} : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "test_ptr1"}
   !$omp target
     test_ptr1 = test_ptr1 + 1
   !$omp end target
 
-  !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32> {name = "test_target"}
+  !CHECK-DAG: {{%.*}} = omp.map.info var_ptr({{%.*}} : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32> {name = "test_target"}
   !$omp target
     test_target = test_target + 1
   !$omp end target
 
 
-  !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(implicit, tofrom) capture(ByRef) members({{%.*}} : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "test_ptr2"}
+  !CHECK-DAG: {{%.*}} = omp.map.info var_ptr({{%.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(implicit, tofrom) capture(ByRef) members({{%.*}} : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "test_ptr2"}
   test_ptr2 => test_target
   !$omp target
     test_ptr2 = test_ptr2 + 1

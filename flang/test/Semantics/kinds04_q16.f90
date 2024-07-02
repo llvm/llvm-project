@@ -12,9 +12,11 @@ subroutine s(var)
   real :: realvar1 = 4.0E6_4
   real :: realvar2 = 4.0D6
   real :: realvar3 = 4.0Q6
+  !PORTABILITY: Explicit kind parameter together with non-'E' exponent letter is not standard
   real :: realvar4 = 4.0D6_8
   !WARNING: Explicit kind parameter on real constant disagrees with exponent letter 'q'
   real :: realvar5 = 4.0Q6_10
+  !PORTABILITY: Explicit kind parameter together with non-'E' exponent letter is not standard
   real :: realvar6 = 4.0Q6_16
   real :: realvar7 = 4.0E6_8
   real :: realvar8 = 4.0E6_10
@@ -25,7 +27,9 @@ subroutine s(var)
   double precision :: doublevar1 = 4.0E6_4
   double precision :: doublevar2 = 4.0D6
   double precision :: doublevar3 = 4.0Q6
+  !PORTABILITY: Explicit kind parameter together with non-'E' exponent letter is not standard
   double precision :: doublevar4 = 4.0D6_8
+  !PORTABILITY: Explicit kind parameter together with non-'E' exponent letter is not standard
   double precision :: doublevar5 = 4.0Q6_16
   double precision :: doublevar6 = 4.0E6_8
   double precision :: doublevar7 = 4.0E6_10

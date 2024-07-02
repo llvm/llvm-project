@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_FENV_FEHOLDEXCEPT_H
 #define LLVM_LIBC_SRC_FENV_FEHOLDEXCEPT_H
 
-#include <fenv.h>
+#include "hdr/types/fenv_t.h"
 
 namespace LIBC_NAMESPACE {
 

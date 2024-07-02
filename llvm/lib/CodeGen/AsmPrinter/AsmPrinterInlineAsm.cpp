@@ -102,9 +102,6 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI, BufNum));
 
-  // Do not use assembler-level information for parsing inline assembly.
-  OutStreamer->setUseAssemblerInfoForParsing(false);
-
   // We create a new MCInstrInfo here since we might be at the module level
   // and not have a MachineFunction to initialize the TargetInstrInfo from and
   // we only need MCInstrInfo for asm parsing. We create one unconditionally
@@ -314,7 +311,7 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
           std::string msg;
           raw_string_ostream Msg(msg);
           Msg << "invalid operand in inline asm: '" << AsmStr << "'";
-          MMI->getModule()->getContext().emitError(LocCookie, Msg.str());
+          MMI->getModule()->getContext().emitError(LocCookie, msg);
         }
       }
       break;
@@ -414,7 +411,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
     }
   }
 
-  emitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
+  emitInlineAsm(StringData, getSubtargetInfo(), TM.Options.MCOptions, LocMD,
                 MI->getInlineAsmDialect());
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't

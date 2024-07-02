@@ -12,9 +12,6 @@
 #include <__config>
 #include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_types.h>
-#include <__type_traits/add_const.h>
-#include <__type_traits/add_cv.h>
-#include <__type_traits/add_volatile.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -28,17 +25,17 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element;
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const _Tp> {
-  typedef _LIBCPP_NODEBUG typename add_const<typename tuple_element<_Ip, _Tp>::type>::type type;
+  typedef _LIBCPP_NODEBUG const typename tuple_element<_Ip, _Tp>::type type;
 };
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, volatile _Tp> {
-  typedef _LIBCPP_NODEBUG typename add_volatile<typename tuple_element<_Ip, _Tp>::type>::type type;
+  typedef _LIBCPP_NODEBUG volatile typename tuple_element<_Ip, _Tp>::type type;
 };
 
 template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp> {
-  typedef _LIBCPP_NODEBUG typename add_cv<typename tuple_element<_Ip, _Tp>::type>::type type;
+  typedef _LIBCPP_NODEBUG const volatile typename tuple_element<_Ip, _Tp>::type type;
 };
 
 #ifndef _LIBCPP_CXX03_LANG

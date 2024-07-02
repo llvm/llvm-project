@@ -22,6 +22,67 @@ entry:
   ret i32 %v
 }
 
+@g1_tls = internal thread_local global i32 0
+
+define i32 @test1_tls(ptr %param) {
+; Ensure that we can fold a store to a load of a global across a store to
+; a parameter when the global is non-escaping.
+;
+; CHECK-LABEL: define i32 @test1_tls(
+; CHECK-SAME: ptr [[PARAM:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @g1_tls)
+; CHECK-NEXT:    store i32 42, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[PARAM]], align 4
+; CHECK-NEXT:    ret i32 42
+;
+entry:
+  %p = call ptr @llvm.threadlocal.address(ptr @g1_tls)
+  store i32 42, ptr %p
+  store i32 7, ptr %param
+  %p2 = call ptr @llvm.threadlocal.address(ptr @g1_tls)
+  %v = load i32, ptr %p2
+  ret i32 %v
+}
+
+define ptr @test1_tls_noopt(ptr %coro, ptr %param) presplitcoroutine {
+; CHECK-LABEL: define ptr @test1_tls_noopt(
+; CHECK-SAME: ptr [[CORO:%.*]], ptr [[PARAM:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @g1_tls)
+; CHECK-NEXT:    store i32 42, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
+; CHECK-NEXT:    switch i8 [[TMP0]], label [[SUSPEND:%.*]] [
+; CHECK-NEXT:      i8 0, label [[RESUME:%.*]]
+; CHECK-NEXT:      i8 1, label [[SUSPEND]]
+; CHECK-NEXT:    ]
+; CHECK:       resume:
+; CHECK-NEXT:    [[P2:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @g1_tls)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[PARAM]], align 4
+; CHECK-NEXT:    ret ptr [[CORO]]
+; CHECK:       suspend:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.coro.end(ptr [[CORO]], i1 false, token none)
+; CHECK-NEXT:    ret ptr [[CORO]]
+;
+entry:
+  %p = call ptr @llvm.threadlocal.address(ptr @g1_tls)
+  store i32 42, ptr %p
+
+  %0 = call i8 @llvm.coro.suspend(token none, i1 false)
+  switch i8 %0, label %suspend [i8 0, label %resume
+  i8 1, label %suspend]
+resume:
+  %p2 = call ptr @llvm.threadlocal.address(ptr @g1_tls)
+  %v = load i32, ptr %p2
+  store i32 %v, ptr %param, align 4
+  ret ptr %coro
+
+suspend:
+  call i1 @llvm.coro.end(ptr %coro, i1 0, token none)
+  ret ptr %coro
+}
+
 declare ptr @f()
 
 define i32 @test2() {

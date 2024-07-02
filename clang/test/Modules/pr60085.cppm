@@ -11,7 +11,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.cppm \
 // RUN:     -emit-module-interface -o %t/a.pcm -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.pcm \
-// RUN:     -S -emit-llvm -disable-llvm-passes -o - -fprebuilt-module-path=%t \
+// RUN:     -emit-llvm -disable-llvm-passes -o - -fprebuilt-module-path=%t \
 // RUN:     | FileCheck %t/a.cppm
 
 // Test again with reduced BMI.
@@ -28,7 +28,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.cppm \
 // RUN:     -emit-module-interface -o %t/a.pcm -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.pcm \
-// RUN:     -S -emit-llvm -disable-llvm-passes -o - -fprebuilt-module-path=%t \
+// RUN:     -emit-llvm -disable-llvm-passes -o - -fprebuilt-module-path=%t \
 // RUN:		| FileCheck %t/a.cppm
 
 //--- d.cppm

@@ -127,11 +127,21 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Print the list of registered dialects and exit"),
         cl::location(showDialectsFlag), cl::init(false));
 
-    static cl::opt<bool, /*ExternalStorage=*/true> splitInputFile(
-        "split-input-file",
-        cl::desc("Split the input file into pieces and process each "
-                 "chunk independently"),
-        cl::location(splitInputFileFlag), cl::init(false));
+    static cl::opt<std::string, /*ExternalStorage=*/true> splitInputFile{
+        "split-input-file", llvm::cl::ValueOptional,
+        cl::callback([&](const std::string &str) {
+          // Implicit value: use default marker if flag was used without value.
+          if (str.empty())
+            splitInputFile.setValue(kDefaultSplitMarker);
+        }),
+        cl::desc("Split the input file into chunks using the given or "
+                 "default marker and process each chunk independently"),
+        cl::location(splitInputFileFlag), cl::init("")};
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> outputSplitMarker(
+        "output-split-marker",
+        cl::desc("Split marker to use for merging the ouput"),
+        cl::location(outputSplitMarkerFlag), cl::init(kDefaultSplitMarker));
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyDiagnostics(
         "verify-diagnostics",
@@ -255,6 +265,8 @@ LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
 
   // Parse the input file.
   OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, &ctx));
+  if (!module)
+    return failure();
 
   // Load IRDL dialects.
   return irdl::loadDialects(module.get());
@@ -503,15 +515,19 @@ mlir::registerAndParseCLIOptions(int argc, char **argv,
   return std::make_pair(inputFilename.getValue(), outputFilename.getValue());
 }
 
+static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
+  llvm::outs() << "Available Dialects: ";
+  interleave(registry.getDialectNames(), llvm::outs(), ",");
+  llvm::outs() << "\n";
+  return success();
+}
+
 LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                 std::unique_ptr<llvm::MemoryBuffer> buffer,
                                 DialectRegistry &registry,
                                 const MlirOptMainConfig &config) {
-  if (config.shouldShowDialects()) {
-    llvm::outs() << "Available Dialects: ";
-    interleave(registry.getDialectNames(), llvm::outs(), ",");
-    llvm::outs() << "\n";
-  }
+  if (config.shouldShowDialects())
+    return printRegisteredDialects(registry);
 
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
@@ -533,8 +549,8 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                          threadPool);
   };
   return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
-                               config.shouldSplitInputFile(),
-                               /*insertMarkerInOutput=*/true);
+                               config.inputSplitMarker(),
+                               config.outputSplitMarker());
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv,
@@ -545,6 +561,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
   InitLLVM y(argc, argv);
 
   MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
+
+  if (config.shouldShowDialects())
+    return printRegisteredDialects(registry);
 
   // When reading from stdin and the input is a tty, it is often a user mistake
   // and the process "appears to be stuck". Print a message to let the user know

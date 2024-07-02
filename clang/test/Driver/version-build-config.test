@@ -1,0 +1,6 @@
+# REQUIRES: asserts
+# RUN: %clang --version 2>&1 | FileCheck %s
+
+# CHECK: clang version
+# When assertions are enabled, we should have a build configuration line that reflects that
+# CHECK: Build config: {{.*}}+assertions

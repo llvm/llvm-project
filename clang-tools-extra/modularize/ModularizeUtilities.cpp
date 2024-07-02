@@ -435,11 +435,9 @@ static std::string replaceDotDot(StringRef Path) {
   llvm::sys::path::const_iterator B = llvm::sys::path::begin(Path),
     E = llvm::sys::path::end(Path);
   while (B != E) {
-    if (B->compare(".") == 0) {
-    }
-    else if (B->compare("..") == 0)
+    if (*B == "..")
       llvm::sys::path::remove_filename(Buffer);
-    else
+    else if (*B != ".")
       llvm::sys::path::append(Buffer, *B);
     ++B;
   }

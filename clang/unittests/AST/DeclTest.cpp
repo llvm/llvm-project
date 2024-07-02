@@ -429,7 +429,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator new"),
             Ctx));
   ASSERT_TRUE(SizedOperatorNew->getOwningModule());
-  EXPECT_TRUE(SizedOperatorNew->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(SizedOperatorNew->isFromExplicitGlobalModule());
 
   // void* operator new(std::size_t, std::align_val_t);
   auto *SizedAlignedOperatorNew = selectFirst<FunctionDecl>(
@@ -441,7 +441,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator new"),
             Ctx));
   ASSERT_TRUE(SizedAlignedOperatorNew->getOwningModule());
-  EXPECT_TRUE(SizedAlignedOperatorNew->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(SizedAlignedOperatorNew->isFromExplicitGlobalModule());
 
   // void* operator new[](std::size_t);
   auto *SizedArrayOperatorNew = selectFirst<FunctionDecl>(
@@ -451,7 +451,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator new[]"),
             Ctx));
   ASSERT_TRUE(SizedArrayOperatorNew->getOwningModule());
-  EXPECT_TRUE(SizedArrayOperatorNew->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(SizedArrayOperatorNew->isFromExplicitGlobalModule());
 
   // void* operator new[](std::size_t, std::align_val_t);
   auto *SizedAlignedArrayOperatorNew = selectFirst<FunctionDecl>(
@@ -464,7 +464,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
             Ctx));
   ASSERT_TRUE(SizedAlignedArrayOperatorNew->getOwningModule());
   EXPECT_TRUE(
-      SizedAlignedArrayOperatorNew->getOwningModule()->isGlobalModule());
+      SizedAlignedArrayOperatorNew->isFromExplicitGlobalModule());
 
   // void operator delete(void*) noexcept;
   auto *Delete = selectFirst<FunctionDecl>(
@@ -475,7 +475,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete"),
             Ctx));
   ASSERT_TRUE(Delete->getOwningModule());
-  EXPECT_TRUE(Delete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(Delete->isFromExplicitGlobalModule());
 
   // void operator delete(void*, std::align_val_t) noexcept;
   auto *AlignedDelete = selectFirst<FunctionDecl>(
@@ -487,7 +487,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete"),
             Ctx));
   ASSERT_TRUE(AlignedDelete->getOwningModule());
-  EXPECT_TRUE(AlignedDelete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(AlignedDelete->isFromExplicitGlobalModule());
 
   // Sized deallocation is not enabled by default. So we skip it here.
 
@@ -500,7 +500,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete[]"),
             Ctx));
   ASSERT_TRUE(ArrayDelete->getOwningModule());
-  EXPECT_TRUE(ArrayDelete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(ArrayDelete->isFromExplicitGlobalModule());
 
   // void operator delete[](void*, std::align_val_t) noexcept;
   auto *AlignedArrayDelete = selectFirst<FunctionDecl>(
@@ -512,7 +512,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete[]"),
             Ctx));
   ASSERT_TRUE(AlignedArrayDelete->getOwningModule());
-  EXPECT_TRUE(AlignedArrayDelete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(AlignedArrayDelete->isFromExplicitGlobalModule());
 }
 
 TEST(Decl, TemplateArgumentDefaulted) {
@@ -544,4 +544,345 @@ TEST(Decl, TemplateArgumentDefaulted) {
   EXPECT_FALSE(ArgList.get(1).getIsDefaulted());
   EXPECT_TRUE(ArgList.get(2).getIsDefaulted());
   EXPECT_TRUE(ArgList.get(3).getIsDefaulted());
+}
+
+TEST(Decl, CXXDestructorDeclsShouldHaveWellFormedNameInfoRanges) {
+  // GH71161
+  llvm::Annotations Code(R"cpp(
+template <typename T> struct Resource {
+  ~Resource(); // 1
+};
+template <typename T>
+Resource<T>::~Resource() {} // 2,3
+
+void instantiate_template() {
+  Resource<int> x;
+}
+)cpp");
+
+  auto AST = tooling::buildASTFromCode(Code.code());
+  ASTContext &Ctx = AST->getASTContext();
+
+  const auto &SM = Ctx.getSourceManager();
+  auto GetNameInfoRange = [&SM](const BoundNodes &Match) {
+    const auto *D = Match.getNodeAs<CXXDestructorDecl>("dtor");
+    return D->getNameInfo().getSourceRange().printToString(SM);
+  };
+
+  auto Matches = match(findAll(cxxDestructorDecl().bind("dtor")),
+                       *Ctx.getTranslationUnitDecl(), Ctx);
+  ASSERT_EQ(Matches.size(), 3U);
+  EXPECT_EQ(GetNameInfoRange(Matches[0]), "<input.cc:3:3, col:4>");
+  EXPECT_EQ(GetNameInfoRange(Matches[1]), "<input.cc:6:14, col:15>");
+  EXPECT_EQ(GetNameInfoRange(Matches[2]), "<input.cc:6:14, col:15>");
+}
+
+TEST(Decl, CommentsAttachedToDecl1) {
+  const SmallVector<StringRef> Sources{
+      R"(
+        /// Test comment
+        void f();
+      )",
+
+      R"(
+        /// Test comment
+
+        void f();
+      )",
+
+      R"(
+        /// Test comment
+        #if 0
+        // tralala
+        #endif
+        void f();
+      )",
+
+      R"(
+        /// Test comment
+
+        #if 0
+        // tralala
+        #endif
+
+        void f();
+      )",
+
+      R"(
+        /// Test comment
+        #ifdef DOCS
+        template<typename T>
+        #endif
+        void f();
+      )",
+
+      R"(
+        /// Test comment
+
+        #ifdef DOCS
+        template<typename T>
+        #endif
+
+        void f();
+      )",
+  };
+
+  for (const auto code : Sources) {
+    auto AST = tooling::buildASTFromCodeWithArgs(code, /*Args=*/{"-std=c++20"});
+    ASTContext &Ctx = AST->getASTContext();
+
+    auto const *F = selectFirst<FunctionDecl>(
+        "id", match(functionDecl(hasName("f")).bind("id"), Ctx));
+    ASSERT_NE(F, nullptr);
+
+    auto const *C = Ctx.getRawCommentForDeclNoCache(F);
+    ASSERT_NE(C, nullptr);
+    EXPECT_EQ(C->getRawText(Ctx.getSourceManager()), "/// Test comment");
+  }
+}
+
+TEST(Decl, CommentsAttachedToDecl2) {
+  const SmallVector<StringRef> Sources{
+      R"(
+        /** Test comment
+         */
+        void f();
+      )",
+
+      R"(
+        /** Test comment
+         */
+
+        void f();
+      )",
+
+      R"(
+        /** Test comment
+         */
+        #if 0
+        /* tralala */
+        #endif
+        void f();
+      )",
+
+      R"(
+        /** Test comment
+         */
+
+        #if 0
+        /* tralala */
+        #endif
+
+        void f();
+      )",
+
+      R"(
+        /** Test comment
+         */
+        #ifdef DOCS
+        template<typename T>
+        #endif
+        void f();
+      )",
+
+      R"(
+        /** Test comment
+         */
+
+        #ifdef DOCS
+        template<typename T>
+        #endif
+
+        void f();
+      )",
+  };
+
+  for (const auto code : Sources) {
+    auto AST = tooling::buildASTFromCodeWithArgs(code, /*Args=*/{"-std=c++20"});
+    ASTContext &Ctx = AST->getASTContext();
+
+    auto const *F = selectFirst<FunctionDecl>(
+        "id", match(functionDecl(hasName("f")).bind("id"), Ctx));
+    ASSERT_NE(F, nullptr);
+
+    auto const *C = Ctx.getRawCommentForDeclNoCache(F);
+    ASSERT_NE(C, nullptr);
+    EXPECT_EQ(C->getRawText(Ctx.getSourceManager()),
+              "/** Test comment\n         */");
+  }
+}
+
+TEST(Decl, CommentsAttachedToDecl3) {
+  const SmallVector<StringRef> Sources{
+      R"(
+        /// @brief Test comment
+        void f();
+      )",
+
+      R"(
+        /// @brief Test comment
+
+        void f();
+      )",
+
+      R"(
+        /// @brief Test comment
+        #if 0
+        // tralala
+        #endif
+        void f();
+      )",
+
+      R"(
+        /// @brief Test comment
+
+        #if 0
+        // tralala
+        #endif
+
+        void f();
+      )",
+
+      R"(
+        /// @brief Test comment
+        #ifdef DOCS
+        template<typename T>
+        #endif
+        void f();
+      )",
+
+      R"(
+        /// @brief Test comment
+
+        #ifdef DOCS
+        template<typename T>
+        #endif
+
+        void f();
+     )",
+  };
+
+  for (const auto code : Sources) {
+    auto AST = tooling::buildASTFromCodeWithArgs(code, /*Args=*/{"-std=c++20"});
+    ASTContext &Ctx = AST->getASTContext();
+
+    auto const *F = selectFirst<FunctionDecl>(
+        "id", match(functionDecl(hasName("f")).bind("id"), Ctx));
+    ASSERT_NE(F, nullptr);
+
+    auto const *C = Ctx.getRawCommentForDeclNoCache(F);
+    ASSERT_NE(C, nullptr);
+    EXPECT_EQ(C->getRawText(Ctx.getSourceManager()), "/// @brief Test comment");
+  }
+}
+
+TEST(Decl, CommentsAttachedToDecl4) {
+  const SmallVector<StringRef> Sources{
+      R"(
+        /** \brief Test comment
+         */
+        void f();
+      )",
+
+      R"(
+        /** \brief Test comment
+         */
+
+        void f();
+      )",
+
+      R"(
+        /** \brief Test comment
+         */
+        #if 0
+        /* tralala */
+        #endif
+        void f();
+      )",
+
+      R"(
+        /** \brief Test comment
+         */
+
+        #if 0
+        /* tralala */
+        #endif
+
+        void f();
+      )",
+
+      R"(
+        /** \brief Test comment
+         */
+        #ifdef DOCS
+        template<typename T>
+        #endif
+        void f();
+      )",
+
+      R"(
+        /** \brief Test comment
+         */
+
+        #ifdef DOCS
+        template<typename T>
+        #endif
+
+        void f();
+     )",
+  };
+
+  for (const auto code : Sources) {
+    auto AST = tooling::buildASTFromCodeWithArgs(code, /*Args=*/{"-std=c++20"});
+    ASTContext &Ctx = AST->getASTContext();
+
+    auto const *F = selectFirst<FunctionDecl>(
+        "id", match(functionDecl(hasName("f")).bind("id"), Ctx));
+    ASSERT_NE(F, nullptr);
+
+    auto const *C = Ctx.getRawCommentForDeclNoCache(F);
+    ASSERT_NE(C, nullptr);
+    EXPECT_EQ(C->getRawText(Ctx.getSourceManager()),
+              "/** \\brief Test comment\n         */");
+  }
+}
+
+/// This example intentionally inserts characters between a doc comment and the
+/// associated declaration to verify that the comment does not become associated
+/// with the FunctionDecl.
+/// By default, Clang does not allow for other declarations (aside from
+/// preprocessor directives, as shown above) to be placed between a doc comment
+/// and a declaration.
+TEST(Decl, CommentsAttachedToDecl5) {
+  const SmallVector<StringRef> Sources{
+      R"(
+        /// Test comment
+        ;
+        void f();
+      )",
+
+      R"(
+        /// Test comment
+        // @
+        void f();
+      )",
+
+      R"(
+        /// Test comment
+        // {}
+        void f();
+      )",
+  };
+
+  for (const auto code : Sources) {
+    auto AST = tooling::buildASTFromCodeWithArgs(code, /*Args=*/{"-std=c++20"});
+    ASTContext &Ctx = AST->getASTContext();
+
+    auto const *F = selectFirst<FunctionDecl>(
+        "id", match(functionDecl(hasName("f")).bind("id"), Ctx));
+    ASSERT_NE(F, nullptr);
+
+    auto const *C = Ctx.getRawCommentForDeclNoCache(F);
+    ASSERT_EQ(C, nullptr);
+  }
 }

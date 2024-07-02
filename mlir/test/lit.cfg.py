@@ -100,6 +100,7 @@ tools = [
     "mlir-lsp-server",
     "mlir-capi-execution-engine-test",
     "mlir-capi-ir-test",
+    "mlir-capi-irdl-test",
     "mlir-capi-llvm-test",
     "mlir-capi-pass-test",
     "mlir-capi-pdl-test",
@@ -204,6 +205,7 @@ config.environment["FILECHECK_OPTS"] = "-enable-var-scope --allow-unused-prefixe
 # binaries come from the build tree. This should be unified to the build tree
 # by copying/linking sources to build.
 if config.enable_bindings_python:
+    config.environment["PYTHONPATH"] = os.getenv("MLIR_LIT_PYTHONPATH", "")
     llvm_config.with_environment(
         "PYTHONPATH",
         [
@@ -243,8 +245,11 @@ def have_host_jit_feature_support(feature_name):
 if have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
 
-if config.run_cuda_tests:
+if config.run_nvptx_tests:
     config.available_features.add("host-supports-nvptx")
 
 if config.run_rocm_tests:
     config.available_features.add("host-supports-amdgpu")
+
+if config.arm_emulator_executable:
+    config.available_features.add("arm-emulator")

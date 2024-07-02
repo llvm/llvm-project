@@ -297,6 +297,20 @@ LogicalResult
 applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
                              const FrozenRewritePatternSet &patterns);
 
+/// Add a pattern to the given pattern list to convert the signature of a
+/// FunctionOpInterface op with the given type converter. This only supports
+/// ops which use FunctionType to represent their type. This is intended to be
+/// used with the 1:N dialect conversion.
+void populateOneToNFunctionOpInterfaceTypeConversionPattern(
+    StringRef functionLikeOpName, TypeConverter &converter,
+    RewritePatternSet &patterns);
+template <typename FuncOpT>
+void populateOneToNFunctionOpInterfaceTypeConversionPattern(
+    TypeConverter &converter, RewritePatternSet &patterns) {
+  populateOneToNFunctionOpInterfaceTypeConversionPattern(
+      FuncOpT::getOperationName(), converter, patterns);
+}
+
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_ONETONTYPECONVERSION_H

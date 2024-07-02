@@ -144,11 +144,11 @@ include "cuf-sanity-common"
 !CHECK: | | | | | | EndDoStmt -> 
 !CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> CUFKernelDoConstruct
 !CHECK: | | | | | Directive
-!CHECK: | | | | | | Scalar -> Integer -> Expr = '1_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Integer -> Expr = '1_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!CHECK: | | | | | | Scalar -> Integer -> Expr = '2_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Integer -> Expr = '2_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
-!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Integer -> Expr = '3_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
 !CHECK: | | | | | | Scalar -> Integer -> Expr = '1_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
@@ -199,8 +199,6 @@ include "cuf-sanity-common"
 !CHECK: | | | | | | AllocateShapeSpec
 !CHECK: | | | | | | | Scalar -> Integer -> Expr = '32_4'
 !CHECK: | | | | | | | | LiteralConstant -> IntLiteralConstant = '32'
-!CHECK: | | | | | AllocOpt -> Stream -> Scalar -> Integer -> Expr = '1_4'
-!CHECK: | | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !CHECK: | | | | | AllocOpt -> Pinned -> Scalar -> Logical -> Variable = 'ispinned'
 !CHECK: | | | | | | Designator -> DataRef -> Name = 'ispinned'
 !CHECK: | | | EndSubroutineStmt -> 

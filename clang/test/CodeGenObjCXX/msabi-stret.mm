@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fobjc-runtime=ios-6.0 -Os -S -emit-llvm -o - %s -mframe-pointer=all | FileCheck %s
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fobjc-runtime=ios-6.0 -Os -emit-llvm -o - %s -mframe-pointer=all | FileCheck %s
 
 struct S {
   S() = default;

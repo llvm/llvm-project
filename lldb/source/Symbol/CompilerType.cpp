@@ -108,6 +108,27 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
+unsigned CompilerType::GetPtrAuthKey() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthKey(m_type);
+  return 0;
+}
+
+unsigned CompilerType::GetPtrAuthDiscriminator() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthDiscriminator(m_type);
+  return 0;
+}
+
+bool CompilerType::GetPtrAuthAddressDiversity() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthAddressDiversity(m_type);
+  return false;
+}
+
 bool CompilerType::IsFunctionType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -664,6 +685,13 @@ CompilerType CompilerType::GetPointerType() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddPtrAuthModifier(m_type, payload);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -770,13 +798,14 @@ lldb::Format CompilerType::GetFormat() const {
   return lldb::eFormatDefault;
 }
 
-uint32_t CompilerType::GetNumChildren(bool omit_empty_base_classes,
-                                      const ExecutionContext *exe_ctx) const {
+llvm::Expected<uint32_t>
+CompilerType::GetNumChildren(bool omit_empty_base_classes,
+                             const ExecutionContext *exe_ctx) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetNumChildren(m_type, omit_empty_base_classes,
                                        exe_ctx);
-  return 0;
+  return llvm::createStringError("invalid type");
 }
 
 lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {
@@ -847,6 +876,12 @@ CompilerType::GetVirtualBaseClassAtIndex(size_t idx,
   return CompilerType();
 }
 
+CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
+  if (IsValid())
+    return GetTypeSystem()->GetStaticFieldWithName(m_type, name);
+  return CompilerDecl();
+}
+
 uint32_t CompilerType::GetIndexOfFieldWithName(
     const char *name, CompilerType *field_compiler_type_ptr,
     uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
@@ -866,7 +901,7 @@ uint32_t CompilerType::GetIndexOfFieldWithName(
   return UINT32_MAX;
 }
 
-CompilerType CompilerType::GetChildCompilerTypeAtIndex(
+llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
     ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
     std::string &child_name, uint32_t &child_byte_size,
@@ -927,6 +962,15 @@ size_t CompilerType::GetIndexOfChildMemberWithName(
         m_type, name, omit_empty_base_classes, child_indexes);
   }
   return 0;
+}
+
+CompilerType
+CompilerType::GetDirectNestedTypeWithName(llvm::StringRef name) const {
+  if (IsValid() && !name.empty()) {
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDirectNestedTypeWithName(m_type, name);
+  }
+  return CompilerType();
 }
 
 size_t CompilerType::GetNumTemplateArguments(bool expand_pack) const {

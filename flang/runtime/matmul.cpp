@@ -22,6 +22,7 @@
 #include "flang/Runtime/matmul.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
@@ -116,8 +117,8 @@ template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline RT_API_ATTRS void MatrixTimesMatrixHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
     SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
-    SubscriptValue n, std::optional<std::size_t> xColumnByteStride,
-    std::optional<std::size_t> yColumnByteStride) {
+    SubscriptValue n, Fortran::common::optional<std::size_t> xColumnByteStride,
+    Fortran::common::optional<std::size_t> yColumnByteStride) {
   if (!xColumnByteStride) {
     if (!yColumnByteStride) {
       MatrixTimesMatrix<RCAT, RKIND, XT, YT, false, false>(
@@ -183,7 +184,7 @@ template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline RT_API_ATTRS void MatrixTimesVectorHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
     SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
-    std::optional<std::size_t> xColumnByteStride) {
+    Fortran::common::optional<std::size_t> xColumnByteStride) {
   if (!xColumnByteStride) {
     MatrixTimesVector<RCAT, RKIND, XT, YT, false>(product, rows, n, x, y);
   } else {
@@ -240,7 +241,7 @@ template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
 inline RT_API_ATTRS void VectorTimesMatrixHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue n,
     SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
-    std::optional<std::size_t> yColumnByteStride) {
+    Fortran::common::optional<std::size_t> yColumnByteStride) {
   if (!yColumnByteStride) {
     VectorTimesMatrix<RCAT, RKIND, XT, YT, false>(product, n, cols, x, y);
   } else {
@@ -287,11 +288,25 @@ static inline RT_API_ATTRS void DoMatmul(
   }
   SubscriptValue n{x.GetDimension(xRank - 1).Extent()};
   if (n != y.GetDimension(0).Extent()) {
-    terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
-        static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
-        static_cast<std::intmax_t>(n),
-        static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
-        static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    // At this point, we know that there's a shape error.  There are three
+    // possibilities, x is rank 1, y is rank 1, or both are rank 2.
+    if (xRank == 1) {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jd, %jdx%jd)",
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    } else if (yRank == 1) {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jd)",
+          static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()));
+    } else {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
+          static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    }
   }
   using WriteResult =
       CppTypeFor<RCAT == TypeCategory::Logical ? TypeCategory::Integer : RCAT,
@@ -301,7 +316,7 @@ static inline RT_API_ATTRS void DoMatmul(
         (IS_ALLOCATING || result.IsContiguous())) {
       // Contiguous numeric matrices (maybe with columns
       // separated by a stride).
-      std::optional<std::size_t> xColumnByteStride;
+      Fortran::common::optional<std::size_t> xColumnByteStride;
       if (!x.IsContiguous()) {
         // X's columns are strided.
         SubscriptValue xAt[2]{};
@@ -309,7 +324,7 @@ static inline RT_API_ATTRS void DoMatmul(
         xAt[1]++;
         xColumnByteStride = x.SubscriptsToByteOffset(xAt);
       }
-      std::optional<std::size_t> yColumnByteStride;
+      Fortran::common::optional<std::size_t> yColumnByteStride;
       if (!y.IsContiguous()) {
         // Y's columns are strided.
         SubscriptValue yAt[2]{};

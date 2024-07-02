@@ -35,7 +35,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 ; BOTH: Function: cleanup_array
-; BOTH-Next:  Offset: [SP+4], Type: Protector, Align: 16, Size: 4
+; BOTH-NEXT:  Offset: [SP+4], Type: Protector, Align: 16, Size: 4
 ; DEBUG: a @ dot.c:13
 ; STRIPPED-NOT: a @ dot.c:13
 ; BOTH:  Offset: [SP-4], Type: Spill, Align: 8, Size: 4

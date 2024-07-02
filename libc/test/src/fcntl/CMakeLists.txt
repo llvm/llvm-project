@@ -18,6 +18,24 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  fcntl_test
+  SUITE
+    libc_fcntl_unittests
+  SRCS
+    fcntl_test.cpp
+  DEPENDS
+    libc.include.fcntl
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.getpid
+    libc.hdr.types.struct_flock
+    libc.hdr.fcntl_macros
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   openat_test
   SUITE
     libc_fcntl_unittests

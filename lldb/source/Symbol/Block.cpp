@@ -314,6 +314,22 @@ bool Block::GetRangeAtIndex(uint32_t range_idx, AddressRange &range) {
   return false;
 }
 
+AddressRanges Block::GetRanges() {
+  AddressRanges ranges;
+  Function *function = CalculateSymbolContextFunction();
+  if (!function)
+    return ranges;
+  for (size_t i = 0, e = m_ranges.GetSize(); i < e; ++i) {
+    ranges.emplace_back();
+    auto &range = ranges.back();
+    const Range &vm_range = m_ranges.GetEntryRef(i);
+    range.GetBaseAddress() = function->GetAddressRange().GetBaseAddress();
+    range.GetBaseAddress().Slide(vm_range.GetRangeBase());
+    range.SetByteSize(vm_range.GetByteSize());
+  }
+  return ranges;
+}
+
 bool Block::GetStartAddress(Address &addr) {
   if (m_ranges.IsEmpty())
     return false;

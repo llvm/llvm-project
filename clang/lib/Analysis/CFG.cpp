@@ -2039,7 +2039,7 @@ void CFGBuilder::addImplicitDtorsForDestructor(const CXXDestructorDecl *DD) {
     QualType QT = FI->getType();
     // It may be a multidimensional array.
     while (const ConstantArrayType *AT = Context->getAsConstantArrayType(QT)) {
-      if (AT->getSize() == 0)
+      if (AT->isZeroSize())
         break;
       QT = AT->getElementType();
     }
@@ -2133,7 +2133,7 @@ bool CFGBuilder::hasTrivialDestructor(const VarDecl *VD) const {
 
   // Check for constant size array. Set type to array element type.
   while (const ConstantArrayType *AT = Context->getAsConstantArrayType(QT)) {
-    if (AT->getSize() == 0)
+    if (AT->isZeroSize())
       return true;
     QT = AT->getElementType();
   }

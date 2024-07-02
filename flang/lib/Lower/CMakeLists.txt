@@ -25,7 +25,9 @@ add_flang_library(FortranLower
   Mangler.cpp
   OpenACC.cpp
   OpenMP/ClauseProcessor.cpp
+  OpenMP/Clauses.cpp
   OpenMP/DataSharingProcessor.cpp
+  OpenMP/Decomposer.cpp
   OpenMP/OpenMP.cpp
   OpenMP/ReductionProcessor.cpp
   OpenMP/Utils.cpp
@@ -35,6 +37,8 @@ add_flang_library(FortranLower
   VectorSubscripts.cpp
   
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRTransforms
   HLFIRDialect
@@ -42,6 +46,8 @@ add_flang_library(FortranLower
   ${extension_libs}
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRDialectSupport
   FIRBuilder

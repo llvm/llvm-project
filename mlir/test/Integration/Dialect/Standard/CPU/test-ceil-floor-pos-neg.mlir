@@ -2,6 +2,10 @@
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf,lower-affine,convert-scf-to-cf,memref-expand,arith-expand),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
+// RUN: mlir-cpu-runner -e main -entry-point-result=void  \
+// RUN:   -shared-libs=%mlir_c_runner_utils | \
+// RUN: FileCheck %s --check-prefix=SCHECK
 
 func.func @transfer_read_2d(%A : memref<40xi32>, %base1: index) {
   %i42 = arith.constant -42: i32
@@ -101,3 +105,29 @@ func.func @entry() {
 // CHECK:( 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -2, -2, -2, -2, -2, -2, -2, -2, -2 )
 // CHECK:( 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4 )
 // CHECK:( 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 )
+
+// -----
+
+func.func @non_inline_function() -> (i64, i64, i64, i64, i64, i64) {
+  %MIN_INT_MINUS_ONE = arith.constant -9223372036854775807 : i64
+  %NEG_ONE = arith.constant -1 : i64
+  %MIN_INT = arith.constant -9223372036854775808 : i64
+  %ONE = arith.constant 1 : i64
+  %MAX_INT = arith.constant 9223372036854775807 : i64
+  return %MIN_INT_MINUS_ONE, %NEG_ONE, %MIN_INT, %ONE, %MAX_INT, %NEG_ONE : i64, i64, i64, i64, i64, i64
+}
+
+func.func @main() {
+  %0:6 = call @non_inline_function() : () -> (i64, i64, i64, i64, i64, i64)
+  %1 = arith.floordivsi %0#0, %0#1 : i64
+  %2 = arith.floordivsi %0#2, %0#3 : i64
+  %3 = arith.floordivsi %0#4, %0#5 : i64
+  vector.print %1 : i64
+  vector.print %2 : i64
+  vector.print %3 : i64
+  return
+}
+
+// SCHECK: 9223372036854775807
+// SCHECK: -9223372036854775808
+// SCHECK: -9223372036854775807

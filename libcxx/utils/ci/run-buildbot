@@ -44,9 +44,6 @@ CMAKE               The CMake binary to use. This variable is optional.
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
 
-ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
-                    is optional.
-
 EOF
 }
 
@@ -111,10 +108,6 @@ function clean() {
     rm -rf "${BUILD_DIR}"
 }
 
-if [ -z "${ENABLE_CLANG_TIDY}" ]; then
-    ENABLE_CLANG_TIDY=Off
-fi
-
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
@@ -126,7 +119,6 @@ function generate-cmake-base() {
           -DLIBCXX_ENABLE_WERROR=YES \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
-          -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
@@ -225,7 +217,13 @@ function test-armv7m-picolibc() {
         "${@}"
 
     ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
-    mv "${BUILD_DIR}/install/lib/armv7m-none-eabi"/* "${BUILD_DIR}/install/lib"
+
+    # Prior to clang 19, armv7m-none-eabi normalised to armv7m-none-unknown-eabi.
+    # clang 19 changed this to armv7m-unknown-none-eabi. So for as long as 18.x
+    # is supported, we have to ask clang what the triple will be.
+    NORMALISED_TARGET_TRIPLE=$(${CC-cc} --target=armv7m-none-eabi -print-target-triple)
+    # Without this step linking fails later in the build.
+    mv "${BUILD_DIR}/install/lib/${NORMALISED_TARGET_TRIPLE}"/* "${BUILD_DIR}/install/lib"
 
     check-runtimes
 }
@@ -374,20 +372,24 @@ bootstrapping-build)
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="clang" \
+          -DLLVM_ENABLE_PROJECTS="clang;lldb" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLLVM_RUNTIME_TARGETS="$(${CXX} --print-target-triple)" \
+          -DLLVM_HOST_TRIPLE="$(${CXX} --print-target-triple)" \
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
-    echo "+++ Running the libc++ and libc++abi tests"
+    echo "+++ Running the LLDB libc++ data formatter tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx
+
+    echo "--- Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
-    echo "--- Installing libc++ and libc++abi to a fake location"
+    echo "+++ Installing libc++ and libc++abi to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-runtimes
 
     ccache -s
@@ -512,7 +514,7 @@ generic-optimized-speed)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
     check-runtimes
 ;;
-apple-system)
+apple-configuration)
     clean
 
     arch="$(uname -m)"
@@ -701,22 +703,13 @@ clang-cl-static-crt)
 ;;
 mingw-dll)
     clean
-    # Explicitly specify the compiler with a triple prefix. The CI
-    # environment has got two installations of Clang; the default one
-    # defaults to MSVC mode, while there's an installation of llvm-mingw
-    # further back in PATH. By calling the compiler with an explicit
-    # triple prefix, we use the one that is bundled with a mingw sysroot.
     generate-cmake \
-          -DCMAKE_C_COMPILER=x86_64-w64-mingw32-clang \
-          -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
     check-runtimes
 ;;
 mingw-static)
     clean
     generate-cmake \
-          -DCMAKE_C_COMPILER=x86_64-w64-mingw32-clang \
-          -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake" \
           -DLIBCXX_ENABLE_SHARED=OFF \
           -DLIBUNWIND_ENABLE_SHARED=OFF

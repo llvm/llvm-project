@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SYS_PRCTL_H
 #define LLVM_LIBC_SYS_PRCTL_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 // Process control is highly platform specific, so the platform usually defines
 // the macros itself.

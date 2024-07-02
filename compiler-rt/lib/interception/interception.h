@@ -204,11 +204,11 @@ const interpose_substitution substitution_##func_name[]             \
        ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
          ASM_TYPE_FUNCTION_STR "\n"                                            \
        SANITIZER_STRINGIFY(TRAMPOLINE(func)) ":\n"                             \
-       SANITIZER_STRINGIFY(CFI_STARTPROC) "\n"                                 \
+       C_ASM_STARTPROC "\n"                                                    \
        C_ASM_TAIL_CALL(SANITIZER_STRINGIFY(TRAMPOLINE(func)),                  \
                        "__interceptor_"                                        \
                          SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(func))) "\n"  \
-       SANITIZER_STRINGIFY(CFI_ENDPROC) "\n"                                   \
+       C_ASM_ENDPROC "\n"                                                      \
        ".size  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
             ".-" SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
      );

@@ -1,0 +1,27 @@
+Create import libraries with empty exports and make sure that archive symbols
+are properly populated.
+
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-lib -machine:arm64 -out:arm64.lib -def:test.def
+RUN: llvm-nm --print-armap arm64.lib | FileCheck --check-prefixes=CHECK,NOECMAP %s
+
+RUN: llvm-lib -machine:arm64ec -out:arm64ec.lib -def:test.def
+RUN: llvm-nm --print-armap arm64ec.lib | FileCheck --check-prefixes=CHECK,ECMAP %s
+
+CHECK:      Archive map
+CHECK-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+CHECK-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
+CHECK-NEXT: test_NULL_THUNK_DATA in test.dll
+CHECK-EMPTY:
+
+ECMAP:      Archive EC map
+ECMAP-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ECMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
+ECMAP-NEXT: test_NULL_THUNK_DATA in test.dll
+
+NOECMAP-NOT: Archive EC map
+
+#--- test.def
+LIBRARY test.dll
+EXPORTS

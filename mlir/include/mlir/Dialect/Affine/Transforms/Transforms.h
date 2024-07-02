@@ -16,7 +16,6 @@
 
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 class AffineMap;
@@ -52,6 +51,17 @@ void reorderOperandsByHoistability(RewriterBase &rewriter, AffineApplyOp op);
 /// Note that this can be undone by canonicalization which tries to
 /// maximally compose chains of AffineApplyOps.
 FailureOr<AffineApplyOp> decompose(RewriterBase &rewriter, AffineApplyOp op);
+
+/// Reify a bound for the given variable in terms of SSA values for which
+/// `stopCondition` is met.
+///
+/// By default, lower/equal bounds are closed and upper bounds are open. If
+/// `closedUB` is set to "true", upper bounds are also closed.
+FailureOr<OpFoldResult>
+reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
+                const ValueBoundsConstraintSet::Variable &var,
+                ValueBoundsConstraintSet::StopConditionFn stopCondition,
+                bool closedUB = false);
 
 /// Reify a bound for the given index-typed value in terms of SSA values for
 /// which `stopCondition` is met. If no stop condition is specified, reify in

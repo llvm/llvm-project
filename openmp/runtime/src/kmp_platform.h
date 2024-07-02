@@ -105,6 +105,7 @@
 #define KMP_ARCH_X86 0
 #define KMP_ARCH_X86_64 0
 #define KMP_ARCH_AARCH64 0
+#define KMP_ARCH_AARCH64_32 0
 #define KMP_ARCH_PPC64_ELFv1 0
 #define KMP_ARCH_PPC64_ELFv2 0
 #define KMP_ARCH_PPC64_XCOFF 0
@@ -157,6 +158,9 @@
 #define KMP_ARCH_PPC_XCOFF 1
 #undef KMP_ARCH_PPC
 #define KMP_ARCH_PPC 1
+#elif defined __ARM64_ARCH_8_32__
+#undef KMP_ARCH_AARCH64_32
+#define KMP_ARCH_AARCH64_32 1
 #elif defined __aarch64__
 #undef KMP_ARCH_AARCH64
 #define KMP_ARCH_AARCH64 1
@@ -244,7 +248,7 @@
 /* Specify 32 bit architectures here */
 #define KMP_32_BIT_ARCH                                                        \
   (KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||           \
-   KMP_ARCH_PPC)
+   KMP_ARCH_PPC || KMP_ARCH_AARCH64_32)
 
 // Platforms which support Intel(R) Many Integrated Core Architecture
 #define KMP_MIC_SUPPORTED                                                      \
@@ -254,7 +258,8 @@
 #if (1 != KMP_ARCH_X86 + KMP_ARCH_X86_64 + KMP_ARCH_ARM + KMP_ARCH_PPC64 +     \
               KMP_ARCH_AARCH64 + KMP_ARCH_MIPS + KMP_ARCH_MIPS64 +             \
               KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 + KMP_ARCH_VE +          \
-              KMP_ARCH_S390X + KMP_ARCH_WASM + KMP_ARCH_PPC)
+              KMP_ARCH_S390X + KMP_ARCH_WASM + KMP_ARCH_PPC +                  \
+              KMP_ARCH_AARCH64_32)
 #error Unknown or unsupported architecture
 #endif
 

@@ -16,6 +16,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -29,7 +30,9 @@
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
-  return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
+  return mlir::cast<mlir::IntegerAttr>(cop.getValue())
+      .getValue()
+      .getSExtValue();
 }
 
 // Reconstruct binding tables for dynamic dispatch.
@@ -134,62 +137,28 @@ inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
            " in " + intrinsicName);
 }
 
-inline fir::CUDADataAttributeAttr
-getCUDADataAttribute(mlir::MLIRContext *mlirContext,
-                     std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
-  if (cudaAttr) {
-    fir::CUDADataAttribute attr;
-    switch (*cudaAttr) {
-    case Fortran::common::CUDADataAttr::Constant:
-      attr = fir::CUDADataAttribute::Constant;
-      break;
-    case Fortran::common::CUDADataAttr::Device:
-      attr = fir::CUDADataAttribute::Device;
-      break;
-    case Fortran::common::CUDADataAttr::Managed:
-      attr = fir::CUDADataAttribute::Managed;
-      break;
-    case Fortran::common::CUDADataAttr::Pinned:
-      attr = fir::CUDADataAttribute::Pinned;
-      break;
-    case Fortran::common::CUDADataAttr::Shared:
-      attr = fir::CUDADataAttribute::Shared;
-      break;
-    case Fortran::common::CUDADataAttr::Texture:
-      // Obsolete attribute
-      return {};
-    }
-    return fir::CUDADataAttributeAttr::get(mlirContext, attr);
-  }
-  return {};
-}
+/// Find the fir.type_info that was created for this \p recordType in \p module,
+/// if any. \p  symbolTable can be provided to speed-up the lookup. This tool
+/// will match record type even if they have been "altered" in type conversion
+/// passes.
+fir::TypeInfoOp
+lookupTypeInfoOp(fir::RecordType recordType, mlir::ModuleOp module,
+                 const mlir::SymbolTable *symbolTable = nullptr);
 
-inline fir::CUDAProcAttributeAttr getCUDAProcAttribute(
-    mlir::MLIRContext *mlirContext,
-    std::optional<Fortran::common::CUDASubprogramAttrs> cudaAttr) {
-  if (cudaAttr) {
-    fir::CUDAProcAttribute attr;
-    switch (*cudaAttr) {
-    case Fortran::common::CUDASubprogramAttrs::Host:
-      attr = fir::CUDAProcAttribute::Host;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::Device:
-      attr = fir::CUDAProcAttribute::Device;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::HostDevice:
-      attr = fir::CUDAProcAttribute::HostDevice;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::Global:
-      attr = fir::CUDAProcAttribute::Global;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::Grid_Global:
-      attr = fir::CUDAProcAttribute::GridGlobal;
-      break;
-    }
-    return fir::CUDAProcAttributeAttr::get(mlirContext, attr);
-  }
-  return {};
-}
+/// Find the fir.type_info named \p name in \p module, if any. \p  symbolTable
+/// can be provided to speed-up the lookup. Prefer using the equivalent with a
+/// RecordType argument  unless it is certain \p name has not been altered by a
+/// pass rewriting fir.type (see NameUniquer::dropTypeConversionMarkers).
+fir::TypeInfoOp
+lookupTypeInfoOp(llvm::StringRef name, mlir::ModuleOp module,
+                 const mlir::SymbolTable *symbolTable = nullptr);
+
+/// Returns all lower bounds of \p component if it is an array component of \p
+/// recordType with non default lower bounds. Returns nullopt if this is not an
+/// array componnet of \p recordType or if its lower bounds are all ones.
+std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
+    fir::RecordType recordType, llvm::StringRef component,
+    mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
 
 } // namespace fir
 

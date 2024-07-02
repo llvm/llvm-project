@@ -60,6 +60,8 @@ def save_temps : Flag<["--"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
 def compress : Flag<["--"], "compress">,
   Flags<[WrapperOnlyOption]>, HelpText<"Compress bundled files">;
+def compression_level_eq : Joined<["--"], "compression-level=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Specify the compression level (integer)">;
 
 def wrapper_time_trace_eq : Joined<["--"], "wrapper-time-trace=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<file>">,
@@ -71,6 +73,10 @@ def wrapper_time_trace_granularity : Joined<["--"], "wrapper-time-trace-granular
 def wrapper_jobs : Joined<["--"], "wrapper-jobs=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<number>">,
   HelpText<"Sets the number of parallel jobs to use for device linking">;
+
+def override_image : Joined<["--"], "override-image=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<kind=file>">,
+  HelpText<"Uses the provided file as if it were the output of the device link step">;
 
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,

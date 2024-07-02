@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=spirv-unknown-unknown -O0 %s -o - | FileCheck %s
 
+; CHECK-DAG:                  OpDecorate %[[#SubgroupLocalInvocationId:]] BuiltIn SubgroupLocalInvocationId
 ; CHECK-DAG:    %[[#bool:]] = OpTypeBool
 ; CHECK-DAG:    %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:  %[[#uint_0:]] = OpConstant %[[#uint]] 0
@@ -37,10 +38,10 @@ l1_continue:
 ; CHECK-NEXT:                      OpBranch %[[#l1_header]]
 
 l1_end:
-  %call = call spir_func i32 @_Z3absi(i32 0) [ "convergencectrl"(token %tl1) ]
+  %call = call i32 @__hlsl_wave_get_lane_index() [ "convergencectrl"(token %tl1) ]
   br label %end
 ; CHECK-DAG:   %[[#l1_end]] = OpLabel
-; CHECK-DAG:         %[[#]] = OpFunctionCall
+; CHECK-DAG:         %[[#]] = OpLoad %[[#]] %[[#SubgroupLocalInvocationId]]
 ; CHECK-NEXT:                 OpBranch %[[#end:]]
 
 l2:
@@ -76,6 +77,4 @@ declare token @llvm.experimental.convergence.entry()
 declare token @llvm.experimental.convergence.control()
 declare token @llvm.experimental.convergence.loop()
 
-; This intrinsic is not convergent. This is only because the backend doesn't
-; support convergent operations yet.
-declare spir_func i32 @_Z3absi(i32) convergent
+declare i32 @__hlsl_wave_get_lane_index() convergent

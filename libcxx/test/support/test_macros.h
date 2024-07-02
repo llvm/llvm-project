@@ -11,7 +11,7 @@
 #define SUPPORT_TEST_MACROS_HPP
 
 #ifdef __has_include
-#  if __has_include("<version>")
+#  if __has_include(<version>)
 #    include <version>
 #  else
 #    include <ciso646>
@@ -385,6 +385,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_UNICODE
 #endif
 
+#if defined(_LIBCPP_HAS_OPEN_WITH_WCHAR)
+#  define TEST_HAS_OPEN_WITH_WCHAR
+#endif
+
 #if defined(_LIBCPP_HAS_NO_INT128) || defined(_MSVC_STL_VERSION)
 #   define TEST_HAS_NO_INT128
 #endif
@@ -411,6 +415,14 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 
 #if defined(_LIBCPP_HAS_NO_RANDOM_DEVICE)
 #  define TEST_HAS_NO_RANDOM_DEVICE
+#endif
+
+#if defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#  define TEST_HAS_NO_EXPERIMENTAL_TZDB
+#endif
+
+#if defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
+#  define TEST_HAS_NO_TIME_ZONE_DATABASE
 #endif
 
 #if defined(TEST_COMPILER_CLANG)

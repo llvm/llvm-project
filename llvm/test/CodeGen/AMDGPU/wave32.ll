@@ -2479,8 +2479,7 @@ define amdgpu_kernel void @icmp64(i32 %n, i32 %s) {
 ; GFX1032-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_lo_u32 v2, s1, v1
-; GFX1032-NEXT:    s_ff1_i32_b32 s1, 0x80000000
-; GFX1032-NEXT:    s_add_i32 s1, s1, 32
+; GFX1032-NEXT:    s_brev_b32 s1, 1
 ; GFX1032-NEXT:    v_mul_hi_u32 v2, v1, v2
 ; GFX1032-NEXT:    v_add_nc_u32_e32 v1, v1, v2
 ; GFX1032-NEXT:    v_mul_hi_u32 v1, v0, v1
@@ -2494,8 +2493,7 @@ define amdgpu_kernel void @icmp64(i32 %n, i32 %s) {
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_lshr_b32 s0, vcc_lo, 1
-; GFX1032-NEXT:    s_ff1_i32_b32 s0, s0
-; GFX1032-NEXT:    s_min_u32 s0, s0, s1
+; GFX1032-NEXT:    s_ff1_i32_b64 s0, s[0:1]
 ; GFX1032-NEXT:    s_cmp_gt_u32 s0, 9
 ; GFX1032-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX1032-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -2529,10 +2527,7 @@ define amdgpu_kernel void @icmp64(i32 %n, i32 %s) {
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_lshr_b64 s[0:1], vcc, 1
 ; GFX1064-NEXT:    s_bitset1_b32 s1, 31
-; GFX1064-NEXT:    s_ff1_i32_b32 s0, s0
-; GFX1064-NEXT:    s_ff1_i32_b32 s1, s1
-; GFX1064-NEXT:    s_add_i32 s1, s1, 32
-; GFX1064-NEXT:    s_min_u32 s0, s0, s1
+; GFX1064-NEXT:    s_ff1_i32_b64 s0, s[0:1]
 ; GFX1064-NEXT:    s_cmp_gt_u32 s0, 9
 ; GFX1064-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX1064-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
@@ -2576,9 +2571,8 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_div_scale_f32 v1, s1, s0, s0, v0
 ; GFX1032-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, s0, v0
-; GFX1032-NEXT:    s_ff1_i32_b32 s1, 0x80000000
+; GFX1032-NEXT:    s_brev_b32 s1, 1
 ; GFX1032-NEXT:    v_rcp_f32_e32 v2, v1
-; GFX1032-NEXT:    s_add_i32 s1, s1, 32
 ; GFX1032-NEXT:    v_fma_f32 v3, -v1, v2, 1.0
 ; GFX1032-NEXT:    v_fmac_f32_e32 v2, v3, v2
 ; GFX1032-NEXT:    v_mul_f32_e32 v3, v4, v2
@@ -2592,8 +2586,7 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1032-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_lshr_b32 s0, vcc_lo, 1
 ; GFX1032-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0
-; GFX1032-NEXT:    s_ff1_i32_b32 s0, s0
-; GFX1032-NEXT:    s_min_u32 s0, s0, s1
+; GFX1032-NEXT:    s_ff1_i32_b64 s0, s[0:1]
 ; GFX1032-NEXT:    s_cmp_gt_u32 s0, 9
 ; GFX1032-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX1032-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -2609,15 +2602,15 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_div_scale_f32 v1, s[0:1], s2, s2, v0
-; GFX1064-NEXT:    v_div_scale_f32 v4, vcc, v0, s2, v0
 ; GFX1064-NEXT:    v_rcp_f32_e32 v2, v1
 ; GFX1064-NEXT:    v_fma_f32 v3, -v1, v2, 1.0
 ; GFX1064-NEXT:    v_fmac_f32_e32 v2, v3, v2
-; GFX1064-NEXT:    v_mul_f32_e32 v3, v4, v2
-; GFX1064-NEXT:    v_fma_f32 v5, -v1, v3, v4
-; GFX1064-NEXT:    v_fmac_f32_e32 v3, v5, v2
-; GFX1064-NEXT:    v_fma_f32 v1, -v1, v3, v4
-; GFX1064-NEXT:    v_div_fmas_f32 v1, v1, v2, v3
+; GFX1064-NEXT:    v_div_scale_f32 v3, vcc, v0, s2, v0
+; GFX1064-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1064-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1064-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1064-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1064-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
 ; GFX1064-NEXT:    v_div_fixup_f32 v1, v1, s2, v0
 ; GFX1064-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_fma_f32 v0, -v1, s2, v0
@@ -2625,10 +2618,7 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1064-NEXT:    s_lshr_b64 s[0:1], vcc, 1
 ; GFX1064-NEXT:    v_cmp_nlg_f32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_bitset1_b32 s1, 31
-; GFX1064-NEXT:    s_ff1_i32_b32 s0, s0
-; GFX1064-NEXT:    s_ff1_i32_b32 s1, s1
-; GFX1064-NEXT:    s_add_i32 s1, s1, 32
-; GFX1064-NEXT:    s_min_u32 s0, s0, s1
+; GFX1064-NEXT:    s_ff1_i32_b64 s0, s[0:1]
 ; GFX1064-NEXT:    s_cmp_gt_u32 s0, 9
 ; GFX1064-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX1064-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]

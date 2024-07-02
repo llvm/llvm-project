@@ -106,7 +106,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   constexpr double LOG10_2 = 0x1.34413509f79ffp-2;
 
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 

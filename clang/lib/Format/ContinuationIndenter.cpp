@@ -684,7 +684,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         // arguments to function calls. We do this by ensuring that either all
         // arguments (including any lambdas) go on the same line as the function
         // call, or we break before the first argument.
-        auto PrevNonComment = Current.getPreviousNonComment();
+        const auto *Prev = Current.Previous;
+        if (!Prev)
+          return false;
+        // For example, `/*Newline=*/false`.
+        if (Prev->is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
+          return false;
+        const auto *PrevNonComment = Current.getPreviousNonComment();
         if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
           return false;
         if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
@@ -822,6 +828,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
       Previous.isNot(TT_TableGenDAGArgOpener) &&
+      Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
@@ -1250,6 +1257,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     }
     return CurrentState.Indent;
   }
+  if (Current.is(TT_TrailingReturnArrow) &&
+      Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
+                       tok::kw_consteval, tok::kw_static, TT_AttributeSquare)) {
+    return ContinuationIndent;
+  }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
        (Current.is(tok::greater) && (Style.isProto() || Style.isTableGen()))) &&
       State.Stack.size() > 1) {
@@ -1415,7 +1427,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // the next line.
   if (State.Line->InPragmaDirective) {
     FormatToken *PragmaType = State.Line->First->Next->Next;
-    if (PragmaType && PragmaType->TokenText.equals("omp"))
+    if (PragmaType && PragmaType->TokenText == "omp")
       return CurrentState.Indent + Style.ContinuationIndentWidth;
   }
 
@@ -1444,7 +1456,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       Style.BreakInheritanceList == FormatStyle::BILS_AfterColon) {
     return CurrentState.Indent;
   }
-  if (Previous.is(tok::r_paren) && !Current.isBinaryOperator() &&
+  if (Previous.is(tok::r_paren) &&
+      Previous.isNot(TT_TableGenDAGArgOperatorToBreak) &&
+      !Current.isBinaryOperator() &&
       !Current.isOneOf(tok::colon, tok::comment)) {
     return ContinuationIndent;
   }
@@ -1703,9 +1717,10 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!Previous || Previous->isNot(tok::kw_return) ||
          (Style.Language != FormatStyle::LK_Java && PrecedenceLevel > 0)) &&
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
-         PrecedenceLevel != prec::Comma || Current.NestingLevel == 0) &&
+         PrecedenceLevel > prec::Comma || Current.NestingLevel == 0) &&
         (!Style.isTableGen() ||
-         (Previous && Previous->is(TT_TableGenDAGArgListComma)))) {
+         (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
+                                        TT_TableGenDAGArgListCommaToBreak)))) {
       NewParenState.Indent = std::max(
           std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
     }
@@ -1841,6 +1856,17 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     NewIndent =
         Style.ContinuationIndentWidth +
         std::max(CurrentState.LastSpace, CurrentState.StartOfFunctionCall);
+
+    if (Style.isTableGen() && Current.is(TT_TableGenDAGArgOpenerToBreak) &&
+        Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakElements) {
+      // For the case the next token is a TableGen DAGArg operator identifier
+      // that is not marked to have a line break after it.
+      // In this case the option DAS_BreakElements requires to align the
+      // DAGArg elements to the operator.
+      const FormatToken *Next = Current.Next;
+      if (Next && Next->is(TT_TableGenDAGArgOperatorID))
+        NewIndent = State.Column + Next->TokenText.size() + 2;
+    }
 
     // Ensure that different different brackets force relative alignment, e.g.:
     // void SomeFunction(vector<  // break

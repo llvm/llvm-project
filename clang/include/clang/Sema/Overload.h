@@ -198,6 +198,9 @@ class Sema;
     /// HLSL vector truncation.
     ICK_HLSL_Vector_Truncation,
 
+    /// HLSL non-decaying array rvalue cast.
+    ICK_HLSL_Array_RValue,
+
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };
@@ -896,6 +899,8 @@ class Sema;
     /// object argument.
     bool IgnoreObjectArgument : 1;
 
+    bool TookAddressOfOverload : 1;
+
     /// True if the candidate was found using ADL.
     CallExpr::ADLCallKind IsADLCandidate : 1;
 
@@ -996,6 +1001,10 @@ class Sema;
       /// Initialization of an object of class type by constructor,
       /// using either a parenthesized or braced list of arguments.
       CSK_InitByConstructor,
+
+      /// C++ [over.match.call.general]
+      /// Resolve a call through the address of an overload set.
+      CSK_AddressOfOverloadSet,
     };
 
     /// Information about operator rewrites to consider when adding operator

@@ -41,7 +41,7 @@ they use or produce `memref`-typed values.
 
 The process relies on the [Dialect Conversion](DialectConversion.md)
 infrastructure and, in particular, on the
-[materialization](DialectConversion.md#type-conversion) hooks of `TypeConverter`
+[materialization](DialectConversion.md/#type-conversion) hooks of `TypeConverter`
 to support progressive lowering by injecting `unrealized_conversion_cast`
 operations between converted and unconverted operations. After multiple partial
 conversions to the LLVM dialect are performed, the cast operations that became
@@ -58,7 +58,7 @@ same type converter.
 
 #### LLVM Dialect-compatible Types
 
-The types [compatible](Dialects/LLVM.md#built-in-type-compatibility) with the
+The types [compatible](Dialects/LLVM.md/#built-in-type-compatibility) with the
 LLVM dialect are kept as is.
 
 #### Complex Type
@@ -188,7 +188,7 @@ Function types are converted to LLVM dialect function types as follows:
     arguments to allow for specifying metadata such as aliasing information on
     individual pointers;
 -   the conversion of `memref`-typed arguments is subject to
-    [calling conventions](TargetLLVMIR.md#calling-conventions).
+    [calling conventions](#calling-conventions).
 -   if a function type has boolean attribute `func.varargs` being set, the
     converted LLVM function will be variadic.
 
@@ -364,7 +364,7 @@ llvm.func @bar() {
 
 The default calling convention converts `memref`-typed function arguments to
 LLVM dialect literal structs
-[defined above](TargetLLVMIR.md#ranked-memref-types) before unbundling them into
+[defined above](#ranked-memref-types) before unbundling them into
 individual scalar arguments.
 
 Examples:

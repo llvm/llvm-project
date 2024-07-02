@@ -36,14 +36,14 @@ MachineLoopInfo::MachineLoopInfo() : MachineFunctionPass(ID) {
 }
 INITIALIZE_PASS_BEGIN(MachineLoopInfo, "machine-loops",
                 "Machine Natural Loop Construction", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineLoopInfo, "machine-loops",
                 "Machine Natural Loop Construction", true, true)
 
 char &llvm::MachineLoopInfoID = MachineLoopInfo::ID;
 
 bool MachineLoopInfo::runOnMachineFunction(MachineFunction &) {
-  calculate(getAnalysis<MachineDominatorTree>());
+  calculate(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
   return false;
 }
 
@@ -54,7 +54,7 @@ void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
 
 void MachineLoopInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -198,6 +198,23 @@ MDNode *MachineLoop::getLoopID() const {
   return LoopID;
 }
 
+bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
+  MachineFunction *MF = getHeader()->getParent();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+
+  if (MRI->isConstantPhysReg(Reg))
+    return true;
+
+  if (!MF->getSubtarget()
+           .getRegisterInfo()
+           ->shouldAnalyzePhysregInMachineLoopInfo(Reg))
+    return false;
+
+  return !llvm::any_of(
+      MRI->def_instructions(Reg),
+      [this](const MachineInstr &MI) { return this->contains(&MI); });
+}
+
 bool MachineLoop::isLoopInvariant(MachineInstr &I,
                                   const Register ExcludeReg) const {
   MachineFunction *MF = I.getParent()->getParent();
@@ -226,7 +243,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
         // it could get allocated to something with a def during allocation.
         // However, if the physreg is known to always be caller saved/restored
         // then this use is safe to hoist.
-        if (!MRI->isConstantPhysReg(Reg) &&
+        if (!isLoopInvariantImplicitPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
             !TII->isIgnorableUse(MO))
           return false;

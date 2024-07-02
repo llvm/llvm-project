@@ -542,10 +542,10 @@ namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
   const CallDescriptionSet ModelledCalls = {
-      {{"CFRetain"}, 1},
-      {{"CFRelease"}, 1},
-      {{"CFMakeCollectable"}, 1},
-      {{"CFAutorelease"}, 1},
+      {CDM::CLibrary, {"CFRetain"}, 1},
+      {CDM::CLibrary, {"CFRelease"}, 1},
+      {CDM::CLibrary, {"CFMakeCollectable"}, 1},
+      {CDM::CLibrary, {"CFAutorelease"}, 1},
   };
 
 public:
@@ -555,10 +555,6 @@ public:
 
 void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
                                           CheckerContext &C) const {
-  // TODO: Make this check part of CallDescription.
-  if (!Call.isGlobalCFunction())
-    return;
-
   // Check if we called CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
   if (!ModelledCalls.contains(Call))
     return;

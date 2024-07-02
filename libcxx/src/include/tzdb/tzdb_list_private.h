@@ -15,8 +15,11 @@
 #include <forward_list>
 
 // When threads are not available the locking is not required.
+// When threads are available, we use std::mutex over std::shared_mutex
+// due to the increased overhead of std::shared_mutex.
+// See shared_mutex_vs_mutex.bench.cpp
 #ifndef _LIBCPP_HAS_NO_THREADS
-#  include <shared_mutex>
+#  include <mutex>
 #endif
 
 #include "types_private.h"
@@ -54,14 +57,14 @@ public:
 
   using const_iterator = tzdb_list::const_iterator;
 
-  const tzdb& front() const noexcept {
+  const tzdb& __front() const noexcept {
 #ifndef _LIBCPP_HAS_NO_THREADS
-    shared_lock __lock{__mutex_};
+    unique_lock __lock{__mutex_};
 #endif
     return __tzdb_.front();
   }
 
-  const_iterator erase_after(const_iterator __p) {
+  const_iterator __erase_after(const_iterator __p) {
 #ifndef _LIBCPP_HAS_NO_THREADS
     unique_lock __lock{__mutex_};
 #endif
@@ -70,19 +73,16 @@ public:
     return __tzdb_.erase_after(__p);
   }
 
-  const_iterator begin() const noexcept {
+  const_iterator __begin() const noexcept {
 #ifndef _LIBCPP_HAS_NO_THREADS
-    shared_lock __lock{__mutex_};
+    unique_lock __lock{__mutex_};
 #endif
     return __tzdb_.begin();
   }
-  const_iterator end() const noexcept {
+  const_iterator __end() const noexcept {
     //  forward_list<T>::end does not access the list, so no need to take a lock.
     return __tzdb_.end();
   }
-
-  const_iterator cbegin() const noexcept { return begin(); }
-  const_iterator cend() const noexcept { return end(); }
 
 private:
   // Loads the tzdbs
@@ -90,7 +90,7 @@ private:
   void __load_no_lock() { chrono::__init_tzdb(__tzdb_.emplace_front(), __rules_.emplace_front()); }
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-  mutable shared_mutex __mutex_;
+  mutable mutex __mutex_;
 #endif
   forward_list<tzdb> __tzdb_;
 

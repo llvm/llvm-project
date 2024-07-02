@@ -133,6 +133,34 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD) {
+  for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
+    auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
+    if (!OpMD)
+      report_fatal_error("Invalid decoration");
+    if (OpMD->getNumOperands() == 0)
+      report_fatal_error("Expect operand(s) of the decoration");
+    ConstantInt *DecorationId =
+        mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(0));
+    if (!DecorationId)
+      report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
+                         "element of the decoration");
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
+                   .addUse(Reg)
+                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
+      if (ConstantInt *OpV =
+              mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
+        MIB.addImm(static_cast<uint32_t>(OpV->getZExtValue()));
+      else if (MDString *OpV = dyn_cast<MDString>(OpMD->getOperand(OpI)))
+        addStringImm(OpV->getString(), MIB);
+      else
+        report_fatal_error("Unexpected operand of the decoration");
+    }
+  }
+}
+
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
@@ -225,7 +253,11 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
-  MachineInstr *ConstInstr = MRI->getVRegDef(ConstReg);
+  MachineInstr *MI = MRI->getVRegDef(ConstReg);
+  MachineInstr *ConstInstr =
+      MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT
+          ? MRI->getVRegDef(MI->getOperand(1).getReg())
+          : MI;
   if (auto *GI = dyn_cast<GIntrinsic>(ConstInstr)) {
     if (GI->is(Intrinsic::spv_track_constant)) {
       ConstReg = ConstInstr->getOperand(2).getReg();
@@ -251,7 +283,8 @@ bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
 }
 
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
-  return cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  Type *ElementTy = cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  return toTypedPointer(ElementTy);
 }
 
 // The set of names is borrowed from the SPIR-V translator.
@@ -306,10 +339,12 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
+  bool IsNonMangledHLSL = Name.starts_with("__hlsl_");
   bool IsMangled = Name.starts_with("_Z");
 
-  if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
-    return std::string();
+  // Otherwise use simple demangling to return the function name.
+  if (IsNonMangledOCL || IsNonMangledSPIRV || IsNonMangledHLSL || !IsMangled)
+    return Name.str();
 
   // Try to use the itanium demangler.
   if (char *DemangledName = itaniumDemangle(Name.data())) {
@@ -317,9 +352,6 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     free(DemangledName);
     return Result;
   }
-  // Otherwise use simple demangling to return the function name.
-  if (IsNonMangledOCL || IsNonMangledSPIRV)
-    return Name.str();
 
   // Autocheck C++, maybe need to do explicit check of the source language.
   // OpenCL C++ built-ins are declared in cl namespace.
@@ -369,19 +401,27 @@ bool isEntryPoint(const Function &F) {
   return false;
 }
 
-Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx) {
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   TypeName.consume_front("atomic_");
   if (TypeName.consume_front("void"))
     return Type::getVoidTy(Ctx);
   else if (TypeName.consume_front("bool"))
     return Type::getIntNTy(Ctx, 1);
-  else if (TypeName.consume_front("char") || TypeName.consume_front("uchar"))
+  else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("unsigned char") ||
+           TypeName.consume_front("uchar"))
     return Type::getInt8Ty(Ctx);
-  else if (TypeName.consume_front("short") || TypeName.consume_front("ushort"))
+  else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("unsigned short") ||
+           TypeName.consume_front("ushort"))
     return Type::getInt16Ty(Ctx);
-  else if (TypeName.consume_front("int") || TypeName.consume_front("uint"))
+  else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("unsigned int") ||
+           TypeName.consume_front("uint"))
     return Type::getInt32Ty(Ctx);
-  else if (TypeName.consume_front("long") || TypeName.consume_front("ulong"))
+  else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("unsigned long") ||
+           TypeName.consume_front("ulong"))
     return Type::getInt64Ty(Ctx);
   else if (TypeName.consume_front("half"))
     return Type::getHalfTy(Ctx);

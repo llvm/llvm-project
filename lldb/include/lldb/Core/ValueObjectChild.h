@@ -39,7 +39,7 @@ public:
 
   lldb::ValueType GetValueType() const override;
 
-  uint32_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   ConstString GetTypeName() override;
 

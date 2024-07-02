@@ -10,9 +10,7 @@ define <vscale x 8 x i64> @vsplat_nxv8i64_1() {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 -1, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x i64> %splat
+  ret <vscale x 8 x i64> splat (i64 -1)
 }
 
 define <vscale x 8 x i64> @vsplat_nxv8i64_2() {
@@ -21,9 +19,7 @@ define <vscale x 8 x i64> @vsplat_nxv8i64_2() {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 4
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 4, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x i64> %splat
+  ret <vscale x 8 x i64> splat (i64 4)
 }
 
 define <vscale x 8 x i64> @vsplat_nxv8i64_3() {
@@ -33,9 +29,7 @@ define <vscale x 8 x i64> @vsplat_nxv8i64_3() {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 255, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x i64> %splat
+  ret <vscale x 8 x i64> splat (i64 255)
 }
 
 define <vscale x 8 x i64> @vsplat_nxv8i64_4() {
@@ -61,9 +55,7 @@ define <vscale x 8 x i64> @vsplat_nxv8i64_4() {
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64V-NEXT:    vmv.v.x v8, a0
 ; RV64V-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 4211079935, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x i64> %splat
+  ret <vscale x 8 x i64> splat (i64 4211079935)
 }
 
 define <vscale x 8 x i64> @vsplat_nxv8i64_5(i64 %a) {
@@ -95,9 +87,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_6(<vscale x 8 x i64> %v) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, 2
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 2, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vret = add <vscale x 8 x i64> %v, %splat
+  %vret = add <vscale x 8 x i64> %v, splat (i64 2)
   ret <vscale x 8 x i64> %vret
 }
 
@@ -107,9 +97,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_7(<vscale x 8 x i64> %v) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 -1, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vret = add <vscale x 8 x i64> %v, %splat
+  %vret = add <vscale x 8 x i64> %v, splat (i64 -1)
   ret <vscale x 8 x i64> %vret
 }
 
@@ -120,9 +108,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_8(<vscale x 8 x i64> %v) {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 255, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vret = add <vscale x 8 x i64> %v, %splat
+  %vret = add <vscale x 8 x i64> %v, splat (i64 255)
   ret <vscale x 8 x i64> %vret
 }
 
@@ -142,9 +128,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_9(<vscale x 8 x i64> %v) {
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64V-NEXT:    vadd.vx v8, v8, a0
 ; RV64V-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 2063596287, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vret = add <vscale x 8 x i64> %v, %splat
+  %vret = add <vscale x 8 x i64> %v, splat (i64 2063596287)
   ret <vscale x 8 x i64> %vret
 }
 
@@ -172,9 +156,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_10(<vscale x 8 x i64> %v) {
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64V-NEXT:    vadd.vx v8, v8, a0
 ; RV64V-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 4211079935, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vret = add <vscale x 8 x i64> %v, %splat
+  %vret = add <vscale x 8 x i64> %v, splat (i64 4211079935)
   ret <vscale x 8 x i64> %vret
 }
 
@@ -203,9 +185,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_11(<vscale x 8 x i64> %v) {
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64V-NEXT:    vadd.vx v8, v8, a0
 ; RV64V-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 8506047231, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vret = add <vscale x 8 x i64> %v, %splat
+  %vret = add <vscale x 8 x i64> %v, splat (i64 8506047231)
   ret <vscale x 8 x i64> %vret
 }
 

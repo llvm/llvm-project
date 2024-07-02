@@ -41,11 +41,13 @@ ValueObjectCast::~ValueObjectCast() = default;
 
 CompilerType ValueObjectCast::GetCompilerTypeImpl() { return m_cast_type; }
 
-uint32_t ValueObjectCast::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t> ValueObjectCast::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(
       true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 std::optional<uint64_t> ValueObjectCast::GetByteSize() {

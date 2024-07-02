@@ -720,13 +720,21 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
       CI->getValue().toString(Idx);
       ArrayIndices = (llvm::Twine("[") + Idx.str() + "]" + ArrayIndices).str();
     }
-    // If not a ConcreteInt, try to obtain the variable
-    // name by calling 'getDescriptiveName' recursively.
+    // Index is symbolic, but may have a descriptive name.
     else {
-      std::string Idx = ER->getDescriptiveName(false);
-      if (!Idx.empty()) {
-        ArrayIndices = (llvm::Twine("[") + Idx + "]" + ArrayIndices).str();
-      }
+      auto SI = ER->getIndex().getAs<nonloc::SymbolVal>();
+      if (!SI)
+        return "";
+
+      const MemRegion *OR = SI->getAsSymbol()->getOriginRegion();
+      if (!OR)
+        return "";
+
+      std::string Idx = OR->getDescriptiveName(false);
+      if (Idx.empty())
+        return "";
+
+      ArrayIndices = (llvm::Twine("[") + Idx + "]" + ArrayIndices).str();
     }
     R = ER->getSuperRegion();
   }
@@ -817,7 +825,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
       };
       auto IsArrayOfZero = [](const ArrayType *AT) {
         const auto *CAT = dyn_cast<ConstantArrayType>(AT);
-        return CAT && CAT->getSize() == 0;
+        return CAT && CAT->isZeroSize();
       };
       auto IsArrayOfOne = [](const ArrayType *AT) {
         const auto *CAT = dyn_cast<ConstantArrayType>(AT);
@@ -1147,10 +1155,10 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
   return getSubRegion<CompoundLiteralRegion>(CL, sReg);
 }
 
-const ElementRegion*
+const ElementRegion *
 MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
-                                   const SubRegion* superRegion,
-                                   ASTContext &Ctx){
+                                   const SubRegion *superRegion,
+                                   const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
 
   llvm::FoldingSetNodeID ID;

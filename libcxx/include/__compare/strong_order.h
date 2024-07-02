@@ -37,6 +37,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [cmp.alg]
 namespace __strong_order {
+void strong_order() = delete;
+
 struct __fn {
   // NOLINTBEGIN(libcpp-robust-against-adl) strong_order should use ADL, but only here
   template <class _Tp, class _Up>

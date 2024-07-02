@@ -46,6 +46,8 @@ typedef unsigned ID;
 
 class AssemblyAnnotationWriter;
 class Constant;
+class ConstantRange;
+class DataLayout;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -120,6 +122,7 @@ public:
   void convertFromNewDbgValues();
 
   void setIsNewDbgInfoFormat(bool NewVal);
+  void setNewDbgInfoFormatFlag(bool NewVal);
 
 private:
   friend class TargetLibraryInfoImpl;
@@ -179,10 +182,14 @@ public:
                           const Twine &N, Module &M);
 
   /// Creates a function with some attributes recorded in llvm.module.flags
-  /// applied.
+  /// and the LLVMContext applied.
   ///
   /// Use this when synthesizing new functions that need attributes that would
   /// have been set by command line options.
+  ///
+  /// This function should not be called from backends or the LTO pipeline. If
+  /// it is called from one of those places, some default attributes will not be
+  /// applied to the function.
   static Function *createWithDefaultAttr(FunctionType *Ty, LinkageTypes Linkage,
                                          unsigned AddrSpace,
                                          const Twine &N = "",
@@ -207,6 +214,11 @@ public:
   /// getContext - Return a reference to the LLVMContext associated with this
   /// function.
   LLVMContext &getContext() const;
+
+  /// Get the data layout of the module this function belongs to.
+  ///
+  /// Requires the function to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// isVarArg - Return true if this function takes a variable number of
   /// arguments.
@@ -430,6 +442,9 @@ public:
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const;
 
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttribute(Attribute::AttrKind Kind) const;
+
   /// For a string attribute \p Kind, parse attribute as an integer.
   ///
   /// \returns \p Default if attribute is not present.
@@ -457,6 +472,9 @@ public:
   /// adds the dereferenceable_or_null attribute to the list of
   /// attributes for the given arg.
   void addDereferenceableOrNullParamAttr(unsigned ArgNo, uint64_t Bytes);
+
+  /// adds the range attribute to the list of attributes for the return value.
+  void addRangeRetAttr(const ConstantRange &CR);
 
   MaybeAlign getParamAlign(unsigned ArgNo) const {
     return AttributeSets.getParamAlignment(ArgNo);
@@ -646,7 +664,10 @@ public:
     return getUWTableKind() != UWTableKind::None;
   }
   void setUWTableKind(UWTableKind K) {
-    addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
+    if (K == UWTableKind::None)
+      removeFnAttr(Attribute::UWTable);
+    else
+      addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
   }
   /// True if this function needs an unwind table.
   bool needsUnwindTableEntry() const {

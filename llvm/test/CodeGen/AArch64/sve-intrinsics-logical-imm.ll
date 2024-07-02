@@ -261,8 +261,8 @@ define <vscale x 4 x i32> @orr_i32_ptrue_all_h(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @orr_i32_ptrue_all_d(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: orr_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #65535 // =0xffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    orr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)

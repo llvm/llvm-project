@@ -12,21 +12,29 @@
 
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/MCPlus.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
-#include <queue>
 
 #define DEBUG_TYPE "mcplus"
 
 using namespace llvm;
 using namespace bolt;
 using namespace MCPlus;
+
+namespace opts {
+cl::opt<bool>
+    TerminalTrap("terminal-trap",
+                 cl::desc("Assume that execution stops at trap instruction"),
+                 cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+}
 
 bool MCPlusBuilder::equals(const MCInst &A, const MCInst &B,
                            CompFuncTy Comp) const {
@@ -119,6 +127,11 @@ bool MCPlusBuilder::equals(const MCExpr &A, const MCExpr &B,
 bool MCPlusBuilder::equals(const MCTargetExpr &A, const MCTargetExpr &B,
                            CompFuncTy Comp) const {
   llvm_unreachable("target-specific expressions are unsupported");
+}
+
+bool MCPlusBuilder::isTerminator(const MCInst &Inst) const {
+  return Analysis->isTerminator(Inst) ||
+         (opts::TerminalTrap && Info->get(Inst.getOpcode()).isTrap());
 }
 
 void MCPlusBuilder::setTailCall(MCInst &Inst) const {
@@ -301,6 +314,28 @@ std::optional<uint32_t> MCPlusBuilder::getSize(const MCInst &Inst) const {
 
 void MCPlusBuilder::setSize(MCInst &Inst, uint32_t Size) const {
   setAnnotationOpValue(Inst, MCAnnotation::kSize, Size);
+}
+
+bool MCPlusBuilder::isDynamicBranch(const MCInst &Inst) const {
+  if (!hasAnnotation(Inst, MCAnnotation::kDynamicBranch))
+    return false;
+  assert(isBranch(Inst) && "Branch expected.");
+  return true;
+}
+
+std::optional<uint32_t>
+MCPlusBuilder::getDynamicBranchID(const MCInst &Inst) const {
+  if (std::optional<int64_t> Value =
+          getAnnotationOpValue(Inst, MCAnnotation::kDynamicBranch)) {
+    assert(isBranch(Inst) && "Branch expected.");
+    return static_cast<uint32_t>(*Value);
+  }
+  return std::nullopt;
+}
+
+void MCPlusBuilder::setDynamicBranch(MCInst &Inst, uint32_t ID) const {
+  assert(isBranch(Inst) && "Branch expected.");
+  setAnnotationOpValue(Inst, MCAnnotation::kDynamicBranch, ID);
 }
 
 bool MCPlusBuilder::hasAnnotation(const MCInst &Inst, unsigned Index) const {

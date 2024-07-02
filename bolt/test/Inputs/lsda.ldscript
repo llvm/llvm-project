@@ -1,7 +1,0 @@
-SECTIONS {
-  .text : { *(.text*) }
-  .gcc_except_table.main : { *(.gcc_except_table*) }
-  . = 0x20000;
-  .eh_frame : { *(.eh_frame) }
-  . = 0x80000;
-}

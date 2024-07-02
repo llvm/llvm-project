@@ -127,16 +127,21 @@ bool M68kTargetInfo::hasFeature(StringRef Feature) const {
 
 const char *const M68kTargetInfo::GCCRegNames[] = {
     "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7",
-    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "sp",
     "pc"};
 
 ArrayRef<const char *> M68kTargetInfo::getGCCRegNames() const {
   return llvm::ArrayRef(GCCRegNames);
 }
 
+const TargetInfo::GCCRegAlias M68kTargetInfo::GCCRegAliases[] = {
+    {{"bp"}, "a5"},
+    {{"fp"}, "a6"},
+    {{"usp", "ssp", "isp", "a7"}, "sp"},
+};
+
 ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {
-  // No aliases.
-  return std::nullopt;
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool M68kTargetInfo::validateAsmConstraint(

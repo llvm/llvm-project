@@ -9,10 +9,13 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINTEST_H
 
+#include "src/__support/CPP/algorithm.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T> class FMinTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMinTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -53,10 +56,11 @@ public:
   }
 
   void testRange(FMinFunc func) {
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = STORAGE_MAX / COUNT;
-    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
-         ++i, v += STEP, w -= STEP) {
+    constexpr int COUNT = 100'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0, w = STORAGE_MAX;
+    for (int i = 0; i <= COUNT; ++i, v += STEP, w -= STEP) {
       FPBits xbits(v), ybits(w);
       if (xbits.is_inf_or_nan())
         continue;

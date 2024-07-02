@@ -387,3 +387,119 @@ for.end:
   %r = phi i64 [ %sum, %for.body ]
   ret i64 %r
 }
+
+; https://alive2.llvm.org/ce/z/3QfEHm
+define i8 @known_power_of_two_rust_next_power_of_two(i8 %x, i8 %y) {
+; CHECK-LABEL: @known_power_of_two_rust_next_power_of_two(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i8 -1, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[X]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i8 [[TMP3]], i8 0
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP5]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %2 = add i8 %x, -1
+  %3 = tail call i8 @llvm.ctlz.i8(i8 %2, i1 true)
+  %4 = lshr i8 -1, %3
+  %5 = add i8 %4, 1
+  %6 = icmp ugt i8 %x, 1
+  %p = select i1 %6, i8 %5, i8 1
+  ; Rust's implementation of `%p = next_power_of_two(%x)`
+
+  %r = urem i8 %y, %p
+  ret i8 %r
+}
+
+define i8 @known_power_of_two_lshr_add_one_allow_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @known_power_of_two_lshr_add_one_allow_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %4 = lshr i8 -1, %x
+  %p = add i8 %4, 1
+
+  ; Note: y % p --> y & (p - 1) allows p == 0
+  %r = urem i8 %y, %p
+  ret i8 %r
+}
+
+define i1 @known_power_of_two_lshr_add_one_nuw_deny_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @known_power_of_two_lshr_add_one_nuw_deny_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 -2, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %4 = lshr i8 -1, %x
+  %p = add nuw i8 %4, 1
+
+  ; Note: A & B_Pow2 != B_Pow2 --> A & B_Pow2 == 0 requires B_Pow2 != 0
+  %and = and i8 %p, %y
+  %r = icmp ne i8 %and, %p
+  ret i1 %r
+}
+
+define i1 @negative_known_power_of_two_lshr_add_one_deny_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @negative_known_power_of_two_lshr_add_one_deny_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 -2, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %4 = lshr i8 -1, %x
+  %p = add i8 %4, 1
+
+  ; Note: A & B_Pow2 != B_Pow2 --> A & B_Pow2 == 0 requires B_Pow2 != 0
+  %and = and i8 %p, %y
+  %r = icmp ne i8 %and, %p
+  ret i1 %r
+}
+
+define i1 @negative_known_power_of_two_lshr_add_one_nsw_deny_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @negative_known_power_of_two_lshr_add_one_nsw_deny_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 -2, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %4 = lshr i8 -1, %x
+  %p = add nsw i8 %4, 1
+
+  ; Note: A & B_Pow2 != B_Pow2 --> A & B_Pow2 == 0 requires B_Pow2 != 0
+  %and = and i8 %p, %y
+  %r = icmp ne i8 %and, %p
+  ret i1 %r
+}
+
+define i8 @known_power_of_two_lshr_add_negative_1(i8 %x, i8 %y) {
+; CHECK-LABEL: @known_power_of_two_lshr_add_negative_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -2, [[X:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = add nuw i8 [[TMP1]], 1
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[Y:%.*]], [[P]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %4 = lshr i8 -2, %x
+  %p = add i8 %4, 1
+
+  %r = urem i8 %y, %p
+  ret i8 %r
+}
+
+define i8 @known_power_of_two_lshr_add_negative_2(i8 %x, i8 %y) {
+; CHECK-LABEL: @known_power_of_two_lshr_add_negative_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = add nsw i8 [[TMP1]], -1
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[Y:%.*]], [[P]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %4 = lshr i8 -1, %x
+  %p = add i8 %4, -1
+
+  %r = urem i8 %y, %p
+  ret i8 %r
+}

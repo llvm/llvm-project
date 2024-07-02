@@ -9,7 +9,7 @@
 ; CHECK-DAG: %[[#TYLONGPTR:]] = OpTypePointer Function %[[#TYLONG]]
 ; CHECK: %[[#PTRTOSTRUCT:]] = OpFunctionParameter %[[#TYSTRUCTPTR]]
 ; CHECK: %[[#PTRTOLONG:]] = OpBitcast %[[#TYLONGPTR]] %[[#PTRTOSTRUCT]]
-; CHECK: OpLoad %[[#TYLONG]] %[[#PTRTOLONG]]
+; CHECK-NEXT: OpLoad %[[#TYLONG]] %[[#PTRTOLONG]]
 
 %struct.S = type { i32 }
 %struct.__wrapper_class = type { [7 x %struct.S] }

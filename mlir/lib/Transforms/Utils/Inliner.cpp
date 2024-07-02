@@ -21,6 +21,7 @@
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 
@@ -711,6 +712,13 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
   if (resolvedCall.call->hasTrait<OpTrait::IsTerminator>())
     return false;
 
+  // Don't allow inlining if the target is a self-recursive function.
+  if (llvm::count_if(*resolvedCall.targetNode,
+                     [&](CallGraphNode::Edge const &edge) -> bool {
+                       return edge.getTarget() == resolvedCall.targetNode;
+                     }) > 0)
+    return false;
+
   // Don't allow inlining if the target is an ancestor of the call. This
   // prevents inlining recursively.
   Region *callableRegion = resolvedCall.targetNode->getCallableRegion();
@@ -731,6 +739,9 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
                 ->mightHaveTrait<OpTrait::SingleBlock>();
   };
   if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
+    return false;
+
+  if (!inliner.isProfitableToInline(resolvedCall))
     return false;
 
   // Otherwise, inline.

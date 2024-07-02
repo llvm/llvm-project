@@ -132,6 +132,9 @@ void test4() {
   // CHECK-NEXT:  |       | `-DeclRefExpr {{.*}} 'int (&(const A &))[3]' lvalue Function {{.*}} 'default_arg_fn' 'int (&(const A &))[3]'
   // CHECK-NEXT:  |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const A':'const P2718R0::A' lvalue has rewritten init
   // CHECK-NEXT:  |         `-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |           `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
+  // CHECK-NEXT:  |             `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |               `-CXXTemporaryObjectExpr {{.*}} 'A':'P2718R0::A' 'void ()'
   for (auto e : default_arg_fn()) 
     bar(e);
 }
@@ -179,10 +182,19 @@ void test5() {
   // CHECK-NEXT:  |               |       |       |     `-CXXTemporaryObjectExpr {{.*}} 'A':'P2718R0::A' 'void ()'
   // CHECK-NEXT:  |               |       |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
   // CHECK-NEXT:  |               |       |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |               |       |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
+  // CHECK-NEXT:  |               |       |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |               |       |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
   // CHECK-NEXT:  |               |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
   // CHECK-NEXT:  |               |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |               |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
+  // CHECK-NEXT:  |               |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |               |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
   // CHECK-NEXT:  |               `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
   // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |                   `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
+  // CHECK-NEXT:  |                     `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                       `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
   for (auto e : default_arg_fn(foo(foo(foo(A())))))
     bar(e);
 }
@@ -219,10 +231,19 @@ void test6() {
   // CHECK-NEXT:  |           |       |       |     `-CXXTemporaryObjectExpr {{.*}} 'C':'P2718R0::C' 'void ()'
   // CHECK-NEXT:  |           |       |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
   // CHECK-NEXT:  |           |       |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |           |       |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
+  // CHECK-NEXT:  |           |       |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |           |       |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
   // CHECK-NEXT:  |           |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
   // CHECK-NEXT:  |           |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |           |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
+  // CHECK-NEXT:  |           |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |           |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
   // CHECK-NEXT:  |           `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
   // CHECK-NEXT:  |             `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |               `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
+  // CHECK-NEXT:  |                 `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                   `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
   for (auto e : C(0, C(0, C(0, C()))))
     bar(e);
 }

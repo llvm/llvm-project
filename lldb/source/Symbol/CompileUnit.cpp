@@ -320,7 +320,7 @@ void CompileUnit::ResolveSymbolContext(
       src_location_spec.GetColumn() ? std::optional<uint16_t>(line_entry.column)
                                     : std::nullopt;
 
-  SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
+  SourceLocationSpec found_entry(line_entry.GetFile(), line_entry.line, column,
                                  inlines, exact);
 
   while (line_idx != UINT32_MAX) {

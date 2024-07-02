@@ -724,3 +724,35 @@ void not_last_param() {
 }
 
 } // namespace enable_if_trailing_type_parameter
+
+
+// Issue fixes:
+
+namespace PR91872 {
+
+enum expression_template_option { value1, value2 };
+
+template <typename T> struct number_category {
+  static const int value = 0;
+};
+
+constexpr int number_kind_complex = 1;
+
+template <typename T, expression_template_option ExpressionTemplates>
+struct number {
+  using type = T;
+};
+
+template <typename T> struct component_type {
+  using type = T;
+};
+
+template <class T, expression_template_option ExpressionTemplates>
+inline typename std::enable_if<
+    number_category<T>::value == number_kind_complex,
+    component_type<number<T, ExpressionTemplates>>>::type::type
+abs(const number<T, ExpressionTemplates> &v) {
+  return {};
+}
+
+}

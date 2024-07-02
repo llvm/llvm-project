@@ -42,14 +42,15 @@ public:
 
     constexpr size_t COUNT = 255;
     constexpr StorageType STEP =
-        ~StorageType(0) / static_cast<StorageType>(COUNT);
+        StorageType(~StorageType(0)) / static_cast<StorageType>(COUNT);
     constexpr double ERR = 3.0 * static_cast<double>(eps);
     StorageType x = 0;
     for (size_t i = 0; i < COUNT; ++i, x += STEP) {
       T v = LIBC_NAMESPACE::cpp::bit_cast<T>(x);
       double v_d = static_cast<double>(v);
       double errors = LIBC_NAMESPACE::fputil::abs(
-          static_cast<double>(func(v)) - LIBC_NAMESPACE::fputil::sqrt(v_d));
+          static_cast<double>(func(v)) -
+          LIBC_NAMESPACE::fputil::sqrt<double>(v_d));
       if (errors > ERR) {
         // Print out the failure input and output.
         EXPECT_EQ(v, zero);
