@@ -542,9 +542,13 @@ CIRGenCallee CIRGenFunction::buildCallee(const clang::Expr *E) {
     assert(FD &&
            "DeclRef referring to FunctionDecl only thing supported so far");
     return buildDirectCallee(CGM, FD);
+  } else if (auto ME = dyn_cast<MemberExpr>(E)) {
+    if (auto FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {
+      buildIgnoredExpr(ME->getBase());
+      return buildDirectCallee(CGM, FD);
+    }
   }
 
-  assert(!dyn_cast<MemberExpr>(E) && "NYI");
   assert(!dyn_cast<SubstNonTypeTemplateParmExpr>(E) && "NYI");
   assert(!dyn_cast<CXXPseudoDestructorExpr>(E) && "NYI");
 
