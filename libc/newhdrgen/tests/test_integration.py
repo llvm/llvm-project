@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import argparse
 
+
 class TestHeaderGenIntegration(unittest.TestCase):
     def setUp(self):
         parser = argparse.ArgumentParser(
@@ -18,13 +19,12 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.output_dir = Path(
             args.output_dir
             if args.output_dir
-            else output_dir_env 
-            if output_dir_env 
-            else "libc/newhdrgen/tests/output"
+            else output_dir_env if output_dir_env else "libc/newhdrgen/tests/output"
         )
 
         self.maxDiff = None
-        self.source_dir = Path(__file__).resolve().parent.parent.parent.parent  # Adjust based on your directory structure
+        # Adjust based on your directory structure such as being in build etc.
+        self.source_dir = Path(__file__).resolve().parent.parent.parent.parent
 
     def run_script(self, yaml_file, h_def_file, output_dir):
         yaml_file = self.source_dir / yaml_file
@@ -57,7 +57,9 @@ class TestHeaderGenIntegration(unittest.TestCase):
     def test_generate_header(self):
         yaml_file = "libc/newhdrgen/tests/input/test_small.yaml"
         h_def_file = "libc/newhdrgen/tests/input/test_small.h.def"
-        expected_output_file = self.source_dir / "libc/newhdrgen/tests/expected_output/test_header.h"
+        expected_output_file = (
+            self.source_dir / "libc/newhdrgen/tests/expected_output/test_header.h"
+        )
         output_file = self.output_dir / "test_small.h"
 
         if not self.output_dir.exists():
@@ -66,6 +68,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.run_script(yaml_file, h_def_file, self.output_dir)
 
         self.compare_files(output_file, expected_output_file)
+
 
 if __name__ == "__main__":
     unittest.main()
