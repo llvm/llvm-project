@@ -538,6 +538,11 @@ endif()
 
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 
+option(LLVM_ENABLE_LIB_PRECOMPILED_HEADERS "Enable precompiled headers for LLVM Lib projects to improve build times." OFF)
+
+set(LLVM_LIB_DIRETORIES_FOR_PRECOMPILED_HEADERS ""
+    CACHE STRING "Semicolon-separated list of llvm/lib/ subdirectories to use precompiled headers")
+
 if( MSVC )
 
   # Add definitions that make MSVC much less annoying.
@@ -593,7 +598,11 @@ if( MSVC )
   # PDBs without changing codegen.
   option(LLVM_ENABLE_PDB OFF)
   if (LLVM_ENABLE_PDB AND uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-    append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    if (LLVM_ENABLE_LIB_PRECOMPILED_HEADERS)
+        append("/Z7" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    else()
+        append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    endif()
     # /DEBUG disables linker GC and ICF, but we want those in Release mode.
     append("/DEBUG /OPT:REF /OPT:ICF"
           CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS
