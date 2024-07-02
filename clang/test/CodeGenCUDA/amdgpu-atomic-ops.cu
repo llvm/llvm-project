@@ -57,8 +57,8 @@ __global__ void ffp2(double *p) {
   // SAFE: global_atomic_cmpswap_b64
   // UNSAFE-LABEL: @_Z4ffp2Pd
   // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
+  // UNSAFE: global_atomic_max_f64
+  // UNSAFE: global_atomic_min_f64
   // UNSAFE: global_atomic_max_f64
   // UNSAFE: global_atomic_min_f64
   __atomic_fetch_sub(p, 1.0, memory_order_relaxed);
@@ -84,8 +84,8 @@ __global__ void ffp3(long double *p) {
   // SAFE: global_atomic_cmpswap_b64
   // UNSAFE-LABEL: @_Z4ffp3Pe
   // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
-  // UNSAFE: global_atomic_cmpswap_x2
+  // UNSAFE: global_atomic_max_f64
+  // UNSAFE: global_atomic_min_f64
   // UNSAFE: global_atomic_max_f64
   // UNSAFE: global_atomic_min_f64
   __atomic_fetch_sub(p, 1.0L, memory_order_relaxed);
