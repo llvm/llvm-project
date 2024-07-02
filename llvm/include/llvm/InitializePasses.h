@@ -131,6 +131,7 @@ void initializeIfConverterPass(PassRegistry&);
 void initializeImmutableModuleSummaryIndexWrapperPassPass(PassRegistry&);
 void initializeImplicitNullChecksPass(PassRegistry&);
 void initializeIndirectBrExpandLegacyPassPass(PassRegistry &);
+void initializeEVLIndVarSimplifyPass(PassRegistry &);
 void initializeInferAddressSpacesPass(PassRegistry&);
 void initializeInstSimplifyLegacyPassPass(PassRegistry &);
 void initializeInstructionCombiningPassPass(PassRegistry&);

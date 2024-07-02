@@ -79,6 +79,7 @@
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/EVLIndVarSimplify.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
