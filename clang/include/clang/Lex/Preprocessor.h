@@ -615,10 +615,6 @@ private:
 
   ModuleDeclSeq ModuleDeclState;
 
-  /// Whether the module import expects an identifier next. Otherwise,
-  /// it expects a '.' or ';'.
-  bool ModuleImportExpectsIdentifier = false;
-
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
   std::pair<IdentifierInfo *, SourceLocation> PragmaARCCFCodeAuditedInfo;
@@ -1744,11 +1740,14 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
+  void LexModuleName(Token &Result, const Token FirstName,
+                     bool AllowMacroExpansion = true);
+  
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
-
   bool LexAfterModuleImport(Token &Result);
+  bool LexAfterModuleDecl(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
   void makeModuleVisible(Module *M, SourceLocation Loc);
@@ -3037,6 +3036,9 @@ private:
   }
   static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
     return P.LexAfterModuleImport(Result);
+  }
+  static bool CLK_LexAfterModuleDecl(Preprocessor &P, Token &Result) {
+    return P.LexAfterModuleDecl(Result);
   }
 };
 
