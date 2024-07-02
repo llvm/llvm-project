@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
@@ -112,19 +113,29 @@ lldb::ValueObjectSP lldb_private::formatters::
     ValueObjectSP hash_sp = node_sp->GetChildMemberWithName("__hash_");
     if (!hash_sp || !value_sp) {
       if (!m_element_type) {
+        auto compressed_pair_layout_getter = [this](ValueObject &node) {
+          m_element_type = node.GetCompilerType();
+          m_element_type = m_element_type.GetTypeTemplateArgument(0);
+          m_element_type = m_element_type.GetPointeeType();
+          m_node_type = m_element_type;
+          m_element_type = m_element_type.GetTypeTemplateArgument(0);
+
+          return true;
+        };
+
         auto p1_sp = m_backend.GetChildAtNamePath({"__table_", "__p1_"});
-        if (!p1_sp)
-          return nullptr;
+        if (p1_sp) {
+          ValueObjectSP first_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
 
-        ValueObjectSP first_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
-        if (!first_sp)
-          return nullptr;
+          if (!first_sp)
+            return {};
 
-        m_element_type = first_sp->GetCompilerType();
-        m_element_type = m_element_type.GetTypeTemplateArgument(0);
-        m_element_type = m_element_type.GetPointeeType();
-        m_node_type = m_element_type;
-        m_element_type = m_element_type.GetTypeTemplateArgument(0);
+          compressed_pair_layout_getter(*p1_sp);
+        } else {
+          p1_sp = m_backend.GetChildAtNamePath({"__table_", "__first_node_"});
+          compressed_pair_layout_getter(*p1_sp);
+        }
+
         // This synthetic provider is used for both unordered_(multi)map and
         // unordered_(multi)set. For unordered_map, the element type has an
         // additional type layer, an internal struct (`__hash_value_type`)
@@ -202,24 +213,35 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
   if (!table_sp)
     return lldb::ChildCacheState::eRefetch;
 
+  bool has_compressed_pair_layout = true;
+  ValueObjectSP p1_sp = table_sp->GetChildMemberWithName("__p1_");
   ValueObjectSP p2_sp = table_sp->GetChildMemberWithName("__p2_");
-  if (!p2_sp)
-    return lldb::ChildCacheState::eRefetch;
+  if (!p1_sp || !p2_sp) {
+    has_compressed_pair_layout = false;
+  }
 
-  ValueObjectSP num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*p2_sp);
+  ValueObjectSP num_elements_sp = nullptr;
+  if (has_compressed_pair_layout) {
+    num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*p2_sp);
+  } else {
+    num_elements_sp = table_sp->GetChildMemberWithName("__size_");
+  }
+
   if (!num_elements_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  ValueObjectSP p1_sp = table_sp->GetChildMemberWithName("__p1_");
-  if (!p1_sp)
+  ValueObjectSP tree_sp = nullptr;
+  if (has_compressed_pair_layout) {
+    tree_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
+  } else {
+    tree_sp = table_sp->GetChildMemberWithName("__first_node_");
+  }
+
+  if (!tree_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  ValueObjectSP value_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
-  if (!value_sp)
-    return lldb::ChildCacheState::eRefetch;
-
-  m_tree = value_sp->GetChildMemberWithName("__next_").get();
-  if (m_tree == nullptr)
+  m_tree = tree_sp->GetChildMemberWithName("__next_").get();
+  if (!m_tree)
     return lldb::ChildCacheState::eRefetch;
 
   m_num_elements = num_elements_sp->GetValueAsUnsigned(0);

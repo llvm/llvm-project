@@ -188,6 +188,9 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
+  size_t CalculateNumChildrenV1();
+  size_t CalculateNumChildrenV2();
+
   bool GetDataType();
 
   void GetValueOffset(const lldb::ValueObjectSP &node);
@@ -198,6 +201,7 @@ private:
   uint32_t m_skip_size = UINT32_MAX;
   size_t m_count = UINT32_MAX;
   std::map<size_t, MapIterator> m_iterators;
+  bool m_has_compressed_pair_layout = false;
 };
 } // namespace formatters
 } // namespace lldb_private
@@ -209,6 +213,31 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     Update();
 }
 
+size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
+    CalculateNumChildrenV2() {
+  ValueObjectSP node(m_tree->GetChildMemberWithName("__size_"));
+  if (!node)
+    return 0;
+
+  m_count = node->GetValueAsUnsigned(0);
+  return m_count;
+}
+
+size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
+    CalculateNumChildrenV1() {
+  ValueObjectSP node(m_tree->GetChildMemberWithName("__pair3_"));
+  if (!node)
+    return 0;
+
+  node = formatters::GetFirstValueOfLibCXXCompressedPair(*node);
+
+  if (!node)
+    return 0;
+
+  m_count = node->GetValueAsUnsigned(0);
+  return m_count;
+}
+
 llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxStdMapSyntheticFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
@@ -217,17 +246,10 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   if (m_tree == nullptr)
     return 0;
 
-  ValueObjectSP size_node(m_tree->GetChildMemberWithName("__pair3_"));
-  if (!size_node)
-    return 0;
+  if (m_has_compressed_pair_layout)
+    return CalculateNumChildrenV1();
 
-  size_node = GetFirstValueOfLibCXXCompressedPair(*size_node);
-
-  if (!size_node)
-    return 0;
-
-  m_count = size_node->GetValueAsUnsigned(0);
-  return m_count;
+  return CalculateNumChildrenV2();
 }
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
@@ -244,12 +266,22 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
     m_element_type = deref->GetCompilerType();
     return true;
   }
-  deref = m_backend.GetChildAtNamePath({"__tree_", "__pair3_"});
-  if (!deref)
-    return false;
-  m_element_type = deref->GetCompilerType()
-                       .GetTypeTemplateArgument(1)
-                       .GetTypeTemplateArgument(1);
+
+  if (m_has_compressed_pair_layout) {
+    deref = m_backend.GetChildAtNamePath({"__tree_", "__pair3_"});
+
+    if (!deref)
+      return false;
+    m_element_type = deref->GetCompilerType()
+                         .GetTypeTemplateArgument(1)
+                         .GetTypeTemplateArgument(1);
+  } else {
+    deref = m_backend.GetChildAtNamePath({"__tree_", "__value_comp_"});
+    if (!deref)
+      return false;
+    m_element_type = deref->GetCompilerType().GetTypeTemplateArgument(1);
+  }
+
   if (m_element_type) {
     std::string name;
     uint64_t bit_offset_ptr;
@@ -413,6 +445,10 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
     return lldb::ChildCacheState::eRefetch;
+
+  m_has_compressed_pair_layout =
+      m_tree->GetChildMemberWithName("__pair1_") != nullptr;
+
   m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
   return lldb::ChildCacheState::eRefetch;
 }

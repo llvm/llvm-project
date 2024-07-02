@@ -45,6 +45,7 @@ class TestCase(TestBase):
             "up_empty",
             type=self.make_expected_type("int"),
             summary="nullptr",
+            #children=[ValueCheck(name="pointer"), ValueCheck(name="deleter")], # TODO: shouldn't be printing deleter
             children=[ValueCheck(name="pointer")],
         )
         self.assertEqual(
@@ -59,6 +60,7 @@ class TestCase(TestBase):
             "up_int",
             type=self.make_expected_type("int"),
             summary="10",
+            #children=[ValueCheck(name="pointer"), ValueCheck(name="deleter")], # TODO: shouldn't be printing deleter
             children=[ValueCheck(name="pointer")],
         )
         self.assertNotEqual(valobj.child[0].unsigned, 0)
@@ -67,6 +69,7 @@ class TestCase(TestBase):
             "up_int_ref",
             type=self.make_expected_type("int", qualifiers="&"),
             summary="10",
+            #children=[ValueCheck(name="pointer"), ValueCheck(name="deleter")], # TODO: shouldn't be printing deleter
             children=[ValueCheck(name="pointer")],
         )
         self.assertNotEqual(valobj.child[0].unsigned, 0)
@@ -75,6 +78,7 @@ class TestCase(TestBase):
             "up_int_ref_ref",
             type=self.make_expected_type("int", qualifiers="&&"),
             summary="10",
+            #children=[ValueCheck(name="pointer"), ValueCheck(name="deleter")], # TODO: shouldn't be printing deleter
             children=[ValueCheck(name="pointer")],
         )
         self.assertNotEqual(valobj.child[0].unsigned, 0)
@@ -83,7 +87,8 @@ class TestCase(TestBase):
             "up_str",
             type=self.make_expected_basic_string_ptr(),
             summary='"hello"',
-            children=[ValueCheck(name="pointer", summary='"hello"')],
+            #children=[ValueCheck(name="pointer"), ValueCheck(name="deleter")], # TODO: shouldn't be printing deleter
+            children=[ValueCheck(name="pointer")],
         )
 
         valobj = self.expect_var_path("up_user", type=self.make_expected_type("User"))

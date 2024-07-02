@@ -17,6 +17,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -294,12 +295,19 @@ lldb::ChildCacheState ForwardListFrontEnd::Update() {
 
   ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__before_begin_"));
   if (!impl_sp)
-    return lldb::ChildCacheState::eRefetch;
-  impl_sp = GetFirstValueOfLibCXXCompressedPair(*impl_sp);
-  if (!impl_sp)
-    return lldb::ChildCacheState::eRefetch;
+    return ChildCacheState::eRefetch;
+
   m_head = impl_sp->GetChildMemberWithName("__next_").get();
-  return lldb::ChildCacheState::eRefetch;
+
+  // TODO: we have to do this in this order because __before_begin_ has a
+  // __value_ member, as does compressed_pair. Is this a problem elsewhere too?
+  if (!m_head) {
+    impl_sp = GetFirstValueOfLibCXXCompressedPair(*impl_sp);
+    if (impl_sp)
+      m_head = impl_sp->GetChildMemberWithName("__next_").get();
+  }
+
+  return ChildCacheState::eRefetch;
 }
 
 ListFrontEnd::ListFrontEnd(lldb::ValueObjectSP valobj_sp)
@@ -313,34 +321,49 @@ llvm::Expected<uint32_t> ListFrontEnd::CalculateNumChildren() {
     return m_count;
   if (!m_head || !m_tail || m_node_address == 0)
     return 0;
-  ValueObjectSP size_alloc(m_backend.GetChildMemberWithName("__size_alloc_"));
-  if (size_alloc) {
-    ValueObjectSP value = GetFirstValueOfLibCXXCompressedPair(*size_alloc);
-    if (value) {
-      m_count = value->GetValueAsUnsigned(UINT32_MAX);
-    }
+
+  bool has_compressed_pair_layout = false;
+  // ValueObjectSP
+  // node_alloc(m_backend.GetChildMemberWithName("__node_alloc_")); if
+  // (!node_alloc)
+  //   has_compressed_pair_layout = true;
+
+  ValueObjectSP size_node(m_backend.GetChildMemberWithName("__size_"));
+  if (!size_node) {
+    size_node = m_backend.GetChildMemberWithName(
+        "__size_alloc_"); // pre-compressed_pair rework
+    if (size_node)
+      has_compressed_pair_layout = true;
   }
-  if (m_count != UINT32_MAX) {
+
+  if (size_node) {
+    if (has_compressed_pair_layout)
+      if (ValueObjectSP value = GetFirstValueOfLibCXXCompressedPair(*size_node))
+        size_node = std::move(value);
+
+    m_count = size_node->GetValueAsUnsigned(UINT32_MAX);
+  }
+
+  if (m_count != UINT32_MAX)
     return m_count;
-  } else {
-    uint64_t next_val = m_head->GetValueAsUnsigned(0);
-    uint64_t prev_val = m_tail->GetValueAsUnsigned(0);
-    if (next_val == 0 || prev_val == 0)
-      return 0;
-    if (next_val == m_node_address)
-      return 0;
-    if (next_val == prev_val)
-      return 1;
-    uint64_t size = 2;
-    ListEntry current(m_head);
-    while (current.next() && current.next().value() != m_node_address) {
-      size++;
-      current = current.next();
-      if (size > m_list_capping_size)
-        break;
-    }
-    return m_count = (size - 1);
+
+  uint64_t next_val = m_head->GetValueAsUnsigned(0);
+  uint64_t prev_val = m_tail->GetValueAsUnsigned(0);
+  if (next_val == 0 || prev_val == 0)
+    return 0;
+  if (next_val == m_node_address)
+    return 0;
+  if (next_val == prev_val)
+    return 1;
+  uint64_t size = 2;
+  ListEntry current(m_head);
+  while (current.next() && current.next().value() != m_node_address) {
+    size++;
+    current = current.next();
+    if (size > m_list_capping_size)
+      break;
   }
+  return m_count = (size - 1);
 }
 
 lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {

@@ -212,6 +212,7 @@ public:
     };
   };
 
+  // TODO: support the new non-compressed_pair layout
   __compressed_pair<__rep, allocator_type> __r_;
 
 public:

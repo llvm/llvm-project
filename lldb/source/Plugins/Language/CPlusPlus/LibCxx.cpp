@@ -27,6 +27,7 @@
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include <optional>
 #include <tuple>
 
@@ -176,9 +177,9 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  ptr_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
-  if (!ptr_sp)
-    return false;
+  if (ValueObjectSP compressed_pair_value__sp =
+          GetFirstValueOfLibCXXCompressedPair(*ptr_sp))
+    ptr_sp = std::move(compressed_pair_value__sp);
 
   if (ptr_sp->GetValueAsUnsigned(0) == 0) {
     stream.Printf("nullptr");
@@ -701,15 +702,28 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (!ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
+  bool has_compressed_pair_layout = true;
+  ValueObjectSP deleter_sp(valobj_sp->GetChildMemberWithName("__deleter_"));
+  if (deleter_sp)
+    has_compressed_pair_layout = false;
+
   // Retrieve the actual pointer and the deleter, and clone them to give them
   // user-friendly names.
-  ValueObjectSP value_pointer_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
-  if (value_pointer_sp)
-    m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
+  if (has_compressed_pair_layout) {
+    ValueObjectSP value_pointer_sp =
+        GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
+    if (value_pointer_sp)
+      m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
 
-  ValueObjectSP deleter_sp = GetSecondValueOfLibCXXCompressedPair(*ptr_sp);
-  if (deleter_sp)
+    ValueObjectSP deleter_sp = GetSecondValueOfLibCXXCompressedPair(*ptr_sp);
+    if (deleter_sp)
+      m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+  } else {
+    // TODO: with the new layout, deleter is always a member, so empty deleters
+    // will be displayed
+    m_value_ptr_sp = ptr_sp->Clone(ConstString("pointer"));
     m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+  }
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -747,11 +761,7 @@ namespace {
 enum class StringLayout { CSD, DSC };
 }
 
-/// Determine the size in bytes of \p valobj (a libc++ std::string object) and
-/// extract its data payload. Return the size + payload pair.
-// TODO: Support big-endian architectures.
-static std::optional<std::pair<uint64_t, ValueObjectSP>>
-ExtractLibcxxStringInfo(ValueObject &valobj) {
+static ValueObjectSP ExtractLibCxxStringDataV1(ValueObject &valobj) {
   ValueObjectSP valobj_r_sp = valobj.GetChildMemberWithName("__r_");
   if (!valobj_r_sp || !valobj_r_sp->GetError().Success())
     return {};
@@ -765,6 +775,29 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   ValueObjectSP valobj_rep_sp =
       valobj_r_base_sp->GetChildMemberWithName("__value_");
   if (!valobj_rep_sp)
+    return {};
+
+  return valobj_rep_sp;
+}
+
+static ValueObjectSP ExtractLibCxxStringDataV2(ValueObject &valobj) {
+  return valobj.GetChildMemberWithName("__rep_");
+}
+
+static ValueObjectSP ExtractLibCxxStringData(ValueObject &valobj) {
+  if (ValueObjectSP ret = ExtractLibCxxStringDataV1(valobj))
+    return ret;
+
+  return ExtractLibCxxStringDataV2(valobj);
+}
+
+/// Determine the size in bytes of \p valobj (a libc++ std::string object) and
+/// extract its data payload. Return the size + payload pair.
+// TODO: Support big-endian architectures.
+static std::optional<std::pair<uint64_t, ValueObjectSP>>
+ExtractLibcxxStringInfo(ValueObject &valobj) {
+  ValueObjectSP valobj_rep_sp = ExtractLibCxxStringData(valobj);
+  if (!valobj_rep_sp || !valobj_rep_sp->GetError().Success())
     return {};
 
   ValueObjectSP l = valobj_rep_sp->GetChildMemberWithName("__l");
