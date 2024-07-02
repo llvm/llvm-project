@@ -1824,6 +1824,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmul_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fmul_test.cpp
+  HDRS
+    FMulTest.h
+  DEPENDS
+    libc.src.math.fmul
+)
+add_fp_unittest(
   asinhf_test
   NEED_MPFR
   SUITE
