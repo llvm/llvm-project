@@ -14076,6 +14076,9 @@ Value *BoUpSLP::vectorizeTree(
       auto *I = cast<Instruction>(Scalar);
       // Clear the operands, marking for deletion trivially dead operands.
       for (unsigned Idx : seq<unsigned>(I->getNumOperands())) {
+        // Ignore pointer operand of stores to keep correct DIAssignID.
+        if (isa<StoreInst>(I) && Idx == 1)
+          continue;
         Value *Op = I->getOperand(Idx);
         I->setOperand(Idx, PoisonValue::get(Op->getType()));
         if (auto *OpI = dyn_cast<Instruction>(Op))
