@@ -1109,4 +1109,45 @@ define float @test_fneg_select_maxnum(float %x) {
   ret float %neg
 }
 
+define float @test_fneg_ninf_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fneg_ninf_mul_with_anyzero(
+; CHECK-NEXT:    [[F:%.*]] = fmul float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F]]
+;
+  %mul = fmul float %a, 0.0
+  %f = fneg ninf float %mul
+  ret float %f
+}
+
+define float @test_fsub_ninf_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fsub_ninf_mul_with_anyzero(
+; CHECK-NEXT:    [[F2:%.*]] = fmul float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul float %a, 0.000000
+  %f2 = fsub ninf float -0.000000, %f1
+  ret float %f2
+}
+
+define float @test_fneg_nnan_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fneg_nnan_mul_with_anyzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[A:%.*]]
+; CHECK-NEXT:    [[F2:%.*]] = call nnan float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul float %a, 0.000000
+  %f2 = fneg nnan float %f1
+  ret float %f2
+}
+
+define float @test_fneg_nsz_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fneg_nsz_mul_with_anyzero(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nsz float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul float %a, 0.000000
+  %f2 = fneg nsz float %f1
+  ret float %f2
+}
+
 !0 = !{}
