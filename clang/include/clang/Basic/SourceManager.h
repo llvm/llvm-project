@@ -2015,7 +2015,7 @@ public:
 };
 
 /// SourceManager and necessary dependencies (e.g. VFS, FileManager) for a
-/// single in-memorty file.
+/// single in-memory file.
 class SourceManagerForFile {
 public:
   /// Creates SourceManager and necessary dependencies (e.g. VFS, FileManager).
