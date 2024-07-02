@@ -110,6 +110,37 @@ class MyClass
   }
 };
 
+// Exported function without body, not used
+export void exportedFunctionUnused(float f);
+
+// Exported function with body, without export, not used
+void exportedFunctionUnused(float f) {
+  // expected-warning@#exportedFunctionUnused_fx_call {{'fx' is only available on Shader Model 6.5 or newer}}
+  // expected-note@#fx {{'fx' has been marked as being introduced in Shader Model 6.5 here, but the deployment target is Shader Model 6.0}}
+  float A = fx(f); // #exportedFunctionUnused_fx_call
+
+  // API with shader-stage-specific availability in unused exported library function
+  // - no errors expected because the actual shader stage this function
+  // will be used in not known at this time
+  float B = fy(f);
+  float C = fz(f);
+}
+
+// Exported function with body - called from main() which is a compute shader entry point
+export void exportedFunctionUsed(float f) {
+  // expected-warning@#exportedFunctionUsed_fx_call {{'fx' is only available on Shader Model 6.5 or newer}}
+  // expected-note@#fx {{'fx' has been marked as being introduced in Shader Model 6.5 here, but the deployment target is Shader Model 6.0}}
+  float A = fx(f); // #exportedFunctionUsed_fx_call
+
+  // expected-warning@#exportedFunctionUsed_fy_call {{'fy' is only available in compute environment on Shader Model 6.5 or newer}}
+  // expected-note@#fy {{'fy' has been marked as being introduced in Shader Model 6.5 in compute environment here, but the deployment target is Shader Model 6.0 compute environment}}
+  float B = fy(f); // #exportedFunctionUsed_fy_call
+
+  // expected-warning@#exportedFunctionUsed_fz_call {{'fz' is unavailable}}
+  // expected-note@#fz {{'fz' has been marked as being introduced in Shader Model 6.5 in mesh environment here, but the deployment target is Shader Model 6.0 compute environment}}
+  float C = fz(f); // #exportedFunctionUsed_fz_call
+}
+
 // Shader entry point without body
 [shader("compute")]
 [numthreads(4,1,1)]
@@ -126,5 +157,6 @@ float main() {
   float c = C.makeF();
   float d = test((float)1.0);
   float e = test((half)1.0);
+  exportedFunctionUsed(1.0f);
   return a * b * c;
 }
