@@ -74,10 +74,28 @@ Value getStride(ConversionPatternRewriter &rewriter,
 }
 
 struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
+private:
+  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+
+public:
   using ConvertOpToLLVMPattern<TileZeroOp>::ConvertOpToLLVMPattern;
+  TileZeroConversion(const LLVMTypeConverter &typeConverter,
+                     const std::optional<TileScopeAnalysis> &analysis)
+      : ConvertOpToLLVMPattern<TileZeroOp>(typeConverter),
+        enablingAnalysis(analysis) {}
+
   LogicalResult
   matchAndRewrite(TileZeroOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (enablingAnalysis && enablingAnalysis->isValid()) {
+      // Routine for lowering tile Ops with binding info.
+      auto dstRegIndex = op.getDstRegIndex();
+      assert(dstRegIndex && "Incomplete operation attribute for tile binding");
+      rewriter.replaceOpWithNewOp<amx::x86_amx_tilezero_plain>(op,
+                                                               *dstRegIndex);
+      return success();
+    }
+
     VectorType vType = op.getVectorType();
     // Determine m x n tile sizes.
     std::pair<Value, Value> tsz =
@@ -91,24 +109,42 @@ struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
 };
 
 struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
+private:
+  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+
+public:
   using ConvertOpToLLVMPattern<TileLoadOp>::ConvertOpToLLVMPattern;
+  TileLoadConversion(const LLVMTypeConverter &typeConverter,
+                     const std::optional<TileScopeAnalysis> &analysis)
+      : ConvertOpToLLVMPattern<TileLoadOp>(typeConverter),
+        enablingAnalysis(analysis) {}
 
   LogicalResult
   matchAndRewrite(TileLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType mType = op.getMemRefType();
-    VectorType vType = op.getVectorType();
-    // Determine m x n tile sizes.
-    std::pair<Value, Value> tsz =
-        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
     // Determine stride.
     if (failed(verifyStride(mType)))
       return failure();
     Value stride = getStride(rewriter, *getTypeConverter(), mType,
                              adaptor.getBase(), op.getLoc());
-    // Replace operation with intrinsic.
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
+
+    if (enablingAnalysis && enablingAnalysis->isValid()) {
+      // Routine for lowering tile Ops with binding info.
+      auto dstRegIndex = op.getDstRegIndex();
+      assert(dstRegIndex && "Incomplete operation attribute for tile binding");
+      rewriter.replaceOpWithNewOp<amx::x86_amx_tileloadd64_plain>(
+          op, ptr, stride, *dstRegIndex);
+      return success();
+    }
+
+    VectorType vType = op.getVectorType();
+    // Determine m x n tile sizes.
+    std::pair<Value, Value> tsz =
+        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
+    // Replace operation with intrinsic.
     Type resType = typeConverter->convertType(vType);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tileloadd64>(
         op, resType, tsz.first, tsz.second, ptr, stride);
@@ -117,24 +153,42 @@ struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
 };
 
 struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
+private:
+  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+
+public:
   using ConvertOpToLLVMPattern<TileStoreOp>::ConvertOpToLLVMPattern;
+  TileStoreConversion(const LLVMTypeConverter &typeConverter,
+                      const std::optional<TileScopeAnalysis> &analysis)
+      : ConvertOpToLLVMPattern<TileStoreOp>(typeConverter),
+        enablingAnalysis(analysis) {}
 
   LogicalResult
   matchAndRewrite(TileStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType mType = op.getMemRefType();
-    VectorType vType = op.getVectorType();
-    // Determine m x n tile sizes.
-    std::pair<Value, Value> tsz =
-        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
     // Determine stride.
     if (failed(verifyStride(mType)))
       return failure();
     Value stride = getStride(rewriter, *getTypeConverter(), mType,
                              adaptor.getBase(), op.getLoc());
-    // Replace operation with intrinsic.
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
+
+    if (enablingAnalysis && enablingAnalysis->isValid()) {
+      // Routine for lowering tile Ops with binding info.
+      auto srcRegIndex = op.getSrcRegIndex();
+      assert(srcRegIndex && "Incomplete operation attribute for tile binding");
+      rewriter.replaceOpWithNewOp<amx::x86_amx_tilestored64_plain>(
+          op, ptr, stride, *srcRegIndex);
+      return success();
+    }
+
+    VectorType vType = op.getVectorType();
+    // Determine m x n tile sizes.
+    std::pair<Value, Value> tsz =
+        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
+    // Replace operation with intrinsic.
     rewriter.replaceOpWithNewOp<amx::x86_amx_tilestored64>(
         op, tsz.first, tsz.second, ptr, stride, adaptor.getVal());
     return success();
@@ -142,10 +196,32 @@ struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
 };
 
 struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
+private:
+  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+
+public:
   using ConvertOpToLLVMPattern<TileMulFOp>::ConvertOpToLLVMPattern;
+  TileMulFConversion(const LLVMTypeConverter &typeConverter,
+                     const std::optional<TileScopeAnalysis> &analysis)
+      : ConvertOpToLLVMPattern<TileMulFOp>(typeConverter),
+        enablingAnalysis(analysis) {}
+
   LogicalResult
   matchAndRewrite(TileMulFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (enablingAnalysis && enablingAnalysis->isValid()) {
+      // Routine for lowering tile Ops with binding info.
+      auto lhsRegIndex = op.getSrcRegIndex();
+      auto rhsRegIndex = op.getRhsRegIndex();
+      auto accRegIndex = op.getAccRegIndex();
+
+      assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
+             "Incomplete operation attribute for tile binding");
+      rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbf16ps_plain>(
+          op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+      return success();
+    }
+
     VectorType aType = op.getLhsVectorType();
     VectorType bType = op.getRhsVectorType();
     VectorType cType = op.getVectorType();
@@ -164,10 +240,45 @@ struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
 };
 
 struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
+private:
+  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+
+public:
   using ConvertOpToLLVMPattern<TileMulIOp>::ConvertOpToLLVMPattern;
+  TileMulIConversion(const LLVMTypeConverter &typeConverter,
+                     const std::optional<TileScopeAnalysis> &analysis)
+      : ConvertOpToLLVMPattern<TileMulIOp>(typeConverter),
+        enablingAnalysis(analysis) {}
+
   LogicalResult
   matchAndRewrite(TileMulIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    bool zexta = op.getIsZextLhs();
+    bool zextb = op.getIsZextRhs();
+
+    if (enablingAnalysis && enablingAnalysis->isValid()) {
+      // Routine for lowering tile Ops with binding info.
+      auto lhsRegIndex = op.getSrcRegIndex();
+      auto rhsRegIndex = op.getRhsRegIndex();
+      auto accRegIndex = op.getAccRegIndex();
+
+      assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
+             "Incomplete operation attribute for tile binding");
+      if (zexta && zextb)
+        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbuud_plain>(
+            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+      else if (zexta && !zextb)
+        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbusd_plain>(
+            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+      else if (!zexta && zextb)
+        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbsud_plain>(
+            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+      else
+        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbssd_plain>(
+            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+      return success();
+    }
+
     VectorType aType = op.getLhsVectorType();
     VectorType bType = op.getRhsVectorType();
     VectorType cType = op.getVectorType();
@@ -178,8 +289,6 @@ struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
         getTileSizes(rewriter, *getTypeConverter(), bType, op.getLoc());
     // Replace operation with intrinsic.
     Type resType = typeConverter->convertType(cType);
-    bool zexta = op.getIsZextLhs();
-    bool zextb = op.getIsZextRhs();
     if (zexta && zextb)
       rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbuud>(
           op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
@@ -203,9 +312,10 @@ struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
 } // namespace
 
 void mlir::populateAMXLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    LLVMTypeConverter &converter, std::optional<TileScopeAnalysis> &analysis,
+    RewritePatternSet &patterns) {
   patterns.add<TileZeroConversion, TileLoadConversion, TileStoreConversion,
-               TileMulFConversion, TileMulIConversion>(converter);
+               TileMulFConversion, TileMulIConversion>(converter, analysis);
 }
 
 void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {
