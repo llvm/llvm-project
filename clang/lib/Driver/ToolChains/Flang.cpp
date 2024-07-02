@@ -735,6 +735,11 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
 
+  llvm::Reloc::Model RelocationModel =
+      std::get<0>(ParsePICArgs(getToolChain(), Args));
+  // Add MCModel information
+  addMCModel(D, Args, Triple, RelocationModel, CmdArgs);
+
   // Add Codegen options
   addCodegenOptions(Args, CmdArgs);
 
