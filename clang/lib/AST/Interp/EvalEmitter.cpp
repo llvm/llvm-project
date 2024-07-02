@@ -151,6 +151,11 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
+    // Never allow reading from a non-const pointer, unless the memory
+    // has been created in this evaluation.
+    if (!Ptr.isConst() && Ptr.block()->getEvalID() != Ctx.getEvalID())
+      return false;
+
     if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
       EvalResult.setValue(*V);
     } else {
