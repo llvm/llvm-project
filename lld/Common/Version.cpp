@@ -26,8 +26,8 @@ std::string lld::getLLDVersion() {
 #if defined(LLVM_REPOSITORY) || defined(LLVM_REVISION)
   return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING " (" LLVM_REPOSITORY
                             " " LLVM_REVISION ")";
-#else 
+#else
   return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING;
-#endif 
+#endif
 #undef LLD_VENDOR_DISPLAY
 }
