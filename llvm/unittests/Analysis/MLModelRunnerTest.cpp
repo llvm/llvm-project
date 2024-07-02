@@ -102,7 +102,7 @@ class ComposedAOTModel final {
 public:
   ComposedAOTModel() = default;
   int LookupArgIndex(const std::string &Name) {
-    if (Name == "prefix__model_selector")
+    if (Name == "prefix_model_selector")
       return 2;
     return getModel()->LookupArgIndex(Name);
   }
@@ -198,10 +198,10 @@ TEST(ReleaseModelRunner, ModelSelectorNoInputFeaturePresent) {
   LLVMContext Ctx;
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
-  EXPECT_DEATH(std::make_unique<ReleaseModeModelRunner<AdditionAOTModel>>(
+  EXPECT_DEATH((void)std::make_unique<ReleaseModeModelRunner<AdditionAOTModel>>(
                    Ctx, Inputs, "", makeOptions().setModelSelector(M2Selector)),
                "A model selector was specified but the underlying model does "
-               "not expose a _model_selector input");
+               "not expose a model_selector input");
 }
 
 TEST(ReleaseModelRunner, ModelSelectorNoSelectorGiven) {
@@ -209,13 +209,13 @@ TEST(ReleaseModelRunner, ModelSelectorNoSelectorGiven) {
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
   EXPECT_DEATH(
-      std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
+      (void)std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
           Ctx, Inputs, "", makeOptions()),
       "A model selector was not specified but the underlying model requires "
-      "selecting one because it exposes a _model_selector input");
+      "selecting one because it exposes a model_selector input");
 }
 
-// Test that we correctly set up the _model_selector tensor value. We are only
+// Test that we correctly set up the model_selector tensor value. We are only
 // responsbile for what happens if the user doesn't specify a value (but the
 // model supports the feature), or if the user specifies one, and we correctly
 // populate the tensor, and do so upfront (in case the model implementation

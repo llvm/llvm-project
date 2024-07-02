@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
 # RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
-# RUN:   --print-cfg --match-profile-with-function-hash 2>&1 --profile-ignore-hash=0 | FileCheck %s
+# RUN:   --print-cfg --match-profile-with-function-hash --profile-ignore-hash=0 2>&1 | FileCheck %s
 
 # CHECK: BOLT-INFO: matched 1 functions with hash
 
@@ -35,8 +35,7 @@ main:
   popq    %rbp
   retq
 ## For relocations against .text
-.LBB05:
-  call exit
+  .reloc 0, R_X86_64_NONE
   .cfi_endproc
   .size	main, .-main
 
@@ -54,7 +53,7 @@ header:
 functions:
   - name:            main2
     fid:             0
-    hash:            0x72F82DEAA6FE65FB
+    hash:            0x6E7F15254DE2478
     exec:            1
     nblocks:         6
     blocks:
