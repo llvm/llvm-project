@@ -1878,6 +1878,7 @@ functions:
   - name: f16sqrtf
     standards: 
       - stdc
+      - llvm_libc_ext
     return_type: _Float16
     arguments:
       - type: float
@@ -1928,13 +1929,6 @@ functions:
     return_type: _Float16
     arguments:
       - type: double
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16sqrtf
-    standards: 
-      - llvm_libc_ext
-    return_type: _Float16
-    arguments:
-      - type: float
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16sqrtl
     standards: 
