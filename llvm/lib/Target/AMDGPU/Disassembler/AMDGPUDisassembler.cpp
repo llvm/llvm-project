@@ -55,7 +55,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
     report_fatal_error("Disassembly not yet supported for subtarget");
 
   for (auto [Symbol, Code] : AMDGPU::UCVersion::getGFXVersions())
-    createConstantSymbolExpr(Symbol, Code);
+    UCVersionSymbols.push_back(createConstantSymbolExpr(Symbol, Code));
 
   UCVersionW64Expr = createConstantSymbolExpr("UC_VERSION_W64_BIT", 0x2000);
   UCVersionW32Expr = createConstantSymbolExpr("UC_VERSION_W32_BIT", 0x4000);
@@ -1755,18 +1755,25 @@ MCOperand AMDGPUDisassembler::decodeVersionImm(unsigned Imm) const {
   if (Encoding::encode(Version, W64, W32, MDP) != Imm)
     return MCOperand::createImm(Imm);
 
-  const auto &Versions = AMDGPU::UCVersion::getGFXVersions();
-  auto I = find_if(Versions,
-                   [Version = Version](const AMDGPU::UCVersion::GFXVersion &V) {
-                     return V.Code == Version;
-                   });
+  // Locate UC_VERSION symbol matching Version.
   MCContext &Ctx = getContext();
-  const MCExpr *E;
-  if (I == Versions.end())
-    E = MCConstantExpr::create(Version, Ctx);
-  else
-    E = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(I->Symbol), Ctx);
+  const MCExpr *E = nullptr;
+  for (auto *VersionSym : UCVersionSymbols) {
+    int64_t Val;
+    if (!VersionSym->evaluateAsAbsolute(Val))
+      continue;
+    if (Val != (int64_t)Version)
+      continue;
+    auto *Sym = Ctx.getOrCreateSymbol(VersionSym->getSymbol().getName());
+    E = MCSymbolRefExpr::create(Sym, Ctx);
+    break;
+  }
 
+  // Default to constant value if not found.
+  if (!E)
+    E = MCConstantExpr::create(Version, Ctx);
+
+  // Apply bits.
   if (W64)
     E = MCBinaryExpr::createOr(E, UCVersionW64Expr, Ctx);
   if (W32)
@@ -2362,15 +2369,17 @@ Expected<bool> AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
   return false;
 }
 
-const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
-                                                           int64_t Val) {
+const MCSymbolRefExpr *
+AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id, int64_t Val) {
   MCContext &Ctx = getContext();
   MCSymbol *Sym = Ctx.getOrCreateSymbol(Id);
   // Note: only set value to Val on a new symbol.
   // Existing symbol may potentially have a different value to the one
   // requested, which allows for user redefinition of symbols.
-  if (!Sym->isVariable())
+  if (!Sym->isVariable()) {
+    Sym->setRedefinable(true);
     Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  }
   return MCSymbolRefExpr::create(Sym, Ctx);
 }
 
