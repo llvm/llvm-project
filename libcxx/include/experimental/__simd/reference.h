@@ -12,6 +12,9 @@
 
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <cstddef>
@@ -59,6 +62,24 @@ public:
     __set(static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
+
+#  define _LIBCXX_SIMD_REFERENCE_OP_(__op)                                                                             \
+    template <class _Up, class = decltype(std::declval<value_type&>() __op## = std::declval<_Up>())>                   \
+        __simd_reference _LIBCPP_HIDE_FROM_ABI operator __op##=(_Up&& __v) && noexcept {                               \
+      __set(__get() __op static_cast<value_type>(std::forward<_Up>(__v)));                                             \
+      return {__s_, __idx_};                                                                                           \
+    }
+  _LIBCXX_SIMD_REFERENCE_OP_(+)
+  _LIBCXX_SIMD_REFERENCE_OP_(-)
+  _LIBCXX_SIMD_REFERENCE_OP_(*)
+  _LIBCXX_SIMD_REFERENCE_OP_(/)
+  _LIBCXX_SIMD_REFERENCE_OP_(%)
+  _LIBCXX_SIMD_REFERENCE_OP_(&)
+  _LIBCXX_SIMD_REFERENCE_OP_(|)
+  _LIBCXX_SIMD_REFERENCE_OP_(^)
+  _LIBCXX_SIMD_REFERENCE_OP_(<<)
+  _LIBCXX_SIMD_REFERENCE_OP_(>>)
+#  undef _LIBCXX_SIMD_REFERENCE_OP_
 
   // Note: This approach might not fully align with the specification,
   // which might be a wording defect. (https://wg21.link/N4808 section 9.6.3)
