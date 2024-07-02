@@ -170,3 +170,52 @@ add_entrypoint_object(
     libc.include.llvm-libc-types.locale_t
     libc.src.__support.ctype_utils
 )
+
+
+add_entrypoint_object(
+  islower_l
+  SRCS
+    islower_l.cpp
+  HDRS
+    islower_l.h
+  DEPENDS
+    libc.src.ctype.islower
+    libc.include.llvm-libc-types.locale_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  isupper_l
+  SRCS
+    isupper_l.cpp
+  HDRS
+    isupper_l.h
+  DEPENDS
+    libc.src.ctype.isupper
+    libc.include.llvm-libc-types.locale_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  tolower_l
+  SRCS
+    tolower_l.cpp
+  HDRS
+    tolower_l.h
+  DEPENDS
+    libc.src.ctype.tolower
+    libc.include.llvm-libc-types.locale_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  toupper_l
+  SRCS
+    toupper_l.cpp
+  HDRS
+    toupper_l.h
+  DEPENDS
+    libc.src.ctype.toupper
+    libc.include.llvm-libc-types.locale_t
+    libc.src.__support.ctype_utils
+)

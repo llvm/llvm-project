@@ -118,6 +118,26 @@ def StdC : StandardSpec<"stdc"> {
               RetValSpec<IntType>,
               [ArgSpec<IntType>, ArgSpec<LocaleTType>]
           >,
+          FunctionSpec<
+              "tolower_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleTType>]
+          >,
+          FunctionSpec<
+              "toupper_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleTType>]
+          >,
+          FunctionSpec<
+              "islower_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleTType>]
+          >,
+          FunctionSpec<
+              "isupper_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleTType>]
+          >,
       ]
   >;
 
