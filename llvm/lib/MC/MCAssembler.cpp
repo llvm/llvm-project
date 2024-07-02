@@ -1288,13 +1288,13 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
 
 bool MCAssembler::relaxCVInlineLineTable(MCCVInlineLineTableFragment &F) {
   unsigned OldSize = F.getContents().size();
-  getContext().getCVContext().encodeInlineLineTable(*Layout, F);
+  getContext().getCVContext().encodeInlineLineTable(*this, F);
   return OldSize != F.getContents().size();
 }
 
 bool MCAssembler::relaxCVDefRange(MCCVDefRangeFragment &F) {
   unsigned OldSize = F.getContents().size();
-  getContext().getCVContext().encodeDefRange(*Layout, F);
+  getContext().getCVContext().encodeDefRange(*this, F);
   return OldSize != F.getContents().size();
 }
 
