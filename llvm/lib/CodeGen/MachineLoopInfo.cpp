@@ -215,13 +215,37 @@ bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
       [this](const MachineInstr &MI) { return this->contains(&MI); });
 }
 
-bool MachineLoop::isLoopInvariant(MachineInstr &I,
-                                  const Register ExcludeReg) const {
+/// Return true if this machine instruction loads only from global offset table
+/// or constant pool.
+static bool onlyLoadsFromConstantMemory(MachineInstr &MI) {
+  assert(MI.mayLoad() && "Expected MI that loads!");
+
+  // If we lost memory operands, conservatively assume that the instruction
+  // reads from everything..
+  if (MI.memoperands_empty())
+    return false;
+
+  for (MachineMemOperand *MemOp : MI.memoperands())
+    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue())
+      if (!PSV->isGOT() && !PSV->isConstantPool())
+        return false;
+
+  return true;
+}
+
+bool MachineLoop::isLoopInvariant(MachineInstr &I, const Register ExcludeReg,
+                                  bool IgnoreAliasing) const {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
+
+  // TODO: If the address of a load is loop-invariant and doesn't alias any
+  // store in the loop then it is loop-invariant. For now only handle constant
+  // loads.
+  if (I.mayLoad() && !onlyLoadsFromConstantMemory(I) && !IgnoreAliasing)
+    return false;
 
   // The instruction is loop invariant if all of its operands are.
   for (const MachineOperand &MO : I.operands()) {
