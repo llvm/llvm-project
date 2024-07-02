@@ -19290,8 +19290,8 @@ Semantics:
 """"""""""
 
 The ``llvm.experimental.vector.compress`` intrinsic compresses data within a vector.
-It collects elements from possibly non-adjacent lanes of a vector and place
-them contiguously in the result vector based on a selection mask and fill the
+It collects elements from possibly non-adjacent lanes of a vector and places
+them contiguously in the result vector based on a selection mask, filling the
 remaining lanes with values from ``passthru``.
 This intrinsic performs the logic of the following C++ example.
 All values in ``out`` after the last selected one are undefined if
