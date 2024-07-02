@@ -1,20 +1,36 @@
 import subprocess
 import unittest
 from pathlib import Path
+import os
+import argparse
 
 
 class TestHeaderGenIntegration(unittest.TestCase):
     def setUp(self):
-        self.output_dir = Path("tests/output")
+        parser = argparse.ArgumentParser(
+            description="TestHeaderGenIntegration arguments"
+        )
+        parser.add_argument(
+            "--output_dir", type=str, help="Output directory for generated headers"
+        )
+        args, _ = parser.parse_known_args()
+        output_dir_env = os.getenv("TEST_OUTPUT_DIR")
+
+        self.output_dir = Path(
+            args.output_dir
+            if args.output_dir
+            else output_dir_env if output_dir_env else "libc/newhdrgen/tests/output"
+        )
+
         self.maxDiff = None
 
     def run_script(self, yaml_file, h_def_file, output_dir):
         result = subprocess.run(
             [
                 "python3",
-                "yaml_to_classes.py",
-                yaml_file,
-                h_def_file,
+                "libc/newhdrgen/yaml_to_classes.py",
+                str(yaml_file),
+                str(h_def_file),
                 "--output_dir",
                 str(output_dir),
             ],
@@ -35,11 +51,12 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.assertEqual(gen_content, exp_content)
 
     def test_generate_header(self):
-        # this is for example, will find a way to test everything at once
-        yaml_file = Path("tests/input/test_string.yaml")
-        h_def_file = Path("tests/input/string.h.def")
-        expected_output_file = Path("tests/expected_output/string.h")
-        output_file = self.output_dir / "string.h"
+        yaml_file = Path("libc/newhdrgen/tests/input/test_small.yaml")
+        h_def_file = Path("libc/newhdrgen/tests/input/test_small.h.def")
+        expected_output_file = Path(
+            "libc/newhdrgen/tests/expected_output/test_header.h"
+        )
+        output_file = self.output_dir / "test_small.h"
 
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True)

@@ -101,6 +101,7 @@ def fill_public_api(header_str, h_def_content):
     Returns:
         The final header content with the public API filled in.
     """
+    header_str = header_str.strip()
     return h_def_content.replace("%%public_api()", header_str, 1)
 
 

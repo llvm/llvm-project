@@ -46,9 +46,6 @@ class HeaderFile:
         for macro in self.macros:
             content.append(str(macro))
 
-        for object in self.objects:
-            content.append(str(object))
-
         for type_ in self.types:
             content.append(str(type_))
 
@@ -58,10 +55,13 @@ class HeaderFile:
                 content.append(f"\t{str(enum)},")
             content.append("};")
 
-        # TODO: replace line below with common.h functionality
-        content.append("__BEGIN_C_DECLS\n")
+        content.append("\n__BEGIN_C_DECLS\n")
+
         for function in self.functions:
             content.append(str(function))
             content.append("")
-        content.append("__END_C_DECLS\n")
+        for object in self.objects:
+            content.append(str(object))
+        content.append("__END_C_DECLS")
+
         return "\n".join(content)
