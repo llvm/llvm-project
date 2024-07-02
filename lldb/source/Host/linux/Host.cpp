@@ -100,7 +100,7 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
   StatFields stat_fields;
   if (sscanf(
           Rest.data(),
-          "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld",
+          "%d %15s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld",
           &stat_fields.pid, stat_fields.comm, &stat_fields.state,
           &stat_fields.ppid, &stat_fields.pgrp, &stat_fields.session,
           &stat_fields.tty_nr, &stat_fields.tpgid, &stat_fields.flags,
