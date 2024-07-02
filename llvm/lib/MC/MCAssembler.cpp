@@ -538,6 +538,7 @@ bool MCAssembler::getSymbolOffset(const MCSymbol &S, uint64_t &Val) const {
 }
 
 uint64_t MCAssembler::getSymbolOffset(const MCSymbol &S) const {
+  assert(HasLayout);
   uint64_t Val;
   getSymbolOffsetImpl(*this, S, true, Val);
   return Val;
