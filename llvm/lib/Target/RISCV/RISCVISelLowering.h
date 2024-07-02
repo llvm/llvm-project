@@ -524,6 +524,7 @@ public:
                     bool ForCodeSize) const override;
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
+  bool aggressivelyPreferVectorShuffle(EVT VT) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
