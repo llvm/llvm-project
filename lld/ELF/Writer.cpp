@@ -1458,7 +1458,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
-      changed |= part.relaDyn->updateAllocSize();
+      if (part.relaDyn)
+        changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
       if (part.memtagGlobalDescriptors)
