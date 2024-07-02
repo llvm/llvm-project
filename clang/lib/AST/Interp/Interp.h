@@ -1255,7 +1255,10 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 /// Same as GetGlobal, but without the checks.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
+  const Pointer &Ptr = S.P.getPtrGlobal(I);
+  if (!Ptr.isInitialized())
+    return false;
+  const Block *B = S.P.getGlobal(I);
   S.Stk.push<T>(B->deref<T>());
   return true;
 }
