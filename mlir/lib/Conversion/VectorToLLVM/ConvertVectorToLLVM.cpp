@@ -1860,6 +1860,19 @@ struct VectorFromElementsLowering
   }
 };
 
+/// Conversion pattern for vector.step.
+struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type llvmType = typeConverter->convertType(stepOp.getType());
+    rewriter.replaceOpWithNewOp<LLVM::StepVectorOp>(stepOp, llvmType);
+    return success();
+  }
+};
+
 } // namespace
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
@@ -1885,8 +1898,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorSplatOpLowering, VectorSplatNdOpLowering,
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
-               VectorDeinterleaveOpLowering, VectorFromElementsLowering>(
-      converter);
+               VectorDeinterleaveOpLowering, VectorFromElementsLowering,
+               VectorStepOpLowering>(converter);
   // Transfer ops with rank > 1 are handled by VectorToSCF.
   populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
 }
