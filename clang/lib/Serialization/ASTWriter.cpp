@@ -1969,9 +1969,15 @@ namespace {
         llvm::PointerIntPair<Module *, 2, ModuleMap::ModuleHeaderRole>;
 
     struct data_type {
-      const HeaderFileInfo &HFI;
+      data_type(const HeaderFileInfo &HFI, bool AlreadyIncluded,
+                ArrayRef<ModuleMap::KnownHeader> KnownHeaders,
+                UnresolvedModule Unresolved)
+          : HFI(HFI), AlreadyIncluded(AlreadyIncluded),
+            KnownHeaders(KnownHeaders), Unresolved(Unresolved) {}
+
+      HeaderFileInfo HFI;
       bool AlreadyIncluded;
-      ArrayRef<ModuleMap::KnownHeader> KnownHeaders;
+      SmallVector<ModuleMap::KnownHeader, 1> KnownHeaders;
       UnresolvedModule Unresolved;
     };
     using data_type_ref = const data_type &;
