@@ -1678,6 +1678,62 @@ define i32 @sdiv_sdiv_mul_nsw_exact_use(i32 %x, i32 %y, i32 %z) {
   ret i32 %r
 }
 
+define i32 @x_times_150_over_100(i32 %x) {
+; CHECK-LABEL: @x_times_150_over_100(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[D1]]
+;
+  %m = mul nuw nsw i32 %x, 150
+  %d = udiv i32 %m, 100
+  ret i32 %d
+}
+
+define i32 @x_times_150_over_100_sdiv(i32 %x) {
+; CHECK-LABEL: @x_times_150_over_100_sdiv(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %m = mul nuw nsw i32 %x, 150
+  %d = sdiv i32 %m, 100
+  ret i32 %d
+}
+
+define i32 @x_times_150_over_100_sdiv_negative(i32 %x) {
+; CHECK-LABEL: @x_times_150_over_100_sdiv_negative(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %m = mul nuw nsw i32 %x, -150
+  %d = sdiv i32 %m, 100
+  ret i32 %d
+}
+
+define i32 @x_times_150_over_100_sdiv_negative_2(i32 %x) {
+; CHECK-LABEL: @x_times_150_over_100_sdiv_negative_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[TMP1]], -2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %m = mul nuw nsw i32 %x, 150
+  %d = sdiv i32 %m, -100
+  ret i32 %d
+}
+
+define i32 @x_times_150_over_100_sdiv_double_negative(i32 %x) {
+; CHECK-LABEL: @x_times_150_over_100_sdiv_double_negative(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %m = mul nuw nsw i32 %x, -150
+  %d = sdiv i32 %m, -100
+  ret i32 %d
+}
+
+
 ; negative test - must have nsw
 
 define i8 @sdiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
