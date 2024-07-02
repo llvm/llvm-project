@@ -925,7 +925,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       // the align directive.  This is purely about human understandability
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
-      MCFragment *FirstChangedFragment = nullptr;
       unsigned RemainingSize = OrigSize;
       while (!Relaxable.empty() && RemainingSize != 0) {
         auto &RF = *Relaxable.pop_back_val();
@@ -933,7 +932,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
         // the encoding size of the given instruction.  Target independent code
         // will try further relaxation, but target's may play further tricks.
         if (padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize))
-          FirstChangedFragment = &RF;
+          Sec.setHasLayout(false);
 
         // If we have an instruction which hasn't been fully relaxed, we can't
         // skip past it and insert bytes before it.  Changing its starting
@@ -945,13 +944,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
           break;
       }
       Relaxable.clear();
-
-      if (FirstChangedFragment) {
-        // Make sure the offsets for any fragments in the effected range get
-        // updated.  Note that this (conservatively) invalidates the offsets of
-        // those following, but this is not required.
-        Layout.invalidateFragmentsFrom(FirstChangedFragment);
-      }
 
       // BoundaryAlign explicitly tracks it's size (unlike align)
       if (F.getKind() == MCFragment::FT_BoundaryAlign)
