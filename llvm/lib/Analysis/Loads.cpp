@@ -293,7 +293,9 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 
   // TODO: Handle overlapping accesses.
   // We should be computing AccessSize as (TC - 1) * Step + EltSize.
-  if (EltSize.sgt(Step->getAPInt()))
+  bool StepIsNegative = Step->getAPInt().isNegative();
+  APInt AbsStep = Step->getAPInt().abs();
+  if (EltSize.ugt(AbsStep))
     return false;
 
   // Compute the total access size for access patterns with unit stride and
@@ -301,13 +303,14 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   // same.
   // For patterns with gaps (i.e. non unit stride), we are
   // accessing EltSize bytes at every Step.
-  APInt AccessSize = TC * Step->getAPInt();
+  APInt AccessSize = TC * AbsStep;
 
   assert(SE.isLoopInvariant(AddRec->getStart(), L) &&
          "implied by addrec definition");
   Value *Base = nullptr;
   if (auto *StartS = dyn_cast<SCEVUnknown>(AddRec->getStart())) {
-    Base = StartS->getValue();
+    if (!StepIsNegative)
+      Base = StartS->getValue();
   } else if (auto *StartS = dyn_cast<SCEVAddExpr>(AddRec->getStart())) {
     // Handle (NewBase + offset) as start value.
     const auto *Offset = dyn_cast<SCEVConstant>(StartS->getOperand(0));
@@ -318,11 +321,24 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
       // TODO: generalize if a case found which warrants
       if (Offset->getAPInt().urem(Alignment.value()) != 0)
         return false;
+      if (StepIsNegative) {
+        // In the last iteration of the loop the address we access we will be
+        // lower than the first by (TC - 1) * Step. So we need to make sure
+        // that there is enough room in Offset to accomodate this.
+        APInt SubOffset = (TC - 1) * AbsStep;
+        if (Offset->getAPInt().ult(SubOffset))
+          return false;
+        // We can safely use the new base because the decrementing pointer is
+        // always guaranteed to be >= new base. The total access size needs to
+        // take into account the start offset and the loaded element size.
+        AccessSize = Offset->getAPInt() + EltSize;
+      } else {
+        bool Overflow = false;
+        AccessSize = AccessSize.uadd_ov(Offset->getAPInt(), Overflow);
+        if (Overflow)
+          return false;
+      }
       Base = NewBase->getValue();
-      bool Overflow = false;
-      AccessSize = AccessSize.uadd_ov(Offset->getAPInt(), Overflow);
-      if (Overflow)
-        return false;
     }
   }
 
