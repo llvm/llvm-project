@@ -221,9 +221,7 @@ void BackendConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
 }
 
 void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
-  // Ignore interesting decls from the AST reader after IRGen is finished.
-  if (!IRGenFinished)
-    HandleTopLevelDecl(D);
+  HandleTopLevelDecl(D);
 }
 
 // Links each entry in LinkModules into our module. Returns true on error.
@@ -280,8 +278,6 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
       if (LLVMIRGenerationRefCount == 0)
         LLVMIRGeneration.stopTimer();
     }
-
-    IRGenFinished = true;
   }
 
   // Silently ignore if we weren't initialized for some reason.

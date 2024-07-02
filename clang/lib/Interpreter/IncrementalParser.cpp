@@ -219,6 +219,10 @@ IncrementalParser::IncrementalParser(Interpreter &Interp,
   Consumer = &CI->getASTConsumer();
   P.reset(
       new Parser(CI->getPreprocessor(), CI->getSema(), /*SkipBodies=*/false));
+
+  if (ExternalASTSource *External = CI->getASTContext().getExternalSource())
+    External->StartTranslationUnit(Consumer);
+
   P->Initialize();
 
   // An initial PTU is needed as CUDA includes some headers automatically
