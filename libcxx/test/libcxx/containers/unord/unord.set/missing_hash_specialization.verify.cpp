@@ -48,11 +48,10 @@ int main(int, char**) {
     using Set = std::unordered_set<VT>;
     Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
 
-
-  // FIXME: It would be great to suppress the below diagnostic all together.
-  //        but for now it's sufficient that it appears last. However there is
-  //        currently no way to test the order diagnostics are issued.
-  // expected-error@*:* {{call to implicitly-deleted default constructor of 'std::}}
+    // FIXME: It would be great to suppress the below diagnostic all together.
+    //        but for now it's sufficient that it appears last. However there is
+    //        currently no way to test the order diagnostics are issued.
+    // expected-error@*:* {{call to implicitly-deleted default constructor}}
   }
   {
     using Set = std::unordered_set<int, BadHashNoCopy>;

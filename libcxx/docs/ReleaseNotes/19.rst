@@ -152,6 +152,9 @@ ABI Affecting Changes
   ``random_device`` could throw a ``system_error`` with this value. It now
   throws ``ENOMSG``.
 
+- The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``. This change results in
+  empty final types being placed at the beginning of the object instead of where the beginning of the
+  ``__compressed_pair`` subobject was. This is only observable by checking the address of the subobject.
 
 Build System Changes
 --------------------
