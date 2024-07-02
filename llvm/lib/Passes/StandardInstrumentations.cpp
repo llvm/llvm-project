@@ -19,9 +19,13 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -48,6 +52,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace ore;
 
 static cl::opt<bool> VerifyAnalysisInvalidation("verify-analysis-invalidation",
                                                 cl::Hidden,
@@ -373,6 +378,14 @@ bool isInteresting(Any IR, StringRef PassID, StringRef PassName) {
   if (const auto *F = unwrapIR<Function>(IR))
     return isInterestingFunction(*F);
   return true;
+}
+
+bool isMachineModulePass(StringRef PassID) {
+#define MACHINE_MODULE_PASS(NAME, CREATE_PASS)                                 \
+  if (PassID == std::remove_reference_t<decltype(CREATE_PASS)>::name())        \
+    return true;
+#include "llvm/Passes/MachinePassRegistry.def"
+  return false;
 }
 
 } // namespace
@@ -1328,6 +1341,49 @@ struct PreservedModuleHashAnalysis
 };
 
 AnalysisKey PreservedModuleHashAnalysis::Key;
+
+struct MachineInstrCounterAnalysis
+    : public AnalysisInfoMixin<MachineInstrCounterAnalysis> {
+  static AnalysisKey Key;
+
+  struct Result {
+    bool invalidate(MachineFunction &MF, const PreservedAnalyses &,
+                    MachineFunctionAnalysisManager::Invalidator &) {
+      return false;
+    }
+
+    void emitRemark(MachineFunction &MF, StringRef PassID) {
+      CountAfter = MF.getInstructionCount();
+      if (CountBefore == CountAfter)
+        return;
+
+      MachineOptimizationRemarkEmitter MORE(MF, nullptr);
+      MORE.emit([&]() {
+        int64_t Delta = static_cast<int64_t>(CountAfter) -
+                        static_cast<int64_t>(CountBefore);
+        MachineOptimizationRemarkAnalysis R("size-info", "FunctionMISizeChange",
+                                            MF.getFunction().getSubprogram(),
+                                            &MF.front());
+        R << NV("Pass", PassID)
+          << ": Function: " << NV("Function", MF.getName()) << ": "
+          << "MI Instruction count changed from "
+          << NV("MIInstrsBefore", CountBefore) << " to "
+          << NV("MIInstrsAfter", CountAfter)
+          << "; Delta: " << NV("Delta", Delta);
+        return R;
+      });
+    }
+
+    unsigned CountBefore = 0;
+    unsigned CountAfter = 0;
+  };
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+    return Result();
+  }
+};
+
+AnalysisKey MachineInstrCounterAnalysis::Key;
 
 bool PreservedCFGCheckerInstrumentation::CFG::invalidate(
     Function &F, const PreservedAnalyses &PA,
@@ -2435,8 +2491,7 @@ void DotCfgChangeReporter::registerCallbacks(
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
     PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts),
-      OptNone(DebugLogging),
+    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
@@ -2444,7 +2499,8 @@ StandardInstrumentations::StandardInstrumentations(
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffQuiet),
       WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
-      Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      Verify(DebugLogging), VerifyEach(VerifyEach), EmitMFSizeRemarks(Context) {
+}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
@@ -2504,6 +2560,76 @@ void PrintCrashIRInstrumentation::registerCallbacks(
       });
 }
 
+void InstrCountChangedReporter::registerCallbacks(
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager &MAM) {
+
+  if (!Context.getDiagHandlerPtr()->isAnalysisRemarkEnabled("size-info") ||
+      !MAM.isRegistered<MachineFunctionAnalysisManagerModuleProxy>())
+    return;
+
+  PIC.registerBeforeNonSkippedPassCallback([this, &MAM, Registered = false](
+                                               StringRef PassID,
+                                               Any IR) mutable {
+    if (isIgnored(PassID))
+      return;
+
+    auto &MFAM = MAM.getResult<MachineFunctionAnalysisManagerModuleProxy>(
+                        const_cast<Module &>(*unwrapModule(IR)))
+                     .getManager();
+    if (!Registered) {
+      MFAM.registerPass([] { return MachineInstrCounterAnalysis(); });
+      Registered = true;
+    }
+
+    if (auto *MF =
+            const_cast<MachineFunction *>(unwrapIR<MachineFunction>(IR))) {
+      MFAM.getResult<MachineInstrCounterAnalysis>(*MF).CountBefore =
+          MF->getInstructionCount();
+      return;
+    }
+
+    // FIXME: Currently except debugify passes, `MachineOutlinerPass`
+    // is the only "machine module pass".
+    if (!isMachineModulePass(PassID))
+      return;
+    if (auto *M = const_cast<Module *>(unwrapIR<Module>(IR))) {
+      auto &FAM =
+          MAM.getResult<FunctionAnalysisManagerModuleProxy>(*M).getManager();
+      for (auto &F : *M) {
+        auto &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
+        MFAM.getResult<MachineInstrCounterAnalysis>(MF).CountBefore =
+            MF.getInstructionCount();
+      }
+    }
+  });
+
+  PIC.registerAfterPassCallback([this, &MAM](StringRef PassID, Any IR,
+                                             const PreservedAnalyses &) {
+    if (isIgnored(PassID))
+      return;
+
+    auto &MFAM = MAM.getResult<MachineFunctionAnalysisManagerModuleProxy>(
+                        const_cast<Module &>(*unwrapModule(IR)))
+                     .getManager();
+    if (auto *MF =
+            const_cast<MachineFunction *>(unwrapIR<MachineFunction>(IR))) {
+      MFAM.getResult<MachineInstrCounterAnalysis>(*MF).emitRemark(*MF, PassID);
+      return;
+    }
+
+    if (!isMachineModulePass(PassID))
+      return;
+    if (auto *M = const_cast<Module *>(unwrapIR<Module>(IR))) {
+      auto &FAM =
+          MAM.getResult<FunctionAnalysisManagerModuleProxy>(*M).getManager();
+      for (auto &F : *M) {
+        auto &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
+        MFAM.getResult<MachineInstrCounterAnalysis>(MF).emitRemark(MF, PassID);
+      }
+    }
+  });
+}
+
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
   PrintIR.registerCallbacks(PIC);
@@ -2519,8 +2645,10 @@ void StandardInstrumentations::registerCallbacks(
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
-  if (MAM)
+  if (MAM) {
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
+    EmitMFSizeRemarks.registerCallbacks(PIC, *MAM);
+  }
 
   // TimeProfiling records the pass running time cost.
   // Its 'BeforePassCallback' can be appended at the tail of all the
