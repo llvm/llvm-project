@@ -16,6 +16,10 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
+#ifndef LIBC_TARGET_ARCH_IS_GPU
+#define LLVM_LIBC_FUNCTION_ATTR [[gnu::visibility("default")]]
+#endif
+
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
