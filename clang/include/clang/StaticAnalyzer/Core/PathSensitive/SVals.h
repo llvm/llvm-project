@@ -326,6 +326,12 @@ public:
   static bool classof(SVal V) { return V.getKind() == LocAsIntegerKind; }
 };
 
+/// The simplest example of a concrete compound value is nonloc::CompoundVal,
+/// which represents a concrete r-value of an initializer-list or a string.
+/// Internally, it contains an llvm::ImmutableList of SVal's stored inside the
+/// literal.
+///
+/// Source: https://github.com/haoNoQ/clang-analyzer-guide, v0.1, section 5.3.2.
 class CompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
@@ -346,6 +352,39 @@ public:
   static bool classof(SVal V) { return V.getKind() == CompoundValKind; }
 };
 
+/// The simplest example of a concrete compound value is nonloc::CompoundVal,
+/// which represents a concrete r-value of an initializer-list or a string.
+/// Internally, it contains an llvm::ImmutableList of SVal's stored inside the
+/// literal.
+///
+/// However, there is another compound value used in the analyzer, which appears
+/// much more often during analysis, which is nonloc::LazyCompoundVal. This
+/// value is an r-value that represents a snapshot of any structure "as a whole"
+/// at a given moment during the analysis. Such value is already quite far from
+/// being re- ferred to as "concrete", as many fields inside it would be unknown
+/// or symbolic. nonloc::LazyCompoundVal operates by storing two things:
+///   * a reference to the TypedValueRegion being snapshotted (yes, it is always
+///     typed), and also
+///   * a copy of the whole Store object, obtained from the ProgramState in
+///     which it was created.
+///
+/// Essentially, nonloc::LazyCompoundVal is a performance optimization for the
+/// analyzer. Because Store is immutable, creating a nonloc::LazyCompoundVal is
+/// a very cheap operation. Note that the Store contains all region bindings in
+/// the program state, not only related to the region. Later, if necessary, such
+/// value can be unpacked -- eg. when it is assigned to another variable.
+///
+/// Source: https://github.com/haoNoQ/clang-analyzer-guide, v0.1, section 5.3.2.
+///
+/// If you ever need to see if a LazyCompoundVal is fully or partially
+/// (un)initialized, you can iterBindings(). This is non-typechecked lookup
+/// (i.e., you cannot figure out which specific sub-region is initialized by the
+/// value you look at, you only get a byte offset). You can also improve
+/// iterBindings() to make it possible to restrict the iteration to a single
+/// cluster, because within the LazyCompoundVal’s Store only the cluster that
+/// corresponds to the LazyCompoundVal’s parent region is relevant.
+///
+/// Source: https://discourse.llvm.org/t/analyzer-for-the-undefined-value-of-array-element-the-tracking-information-is-incomplete/49372/2
 class LazyCompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
