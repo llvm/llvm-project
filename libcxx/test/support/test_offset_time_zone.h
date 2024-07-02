@@ -1,0 +1,68 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SUPPORT_TEST_OFFSET_TIME_ZONE_H
+#define SUPPORT_TEST_OFFSET_TIME_ZONE_H
+
+#include <cassert>
+#include <charconv>
+#include <chrono>
+#include <string_view>
+
+enum class offset_time_zone_flags {
+  none             = 0,
+  has_default_zone = 1,
+  has_locate_zone  = 2,
+  both             = has_default_zone | has_locate_zone
+};
+
+// The enforcement of the flags is done in the zoned_traits
+template <offset_time_zone_flags flags = offset_time_zone_flags::both>
+class offset_time_zone {
+public:
+  offset_time_zone() : offset_{std::chrono::seconds{0}} {}
+  explicit offset_time_zone(std::string_view name) {
+    int count;
+    const char* begin             = name.data();
+    const char* end               = begin + name.size();
+    std::from_chars_result result = std::from_chars(begin, end, count);
+    assert(result == std::from_chars_result(end, std::errc{}));
+
+    offset_ = std::chrono::seconds(count);
+  }
+
+  std::chrono::seconds offset() const { return offset_; }
+
+private:
+  std::chrono::seconds offset_;
+};
+
+template <>
+struct std::chrono::zoned_traits<offset_time_zone<offset_time_zone_flags::has_default_zone>> {
+  using type = offset_time_zone<offset_time_zone_flags::has_default_zone>;
+
+  static type default_zone() { return {}; }
+};
+
+template <>
+struct std::chrono::zoned_traits<offset_time_zone<offset_time_zone_flags::has_locate_zone>> {
+  using type = offset_time_zone<offset_time_zone_flags::has_locate_zone>;
+
+  static type locate_zone(std::string_view name) { return type{name}; }
+};
+
+template <>
+struct std::chrono::zoned_traits<offset_time_zone<offset_time_zone_flags::both>> {
+  using type = offset_time_zone<offset_time_zone_flags::both>;
+
+  static type default_zone() { return {}; }
+  static type locate_zone(std::string_view name) { return type{name}; }
+};
+
+#endif // SUPPORT_TEST_OFFSET_TIME_ZONE_H
