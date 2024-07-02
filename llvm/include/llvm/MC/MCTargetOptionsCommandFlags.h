@@ -53,6 +53,8 @@ bool getNoTypeCheck();
 
 bool getSaveTempLabels();
 
+bool getCrel();
+
 bool getX86RelaxRelocations();
 
 std::string getABIName();
