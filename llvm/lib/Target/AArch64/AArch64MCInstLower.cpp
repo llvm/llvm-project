@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"
