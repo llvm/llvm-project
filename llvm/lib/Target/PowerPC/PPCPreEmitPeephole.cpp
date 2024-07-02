@@ -109,6 +109,93 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
+    // The funtion will simply the zeroing accumulator and spilling instrcutions
+    // into simple xxlxor and spilling instrcuctions.
+    // From:
+    // setaccz acci
+    // xxmfacc acci
+    // stxv vsr(i*4+0), D(1)
+    // stxv vsr(i*4+1), D-16(1)
+    // stxv vsr(i*4+2), D-32(1)
+    // stxv vsr(i*4+3), D-48(1)
+
+    // To:
+    // xxlxor vsr(i*4), 0, 0
+    // stxv vsr(i*4), D(1)
+    // stxv vsr(i*4), D-16(1)
+    // stxv vsr(i*4), D-32(1)
+    // stxv vsr(i*4), D-48(1)
+    bool
+    OptimizeZeroingAccumulatorSpilling(MachineBasicBlock &MBB,
+                                       const TargetRegisterInfo *TRI) const {
+      bool changed = false;
+      for (auto BBI = MBB.instr_begin(); BBI != MBB.instr_end(); ++BBI) {
+        if (BBI->getOpcode() != PPC::XXSETACCZ)
+          continue;
+
+        Register ACCZReg = BBI->getOperand(0).getReg();
+
+        DenseSet<MachineInstr *> InstrsToErase;
+        InstrsToErase.insert(&*BBI++);
+
+        if (BBI->getOpcode() != PPC::XXMFACC) {
+	  --BBI;
+          continue;
+	}
+
+        Register ACCWReg = BBI->getOperand(0).getReg();
+
+        if (ACCWReg != ACCZReg) 
+          continue;
+
+        auto XXMFACCInstr = BBI;
+        InstrsToErase.insert(&*BBI++);
+
+        Register VSLRegBase = (ACCWReg - PPC::ACC0) * 4 + PPC::VSL0;
+        bool isVSLRegBaseKilled = false;
+        for (unsigned InstrCount = 0; InstrCount < 4; ++InstrCount, ++BBI) {
+          if (BBI->getOpcode() == PPC::STXV) {
+            Register Reg0 = BBI->getOperand(0).getReg();
+            // If the VSLRegBase Register is killed, we put the kill in the
+            // last STXV instruction.
+            if (Reg0 == VSLRegBase && BBI->getOperand(0).isKill())
+              isVSLRegBaseKilled = true;
+            if (Reg0 < VSLRegBase || Reg0 > VSLRegBase + 3)
+              continue;
+          } else {
+	      --BBI;
+              continue;
+	  }
+          }
+
+          BBI = XXMFACCInstr;
+          BBI++;
+          for (unsigned InstrCount = 0; InstrCount < 4; ++InstrCount, ++BBI) {
+            Register VSLiReg = BBI->getOperand(0).getReg();
+            BBI->substituteRegister(VSLiReg, VSLRegBase, 0, *TRI);
+            BBI->getOperand(0).setIsKill(false);
+          }
+
+          if (isVSLRegBaseKilled)
+            (--BBI)->getOperand(0).setIsKill(true);
+
+          DebugLoc DL = XXMFACCInstr->getDebugLoc();
+          const PPCInstrInfo *TII = XXMFACCInstr->getMF()
+                                        ->getSubtarget<PPCSubtarget>()
+                                        .getInstrInfo();
+
+          BuildMI(MBB, &*XXMFACCInstr, DL, TII->get(PPC::XXLXOR), VSLRegBase)
+              .addReg(VSLRegBase,RegState::Undef)
+              .addReg(VSLRegBase,RegState::Undef);
+
+          for (MachineInstr *MI : InstrsToErase)
+            MI->eraseFromParent();
+
+          changed |= true;
+        }
+      return changed;
+    }
+
     // This function removes any redundant load immediates. It has two level
     // loops - The outer loop finds the load immediates BBI that could be used
     // to replace following redundancy. The inner loop scans instructions that
@@ -466,6 +553,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         Changed |= removeRedundantLIs(MBB, TRI);
         Changed |= addLinkerOpt(MBB, TRI);
         Changed |= removeAccPrimeUnprime(MBB);
+        Changed |= OptimizeZeroingAccumulatorSpilling(MBB, TRI);
         for (MachineInstr &MI : MBB) {
           unsigned Opc = MI.getOpcode();
           if (Opc == PPC::UNENCODED_NOP) {
