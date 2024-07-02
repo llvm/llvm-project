@@ -1205,6 +1205,12 @@ public:
                     MachinePointerInfo DstPtrInfo,
                     const AAMDNodes &AAInfo = AAMDNodes());
 
+  SDValue getMemsetPatternInline(SDValue Chain, const SDLoc &dl, SDValue Dst,
+                                 SDValue Src, SDValue Size, Align Alignment,
+                                 bool isVol, bool isTailCall,
+                                 MachinePointerInfo DstPtrInfo,
+                                 const AAMDNodes &AAInfo = AAMDNodes());
+
   SDValue getAtomicMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
                           SDValue Src, SDValue Size, Type *SizeTy,
                           unsigned ElemSz, bool isTailCall,
