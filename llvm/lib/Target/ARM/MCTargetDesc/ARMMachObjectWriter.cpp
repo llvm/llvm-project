@@ -438,7 +438,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
     if (A->isVariable()) {
       int64_t Res;
       if (A->getVariableValue()->evaluateAsAbsolute(
-              Res, Layout, Writer->getSectionAddressMap())) {
+              Res, Asm, Writer->getSectionAddressMap())) {
         FixedValue = Res;
         return;
       }

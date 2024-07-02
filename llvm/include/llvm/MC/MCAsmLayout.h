@@ -31,16 +31,12 @@ class MCAsmLayout {
   /// List of sections in layout order.
   llvm::SmallVector<MCSection *, 16> SectionOrder;
 
-  /// Compute the layout for the section if necessary.
-  void ensureValid(const MCFragment *F) const;
-
 public:
   MCAsmLayout(MCAssembler &Assembler);
 
   /// Get the assembler object this is a layout for.
   MCAssembler &getAssembler() const { return Assembler; }
 
-  void layoutBundle(MCFragment *Prev, MCFragment *F);
 
   /// \name Section Access (in layout order)
   /// @{
@@ -69,11 +65,6 @@ public:
   /// Get the data size of the given section, as emitted to the object
   /// file. This may include additional padding, or be 0 for virtual sections.
   uint64_t getSectionFileSize(const MCSection *Sec) const;
-
-  /// Get the offset of the given symbol, as computed in the current
-  /// layout.
-  /// \return True on success.
-  bool getSymbolOffset(const MCSymbol &S, uint64_t &Val) const;
 
   /// Variant that reports a fatal error if the offset is not computable.
   uint64_t getSymbolOffset(const MCSymbol &S) const;
