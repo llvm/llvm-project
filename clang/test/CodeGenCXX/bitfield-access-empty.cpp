@@ -84,8 +84,8 @@ struct P3 {
   unsigned b : 16;
 } p3;
 // CHECK-LABEL: LLVMType:%struct.P3 =
-// LAYOUT-SAME: type { i16, %struct.Empty, i16, [2 x i8] }
-// LAYOUT-DWN32-SAME: type <{ i16, %struct.Empty, i16 }>
+// LAYOUT-SAME: type { i16, [2 x i8], i16, [2 x i8] }
+// LAYOUT-DWN32-SAME: type <{ i16, i8, i16 }>
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.P3 =
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
@@ -138,13 +138,13 @@ struct P7 {
   unsigned c;
 } p7;
 // CHECK-LABEL: LLVMType:%struct.P7 =
-// LAYOUT-SAME: type { i16, i8, %struct.Empty, i32 }
-// LAYOUT-DWN32-SAME: type { i16, i8, %struct.Empty, i32 }
+// LAYOUT-SAME: type { i32, i32 }
+// LAYOUT-DWN32-SAME: type { i32, i32 }
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.P7 =
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:8 StorageOffset:2
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:32 StorageOffset:0
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:16 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:8 StorageOffset:2
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:0 StorageSize:32 StorageOffset:0
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:0 StorageSize:32 StorageOffset:0
 // CHECK-NEXT: ]>

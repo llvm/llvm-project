@@ -248,7 +248,7 @@ Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
   return Address(PHI, Addr1.getElementType(), Align);
 }
 
-bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
+bool CodeGen::isEmptyField(const ASTContext &Context, const FieldDecl *FD,
                            bool AllowArrays, bool AsIfNoUniqueAddr) {
   if (FD->isUnnamedBitField())
     return true;
@@ -289,8 +289,20 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
   return isEmptyRecord(Context, FT, AllowArrays, AsIfNoUniqueAddr);
 }
 
-bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
-                            bool AsIfNoUniqueAddr) {
+bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
+                                    const FieldDecl *FD) {
+  if (FD->isZeroLengthBitField(Context))
+    return true;
+
+  if (FD->isUnnamedBitField())
+    return false;
+
+  return isEmptyField(Context, FD, /*AllowArrays=*/false,
+                      /*AsIfNoUniqueAddr=*/true);
+}
+
+bool CodeGen::isEmptyRecord(const ASTContext &Context, QualType T,
+                            bool AllowArrays, bool AsIfNoUniqueAddr) {
   const RecordType *RT = T->getAs<RecordType>();
   if (!RT)
     return false;
@@ -308,6 +320,11 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
     if (!isEmptyField(Context, I, AllowArrays, AsIfNoUniqueAddr))
       return false;
   return true;
+}
+
+bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
+  return isEmptyRecord(Context, T, /*AllowArrays=*/false,
+                       /*AsIfNoUniqueAddr=*/true);
 }
 
 const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {

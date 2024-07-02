@@ -2,7 +2,7 @@
 
 // CHECK: %struct.layout3 = type <{ i8, [3 x i8], %struct.size8_pack4, i8, [3 x i8] }>
 // CHECK: %struct.layout0 = type { i8, %struct.size8, i8 }
-// CHECK: %struct.layout1 = type <{ i8, %struct.size8_anon, i8, [2 x i8] }>
+// CHECK: %struct.layout1 = type { i8, [8 x i8], i8, [2 x i8] }
 // CHECK: %struct.layout2 = type <{ i8, %struct.size8_pack1, i8 }>
 
 // ---------------------------------------------------------------------

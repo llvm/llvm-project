@@ -126,16 +126,25 @@ Address emitMergePHI(CodeGenFunction &CGF, Address Addr1,
 /// is an unnamed bit-field or an (array of) empty record(s). If
 /// AsIfNoUniqueAddr is true, then C++ record fields are considered empty if
 /// the [[no_unique_address]] attribute would have made them empty.
-bool isEmptyField(ASTContext &Context, const FieldDecl *FD, bool AllowArrays,
-                  bool AsIfNoUniqueAddr = false);
+bool isEmptyField(const ASTContext &Context, const FieldDecl *FD,
+                  bool AllowArrays, bool AsIfNoUniqueAddr = false);
+
+/// isEmptyFieldForLayout - Return true iff the field is "empty", that is,
+/// either a zero-width bit-field or an empty record.
+bool isEmptyFieldForLayout(const ASTContext &Context, const FieldDecl *FD);
 
 /// isEmptyRecord - Return true iff a structure contains only empty
 /// fields. Note that a structure with a flexible array member is not
 /// considered empty. If AsIfNoUniqueAddr is true, then C++ record fields are
 /// considered empty if the [[no_unique_address]] attribute would have made
 /// them empty.
-bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
+bool isEmptyRecord(const ASTContext &Context, QualType T, bool AllowArrays,
                    bool AsIfNoUniqueAddr = false);
+
+/// isEmptyRecordForLayout - Return true iff a structure contains only empty
+/// fields. Note, C++ record fields are considered empty if the
+/// [[no_unique_address]] attribute would have made them empty.
+bool isEmptyRecordForLayout(const ASTContext &Context, QualType T);
 
 /// isSingleElementStruct - Determine if a structure is a "single
 /// element struct", i.e. it has exactly one non-empty field or

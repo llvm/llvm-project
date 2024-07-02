@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,CHECK-O0
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0,PATTERN-64-O0
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=PATTERN,PATTERN-O1
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,ZERO,ZERO-O0
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=ZERO,ZERO-O1
-// RUN: %clang_cc1 -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
+// RUN: %clang_cc1 -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0,PATTERN-32-O0
 
 #pragma clang diagnostic ignored "-Winaccessible-base"
 
@@ -166,14 +166,17 @@ struct semivolatileinit { int i = 0x11111111; volatile int vi = 0x11111111; };
 // PATTERN-O0: @__const.test_base_braces.braces = private unnamed_addr constant %struct.base { ptr inttoptr ([[IPTRT]] [[IPTR]] to ptr) }, align
 // PATTERN-O1-NOT: @__const.test_base_braces.braces
 struct base { virtual ~base(); };
-// PATTERN-O0: @__const.test_derived_uninit.uninit = private unnamed_addr constant %struct.derived { %struct.base { ptr inttoptr ([[IPTRT]] [[IPTR]] to ptr) } }, align
+// PATTERN-32-O0: @__const.test_derived_uninit.uninit = private unnamed_addr constant %struct.derived { [4 x i8] c"\FF\FF\FF\FF" }, align 4
+// PATTERN-64-O0: @__const.test_derived_uninit.uninit = private unnamed_addr constant %struct.derived { [8 x i8] c"\AA\AA\AA\AA\AA\AA\AA\AA" }, align 8
 // PATTERN-O1-NOT: @__const.test_derived_uninit.uninit
-// PATTERN-O0: @__const.test_derived_braces.braces = private unnamed_addr constant %struct.derived { %struct.base { ptr inttoptr ([[IPTRT]] [[IPTR]] to ptr) } }, align
+// PATTERN-32-O0: @__const.test_derived_braces.braces = private unnamed_addr constant %struct.derived { [4 x i8] c"\FF\FF\FF\FF" }, align 4
+// PATTERN-64-O0: @__const.test_derived_braces.braces = private unnamed_addr constant %struct.derived { [8 x i8] c"\AA\AA\AA\AA\AA\AA\AA\AA" }, align 8
 // PATTERN-O1-NOT: @__const.test_derived_braces.braces
 struct derived : public base {};
-// PATTERN-O0: @__const.test_virtualderived_uninit.uninit = private unnamed_addr constant %struct.virtualderived { %struct.base { ptr inttoptr ([[IPTRT]] [[IPTR]] to ptr) }, %struct.derived { %struct.base { ptr inttoptr ([[IPTRT]] [[IPTR]] to ptr) } } }, align
+// PATERN-O0: @__const.test_virtualderived_uninit.uninit = private unnamed_addr constant %struct.virtualderived { %struct.base { ptr inttoptr (i64 -6148914691236517206 to ptr) }, [8 x i8] c"\AA\AA\AA\AA\AA\AA\AA\AA" }, align 8
 // PATTERN-O1-NOT: @__const.test_virtualderived_uninit.uninit
-// PATTERN-O0: @__const.test_virtualderived_braces.braces = private unnamed_addr constant %struct.virtualderived { %struct.base { ptr inttoptr ([[IPTRT]] [[IPTR]] to ptr) }, %struct.derived { %struct.base { ptr inttoptr ([[IPTRT]] [[IPTR]] to ptr) } } }, align
+// PATTERN-32-O0: @__const.test_virtualderived_uninit.uninit = private unnamed_addr constant %struct.virtualderived { %struct.base { ptr inttoptr (i32 -1 to ptr) }, [4 x i8] c"\FF\FF\FF\FF" }, align 4
+// PATTERN-64-O0: @__const.test_virtualderived_uninit.uninit = private unnamed_addr constant %struct.virtualderived { %struct.base { ptr inttoptr (i64 -6148914691236517206 to ptr) }, [8 x i8] c"\AA\AA\AA\AA\AA\AA\AA\AA" }, align 8
 // PATTERN-O1-NOT: @__const.test_virtualderived_braces.braces
 struct virtualderived : public virtual base, public virtual derived {};
 // PATTERN-O0: @__const.test_matching_uninit.uninit = private unnamed_addr constant %union.matching { i32 [[I32]] }, align 4

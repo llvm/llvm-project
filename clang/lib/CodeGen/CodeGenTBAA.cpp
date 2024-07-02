@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTBAA.h"
+#include "ABIInfoImpl.h"
 #include "CGRecordLayout.h"
 #include "CodeGenTypes.h"
 #include "clang/AST/ASTContext.h"
@@ -309,7 +310,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
          i != e; ++i, ++idx) {
-      if ((*i)->isZeroSize(Context))
+      if (isEmptyFieldForLayout(Context, *i))
         continue;
 
       uint64_t Offset =
