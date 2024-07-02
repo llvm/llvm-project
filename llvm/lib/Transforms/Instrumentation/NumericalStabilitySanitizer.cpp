@@ -1529,7 +1529,6 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   assert(Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys) ==
              Intrinsic::MatchIntrinsicTypes_Match &&
          "invalid widened intrinsic");
-  (void)TableRef;
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
   SmallVector<Value *, 4> Args;
