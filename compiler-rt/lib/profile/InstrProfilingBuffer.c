@@ -249,10 +249,10 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer(char *Buffer) {
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
   VPDataReaderType *Reader = lprofGetVPDataReader();
-  if (__llvm_profile_getSizeOfValueProfData(Reader,DataBegin, DataEnd) < 0) {
+  if (__llvm_profile_getSizeOfValueProfData(Reader, DataBegin, DataEnd) < 0) {
     /* Attempt to use lprofGetVPDataReader will result in an error, so
      * do not use it. Generate profile data without VPDataReader.
-    */
+     */
     Reader = 0;
   }
   return lprofWriteData(&BufferWriter, Reader, 0);

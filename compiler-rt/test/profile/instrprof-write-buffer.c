@@ -6,7 +6,12 @@
 // RUN: rm -f %t.buf.profraw
 // RUN: %clang_pgogen -o %t %s
 // RUN: %run %t %t.buf.profraw
-// RUN: llvm-profdata show %t.buf.profraw
+// RUN: llvm-profdata show %t.buf.profraw | FileCheck %s
+
+// CHECK: Instrumentation level: IR  entry_first = 0
+// CHECK: Total functions: 2
+// CHECK: Maximum function count: 0
+// CHECK: Maximum internal block count: 0
 
 #include <stdint.h>
 #include <stdio.h>
