@@ -40,8 +40,8 @@
 # ALL-NEXT:   CHPEMetadataPointer: 0x0
 # ALL-NEXT:   GuardRFFailureRoutine: 0x4
 # ALL-NEXT:   GuardRFFailureRoutineFunctionPointer: 0x5
-# ALL-NEXT:   DynamicValueRelocTableOffset: 0x6
-# ALL-NEXT:   DynamicValueRelocTableSection: 7
+# ALL-NEXT:   DynamicValueRelocTableOffset: 0x4
+# ALL-NEXT:   DynamicValueRelocTableSection: 2
 # ALL-NEXT:   GuardRFVerifyStackPointerFunctionPointer: 0x8
 # ALL-NEXT:   HotPatchTableOffset: 0x9
 # ALL-NEXT:   EnclaveConfigurationPointer: 0x1
@@ -106,8 +106,8 @@ sections:
           CHPEMetadataPointer: 0
           GuardRFFailureRoutine: 4
           GuardRFFailureRoutineFunctionPointer: 5
-          DynamicValueRelocTableOffset: 6
-          DynamicValueRelocTableSection: 7
+          DynamicValueRelocTableOffset: 4
+          DynamicValueRelocTableSection: 2
           GuardRFVerifyStackPointerFunctionPointer: 8
           HotPatchTableOffset: 9
           EnclaveConfigurationPointer: 1
@@ -118,6 +118,14 @@ sections:
           GuardXFGDispatchFunctionPointer: 6
           GuardXFGTableDispatchFunctionPointer: 7
           CastGuardOsDeterminedFailureMode: 8
+  - Name:            .reloc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x2000
+    VirtualSize:     12
+    StructuredData:
+      - UInt32: 1 # pad
+      - UInt32: 0x10b # Version
+      - UInt32: 0 # Size
 symbols: []
 ...
 
