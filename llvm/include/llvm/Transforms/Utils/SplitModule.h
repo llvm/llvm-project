@@ -24,6 +24,9 @@ class Module;
 
 /// Splits the module M into N linkable partitions. The function ModuleCallback
 /// is called N times passing each individual partition as the MPart argument.
+/// PreserveLocals: Split without externalizing locals.
+/// TryToAvoidEmptyModules: Try to avoid generating empty modules by
+/// modifying the distribution of functions.
 ///
 /// FIXME: This function does not deal with the somewhat subtle symbol
 /// visibility issues around module splitting, including (but not limited to):
