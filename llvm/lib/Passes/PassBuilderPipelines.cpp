@@ -1320,7 +1320,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
 
   // We do UnrollAndJam in a separate LPM to Unroll ensure it happens first.
   // In order for outer loop vectorization to be done, UnrollAndJam must occur before the SLPVectorizerPass.
-  if (EnableUnrollAndJam && PTO.LoopUnrolling) {
+  if (!IsFullLTO && EnableUnrollAndJam && PTO.LoopUnrolling) {
     FPM.addPass(createFunctionToLoopPassAdaptor(
         LoopUnrollAndJamPass(Level.getSpeedupLevel())));
   }
