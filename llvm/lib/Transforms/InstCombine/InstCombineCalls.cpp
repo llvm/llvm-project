@@ -89,6 +89,11 @@ static cl::opt<unsigned> GuardWideningWindow(
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
 
+static cl::opt<bool> SkipRetTypeVoidToNonVoidCallInst(
+    "instcombine-skip-call-ret-type-void-to-nonvoid", cl::init(false),
+    cl::desc("skip simplifying call instruction which expects a non-void "
+             "return value but the callee returns void"));
+
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
 static Type *getPromotedType(Type *Ty) {
@@ -4073,7 +4078,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
       if (!Caller->use_empty() &&
           // void -> non-void is handled specially
-          !NewRetTy->isVoidTy())
+          (SkipRetTypeVoidToNonVoidCallInst || !NewRetTy->isVoidTy()))
         return false;   // Cannot transform this return value.
     }
 
