@@ -837,6 +837,16 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     II.setIsFutureCompatKeyword(false);
   }
 
+  // Standard libraries used to declare structs with the same (reserved) names
+  // as our builtins for type traits, e.g. __is_pod. This is deprecated, and
+  // we warn when our builtin identifiers are used for something else than
+  // invocation. Notable exception is __has_builtin macro.
+  if (II.isReusableBuiltinName() && !isNextPPTokenLParen() &&
+      !EvaluatingHasBuiltinMacro) {
+    Identifier.setKind(tok::identifier);
+    Diag(Identifier, diag::warn_deprecated_builtin_replacement) << II.getName();
+  }
+
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.
   // FIXME: This warning is disabled in cases where it shouldn't be,

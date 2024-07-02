@@ -1773,6 +1773,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
         return II && HasExtension(*this, II->getName());
       });
   } else if (II == Ident__has_builtin) {
+    EvaluatingHasBuiltinMacro = true;
     EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
@@ -1834,6 +1835,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               .Default(false);
         }
       });
+    EvaluatingHasBuiltinMacro = false;
   } else if (II == Ident__has_constexpr_builtin) {
     EvaluateFeatureLikeBuiltinMacro(
         OS, Tok, II, *this, false,

@@ -246,6 +246,79 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   return CurStatus;
 }
 
+static bool isReusableBuiltinName(tok::TokenKind TokenCode) {
+#define RTT_JOIN(X, Y) X##Y
+#define REVERTIBLE_TYPE_TRAIT(Name)                                            \
+  case RTT_JOIN(tok::kw_, Name):                                               \
+    return true;
+
+  switch (TokenCode) {
+  default:
+    return false;
+    REVERTIBLE_TYPE_TRAIT(__is_abstract);
+    REVERTIBLE_TYPE_TRAIT(__is_aggregate);
+    REVERTIBLE_TYPE_TRAIT(__is_arithmetic);
+    REVERTIBLE_TYPE_TRAIT(__is_array);
+    REVERTIBLE_TYPE_TRAIT(__is_assignable);
+    REVERTIBLE_TYPE_TRAIT(__is_base_of);
+    REVERTIBLE_TYPE_TRAIT(__is_bounded_array);
+    REVERTIBLE_TYPE_TRAIT(__is_class);
+    REVERTIBLE_TYPE_TRAIT(__is_complete_type);
+    REVERTIBLE_TYPE_TRAIT(__is_compound);
+    REVERTIBLE_TYPE_TRAIT(__is_const);
+    REVERTIBLE_TYPE_TRAIT(__is_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_convertible);
+    REVERTIBLE_TYPE_TRAIT(__is_convertible_to);
+    REVERTIBLE_TYPE_TRAIT(__is_destructible);
+    REVERTIBLE_TYPE_TRAIT(__is_empty);
+    REVERTIBLE_TYPE_TRAIT(__is_enum);
+    REVERTIBLE_TYPE_TRAIT(__is_floating_point);
+    REVERTIBLE_TYPE_TRAIT(__is_final);
+    REVERTIBLE_TYPE_TRAIT(__is_function);
+    REVERTIBLE_TYPE_TRAIT(__is_fundamental);
+    REVERTIBLE_TYPE_TRAIT(__is_integral);
+    REVERTIBLE_TYPE_TRAIT(__is_interface_class);
+    REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
+    REVERTIBLE_TYPE_TRAIT(__is_literal);
+    REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
+    REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
+    REVERTIBLE_TYPE_TRAIT(__is_member_function_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_member_object_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_member_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_nothrow_assignable);
+    REVERTIBLE_TYPE_TRAIT(__is_nothrow_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_nothrow_destructible);
+    REVERTIBLE_TYPE_TRAIT(__is_nothrow_convertible);
+    REVERTIBLE_TYPE_TRAIT(__is_nullptr);
+    REVERTIBLE_TYPE_TRAIT(__is_object);
+    REVERTIBLE_TYPE_TRAIT(__is_pod);
+    REVERTIBLE_TYPE_TRAIT(__is_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
+    REVERTIBLE_TYPE_TRAIT(__is_reference);
+    REVERTIBLE_TYPE_TRAIT(__is_referenceable);
+    REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
+    REVERTIBLE_TYPE_TRAIT(__is_rvalue_reference);
+    REVERTIBLE_TYPE_TRAIT(__is_same);
+    REVERTIBLE_TYPE_TRAIT(__is_scalar);
+    REVERTIBLE_TYPE_TRAIT(__is_scoped_enum);
+    REVERTIBLE_TYPE_TRAIT(__is_sealed);
+    REVERTIBLE_TYPE_TRAIT(__is_signed);
+    REVERTIBLE_TYPE_TRAIT(__is_standard_layout);
+    REVERTIBLE_TYPE_TRAIT(__is_trivial);
+    REVERTIBLE_TYPE_TRAIT(__is_trivially_assignable);
+    REVERTIBLE_TYPE_TRAIT(__is_trivially_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_trivially_copyable);
+    REVERTIBLE_TYPE_TRAIT(__is_trivially_equality_comparable);
+    REVERTIBLE_TYPE_TRAIT(__is_unbounded_array);
+    REVERTIBLE_TYPE_TRAIT(__is_union);
+    REVERTIBLE_TYPE_TRAIT(__is_unsigned);
+    REVERTIBLE_TYPE_TRAIT(__is_void);
+    REVERTIBLE_TYPE_TRAIT(__is_volatile);
+    REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
+  }
+  return false;
+}
+
 /// AddKeyword - This method is used to associate a token ID with specific
 /// identifiers because they are language keywords.  This causes the lexer to
 /// automatically map matching identifiers to specialized token codes.
@@ -261,6 +334,8 @@ static void AddKeyword(StringRef Keyword,
       Table.get(Keyword, AddResult == KS_Future ? tok::identifier : TokenCode);
   Info.setIsExtensionToken(AddResult == KS_Extension);
   Info.setIsFutureCompatKeyword(AddResult == KS_Future);
+  Info.setIsReusableBuiltinName(LangOpts.CPlusPlus &&
+                                isReusableBuiltinName(TokenCode));
 }
 
 /// AddCXXOperatorKeyword - Register a C++ operator keyword alternative

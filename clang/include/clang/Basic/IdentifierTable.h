@@ -196,6 +196,9 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsReusableBuiltinName : 1;
+
   // 22 bits left in a 64-bit word.
 
   // Managed by the language front-end.
@@ -213,7 +216,8 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
         RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
         IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
-        IsRestrictExpansion(false), IsFinal(false) {}
+        IsRestrictExpansion(false), IsFinal(false),
+        IsReusableBuiltinName(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -331,6 +335,16 @@ public:
     TokenID = TK;
     RevertedTokenID = false;
   }
+
+  bool isReusableBuiltinName() const { return IsReusableBuiltinName; };
+
+  void setIsReusableBuiltinName(bool Val) {
+    IsReusableBuiltinName = Val;
+    if (Val)
+      NeedsHandleIdentifier = true;
+    else
+      RecomputeNeedsHandleIdentifier();
+  };
 
   /// Return the preprocessor keyword ID for this identifier.
   ///
@@ -569,7 +583,8 @@ private:
   void RecomputeNeedsHandleIdentifier() {
     NeedsHandleIdentifier = isPoisoned() || hasMacroDefinition() ||
                             isExtensionToken() || isFutureCompatKeyword() ||
-                            isOutOfDate() || isModulesImport();
+                            isReusableBuiltinName() || isOutOfDate() ||
+                            isModulesImport();
   }
 };
 

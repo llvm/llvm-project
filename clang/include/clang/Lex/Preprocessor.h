@@ -1117,6 +1117,9 @@ private:
   /// Whether tokens are being skipped until the through header is seen.
   bool SkippingUntilPCHThroughHeader = false;
 
+  /// Whether we're evaluating __has_builtin().
+  bool EvaluatingHasBuiltinMacro = false;
+
   /// \{
   /// Cache of macro expanders to reduce malloc traffic.
   enum { TokenLexerCacheSize = 8 };

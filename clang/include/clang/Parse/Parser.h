@@ -169,10 +169,6 @@ class Parser : public CodeCompletionHandler {
   mutable IdentifierInfo *Ident_import;
   mutable IdentifierInfo *Ident_module;
 
-  // C++ type trait keywords that can be reverted to identifiers and still be
-  // used as type traits.
-  llvm::SmallDenseMap<IdentifierInfo *, tok::TokenKind> RevertibleTypeTraits;
-
   std::unique_ptr<PragmaHandler> AlignHandler;
   std::unique_ptr<PragmaHandler> GCCVisibilityHandler;
   std::unique_ptr<PragmaHandler> OptionsHandler;
