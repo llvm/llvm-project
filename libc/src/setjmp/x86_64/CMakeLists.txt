@@ -8,12 +8,8 @@ add_entrypoint_object(
     libc.include.setjmp
   COMPILE_OPTIONS
     -O3
-    -fno-omit-frame-pointer
-    # TODO: Remove once one of these lands:
-    # https://github.com/llvm/llvm-project/pull/87837
-    # https://github.com/llvm/llvm-project/pull/88054
-    # https://github.com/llvm/llvm-project/pull/88157
-    -ftrivial-auto-var-init=uninitialized
+    -fomit-frame-pointer
+    -momit-leaf-frame-pointer
 )
 
 add_entrypoint_object(
