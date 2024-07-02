@@ -20,7 +20,7 @@ define void @simplified_constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 
 define void @constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 ; CHECK-LABEL: @constexpr_gep_addrspacecast(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr inbounds ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX0:%.*]]
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX0:%.*]]
 ; CHECK-NEXT:    store double 1.000000e+00, ptr addrspace(3) [[GEP0]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -32,7 +32,7 @@ define void @constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 
 define void @constexpr_gep_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 ; CHECK-LABEL: @constexpr_gep_gep_addrspacecast(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr inbounds ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX0:%.*]]
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX0:%.*]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds double, ptr addrspace(3) [[GEP0]], i64 [[IDX1:%.*]]
 ; CHECK-NEXT:    store double 1.000000e+00, ptr addrspace(3) [[GEP1]], align 8
 ; CHECK-NEXT:    ret void
@@ -74,9 +74,9 @@ define amdgpu_kernel void @vector_gep(<4 x ptr addrspace(3)> %array) nounwind {
 
 define void @repeated_constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 ; CHECK-LABEL: @repeated_constexpr_gep_addrspacecast(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr inbounds ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX0:%.*]]
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX0:%.*]]
 ; CHECK-NEXT:    store double 1.000000e+00, ptr addrspace(3) [[GEP0]], align 8
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr inbounds ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds double, ptr addrspace(3) getelementptr ([648 x double], ptr addrspace(3) @lds, i64 0, i64 384), i64 [[IDX1:%.*]]
 ; CHECK-NEXT:    store double 1.000000e+00, ptr addrspace(3) [[GEP1]], align 8
 ; CHECK-NEXT:    ret void
 ;

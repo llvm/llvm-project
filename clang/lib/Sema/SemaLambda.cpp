@@ -1076,16 +1076,27 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
   // be dependent, because there are template parameters in scope.
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
-  if (LSI->NumExplicitTemplateParams > 0) {
-    Scope *TemplateParamScope = CurScope->getTemplateParamParent();
-    assert(TemplateParamScope &&
-           "Lambda with explicit template param list should establish a "
-           "template param scope");
-    assert(TemplateParamScope->getParent());
-    if (TemplateParamScope->getParent()->getTemplateParamParent() != nullptr)
-      LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  } else if (CurScope->getTemplateParamParent() != nullptr) {
+  if (CurScope->getTemplateParamParent() != nullptr) {
     LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
+  } else if (Scope *P = CurScope->getParent()) {
+    // Given a lambda defined inside a requires expression,
+    //
+    // struct S {
+    //   S(auto var) requires requires { [&] -> decltype(var) { }; }
+    //   {}
+    // };
+    //
+    // The parameter var is not injected into the function Decl at the point of
+    // parsing lambda. In such scenarios, perceiving it as dependent could
+    // result in the constraint being evaluated, which matches what GCC does.
+    while (P->getEntity() && P->getEntity()->isRequiresExprBody())
+      P = P->getParent();
+    if (P->isFunctionDeclarationScope() &&
+        llvm::any_of(P->decls(), [](Decl *D) {
+          return isa<ParmVarDecl>(D) &&
+                 cast<ParmVarDecl>(D)->getType()->isTemplateTypeParmType();
+        }))
+      LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
   }
 
   CXXRecordDecl *Class = createLambdaClosureType(
@@ -1235,7 +1246,11 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
       if (auto *BD = R.getAsSingle<BindingDecl>())
         Var = BD;
-      else
+      else if (R.getAsSingle<FieldDecl>()) {
+        Diag(C->Loc, diag::err_capture_class_member_does_not_name_variable)
+            << C->Id;
+        continue;
+      } else
         Var = R.getAsSingle<VarDecl>();
       if (Var && DiagnoseUseOfDecl(Var, C->Loc))
         continue;
@@ -2380,7 +2395,7 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
       Pattern =
           dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(Pattern));
 
-      if (!FD || !Pattern)
+      if (!ParentFD || !Pattern)
         break;
 
       SemaRef.addInstantiatedParametersToScope(ParentFD, Pattern, Scope, MLTAL);

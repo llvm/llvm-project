@@ -2034,7 +2034,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (Src0->isImm())
     std::swap(Src0, Src1);
 
-  if (!Src1->isImm())
+  if (!Src1->isImm() || Src0->isImm())
     return;
 
   uint64_t Offset1 = Src1->getImm();
@@ -2052,16 +2052,15 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     MemInfoMap &Visited,
     SmallPtrSet<MachineInstr *, 4> &AnchorList) const {
 
-  if (!(MI.mayLoad() ^ MI.mayStore()))
+  if (!STM->hasFlatInstOffsets() || !SIInstrInfo::isFLAT(MI))
     return false;
 
-  // TODO: Support flat and scratch.
-  if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0)
+  // TODO: Support FLAT_SCRATCH. Currently code expects 64-bit pointers.
+  if (SIInstrInfo::isFLATScratch(MI))
     return false;
 
-  if (MI.mayLoad() &&
-      TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != nullptr)
-    return false;
+  unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
+                                              : AMDGPUAS::FLAT_ADDRESS;
 
   if (AnchorList.count(&MI))
     return false;
@@ -2157,7 +2156,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     TargetLoweringBase::AddrMode AM;
     AM.HasBaseReg = true;
     AM.BaseOffs = Dist;
-    if (TLI->isLegalGlobalAddressingMode(AM) &&
+    if (TLI->isLegalFlatAddressingMode(AM, AS) &&
         (uint32_t)std::abs(Dist) > MaxDist) {
       MaxDist = std::abs(Dist);
 
@@ -2183,7 +2182,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.HasBaseReg = true;
       AM.BaseOffs = OtherOffset - AnchorAddr.Offset;
 
-      if (TLI->isLegalGlobalAddressingMode(AM)) {
+      if (TLI->isLegalFlatAddressingMode(AM, AS)) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
         updateBaseAndOffset(*OtherMI, Base, OtherOffset - AnchorAddr.Offset);

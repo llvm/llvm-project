@@ -9,6 +9,7 @@ static int baz(int x) {
 }
 
 [[clang::noinline]] bool noi() { }
+[[msvc::noinline]] bool ms_noi() { return true; }
 
 void foo(int i) {
   [[clang::noinline]] bar();
@@ -39,6 +40,31 @@ void foo(int i) {
 // CHECK: call noundef zeroext i1 @_Z3barv()
 }
 
+void ms_noi_check(int i) {
+  [[msvc::noinline]] bar();
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR:[0-9]+]]
+  [[msvc::noinline]] i = baz(i);
+// CHECK: call noundef i32 @_ZL3bazi({{.*}}) #[[NOINLINEATTR]]
+  [[msvc::noinline]] (i = 4, bar());
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
+  [[msvc::noinline]] (void)(bar());
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
+  [[msvc::noinline]] f(bar(), bar());
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
+// CHECK: call void @_Z1fbb({{.*}}) #[[NOINLINEATTR]]
+  [[msvc::noinline]] [] { bar(); bar(); }(); // noinline only applies to the anonymous function call
+// CHECK: call void @"_ZZ12ms_noi_checkiENK3$_0clEv"(ptr {{[^,]*}} %ref.tmp) #[[NOINLINEATTR]]
+  [[msvc::noinline]] for (bar(); bar(); bar()) {}
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
+// CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
+  [[msvc::noinline]] ms_noi();
+// CHECK: call noundef zeroext i1 @_Z6ms_noiv()
+  ms_noi();
+// CHECK: call noundef zeroext i1 @_Z6ms_noiv()
+}
+
 struct S {
   friend bool operator==(const S &LHS, const S &RHS);
 };
@@ -49,6 +75,12 @@ void func(const S &s1, const S &s2) {
 // CHECK: call void @_Z1gb({{.*}}) #[[NOINLINEATTR]]
   bool b;
   [[clang::noinline]] b = s1 == s2;
+// CHECK: call noundef zeroext i1 @_ZeqRK1SS1_({{.*}}) #[[NOINLINEATTR]]
+
+  [[msvc::noinline]]g(s1 == s2);
+// CHECK: call noundef zeroext i1 @_ZeqRK1SS1_({{.*}}) #[[NOINLINEATTR]]
+// CHECK: call void @_Z1gb({{.*}}) #[[NOINLINEATTR]]
+  [[msvc::noinline]] b = s1 == s2;
 // CHECK: call noundef zeroext i1 @_ZeqRK1SS1_({{.*}}) #[[NOINLINEATTR]]
 }
 

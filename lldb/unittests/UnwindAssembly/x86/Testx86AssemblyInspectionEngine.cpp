@@ -1731,7 +1731,29 @@ TEST_F(Testx86AssemblyInspectionEngine, TestAddESP) {
   EXPECT_EQ(4 - 16, row_sp->GetCFAValue().GetOffset());
 }
 
-// FIXME add test for lea_rsp_pattern_p
+TEST_F(Testx86AssemblyInspectionEngine, TestLEA_RSP_Pattern) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x8d, 0x64, 0x24, 0x10, // lea rsp, [rsp + 0x10]
+      0x90                    // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(0);
+  EXPECT_EQ(0ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+}
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopRBX) {
   UnwindPlan::Row::RegisterLocation regloc;

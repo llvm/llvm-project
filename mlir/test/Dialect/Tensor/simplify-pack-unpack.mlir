@@ -266,3 +266,131 @@ func.func @unpack_16x1x1x2_to_32x1(%arg0 : tensor<16x1x1x2xf32>) -> tensor<32x1x
     : tensor<16x1x1x2xf32> -> tensor<32x1xf32>
   return %unpack : tensor<32x1xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @pad_like_pack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x64xf32>)
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] output_shape [1, 1, 32, 64] : tensor<32x64xf32> into tensor<1x1x32x64xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<1x1x32x64xf32>
+func.func @pad_like_pack(%arg0: tensor<32x64xf32>) -> tensor<1x1x32x64xf32> {
+  %empty = tensor.empty() : tensor<1x1x32x64xf32>
+  %0 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<32x64xf32> -> tensor<1x1x32x64xf32>
+  return %0 : tensor<1x1x32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @pad_like_pack_with_outer_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x64xf32>)
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] output_shape [1, 1, 32, 64] : tensor<32x64xf32> into tensor<1x1x32x64xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<1x1x32x64xf32>
+func.func @pad_like_pack_with_outer_dims_perm(%arg0: tensor<32x64xf32>) -> tensor<1x1x32x64xf32> {
+  %empty = tensor.empty() : tensor<1x1x32x64xf32>
+  %0 = tensor.pack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<32x64xf32> -> tensor<1x1x32x64xf32>
+  return %0 : tensor<1x1x32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @inner_pad_like_pack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x64xf32>)
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0], [1, 2]] output_shape [32, 1, 64] : tensor<32x64xf32> into tensor<32x1x64xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<32x1x64xf32>
+func.func @inner_pad_like_pack(%arg0: tensor<32x64xf32>) -> tensor<32x1x64xf32> {
+  %empty = tensor.empty() : tensor<32x1x64xf32>
+  %0 = tensor.pack %arg0 inner_dims_pos = [1] inner_tiles = [64] into %empty : tensor<32x64xf32> -> tensor<32x1x64xf32>
+  return %0 : tensor<32x1x64xf32>
+}
+
+// -----
+
+// Do not simplify pack with inner dimension shuffling.
+// CHECK-LABEL: func.func @pad_and_inner_dim_shuffle_pack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x64xf32>)
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x1x64x32xf32>
+// CHECK:         %[[PACK:.+]] = tensor.pack %[[ARG0]] inner_dims_pos = [1, 0] inner_tiles = [64, 32] into %[[EMPTY]] : tensor<32x64xf32> -> tensor<1x1x64x32xf32>
+// CHECK:         return %[[PACK]] : tensor<1x1x64x32xf32>
+func.func @pad_and_inner_dim_shuffle_pack(%arg0: tensor<32x64xf32>) -> tensor<1x1x64x32xf32> {
+  %empty = tensor.empty() : tensor<1x1x64x32xf32>
+  %0 = tensor.pack %arg0 inner_dims_pos = [1, 0] inner_tiles = [64, 32] into %empty : tensor<32x64xf32> -> tensor<1x1x64x32xf32>
+  return %0 : tensor<1x1x64x32xf32>
+}
+
+// -----
+
+// Do not simplify pack with inner dimension transpose.
+// CHECK-LABEL: func.func @pad_like_pack_with_transpose(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x64x16xf32>)
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<32x1x16x64xf32>
+// CHECK:         %[[PACK:.+]] = tensor.pack %[[ARG0]] inner_dims_pos = [1] inner_tiles = [64] into %[[EMPTY]] : tensor<32x64x16xf32> -> tensor<32x1x16x64xf32>
+// CHECK:         return %[[PACK]] : tensor<32x1x16x64xf32>
+func.func @pad_like_pack_with_transpose(%arg0: tensor<32x64x16xf32>) -> tensor<32x1x16x64xf32> {
+  %empty = tensor.empty() : tensor<32x1x16x64xf32>
+  %0 = tensor.pack %arg0 inner_dims_pos = [1] inner_tiles = [64] into %empty : tensor<32x64x16xf32> -> tensor<32x1x16x64xf32>
+  return %0 : tensor<32x1x16x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @unpad_like_unpack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x1x32x64xf32>)
+// CHECK:         %[[COLLAPSED:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] : tensor<1x1x32x64xf32> into tensor<32x64xf32>
+// CHECK:         return %[[COLLAPSED]] : tensor<32x64xf32>
+func.func @unpad_like_unpack(%arg0: tensor<1x1x32x64xf32>) -> tensor<32x64xf32> {
+  %empty = tensor.empty() : tensor<32x64xf32>
+  %0 = tensor.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<1x1x32x64xf32> -> tensor<32x64xf32>
+  return %0 : tensor<32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @unpad_like_unpack_with_outer_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x1x32x64xf32>)
+// CHECK:         %[[COLLAPSED:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] : tensor<1x1x32x64xf32> into tensor<32x64xf32>
+// CHECK:         return %[[COLLAPSED]] : tensor<32x64xf32>
+func.func @unpad_like_unpack_with_outer_dims_perm(%arg0: tensor<1x1x32x64xf32>) -> tensor<32x64xf32> {
+  %empty = tensor.empty() : tensor<32x64xf32>
+  %0 = tensor.unpack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<1x1x32x64xf32> -> tensor<32x64xf32>
+  return %0 : tensor<32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @inner_unpad_like_unpack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x1x64xf32>)
+// CHECK:         %[[COLLAPSED:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0], [1, 2]] : tensor<32x1x64xf32> into tensor<32x64xf32>
+// CHECK:         return %[[COLLAPSED]] : tensor<32x64xf32>
+func.func @inner_unpad_like_unpack(%arg0: tensor<32x1x64xf32>) -> tensor<32x64xf32> {
+  %empty = tensor.empty() : tensor<32x64xf32>
+  %0 = tensor.unpack %arg0 inner_dims_pos = [1] inner_tiles = [64] into %empty : tensor<32x1x64xf32> -> tensor<32x64xf32>
+  return %0 : tensor<32x64xf32>
+}
+
+// -----
+
+// Do not simplify unpack with inner dimension shuffling.
+// CHECK-LABEL: func.func @unpad_and_inner_dim_shuffle_pack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x1x32x64xf32>)
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<64x32xf32>
+// CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[ARG0]] inner_dims_pos = [1, 0] inner_tiles = [32, 64] into %[[EMPTY]] : tensor<1x1x32x64xf32> -> tensor<64x32xf32>
+// CHECK:         return %[[UNPACK]] : tensor<64x32xf32>
+func.func @unpad_and_inner_dim_shuffle_pack(%arg0: tensor<1x1x32x64xf32>) -> tensor<64x32xf32> {
+  %empty = tensor.empty() : tensor<64x32xf32>
+  %0 = tensor.unpack %arg0 inner_dims_pos = [1, 0] inner_tiles = [32, 64] into %empty : tensor<1x1x32x64xf32> -> tensor<64x32xf32>
+  return %0 : tensor<64x32xf32>
+}
+
+// -----
+
+// Do not simplify unpack with inner dimension transpose.
+// CHECK-LABEL: func.func @unpad_like_unpack_with_transpose(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x1x16x64xf32>)
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<32x64x16xf32>
+// CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[ARG0]] inner_dims_pos = [1] inner_tiles = [64] into %[[EMPTY]] : tensor<32x1x16x64xf32> -> tensor<32x64x16xf32>
+// CHECK:         return %[[UNPACK]] : tensor<32x64x16xf32>
+func.func @unpad_like_unpack_with_transpose(%arg0: tensor<32x1x16x64xf32>) -> tensor<32x64x16xf32> {
+  %empty = tensor.empty() : tensor<32x64x16xf32>
+  %0 = tensor.unpack %arg0 inner_dims_pos = [1] inner_tiles = [64] into %empty : tensor<32x1x16x64xf32> -> tensor<32x64x16xf32>
+  return %0 : tensor<32x64x16xf32>
+}

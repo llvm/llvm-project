@@ -121,10 +121,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVFoldMasksPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
-  initializeRISCVCoalesceVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
-  initializeRISCVDAGToDAGISelPass(*PR);
+  initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
 }
@@ -396,7 +395,6 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
   if (EnableVSETVLIAfterRVVRegAlloc)
     addPass(createRISCVInsertVSETVLIPass());
-  addPass(createRISCVCoalesceVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -408,7 +406,6 @@ bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createVirtRegRewriter(false));
   if (EnableVSETVLIAfterRVVRegAlloc)
     addPass(createRISCVInsertVSETVLIPass());
-  addPass(createRISCVCoalesceVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -500,9 +497,6 @@ void RISCVPassConfig::addPreSched2() {
 }
 
 void RISCVPassConfig::addPreEmitPass() {
-  addPass(&BranchRelaxationPassID);
-  addPass(createRISCVMakeCompressibleOptPass());
-
   // TODO: It would potentially be better to schedule copy propagation after
   // expanding pseudos (in addPreEmitPass2). However, performing copy
   // propagation after the machine outliner (which runs after addPreEmitPass)
@@ -511,6 +505,8 @@ void RISCVPassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
       EnableRISCVCopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
+  addPass(&BranchRelaxationPassID);
+  addPass(createRISCVMakeCompressibleOptPass());
 }
 
 void RISCVPassConfig::addPreEmitPass2() {

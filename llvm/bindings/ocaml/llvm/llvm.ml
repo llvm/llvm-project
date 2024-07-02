@@ -651,11 +651,6 @@ external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
 external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
 external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_icmp"
-external const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_fcmp"
-external const_shl : llvalue -> llvalue -> llvalue = "llvm_const_shl"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
 external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
@@ -1139,6 +1134,9 @@ external delete_instruction : llvalue -> unit = "llvm_delete_instruction"
 external builder : llcontext -> llbuilder = "llvm_builder"
 external position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
                           = "llvm_position_builder"
+external position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
+                                               llbuilder -> unit
+                                  = "llvm_position_builder_before_dbg_records"
 external insertion_block : llbuilder -> llbasicblock = "llvm_insertion_block"
 external insert_into_builder : llvalue -> string -> llbuilder -> unit
                              = "llvm_insert_into_builder"
@@ -1152,6 +1150,8 @@ let builder_before context i = builder_at context (Before i)
 let builder_at_end context bb = builder_at context (At_end bb)
 
 let position_before i = position_builder (Before i)
+let position_before_dbg_records i =
+  position_builder_before_dbg_records (Before i)
 let position_at_end bb = position_builder (At_end bb)
 
 

@@ -16,6 +16,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 
@@ -149,7 +150,8 @@ struct CUDAKernelTy : public GenericKernelTy {
 
   /// Launch the CUDA kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+                   KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
 private:
@@ -1228,9 +1230,10 @@ private:
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
     KernelArgsTy KernelArgs = {};
-    if (auto Err = CUDAKernel.launchImpl(*this, /*NumThread=*/1u,
-                                         /*NumBlocks=*/1ul, KernelArgs, nullptr,
-                                         AsyncInfoWrapper))
+    if (auto Err =
+            CUDAKernel.launchImpl(*this, /*NumThread=*/1u,
+                                  /*NumBlocks=*/1ul, KernelArgs,
+                                  KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
     Error Err = Plugin::success();
@@ -1274,7 +1277,8 @@ private:
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads, uint64_t NumBlocks,
-                               KernelArgsTy &KernelArgs, void *Args,
+                               KernelArgsTy &KernelArgs,
+                               KernelLaunchParamsTy LaunchParams,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
@@ -1285,11 +1289,15 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   uint32_t MaxDynCGroupMem =
       std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
 
-  CUresult Res =
-      cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
-                     /*gridDimZ=*/1, NumThreads,
-                     /*blockDimY=*/1, /*blockDimZ=*/1, MaxDynCGroupMem, Stream,
-                     (void **)Args, nullptr);
+  void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
+                    CU_LAUNCH_PARAM_BUFFER_SIZE,
+                    reinterpret_cast<void *>(&LaunchParams.Size),
+                    CU_LAUNCH_PARAM_END};
+
+  CUresult Res = cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
+                                /*gridDimZ=*/1, NumThreads,
+                                /*blockDimY=*/1, /*blockDimZ=*/1,
+                                MaxDynCGroupMem, Stream, nullptr, Config);
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 
@@ -1388,8 +1396,9 @@ struct CUDAPluginTy final : public GenericPluginTy {
 
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 
-  /// Check whether the image is compatible with the available CUDA devices.
-  Expected<bool> isELFCompatible(StringRef Image) const override {
+  /// Check whether the image is compatible with a CUDA device.
+  Expected<bool> isELFCompatible(uint32_t DeviceId,
+                                 StringRef Image) const override {
     auto ElfOrErr =
         ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
                                   /*InitContent=*/false);
@@ -1399,33 +1408,29 @@ struct CUDAPluginTy final : public GenericPluginTy {
     // Get the numeric value for the image's `sm_` value.
     auto SM = ElfOrErr->getPlatformFlags() & ELF::EF_CUDA_SM;
 
-    for (int32_t DevId = 0; DevId < getNumDevices(); ++DevId) {
-      CUdevice Device;
-      CUresult Res = cuDeviceGet(&Device, DevId);
-      if (auto Err = Plugin::check(Res, "Error in cuDeviceGet: %s"))
-        return std::move(Err);
+    CUdevice Device;
+    CUresult Res = cuDeviceGet(&Device, DeviceId);
+    if (auto Err = Plugin::check(Res, "Error in cuDeviceGet: %s"))
+      return std::move(Err);
 
-      int32_t Major, Minor;
-      Res = cuDeviceGetAttribute(
-          &Major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, Device);
-      if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
-        return std::move(Err);
+    int32_t Major, Minor;
+    Res = cuDeviceGetAttribute(
+        &Major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, Device);
+    if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
+      return std::move(Err);
 
-      Res = cuDeviceGetAttribute(
-          &Minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, Device);
-      if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
-        return std::move(Err);
+    Res = cuDeviceGetAttribute(
+        &Minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, Device);
+    if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
+      return std::move(Err);
 
-      int32_t ImageMajor = SM / 10;
-      int32_t ImageMinor = SM % 10;
+    int32_t ImageMajor = SM / 10;
+    int32_t ImageMinor = SM % 10;
 
-      // A cubin generated for a certain compute capability is supported to
-      // run on any GPU with the same major revision and same or higher minor
-      // revision.
-      if (Major != ImageMajor || Minor < ImageMinor)
-        return false;
-    }
-    return true;
+    // A cubin generated for a certain compute capability is supported to
+    // run on any GPU with the same major revision and same or higher minor
+    // revision.
+    return Major == ImageMajor && Minor >= ImageMinor;
   }
 };
 

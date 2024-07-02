@@ -33,35 +33,42 @@ import re
 regenerate_expected_results = False
 
 if regenerate_expected_results:
-  print(f"""\
+    print(
+        f"""\
 //--- generate-transitive-includes.sh.cpp
 // RUN: mkdir %t
-""")
+"""
+    )
 
-  all_traces = []
-  for header in sorted(public_headers):
-    if header.endswith('.h'): # Skip C compatibility or detail headers
-      continue
+    all_traces = []
+    for header in sorted(public_headers):
+        if header.endswith(".h"):  # Skip C compatibility or detail headers
+            continue
 
-    normalized_header = re.sub('/', '_', header)
-    print(f"""\
+        normalized_header = re.sub("/", "_", header)
+        print(
+            f"""\
 // RUN: echo "#include <{header}>" | %{{cxx}} -xc++ - %{{flags}} %{{compile_flags}} --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.{normalized_header}.txt
-""")
-    all_traces.append(f'%t/trace-includes.{normalized_header}.txt')
+"""
+        )
+        all_traces.append(f"%t/trace-includes.{normalized_header}.txt")
 
-  print(f"""\
+    print(
+        f"""\
 // RUN: %{{python}} %{{libcxx-dir}}/test/libcxx/transitive_includes_to_csv.py {' '.join(all_traces)} > %{{libcxx-dir}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv
-""")
+"""
+    )
 
 else:
-  for header in public_headers:
-    if header.endswith('.h'): # Skip C compatibility or detail headers
-      continue
+    for header in public_headers:
+        if header.endswith(".h"):  # Skip C compatibility or detail headers
+            continue
 
-    # Escape slashes for the awk command below
-    escaped_header = header.replace('/', '\/')
+        # Escape slashes for the awk command below
+        escaped_header = header.replace("/", "\\/")
 
-    print(f"""\
+        print(
+            f"""\
 //--- {header}.sh.cpp
 {lit_header_restrictions.get(header, '')}
 
@@ -89,4 +96,5 @@ else:
 // RUN: cat %{{libcxx-dir}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv | awk '/^{escaped_header} / {{ print }}' > %t/expected_transitive_includes.csv
 // RUN: diff -w %t/expected_transitive_includes.csv %t/actual_transitive_includes.csv
 #include <{header}>
-""")
+"""
+        )

@@ -10,13 +10,17 @@
 ; We default to putting A/B in P0, alongside a copy
 ; of all helpers who have their address taken.
 ; The other kernels can still go into separate partitions.
+;
+; Note that dependency discovery shouldn't stop upon finding an
+; indirect call. HelperC/D should also end up in P0 as they
+; are dependencies of HelperB.
 
 ; CHECK0-NOT: define
 ; CHECK0: define hidden void @HelperA
 ; CHECK0: define hidden void @HelperB
 ; CHECK0: define hidden void @CallCandidate
-; CHECK0-NOT: define {{.*}} @HelperC
-; CHECK0-NOT: define {{.*}} @HelperD
+; CHECK0: define internal void @HelperC
+; CHECK0: define internal void @HelperD
 ; CHECK0: define amdgpu_kernel void @A
 ; CHECK0: define amdgpu_kernel void @B
 ; CHECK0-NOT: define
@@ -39,7 +43,9 @@ define internal void @HelperA(ptr %call) {
 }
 
 define internal void @HelperB(ptr %call) {
+  call void @HelperC()
   call void %call()
+  call void @HelperD()
   ret void
 }
 

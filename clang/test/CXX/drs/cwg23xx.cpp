@@ -317,7 +317,42 @@ namespace cwg2387 { // cwg2387: 9
 #endif
 }
 
-// cwg2390 is in cwg2390.cpp
+namespace cwg2390 { // cwg2390: 14
+// Test that macro expansion of the builtin argument works.
+#define C clang
+#define F fallthrough
+#define CF clang::fallthrough
+
+#if !__has_cpp_attribute(F)
+#error "doesn't have fallthrough"
+#endif
+
+#if !__has_cpp_attribute(C::F)
+#error "doesn't have clang::fallthrough 1"
+#endif
+
+#if !__has_cpp_attribute(clang::F)
+#error "doesn't have clang::fallthrough 2"
+#endif
+
+#if !__has_cpp_attribute(C::fallthrough)
+#error "doesn't have clang::fallthrough 3"
+#endif
+
+#if !__has_cpp_attribute(CF)
+#error "doesn't have clang::fallthrough 4"
+#endif
+
+#define FUNCLIKE1(x) clang::x
+#if !__has_cpp_attribute(FUNCLIKE1(fallthrough))
+#error "doesn't have clang::fallthrough through func-like macro 1"
+#endif
+
+#define FUNCLIKE2(x) _Clang::x
+#if !__has_cpp_attribute(FUNCLIKE2(fallthrough))
+#error "doesn't have clang::fallthrough through func-like macro 2"
+#endif
+} // namespace cwg2390
 
 namespace cwg2394 { // cwg2394: 15
 

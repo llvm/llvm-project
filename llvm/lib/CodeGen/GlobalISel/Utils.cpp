@@ -833,6 +833,7 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD:
     if (SNaN)
@@ -1713,6 +1714,7 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_INTRINSIC_ROUND:
@@ -1724,6 +1726,39 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   }
 }
 
+/// Shifts return poison if shiftwidth is larger than the bitwidth.
+static bool shiftAmountKnownInRange(Register ShiftAmount,
+                                    const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(ShiftAmount);
+
+  if (Ty.isScalableVector())
+    return false; // Can't tell, just return false to be safe
+
+  if (Ty.isScalar()) {
+    std::optional<ValueAndVReg> Val =
+        getIConstantVRegValWithLookThrough(ShiftAmount, MRI);
+    if (!Val)
+      return false;
+    return Val->Value.ult(Ty.getScalarSizeInBits());
+  }
+
+  GBuildVector *BV = getOpcodeDef<GBuildVector>(ShiftAmount, MRI);
+  if (!BV)
+    return false;
+
+  unsigned Sources = BV->getNumSources();
+  for (unsigned I = 0; I < Sources; ++I) {
+    std::optional<ValueAndVReg> Val =
+        getIConstantVRegValWithLookThrough(BV->getSourceReg(I), MRI);
+    if (!Val)
+      return false;
+    if (!Val->Value.ult(Ty.getScalarSizeInBits()))
+      return false;
+  }
+
+  return true;
+}
+
 namespace {
 enum class UndefPoisonKind {
   PoisonOnly = (1 << 0),
@@ -1732,11 +1767,11 @@ enum class UndefPoisonKind {
 };
 }
 
-[[maybe_unused]] static bool includesPoison(UndefPoisonKind Kind) {
+static bool includesPoison(UndefPoisonKind Kind) {
   return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
 }
 
-[[maybe_unused]] static bool includesUndef(UndefPoisonKind Kind) {
+static bool includesUndef(UndefPoisonKind Kind) {
   return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
@@ -1745,18 +1780,55 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
                                    UndefPoisonKind Kind) {
   MachineInstr *RegDef = MRI.getVRegDef(Reg);
 
-  if (auto *GMI = dyn_cast<GenericMachineInstr>(RegDef)) {
-    if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-        GMI->hasPoisonGeneratingFlags())
-      return true;
-  } else {
-    // Conservatively return true.
-    return true;
-  }
+  if (ConsiderFlagsAndMetadata && includesPoison(Kind))
+    if (auto *GMI = dyn_cast<GenericMachineInstr>(RegDef))
+      if (GMI->hasPoisonGeneratingFlags())
+        return true;
 
+  // Check whether opcode is a poison/undef-generating operation.
   switch (RegDef->getOpcode()) {
   case TargetOpcode::G_FREEZE:
+  case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_CONSTANT_FOLD_BARRIER:
     return false;
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+    return includesPoison(Kind) &&
+           !shiftAmountKnownInRange(RegDef->getOperand(2).getReg(), MRI);
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+    // fptosi/ui yields poison if the resulting value does not fit in the
+    // destination type.
+    return true;
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_ABS:
+  case TargetOpcode::G_CTPOP:
+  case TargetOpcode::G_BSWAP:
+  case TargetOpcode::G_BITREVERSE:
+  case TargetOpcode::G_FSHL:
+  case TargetOpcode::G_FSHR:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_UMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_PTRMASK:
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_SMULO:
+  case TargetOpcode::G_UMULO:
+  case TargetOpcode::G_SADDSAT:
+  case TargetOpcode::G_UADDSAT:
+  case TargetOpcode::G_SSUBSAT:
+  case TargetOpcode::G_USUBSAT:
+    return false;
+  case TargetOpcode::G_SSHLSAT:
+  case TargetOpcode::G_USHLSAT:
+    return includesPoison(Kind) &&
+           !shiftAmountKnownInRange(RegDef->getOperand(2).getReg(), MRI);
   default:
     return !isa<GCastOp>(RegDef) && !isa<GBinOp>(RegDef);
   }
@@ -1776,6 +1848,18 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
     return true;
   case TargetOpcode::G_IMPLICIT_DEF:
     return !includesUndef(Kind);
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
+    return true;
+  case TargetOpcode::G_BUILD_VECTOR: {
+    GBuildVector *BV = cast<GBuildVector>(RegDef);
+    unsigned NumSources = BV->getNumSources();
+    for (unsigned I = 0; I < NumSources; ++I)
+      if (!::isGuaranteedNotToBeUndefOrPoison(BV->getSourceReg(I), MRI,
+                                              Depth + 1, Kind))
+        return false;
+    return true;
+  }
   default: {
     auto MOCheck = [&](const MachineOperand &MO) {
       if (!MO.isReg())
@@ -1821,4 +1905,11 @@ bool llvm::isGuaranteedNotToBeUndef(Register Reg,
                                     unsigned Depth) {
   return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
                                             UndefPoisonKind::UndefOnly);
+}
+
+Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
+  if (Ty.isVector())
+    return VectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                           Ty.getElementCount());
+  return IntegerType::get(C, Ty.getSizeInBits());
 }

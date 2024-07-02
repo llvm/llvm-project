@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 class MCSymbolMachO : public MCSymbol {
@@ -42,7 +43,7 @@ class MCSymbolMachO : public MCSymbol {
   };
 
 public:
-  MCSymbolMachO(const StringMapEntry<bool> *Name, bool isTemporary)
+  MCSymbolMachO(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(SymbolKindMachO, Name, isTemporary) {}
 
   // Reference type methods.

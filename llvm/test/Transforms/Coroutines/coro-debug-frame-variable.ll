@@ -31,20 +31,20 @@
 ; CHECK-LABEL: define void @f() {{.*}} {
 ; CHECK:       entry:
 ; CHECK:         %j = alloca i32, align 4
-; CHECK:         call void @llvm.dbg.declare(metadata ptr %j, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
+; CHECK:         #dbg_declare(ptr %j, ![[JVAR:[0-9]+]], !DIExpression(), ![[JDBGLOC:[0-9]+]]
 ; CHECK:         %[[MEMORY:.*]] = call ptr @new({{.+}}), !dbg ![[IDBGLOC:[0-9]+]]
-; CHECK:         call void @llvm.dbg.declare(metadata ptr %[[MEMORY]], metadata ![[XVAR:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 32)), !dbg ![[IDBGLOC]]
-; CHECK:         call void @llvm.dbg.declare(metadata ptr %[[MEMORY]], metadata ![[IVAR:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC]]
+; CHECK:         #dbg_declare(ptr %[[MEMORY]], ![[XVAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 32), ![[IDBGLOC]]
+; CHECK:         #dbg_declare(ptr %[[MEMORY]], ![[IVAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 20), ![[IDBGLOC]]
 ; CHECK:       await.ready:
 ;
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {{.*}} {
 ; CHECK:       entry.resume:
 ; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca ptr
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[XVAR_RESUME:[0-9]+]],   metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
+; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[XVAR_RESUME:[0-9]+]],   !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32),
+; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[IVAR_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 20), ![[IDBGLOC_RESUME:[0-9]+]]
 ; CHECK-NEXT:    store ptr {{.*}}, ptr %[[DBG_PTR]]
 ; CHECK:         %[[J:.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %[[J]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
+; CHECK-NEXT:    #dbg_declare(ptr %[[J]], ![[JVAR_RESUME:[0-9]+]], !DIExpression(), ![[JDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       init.ready:
 ; CHECK:       await.ready:
 ;

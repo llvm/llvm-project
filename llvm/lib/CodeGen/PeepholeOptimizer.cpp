@@ -172,8 +172,8 @@ namespace {
       AU.addRequired<MachineLoopInfo>();
       AU.addPreserved<MachineLoopInfo>();
       if (Aggressive) {
-        AU.addRequired<MachineDominatorTree>();
-        AU.addPreserved<MachineDominatorTree>();
+        AU.addRequired<MachineDominatorTreeWrapperPass>();
+        AU.addPreserved<MachineDominatorTreeWrapperPass>();
       }
     }
 
@@ -487,7 +487,7 @@ char &llvm::PeepholeOptimizerID = PeepholeOptimizer::ID;
 
 INITIALIZE_PASS_BEGIN(PeepholeOptimizer, DEBUG_TYPE,
                       "Peephole Optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(PeepholeOptimizer, DEBUG_TYPE,
                     "Peephole Optimizations", false, false)
@@ -615,8 +615,7 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
         PHIBBs.insert(UI.getParent());
 
     const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
-    for (unsigned i = 0, e = Uses.size(); i != e; ++i) {
-      MachineOperand *UseMO = Uses[i];
+    for (MachineOperand *UseMO : Uses) {
       MachineInstr *UseMI = UseMO->getParent();
       MachineBasicBlock *UseMBB = UseMI->getParent();
       if (PHIBBs.count(UseMBB))
@@ -1670,7 +1669,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
-  DT  = Aggressive ? &getAnalysis<MachineDominatorTree>() : nullptr;
+  DT = Aggressive ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
+                  : nullptr;
   MLI = &getAnalysis<MachineLoopInfo>();
   MF.setDelegate(this);
 

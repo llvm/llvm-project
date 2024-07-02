@@ -1414,13 +1414,21 @@ IdentifierNamingCheck::getDiagInfo(const NamingCheckId &ID,
                   }};
 }
 
+StringRef IdentifierNamingCheck::getRealFileName(StringRef FileName) const {
+  auto Iter = RealFileNameCache.try_emplace(FileName);
+  SmallString<256U> &RealFileName = Iter.first->getValue();
+  if (!Iter.second)
+    return RealFileName;
+  llvm::sys::fs::real_path(FileName, RealFileName);
+  return RealFileName;
+}
+
 const IdentifierNamingCheck::FileStyle &
 IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
   if (!GetConfigPerFile)
     return *MainFileStyle;
 
-  SmallString<128> RealFileName;
-  llvm::sys::fs::real_path(FileName, RealFileName);
+  StringRef RealFileName = getRealFileName(FileName);
   StringRef Parent = llvm::sys::path::parent_path(RealFileName);
   auto Iter = NamingStylesCache.find(Parent);
   if (Iter != NamingStylesCache.end())

@@ -14,6 +14,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
@@ -645,7 +646,11 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      std::vector<StringRef> &Features) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
-  StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+  StringRef TargetID;
+  if (Args.hasArg(options::OPT_mcpu_EQ))
+    TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+  else if (Args.hasArg(options::OPT_march_EQ))
+    TargetID = Args.getLastArgValue(options::OPT_march_EQ);
   if (!TargetID.empty()) {
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
@@ -877,7 +882,7 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("amdgpu-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program);
+  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -942,6 +947,11 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, false));
 
+  if (getSanitizerArgs(DriverArgs).needsAsanRt()) {
+    CC1Args.push_back("-mlink-bitcode-file");
+    CC1Args.push_back(
+        DriverArgs.MakeArgString(RocmInstallation->getAsanRTLPath()));
+  }
   for (StringRef BCFile : BCLibs) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile));

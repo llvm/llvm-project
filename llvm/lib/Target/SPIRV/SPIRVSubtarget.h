@@ -16,6 +16,7 @@
 #include "SPIRVCallLowering.h"
 #include "SPIRVFrameLowering.h"
 #include "SPIRVISelLowering.h"
+#include "SPIRVInlineAsmLowering.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
@@ -54,6 +55,7 @@ private:
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<InlineAsmLowering> InlineAsmInfo;
 
   // TODO: Initialise the available extensions, extended instruction sets
   // based on the environment settings.
@@ -81,6 +83,7 @@ public:
            TargetTriple.getArch() == Triple::spirv64;
   }
   bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
+  const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;
   bool isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const;
@@ -107,6 +110,9 @@ public:
   }
   InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
+  }
+  const InlineAsmLowering *getInlineAsmLowering() const override {
+    return InlineAsmInfo.get();
   }
   const SPIRVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const SPIRVFrameLowering *getFrameLowering() const override {

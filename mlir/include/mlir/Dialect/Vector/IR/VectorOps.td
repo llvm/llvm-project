@@ -480,24 +480,25 @@ def Vector_ShuffleOp :
   let hasCanonicalizer = 1;
 }
 
-def Vector_InterleaveOp :
-  Vector_Op<"interleave", [Pure,
-    AllTypesMatch<["lhs", "rhs"]>,
-    TypesMatchWith<
+def ResultIsDoubleSourceVectorType : TypesMatchWith<
     "type of 'result' is double the width of the inputs",
     "lhs", "result",
     [{
       [&]() -> ::mlir::VectorType {
-        auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+        auto vectorType = ::llvm::cast<::mlir::VectorType>($_self);
         ::mlir::VectorType::Builder builder(vectorType);
         if (vectorType.getRank() == 0) {
-          static constexpr int64_t v2xty_shape[] = { 2 };
-          return builder.setShape(v2xty_shape);
+          static constexpr int64_t v2xTyShape[] = {2};
+          return builder.setShape(v2xTyShape);
         }
         auto lastDim = vectorType.getRank() - 1;
         return builder.setDim(lastDim, vectorType.getDimSize(lastDim) * 2);
       }()
-    }]>]> {
+    }]>;
+
+def Vector_InterleaveOp :
+  Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
+    ResultIsDoubleSourceVectorType]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -513,16 +514,16 @@ def Vector_InterleaveOp :
 
     Example:
     ```mlir
-    %0 = vector.interleave %a, %b
-               : vector<[4]xi32>     ; yields vector<[8]xi32>
-    %1 = vector.interleave %c, %d
-               : vector<8xi8>        ; yields vector<16xi8>
-    %2 = vector.interleave %e, %f
-               : vector<f16>         ; yields vector<2xf16>
-    %3 = vector.interleave %g, %h
-               : vector<2x4x[2]xf64> ; yields vector<2x4x[4]xf64>
-    %4 = vector.interleave %i, %j
-               : vector<6x3xf32>     ; yields vector<6x6xf32>
+    %a = arith.constant dense<[0, 1]> : vector<2xi32>
+    %b = arith.constant dense<[2, 3]> : vector<2xi32>
+    // The value of `%0` is `[0, 2, 1, 3]`.
+    %0 = vector.interleave %a, %b : vector<2xi32> -> vector<4xi32>
+
+    // Examples showing allowed input and result types.
+    %1 = vector.interleave %c, %d : vector<f16> -> vector<2xf16>
+    %2 = vector.interleave %e, %f : vector<6x3xf32> -> vector<6x6xf32>
+    %3 = vector.interleave %g, %h : vector<[4]xi32> -> vector<[8]xi32>
+    %4 = vector.interleave %i, %j : vector<2x4x[2]xf64> -> vector<2x4x[4]xf64>
     ```
   }];
 
@@ -530,7 +531,7 @@ def Vector_InterleaveOp :
   let results = (outs AnyVector:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs  attr-dict `:` type($lhs)
+    $lhs `,` $rhs  attr-dict `:` type($lhs) `->` type($result)
   }];
 
   let extraClassDeclaration = [{
@@ -679,6 +680,10 @@ def Vector_ExtractOp :
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
     the proper position. Degenerates to an element type if n-k is zero.
 
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
+
     Example:
 
     ```mlir
@@ -719,10 +724,9 @@ def Vector_ExtractOp :
       return getStaticPosition().size();
     }
 
+    /// Return "true" if the op has at least one dynamic position.
     bool hasDynamicPosition() {
-      auto dynPos = getDynamicPosition();
-      return std::any_of(dynPos.begin(), dynPos.end(),
-                         [](Value operand) { return operand != nullptr; });
+      return !getDynamicPosition().empty();
     }
   }];
 
@@ -766,6 +770,41 @@ def Vector_FMAOp :
   let extraClassDeclaration = [{
     VectorType getVectorType() { return ::llvm::cast<VectorType>(getLhs().getType()); }
   }];
+}
+
+def Vector_FromElementsOp : Vector_Op<"from_elements", [
+    Pure,
+    TypesMatchWith<"operand types match result element type",
+                   "result", "elements", "SmallVector<Type>("
+                   "::llvm::cast<VectorType>($_self).getNumElements(), "
+                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+  let summary = "operation that defines a vector from scalar elements";
+  let description = [{
+    This operation defines a vector from one or multiple scalar elements. The
+    number of elements must match the number of elements in the result type.
+    All elements must have the same type, which must match the element type of
+    the result vector type.
+
+    `elements` are a flattened version of the result vector in row-major order.
+
+    Example:
+
+    ```mlir
+    // %f1
+    %0 = vector.from_elements %f1 : vector<f32>
+    // [%f1, %f2]
+    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
+    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
+    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
+    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
+    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$elements);
+  let results = (outs AnyVectorOfAnyRank:$result);
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_InsertElementOp :
@@ -826,6 +865,10 @@ def Vector_InsertOp :
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
     and inserts the n-D source into the (n+k)-D destination at the proper
     position. Degenerates to a scalar or a 0-d vector source type when n = 0.
+
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
 
     Example:
 

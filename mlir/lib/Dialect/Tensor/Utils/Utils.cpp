@@ -72,6 +72,7 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
       RTTBuilder(rankedTensorType).setShape(transposedShape);
   return transposedTensorType;
 }
+
 /// The permutation can be obtained from two permutations:
 ///   a) Compute the permutation vector to move the last `numPackedDims` into
 ///      the `innerPosDims` of a shape of rank `rank`.
@@ -100,10 +101,6 @@ computePackUnPackPerm(int64_t rank, ArrayRef<int64_t> &innerDimsPos,
   return packInverseDestPermutation;
 }
 
-/// Shell function to compute the Destination Permutation of PackOp
-/// This function uses the helper function `computePackUnPackPerm` to get
-/// the permutation vector. Only major difference between UnPack and Pack is
-/// that packOp uses destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getPackInverseDestPerm(PackOp packOp) {
 
   PackingMetadata pMetadata;
@@ -115,19 +112,11 @@ SmallVector<int64_t> mlir::tensor::getPackInverseDestPerm(PackOp packOp) {
   return packInvDestPerm;
 }
 
-/// Shell function to compute the Source Permutation of unPackOp.
-/// This function, like the getPackInverseDestPerm uses the helper function
-/// computePackUnPackPerm` to get the permutation vector.
-/// Only major difference between UnPack and Pack is that packOp uses
-/// destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp) {
   PackingMetadata metadata;
   return mlir::tensor::getUnPackInverseSrcPerm(unpackOp, metadata);
 }
 
-/// Shell function to compute the Source rank permutation for unpackOp
-/// Unpack requires some packing metadata data information, so created
-/// another function where this value is passed by reference.
 SmallVector<int64_t>
 mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp,
                                       PackingMetadata &metadata) {

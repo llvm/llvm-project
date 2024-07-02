@@ -1,7 +1,7 @@
 add_object_library(
   gpu_util
   SRCS
-    quick_exit.cpp
+    exit.cpp
     io.cpp
   HDRS
     io.h

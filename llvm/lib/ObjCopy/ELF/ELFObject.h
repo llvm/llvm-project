@@ -910,7 +910,7 @@ class RelocationSection
 
 public:
   RelocationSection(const Object &O) : Obj(O) {}
-  void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
+  void addRelocation(const Relocation &Rel) { Relocations.push_back(Rel); }
   Error accept(SectionVisitor &Visitor) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
   Error removeSectionReferences(

@@ -46,7 +46,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <cassert>
@@ -872,6 +871,9 @@ void TargetPassConfig::addIRPasses() {
   // passes since it emits those kinds of intrinsics.
   addPass(createExpandVectorPredicationPass());
 
+  // Instrument function entry after all inlining.
+  addPass(createPostInlineEntryExitInstrumenterPass());
+
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
   // that stores/loads element one-by-one if the appropriate mask bit is set.
@@ -946,8 +948,6 @@ void TargetPassConfig::addCodeGenPrepare() {
 /// instruction selection.
 void TargetPassConfig::addISelPrepare() {
   addPreISel();
-
-  addPass(createObjCARCContractPass());
 
   // Force codegen to run according to the callgraph.
   if (requiresCodeGenSCCOrder())
