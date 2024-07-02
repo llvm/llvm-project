@@ -367,13 +367,12 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
   }
 }
 
-static uint64_t getSymbolValue(const MCSymbol &Symbol,
-                               const MCAsmLayout &Layout) {
+static uint64_t getSymbolValue(const MCSymbol &Symbol, const MCAssembler &Asm) {
   if (Symbol.isCommon() && Symbol.isExternal())
     return Symbol.getCommonSize();
 
   uint64_t Res;
-  if (!Layout.getSymbolOffset(Symbol, Res))
+  if (!Asm.getSymbolOffset(Symbol, Res))
     return 0;
 
   return Res;
@@ -446,7 +445,7 @@ void WinCOFFWriter::DefineSymbol(const MCSymbol &MCSym, MCAssembler &Assembler,
   }
 
   if (Local) {
-    Local->Data.Value = getSymbolValue(MCSym, Layout);
+    Local->Data.Value = getSymbolValue(MCSym, Assembler);
 
     const MCSymbolCOFF &SymbolCOFF = cast<MCSymbolCOFF>(MCSym);
     Local->Data.Type = SymbolCOFF.getType();
