@@ -701,6 +701,45 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder.CreateICmp(NewPred, Input, RangeEnd);
 }
 
+// (or (icmp eq X, 0), (icmp eq X, Pow2OrZero))
+//      -> (icmp eq (and X, Pow2OrZero), X)
+// (and (icmp ne X, 0), (icmp ne X, Pow2OrZero))
+//      -> (icmp ne (and X, Pow2OrZero), X)
+static Value *
+foldAndOrOfICmpsWithPow2AndWithZero(InstCombiner::BuilderTy &Builder,
+                                    ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
+                                    const SimplifyQuery &Q) {
+  CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
+  // Make sure we have right compares for our op.
+  if (LHS->getPredicate() != Pred || RHS->getPredicate() != Pred)
+    return nullptr;
+
+  // Make it so we can match LHS against the (icmp eq/ne X, 0) just for
+  // simplicity.
+  if (match(RHS->getOperand(1), m_Zero()))
+    std::swap(LHS, RHS);
+
+  Value *Pow2, *Op;
+  // Match the desired pattern:
+  // LHS: (icmp eq/ne X, 0)
+  // RHS: (icmp eq/ne X, Pow2OrZero)
+  // Skip if Pow2OrZero is 1. Either way it gets folded to (icmp ugt X, 1) but
+  // this form ends up slightly less canonical.
+  // We could potentially be more sophisticated than requiring LHS/RHS
+  // be one-use. We don't create additional instructions if only one
+  // of them is one-use. So cases where one is one-use and the other
+  // is two-use might be profitable.
+  if (!match(LHS, m_OneUse(m_ICmp(Pred, m_Value(Op), m_Zero()))) ||
+      !match(RHS, m_OneUse(m_c_ICmp(Pred, m_Specific(Op), m_Value(Pow2)))) ||
+      match(Pow2, m_One()) ||
+      !isKnownToBeAPowerOfTwo(Pow2, Q.DL, /*OrZero=*/true, /*Depth=*/0, Q.AC,
+                              Q.CxtI, Q.DT))
+    return nullptr;
+
+  Value *And = Builder.CreateAnd(Op, Pow2);
+  return Builder.CreateICmp(Pred, And, Op);
+}
+
 // Fold (iszero(A & K1) | iszero(A & K2)) -> (A & (K1 | K2)) != (K1 | K2)
 // Fold (!iszero(A & K1) & !iszero(A & K2)) -> (A & (K1 | K2)) == (K1 | K2)
 Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
@@ -3240,6 +3279,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
   Value *LHS1 = LHS->getOperand(1), *RHS1 = RHS->getOperand(1);
+
   const APInt *LHSC = nullptr, *RHSC = nullptr;
   match(LHS1, m_APInt(LHSC));
   match(RHS1, m_APInt(RHSC));
@@ -3344,6 +3384,11 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return Builder.CreateICmp(PredL, NewAnd,
                               Constant::getAllOnesValue(LHS0->getType()));
   }
+
+  if (!IsLogical)
+    if (Value *V =
+            foldAndOrOfICmpsWithPow2AndWithZero(Builder, LHS, RHS, IsAnd, Q))
+      return V;
 
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   if (!LHSC || !RHSC)
