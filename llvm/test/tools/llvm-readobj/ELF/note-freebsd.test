@@ -123,7 +123,7 @@ Sections:
 # LLVM-NEXT:            Type: Unknown (0x0000000d)
 # LLVM-NEXT:            Description data (
 # LLVM-NEXT:                0000: 61626364 6566                        |abcdef|
-# LLVM-NEXT:        )
+# LLVM-NEXT:            )
 # LLVM-NEXT:        }
 # LLVM-NEXT:    ]
 # LLVM-NEXT:  }

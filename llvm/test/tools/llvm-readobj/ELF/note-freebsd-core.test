@@ -142,7 +142,7 @@ ProgramHeaders:
 # LLVM-NEXT:            Type: NT_PRPSINFO (prpsinfo structure)
 # LLVM-NEXT:            Description data (
 # LLVM-NEXT:                0000: AABBCCDD EEFF                        |......|
-# LLVM-NEXT:        )
+# LLVM-NEXT:            )
 # LLVM-NEXT:        }
 # LLVM-NEXT:    ]
 # LLVM-NEXT:   }
