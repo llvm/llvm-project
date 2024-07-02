@@ -1521,8 +1521,7 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
         SymA.getType() == ELF::STT_GNU_IFUNC)
       return false;
   }
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
-                                                                InSet, IsPCRel);
+  return &SymA.getSection() == FB.getParent();
 }
 
 std::unique_ptr<MCObjectWriter>
