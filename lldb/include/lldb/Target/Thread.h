@@ -128,11 +128,9 @@ public:
         register_backup_sp; // You need to restore the registers, of course...
     uint32_t current_inlined_depth;
     lldb::addr_t current_inlined_pc;
-    lldb::addr_t
-        hit_bp_at_addr; // Set to the address of a breakpoint that we have hit.
-    lldb::addr_t bpsite_at_stop_pc; // Set to the address of a breakpoint
-                                    // instruction that we have not yet hit, but
-                                    // will hit when we resume.
+    lldb::addr_t stopped_at_unexecuted_bp; // Set to the address of a breakpoint
+                                           // instruction that we have not yet
+                                           // hit, but will hit when we resume.
   };
 
   /// Constructor
@@ -382,17 +380,24 @@ public:
 
   virtual void SetQueueLibdispatchQueueAddress(lldb::addr_t dispatch_queue_t) {}
 
-  /// When a thread has executed/trapped a breakpoint, set the address of that
-  /// breakpoint so we know it has been hit already, and should be silently
-  /// stepped past on resume.
-  void SetThreadHitBreakpointAtAddr(lldb::addr_t pc) { m_hit_bp_at_addr = pc; }
-
-  /// When a thread stops at a breakpoint instruction/address, but has not yet
-  /// executed/triggered it, record that so we can detect when a user adds a
-  /// breakpoint (or changes a thread to a breakpoint site) and we need to
-  /// silently step past that when resuming.
-  void SetThreadStoppedAtBreakpointSite(lldb::addr_t pc) {
-    m_bpsite_at_stop_pc = pc;
+  /// When a thread stops at an enabled BreakpointSite that has not exectued,
+  /// the Process plugin should call SetThreadStoppedAtUnexecutedBP(pc).
+  /// If that BreakpointSite was actually triggered (the instruction was
+  /// executed, for a software breakpoint), regardless of wheether the
+  /// breakpoint is valid for this thread, SetThreadHitBreakpointSite()
+  /// should be called to clear that state.
+  ///
+  /// Depending on the structure of the Process plugin, it may be easiest
+  /// to call SetThreadStoppedAtUnexecutedBP(pc) unconditionally when at
+  /// a BreakpointSite, and later when it is known that it was triggered,
+  /// SetThreadHitBreakpointSite() can be called.  These two methods
+  /// overwrite the same piece of state in the Thread, the last one
+  /// called on a Thread wins.
+  void SetThreadStoppedAtUnexecutedBP(lldb::addr_t pc) {
+    m_stopped_at_unexecuted_bp = pc;
+  }
+  void SetThreadHitBreakpointSite() {
+    m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
   }
 
   /// Whether this Thread already has all the Queue information cached or not
@@ -1329,17 +1334,16 @@ protected:
   bool m_should_run_before_public_stop;  // If this thread has "stop others" 
                                          // private work to do, then it will
                                          // set this.
-  lldb::addr_t m_hit_bp_at_addr;    // If this thread originally stopped at a
-                                    // breakpoint instruction, AND HIT IT,
-                                    // record the address of that breakpoint.
-                                    // LLDB_INVALID_ADDRESS if this thread did
-                                    // not stop at a breakpoint insn, or did not
-                                    // hit it yet.
-  lldb::addr_t m_bpsite_at_stop_pc; // If this thread originally stopped at a
-                                    // breakpoint site, record the address of
-                                    // that breakpoint site.
-                                    // LLDB_INVALID_ADDRESS if this thread did
-                                    // not stop at a breakpoint site.
+  lldb::addr_t
+      m_stopped_at_unexecuted_bp; // When the thread stops at a
+                                  // breakpoint instruction/BreakpointSite
+                                  // but has not yet hit/exectued it,
+                                  // record the address.
+                                  // When the thread resumes, if the pc
+                                  // is still at the same address, we will
+                                  // hit and trigger the breakpoint.
+                                  // Otherwise we will silently step past
+                                  // the breakpoint before resuming.
   const uint32_t m_index_id; ///< A unique 1 based index assigned to each thread
                              /// for easy UI/command line access.
   lldb::RegisterContextSP m_reg_context_sp; ///< The register context for this

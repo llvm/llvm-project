@@ -1711,8 +1711,8 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     addr_t pc = thread_sp->GetRegisterContext()->GetPC();
     BreakpointSiteSP bp_site_sp =
         thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-    if (bp_site_sp)
-      thread_sp->SetThreadStoppedAtBreakpointSite(pc);
+    if (bp_site_sp && bp_site_sp->IsEnabled())
+      thread_sp->SetThreadStoppedAtUnexecutedBP(pc);
 
     if (exc_type != 0) {
       const size_t exc_data_size = exc_data.size();
@@ -1733,11 +1733,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
           handled = true;
         } else if (reason == "breakpoint") {
-          addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-          thread_sp->SetThreadHitBreakpointAtAddr(pc);
-          lldb::BreakpointSiteSP bp_site_sp =
-              thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
-                  pc);
+          thread_sp->SetThreadHitBreakpointSite();
           if (bp_site_sp) {
             // If the breakpoint is for this thread, then we'll report the hit,
             // but if it is for another thread, we can just report no reason.
@@ -1749,7 +1745,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonWithBreakpointSiteID(
                       *thread_sp, bp_site_sp->GetID()));
-              thread_sp->SetThreadHitBreakpointAtAddr(pc);
             } else {
               StopInfoSP invalid_stop_info_sp;
               thread_sp->SetStopInfo(invalid_stop_info_sp);
@@ -1875,6 +1870,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                     pc);
 
             if (bp_site_sp) {
+              thread_sp->SetThreadHitBreakpointSite();
               // If the breakpoint is for this thread, then we'll report the
               // hit, but if it is for another thread, we can just report no
               // reason.
@@ -1884,7 +1880,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                 thread_sp->SetStopInfo(
                     StopInfo::CreateStopReasonWithBreakpointSiteID(
                         *thread_sp, bp_site_sp->GetID()));
-                thread_sp->SetThreadHitBreakpointAtAddr(pc);
                 handled = true;
               }
             }

@@ -377,13 +377,17 @@ void ProcessWindows::RefreshStateAfterStop() {
   if (!stop_thread)
     return;
 
-  switch (active_exception->GetExceptionCode()) {
-  case EXCEPTION_SINGLE_STEP: {
-    RegisterContextSP register_context = stop_thread->GetRegisterContext();
+  // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.
+  // We'll clear that state if we've actually executed the breakpoint.
+  if (RegisterContextSP register_context = stop_thread->GetRegisterContext()) {
     const uint64_t pc = register_context->GetPC();
     BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
     if (site)
-      stop_thread->SetThreadStoppedAtBreakpointSite(pc);
+      stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
+  }
+
+  switch (active_exception->GetExceptionCode()) {
+  case EXCEPTION_SINGLE_STEP: {
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         stop_thread->GetRegisterContext().get());
     uint32_t slot_id = reg_ctx->GetTriggeredHardwareBreakpointSlotId();
@@ -442,7 +446,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
                site->GetID());
 
-      stop_thread->SetThreadHitBreakpointAtAddr(pc);
+      stop_thread->SetThreadHitBreakpointSite();
       if (site->ValidForThisThread(*stop_thread)) {
         LLDB_LOG(log,
                  "Breakpoint site {0} is valid for this thread ({1:x}), "

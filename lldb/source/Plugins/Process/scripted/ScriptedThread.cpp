@@ -229,6 +229,16 @@ bool ScriptedThread::CalculateStopInfo() {
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread stop info.", error,
         LLDBLog::Thread);
 
+  // If we're at a BreakpointSite, mark that we stopped there and
+  // need to hit the breakpoint when we resume.  This will be cleared
+  // if we CreateStopReasonWithBreakpointSiteID.
+  if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
+    addr_t pc = reg_ctx_sp->GetPC();
+    if (BreakpointSiteSP bp_site_sp =
+            GetProcess()->GetBreakpointSiteList().FindByAddress(pc))
+      SetThreadStoppedAtUnexecutedBP(pc);
+  }
+
   lldb::StopInfoSP stop_info_sp;
   lldb::StopReason stop_reason_type;
 
@@ -254,8 +264,6 @@ bool ScriptedThread::CalculateStopInfo() {
                                        LLDB_INVALID_BREAK_ID);
     stop_info_sp =
         StopInfo::CreateStopReasonWithBreakpointSiteID(*this, break_id);
-    if (RegisterContextSP reg_ctx_sp = GetRegisterContext())
-      SetThreadHitBreakpointAtAddr(reg_ctx_sp->GetPC());
   } break;
   case lldb::eStopReasonSignal: {
     uint32_t signal;
@@ -320,13 +328,6 @@ bool ScriptedThread::CalculateStopInfo() {
                     llvm::Twine(stop_reason_type) + llvm::Twine(")."))
             .str(),
         error, LLDBLog::Thread);
-  }
-  if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
-    addr_t pc = reg_ctx_sp->GetPC();
-    if (BreakpointSiteSP bp_site_sp =
-            GetProcess()->GetBreakpointSiteList().FindByAddress(pc)) {
-      SetThreadStoppedAtBreakpointSite(pc);
-    }
   }
 
   if (!stop_info_sp)

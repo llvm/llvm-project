@@ -575,6 +575,18 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       target ? target->GetArchitecture().GetMachine()
              : llvm::Triple::UnknownArch;
 
+  ProcessSP process_sp(thread.GetProcess());
+  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  BreakpointSiteSP bp_site_sp;
+  addr_t pc = LLDB_INVALID_ADDRESS;
+  if (reg_ctx_sp) {
+    pc = reg_ctx_sp->GetPC();
+    BreakpointSiteSP bp_site_sp =
+        process_sp->GetBreakpointSiteList().FindByAddress(pc);
+    if (bp_site_sp && bp_site_sp->IsEnabled())
+      thread.SetThreadStoppedAtUnexecutedBP(pc);
+  }
+
   switch (exc_type) {
   case 1: // EXC_BAD_ACCESS
   case 2: // EXC_BAD_INSTRUCTION
@@ -685,9 +697,6 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     // may have multiple possible reasons set.
 
     if (stopped_by_hitting_breakpoint) {
-      ProcessSP process_sp(thread.GetProcess());
-      RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
-      BreakpointSiteSP bp_site_sp;
       addr_t pc = LLDB_INVALID_ADDRESS;
       if (reg_ctx_sp)
         pc = reg_ctx_sp->GetPC() - pc_decrement;
@@ -700,6 +709,10 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(pc);
       }
       if (bp_site_sp && bp_site_sp->IsEnabled()) {
+        // We've hit this breakpoint, whether it was intended for this thread
+        // or not.  Clear this in the Tread object so we step past it on resume.
+        thread.SetThreadHitBreakpointSite();
+
         // If we have an operating system plug-in, we might have set a thread
         // specific breakpoint using the operating system thread ID, so we
         // can't make any assumptions about the thread ID so we must always
@@ -711,11 +724,9 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           // instruction in the code
           if (pc_decrement > 0 && adjust_pc_if_needed && reg_ctx_sp)
             reg_ctx_sp->SetPC(pc);
-          thread.SetThreadHitBreakpointAtAddr(pc);
           return StopInfo::CreateStopReasonWithBreakpointSiteID(
               thread, bp_site_sp->GetID());
         } else {
-          thread.SetThreadHitBreakpointAtAddr(pc);
           return StopInfoSP();
         }
       }
