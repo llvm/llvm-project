@@ -522,8 +522,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
-                              bool ExperimentalExtensionVersionCheck,
-                              bool IgnoreUnknown) {
+                              bool ExperimentalExtensionVersionCheck) {
   // RISC-V ISA strings must be [a-z0-9_]
   if (!llvm::all_of(
           Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
@@ -567,7 +566,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         NewArch += ArchWithoutProfile.str();
       }
       return parseArchString(NewArch, EnableExperimentalExtension,
-                             ExperimentalExtensionVersionCheck, IgnoreUnknown);
+                             ExperimentalExtensionVersionCheck);
     }
   }
 
@@ -601,16 +600,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // Baseline is `i` or `e`
     if (auto E = getExtensionVersion(
             StringRef(&Baseline, 1), Exts, Major, Minor, ConsumeLength,
-            EnableExperimentalExtension, ExperimentalExtensionVersionCheck)) {
-      if (!IgnoreUnknown)
-        return std::move(E);
-      // If IgnoreUnknown, then ignore an unrecognised version of the baseline
-      // ISA and just use the default supported version.
-      consumeError(std::move(E));
-      auto Version = findDefaultVersion(StringRef(&Baseline, 1));
-      Major = Version->Major;
-      Minor = Version->Minor;
-    }
+            EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
+      return std::move(E);
 
     // Postpone AddExtension until end of this function
     SeenExtMap[StringRef(&Baseline, 1).str()] = {Major, Minor};
@@ -677,11 +668,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         Ext = StringRef();
 
         assert(!Type.empty() && "Empty type?");
-        if (!IgnoreUnknown && Name.size() == Type.size())
+        if (Name.size() == Type.size())
           return createStringError(errc::invalid_argument,
                                    Desc + " name missing after '" + Type + "'");
       } else {
-        // FIXME: Could it be ignored by IgnoreUnknown?
         return createStringError(errc::invalid_argument,
                                  "invalid standard user-level extension '" +
                                      Twine(Ext.front()) + "'");
@@ -690,26 +680,16 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       unsigned Major, Minor, ConsumeLength;
       if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
                                        EnableExperimentalExtension,
-                                       ExperimentalExtensionVersionCheck)) {
-        if (!IgnoreUnknown)
-          return E;
-
-        consumeError(std::move(E));
-        if (Name.size() == 1)
-          Ext = Ext.substr(ConsumeLength);
-        continue;
-      }
+                                       ExperimentalExtensionVersionCheck))
+        return E;
 
       if (Name.size() == 1)
         Ext = Ext.substr(ConsumeLength);
 
       // Check if duplicated extension.
-      if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
+      if (SeenExtMap.contains(Name.str()))
         return createStringError(errc::invalid_argument,
                                  "duplicated " + Desc + " '" + Name + "'");
-
-      if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
-        continue;
 
       SeenExtMap[Name.str()] = {Major, Minor};
     } while (!Ext.empty());
