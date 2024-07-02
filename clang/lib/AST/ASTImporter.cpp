@@ -9894,6 +9894,21 @@ Expected<TemplateName> ASTImporter::Import(TemplateName From) {
       return UsingOrError.takeError();
     return TemplateName(cast<UsingShadowDecl>(*UsingOrError));
   }
+  case TemplateName::DeducedTemplate: {
+    DeducedTemplateStorage *S = From.getAsDeducedTemplateName();
+    auto UnderlyingOrError = Import(S->getUnderlying());
+    if (!UnderlyingOrError)
+      return UnderlyingOrError.takeError();
+
+    ASTNodeImporter Importer(*this);
+    DefaultArguments FromDefArgs = S->getDefaultArguments();
+    SmallVector<TemplateArgument, 8> ToTemplateArgs;
+    if (Error Err =
+            Importer.ImportTemplateArguments(FromDefArgs.Args, ToTemplateArgs))
+      return std::move(Err);
+    return ToContext.getDeducedTemplateName(
+        *UnderlyingOrError, {FromDefArgs.StartPos, ToTemplateArgs});
+  }
   }
 
   llvm_unreachable("Invalid template name kind");

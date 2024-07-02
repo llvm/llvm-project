@@ -752,6 +752,23 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
     return ctx.getSubstTemplateTemplateParmPack(argumentPack, associatedDecl, index, final);
   }]>;
 }
+let Class = PropertyTypeCase<TemplateName, "DeducedTemplate"> in {
+  def : ReadHelper<[{
+    auto DTS = node.getAsDeducedTemplateName();
+  }]>;
+  def : Property<"underlying", TemplateName> {
+    let Read = [{ DTS->getUnderlying() }];
+  }
+  def : Property<"startPos", UInt32> {
+    let Read = [{ DTS->getDefaultArguments().StartPos }];
+  }
+  def : Property<"defaultArgs", Array<TemplateArgument>> {
+    let Read = [{ DTS->getDefaultArguments().Args }];
+  }
+  def : Creator<[{
+    return ctx.getDeducedTemplateName(underlying, {startPos, defaultArgs});
+  }]>;
+}
 
 // Type cases for TemplateArgument.
 def : PropertyTypeKind<TemplateArgument, TemplateArgumentKind,

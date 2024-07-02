@@ -2384,6 +2384,16 @@ void CXXNameMangler::mangleType(TemplateName TN) {
     Out << "_SUBSTPACK_";
     break;
   }
+  case TemplateName::DeducedTemplate: {
+    DeducedTemplateStorage *S = TN.getAsDeducedTemplateName();
+    mangleType(S->getUnderlying());
+    auto [StartPos, Args] = S->getDefaultArguments();
+    mangleNumber(StartPos);
+    Out << 'I';
+    for (unsigned I = 0; I != Args.size(); ++I)
+      mangleTemplateArg(Args[I], /*NeedExactType=*/true);
+    Out << 'E';
+  }
   }
 
   addSubstitution(TN);
@@ -2501,6 +2511,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     case TemplateName::OverloadedTemplate:
     case TemplateName::AssumedTemplate:
     case TemplateName::DependentTemplate:
+    case TemplateName::DeducedTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 
     case TemplateName::SubstTemplateTemplateParm: {
@@ -5892,7 +5903,8 @@ struct CXXNameMangler::TemplateArgManglingInfo {
     // that of the template.
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
     TemplateName ArgTemplateName = Arg.getAsTemplateOrTemplatePattern();
-    const TemplateDecl *ArgTemplate = ArgTemplateName.getAsTemplateDecl();
+    const TemplateDecl *ArgTemplate =
+        ArgTemplateName.getAsTemplateDecl(/*IgnoreDeduced=*/true);
     if (!ArgTemplate)
       return true;
 
@@ -6759,9 +6771,6 @@ bool CXXNameMangler::mangleSubstitution(QualType T) {
 }
 
 bool CXXNameMangler::mangleSubstitution(TemplateName Template) {
-  if (TemplateDecl *TD = Template.getAsTemplateDecl())
-    return mangleSubstitution(TD);
-
   Template = Context.getASTContext().getCanonicalTemplateName(Template);
   return mangleSubstitution(
                       reinterpret_cast<uintptr_t>(Template.getAsVoidPointer()));
@@ -6931,9 +6940,6 @@ void CXXNameMangler::addSubstitution(QualType T) {
 }
 
 void CXXNameMangler::addSubstitution(TemplateName Template) {
-  if (TemplateDecl *TD = Template.getAsTemplateDecl())
-    return addSubstitution(TD);
-
   Template = Context.getASTContext().getCanonicalTemplateName(Template);
   addSubstitution(reinterpret_cast<uintptr_t>(Template.getAsVoidPointer()));
 }

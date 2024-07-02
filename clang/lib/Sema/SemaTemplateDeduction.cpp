@@ -509,67 +509,12 @@ static TemplateDeductionResult DeduceNonTypeTemplateArgument(
       S, TemplateParams, NTTP, DeducedTemplateArgument(New), T, Info, Deduced);
 }
 
-/// Create a shallow copy of a given template parameter declaration, with
-/// empty source locations and using the given TemplateArgument as it's
-/// default argument.
-///
-/// \returns The new template parameter declaration.
-static NamedDecl *getTemplateParameterWithDefault(Sema &S, NamedDecl *A,
-                                                  TemplateArgument Default) {
-  switch (A->getKind()) {
-  case Decl::TemplateTypeParm: {
-    auto *T = cast<TemplateTypeParmDecl>(A);
-    auto *R = TemplateTypeParmDecl::Create(
-        S.Context, A->getDeclContext(), SourceLocation(), SourceLocation(),
-        T->getDepth(), T->getIndex(), T->getIdentifier(),
-        T->wasDeclaredWithTypename(), T->isParameterPack(),
-        T->hasTypeConstraint());
-    R->setDefaultArgument(
-        S.Context,
-        S.getTrivialTemplateArgumentLoc(Default, QualType(), SourceLocation()));
-    if (R->hasTypeConstraint()) {
-      auto *C = R->getTypeConstraint();
-      R->setTypeConstraint(C->getConceptReference(),
-                           C->getImmediatelyDeclaredConstraint());
-    }
-    return R;
-  }
-  case Decl::NonTypeTemplateParm: {
-    auto *T = cast<NonTypeTemplateParmDecl>(A);
-    auto *R = NonTypeTemplateParmDecl::Create(
-        S.Context, A->getDeclContext(), SourceLocation(), SourceLocation(),
-        T->getDepth(), T->getIndex(), T->getIdentifier(), T->getType(),
-        T->isParameterPack(), T->getTypeSourceInfo());
-    R->setDefaultArgument(S.Context,
-                          S.getTrivialTemplateArgumentLoc(
-                              Default, Default.getNonTypeTemplateArgumentType(),
-                              SourceLocation()));
-    if (auto *PTC = T->getPlaceholderTypeConstraint())
-      R->setPlaceholderTypeConstraint(PTC);
-    return R;
-  }
-  case Decl::TemplateTemplateParm: {
-    auto *T = cast<TemplateTemplateParmDecl>(A);
-    auto *R = TemplateTemplateParmDecl::Create(
-        S.Context, A->getDeclContext(), SourceLocation(), T->getDepth(),
-        T->getIndex(), T->isParameterPack(), T->getIdentifier(),
-        T->wasDeclaredWithTypename(), T->getTemplateParameters());
-    R->setDefaultArgument(
-        S.Context,
-        S.getTrivialTemplateArgumentLoc(Default, QualType(), SourceLocation()));
-    return R;
-  }
-  default:
-    llvm_unreachable("Unexpected Decl Kind");
-  }
-}
-
 static TemplateDeductionResult
-DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
-                        TemplateName Param, TemplateName Arg,
-                        TemplateDeductionInfo &Info,
-                        ArrayRef<TemplateArgument> DefaultArguments,
-                        SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
+DeduceTemplateNames(Sema &S, TemplateParameterList *TemplateParams,
+                    TemplateName Param, TemplateName Arg,
+                    TemplateDeductionInfo &Info,
+                    ArrayRef<TemplateArgument> DefaultArguments,
+                    SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
   TemplateDecl *ParamDecl = Param.getAsTemplateDecl();
   if (!ParamDecl) {
     // The parameter type is dependent and is not a template template parameter,
@@ -582,42 +527,28 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     if (TempParam->getDepth() != Info.getDeducedDepth())
       return TemplateDeductionResult::Success;
 
-    auto NewDeduced = DeducedTemplateArgument(Arg);
-    // Provisional resolution for CWG2398: If Arg is also a template template
-    // param, and it names a template specialization, then we deduce a
-    // synthesized template template parameter based on A, but using the TS's
-    // arguments as defaults.
-    if (auto *TempArg = dyn_cast_or_null<TemplateTemplateParmDecl>(
-            Arg.getAsTemplateDecl())) {
-      assert(!TempArg->isExpandedParameterPack());
-
-      TemplateParameterList *As = TempArg->getTemplateParameters();
-      if (DefaultArguments.size() != 0) {
-        assert(DefaultArguments.size() <= As->size());
-        SmallVector<NamedDecl *, 4> Params(As->size());
-        for (unsigned I = 0; I < DefaultArguments.size(); ++I)
-          Params[I] = getTemplateParameterWithDefault(S, As->getParam(I),
-                                                      DefaultArguments[I]);
-        for (unsigned I = DefaultArguments.size(); I < As->size(); ++I)
-          Params[I] = As->getParam(I);
-        // FIXME: We could unique these, and also the parameters, but we don't
-        // expect programs to contain a large enough amount of these deductions
-        // for that to be worthwhile.
-        auto *TPL = TemplateParameterList::Create(
-            S.Context, SourceLocation(), SourceLocation(), Params,
-            SourceLocation(), As->getRequiresClause());
-        NewDeduced = DeducedTemplateArgument(
-            TemplateName(TemplateTemplateParmDecl::Create(
-                S.Context, TempArg->getDeclContext(), SourceLocation(),
-                TempArg->getDepth(), TempArg->getPosition(),
-                TempArg->isParameterPack(), TempArg->getIdentifier(),
-                TempArg->wasDeclaredWithTypename(), TPL)));
+    ArrayRef<NamedDecl *> Params =
+        ParamDecl->getTemplateParameters()->asArray();
+    unsigned StartPos = 0;
+    for (unsigned I = 0, E = std::min(Params.size(), DefaultArguments.size());
+         I < E; ++I) {
+      if (Params[I]->isParameterPack()) {
+        StartPos = DefaultArguments.size();
+        break;
       }
+      StartPos = I + 1;
     }
 
-    DeducedTemplateArgument Result = checkDeducedTemplateArguments(S.Context,
-                                                 Deduced[TempParam->getIndex()],
-                                                                   NewDeduced);
+    // Provisional resolution for CWG2398: If Arg names a template
+    // specialization, then we deduce a synthesized template name
+    // based on A, but using the TS's extra arguments, relative to P, as
+    // defaults.
+    DeducedTemplateArgument NewDeduced =
+        TemplateArgument(S.Context.getDeducedTemplateName(
+            Arg, {StartPos, DefaultArguments.drop_front(StartPos)}));
+
+    DeducedTemplateArgument Result = checkDeducedTemplateArguments(
+        S.Context, Deduced[TempParam->getIndex()], NewDeduced);
     if (Result.isNull()) {
       Info.Param = TempParam;
       Info.FirstArg = Deduced[TempParam->getIndex()];
@@ -630,7 +561,8 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   }
 
   // Verify that the two template names are equivalent.
-  if (S.Context.hasSameTemplateName(Param, Arg))
+  if (S.Context.hasSameTemplateName(
+          Param, Arg, /*IgnoreDeduced=*/DefaultArguments.size() != 0))
     return TemplateDeductionResult::Success;
 
   // Mismatch of non-dependent template parameter to argument.
@@ -720,8 +652,9 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
             ->template_arguments();
 
     // Perform template argument deduction for the template name.
-    if (auto Result = DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
-                                              AResolved, Deduced);
+    if (auto Result =
+            DeduceTemplateNames(S, TemplateParams, TNP, TNA, Info,
+                                /*DefaultArguments=*/AResolved, Deduced);
         Result != TemplateDeductionResult::Success)
       return Result;
 
@@ -751,9 +684,9 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
         *NNS, false, TemplateName(SA->getSpecializedTemplate()));
 
   // Perform template argument deduction for the template name.
-  if (auto Result =
-          DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
-                                  SA->getTemplateArgs().asArray(), Deduced);
+  if (auto Result = DeduceTemplateNames(
+          S, TemplateParams, TNP, TNA, Info,
+          /*DefaultArguments=*/SA->getTemplateArgs().asArray(), Deduced);
       Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -2436,9 +2369,9 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
 
   case TemplateArgument::Template:
     if (A.getKind() == TemplateArgument::Template)
-      return DeduceTemplateArguments(S, TemplateParams, P.getAsTemplate(),
-                                     A.getAsTemplate(), Info,
-                                     /*DefaultArguments=*/{}, Deduced);
+      return DeduceTemplateNames(S, TemplateParams, P.getAsTemplate(),
+                                 A.getAsTemplate(), Info,
+                                 /*DefaultArguments=*/{}, Deduced);
     Info.FirstArg = P;
     Info.SecondArg = A;
     return TemplateDeductionResult::NonDeducedMismatch;
@@ -3174,7 +3107,7 @@ FinishTemplateArgumentDeduction(
   SmallVector<TemplateArgument, 4> SugaredConvertedInstArgs,
       CanonicalConvertedInstArgs;
   if (S.CheckTemplateArgumentList(
-          Template, Partial->getLocation(), InstArgs, false,
+          Template, Partial->getLocation(), InstArgs, /*DefaultArgs=*/{}, false,
           SugaredConvertedInstArgs, CanonicalConvertedInstArgs,
           /*UpdateArgsWithConversions=*/true, &ConstraintsNotSatisfied))
     return ConstraintsNotSatisfied
@@ -3472,8 +3405,8 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
     return TemplateDeductionResult::InstantiationDepth;
 
   if (CheckTemplateArgumentList(FunctionTemplate, SourceLocation(),
-                                ExplicitTemplateArgs, true, SugaredBuilder,
-                                CanonicalBuilder,
+                                ExplicitTemplateArgs, /*DefaultArgs=*/{}, true,
+                                SugaredBuilder, CanonicalBuilder,
                                 /*UpdateArgsWithConversions=*/false) ||
       Trap.hasErrorOccurred()) {
     unsigned Index = SugaredBuilder.size();
@@ -4997,9 +4930,9 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     TemplateArgs.addArgument(TypeLoc.getArgLoc(I));
 
   llvm::SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
-  if (S.CheckTemplateArgumentList(Concept, SourceLocation(), TemplateArgs,
-                                  /*PartialTemplateArgs=*/false,
-                                  SugaredConverted, CanonicalConverted))
+  if (S.CheckTemplateArgumentList(
+          Concept, SourceLocation(), TemplateArgs, /*DefaultArgs=*/{},
+          /*PartialTemplateArgs=*/false, SugaredConverted, CanonicalConverted))
     return true;
   MultiLevelTemplateArgumentList MLTAL(Concept, CanonicalConverted,
                                        /*Final=*/false);
@@ -6142,8 +6075,8 @@ bool Sema::isMoreSpecializedThanPrimary(
 }
 
 bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
-    TemplateParameterList *P, TemplateDecl *AArg, SourceLocation Loc,
-    bool IsDeduced) {
+    TemplateParameterList *P, TemplateDecl *AArg,
+    const DefaultArguments &DefaultArgs, SourceLocation Loc, bool IsDeduced) {
   // C++1z [temp.arg.template]p4: (DR 150)
   //   A template template-parameter P is at least as specialized as a
   //   template template-argument A if, given the following rewrite to two
@@ -6191,8 +6124,9 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     //   If the rewrite produces an invalid type, then P is not at least as
     //   specialized as A.
     SmallVector<TemplateArgument, 4> SugaredPArgs;
-    if (CheckTemplateArgumentList(AArg, Loc, PArgList, false, SugaredPArgs,
-                                  PArgs, /*UpdateArgsWithConversions=*/true,
+    if (CheckTemplateArgumentList(AArg, Loc, PArgList, DefaultArgs, false,
+                                  SugaredPArgs, PArgs,
+                                  /*UpdateArgsWithConversions=*/true,
                                   /*ConstraintsNotSatisfied=*/nullptr,
                                   /*PartialOrderTTP=*/true) ||
         Trap.hasErrorOccurred())

@@ -4,12 +4,11 @@
 namespace issue1 {
   template<class T, class U = T> class B {};
   template<template<class> class P, class T> void f(P<T>);
-  // new-note@-1 {{deduced type 'B<[...], (default) int>' of 1st parameter does not match adjusted type 'B<[...], float>' of argument [with P = B, T = int]}}
-  // old-note@-2 2{{template template argument has different template parameters}}
+  // old-note@-1 2{{template template argument has different template parameters}}
 
   void g() {
     f(B<int>()); // old-error {{no matching function for call}}
-    f(B<int,float>()); // expected-error {{no matching function for call}}
+    f(B<int,float>()); // old-error {{no matching function for call}}
   }
 } // namespace issue1
 
@@ -65,13 +64,10 @@ namespace class_template {
   template <class T3> struct B;
 
   template <template <class T4> class TT1, class T5> struct B<TT1<T5>>;
-  // new-note@-1 {{partial specialization matches}}
 
   template <class T6, class T7> struct B<A<T6, T7>> {};
-  // new-note@-1 {{partial specialization matches}}
 
   template struct B<A<int>>;
-  // new-error@-1 {{ambiguous partial specialization}}
 } // namespace class_template
 
 namespace type_pack1 {
@@ -272,16 +268,19 @@ namespace classes {
 
     template<template<class> class TT> auto f(TT<int> a) { return a; }
     // old-note@-1 2{{template template argument has different template parameters}}
-    // new-note@-2 2{{substitution failure: too few template arguments}}
 
     A<int, float> v1;
     A<int, double> v2;
 
     using X = decltype(f(v1));
-    // expected-error@-1 {{no matching function for call}}
+    // old-error@-1 {{no matching function for call}}
+    // new-note@-2 {{previous definition is here}}
 
+    // FIXME: The template differ needs to be taught to also
+    // look at differences in arguments which were not written.
     using X = decltype(f(v2));
-    // expected-error@-1 {{no matching function for call}}
+    // old-error@-1 {{no matching function for call}}
+    // new-error@-2 {{different types ('A<...>' vs 'A<...>')}}
   } // namespace canon
   namespace expr {
     template <class T1, int E1> struct A {
@@ -289,12 +288,11 @@ namespace classes {
     };
     template <template <class T3> class TT> void f(TT<int> v) {
       // old-note@-1 {{template template argument has different template parameters}}
-      // new-note@-2 {{substitution failure: too few template arguments}}
       static_assert(v.val == 3);
     };
     void test() {
       f(A<int, 3>());
-      // expected-error@-1 {{no matching function for call}}
+      // old-error@-1 {{no matching function for call}}
     }
   } // namespace expr
   namespace packs {
@@ -304,14 +302,54 @@ namespace classes {
 
     template <template <class T3> class TT> void f(TT<int> v) {
       // old-note@-1 {{template template argument has different template parameters}}
-      // new-note@-2 {{deduced type 'A<[...], (no argument), (no argument), (no argument)>' of 1st parameter does not match adjusted type 'A<[...], void, void, void>' of argument [with TT = A]}}
+      // new-note@-2 {{deduced type 'A<[...], (no argument), (no argument), (no argument)>' of 1st parameter does not match adjusted type 'A<[...], void, void, void>' of argument [with TT = A:1<void, void, void>]}}
       static_assert(v.val == 3);
     };
     void test() {
+      // FIXME: Needs deduction of defaulted template parameter packs.
       f(A<int, void, void, void>());
       // expected-error@-1 {{no matching function for call}}
     }
   } // namespace packs
+  namespace nested {
+    template <class T1, int V1, int V2> struct A {
+      using type = T1;
+      static constexpr int v1 = V1, v2 = V2;
+    };
+
+    template <template <class T1> class TT1> auto f(TT1<int>) {
+      return TT1<float>();
+    }
+
+    template <template <class T2, int V3> class TT2> auto g(TT2<double, 1>) {
+      // old-note@-1 {{template template argument has different template parameters}}
+      return f(TT2<int, 2>());
+    }
+
+    using B = decltype(g(A<double, 1, 3>()));
+    // old-error@-1 {{no matching function for call}}
+
+    using X = B::type; // old-error {{undeclared identifier 'B'}}
+    using X = float;
+    static_assert(B::v1 == 2); // old-error {{undeclared identifier 'B'}}
+    static_assert(B::v2 == 3); // old-error {{undeclared identifier 'B'}}
+  }
+  namespace defaulted {
+    template <class T1, class T2 = T1*> struct A {
+      using type = T2;
+    };
+
+    template <template <class> class TT> TT<float> f(TT<int>);
+    // old-note@-1 2{{template template argument has different template parameters}}
+
+    using X = int*;
+    using X = decltype(f(A<int>()))::type;
+    // old-error@-1 {{no matching function for call}}
+
+    using Y = double*;
+    using Y = decltype(f(A<int, double*>()))::type;
+    // old-error@-1 {{no matching function for call}}
+  } // namespace defaulted
 } // namespace classes
 
 namespace regression1 {

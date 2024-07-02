@@ -1002,6 +1002,23 @@ TEST_P(ImportDecl, ImportUsingTemplate) {
                      hasAnyTemplateArgumentLoc(templateArgumentLoc())))))))));
 }
 
+TEST_P(ImportDecl, ImportDeducedTemplateName) {
+  MatchVerifier<Decl> Verifier;
+  testImport(
+      R"(
+template <class, class> class A {};
+template <template <class> class TT> TT<char> f(TT<int>);
+void declToImport() {
+  using X = decltype(f(A<int, float>()));
+}
+)",
+      Lang_CXX17, "", Lang_CXX17, Verifier,
+      functionDecl(hasName("declToImport"),
+                   hasDescendant(typeAliasDecl(
+                       hasName("X"), hasUnderlyingType(hasCanonicalType(
+                                         asString("class A<char, float>")))))));
+}
+
 TEST_P(ImportDecl, ImportUsingEnumDecl) {
   MatchVerifier<Decl> Verifier;
   testImport("namespace foo { enum bar { baz, toto, quux }; }"
