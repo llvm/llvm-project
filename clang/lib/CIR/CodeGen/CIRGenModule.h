@@ -693,6 +693,7 @@ private:
   /// Call replaceAllUsesWith on all pairs in Replacements.
   void applyReplacements();
 
+  void setNonAliasAttributes(GlobalDecl GD, mlir::Operation *GV);
   /// Map source language used to a CIR attribute.
   mlir::cir::SourceLanguage getCIRSourceLanguage();
 };

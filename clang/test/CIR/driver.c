@@ -11,18 +11,30 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -clangir-disable-passes -S -Xclang -emit-cir %s -o %t.cir
 // RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -clangir-disable-verifier -S -Xclang -emit-cir %s -o %t.cir
 // RUN: %clang -target arm64-apple-macosx12.0.0 -fclangir -S -Xclang -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR_MACOS
+// RUN: %clang -target arm64-apple-macosx12.0.0 -fclangir -S -emit-llvm %s -o %t3.ll
+// RUN: FileCheck --input-file=%t3.ll %s -check-prefix=LLVM_MACOS
 
 void foo(void) {}
 
 //      CIR: module {{.*}} {
-// CIR-NEXT:   cir.func @foo()
+// CIR-NEXT:   cir.func dsolocal @foo()
 // CIR-NEXT:     cir.return
 // CIR-NEXT:   }
 // CIR-NEXT: }
 
-//      LLVM: define void @foo()
+//      CIR_MACOS: module {{.*}} {
+// CIR_MACOS-NEXT:   cir.func @foo()
+// CIR_MACOS-NEXT:     cir.return
+// CIR_MACOS-NEXT:   }
+// CIR_MACOS-NEXT: }
+
+//      LLVM: define dso_local void @foo()
 // LLVM-NEXT:   ret void
 // LLVM-NEXT: }
+
+//      LLVM_MACOS: define void @foo()
+// LLVM_MACOS-NEXT:   ret void
+// LLVM_MACOS-NEXT: }
 
 // OBJ: 0: c3 retq

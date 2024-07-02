@@ -50,6 +50,11 @@ struct MissingFeatures {
   static bool addCompilerUsedGlobal() { return false; }
   static bool supportIFuncAttr() { return false; }
   static bool setDefaultVisibility() { return false; }
+  static bool addUsedOrCompilerUsedGlobal() { return false; }
+  static bool addUsedGlobal() { return false; }
+  static bool addSectionAttributes() { return false; }
+  static bool setSectionForFuncOp() { return false; }
+  static bool updateCPUAndFeaturesAttributes() { return false; }
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }
@@ -146,7 +151,6 @@ struct MissingFeatures {
   static bool setNonGC() { return false; }
   static bool volatileLoadOrStore() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
-  static bool setCommonAttributes() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool createInvariantGroup() { return false; }
   static bool addAutoInitAnnotation() { return false; }
@@ -267,6 +271,8 @@ struct MissingFeatures {
   // If a store op is guaranteed to execute before the retun value load op, we
   // can optimize away the store and load ops. Seems like an early optimization.
   static bool returnValueDominatingStoreOptmiization() { return false; }
+  // Globals (vars and functions) may have attributes that are target depedent.
+  static bool setTargetAttributes() { return false; }
 };
 
 } // namespace cir
