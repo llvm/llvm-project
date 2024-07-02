@@ -2,6 +2,8 @@ def StdC : StandardSpec<"stdc"> {
 
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
+  RestrictedPtrType StructTmRestrictedPtr = RestrictedPtrType<StructTmType>;
+  
   PtrType TimeTTypePtr = PtrType<TimeTType>;
   NamedType ClockT = NamedType<"clock_t">;
 
@@ -1189,6 +1191,20 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"strtoul_l", RetValSpec<UnsignedLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleTType>]>,
           FunctionSpec<"strtoull_l", RetValSpec<UnsignedLongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleTType>]>,
 
+          FunctionSpec<
+              "strxfrm_l",
+              RetValSpec<SizeTType>,
+              [ArgSpec<CharRestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<SizeTType>,
+               ArgSpec<LocaleTType>]
+          >,
+          FunctionSpec<
+              "strcoll_l",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<LocaleTType>]
+          >,
+
           FunctionSpec<"malloc", RetValSpec<VoidPtr>, [ArgSpec<SizeTType>]>,
           FunctionSpec<"calloc", RetValSpec<VoidPtr>, [ArgSpec<SizeTType>, ArgSpec<SizeTType>]>,
           FunctionSpec<"realloc", RetValSpec<VoidPtr>, [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]>,
@@ -1490,6 +1506,27 @@ def StdC : StandardSpec<"stdc"> {
               RetValSpec<TimeTType>,
               [ArgSpec<StructTmPtr>]
           >,
+          FunctionSpec<
+              "strftime",
+              RetValSpec<SizeTType>,
+              [
+                ArgSpec<CharRestrictedPtr>,
+                ArgSpec<SizeTType>,
+                ArgSpec<ConstCharRestrictedPtr>,
+                ArgSpec<StructTmRestrictedPtr>
+              ]
+          >,
+          FunctionSpec<
+              "strftime_l",
+              RetValSpec<SizeTType>,
+              [
+                ArgSpec<CharRestrictedPtr>,
+                ArgSpec<SizeTType>,
+                ArgSpec<ConstCharRestrictedPtr>,
+                ArgSpec<StructTmRestrictedPtr>,
+                ArgSpec<LocaleTType>
+              ]
+          >,          
           FunctionSpec<
               "time",
               RetValSpec<TimeTType>,

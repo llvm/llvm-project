@@ -354,7 +354,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcoll_l
     libc.src.stdio.vsscanf
     libc.src.stdio.vasprintf
-    
+    libc.src.time.strftime
+    libc.src.time.strftime_l
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

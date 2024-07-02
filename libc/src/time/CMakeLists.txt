@@ -81,6 +81,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strftime
+  SRCS
+    strftime.cpp
+  HDRS
+    strftime.h
+  DEPENDS
+    .time_utils
+    libc.include.time
+)
+
+add_entrypoint_object(
+  strftime_l
+  SRCS
+    strftime_l.cpp
+  HDRS
+    strftime_l.h
+  DEPENDS
+    .strftime
+    .time_utils
+    libc.include.time
+    libc.include.llvm-libc-types.locale_t
+)
+
+add_entrypoint_object(
   time
   ALIAS
   DEPENDS
