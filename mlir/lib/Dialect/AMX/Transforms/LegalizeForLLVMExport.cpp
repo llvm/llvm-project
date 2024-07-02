@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/AMX/Analysis/AMXBindingAnalysis.h"
 #include "mlir/Dialect/AMX/Transforms.h"
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"

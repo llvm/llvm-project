@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRAMXTransforms
 
   DEPENDS
   MLIRAMXConversionsIncGen
+  MLIRAMXAnalysis
 
   LINK_LIBS PUBLIC
   MLIRAMXDialect
