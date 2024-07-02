@@ -2,25 +2,20 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=CHECK,X64
 
+; PR82242
 define <8 x i32> @cmp_eq_bitcast(<8 x i32> %x) {
 ; X86-LABEL: cmp_eq_bitcast:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,3,3,3]
-; X86-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp_eq_bitcast:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,3,3,3]
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
   %and = and <8 x i32> %x, <i32 7, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %cmp = icmp eq <8 x i32> %and, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
