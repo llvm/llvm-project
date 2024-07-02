@@ -86,6 +86,11 @@ bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                        ScalarEvolution &SE, DominatorTree &DT,
                                        AssumptionCache *AC = nullptr);
 
+/// Return true if the loop \p L cannot fault on any iteration and only
+/// contains read-only memory accesses.
+bool isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
+                                   DominatorTree *DT, AssumptionCache *AC);
+
 /// Return true if we know that executing a load from this value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
