@@ -17,7 +17,8 @@ void Benchmark::add_benchmark(Benchmark *benchmark) {
   benchmarks.push_back(benchmark);
 }
 
-BenchmarkResult reduce_results(cpp::array<BenchmarkResult, 1024> &results) {
+BenchmarkResult
+reduce_results(const cpp::array<BenchmarkResult, 1024> &results) {
   BenchmarkResult result;
   uint64_t cycles_sum = 0;
   double standard_deviation_sum = 0;
@@ -51,16 +52,16 @@ void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
   gpu::sync_threads();
 
-  for (Benchmark *benchmark : benchmarks)
-    results[id] = benchmark->run();
+  for (Benchmark *b : benchmarks)
+    results[id] = b->run();
   gpu::sync_threads();
   if (id == 0) {
-    for (Benchmark *benchmark : benchmarks) {
+    for (Benchmark const *b : benchmarks) {
       BenchmarkResult all_results = reduce_results(results);
       constexpr auto GREEN = "\033[32m";
       constexpr auto RESET = "\033[0m";
-      log << GREEN << "[ RUN      ] " << RESET << benchmark->get_name() << '\n';
-      log << GREEN << "[       OK ] " << RESET << benchmark->get_name() << ": "
+      log << GREEN << "[ RUN      ] " << RESET << b->get_name() << '\n';
+      log << GREEN << "[       OK ] " << RESET << b->get_name() << ": "
           << all_results.cycles << " cycles, " << all_results.min << " min, "
           << all_results.max << " max, " << all_results.total_iterations
           << " iterations, " << all_results.total_time << " ns, "
@@ -82,7 +83,6 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   uint32_t samples = 0;
   uint64_t total_time = 0;
   uint64_t best_guess = 0;
-  uint64_t total_cycles = 0;
   uint64_t cycles_squared = 0;
   uint64_t min = UINT64_MAX;
   uint64_t max = 0;
@@ -92,15 +92,15 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   for (int i = 0; i < overhead_iterations; i++)
     overhead = cpp::min(overhead, LIBC_NAMESPACE::overhead());
 
-  for (uint64_t time_budget = options.max_duration; time_budget >= 0;) {
+  for (int64_t time_budget = options.max_duration; time_budget >= 0;) {
     uint64_t sample_cycles = 0;
     const clock_t start = static_cast<double>(clock());
     for (uint32_t i = 0; i < iterations; i++) {
       auto wrapper_intermediate = wrapper_func();
-      uint64_t result = wrapper_intermediate - overhead;
-      max = cpp::max(max, result);
-      min = cpp::min(min, result);
-      sample_cycles += result;
+      uint64_t current_result = wrapper_intermediate - overhead;
+      max = cpp::max(max, current_result);
+      min = cpp::min(min, current_result);
+      sample_cycles += current_result;
     }
     const clock_t end = clock();
     const clock_t duration_ns =
@@ -108,7 +108,6 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     total_time += duration_ns;
     time_budget -= duration_ns;
     samples++;
-    total_cycles += sample_cycles;
     cycles_squared += sample_cycles * sample_cycles;
 
     total_iterations += iterations;
