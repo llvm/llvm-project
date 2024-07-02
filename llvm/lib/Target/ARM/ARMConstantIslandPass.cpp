@@ -1025,10 +1025,7 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   OrigBB->addSuccessor(NewBB);
 
   // Update live-in information in the new block.
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  for (MCPhysReg L : LRs)
-    if (!MRI.isReserved(L))
-      NewBB->addLiveIn(L);
+  addLiveIns(*NewBB, LRs);
 
   // Update internal data structures to account for the newly inserted MBB.
   // This is almost the same as updateForInsertedWaterBlock, except that
