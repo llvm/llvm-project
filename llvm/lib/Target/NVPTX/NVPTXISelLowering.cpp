@@ -859,6 +859,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
   }
 
+  // Custom lowering for inline asm with 128-bit operands
+  setOperationAction(ISD::CopyToReg, MVT::i128, Custom);
+  setOperationAction(ISD::CopyFromReg, MVT::i128, Custom);
+
   // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
   // No FPOW or FREM in PTX.
 
@@ -2804,6 +2808,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVectorArith(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::CopyToReg:
+    return LowerCopyToReg_128(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
@@ -3092,6 +3098,54 @@ SDValue NVPTXTargetLowering::LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const {
       DAG.getTruncStore(Tmp1, dl, Tmp3, Tmp2, ST->getPointerInfo(), MVT::i8,
                         ST->getAlign(), ST->getMemOperand()->getFlags());
   return Result;
+}
+
+SDValue NVPTXTargetLowering::LowerCopyToReg_128(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  // Change the CopyToReg to take in two 64-bit operands instead of a 128-bit
+  // operand so that it can pass the legalization.
+
+  assert(Op.getOperand(1).getValueType() == MVT::i128 &&
+         "Custom lowering for 128-bit CopyToReg only");
+
+  SDNode *Node = Op.getNode();
+  SDLoc DL(Node);
+
+  SDValue Cast = DAG.getBitcast(MVT::v2i64, Op->getOperand(2));
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                           DAG.getIntPtrConstant(0, DL));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                           DAG.getIntPtrConstant(1, DL));
+
+  SmallVector<SDValue, 5> NewOps(Op->getNumOperands() + 1);
+  SmallVector<EVT, 3> ResultsType(Node->values());
+
+  NewOps[0] = Op->getOperand(0); // Chain
+  NewOps[1] = Op->getOperand(1); // Dst Reg
+  NewOps[2] = Lo;                // Lower 64-bit
+  NewOps[3] = Hi;                // Higher 64-bit
+  if (Op.getNumOperands() == 4)
+    NewOps[4] = Op->getOperand(3); // Glue if exists
+
+  return DAG.getNode(ISD::CopyToReg, DL, ResultsType, NewOps);
+}
+
+unsigned NVPTXTargetLowering::getNumRegisters(
+    LLVMContext &Context, EVT VT,
+    std::optional<MVT> RegisterVT = std::nullopt) const {
+  if (VT == MVT::i128 && RegisterVT == MVT::i128)
+    return 1;
+  return TargetLoweringBase::getNumRegisters(Context, VT, RegisterVT);
+}
+
+bool NVPTXTargetLowering::splitValueIntoRegisterParts(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+    unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
+  if (Val.getValueType() == MVT::i128 && NumParts == 1) {
+    Parts[0] = Val;
+    return true;
+  }
+  return false;
 }
 
 // This creates target external symbol for a function parameter.
@@ -5150,6 +5204,7 @@ NVPTXTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'l':
     case 'f':
     case 'd':
+    case 'q':
     case '0':
     case 'N':
       return C_RegisterClass;
@@ -5175,6 +5230,12 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'l':
     case 'N':
       return std::make_pair(0U, &NVPTX::Int64RegsRegClass);
+    case 'q': {
+      if (STI.getSmVersion() < 70)
+        report_fatal_error("Inline asm with 128 bit operands is only "
+                           "supported for sm_70 and higher!");
+      return std::make_pair(0U, &NVPTX::Int128RegsRegClass);
+    }
     case 'f':
       return std::make_pair(0U, &NVPTX::Float32RegsRegClass);
     case 'd':
@@ -6261,6 +6322,30 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   }
 }
 
+static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
+                                   SmallVectorImpl<SDValue> &Results) {
+  // Change the CopyFromReg to output 2 64-bit results instead of a 128-bit
+  // result so that it can pass the legalization
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue Reg = N->getOperand(1);
+  SDValue Glue = N->getOperand(2);
+
+  assert(Reg.getValueType() == MVT::i128 &&
+         "Custom lowering for CopyFromReg with 128-bit reg only");
+  SmallVector<EVT, 4> ResultsType = {MVT::i64, MVT::i64, N->getValueType(1),
+                                     N->getValueType(2)};
+  SmallVector<SDValue, 3> NewOps = {Chain, Reg, Glue};
+
+  SDValue NewValue = DAG.getNode(ISD::CopyFromReg, DL, ResultsType, NewOps);
+  SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128,
+                             {NewValue.getValue(0), NewValue.getValue(1)});
+
+  Results.push_back(Pair);
+  Results.push_back(NewValue.getValue(2));
+  Results.push_back(NewValue.getValue(3));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -6271,6 +6356,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case ISD::INTRINSIC_W_CHAIN:
     ReplaceINTRINSIC_W_CHAIN(N, DAG, Results);
+    return;
+  case ISD::CopyFromReg:
+    ReplaceCopyFromReg_128(N, DAG, Results);
     return;
   }
 }

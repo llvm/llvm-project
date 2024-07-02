@@ -2419,6 +2419,7 @@ def err_selected_explicit_constructor : Error<
   "chosen constructor is explicit in copy-initialization">;
 def note_explicit_ctor_deduction_guide_here : Note<
   "explicit %select{constructor|deduction guide}0 declared here">;
+def note_implicit_deduction_guide : Note<"implicit deduction guide declared as '%0'">;
 
 // C++11 auto
 def warn_cxx98_compat_auto_type_specifier : Warning<
@@ -3546,6 +3547,12 @@ def warn_alignment_not_power_of_two : Warning<
   InGroup<DiagGroup<"non-power-of-two-alignment">>;
 def err_alignment_dependent_typedef_name : Error<
   "requested alignment is dependent but declaration is not dependent">;
+def ext_c2y_alignof_incomplete_array : Extension<
+  "'alignof' on an incomplete array type is a C2y extension">,
+  InGroup<C2y>;
+def warn_c2y_compat_alignof_incomplete_array : Warning<
+  "'alignof' on an incomplete array type is incompatible with C standards "
+  "before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def warn_alignment_builtin_useless : Warning<
   "%select{aligning a value|the result of checking whether a value is aligned}0"
@@ -7663,8 +7670,12 @@ def ext_gnu_ptr_func_arith : Extension<
   InGroup<GNUPointerArith>;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
-def ext_increment_complex : Extension<
-  "'%select{--|++}0' on an object of complex type is a Clang extension">;
+def ext_c2y_increment_complex : Extension<
+  "'%select{--|++}0' on an object of complex type is a C2y extension">,
+  InGroup<C2y>;
+def warn_c2y_compat_increment_complex : Warning<
+  "'%select{--|++}0' on an object of complex type is incompatible with C "
+  "standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 def ext_integer_complement_complex : Extension<
   "ISO C does not support '~' for complex conjugation of %0">;
 def err_nosetter_property_assignment : Error<
