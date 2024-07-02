@@ -38,9 +38,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = shl i32 [[TMP19]], 4
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vscale.i32()
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], 4
-; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP6]], i64 0
+; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP20]], i64 0
 ; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[DOTSPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
@@ -230,9 +228,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP14]], 4
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vscale.i32()
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], 4
-; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP6]], i64 0
+; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP15]], i64 0
 ; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[DOTSPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
@@ -392,9 +388,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP15]], 4
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vscale.i32()
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], 4
-; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP6]], i64 0
+; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP16]], i64 0
 ; SCALAR_TAIL_FOLDING-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[DOTSPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer

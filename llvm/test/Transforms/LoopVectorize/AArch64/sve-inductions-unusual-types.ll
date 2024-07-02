@@ -13,7 +13,8 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK:       vector.ph:
 ; CHECK:         %ind.end = trunc i64 %n.vec to i7
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP40:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP40]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i7>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i7> [[TMP7]], zeroinitializer
@@ -73,7 +74,8 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK:       vector.ph:
 ; CHECK:         %ind.end = trunc i64 %n.vec to i3
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP40:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP40]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i3> [[TMP7]], zeroinitializer

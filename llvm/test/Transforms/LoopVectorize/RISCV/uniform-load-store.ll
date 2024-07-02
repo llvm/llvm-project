@@ -330,9 +330,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = add <vscale x 2 x i64> [[TMP4]], zeroinitializer
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = mul <vscale x 2 x i64> [[TMP5]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP6]]
-; SCALABLE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
-; SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP8]]
+; SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP16]]
 ; SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP9]], i64 0
 ; SCALABLE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[B:%.*]], i64 0
@@ -1149,9 +1147,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = add <vscale x 2 x i64> [[TMP4]], zeroinitializer
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = mul <vscale x 2 x i64> [[TMP5]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP6]]
-; SCALABLE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
-; SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP8]]
+; SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP15]]
 ; SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP9]], i64 0
 ; SCALABLE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[V:%.*]], i64 0
