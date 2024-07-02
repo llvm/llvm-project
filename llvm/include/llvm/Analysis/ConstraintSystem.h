@@ -35,11 +35,19 @@ class ConstraintSystem {
     return 0;
   }
 
-  static int64_t getLastCoefficient(ArrayRef<Entry> Row, uint16_t Id) {
-    if (Row.empty())
+  struct ConstraintRow {
+    SmallVector<Entry, 8> Entries;
+    bool IsWellDefined;
+
+    ConstraintRow(SmallVector<Entry, 8> Entries, bool IsWellDefined)
+        : Entries(std::move(Entries)), IsWellDefined(IsWellDefined) {}
+  };
+
+  static int64_t getLastCoefficient(const ConstraintRow &Row, uint16_t Id) {
+    if (Row.Entries.empty())
       return 0;
-    if (Row.back().Id == Id)
-      return Row.back().Coefficient;
+    if (Row.Entries.back().Id == Id)
+      return Row.Entries.back().Coefficient;
     return 0;
   }
 
@@ -48,11 +56,15 @@ class ConstraintSystem {
   /// Current linear constraints in the system.
   /// An entry of the form c0, c1, ... cn represents the following constraint:
   ///   c0 >= v0 * c1 + .... + v{n-1} * cn
-  SmallVector<SmallVector<Entry, 8>, 4> Constraints;
+  SmallVector<ConstraintRow, 4> Constraints;
 
   /// A map of variables (IR values) to their corresponding index in the
   /// constraint system.
   DenseMap<Value *, unsigned> Value2Index;
+
+  /// A map of index to the count of the corresponding variable used by
+  /// well-defined constraints.
+  DenseMap<unsigned, unsigned> WellDefinedVariableRefCount;
 
   // Eliminate constraints from the system using Fourier–Motzkin elimination.
   bool eliminateUsingFM();
@@ -74,14 +86,14 @@ public:
   ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
       : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
-  bool addVariableRow(ArrayRef<int64_t> R) {
+  bool addVariableRow(ArrayRef<int64_t> R, bool IsWellDefined = true) {
     assert(Constraints.empty() || R.size() == NumVariables);
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
     if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
       return false;
 
-    SmallVector<Entry, 4> NewRow;
+    SmallVector<Entry, 8> NewRow;
     for (const auto &[Idx, C] : enumerate(R)) {
       if (C == 0)
         continue;
@@ -89,7 +101,12 @@ public:
     }
     if (Constraints.empty())
       NumVariables = R.size();
-    Constraints.push_back(std::move(NewRow));
+    Constraints.emplace_back(std::move(NewRow), IsWellDefined);
+    if (IsWellDefined) {
+      for (auto &Entry : Constraints.back().Entries)
+        if (Entry.Id != 0)
+          ++WellDefinedVariableRefCount[Entry.Id];
+    }
     return true;
   }
 
@@ -98,14 +115,14 @@ public:
     return Value2Index;
   }
 
-  bool addVariableRowFill(ArrayRef<int64_t> R) {
+  bool addVariableRowFill(ArrayRef<int64_t> R, bool IsWellDefined = true) {
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
     if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
       return false;
 
     NumVariables = std::max(R.size(), NumVariables);
-    return addVariableRow(R);
+    return addVariableRow(R, IsWellDefined);
   }
 
   /// Returns true if there may be a solution for the constraints in the system.
@@ -147,12 +164,20 @@ public:
   SmallVector<int64_t> getLastConstraint() const {
     assert(!Constraints.empty() && "Constraint system is empty");
     SmallVector<int64_t> Result(NumVariables, 0);
-    for (auto &Entry : Constraints.back())
+    for (auto &Entry : Constraints.back().Entries)
       Result[Entry.Id] = Entry.Coefficient;
     return Result;
   }
 
-  void popLastConstraint() { Constraints.pop_back(); }
+  void popLastConstraint() {
+    if (Constraints.back().IsWellDefined) {
+      for (auto &Entry : Constraints.back().Entries)
+        if (Entry.Id != 0)
+          --WellDefinedVariableRefCount[Entry.Id];
+    }
+    Constraints.pop_back();
+  }
+
   void popLastNVariables(unsigned N) {
     assert(NumVariables > N);
     NumVariables -= N;
