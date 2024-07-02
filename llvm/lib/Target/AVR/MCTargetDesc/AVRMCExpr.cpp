@@ -79,7 +79,7 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
   if (Value.isAbsolute()) {
     Result = MCValue::get(evaluateAsInt64(Value.getConstant()));
   } else {
-    if (!Asm || !Asm->hasLayout())
+    if (!Asm || !Asm->getLayout())
       return false;
 
     MCContext &Context = Asm->getContext();
