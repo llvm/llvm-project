@@ -73,7 +73,7 @@ template<> int A<bool>::a = 10;
 // MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered22:[^,]*]], ptr null },
 
 // ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr @_ZN4Fib2ILi5EE1aE },
-// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr null }, 
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr null },
 
 // ALL:  { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_static_member_variable_explicit_specialization.cpp, ptr null }]
 
