@@ -136,10 +136,10 @@ namespace {
 
   public:
     SparcAsmBackend(const Target &T, const MCSubtargetInfo &STI)
-        : MCAsmBackend(StringRef(T.getName()) == "sparcel"
+        : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
                            ? llvm::endianness::little
                            : llvm::endianness::big),
-          Is64Bit(StringRef(T.getName()) == "sparcv9"),
+          Is64Bit(STI.getTargetTriple().isArch64Bit()),
           HasV9(STI.hasFeature(Sparc::FeatureV9)) {}
 
     unsigned getNumFixupKinds() const override {
