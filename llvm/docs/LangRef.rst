@@ -24845,7 +24845,7 @@ Predicated fshl of three vectors of integers.
 Arguments:
 """"""""""
 
-The first three argument and the result have the same vector of integer type. The
+The first three arguments and the result have the same vector of integer type. The
 fourth argument is the vector mask and has the same number of elements as the
 result vector type. The fifth argument is the explicit vector length of the
 operation.
@@ -24891,7 +24891,7 @@ Predicated fshr of three vectors of integers.
 Arguments:
 """"""""""
 
-The first three argument and the result have the same vector of integer type. The
+The first three arguments and the result have the same vector of integer type. The
 fourth argument is the vector mask and has the same number of elements as the
 result vector type. The fifth argument is the explicit vector length of the
 operation.
