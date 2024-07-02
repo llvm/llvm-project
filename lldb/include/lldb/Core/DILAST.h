@@ -91,9 +91,9 @@ enum class CStyleCastKind {
 
 /// The Unary operators recognized by DIL.
 enum class UnaryOpKind {
-  AddrOf,  // "&"
-  Deref,   // "*"
-  Minus,   // "-"
+  AddrOf, // "&"
+  Deref,  // "*"
+  Minus,  // "-"
 };
 
 /// Given a string representing a type, returns the CompilerType corresponding
