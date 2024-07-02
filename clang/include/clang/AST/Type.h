@@ -2630,7 +2630,7 @@ public:
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
-  bool isHLSLSpecificType() const;              // Any HLSL specific type
+  bool isHLSLSpecificType() const; // Any HLSL specific type
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
