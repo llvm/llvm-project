@@ -397,7 +397,7 @@ void PlainCFGBuilder::buildPlainCFG() {
                                 : static_cast<VPBlockBase *>(Successor));
       continue;
     }
-    assert(BI->isConditional() && NumSuccs == 2 && BI->isConditional() &&
+    assert(BI->isConditional() && NumSuccs == 2 &&
            "block must have conditional branch with 2 successors");
     // Look up the branch condition to get the corresponding VPValue
     // representing the condition bit in VPlan (which may be in another VPBB).

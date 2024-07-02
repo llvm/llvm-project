@@ -430,11 +430,10 @@ private:
               AST.getSourceManager(), AST.getLangOpts());
           if (EltRange.isInvalid())
             continue;
-          if (EltRange.getBegin() < Range.getBegin() ||
-              EltRange.getEnd() >= Range.getEnd() ||
-              EltRange.getEnd() < Range.getBegin() ||
-              EltRange.getEnd() >= Range.getEnd())
+          if (EltRange.getEnd() <= Range.getBegin() ||
+              EltRange.getBegin() >= Range.getEnd())
             continue;
+
           unsigned Off = EltRange.getBegin().getRawEncoding() -
                          Range.getBegin().getRawEncoding();
           unsigned Len = EltRange.getEnd().getRawEncoding() -

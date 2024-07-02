@@ -103,7 +103,6 @@ Simplex::Unknown &SimplexBase::unknownFromRow(unsigned row) {
 unsigned SimplexBase::addZeroRow(bool makeRestricted) {
   // Resize the tableau to accommodate the extra row.
   unsigned newRow = tableau.appendExtraRow();
-  assert(getNumRows() == getNumRows() && "Inconsistent tableau size");
   rowUnknown.push_back(~con.size());
   con.emplace_back(Orientation::Row, makeRestricted, newRow);
   undoLog.push_back(UndoLogEntry::RemoveLastConstraint);
