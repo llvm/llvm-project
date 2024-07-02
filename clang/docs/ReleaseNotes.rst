@@ -317,6 +317,9 @@ Resolutions to C++ Defect Reports
 - Clang now considers ``noexcept(typeid(expr))`` more carefully, instead of always assuming that ``std::bad_typeid`` can be thrown.
   (`CWG2191: Incorrect result for noexcept(typeid(v)) <https://cplusplus.github.io/CWG/issues/2191.html>`_).
 
+- Allow ``void{}`` as a prvalue of type ``void``.
+  (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
 C Language Changes
 ------------------
 
