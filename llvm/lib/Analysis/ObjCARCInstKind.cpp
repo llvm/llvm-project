@@ -201,8 +201,13 @@ static bool isUseOnlyIntrinsic(unsigned ID) {
   // TODO: Expand this into a covered switch. There is a lot more here.
   switch (ID) {
   case Intrinsic::memcpy:
+  case Intrinsic::memcpy_element_unordered_atomic:
+  case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
+  case Intrinsic::memmove_element_unordered_atomic:
   case Intrinsic::memset:
+  case Intrinsic::memset_element_unordered_atomic:
+  case Intrinsic::memset_inline:
     return true;
   default:
     return false;
