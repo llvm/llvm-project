@@ -139,7 +139,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveVariables>();
   AU.addPreserved<SlotIndexes>();
   AU.addPreserved<LiveIntervals>();
-  AU.addPreserved<MachineDominatorTree>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfo>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -216,8 +216,8 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
 
   // TODO: we should use the incremental DomTree updater here.
   if (Changed)
-    if (auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>())
-      MDT->getBase().recalculate(MF);
+    if (auto *MDT = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
+      MDT->getDomTree().getBase().recalculate(MF);
 
   LoweredPHIs.clear();
   ImpDefs.clear();
@@ -549,7 +549,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator KillInst = opBlock.end();
       for (MachineBasicBlock::iterator Term = InsertPos; Term != opBlock.end();
            ++Term) {
-        if (Term->readsRegister(SrcReg))
+        if (Term->readsRegister(SrcReg, /*TRI=*/nullptr))
           KillInst = Term;
       }
 
@@ -563,7 +563,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
             --KillInst;
             if (KillInst->isDebugInstr())
               continue;
-            if (KillInst->readsRegister(SrcReg))
+            if (KillInst->readsRegister(SrcReg, /*TRI=*/nullptr))
               break;
           }
         } else {
@@ -571,7 +571,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           KillInst = NewSrcInstr;
         }
       }
-      assert(KillInst->readsRegister(SrcReg) && "Cannot find kill instruction");
+      assert(KillInst->readsRegister(SrcReg, /*TRI=*/nullptr) &&
+             "Cannot find kill instruction");
 
       // Finally, mark it killed.
       LV->addVirtualRegisterKilled(SrcReg, *KillInst);
@@ -607,7 +608,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           MachineBasicBlock::iterator KillInst = opBlock.end();
           for (MachineBasicBlock::iterator Term = InsertPos;
                Term != opBlock.end(); ++Term) {
-            if (Term->readsRegister(SrcReg))
+            if (Term->readsRegister(SrcReg, /*TRI=*/nullptr))
               KillInst = Term;
           }
 
@@ -621,7 +622,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
                 --KillInst;
                 if (KillInst->isDebugInstr())
                   continue;
-                if (KillInst->readsRegister(SrcReg))
+                if (KillInst->readsRegister(SrcReg, /*TRI=*/nullptr))
                   break;
               }
             } else {
@@ -629,7 +630,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
               KillInst = std::prev(InsertPos);
             }
           }
-          assert(KillInst->readsRegister(SrcReg) &&
+          assert(KillInst->readsRegister(SrcReg, /*TRI=*/nullptr) &&
                  "Cannot find kill instruction");
 
           SlotIndex LastUseIndex = LIS->getInstructionIndex(*KillInst);

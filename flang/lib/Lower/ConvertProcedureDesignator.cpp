@@ -89,9 +89,15 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
             fir::factory::genMaxWithZero(builder, loc, rawLen);
       }
     }
+    // The caller of the function pointer will have to allocate
+    // the function result with the character length specified
+    // by the boxed value. If the result length cannot be
+    // computed statically, set it to zero (we used to use -1,
+    // but this could cause assertions in LLVM after inlining
+    // exposed alloca of size -1).
     if (!funcPtrResultLength)
       funcPtrResultLength = builder.createIntegerConstant(
-          loc, builder.getCharacterLengthType(), -1);
+          loc, builder.getCharacterLengthType(), 0);
     return fir::CharBoxValue{funcPtr, funcPtrResultLength};
   }
   return funcPtr;
@@ -107,11 +113,11 @@ static hlfir::EntityWithAttributes designateProcedurePointerComponent(
                                                 procComponentSym);
   /// Passed argument may be a descriptor. This is a scalar reference, so the
   /// base address can be directly addressed.
-  if (base.getType().isa<fir::BaseBoxType>())
+  if (mlir::isa<fir::BaseBoxType>(base.getType()))
     base = builder.create<fir::BoxAddrOp>(loc, base);
   std::string fieldName = converter.getRecordTypeFieldName(procComponentSym);
   auto recordType =
-      hlfir::getFortranElementType(base.getType()).cast<fir::RecordType>();
+      mlir::cast<fir::RecordType>(hlfir::getFortranElementType(base.getType()));
   mlir::Type fieldType = recordType.getType(fieldName);
   // Note: semantics turns x%p() into x%t%p() when the procedure pointer
   // component is part of parent component t.
@@ -164,7 +170,7 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   mlir::Value funcAddr = fir::getBase(procExv);
-  if (!funcAddr.getType().isa<fir::BoxProcType>()) {
+  if (!mlir::isa<fir::BoxProcType>(funcAddr.getType())) {
     mlir::Type boxTy =
         Fortran::lower::getUntypedBoxProcType(&converter.getMLIRContext());
     if (auto host = Fortran::lower::argumentHostAssocs(converter, funcAddr))

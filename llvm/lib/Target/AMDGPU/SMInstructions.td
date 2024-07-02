@@ -25,7 +25,7 @@ def OptSMEMOffsetMod : NamedIntOperand<i32, "offset"> {
 
 class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> pattern=[]> :
   InstSI <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
+  SIMCInstr<NAME, SIEncodingFamily.NONE> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 
@@ -67,9 +67,12 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
   let SubtargetPredicate   = ps.SubtargetPredicate;
+  let OtherPredicates      = ps.OtherPredicates;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   let TSFlags = ps.TSFlags;
 
@@ -113,7 +116,6 @@ class SM_Probe_Pseudo <string opName, RegisterClass baseClass, OffsetMode offset
   let hasSideEffects = 1;
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 class SM_Load_Pseudo <string opName, RegisterClass baseClass,
@@ -129,7 +131,6 @@ class SM_Load_Pseudo <string opName, RegisterClass baseClass,
   let has_dlc = 1;
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 class SM_Store_Pseudo <string opName, RegisterClass baseClass,
@@ -145,7 +146,6 @@ class SM_Store_Pseudo <string opName, RegisterClass baseClass,
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
   let ScalarStore = 1;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 class SM_Discard_Pseudo <string opName, OffsetMode offsets>
@@ -159,7 +159,6 @@ class SM_Discard_Pseudo <string opName, OffsetMode offsets>
   let hasSideEffects = 1;
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 multiclass SM_Pseudo_Loads<RegisterClass baseClass,
@@ -235,7 +234,6 @@ class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   let ScalarStore = 0;
   let has_offset = 1;
   let has_soffset = 1;
-  let PseudoInstr = opName;
 }
 
 //===----------------------------------------------------------------------===//
@@ -268,8 +266,6 @@ class SM_Pseudo_Atomic<string opName,
                        RegisterClass dataClass,
                        OffsetMode offsets,
                        bit isRet,
-                       string opNameWithSuffix =
-                         opName # offsets.Variant # !if(isRet, "_RTN", ""),
                        Operand CPolTy = !if(isRet, CPol_GLC, CPol_NonGLC)> :
   SM_Atomic_Pseudo<opName,
                    !if(isRet, (outs dataClass:$sdst), (outs)),
@@ -280,7 +276,6 @@ class SM_Pseudo_Atomic<string opName,
                    isRet> {
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opNameWithSuffix;
 
   let Constraints = !if(isRet, "$sdst = $sdata", "");
   let DisableEncoding = !if(isRet, "$sdata", "");
@@ -1172,11 +1167,9 @@ defm S_LOAD_DWORDX4          : SM_Real_Loads_gfx10<0x002>;
 defm S_LOAD_DWORDX8          : SM_Real_Loads_gfx10<0x003>;
 defm S_LOAD_DWORDX16         : SM_Real_Loads_gfx10<0x004>;
 
-let SubtargetPredicate = HasScalarFlatScratchInsts in {
 defm S_SCRATCH_LOAD_DWORD    : SM_Real_Loads_gfx10<0x005>;
 defm S_SCRATCH_LOAD_DWORDX2  : SM_Real_Loads_gfx10<0x006>;
 defm S_SCRATCH_LOAD_DWORDX4  : SM_Real_Loads_gfx10<0x007>;
-} // End SubtargetPredicate = HasScalarFlatScratchInsts
 
 defm S_BUFFER_LOAD_DWORD     : SM_Real_Loads_gfx10<0x008>;
 defm S_BUFFER_LOAD_DWORDX2   : SM_Real_Loads_gfx10<0x009>;
@@ -1184,19 +1177,15 @@ defm S_BUFFER_LOAD_DWORDX4   : SM_Real_Loads_gfx10<0x00a>;
 defm S_BUFFER_LOAD_DWORDX8   : SM_Real_Loads_gfx10<0x00b>;
 defm S_BUFFER_LOAD_DWORDX16  : SM_Real_Loads_gfx10<0x00c>;
 
-let SubtargetPredicate = HasScalarStores in {
 defm S_STORE_DWORD           : SM_Real_Stores_gfx10<0x010>;
 defm S_STORE_DWORDX2         : SM_Real_Stores_gfx10<0x011>;
 defm S_STORE_DWORDX4         : SM_Real_Stores_gfx10<0x012>;
-let OtherPredicates = [HasScalarFlatScratchInsts] in {
 defm S_SCRATCH_STORE_DWORD   : SM_Real_Stores_gfx10<0x015>;
 defm S_SCRATCH_STORE_DWORDX2 : SM_Real_Stores_gfx10<0x016>;
 defm S_SCRATCH_STORE_DWORDX4 : SM_Real_Stores_gfx10<0x017>;
-} // End OtherPredicates = [HasScalarFlatScratchInsts]
 defm S_BUFFER_STORE_DWORD    : SM_Real_Stores_gfx10<0x018>;
 defm S_BUFFER_STORE_DWORDX2  : SM_Real_Stores_gfx10<0x019>;
 defm S_BUFFER_STORE_DWORDX4  : SM_Real_Stores_gfx10<0x01a>;
-} // End SubtargetPredicate = HasScalarStores
 
 def S_MEMREALTIME_gfx10              : SMEM_Real_gfx10<0x025, S_MEMREALTIME>;
 def S_MEMTIME_gfx10                  : SMEM_Real_gfx10<0x024, S_MEMTIME>;
@@ -1204,9 +1193,7 @@ def S_GL1_INV_gfx10                  : SMEM_Real_gfx10<0x01f, S_GL1_INV>;
 def S_GET_WAVEID_IN_WORKGROUP_gfx10  : SMEM_Real_gfx10<0x02a, S_GET_WAVEID_IN_WORKGROUP>;
 def S_DCACHE_INV_gfx10               : SMEM_Real_gfx10<0x020, S_DCACHE_INV>;
 
-let SubtargetPredicate = HasScalarStores in {
 def S_DCACHE_WB_gfx10                : SMEM_Real_gfx10<0x021, S_DCACHE_WB>;
-} // End SubtargetPredicate = HasScalarStores
 
 multiclass SM_Real_Probe_gfx10<bits<8> op> {
   defvar ps = NAME;
@@ -1242,8 +1229,6 @@ multiclass SM_Real_Atomics_gfx10<bits<8> op> {
   def _SGPR_RTN_gfx10  : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_RTN)>;
   def _SGPR_IMM_RTN_gfx10 : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM_RTN)>;
 }
-
-let SubtargetPredicate = HasScalarAtomics in {
 
 defm S_BUFFER_ATOMIC_SWAP         : SM_Real_Atomics_gfx10 <0x40>;
 defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Real_Atomics_gfx10 <0x41>;
@@ -1311,8 +1296,6 @@ multiclass SM_Real_Discard_gfx10<bits<8> op> {
 defm S_DCACHE_DISCARD    : SM_Real_Discard_gfx10 <0x28>;
 defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_gfx10 <0x29>;
 
-} // End SubtargetPredicate = HasScalarAtomics
-
 def SMInfoTable : GenericTable {
   let FilterClass = "SM_Real";
   let CppTypeName = "SMInfo";
@@ -1343,8 +1326,9 @@ multiclass SM_Real_Loads_gfx11<bits<8> op, string ps> {
   def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_IMM", opName>;
   def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR", opName>;
   def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR_IMM", opName>;
-  def : MnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName>,
-                      Requires<[isGFX11Plus]>;
+  def : AMDGPUMnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName> {
+    let AssemblerPredicate = isGFX11Plus;
+  }
 }
 
 defm S_LOAD_B32  : SM_Real_Loads_gfx11<0x000, "S_LOAD_DWORD">;

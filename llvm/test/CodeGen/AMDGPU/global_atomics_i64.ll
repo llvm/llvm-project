@@ -4570,7 +4570,7 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr addrspace(1) %out, double 
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr double, ptr addrspace(1) %out, i64 4
@@ -4625,7 +4625,7 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr ptr, ptr addrspace(1) %out, i64 4
@@ -6515,7 +6515,7 @@ define amdgpu_kernel void @atomic_load_i64_neg_offset(ptr addrspace(1) %in, ptr 
 ; CI:       ; %bb.0: ; %entry
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
-; CI-NEXT:    v_mov_b32_e32 v0, 0xffffffe0
+; CI-NEXT:    v_not_b32_e32 v0, 31
 ; CI-NEXT:    v_mov_b32_e32 v1, -1
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)

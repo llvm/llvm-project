@@ -160,6 +160,23 @@ define float @sin(float %x) #0 {
   ret float %result
 }
 
+define float @tan(float %x) #0 {
+; CHECK-LABEL: tan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subl $12, %esp
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstpl (%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    calll _tan
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    addl $12, %esp
+; CHECK-NEXT:    retl
+  %result = call float @llvm.experimental.constrained.tan.f32(float %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
 attributes #0 = { strictfp }
 
 declare float @llvm.experimental.constrained.ceil.f32(float, metadata)
@@ -171,3 +188,4 @@ declare float @llvm.experimental.constrained.log.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.log10.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.pow.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.sin.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.tan.f32(float, metadata, metadata)

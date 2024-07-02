@@ -245,8 +245,8 @@ define <8 x i1> @buildvec_mask_v8i1() {
 define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a2, 19
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
@@ -256,8 +256,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1:
 ; ZVE32F:       # %bb.0:
-; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; ZVE32F-NEXT:    li a2, 19
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vmv.v.x v8, a1
 ; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
@@ -549,20 +549,20 @@ define <128 x i1> @buildvec_mask_v128i1() {
 define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; CHECK-LABEL: buildvec_mask_optsize_v128i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI21_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; CHECK-NEXT:    li a1, 128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    lui a1, %hi(.LCPI21_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI21_0)
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_optsize_v128i1:
 ; ZVE32F:       # %bb.0:
-; ZVE32F-NEXT:    lui a0, %hi(.LCPI21_0)
-; ZVE32F-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; ZVE32F-NEXT:    li a1, 128
-; ZVE32F-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; ZVE32F-NEXT:    vlm.v v0, (a0)
+; ZVE32F-NEXT:    li a0, 128
+; ZVE32F-NEXT:    lui a1, %hi(.LCPI21_0)
+; ZVE32F-NEXT:    addi a1, a1, %lo(.LCPI21_0)
+; ZVE32F-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; ZVE32F-NEXT:    vlm.v v0, (a1)
 ; ZVE32F-NEXT:    ret
   ret <128 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>
 }

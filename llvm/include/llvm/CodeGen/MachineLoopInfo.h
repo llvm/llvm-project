@@ -89,6 +89,9 @@ public:
 private:
   friend class LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
+  /// Returns true if the given physreg has no defs inside the loop.
+  bool isLoopInvariantImplicitPhysReg(Register Reg) const;
+
   explicit MachineLoop(MachineBasicBlock *MBB)
     : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
 

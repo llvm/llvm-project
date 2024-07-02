@@ -107,6 +107,9 @@ public:
 
   /// Returns the source MemRefType for this DMA operation.
   Value getSrcMemRef() { return getOperand(getSrcMemRefOperandIndex()); }
+  OpOperand &getSrcMemRefMutable() {
+    return getOperation()->getOpOperand(getSrcMemRefOperandIndex());
+  }
   MemRefType getSrcMemRefType() {
     return cast<MemRefType>(getSrcMemRef().getType());
   }
@@ -117,7 +120,8 @@ public:
   /// Returns the affine map used to access the source memref.
   AffineMap getSrcMap() { return getSrcMapAttr().getValue(); }
   AffineMapAttr getSrcMapAttr() {
-    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getSrcMapAttrStrName()));
+    return cast<AffineMapAttr>(
+        *(*this)->getInherentAttr(getSrcMapAttrStrName()));
   }
 
   /// Returns the source memref affine map indices for this DMA operation.
@@ -139,6 +143,9 @@ public:
 
   /// Returns the destination MemRefType for this DMA operation.
   Value getDstMemRef() { return getOperand(getDstMemRefOperandIndex()); }
+  OpOperand &getDstMemRefMutable() {
+    return getOperation()->getOpOperand(getDstMemRefOperandIndex());
+  }
   MemRefType getDstMemRefType() {
     return cast<MemRefType>(getDstMemRef().getType());
   }
@@ -156,7 +163,8 @@ public:
   /// Returns the affine map used to access the destination memref.
   AffineMap getDstMap() { return getDstMapAttr().getValue(); }
   AffineMapAttr getDstMapAttr() {
-    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getDstMapAttrStrName()));
+    return cast<AffineMapAttr>(
+        *(*this)->getInherentAttr(getDstMapAttrStrName()));
   }
 
   /// Returns the destination memref indices for this DMA operation.
@@ -173,6 +181,9 @@ public:
 
   /// Returns the Tag MemRef for this DMA operation.
   Value getTagMemRef() { return getOperand(getTagMemRefOperandIndex()); }
+  OpOperand &getTagMemRefMutable() {
+    return getOperation()->getOpOperand(getTagMemRefOperandIndex());
+  }
   MemRefType getTagMemRefType() {
     return cast<MemRefType>(getTagMemRef().getType());
   }
@@ -185,7 +196,8 @@ public:
   /// Returns the affine map used to access the tag memref.
   AffineMap getTagMap() { return getTagMapAttr().getValue(); }
   AffineMapAttr getTagMapAttr() {
-    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getTagMapAttrStrName()));
+    return cast<AffineMapAttr>(
+        *(*this)->getInherentAttr(getTagMapAttrStrName()));
   }
 
   /// Returns the tag memref indices for this DMA operation.
@@ -300,6 +312,7 @@ public:
 
   /// Returns the Tag MemRef associated with the DMA operation being waited on.
   Value getTagMemRef() { return getOperand(0); }
+  OpOperand &getTagMemRefMutable() { return getOperation()->getOpOperand(0); }
   MemRefType getTagMemRefType() {
     return cast<MemRefType>(getTagMemRef().getType());
   }
@@ -307,7 +320,8 @@ public:
   /// Returns the affine map used to access the tag memref.
   AffineMap getTagMap() { return getTagMapAttr().getValue(); }
   AffineMapAttr getTagMapAttr() {
-    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getTagMapAttrStrName()));
+    return cast<AffineMapAttr>(
+        *(*this)->getInherentAttr(getTagMapAttrStrName()));
   }
 
   /// Returns the tag memref index for this DMA operation.

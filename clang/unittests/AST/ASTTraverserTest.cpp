@@ -368,6 +368,8 @@ FunctionDecl 'stringConstruct'
   |             |-ImplicitCastExpr
   |             | `-StringLiteral
   |             `-CXXDefaultArgExpr
+  |               `-UnaryOperator
+  |                 `-IntegerLiteral
   `-ExprWithCleanups
     `-CXXOperatorCallExpr
       |-ImplicitCastExpr
@@ -378,6 +380,8 @@ FunctionDecl 'stringConstruct'
           |-ImplicitCastExpr
           | `-StringLiteral
           `-CXXDefaultArgExpr
+            `-UnaryOperator
+              `-IntegerLiteral
 )cpp");
 
     EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
@@ -415,6 +419,8 @@ FunctionDecl 'overloadCall'
   |             |-ImplicitCastExpr
   |             | `-StringLiteral
   |             `-CXXDefaultArgExpr
+  |               `-UnaryOperator
+  |                 `-IntegerLiteral
   `-CXXMemberCallExpr
     `-MemberExpr
       `-ParenExpr
@@ -1219,6 +1225,7 @@ CXXRecordDecl 'Record'
 | | `-IntegerLiteral
 | |-CXXCtorInitializer 'm_i2'
 | | `-CXXDefaultInitExpr
+| |   `-IntegerLiteral
 | |-CXXCtorInitializer 'm_s'
 | | `-CXXConstructExpr
 | `-CompoundStmt
@@ -1485,6 +1492,7 @@ CallExpr
 | `-DeclRefExpr 'hasDefaultArg'
 |-IntegerLiteral
 `-CXXDefaultArgExpr
+  `-IntegerLiteral
 )cpp");
     EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
                             BN[0].getNodeAs<CallExpr>("funcCall")),

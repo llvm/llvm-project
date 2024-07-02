@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -S -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
 
 typedef __attribute__((vector_size(4*4))) float float32x4_t;
 union QDSUnion { float32x4_t q; float s[4]; };

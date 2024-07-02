@@ -12,11 +12,11 @@ define <2 x i1> @eq_t(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @eq_t_undef_elt(<2 x i1> %a) {
-; CHECK-LABEL: @eq_t_undef_elt(
+define <2 x i1> @eq_t_poison_elt(<2 x i1> %a) {
+; CHECK-LABEL: @eq_t_poison_elt(
 ; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
-  %r = icmp eq <2 x i1> %a, <i1 undef, i1 true>
+  %r = icmp eq <2 x i1> %a, <i1 poison, i1 true>
   ret <2 x i1> %r
 }
 
@@ -54,11 +54,11 @@ define <2 x i1> @ugt_t(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @ugt_t_undef_elt(<2 x i1> %a) {
-; CHECK-LABEL: @ugt_t_undef_elt(
+define <2 x i1> @ugt_t_poison_elt(<2 x i1> %a) {
+; CHECK-LABEL: @ugt_t_poison_elt(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %r = icmp ugt <2 x i1> %a, <i1 true, i1 undef>
+  %r = icmp ugt <2 x i1> %a, <i1 true, i1 poison>
   ret <2 x i1> %r
 }
 
@@ -161,11 +161,11 @@ define <2 x i1> @sge_t(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @sge_t_undef_elt(<2 x i1> %a) {
-; CHECK-LABEL: @sge_t_undef_elt(
+define <2 x i1> @sge_t_poison_elt(<2 x i1> %a) {
+; CHECK-LABEL: @sge_t_poison_elt(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
-  %r = icmp sge <2 x i1> %a, <i1 true, i1 undef>
+  %r = icmp sge <2 x i1> %a, <i1 true, i1 poison>
   ret <2 x i1> %r
 }
 

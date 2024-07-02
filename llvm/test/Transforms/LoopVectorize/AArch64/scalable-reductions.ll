@@ -350,6 +350,38 @@ for.cond.cleanup:
   ret void
 }
 
+
+; ADD (with reduction of i1)
+
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define i1 @add_trunc_i32_i1(ptr nocapture %src, i64 %N) {
+; CHECK-LABEL: @add_trunc_i32_i1
+; CHECK: vector.body:
+; CHECK: %[[PHI1:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ %20, %vector.body ]
+; CHECK: %[[PHI2:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ %21, %vector.body ]
+; CHECK: %[[TRUNC1:.*]] = trunc <vscale x 8 x i32> %{{.*}} to <vscale x 8 x i1>
+; CHECK: %[[TRUNC2:.*]] = trunc <vscale x 8 x i32> %{{.*}} to <vscale x 8 x i1>
+; CHECK: %{{.*}} = xor <vscale x 8 x i1> %[[PHI1]], %[[TRUNC1]]
+; CHECK: %{{.*}} = xor <vscale x 8 x i1> %[[PHI2]], %[[TRUNC2]]
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %red = phi i1 [ 0, %entry ], [ %red.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load32 = load i32, ptr %arrayidx, align 4
+  %trunc = trunc i32 %load32 to i1
+  %red.next = xor i1 %red, %trunc
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %N
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret i1 %red.next
+}
+
+
 ; Reduction cannot be vectorized
 
 ; MUL

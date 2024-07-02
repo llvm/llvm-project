@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir %t
 ; RUN: cd %t
-;; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-input-lowpc-ranges-main.s \
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-input-lowpc-ranges-main.s \
 ; RUN: -split-dwarf-file=main.dwo -o main.o
 ; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
@@ -11,7 +11,7 @@
 ; RUN: not llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo &> %t/mainddwodwo.txt
 ; RUN: cat %t/mainddwodwo.txt | FileCheck -check-prefix=BOLT-DWO-MAIN %s
 
-; Tests BOLT handles correctly Skeleton CU which has DW_AT_low_pc/DW_AT_ranges as input.
+;; Tests that BOLT correctly handles Skeleton CU which has DW_AT_low_pc/DW_AT_ranges as input.
 
 ; BOLT: .debug_ranges
 ; BOLT-NEXT: 00000000 <End of list>

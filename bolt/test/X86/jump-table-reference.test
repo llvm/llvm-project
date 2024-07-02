@@ -1,4 +1,4 @@
-# Verifies that BOLT detects fixed destination of indirect jump
+## Verifies that BOLT detects fixed destination of indirect jump
 
 RUN: %clang %cflags -no-pie %S/Inputs/jump_table_reference.s -Wl,-q -o %t
 RUN: llvm-bolt %t --relocs -o %t.null 2>&1 | FileCheck %s

@@ -18,7 +18,7 @@ class SettingsUseSourceCacheTestCase(TestBase):
         self.set_use_source_cache_and_test(False)
 
     @skipIf(hostoslist=no_match(["windows"]))
-    @skipIf(oslist=["windows"], archs=["aarch64"])  # Fails on windows 11
+    @skipIf(oslist=["windows"])  # Fails on windows 11
     def test_set_use_source_cache_true(self):
         """Test that after 'set use-source-cache false', files are locked."""
         self.set_use_source_cache_and_test(True)

@@ -30,13 +30,13 @@ define <64 x i8> @add_v64i8_broadcasts(<64 x i8> %a0, i64 %a1, i8 %a2) {
 ; AVX512F-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; AVX512F-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
-; AVX512F-NEXT:    vpaddb %ymm1, %ymm0, %ymm3
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpaddb %ymm1, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm4
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm4
+; AVX512F-NEXT:    vpaddb %ymm1, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpaddb %ymm1, %ymm3, %ymm1
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpternlogq $226, %zmm4, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;

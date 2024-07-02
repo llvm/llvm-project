@@ -6,8 +6,8 @@
 ; the value.
 
 ; CHECK-LABEL: @test
-; CHECK: call void @llvm.dbg.value(metadata i32 %A,
-; CHECK-NEXT: call void @llvm.dbg.value(metadata !DIArgList(i32 0, i32 %A),
+; CHECK: #dbg_value(i32 %A,
+; CHECK-NEXT: #dbg_value(!DIArgList(i32 0, i32 %A),
 ; CHECK-NEXT: %A =
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"

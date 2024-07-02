@@ -1,5 +1,5 @@
-! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
-! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | FileCheck %s --check-prefix=BT
+! RUN: bbc -emit-hlfir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefix=BT
 
 ! Tests codegen of fir.dispatch operation. This test is intentionally run from
 ! Fortran through bbc and tco so we have all the binding tables lowered to FIR
@@ -184,7 +184,7 @@ end
 
 ! CHECK-LABEL: func.func @_QMdispatch1Pdisplay_class(
 ! CHECK-SAME: %[[ARG:.*]]: [[CLASS:!fir.class<.*>>]]
-! CHECK: %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] {uniq_name = "_QMdispatch1Fdisplay_classEp"} : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>)
+! CHECK: %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMdispatch1Fdisplay_classEp"} : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>)
 
 ! Check dynamic dispatch equal to `call p%display2()` with binding index = 2.
 ! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG_DECL]]#0 : ([[CLASS]]) -> !fir.tdesc<none>

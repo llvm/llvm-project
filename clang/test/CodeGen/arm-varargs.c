@@ -264,5 +264,5 @@ void check_start(int n, ...) {
   va_list the_list;
   va_start(the_list, n);
 // CHECK: [[THE_LIST:%[a-z0-9._]+]] = alloca %struct.__va_list
-// CHECK: call void @llvm.va_start(ptr [[THE_LIST]])
+// CHECK: call void @llvm.va_start.p0(ptr [[THE_LIST]])
 }

@@ -5,6 +5,12 @@ subroutine substring_main
   character*7 :: string(2) = ['12     ', '12     ']
   integer :: result(2)
   integer :: ival
+interface
+  elemental function inner(arg)
+    character(len=*), intent(in) :: arg
+    integer :: inner
+  end function inner
+end interface
 
   ival = 1
   ! CHECK: %[[a0:.*]] = fir.alloca i32 {bindc_name = "ival", uniq_name = "_QFsubstring_mainEival"}
@@ -26,14 +32,7 @@ subroutine substring_main
   ! CHECK: %[[a14:.*]] = fir.coordinate_of %[[a13]], %[[a12]] : (!fir.ref<!fir.array<7x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
   ! CHECK: %[[a15:.*]] = fir.convert %[[a14]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[a16:.*]] = fir.emboxchar %[[a15]], {{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: %[[a17:.*]] = fir.call @_QFsubstring_mainPinner(%[[a16]]) {{.*}}: (!fir.boxchar<1>) -> i32
+  ! CHECK: %[[a17:.*]] = fir.call @_QPinner(%[[a16]]) {{.*}}: (!fir.boxchar<1>) -> i32
   result = inner(string(1:2)(ival:ival))
   print *, result
-contains
-  elemental function inner(arg)
-    character(len=*), intent(in) :: arg
-    integer :: inner
-
-    inner = len(arg)
-  end function inner
 end subroutine substring_main

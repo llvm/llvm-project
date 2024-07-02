@@ -1,8 +1,8 @@
 /// Check that -fexperimental-omit-vtable-rtti omits the RTTI component from
 /// the vtable.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fno-rtti -fexperimental-omit-vtable-rtti -S -o - -emit-llvm | FileCheck -check-prefixes=POINTER,RTTI %s
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fexperimental-relative-c++-abi-vtables -fno-rtti -fexperimental-omit-vtable-rtti -S -o - -emit-llvm | FileCheck -check-prefixes=RELATIVE,RTTI %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fno-rtti -fexperimental-omit-vtable-rtti -o - -emit-llvm | FileCheck -check-prefixes=POINTER,RTTI %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fexperimental-relative-c++-abi-vtables -fno-rtti -fexperimental-omit-vtable-rtti -o - -emit-llvm | FileCheck -check-prefixes=RELATIVE,RTTI %s
 
 /// Normally, the vtable would contain at least three components:
 /// - An offset to top

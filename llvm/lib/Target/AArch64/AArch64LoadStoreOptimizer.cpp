@@ -2362,7 +2362,7 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
       // Get the needed alignments to check them if
       // ldp-aligned-only/stp-aligned-only features are opted.
       uint64_t MemAlignment = MemOp->getAlign().value();
-      uint64_t TypeAlignment = Align(MemOp->getSize()).value();
+      uint64_t TypeAlignment = Align(MemOp->getSize().getValue()).value();
 
       if (MemAlignment < 2 * TypeAlignment) {
         NumFailedAlignmentCheck++;

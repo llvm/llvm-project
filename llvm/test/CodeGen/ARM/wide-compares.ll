@@ -257,12 +257,12 @@ define {i32, i32} @test_slt_not(i32 %c, i32 %d, i64 %a, i64 %b) {
 ; CHECK-THUMB1-NOMOV-NEXT:    ldr r5, [sp, #16]
 ; CHECK-THUMB1-NOMOV-NEXT:    subs r2, r2, r5
 ; CHECK-THUMB1-NOMOV-NEXT:    sbcs r3, r0
-; CHECK-THUMB1-NOMOV-NEXT:    push {r1}
-; CHECK-THUMB1-NOMOV-NEXT:    pop {r0}
+; CHECK-THUMB1-NOMOV-NEXT:    mov r12, r1
+; CHECK-THUMB1-NOMOV-NEXT:    mov r0, r12
 ; CHECK-THUMB1-NOMOV-NEXT:    blt .LBB3_2
 ; CHECK-THUMB1-NOMOV-NEXT:  @ %bb.1: @ %entry
-; CHECK-THUMB1-NOMOV-NEXT:    push {r4}
-; CHECK-THUMB1-NOMOV-NEXT:    pop {r0}
+; CHECK-THUMB1-NOMOV-NEXT:    mov r12, r4
+; CHECK-THUMB1-NOMOV-NEXT:    mov r0, r12
 ; CHECK-THUMB1-NOMOV-NEXT:  .LBB3_2: @ %entry
 ; CHECK-THUMB1-NOMOV-NEXT:    bge .LBB3_4
 ; CHECK-THUMB1-NOMOV-NEXT:  @ %bb.3: @ %entry

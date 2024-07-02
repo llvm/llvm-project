@@ -27,11 +27,11 @@ define void @no_promote(ptr %arg) #1 {
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
-; TUNIT-NEXT:    [[TRUETMP2:%.*]] = alloca <4 x i64>, align 32
+; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR3:[0-9]+]]
-; TUNIT-NEXT:    call fastcc void @no_promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TRUETMP2]], ptr noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) #[[ATTR4:[0-9]+]]
-; TUNIT-NEXT:    [[TRUETMP4:%.*]] = load <4 x i64>, ptr [[TRUETMP2]], align 32
-; TUNIT-NEXT:    store <4 x i64> [[TRUETMP4]], ptr [[ARG]], align 2
+; TUNIT-NEXT:    call fastcc void @no_promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], ptr noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) #[[ATTR4:[0-9]+]]
+; TUNIT-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 32
+; TUNIT-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) uwtable
@@ -39,11 +39,11 @@ define void @no_promote(ptr %arg) #1 {
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
-; CGSCC-NEXT:    [[TRUETMP2:%.*]] = alloca <4 x i64>, align 32
+; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR3:[0-9]+]]
-; CGSCC-NEXT:    call fastcc void @no_promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TRUETMP2]], ptr noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) #[[ATTR4:[0-9]+]]
-; CGSCC-NEXT:    [[TRUETMP4:%.*]] = load <4 x i64>, ptr [[TRUETMP2]], align 32
-; CGSCC-NEXT:    store <4 x i64> [[TRUETMP4]], ptr [[ARG]], align 2
+; CGSCC-NEXT:    call fastcc void @no_promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], ptr noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) #[[ATTR4:[0-9]+]]
+; CGSCC-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 32
+; CGSCC-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
 ;
 bb:
@@ -79,12 +79,12 @@ define void @promote(ptr %arg) #0 {
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
-; TUNIT-NEXT:    [[TRUETMP2:%.*]] = alloca <4 x i64>, align 32
+; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR3]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[TMP]], align 32
-; TUNIT-NEXT:    call fastcc void @promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TRUETMP2]], <4 x i64> [[TMP0]]) #[[ATTR4]]
-; TUNIT-NEXT:    [[TRUETMP4:%.*]] = load <4 x i64>, ptr [[TRUETMP2]], align 32
-; TUNIT-NEXT:    store <4 x i64> [[TRUETMP4]], ptr [[ARG]], align 2
+; TUNIT-NEXT:    call fastcc void @promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]]) #[[ATTR4]]
+; TUNIT-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 32
+; TUNIT-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
@@ -92,12 +92,12 @@ define void @promote(ptr %arg) #0 {
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
-; CGSCC-NEXT:    [[TRUETMP2:%.*]] = alloca <4 x i64>, align 32
+; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR3]]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[TMP]], align 32
-; CGSCC-NEXT:    call fastcc void @promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TRUETMP2]], <4 x i64> [[TMP0]]) #[[ATTR4]]
-; CGSCC-NEXT:    [[TRUETMP4:%.*]] = load <4 x i64>, ptr [[TRUETMP2]], align 32
-; CGSCC-NEXT:    store <4 x i64> [[TRUETMP4]], ptr [[ARG]], align 2
+; CGSCC-NEXT:    call fastcc void @promote_avx2(ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 32
+; CGSCC-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
 ;
 bb:

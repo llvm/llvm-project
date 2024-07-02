@@ -17,11 +17,11 @@ define i32 @all_ones(i32 %A) {
   ret i32 %B
 }
 
-define <3 x i8> @all_ones_vec_with_undef_elt(<3 x i8> %A) {
-; CHECK-LABEL: @all_ones_vec_with_undef_elt(
+define <3 x i8> @all_ones_vec_with_poison_elt(<3 x i8> %A) {
+; CHECK-LABEL: @all_ones_vec_with_poison_elt(
 ; CHECK-NEXT:    ret <3 x i8> <i8 -1, i8 -1, i8 -1>
 ;
-  %B = or <3 x i8> %A, <i8 -1, i8 undef, i8 -1>
+  %B = or <3 x i8> %A, <i8 -1, i8 poison, i8 -1>
   ret <3 x i8> %B
 }
 
@@ -68,11 +68,11 @@ define i32 @or_not(i32 %A) {
   ret i32 %B
 }
 
-define <2 x i4> @or_not_commute_vec_undef(<2 x i4> %A) {
-; CHECK-LABEL: @or_not_commute_vec_undef(
+define <2 x i4> @or_not_commute_vec_poison(<2 x i4> %A) {
+; CHECK-LABEL: @or_not_commute_vec_poison(
 ; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
 ;
-  %NotA = xor <2 x i4> %A, <i4 -1, i4 undef>
+  %NotA = xor <2 x i4> %A, <i4 -1, i4 poison>
   %B = or <2 x i4> %NotA, %A
   ret <2 x i4> %B
 }
@@ -335,7 +335,7 @@ define <2 x i1> @or_with_not_op_commute4(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %ab = and <2 x i1> %b, %a
-  %not = xor <2 x i1> %ab, <i1 -1, i1 undef>
+  %not = xor <2 x i1> %ab, <i1 -1, i1 poison>
   %r = or <2 x i1> %not, %a
   ret <2 x i1> %r
 }
@@ -508,6 +508,21 @@ define <2 x i4> @and_or_not_or_commute7_undef_elt(<2 x i4> %A, <2 x i4> %B) {
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %nota = xor <2 x i4> %A, <i4 undef, i4 -1>
+  %and = and <2 x i4> %B, %nota
+  %or = or <2 x i4> %B, %A
+  %notab = xor <2 x i4> %or, <i4 -1, i4 -1>
+  %r = or <2 x i4> %notab, %and
+  ret <2 x i4> %r
+}
+
+; doing the same with poison is safe.
+
+define <2 x i4> @and_or_not_or_commute7_poison_elt(<2 x i4> %A, <2 x i4> %B) {
+; CHECK-LABEL: @and_or_not_or_commute7_poison_elt(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i4> [[A:%.*]], <i4 poison, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NOTA]]
+;
+  %nota = xor <2 x i4> %A, <i4 poison, i4 -1>
   %and = and <2 x i4> %B, %nota
   %or = or <2 x i4> %B, %A
   %notab = xor <2 x i4> %or, <i4 -1, i4 -1>
@@ -769,6 +784,21 @@ define <2 x i4> @or_nxor_and_undef_elt(<2 x i4> %a, <2 x i4> %b) {
   ret <2 x i4> %r
 }
 
+; Same with poison is safe.
+
+define <2 x i4> @or_nxor_and_poison_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_and_poison_elt(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 poison>
+; CHECK-NEXT:    ret <2 x i4> [[NOT]]
+;
+  %and = and <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 poison>
+  %r = or <2 x i4> %not, %and
+  ret <2 x i4> %r
+}
+
 ; ~(A ^ B) | (A | B) --> -1
 
 define i4 @or_nxor_or_commute0(i4 %a, i4 %b) {
@@ -849,15 +879,15 @@ define i4 @or_nxor_or_wrong_val2(i4 %a, i4 %b, i4 %c) {
   ret i4 %r
 }
 
-; negative test - undef in 'not' is allowed
+; negative test - poison in 'not' is allowed
 
-define <2 x i4> @or_nxor_or_undef_elt(<2 x i4> %a, <2 x i4> %b) {
-; CHECK-LABEL: @or_nxor_or_undef_elt(
+define <2 x i4> @or_nxor_or_poison_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_or_poison_elt(
 ; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
 ;
   %or = or <2 x i4> %b, %a
   %xor = xor <2 x i4> %a, %b
-  %not = xor <2 x i4> %xor, <i4 -1, i4 undef>
+  %not = xor <2 x i4> %xor, <i4 -1, i4 poison>
   %r = or <2 x i4> %or, %not
   ret <2 x i4> %r
 }
@@ -966,12 +996,12 @@ define i32  @or_xor_not_op_or_commute7(i32 %a, i32 %b){
   ret i32  %r
 }
 
-define <2 x i4> @or_xor_not_op_or_undef_elt(<2 x i4> %a, <2 x i4> %b) {
-; CHECK-LABEL: @or_xor_not_op_or_undef_elt(
+define <2 x i4> @or_xor_not_op_or_poison_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_xor_not_op_or_poison_elt(
 ; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
 ;
   %xor = xor <2 x i4> %a, %b
-  %nota = xor <2 x i4> %a, <i4 -1, i4 undef>
+  %nota = xor <2 x i4> %a, <i4 -1, i4 poison>
   %or = or <2 x i4>  %nota, %b
   %r = or <2 x i4> %xor, %or
   ret <2 x i4> %r
@@ -1078,6 +1108,21 @@ define <2 x i4> @or_nand_xor_undef_elt(<2 x i4> %x, <2 x i4> %y) {
   %and = and <2 x i4> %y, %x
   %xor = xor <2 x i4> %x, %y
   %nand = xor <2 x i4> %and, <i4 undef, i4 -1>
+  %or = or <2 x i4> %xor, %nand
+  ret <2 x i4> %or
+}
+
+; Same with poison is safe.
+
+define <2 x i4> @or_nand_xor_poison_elt(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @or_nand_xor_poison_elt(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i4> [[AND]], <i4 poison, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NAND]]
+;
+  %and = and <2 x i4> %y, %x
+  %xor = xor <2 x i4> %x, %y
+  %nand = xor <2 x i4> %and, <i4 poison, i4 -1>
   %or = or <2 x i4> %xor, %nand
   ret <2 x i4> %or
 }

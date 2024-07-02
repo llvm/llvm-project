@@ -305,16 +305,6 @@ namespace {
       }
     }
 
-    /// fixupNeedsRelaxation - Target specific predicate for whether a given
-    /// fixup requires the associated instruction to be relaxed.
-    bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                              uint64_t Value,
-                              const MCRelaxableFragment *DF,
-                              const MCAsmLayout &Layout) const override {
-      // FIXME.
-      llvm_unreachable("fixupNeedsRelaxation() unimplemented");
-      return false;
-    }
     void relaxInstruction(MCInst &Inst,
                           const MCSubtargetInfo &STI) const override {
       // FIXME.
@@ -323,9 +313,11 @@ namespace {
 
     bool writeNopData(raw_ostream &OS, uint64_t Count,
                       const MCSubtargetInfo *STI) const override {
-      // Cannot emit NOP with size not multiple of 32 bits.
-      if (Count % 4 != 0)
-        return false;
+
+      // If the count is not 4-byte aligned, we must be writing data into the
+      // text section (otherwise we have unaligned instructions, and thus have
+      // far bigger problems), so just write zeros instead.
+      OS.write_zeros(Count % 4);
 
       uint64_t NumNops = Count / 4;
       for (uint64_t i = 0; i != NumNops; ++i)

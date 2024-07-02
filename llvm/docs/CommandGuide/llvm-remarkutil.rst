@@ -3,12 +3,12 @@ llvm-remarkutil - Remark utility
 
 .. program:: llvm-remarkutil
 
-SYNOPSIS
+Synopsis
 --------
 
 :program:`llvm-remarkutil` [*subcommmand*] [*options*]
 
-DESCRIPTION
+Description
 -----------
 
 Utility for displaying information from, and converting between different
@@ -72,12 +72,14 @@ Instruction count remarks require asm-printer remarks.
 CSV format is as follows:
 
 ::
+
   Function,InstructionCount
   foo,123
 
 if `--use-debug-loc` is passed then the CSV will include the source path, line number and column.
 
 ::
+
   Source,Function,InstructionCount
   path:line:column,foo,3
 
@@ -101,12 +103,14 @@ Annotation count remarks require AnnotationRemarksPass remarks.
 CSV format is as follows:
 
 ::
+
   Function,Count
   foo,123
 
 if `--use-debug-loc` is passed then the CSV will include the source path, line number and column.
 
 ::
+  
   Source,Function,Count
   path:line:column,foo,3
 
@@ -115,67 +119,83 @@ if `--use-debug-loc` is passed then the CSV will include the source path, line n
 count
 ~~~~~
 
-..program:: llvm-remarkutil count
+.. program:: llvm-remarkutil count
 
 USAGE: :program:`llvm-remarkutil` count [*options*] <input file>
 
 Summary
 ^^^^^^^
 
-:program:`llvm-remarkutil count` counts `remarks <https://llvm.org/docs/Remarks.html>` based on specified properties.
+:program:`llvm-remarkutil count` counts `remarks <https://llvm.org/docs/Remarks.html>`_ based on specified properties.
 By default the tool counts remarks based on how many occur in a source file or function or total for the generated remark file.
 The tool also supports collecting count based on specific remark arguments. The specified arguments should have an integer value to be able to report a count.
 
 The tool contains utilities to filter the remark count based on remark name, pass name, argument value and remark type.
-OPTIONS
--------
+
+Options
+^^^^^^^
 
 .. option:: --parser=<yaml|bitstream>
 
   Select the type of input remark parser. Required.
-  * ``yaml``: The tool will parse YAML remarks.
-  * ``bitstream``: The tool will parse bitstream remarks.
 
-.. option:: --count-by<value>
+  * ``yaml`` : The tool will parse YAML remarks.
+  * ``bitstream`` : The tool will parse bitstream remarks.
+
+.. option:: --count-by=<value>
+
   Select option to collect remarks by.
-  * ``remark-name``: count how many individual remarks exist.
-  * ``arg``: count remarks based on specified arguments passed by --(r)args. The argument value must be a number.
+
+  * ``remark-name`` : count how many individual remarks exist.
+  * ``arg`` : count remarks based on specified arguments passed by --(r)args. The argument value must be a number.
 
 .. option:: --group-by=<value>
+
   group count of remarks by property.
-  * ``source``: Count will be collected per source path. Remarks with no debug location will not be counted.
-  * ``function``: Count is collected per function.
-  * ``function-with-loc``: Count is collected per function per source. Remarks with no debug location will not be counted.
-  * ``Total``: Report a count for the provided remark file.
+
+  * ``source`` : Count will be collected per source path. Remarks with no debug location will not be counted.
+  * ``function`` : Count is collected per function.
+  * ``function-with-loc`` : Count is collected per function per source. Remarks with no debug location will not be counted.
+  * ``Total`` : Report a count for the provided remark file.
 
 .. option:: --args[=arguments]
+
   If `count-by` is set to `arg` this flag can be used to collect from specified remark arguments represented as a comma separated string.
   The arguments must have a numeral value to be able to count remarks by
 
 .. option:: --rargs[=arguments]
+
   If `count-by` is set to `arg` this flag can be used to collect from specified remark arguments using regular expression.
   The arguments must have a numeral value to be able to count remarks by
 
 .. option:: --pass-name[=<string>]
+
   Filter count by pass name.
 
 .. option:: --rpass-name[=<string>]
+
   Filter count by pass name using regular expressions.
 
 .. option:: --remark-name[=<string>]
+
   Filter count by remark name.
 
 .. option:: --rremark-name[=<string>]
+
   Filter count by remark name using regular expressions.
 
 .. option:: --filter-arg-by[=<string>]
+
   Filter count by argument value.
 
 .. option:: --rfilter-arg-by[=<string>]
+
   Filter count by argument value using regular expressions.
 
 .. option:: --remark-type=<value>
+
   Filter remarks by type with the following options.
+
   * ``unknown``
   * ``passed``
   * ``missed``
@@ -210,20 +230,22 @@ compiling a **fixed source** with **differing compilers** or
 `bitstream <https://llvm.org/docs/Remarks.html#llvm-bitstream-remarks>`_
 remarks.
 
-OPTIONS
--------
+Options
+^^^^^^^
 
 .. option:: --parser=<yaml|bitstream>
 
-  Select the type of input remark parser. Required.
-  * ``yaml``: The tool will parse YAML remarks.
-  * ``bitstream``: The tool will parse bitstream remarks.
+Select the type of input remark parser. Required.
+
+* ``yaml`` : The tool will parse YAML remarks.
+* ``bitstream`` : The tool will parse bitstream remarks.
 
 .. option:: --report-style=<human|json>
 
   Output style.
-  * ``human``: Human-readable textual report. Default option.
-  * ``json``: JSON report.
+
+  * ``human`` : Human-readable textual report. Default option.
+  * ``json`` : JSON report.
 
 .. option:: --pretty
 
@@ -235,8 +257,8 @@ OPTIONS
 
   Output file for the report. Outputs to stdout by default.
 
-HUMAN-READABLE OUTPUT
----------------------
+Human-Readable Output
+^^^^^^^^^^^^^^^^^^^^^
 
 The human-readable format for :program:`llvm-remarkutil size-diff` is composed of
 two sections:
@@ -245,7 +267,7 @@ two sections:
 * A high-level summary of all changes.
 
 Changed Function Section
-~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Suppose you are comparing two remark files OLD and NEW.
 
@@ -282,7 +304,7 @@ A breakdown of the format is below:
   Second file stack byte count - first file stack byte count.
 
 Summary Section
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 :program:`llvm-remarkutil size-diff` will output a high-level summary after
 printing all changed functions.
@@ -307,10 +329,10 @@ printing all changed functions.
   file.
 
 JSON OUTPUT
------------
+^^^^^^^^^^^^
 
 High-Level view
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 Suppose we are comparing two files, OLD and NEW.
 
@@ -352,7 +374,7 @@ Suppose we are comparing two files, OLD and NEW.
   Functions only present in the second file.
 
 Function JSON
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 
 The ``InBoth``, ``OnlyInA``, and ``OnlyInB`` sections contain size information
 for each function in the input remark files.
@@ -387,7 +409,7 @@ for each function in the input remark files.
   *  ``STACK_BYTES_B``: Stack bytes in NEW.
 
 Computing Diffs From Function JSON
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Function JSON does not contain the diffs. Tools consuming JSON output from
 :program:`llvm-remarkutil size-diff` are responsible for computing the diffs
@@ -399,7 +421,7 @@ separately.
 * Stack byte count diff: ``STACK_BYTES_B - STACK_BYTES_A``
 
 EXIT STATUS
------------
+^^^^^^^^^^^
 
 :program:`llvm-remarkutil size-diff` returns 0 on success, and a non-zero value
 otherwise.

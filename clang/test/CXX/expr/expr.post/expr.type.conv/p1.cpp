@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++1z -verify %s
 
-template<typename T> struct A { // expected-note 2{{candidate}}
+template<typename T> struct A { // expected-note 2{{candidate}} expected-note 2{{implicit deduction guide}}
   T t, u;
 };
 template<typename T> A(T, T) -> A<T>; // expected-note {{deduced conflicting types for parameter 'T'}}

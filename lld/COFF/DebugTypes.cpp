@@ -465,7 +465,7 @@ static bool equalsPath(StringRef path1, StringRef path2) {
 #if defined(_WIN32)
   return path1.equals_insensitive(path2);
 #else
-  return path1.equals(path2);
+  return path1 == path2;
 #endif
 }
 

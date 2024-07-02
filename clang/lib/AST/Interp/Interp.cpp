@@ -18,6 +18,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/APSInt.h"
@@ -56,22 +57,67 @@ static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   return true;
 }
 
+static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
+                                       const ValueDecl *VD) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.FFDiag(E, diag::note_constexpr_var_init_unknown, 1) << VD;
+  S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
+}
+
+static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
+                                     const ValueDecl *VD);
+static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
+                                const ValueDecl *D) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+
+  if (isa<ParmVarDecl>(D)) {
+    if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
+      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+    } else {
+      S.FFDiag(E);
+    }
+    return false;
+  }
+
+  if (!D->getType().isConstQualified())
+    diagnoseNonConstVariable(S, OpPC, D);
+  else if (const auto *VD = dyn_cast<VarDecl>(D);
+           VD && !VD->getAnyInitializer())
+    diagnoseMissingInitializer(S, OpPC, VD);
+
+  return false;
+}
+
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD) {
   if (!S.getLangOpts().CPlusPlus)
     return;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (const auto *VarD = dyn_cast<VarDecl>(VD);
+      VarD && VarD->getType().isConstQualified() &&
+      !VarD->getAnyInitializer()) {
+    diagnoseMissingInitializer(S, OpPC, VD);
+    return;
+  }
 
-  if (VD->getType()->isIntegralOrEnumerationType())
+  // Rather random, but this is to match the diagnostic output of the current
+  // interpreter.
+  if (isa<ObjCIvarDecl>(VD))
+    return;
+
+  if (VD->getType()->isIntegralOrEnumerationType()) {
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
-  else
-    S.FFDiag(Loc,
-             S.getLangOpts().CPlusPlus11
-                 ? diag::note_constexpr_ltor_non_constexpr
-                 : diag::note_constexpr_ltor_non_integral,
-             1)
-        << VD << VD->getType();
+    S.Note(VD->getLocation(), diag::note_declared_at);
+    return;
+  }
+
+  S.FFDiag(Loc,
+           S.getLangOpts().CPlusPlus11 ? diag::note_constexpr_ltor_non_constexpr
+                                       : diag::note_constexpr_ltor_non_integral,
+           1)
+      << VD << VD->getType();
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
@@ -202,6 +248,9 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
+  if (Ptr.isInitialized())
+    return true;
+
   if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
     const auto *VD = Ptr.getDeclDesc()->asValueDecl();
     diagnoseNonConstVariable(S, OpPC, VD);
@@ -254,10 +303,12 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     if (VD->isConstexpr())
       return true;
 
-    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
-      return false;
-
     QualType T = VD->getType();
+    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
+      return (T->isSignedIntegerOrEnumerationType() ||
+              T->isUnsignedIntegerOrEnumerationType()) &&
+             T.isConstQualified();
+
     if (T.isConstQualified())
       return true;
 
@@ -270,18 +321,18 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return false;
   };
 
-  if (const auto *D = Desc->asValueDecl()) {
-    if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() && !IsConstType(VD)) {
-      diagnoseNonConstVariable(S, OpPC, VD);
-      return S.inConstantContext();
-    }
+  if (const auto *D = Desc->asVarDecl();
+      D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
+    diagnoseNonConstVariable(S, OpPC, D);
+    return S.inConstantContext();
   }
 
   return true;
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isIntegralPointer())
+    return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
 
@@ -290,7 +341,9 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isZero())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_null_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_null_subobject)
+      << CSK << S.Current->getRange(OpPC);
+
   return false;
 }
 
@@ -299,7 +352,8 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isOnePastEnd())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_past_end) << AK;
+  S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+      << AK << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -308,7 +362,8 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isElementPastEnd())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
+      << CSK << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -318,13 +373,34 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
+      << CSK << S.Current->getRange(OpPC);
+  return false;
+}
+
+bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   uint32_t Offset) {
+  uint32_t MinOffset = Ptr.getDeclDesc()->getMetadataSize();
+  uint32_t PtrOffset = Ptr.getByteOffset();
+
+  // We subtract Offset from PtrOffset. The result must be at least
+  // MinOffset.
+  if (Offset < PtrOffset && (PtrOffset - Offset) >= MinOffset)
+    return true;
+
+  const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+  QualType TargetQT = E->getType()->getPointeeType();
+  QualType MostDerivedQT = Ptr.getDeclPtr().getType();
+
+  S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
+      << MostDerivedQT << TargetQT;
+
   return false;
 }
 
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isConst())
+  if (!Ptr.isConst() || Ptr.isMutable())
     return true;
 
   // The This pointer is writable in constructors and destructors,
@@ -335,6 +411,9 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return true;
   }
 
+  if (!Ptr.isBlockPointer())
+    return false;
+
   const QualType Ty = Ptr.getType();
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
@@ -343,9 +422,14 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isMutable()) {
+  if (!Ptr.isMutable())
     return true;
-  }
+
+  // In C++14 onwards, it is permitted to read a mutable member whose
+  // lifetime began within the evaluation.
+  if (S.getLangOpts().CPlusPlus14 &&
+      Ptr.block()->getEvalID() == S.Ctx.getEvalID())
+    return true;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -364,9 +448,15 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && VD->hasGlobalStorage()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
-    S.Note(VD->getLocation(), diag::note_declared_at);
+    if (VD->getAnyInitializer()) {
+      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    } else {
+      diagnoseMissingInitializer(S, OpPC, VD);
+    }
+    return false;
   }
+
   if (!S.checkingPotentialConstantExpression()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
@@ -391,23 +481,24 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!CheckLive(S, OpPC, Ptr, AK_Read))
+bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK) {
+  if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
 
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
-  if (!CheckRange(S, OpPC, Ptr, AK_Read))
+  if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
+  if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckActive(S, OpPC, Ptr, AK_Read))
+  if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
+  if (!CheckTemporary(S, OpPC, Ptr, AK))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
@@ -417,7 +508,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
@@ -433,10 +524,12 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
     return false;
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
-    return false;
+  if (!Ptr.isDummy()) {
+    if (!CheckExtern(S, OpPC, Ptr))
+      return false;
+    if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
+      return false;
+  }
   return true;
 }
 
@@ -456,7 +549,7 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
-  if (!F->isConstexpr()) {
+  if (!F->isConstexpr() || !F->hasBody()) {
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
@@ -485,12 +578,15 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         // Don't emit anything if the function isn't defined and we're checking
         // for a constant expression. It might be defined at the point we're
         // actually calling it.
-        if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
+        bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
+        if (!DiagDecl->isDefined() && !IsExtern &&
+            S.checkingPotentialConstantExpression())
           return false;
 
-        // If the declaration is defined _and_ declared 'constexpr', the below
-        // diagnostic doesn't add anything useful.
-        if (DiagDecl->isDefined() && DiagDecl->isConstexpr())
+        // If the declaration is defined, declared 'constexpr' _and_ has a body,
+        // the below diagnostic doesn't add anything useful.
+        if (DiagDecl->isDefined() && DiagDecl->isConstexpr() &&
+            DiagDecl->hasBody())
           return false;
 
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
@@ -591,33 +687,6 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   return true;
 }
 
-static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
-                                const ValueDecl *D) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
-
-  if (isa<ParmVarDecl>(D)) {
-    if (S.getLangOpts().CPlusPlus11) {
-      S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
-      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
-    } else {
-      S.FFDiag(E);
-    }
-  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (!VD->getType().isConstQualified()) {
-      diagnoseNonConstVariable(S, OpPC, VD);
-      return false;
-    }
-
-    // const, but no initializer.
-    if (!VD->getAnyInitializer()) {
-      S.FFDiag(E, diag::note_constexpr_var_init_unknown, 1) << VD;
-      S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
-      return false;
-    }
-  }
-  return false;
-}
-
 /// We aleady know the given DeclRefExpr is invalid for some reason,
 /// now figure out why and print appropriate diagnostics.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
@@ -625,7 +694,8 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
   return diagnoseUnknownDecl(S, OpPC, D);
 }
 
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK) {
   if (!Ptr.isDummy())
     return true;
 
@@ -634,7 +704,15 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!D)
     return false;
 
-  return diagnoseUnknownDecl(S, OpPC, D);
+  if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement)
+    return diagnoseUnknownDecl(S, OpPC, D);
+
+  assert(AK == AK_Assign);
+  if (S.getLangOpts().CPlusPlus11) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_modify_global);
+  }
+  return false;
 }
 
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,

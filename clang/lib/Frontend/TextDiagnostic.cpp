@@ -145,7 +145,7 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *I,
     (void)Res;
     assert(Res == llvm::conversionOK);
     assert(OriginalBegin < Begin);
-    assert((Begin - OriginalBegin) == CharSize);
+    assert(unsigned(Begin - OriginalBegin) == CharSize);
 
     (*I) += (Begin - OriginalBegin);
 

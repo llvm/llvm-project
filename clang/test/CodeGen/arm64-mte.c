@@ -1,6 +1,6 @@
 // Test memory tagging extension intrinsics
-// RUN: %clang_cc1 -triple aarch64 -target-feature +mte -O3 -S -emit-llvm -o - %s  | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64 -DMTE -O3 -S -emit-llvm -o - %s  | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +mte -O3 -emit-llvm -o - %s  | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -DMTE -O3 -emit-llvm -o - %s  | FileCheck %s
 #include <stddef.h>
 #include <arm_acle.h>
 

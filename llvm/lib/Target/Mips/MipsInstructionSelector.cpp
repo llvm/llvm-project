@@ -184,7 +184,8 @@ MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
   const Register ValueReg = I.getOperand(0).getReg();
   const LLT Ty = MRI.getType(ValueReg);
   const unsigned TySize = Ty.getSizeInBits();
-  const unsigned MemSizeInBytes = (*I.memoperands_begin())->getSize();
+  const unsigned MemSizeInBytes =
+      (*I.memoperands_begin())->getSize().getValue();
   unsigned Opc = I.getOpcode();
   const bool isStore = Opc == TargetOpcode::G_STORE;
 
@@ -455,7 +456,8 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     }
 
     // Unaligned memory access
-    if (MMO->getAlign() < MMO->getSize() &&
+    if ((!MMO->getSize().hasValue() ||
+         MMO->getAlign() < MMO->getSize().getValue()) &&
         !STI.systemSupportsUnalignedAccess()) {
       if (MMO->getSize() != 4 || !isRegInGprb(I.getOperand(0).getReg(), MRI))
         return false;

@@ -9,7 +9,7 @@ module m
     end interface
 end module m
 !CHECK-DAG: %[[S0:.*]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
-!CHECK-DAG: fir.call @test_proc() fastmath<contract> : () -> ()
+!CHECK-DAG: fir.call @test_proc() fastmath<contract> {is_bind_c} : () -> ()
 !CHECK-DAG: fir.call @llvm.stackrestore.p0(%[[S0]]) fastmath<contract> : (!fir.ref<i8>) -> ()
 !CHECK-DAG: func.func private @test_proc() attributes {fir.bindc_name = "test_proc"}
 subroutine test

@@ -135,6 +135,40 @@ static cl::opt<unsigned>
                                "(instructions per cycle)"),
                       cl::cat(ToolOptions), cl::init(0));
 
+static cl::opt<unsigned>
+    CallLatency("call-latency", cl::Hidden,
+                cl::desc("Number of cycles to assume for a call instruction"),
+                cl::cat(ToolOptions), cl::init(100U));
+
+enum class SkipType { NONE, LACK_SCHED, PARSE_FAILURE, ANY_FAILURE };
+
+static cl::opt<enum SkipType> SkipUnsupportedInstructions(
+    "skip-unsupported-instructions",
+    cl::desc("Force analysis to continue in the presence of unsupported "
+             "instructions"),
+    cl::values(
+        clEnumValN(SkipType::NONE, "none",
+                   "Exit with an error when an instruction is unsupported for "
+                   "any reason (default)"),
+        clEnumValN(
+            SkipType::LACK_SCHED, "lack-sched",
+            "Skip instructions on input which lack scheduling information"),
+        clEnumValN(
+            SkipType::PARSE_FAILURE, "parse-failure",
+            "Skip lines on the input which fail to parse for any reason"),
+        clEnumValN(SkipType::ANY_FAILURE, "any",
+                   "Skip instructions or lines on input which are unsupported "
+                   "for any reason")),
+    cl::init(SkipType::NONE), cl::cat(ViewOptions));
+
+bool shouldSkip(enum SkipType skipType) {
+  if (SkipUnsupportedInstructions == SkipType::NONE)
+    return false;
+  if (SkipUnsupportedInstructions == SkipType::ANY_FAILURE)
+    return true;
+  return skipType == SkipUnsupportedInstructions;
+}
+
 static cl::opt<bool>
     PrintRegisterFileStats("register-file-stats",
                            cl::desc("Print register file statistics"),
@@ -435,7 +469,8 @@ int main(int argc, char **argv) {
   mca::AsmAnalysisRegionGenerator CRG(*TheTarget, SrcMgr, ACtx, *MAI, *STI,
                                       *MCII);
   Expected<const mca::AnalysisRegions &> RegionsOrErr =
-      CRG.parseAnalysisRegions(std::move(IPtemp));
+      CRG.parseAnalysisRegions(std::move(IPtemp),
+                               shouldSkip(SkipType::PARSE_FAILURE));
   if (!RegionsOrErr) {
     if (auto Err =
             handleErrors(RegionsOrErr.takeError(), [](const StringError &E) {
@@ -477,7 +512,8 @@ int main(int argc, char **argv) {
   mca::AsmInstrumentRegionGenerator IRG(*TheTarget, SrcMgr, ICtx, *MAI, *STI,
                                         *MCII, *IM);
   Expected<const mca::InstrumentRegions &> InstrumentRegionsOrErr =
-      IRG.parseInstrumentRegions(std::move(IPtemp));
+      IRG.parseInstrumentRegions(std::move(IPtemp),
+                                 shouldSkip(SkipType::PARSE_FAILURE));
   if (!InstrumentRegionsOrErr) {
     if (auto Err = handleErrors(InstrumentRegionsOrErr.takeError(),
                                 [](const StringError &E) {
@@ -537,7 +573,7 @@ int main(int argc, char **argv) {
   }
 
   // Create an instruction builder.
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, CallLatency);
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);
@@ -558,6 +594,7 @@ int main(int argc, char **argv) {
   assert(MAB && "Unable to create asm backend!");
 
   json::Object JSONOutput;
+  int NonEmptyRegions = 0;
   for (const std::unique_ptr<mca::AnalysisRegion> &Region : Regions) {
     // Skip empty code regions.
     if (Region->empty())
@@ -571,14 +608,13 @@ int main(int argc, char **argv) {
 
     IPP->resetState();
 
-    DenseMap<const MCInst *, SmallVector<mca::Instrument *>>
-        InstToInstruments;
+    DenseMap<const MCInst *, SmallVector<mca::Instrument *>> InstToInstruments;
     SmallVector<std::unique_ptr<mca::Instruction>> LoweredSequence;
+    SmallPtrSet<const MCInst *, 16> DroppedInsts;
     for (const MCInst &MCI : Insts) {
       SMLoc Loc = MCI.getLoc();
       const SmallVector<mca::Instrument *> Instruments =
           InstrumentRegions.getActiveInstruments(Loc);
-      InstToInstruments.insert({&MCI, Instruments});
 
       Expected<std::unique_ptr<mca::Instruction>> Inst =
           IB.createInstruction(MCI, Instruments);
@@ -588,7 +624,16 @@ int main(int argc, char **argv) {
                 [&IP, &STI](const mca::InstructionError<MCInst> &IE) {
                   std::string InstructionStr;
                   raw_string_ostream SS(InstructionStr);
-                  WithColor::error() << IE.Message << '\n';
+                  if (shouldSkip(SkipType::LACK_SCHED))
+                    WithColor::warning()
+                        << IE.Message
+                        << ", skipping with -skip-unsupported-instructions, "
+                           "note accuracy will be impacted:\n";
+                  else
+                    WithColor::error()
+                        << IE.Message
+                        << ", use -skip-unsupported-instructions=lack-sched to "
+                           "ignore these on the input.\n";
                   IP->printInst(&IE.Inst, 0, "", *STI, SS);
                   SS.flush();
                   WithColor::note()
@@ -597,13 +642,24 @@ int main(int argc, char **argv) {
           // Default case.
           WithColor::error() << toString(std::move(NewE));
         }
+        if (shouldSkip(SkipType::LACK_SCHED)) {
+          DroppedInsts.insert(&MCI);
+          continue;
+        }
         return 1;
       }
 
       IPP->postProcessInstruction(Inst.get(), MCI);
-
+      InstToInstruments.insert({&MCI, Instruments});
       LoweredSequence.emplace_back(std::move(Inst.get()));
     }
+
+    Insts = Region->dropInstructions(DroppedInsts);
+
+    // Skip empty regions.
+    if (Insts.empty())
+      continue;
+    NonEmptyRegions++;
 
     mca::CircularSourceMgr S(LoweredSequence,
                              PrintInstructionTables ? 1 : Iterations);
@@ -757,6 +813,11 @@ int main(int argc, char **argv) {
     }
 
     ++RegionIdx;
+  }
+
+  if (NonEmptyRegions == 0) {
+    WithColor::error() << "no assembly instructions found.\n";
+    return 1;
   }
 
   if (PrintJson)

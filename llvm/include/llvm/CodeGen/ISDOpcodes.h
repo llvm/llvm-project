@@ -83,6 +83,12 @@ enum NodeType {
   ExternalSymbol,
   BlockAddress,
 
+  /// A ptrauth constant.
+  /// ptr, key, addr-disc, disc
+  /// Note that the addr-disc can be a non-constant value, to allow representing
+  /// a constant global address signed using address-diversification, in code.
+  PtrAuthGlobalAddress,
+
   /// The address of the GOT
   GLOBAL_OFFSET_TABLE,
 
@@ -205,6 +211,7 @@ enum NodeType {
   /// CopyFromReg - This node indicates that the input value is a virtual or
   /// physical register that is defined outside of the scope of this
   /// SelectionDAG.  The register is available from the RegisterSDNode object.
+  /// Note that CopyFromReg is considered as also freezing the value.
   CopyFromReg,
 
   /// UNDEF - An undefined node.
@@ -414,6 +421,7 @@ enum NodeType {
   STRICT_FLDEXP,
   STRICT_FSIN,
   STRICT_FCOS,
+  STRICT_FTAN,
   STRICT_FEXP,
   STRICT_FEXP2,
   STRICT_FLOG,
@@ -676,6 +684,12 @@ enum NodeType {
   UMIN,
   UMAX,
 
+  /// [US]CMP - 3-way comparison of signed or unsigned integers. Returns -1, 0,
+  /// or 1 depending on whether Op0 <, ==, or > Op1. The operands can have type
+  /// different to the result.
+  SCMP,
+  UCMP,
+
   /// Bitwise operators - logical and, logical or, logical xor.
   AND,
   OR,
@@ -933,6 +947,7 @@ enum NodeType {
   FCBRT,
   FSIN,
   FCOS,
+  FTAN,
   FPOW,
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
@@ -971,10 +986,16 @@ enum NodeType {
   FMINNUM,
   FMAXNUM,
 
-  /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimum or maximum on
-  /// two values, following the IEEE-754 2008 definition. This differs from
-  /// FMINNUM/FMAXNUM in the handling of signaling NaNs. If one input is a
-  /// signaling NaN, returns a quiet NaN.
+  /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
+  /// maximumNumber on two values, following IEEE-754 definitions. This differs
+  /// from FMINNUM/FMAXNUM in the handling of signaling NaNs, and signed zero.
+  ///
+  /// If one input is a signaling NaN, returns a quiet NaN. This matches
+  /// IEEE-754 2008's minnum/maxnum behavior for signaling NaNs (which differs
+  /// from 2019).
+  ///
+  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
+  /// 2019's minimumNumber/maximumNumber.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
@@ -1394,6 +1415,16 @@ enum NodeType {
   // to glue a convergence control token to a convergent operation in the DAG,
   // which is later translated to an implicit use in the MIR.
   CONVERGENCECTRL_GLUE,
+
+  // Experimental vector histogram intrinsic
+  // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
+  // Output: Output Chain
+  EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  // llvm.clear_cache intrinsic
+  // Operands: Input Chain, Start Addres, End Address
+  // Outputs: Output Chain
+  CLEAR_CACHE,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

@@ -227,6 +227,7 @@ private:
   void initializeSymbols();
   void initializeFlags();
   void initializeDependencies();
+  void initializeECThunks();
 
   SectionChunk *
   readSection(uint32_t sectionNumber,
@@ -291,6 +292,8 @@ private:
   std::vector<SectionChunk *> guardIATChunks;
   std::vector<SectionChunk *> guardLJmpChunks;
   std::vector<SectionChunk *> guardEHContChunks;
+
+  std::vector<SectionChunk *> hybmpChunks;
 
   // This vector contains a list of all symbols defined or referenced by this
   // file. They are indexed such that you can get a Symbol by symbol

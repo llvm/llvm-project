@@ -98,9 +98,49 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
   else if (llvm::getAsUnsignedInteger(Parts[2], 0, Minor))
     return std::nullopt;
 
-  // dxil-unknown-shadermodel-hull
+  // Determine DXIL version using the minor version number of Shader
+  // Model version specified in target profile. Prior to decoupling DXIL version
+  // numbering from that of Shader Model DXIL version 1.Y corresponds to SM 6.Y.
+  // E.g., dxilv1.Y-unknown-shadermodelX.Y-hull
   llvm::Triple T;
-  T.setArch(Triple::ArchType::dxil);
+  Triple::SubArchType SubArch = llvm::Triple::NoSubArch;
+  switch (Minor) {
+  case 0:
+    SubArch = llvm::Triple::DXILSubArch_v1_0;
+    break;
+  case 1:
+    SubArch = llvm::Triple::DXILSubArch_v1_1;
+    break;
+  case 2:
+    SubArch = llvm::Triple::DXILSubArch_v1_2;
+    break;
+  case 3:
+    SubArch = llvm::Triple::DXILSubArch_v1_3;
+    break;
+  case 4:
+    SubArch = llvm::Triple::DXILSubArch_v1_4;
+    break;
+  case 5:
+    SubArch = llvm::Triple::DXILSubArch_v1_5;
+    break;
+  case 6:
+    SubArch = llvm::Triple::DXILSubArch_v1_6;
+    break;
+  case 7:
+    SubArch = llvm::Triple::DXILSubArch_v1_7;
+    break;
+  case 8:
+    SubArch = llvm::Triple::DXILSubArch_v1_8;
+    break;
+  case OfflineLibMinor:
+    // Always consider minor version x as the latest supported DXIL version
+    SubArch = llvm::Triple::LatestDXILSubArch;
+    break;
+  default:
+    // No DXIL Version corresponding to specified Shader Model version found
+    return std::nullopt;
+  }
+  T.setArch(Triple::ArchType::dxil, SubArch);
   T.setOSName(Triple::getOSTypeName(Triple::OSType::ShaderModel).str() +
               VersionTuple(Major, Minor).getAsString());
   T.setEnvironment(Kind);
@@ -218,11 +258,25 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       }
     }
     if (A->getOption().getID() == options::OPT_emit_pristine_llvm) {
-      // Translate fcgl into -S -emit-llvm and -disable-llvm-passes.
-      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));
+      // Translate -fcgl into -emit-llvm and -disable-llvm-passes.
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_emit_llvm));
       DAL->AddFlagArg(nullptr,
                       Opts.getOption(options::OPT_disable_llvm_passes));
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_hlsl_version) {
+      // Translate -HV into -std for llvm
+      // depending on the value given
+      LangStandard::Kind LangStd = LangStandard::getHLSLLangKind(A->getValue());
+      if (LangStd != LangStandard::lang_unspecified) {
+        LangStandard l = LangStandard::getLangStandardForKind(LangStd);
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            l.getName());
+      } else {
+        getDriver().Diag(diag::err_drv_invalid_value) << "HV" << A->getValue();
+      }
+
       A->claim();
       continue;
     }
@@ -240,9 +294,7 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   if (!DAL->hasArg(options::OPT_O_Group)) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O), "3");
   }
-  // FIXME: add validation for enable_16bit_types should be after HLSL 2018 and
-  // shader model 6.2.
-  // See: https://github.com/llvm/llvm-project/issues/57876
+
   return DAL;
 }
 

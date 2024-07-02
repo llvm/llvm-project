@@ -24,10 +24,10 @@
 ;; and the modifying the position of the optimised-out value in the location
 ;; list.
 
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i64 %lsr.iv, i32 %k), metadata ![[comp:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value))
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i64 %lsr.iv, i32 %l, i32 %k), metadata ![[comp2:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value))
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i64 %lsr.iv, i32 %m, i32 %l, i32 %k), metadata ![[comp3:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_shl, DW_OP_stack_value))
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i64 %lsr.iv, i32 %m, i32 %l, i32 %k), metadata ![[comp3:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_shl, DW_OP_stack_value))
+; CHECK: #dbg_value(!DIArgList(i64 %lsr.iv, i32 %k), ![[comp:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value),
+; CHECK: #dbg_value(!DIArgList(i64 %lsr.iv, i32 %l, i32 %k), ![[comp2:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value),
+; CHECK: #dbg_value(!DIArgList(i64 %lsr.iv, i32 %m, i32 %l, i32 %k), ![[comp3:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_shl, DW_OP_stack_value),
+; CHECK: #dbg_value(!DIArgList(i64 %lsr.iv, i32 %m, i32 %l, i32 %k), ![[comp3:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 4, DW_OP_div, DW_OP_consts, 4, DW_OP_mul, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_shl, DW_OP_stack_value),
 ; CHECK: ![[comp]] = !DILocalVariable(name: "comp"
 ; CHECK: ![[comp2]] = !DILocalVariable(name: "comp2"
 ; CHECK: ![[comp3]] = !DILocalVariable(name: "comp3"

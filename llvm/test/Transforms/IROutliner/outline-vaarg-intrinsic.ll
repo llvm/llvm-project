@@ -51,7 +51,7 @@ entry:
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 ; CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8
-; CHECK-NEXT:    call void @llvm.va_start(ptr [[AP]])
+; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[AP]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = va_arg ptr [[AP]], i32
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[TMP_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[V]], ptr [[AP]], i32 [[TMP0]], ptr [[C]], ptr [[TMP_LOC]])
@@ -70,7 +70,7 @@ entry:
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 ; CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8
-; CHECK-NEXT:    call void @llvm.va_start(ptr [[AP]])
+; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[AP]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = va_arg ptr [[AP]], i32
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[TMP_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[V]], ptr [[AP]], i32 [[TMP0]], ptr [[C]], ptr [[TMP_LOC]])
@@ -84,8 +84,8 @@ entry:
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
 ; CHECK:       entry_to_outline:
-; CHECK-NEXT:    call void @llvm.va_copy(ptr [[TMP0]], ptr [[TMP1]])
-; CHECK-NEXT:    call void @llvm.va_end(ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[TMP0]], ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    br label [[ENTRY_AFTER_OUTLINE_EXITSTUB:%.*]]

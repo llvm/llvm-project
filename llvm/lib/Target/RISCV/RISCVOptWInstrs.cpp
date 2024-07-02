@@ -12,15 +12,24 @@
 // extended bits aren't consumed or because the input was already sign extended
 // by an earlier instruction.
 //
-// Then it removes the -w suffix from opw instructions whenever all users are
-// dependent only on the lower word of the result of the instruction.
-// The cases handled are:
-// * addw because c.add has a larger register encoding than c.addw.
-// * addiw because it helps reduce test differences between RV32 and RV64
-//   w/o being a pessimization.
-// * mulw because c.mulw doesn't exist but c.mul does (w/ zcb)
-// * slliw because c.slliw doesn't exist and c.slli does
+// Then:
+// 1. Unless explicit disabled or the target prefers instructions with W suffix,
+//    it removes the -w suffix from opw instructions whenever all users are
+//    dependent only on the lower word of the result of the instruction.
+//    The cases handled are:
+//    * addw because c.add has a larger register encoding than c.addw.
+//    * addiw because it helps reduce test differences between RV32 and RV64
+//      w/o being a pessimization.
+//    * mulw because c.mulw doesn't exist but c.mul does (w/ zcb)
+//    * slliw because c.slliw doesn't exist and c.slli does
 //
+// 2. Or if explicit enabled or the target prefers instructions with W suffix,
+//    it adds the W suffix to the instruction whenever all users are dependent
+//    only on the lower word of the result of the instruction.
+//    The cases handled are:
+//    * add/addi/sub/mul.
+//    * slli with imm < 32.
+//    * ld/lwu.
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
@@ -60,6 +69,8 @@ public:
                          const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
   bool stripWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
+  bool appendWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
+                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -409,7 +420,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     if (!MI)
       continue;
 
-    int OpNo = MI->findRegisterDefOperandIdx(Reg);
+    int OpNo = MI->findRegisterDefOperandIdx(Reg, /*TRI=*/nullptr);
     assert(OpNo != -1 && "Couldn't find register");
 
     // If this is a sign extending operation we don't need to look any further.
@@ -672,9 +683,6 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
                                      const RISCVInstrInfo &TII,
                                      const RISCVSubtarget &ST,
                                      MachineRegisterInfo &MRI) {
-  if (DisableStripWSuffix)
-    return false;
-
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -698,6 +706,58 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
   return MadeChange;
 }
 
+bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
+                                      const RISCVInstrInfo &TII,
+                                      const RISCVSubtarget &ST,
+                                      MachineRegisterInfo &MRI) {
+  bool MadeChange = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      unsigned WOpc;
+      // TODO: Add more?
+      switch (MI.getOpcode()) {
+      default:
+        continue;
+      case RISCV::ADD:
+        WOpc = RISCV::ADDW;
+        break;
+      case RISCV::ADDI:
+        WOpc = RISCV::ADDIW;
+        break;
+      case RISCV::SUB:
+        WOpc = RISCV::SUBW;
+        break;
+      case RISCV::MUL:
+        WOpc = RISCV::MULW;
+        break;
+      case RISCV::SLLI:
+        // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits
+        if (MI.getOperand(2).getImm() >= 32)
+          continue;
+        WOpc = RISCV::SLLIW;
+        break;
+      case RISCV::LD:
+      case RISCV::LWU:
+        WOpc = RISCV::LW;
+        break;
+      }
+
+      if (hasAllWUsers(MI, ST, MRI)) {
+        LLVM_DEBUG(dbgs() << "Replacing " << MI);
+        MI.setDesc(TII.get(WOpc));
+        MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
+        MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+        MI.clearFlag(MachineInstr::MIFlag::IsExact);
+        LLVM_DEBUG(dbgs() << "     with " << MI);
+        ++NumTransformedToWInstrs;
+        MadeChange = true;
+      }
+    }
+  }
+
+  return MadeChange;
+}
+
 bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -711,7 +771,12 @@ bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
 
   bool MadeChange = false;
   MadeChange |= removeSExtWInstrs(MF, TII, ST, MRI);
-  MadeChange |= stripWSuffixes(MF, TII, ST, MRI);
+
+  if (!(DisableStripWSuffix || ST.preferWInst()))
+    MadeChange |= stripWSuffixes(MF, TII, ST, MRI);
+
+  if (ST.preferWInst())
+    MadeChange |= appendWSuffixes(MF, TII, ST, MRI);
 
   return MadeChange;
 }

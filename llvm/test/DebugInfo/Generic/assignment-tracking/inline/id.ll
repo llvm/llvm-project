@@ -16,10 +16,10 @@
 ; CHECK-LABEL: _Z3funv
 ;
 ; CHECK: store i32 5, ptr %val.i, align 4{{.*}}, !DIAssignID [[ID_0:![0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 5, metadata [[val:![0-9]+]], metadata !DIExpression(), metadata [[ID_0]], metadata ptr %val.i, metadata !DIExpression()), !dbg [[dl_inline_0:![0-9]+]]
+; CHECK-NEXT: #dbg_assign(i32 5, [[val:![0-9]+]], !DIExpression(), [[ID_0]], ptr %val.i, !DIExpression(), [[dl_inline_0:![0-9]+]]
 ;
 ; CHECK: store i32 5, ptr %val.i1, align 4{{.*}}, !DIAssignID [[ID_1:![0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 5, metadata [[val]], metadata !DIExpression(), metadata [[ID_1]], metadata ptr %val.i1, metadata !DIExpression()), !dbg [[dl_inline_1:![0-9]+]]
+; CHECK-NEXT: #dbg_assign(i32 5, [[val]], !DIExpression(), [[ID_1]], ptr %val.i1, !DIExpression(), [[dl_inline_1:![0-9]+]]
 ;
 ; CHECK-DAG: [[val]] = !DILocalVariable(name: "val",
 ; CHECK-DAG: [[dl_inline_0]] = !DILocation({{.*}}inlinedAt

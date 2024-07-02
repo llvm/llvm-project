@@ -75,6 +75,21 @@ define i32 @typedevent() nounwind "function-instrument"="xray-always" !dbg !2 {
 ; CHECK-LABEL: Lxray_sleds_start1:
 ; CHECK:       .quad {{.*}}xray_typed_event_sled_0
 
+; Verify that custom event calls are done with proper stack alignment,
+; even in leaf functions.
+@leaf_func.event_id = internal constant i32 1, align 4
+define void @leaf_func() "function-instrument"="xray-always" "frame-pointer"="none" nounwind {
+  ; CHECK-LABEL: leaf_func:
+  ; CHECK-NEXT:  .Lfunc_begin2:
+  ; CHECK:         pushq %rax
+  ; CHECK:         movl $leaf_func.event_id, %eax
+  ; CHECK-NEXT:    movl $4, %ecx
+  ; CHECK-NEXT:    .p2align 1, 0x90
+  ; CHECK-NEXT:  .Lxray_event_sled_1:
+  call void @llvm.xray.customevent(ptr @leaf_func.event_id, i64 4)
+  ret void
+}
+
 declare void @llvm.xray.customevent(ptr, i64)
 declare void @llvm.xray.typedevent(i64, ptr, i64)
 

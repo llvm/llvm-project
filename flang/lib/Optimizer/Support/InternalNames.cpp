@@ -381,6 +381,15 @@ std::string fir::NameUniquer::getTypeDescriptorBindingTableName(
   return getDerivedTypeObjectName(mangledTypeName, bindingTableSeparator);
 }
 
+std::string
+fir::NameUniquer::getComponentInitName(llvm::StringRef mangledTypeName,
+                                       llvm::StringRef componentName) {
+
+  std::string prefix =
+      getDerivedTypeObjectName(mangledTypeName, componentInitSeparator);
+  return prefix + "." + componentName.str();
+}
+
 llvm::StringRef
 fir::NameUniquer::dropTypeConversionMarkers(llvm::StringRef mangledTypeName) {
   if (mangledTypeName.ends_with(boxprocSuffix))

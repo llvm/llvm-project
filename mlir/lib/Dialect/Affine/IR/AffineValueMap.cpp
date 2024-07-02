@@ -24,6 +24,15 @@ void AffineValueMap::reset(AffineMap map, ValueRange operands,
   this->results.assign(results.begin(), results.end());
 }
 
+void AffineValueMap::composeSimplifyAndCanonicalize() {
+  AffineMap sMap = getAffineMap();
+  fullyComposeAffineMapAndOperands(&sMap, &operands);
+  // Full composition also canonicalizes and simplifies before returning. We
+  // need to canonicalize once more to drop unused operands.
+  canonicalizeMapAndOperands(&sMap, &operands);
+  this->map.reset(sMap);
+}
+
 void AffineValueMap::difference(const AffineValueMap &a,
                                 const AffineValueMap &b, AffineValueMap *res) {
   assert(a.getNumResults() == b.getNumResults() && "invalid inputs");

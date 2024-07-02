@@ -33,11 +33,11 @@ def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 // CHECK: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SEXT),
 // CHECK-NEXT: // MIs[0] DstI[dst]
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT: // MIs[0] src
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s16,
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(Test::SRegsRegClassID),
+// CHECK-NEXT: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s16,
+// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: // (sext:{ *:[i32] } SOP:{ *:[i16] }:$src)  =>  (REG_SEQUENCE:{ *:[i32] } DRegs:{ *:[i32] }, (SUBSOME_INSN:{ *:[i16] } SOP:{ *:[i16] }:$src), sub0:{ *:[i32] }, (SUBSOME_INSN:{ *:[i16] } SOP:{ *:[i16] }:$src), sub1:{ *:[i32] })
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s16,
 // CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s16,
@@ -49,8 +49,8 @@ def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::REG_SEQUENCE),
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::REG_SEQUENCE),
+// CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT: GIR_AddImm8, /*InsnID*/0, /*SubRegIndex*/1,
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
@@ -58,7 +58,8 @@ def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/3, GIMT_Encode2(Test::SRegsRegClassID),
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT: // GIR_Coverage, 0,
+// CHECK-NEXT: GIR_EraseRootFromParent_Done,
 def : Pat<(i32 (sext SOP:$src)),
           (REG_SEQUENCE DRegs, (SUBSOME_INSN SOP:$src), sub0,
                                (SUBSOME_INSN SOP:$src), sub1)>;
@@ -74,7 +75,7 @@ def : Pat<(i32 (sext SOP:$src)),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/3, GIMT_Encode2(Test::SRegsRegClassID),
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::SOME_INSN),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::SOME_INSN),
 // Make sure operands are constrained when REG_SEQUENCE isn't the root instruction.
 def : Pat<(i32 (zext SOP:$src)),
           (SOME_INSN (REG_SEQUENCE DRegs, (SUBSOME_INSN SOP:$src), sub0,

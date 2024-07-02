@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s --check-prefix=FIR
-! RUN: bbc -emit-fir -polymorphic-type -hlfir %s -o - | FileCheck %s --check-prefix=HLFIR
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefix=FIR
+! RUN: bbc -emit-fir -hlfir %s -o - | FileCheck %s --check-prefix=HLFIR
 
 subroutine test
   interface

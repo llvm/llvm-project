@@ -1,7 +1,9 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
-! RUN: bbc -fopenmp -emit-hlfir -o - %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - 2>&1 | FileCheck %s
-! RUN: bbc -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
+! REQUIRES: openmp_runtime
+
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - 2>&1 | FileCheck %s
+! RUN: bbc %openmp_flags -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-fir %openmp_flags %s -o - 2>&1 | FileCheck %s
+! RUN: bbc -emit-fir %openmp_flags -o - %s 2>&1 | FileCheck %s
 !
 ! Test that the calls to omp_lib's omp_get_num_threads and omp_set_num_threads
 ! get lowered even though their implementation is not in the omp_lib module

@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s -fexceptions -fcxx-exceptions -Wno-unevaluated-expression
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s -fexceptions -fcxx-exceptions -Wno-unevaluated-expression -fexperimental-new-constant-interpreter
 
+namespace std {
+struct type_info;
+}
+
 void f(); // expected-note {{possible target for call}}
 void f(int); // expected-note {{possible target for call}}
 
@@ -97,3 +101,59 @@ void j() noexcept(0);
 void k() noexcept(1);
 void l() noexcept(2); // expected-error {{noexcept specifier argument evaluates to 2, which cannot be narrowed to type 'bool'}}
 } // namespace P1401
+
+namespace typeid_ {
+template<bool NoexceptConstructor, bool NoexceptDestructor>
+struct Polymorphic {
+  Polymorphic() noexcept(NoexceptConstructor) {}
+  virtual ~Polymorphic() noexcept(NoexceptDestructor) {}
+};
+
+static_assert(noexcept(typeid(Polymorphic<false, false>{})));  // Not evaluated (not glvalue)
+static_assert(noexcept(typeid((Polymorphic<true, true>&&) Polymorphic<true, true>{})));
+static_assert(!noexcept(typeid((Polymorphic<false, true>&&) Polymorphic<false, true>{})));
+static_assert(!noexcept(typeid((Polymorphic<true, false>&&) Polymorphic<true, false>{})));
+static_assert(!noexcept(typeid(*&(const Polymorphic<true, true>&) Polymorphic<true, true>{})));
+static_assert(!noexcept(typeid(*&(const Polymorphic<false, true>&) Polymorphic<false, true>{})));
+static_assert(!noexcept(typeid(*&(const Polymorphic<true, false>&) Polymorphic<true, false>{})));
+
+template<bool B>
+struct X {
+  template<typename T> void f();
+};
+template<typename T>
+void f1() {
+  X<noexcept(typeid(*T{}))> dependent;
+  // `dependent` should be type-dependent because the noexcept-expression should be value-dependent
+  // (it is true if T is int*, false if T is Polymorphic<false, false>* for example)
+  dependent.f<void>();  // This should need to be `.template f` to parse as a template
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+}
+template<typename... T>
+void f2() {
+  X<noexcept(typeid(*((static_cast<Polymorphic<false, false>*>(nullptr) && ... && T{}))))> dependent;
+  // X<true> when T...[0] is a type with some operator&& which returns int*
+  // X<false> when sizeof...(T) == 0
+  dependent.f<void>();
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+}
+template<typename T>
+void f3() {
+  X<noexcept(typeid(*static_cast<T*>(nullptr)))> dependent;
+  // X<true> when T is int, X<false> when T is Polymorphic<false, false>
+  dependent.f<void>();
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+}
+template<typename T>
+void f4() {
+  X<noexcept(typeid(T))> not_dependent;
+  not_dependent.non_existent();
+  // expected-error@-1 {{no member named 'non_existent' in 'typeid_::X<true>'}}
+}
+template<typename T>
+void f5() {
+  X<noexcept(typeid(sizeof(sizeof(T))))> not_dependent;
+  not_dependent.non_existent();
+  // expected-error@-1 {{no member named 'non_existent' in 'typeid_::X<true>'}}
+}
+} // namespace typeid_

@@ -22,9 +22,8 @@ const int recurse2 = recurse1; // both-note {{declared here}}
 const int recurse1 = 1;
 int array1[recurse1];
 int array2[recurse2]; // ref-warning 2{{variable length array}} \
-                      // ref-note {{initializer of 'recurse2' is not a constant expression}} \
+                      // both-note {{initializer of 'recurse2' is not a constant expression}} \
                       // expected-warning {{variable length array}} \
-                      // expected-note {{read of non-const variable 'recurse2'}} \
                       // expected-error {{variable length array}}
 
 int NCI; // both-note {{declared here}}
@@ -39,3 +38,19 @@ struct V {
                          // both-error {{constructor cannot have a return type}}
 };
 _Static_assert(V().c[0], ""); // both-error {{is not an integral constant expression}}
+
+struct C0 {
+  template<typename U> static U Data; // both-warning {{C++14 extension}}
+  template<typename U> static const U Data<U*> = U();
+};
+const int c0_test = C0::Data<int*>;
+_Static_assert(c0_test == 0, "");
+
+
+int a = 0; // both-note {{declared here}}
+_Static_assert(a == 0, ""); // both-error {{static assertion expression is not an integral constant expression}} \
+                            // both-note {{read of non-const variable 'a' is not allowed in a constant expression}}
+
+struct SelfReference { SelfReference &r; };
+extern SelfReference self_reference_1;
+SelfReference self_reference_2 = {self_reference_1};

@@ -28,6 +28,12 @@ void initializeDXILPrepareModulePass(PassRegistry &);
 /// Pass to convert modules into DXIL-compatable modules
 ModulePass *createDXILPrepareModulePass();
 
+/// Initializer for DXIL Intrinsic Expansion
+void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
+
+/// Pass to expand intrinsic operations that lack DXIL opCodes
+ModulePass *createDXILIntrinsicExpansionLegacyPass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 

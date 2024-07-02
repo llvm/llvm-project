@@ -13,10 +13,16 @@ config.suffixes = [".c", ".cpp", ".m", ".mm", ".ll", ".test"]
 
 # Add clang substitutions.
 config.substitutions.append(
-    ("%clang_nosafestack ", config.clang + " -O0 -fno-sanitize=safe-stack ")
+    (
+        "%clang_nosafestack ",
+        config.clang + config.target_cflags + " -O0 -fno-sanitize=safe-stack ",
+    )
 )
 config.substitutions.append(
-    ("%clang_safestack ", config.clang + " -O0 -fsanitize=safe-stack ")
+    (
+        "%clang_safestack ",
+        config.clang + config.target_cflags + " -O0 -fsanitize=safe-stack ",
+    )
 )
 
 if config.lto_supported:

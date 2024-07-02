@@ -62,13 +62,13 @@ define <4 x i32> @ashr_or_mul_to_abs_vec2(<4 x i32> %X) {
   ret <4 x i32> %i2
 }
 
-define <4 x i32> @ashr_or_mul_to_abs_vec3_undef(<4 x i32> %X) {
-; CHECK-LABEL: @ashr_or_mul_to_abs_vec3_undef(
+define <4 x i32> @ashr_or_mul_to_abs_vec3_poison(<4 x i32> %X) {
+; CHECK-LABEL: @ashr_or_mul_to_abs_vec3_poison(
 ; CHECK-NEXT:    [[I2:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <4 x i32> [[I2]]
 ;
-  %i = ashr <4 x i32> %X, <i32 31, i32 undef, i32 31, i32 31>
-  %i1 = or <4 x i32> %i, <i32 1, i32 1, i32 1, i32 undef>
+  %i = ashr <4 x i32> %X, <i32 31, i32 poison, i32 31, i32 31>
+  %i1 = or <4 x i32> %i, <i32 1, i32 1, i32 1, i32 poison>
   %i2 = mul <4 x i32> %i1, %X
   ret <4 x i32> %i2
 }

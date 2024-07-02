@@ -91,25 +91,25 @@ module @func_sparse.2 {
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 2, 3, 4 )
     // CHECK-NEXT: lvl = ( 2, 3, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 1
-    // CHECK-NEXT: pos[1] : ( 0, 3, 6
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 1, 2
-    // CHECK-NEXT: pos[2] : ( 0, 4, 8, 12, 16, 20, 24
-    // CHECK-NEXT: crd[2] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 1 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 1, 2 )
+    // CHECK-NEXT: pos[2] : ( 0, 4, 8, 12, 16, 20, 24 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 2, 3, 4 )
     // CHECK-NEXT: lvl = ( 2, 3, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 1
-    // CHECK-NEXT: pos[1] : ( 0, 3, 6
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 1, 2
-    // CHECK-NEXT: pos[2] : ( 0, 4, 8, 12, 16, 20, 24
-    // CHECK-NEXT: crd[2] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 1 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 1, 2 )
+    // CHECK-NEXT: pos[2] : ( 0, 4, 8, 12, 16, 20, 24 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %sm_t : tensor<2x3x4xf64, #SparseMatrix>

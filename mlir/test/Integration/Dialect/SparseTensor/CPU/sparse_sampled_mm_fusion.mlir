@@ -211,22 +211,22 @@ module {
     // CHECK-NEXT: nse = 2
     // CHECK-NEXT: dim = ( 8, 8 )
     // CHECK-NEXT: lvl = ( 8, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 7
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2
-    // CHECK-NEXT: crd[1] : ( 0, 7
-    // CHECK-NEXT: values : ( 96, 192
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 7 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+    // CHECK-NEXT: crd[1] : ( 0, 7 )
+    // CHECK-NEXT: values : ( 96, 192 )
     // CHECK-NEXT: ----
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 2
     // CHECK-NEXT: dim = ( 8, 8 )
     // CHECK-NEXT: lvl = ( 8, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 7
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2
-    // CHECK-NEXT: crd[1] : ( 0, 7
-    // CHECK-NEXT: values : ( 96, 192
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 7 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+    // CHECK-NEXT: crd[1] : ( 0, 7 )
+    // CHECK-NEXT: values : ( 96, 192 )
     // CHECK-NEXT: ----
     //
     %v0 = vector.transfer_read %0[%c0, %c0], %d0

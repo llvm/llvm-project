@@ -45,6 +45,7 @@ liveins:
   - { reg: '$rsi', virtual-reg: '%3' }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |

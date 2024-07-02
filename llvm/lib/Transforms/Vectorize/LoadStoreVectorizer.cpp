@@ -252,7 +252,7 @@ public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
       : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getParent()->getDataLayout()), Builder(SE.getContext()) {}
+        DL(F.getDataLayout()), Builder(SE.getContext()) {}
 
   bool run();
 
@@ -892,7 +892,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     // Loads get hoisted to the location of the first load in the chain.  We may
     // also need to hoist the (transitive) operands of the loads.
     Builder.SetInsertPoint(
-        std::min_element(C.begin(), C.end(), [](const auto &A, const auto &B) {
+        llvm::min_element(C, [](const auto &A, const auto &B) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
 
@@ -944,10 +944,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     reorder(VecInst);
   } else {
     // Stores get sunk to the location of the last store in the chain.
-    Builder.SetInsertPoint(
-        std::max_element(C.begin(), C.end(), [](auto &A, auto &B) {
-          return A.Inst->comesBefore(B.Inst);
-        })->Inst);
+    Builder.SetInsertPoint(llvm::max_element(C, [](auto &A, auto &B) {
+                             return A.Inst->comesBefore(B.Inst);
+                           })->Inst);
 
     // Build the vector to store.
     Value *Vec = PoisonValue::get(VecTy);

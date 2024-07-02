@@ -52,9 +52,8 @@ void foo() {
 // CHECK-NEXT: load i8
 // CHECK-NEXT: trunc
 // CHECK-NEXT: store i1 false
-// CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[REF:%ref.tmp[0-9]+]])
 
 // CHECK: await.suspend:{{.*}}
-// CHECK-NOT: call void @llvm.lifetime.start.p0(i64 8, ptr [[REF]])
-// CHECK: call void @_ZZN4Task12promise_type15await_transformES_EN10Suspension13await_suspendESt16coroutine_handleIvE
-// CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[REF]])
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call void @llvm.coro.await.suspend.void(
+// CHECK-NEXT: %{{[0-9]+}} = call i8 @llvm.coro.suspend(

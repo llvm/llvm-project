@@ -1,20 +1,17 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // -fgpu-rdc link with output
 // RUN: rm -rf %t && mkdir %t
 // RUN: touch %t/obj1.o
 // RUN: touch %t/obj2.o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   --hip-link -o executable -fgpu-rdc --cuda-gpu-arch=gfx900 \
-// RUN:   --offload-arch=gfx906  %t/obj1.o %t/obj2.o 2>&1 | \
+// RUN:   --no-offload-new-driver --offload-arch=gfx906  %t/obj1.o %t/obj2.o 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,OUT %s
 
 // -fgpu-rdc link without output
 // RUN: touch %t/obj1.o
 // RUN: touch %t/obj2.o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --hip-link -fgpu-rdc --cuda-gpu-arch=gfx900 \
+// RUN:   --no-offload-new-driver --hip-link -fgpu-rdc --cuda-gpu-arch=gfx900 \
 // RUN:   --offload-arch=gfx906  %t/obj1.o %t/obj2.o 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NOUT %s
 
@@ -23,7 +20,7 @@
 // RUN: touch %t/obj2.o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   --hip-link -o libTest.a -fgpu-rdc --cuda-gpu-arch=gfx900 \
-// RUN:   --emit-static-lib \
+// RUN:   --no-offload-new-driver --emit-static-lib \
 // RUN:   --offload-arch=gfx906  %t/obj1.o %t/obj2.o 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,SLO %s
 
@@ -32,7 +29,7 @@
 // RUN: touch %t/obj2.o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   --hip-link -fgpu-rdc --cuda-gpu-arch=gfx900 \
-// RUN:   --emit-static-lib \
+// RUN:   --no-offload-new-driver --emit-static-lib \
 // RUN:   --offload-arch=gfx906  %t/obj1.o %t/obj2.o 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,SLNO %s
 

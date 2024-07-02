@@ -8,12 +8,10 @@
 
 // UNSUPPORTED: no-exceptions
 
-// std::uncaught_exceptions() was introduced in the dylib on Mac OS 10.12
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
-
-// However, std::uncaught_exceptions() gives the wrong answer in Mac OS 10.12
-// and 10.13, where it only gives 0 or 1. This was fixed later.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{12|13}}
+// std::uncaught_exceptions() gives the wrong answer in versions of
+// the dylib that don't contain 3a92ecc. Previously, it only returned
+// 0 or 1.
+// XFAIL: using-built-library-before-llvm-9
 
 // test uncaught_exceptions
 

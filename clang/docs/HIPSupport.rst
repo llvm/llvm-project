@@ -208,6 +208,20 @@ Host Code Compilation
 - These relocatable objects are then linked together.
 - Host code within a TU can call host functions and launch kernels from another TU.
 
+Syntax Difference with CUDA
+===========================
+
+Clang's front end, used for both CUDA and HIP programming models, shares the same parsing and semantic analysis mechanisms. This includes the resolution of overloads concerning device and host functions. While there exists a comprehensive documentation on the syntax differences between Clang and NVCC for CUDA at `Dialect Differences Between Clang and NVCC <https://llvm.org/docs/CompileCudaWithLLVM.html#dialect-differences-between-clang-and-nvcc>`_, it is important to note that these differences also apply to HIP code compilation.
+
+Predefined Macros for Differentiation
+-------------------------------------
+
+To facilitate differentiation between HIP and CUDA code, as well as between device and host compilations within HIP, Clang defines specific macros:
+
+- ``__HIP__`` : This macro is defined only when compiling HIP code. It can be used to conditionally compile code specific to HIP, enabling developers to write portable code that can be compiled for both CUDA and HIP.
+
+- ``__HIP_DEVICE_COMPILE__`` : Defined exclusively during HIP device compilation, this macro allows for conditional compilation of device-specific code. It provides a mechanism to segregate device and host code, ensuring that each can be optimized for their respective execution environments.
+
 Function Pointers Support
 =========================
 
@@ -270,3 +284,48 @@ Example Usage
       Base* basePtr = &obj;
       basePtr->virtualFunction(); // Allowed since obj is constructed in device code
    }
+
+SPIR-V Support on HIPAMD ToolChain
+==================================
+
+The HIPAMD ToolChain supports targetting
+`AMDGCN Flavoured SPIR-V <https://llvm.org/docs/SPIRVUsage.html#target-triples>`_.
+The support for SPIR-V in the ROCm and HIPAMD ToolChain is under active
+development.
+
+Compilation Process
+-------------------
+
+When compiling HIP programs with the intent of utilizing SPIR-V, the process
+diverges from the traditional compilation flow:
+
+Using ``--offload-arch=amdgcnspirv``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- **Target Triple**: The ``--offload-arch=amdgcnspirv`` flag instructs the
+  compiler to use the target triple ``spirv64-amd-amdhsa``. This approach does
+  generates generic AMDGCN SPIR-V which retains architecture specific elements
+  without hardcoding them, thus allowing for optimal target specific code to be
+  generated at run time, when the concrete target is known.
+
+- **LLVM IR Translation**: The program is compiled to LLVM Intermediate
+  Representation (IR), which is subsequently translated into SPIR-V. In the
+  future, this translation step will be replaced by direct SPIR-V emission via
+  the SPIR-V Back-end.
+
+- **Clang Offload Bundler**: The resulting SPIR-V is embedded in the Clang
+  offload bundler with the bundle ID ``hip-spirv64-amd-amdhsa--amdgcnspirv``.
+
+Mixed with Normal ``--offload-arch``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Mixing ``amdgcnspirv`` and concrete ``gfx###`` targets via ``--offload-arch``
+is not currently supported; this limitation is temporary and will be removed in
+a future release**
+
+Architecture Specific Macros
+----------------------------
+
+None of the architecture specific :doc:`AMDGPU macros <AMDGPUSupport>` are
+defined when targeting SPIR-V. An alternative, more flexible mechanism to enable
+doing per target / per feature code selection will be added in the future.

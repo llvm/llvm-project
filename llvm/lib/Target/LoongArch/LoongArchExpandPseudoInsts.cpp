@@ -80,6 +80,9 @@ private:
   bool expandLoadAddressTLSGD(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadAddressTLSDesc(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                MachineBasicBlock::iterator &NextMBBI);
 };
 
 char LoongArchPreRAExpandPseudo::ID = 0;
@@ -122,6 +125,8 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_GD:
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoLA_TLS_DESC_PC:
+    return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI);
   }
   return false;
 }
@@ -267,6 +272,52 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
                                  SecondOpcode, LoongArchII::MO_GOT_PC_LO);
 }
 
+bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  // pcalau12i $a0, %desc_pc_hi20(sym)
+  // addi.w/d  $a0, $a0, %desc_pc_lo12(sym)
+  // ld.w/d    $ra, $a0, %desc_ld(sym)
+  // jirl      $ra, $ra, %desc_ld(sym)
+  // add.d     $dst, $a0, $tp
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+  unsigned ADD = STI.is64Bit() ? LoongArch::ADD_D : LoongArch::ADD_W;
+  unsigned ADDI = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+  unsigned LD = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
+
+  Register DestReg = MI.getOperand(0).getReg();
+  Register ScratchReg =
+      MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+  MachineOperand &Symbol = MI.getOperand(1);
+
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_PC_HI);
+
+  BuildMI(MBB, MBBI, DL, TII->get(ADDI), LoongArch::R4)
+      .addReg(ScratchReg)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_PC_LO);
+
+  BuildMI(MBB, MBBI, DL, TII->get(LD), LoongArch::R1)
+      .addReg(LoongArch::R4)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_LD);
+
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PseudoDESC_CALL), LoongArch::R1)
+      .addReg(LoongArch::R1)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_CALL);
+
+  BuildMI(MBB, MBBI, DL, TII->get(ADD), DestReg)
+      .addReg(LoongArch::R4)
+      .addReg(LoongArch::R2);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 class LoongArchExpandPseudo : public MachineFunctionPass {
 public:
   const LoongArchInstrInfo *TII;
@@ -313,6 +364,9 @@ private:
   bool expandLoadAddressTLSGDLarge(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadAddressTLSDescPcLarge(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       MachineBasicBlock::iterator &NextMBBI);
   bool expandFunctionCALL(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI,
                           MachineBasicBlock::iterator &NextMBBI,
@@ -361,6 +415,8 @@ bool LoongArchExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandLoadAddressTLSLDLarge(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_GD_LARGE:
     return expandLoadAddressTLSGDLarge(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoLA_TLS_DESC_PC_LARGE:
+    return expandLoadAddressTLSDescPcLarge(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoCALL:
   case LoongArch::PseudoCALL_MEDIUM:
   case LoongArch::PseudoCALL_LARGE:
@@ -558,6 +614,58 @@ bool LoongArchExpandPseudo::expandLoadAddressTLSGDLarge(
   // of relocs, with the `pcalau12i` insn relocated with `%gd_pc_hi20`.
   return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LoongArch::ADD_D,
                                 LoongArchII::MO_GD_PC_HI);
+}
+
+bool LoongArchExpandPseudo::expandLoadAddressTLSDescPcLarge(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  //
+  // pcalau12i  $a0, %desc_pc_hi20(sym)
+  // addi.d     $t8, $zero, %desc_pc_lo12(sym)
+  // lu32i.d    $t8, %desc64_pc_lo20(sym)
+  // lu52i.d    $t8, $t8, %desc64_pc_hi12(sym)
+  // add.d      $a0, $a0, $t8
+  // ld.d       $ra, $a0, %desc_ld(sym)
+  // jirl       $ra, $ra, %desc_call(sym)
+  // add.d      $dst, $a0, $tp
+
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  Register DestReg = MI.getOperand(0).getReg();
+  MachineOperand &Symbol = MI.getOperand(2);
+  Register ScratchReg = LoongArch::R20; // $t8
+
+  assert(MBB.getParent()->getSubtarget<LoongArchSubtarget>().is64Bit() &&
+         "Large code model requires LA64");
+
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), LoongArch::R4)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_PC_HI);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ADDI_D), ScratchReg)
+      .addReg(LoongArch::R0)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_PC_LO);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU32I_D), ScratchReg)
+      .addReg(ScratchReg)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC64_PC_LO);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU52I_D), ScratchReg)
+      .addReg(ScratchReg)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC64_PC_HI);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ADD_D), LoongArch::R4)
+      .addReg(ScratchReg)
+      .addReg(LoongArch::R4);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LD_D), LoongArch::R1)
+      .addReg(LoongArch::R4)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_LD);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PseudoDESC_CALL), LoongArch::R1)
+      .addReg(LoongArch::R1)
+      .addDisp(Symbol, 0, LoongArchII::MO_DESC_CALL);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ADD_D), DestReg)
+      .addReg(LoongArch::R4)
+      .addReg(LoongArch::R2);
+
+  MI.eraseFromParent();
+
+  return true;
 }
 
 bool LoongArchExpandPseudo::expandFunctionCALL(

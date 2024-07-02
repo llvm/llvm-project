@@ -104,6 +104,13 @@ public:
   /// Returns the program. This is only needed for unittests.
   Program &getProgram() const { return *P.get(); }
 
+  unsigned collectBaseOffset(const RecordDecl *BaseDecl,
+                             const RecordDecl *DerivedDecl) const;
+
+  const Record *getRecord(const RecordDecl *D) const;
+
+  unsigned getEvalID() const { return EvalID; }
+
 private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func, APValue &Result);
@@ -114,6 +121,8 @@ private:
   InterpStack Stk;
   /// Constexpr program.
   std::unique_ptr<Program> P;
+  /// ID identifying an evaluation.
+  unsigned EvalID = 0;
 };
 
 } // namespace interp

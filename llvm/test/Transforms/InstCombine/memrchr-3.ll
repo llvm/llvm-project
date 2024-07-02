@@ -98,7 +98,7 @@ define ptr @fold_memrchr_ax_c_1(i32 %C) {
 
 define ptr @fold_memrchr_a12345_5_5() {
 ; CHECK-LABEL: @fold_memrchr_a12345_5_5(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 4)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a12345, i64 4)
 ;
 
   %ret = call ptr @memrchr(ptr @a12345, i32 5, i64 5)
@@ -122,7 +122,7 @@ define ptr @fold_memrchr_a12345_5_4() {
 
 define ptr @fold_memrchr_a12345_4_5() {
 ; CHECK-LABEL: @fold_memrchr_a12345_4_5(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 3)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a12345, i64 3)
 ;
 
   %ret = call ptr @memrchr(ptr @a12345, i32 4, i64 5)
@@ -147,7 +147,7 @@ define ptr @fold_memrchr_a12345p1_1_4() {
 
 define ptr @fold_memrchr_a12345p1_2_4() {
 ; CHECK-LABEL: @fold_memrchr_a12345p1_2_4(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a12345, i64 1)
 ;
 
   %ptr = getelementptr [5 x i8], ptr @a12345, i32 0, i32 1
@@ -160,7 +160,7 @@ define ptr @fold_memrchr_a12345p1_2_4() {
 
 define ptr @fold_memrchr_a12345_2_5() {
 ; CHECK-LABEL: @fold_memrchr_a12345_2_5(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a12345, i64 1)
 ;
 
   %ret = call ptr @memrchr(ptr @a12345, i32 2, i64 5)
@@ -185,7 +185,7 @@ define ptr @fold_memrchr_a12345_0_n(i64 %N) {
 define ptr @fold_memrchr_a12345_3_n(i64 %n) {
 ; CHECK-LABEL: @fold_memrchr_a12345_3_n(
 ; CHECK-NEXT:    [[MEMRCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CMP]], ptr null, ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 2)
+; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CMP]], ptr null, ptr getelementptr inbounds (i8, ptr @a12345, i64 2)
 ; CHECK-NEXT:    ret ptr [[MEMRCHR_SEL]]
 ;
 
@@ -199,7 +199,7 @@ define ptr @fold_memrchr_a12345_3_n(i64 %n) {
 define ptr @fold_memrchr_a12345_5_n(i64 %n) {
 ; CHECK-LABEL: @fold_memrchr_a12345_5_n(
 ; CHECK-NEXT:    [[MEMRCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 5
-; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CMP]], ptr null, ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 4)
+; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CMP]], ptr null, ptr getelementptr inbounds (i8, ptr @a12345, i64 4)
 ; CHECK-NEXT:    ret ptr [[MEMRCHR_SEL]]
 ;
 
@@ -212,7 +212,7 @@ define ptr @fold_memrchr_a12345_5_n(i64 %n) {
 
 define ptr @fold_memrchr_a123123_3_5() {
 ; CHECK-LABEL: @fold_memrchr_a123123_3_5(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([6 x i8], ptr @a123123, i64 0, i64 2)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a123123, i64 2)
 ;
 
   %ret = call ptr @memrchr(ptr @a123123, i32 3, i64 5)
@@ -224,7 +224,7 @@ define ptr @fold_memrchr_a123123_3_5() {
 
 define ptr @fold_memrchr_a123123_3_6() {
 ; CHECK-LABEL: @fold_memrchr_a123123_3_6(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([6 x i8], ptr @a123123, i64 0, i64 5)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a123123, i64 5)
 ;
 
   %ret = call ptr @memrchr(ptr @a123123, i32 3, i64 6)
@@ -235,7 +235,7 @@ define ptr @fold_memrchr_a123123_3_6() {
 
 define ptr @fold_memrchr_a123123_2_6() {
 ; CHECK-LABEL: @fold_memrchr_a123123_2_6(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([6 x i8], ptr @a123123, i64 0, i64 4)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a123123, i64 4)
 ;
 
   %ret = call ptr @memrchr(ptr @a123123, i32 2, i64 6)
@@ -246,7 +246,7 @@ define ptr @fold_memrchr_a123123_2_6() {
 
 define ptr @fold_memrchr_a123123_1_6() {
 ; CHECK-LABEL: @fold_memrchr_a123123_1_6(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([6 x i8], ptr @a123123, i64 0, i64 3)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a123123, i64 3)
 ;
 
   %ret = call ptr @memrchr(ptr @a123123, i32 1, i64 6)

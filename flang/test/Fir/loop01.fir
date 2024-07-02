@@ -1,4 +1,5 @@
 // RUN: fir-opt --split-input-file --cfg-conversion %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cfg-conversion="set-nsw=true" %s | FileCheck %s --check-prefix=NSW
 
 func.func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
   fir.do_loop %iv = %lb to %ub step %step unordered {
@@ -43,6 +44,34 @@ func.func private @f2() -> i1
 // CHECK:     }
 // CHECK:     func private @f2() -> i1
 
+// NSW:     func @x(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: i1, %[[VAL_4:.*]]: !fir.ref<index>) {
+// NSW:       %[[VAL_5:.*]] = arith.subi %[[VAL_1]], %[[VAL_0]] : index
+// NSW:       %[[VAL_6:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] : index
+// NSW:       %[[VAL_7:.*]] = arith.divsi %[[VAL_6]], %[[VAL_2]] : index
+// NSW:       br ^bb1(%[[VAL_0]], %[[VAL_7]] : index, index)
+// NSW:     ^bb1(%[[VAL_8:.*]]: index, %[[VAL_9:.*]]: index):
+// NSW:       %[[VAL_10:.*]] = arith.constant 0 : index
+// NSW:       %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_9]], %[[VAL_10]] : index
+// NSW:       cond_br %[[VAL_11]], ^bb2, ^bb6
+// NSW:     ^bb2:
+// NSW:       cond_br %[[VAL_3]], ^bb3, ^bb4
+// NSW:     ^bb3:
+// NSW:       fir.store %[[VAL_8]] to %[[VAL_4]] : !fir.ref<index>
+// NSW:       br ^bb5
+// NSW:     ^bb4:
+// NSW:       %[[VAL_12:.*]] = arith.constant 0 : index
+// NSW:       fir.store %[[VAL_12]] to %[[VAL_4]] : !fir.ref<index>
+// NSW:       br ^bb5
+// NSW:     ^bb5:
+// NSW:       %[[VAL_13:.*]] = arith.addi %[[VAL_8]], %[[VAL_2]] overflow<nsw> : index
+// NSW:       %[[VAL_14:.*]] = arith.constant 1 : index
+// NSW:       %[[VAL_15:.*]] = arith.subi %[[VAL_9]], %[[VAL_14]] : index
+// NSW:       br ^bb1(%[[VAL_13]], %[[VAL_15]] : index, index)
+// NSW:     ^bb6:
+// NSW:       return
+// NSW:     }
+// NSW:     func private @f2() -> i1
+
 // -----
 
 func.func @x2(%lo : index, %up : index, %ok : i1) {
@@ -79,6 +108,29 @@ func.func private @f3(i16)
 // CHECK:   }
 // CHECK:   func private @f3(i16)
 
+// NSW:   func @x2(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: i1) {
+// NSW:     %[[VAL_3:.*]] = arith.constant 1 : index
+// NSW:     br ^bb1(%[[VAL_0]], %[[VAL_2]] : index, i1)
+// NSW:   ^bb1(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: i1):
+// NSW:     %[[VAL_6:.*]] = arith.constant 0 : index
+// NSW:     %[[VAL_7:.*]] = arith.cmpi slt, %[[VAL_6]], %[[VAL_3]] : index
+// NSW:     %[[VAL_8:.*]] = arith.cmpi sle, %[[VAL_4]], %[[VAL_1]] : index
+// NSW:     %[[VAL_9:.*]] = arith.cmpi slt, %[[VAL_3]], %[[VAL_6]] : index
+// NSW:     %[[VAL_10:.*]] = arith.cmpi sle, %[[VAL_1]], %[[VAL_4]] : index
+// NSW:     %[[VAL_11:.*]] = arith.andi %[[VAL_7]], %[[VAL_8]] : i1
+// NSW:     %[[VAL_12:.*]] = arith.andi %[[VAL_9]], %[[VAL_10]] : i1
+// NSW:     %[[VAL_13:.*]] = arith.ori %[[VAL_11]], %[[VAL_12]] : i1
+// NSW:     %[[VAL_14:.*]] = arith.andi %[[VAL_5]], %[[VAL_13]] : i1
+// NSW:     cond_br %[[VAL_14]], ^bb2, ^bb3
+// NSW:   ^bb2:
+// NSW:     %[[VAL_15:.*]] = fir.call @f2() : () -> i1
+// NSW:     %[[VAL_16:.*]] = arith.addi %[[VAL_4]], %[[VAL_3]] overflow<nsw> : index
+// NSW:     br ^bb1(%[[VAL_16]], %[[VAL_15]] : index, i1)
+// NSW:   ^bb3:
+// NSW:     return
+// NSW:   }
+// NSW:   func private @f3(i16)
+
 // -----
 
 // do_loop with an extra loop-carried value
@@ -114,6 +166,29 @@ func.func @x3(%lo : index, %up : index) -> i1 {
 // CHECK:         ^bb3:
 // CHECK:           return %[[VAL_8]] : i1
 // CHECK:         }
+
+// NSW-LABEL:   func @x3(
+// NSW-SAME:             %[[VAL_0:.*]]: index,
+// NSW-SAME:             %[[VAL_1:.*]]: index) -> i1 {
+// NSW:           %[[VAL_2:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_3:.*]] = arith.constant true
+// NSW:           %[[VAL_4:.*]] = arith.subi %[[VAL_1]], %[[VAL_0]] : index
+// NSW:           %[[VAL_5:.*]] = arith.addi %[[VAL_4]], %[[VAL_2]] : index
+// NSW:           %[[VAL_6:.*]] = arith.divsi %[[VAL_5]], %[[VAL_2]] : index
+// NSW:           br ^bb1(%[[VAL_0]], %[[VAL_3]], %[[VAL_6]] : index, i1, index)
+// NSW:         ^bb1(%[[VAL_7:.*]]: index, %[[VAL_8:.*]]: i1, %[[VAL_9:.*]]: index):
+// NSW:           %[[VAL_10:.*]] = arith.constant 0 : index
+// NSW:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_9]], %[[VAL_10]] : index
+// NSW:           cond_br %[[VAL_11]], ^bb2, ^bb3
+// NSW:         ^bb2:
+// NSW:           %[[VAL_12:.*]] = fir.call @f2() : () -> i1
+// NSW:           %[[VAL_13:.*]] = arith.addi %[[VAL_7]], %[[VAL_2]] overflow<nsw> : index
+// NSW:           %[[VAL_14:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_15:.*]] = arith.subi %[[VAL_9]], %[[VAL_14]] : index
+// NSW:           br ^bb1(%[[VAL_13]], %[[VAL_12]], %[[VAL_15]] : index, i1, index)
+// NSW:         ^bb3:
+// NSW:           return %[[VAL_8]] : i1
+// NSW:         }
 
 // -----
 
@@ -160,6 +235,34 @@ func.func private @f4(i32) -> i1
 // CHECK:         }
 // CHECK:         func private @f4(i32) -> i1
 
+// NSW-LABEL:   func @y3(
+// NSW-SAME:             %[[VAL_0:.*]]: index,
+// NSW-SAME:             %[[VAL_1:.*]]: index) -> i1 {
+// NSW:           %[[VAL_2:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_3:.*]] = arith.constant true
+// NSW:           %[[VAL_4:.*]] = fir.call @f2() : () -> i1
+// NSW:           br ^bb1(%[[VAL_0]], %[[VAL_3]], %[[VAL_4]] : index, i1, i1)
+// NSW:         ^bb1(%[[VAL_5:.*]]: index, %[[VAL_6:.*]]: i1, %[[VAL_7:.*]]: i1):
+// NSW:           %[[VAL_8:.*]] = arith.constant 0 : index
+// NSW:           %[[VAL_9:.*]] = arith.cmpi slt, %[[VAL_8]], %[[VAL_2]] : index
+// NSW:           %[[VAL_10:.*]] = arith.cmpi sle, %[[VAL_5]], %[[VAL_1]] : index
+// NSW:           %[[VAL_11:.*]] = arith.cmpi slt, %[[VAL_2]], %[[VAL_8]] : index
+// NSW:           %[[VAL_12:.*]] = arith.cmpi sle, %[[VAL_1]], %[[VAL_5]] : index
+// NSW:           %[[VAL_13:.*]] = arith.andi %[[VAL_9]], %[[VAL_10]] : i1
+// NSW:           %[[VAL_14:.*]] = arith.andi %[[VAL_11]], %[[VAL_12]] : i1
+// NSW:           %[[VAL_15:.*]] = arith.ori %[[VAL_13]], %[[VAL_14]] : i1
+// NSW:           %[[VAL_16:.*]] = arith.andi %[[VAL_6]], %[[VAL_15]] : i1
+// NSW:           cond_br %[[VAL_16]], ^bb2, ^bb3
+// NSW:         ^bb2:
+// NSW:           %[[VAL_17:.*]] = fir.call @f2() : () -> i1
+// NSW:           %[[VAL_18:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] overflow<nsw> : index
+// NSW:           br ^bb1(%[[VAL_18]], %[[VAL_6]], %[[VAL_17]] : index, i1, i1)
+// NSW:         ^bb3:
+// NSW:           %[[VAL_19:.*]] = arith.andi %[[VAL_6]], %[[VAL_7]] : i1
+// NSW:           return %[[VAL_19]] : i1
+// NSW:         }
+// NSW:         func private @f4(i32) -> i1
+
 // -----
 
 // do_loop that returns the final value of the induction
@@ -195,6 +298,29 @@ func.func @x4(%lo : index, %up : index) -> index {
 // CHECK:         ^bb3:
 // CHECK:           return %[[VAL_6]] : index
 // CHECK:         }
+
+// NSW-LABEL:   func @x4(
+// NSW-SAME:             %[[VAL_0:.*]]: index,
+// NSW-SAME:             %[[VAL_1:.*]]: index) -> index {
+// NSW:           %[[VAL_2:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_3:.*]] = arith.subi %[[VAL_1]], %[[VAL_0]] : index
+// NSW:           %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_2]] : index
+// NSW:           %[[VAL_5:.*]] = arith.divsi %[[VAL_4]], %[[VAL_2]] : index
+// NSW:           br ^bb1(%[[VAL_0]], %[[VAL_5]] : index, index)
+// NSW:         ^bb1(%[[VAL_6:.*]]: index, %[[VAL_7:.*]]: index):
+// NSW:           %[[VAL_8:.*]] = arith.constant 0 : index
+// NSW:           %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_7]], %[[VAL_8]] : index
+// NSW:           cond_br %[[VAL_9]], ^bb2, ^bb3
+// NSW:         ^bb2:
+// NSW:           %[[VAL_10:.*]] = fir.convert %[[VAL_6]] : (index) -> i32
+// NSW:           %[[VAL_11:.*]] = fir.call @f4(%[[VAL_10]]) : (i32) -> i1
+// NSW:           %[[VAL_12:.*]] = arith.addi %[[VAL_6]], %[[VAL_2]] overflow<nsw> : index
+// NSW:           %[[VAL_13:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_14:.*]] = arith.subi %[[VAL_7]], %[[VAL_13]] : index
+// NSW:           br ^bb1(%[[VAL_12]], %[[VAL_14]] : index, index)
+// NSW:         ^bb3:
+// NSW:           return %[[VAL_6]] : index
+// NSW:         }
 
 // -----
 
@@ -236,6 +362,32 @@ func.func @y4(%lo : index, %up : index) -> index {
 // CHECK:           return %[[VAL_4]] : index
 // CHECK:         }
 
+// NSW-LABEL:   func @y4(
+// NSW-SAME:             %[[VAL_0:.*]]: index,
+// NSW-SAME:             %[[VAL_1:.*]]: index) -> index {
+// NSW:           %[[VAL_2:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_3:.*]] = arith.constant true
+// NSW:           br ^bb1(%[[VAL_0]], %[[VAL_3]] : index, i1)
+// NSW:         ^bb1(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: i1):
+// NSW:           %[[VAL_6:.*]] = arith.constant 0 : index
+// NSW:           %[[VAL_7:.*]] = arith.cmpi slt, %[[VAL_6]], %[[VAL_2]] : index
+// NSW:           %[[VAL_8:.*]] = arith.cmpi sle, %[[VAL_4]], %[[VAL_1]] : index
+// NSW:           %[[VAL_9:.*]] = arith.cmpi slt, %[[VAL_2]], %[[VAL_6]] : index
+// NSW:           %[[VAL_10:.*]] = arith.cmpi sle, %[[VAL_1]], %[[VAL_4]] : index
+// NSW:           %[[VAL_11:.*]] = arith.andi %[[VAL_7]], %[[VAL_8]] : i1
+// NSW:           %[[VAL_12:.*]] = arith.andi %[[VAL_9]], %[[VAL_10]] : i1
+// NSW:           %[[VAL_13:.*]] = arith.ori %[[VAL_11]], %[[VAL_12]] : i1
+// NSW:           %[[VAL_14:.*]] = arith.andi %[[VAL_5]], %[[VAL_13]] : i1
+// NSW:           cond_br %[[VAL_14]], ^bb2, ^bb3
+// NSW:         ^bb2:
+// NSW:           %[[VAL_15:.*]] = fir.convert %[[VAL_4]] : (index) -> i32
+// NSW:           %[[VAL_16:.*]] = fir.call @f4(%[[VAL_15]]) : (i32) -> i1
+// NSW:           %[[VAL_17:.*]] = arith.addi %[[VAL_4]], %[[VAL_2]] overflow<nsw> : index
+// NSW:           br ^bb1(%[[VAL_17]], %[[VAL_16]] : index, i1)
+// NSW:         ^bb3:
+// NSW:           return %[[VAL_4]] : index
+// NSW:         }
+
 // -----
 
 // do_loop that returns the final induction value
@@ -276,6 +428,31 @@ func.func @x5(%lo : index, %up : index) -> index {
 // CHECK:           fir.call @f3(%[[VAL_8]]) : (i16) -> ()
 // CHECK:           return %[[VAL_7]] : index
 // CHECK:         }
+
+// NSW-LABEL:   func @x5(
+// NSW-SAME:             %[[VAL_0:.*]]: index,
+// NSW-SAME:             %[[VAL_1:.*]]: index) -> index {
+// NSW:           %[[VAL_2:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_3:.*]] = arith.constant 42 : i16
+// NSW:           %[[VAL_4:.*]] = arith.subi %[[VAL_1]], %[[VAL_0]] : index
+// NSW:           %[[VAL_5:.*]] = arith.addi %[[VAL_4]], %[[VAL_2]] : index
+// NSW:           %[[VAL_6:.*]] = arith.divsi %[[VAL_5]], %[[VAL_2]] : index
+// NSW:           br ^bb1(%[[VAL_0]], %[[VAL_3]], %[[VAL_6]] : index, i16, index)
+// NSW:         ^bb1(%[[VAL_7:.*]]: index, %[[VAL_8:.*]]: i16, %[[VAL_9:.*]]: index):
+// NSW:           %[[VAL_10:.*]] = arith.constant 0 : index
+// NSW:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_9]], %[[VAL_10]] : index
+// NSW:           cond_br %[[VAL_11]], ^bb2, ^bb3
+// NSW:         ^bb2:
+// NSW:           %[[VAL_12:.*]] = fir.call @f2() : () -> i1
+// NSW:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i1) -> i16
+// NSW:           %[[VAL_14:.*]] = arith.addi %[[VAL_7]], %[[VAL_2]] overflow<nsw> : index
+// NSW:           %[[VAL_15:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_16:.*]] = arith.subi %[[VAL_9]], %[[VAL_15]] : index
+// NSW:           br ^bb1(%[[VAL_14]], %[[VAL_13]], %[[VAL_16]] : index, i16, index)
+// NSW:         ^bb3:
+// NSW:           fir.call @f3(%[[VAL_8]]) : (i16) -> ()
+// NSW:           return %[[VAL_7]] : index
+// NSW:         }
 
 // -----
 
@@ -331,3 +508,37 @@ func.func @y5(%lo : index, %up : index) -> index {
 // CHECK:           fir.call @f3(%[[VAL_7]]) : (i16) -> ()
 // CHECK:           return %[[VAL_5]] : index
 // CHECK:         }
+
+// NSW-LABEL:   func @y5(
+// NSW-SAME:             %[[VAL_0:.*]]: index,
+// NSW-SAME:             %[[VAL_1:.*]]: index) -> index {
+// NSW:           %[[VAL_2:.*]] = arith.constant 1 : index
+// NSW:           %[[VAL_3:.*]] = arith.constant 42 : i16
+// NSW:           %[[VAL_4:.*]] = arith.constant true
+// NSW:           br ^bb1(%[[VAL_0]], %[[VAL_4]], %[[VAL_3]] : index, i1, i16)
+// NSW:         ^bb1(%[[VAL_5:.*]]: index, %[[VAL_6:.*]]: i1, %[[VAL_7:.*]]: i16):
+// NSW:           %[[VAL_8:.*]] = arith.constant 0 : index
+// NSW:           %[[VAL_9:.*]] = arith.cmpi slt, %[[VAL_8]], %[[VAL_2]] : index
+// NSW:           %[[VAL_10:.*]] = arith.cmpi sle, %[[VAL_5]], %[[VAL_1]] : index
+// NSW:           %[[VAL_11:.*]] = arith.cmpi slt, %[[VAL_2]], %[[VAL_8]] : index
+// NSW:           %[[VAL_12:.*]] = arith.cmpi sle, %[[VAL_1]], %[[VAL_5]] : index
+// NSW:           %[[VAL_13:.*]] = arith.andi %[[VAL_9]], %[[VAL_10]] : i1
+// NSW:           %[[VAL_14:.*]] = arith.andi %[[VAL_11]], %[[VAL_12]] : i1
+// NSW:           %[[VAL_15:.*]] = arith.ori %[[VAL_13]], %[[VAL_14]] : i1
+// NSW:           %[[VAL_16:.*]] = arith.andi %[[VAL_6]], %[[VAL_15]] : i1
+// NSW:           cond_br %[[VAL_16]], ^bb2, ^bb3
+// NSW:         ^bb2:
+// NSW:           %[[VAL_17:.*]] = fir.call @f2() : () -> i1
+// NSW:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i1) -> i16
+// NSW:           %[[VAL_19:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] overflow<nsw> : index
+// NSW:           br ^bb1(%[[VAL_19]], %[[VAL_17]], %[[VAL_18]] : index, i1, i16)
+// NSW:         ^bb3:
+// NSW:           cond_br %[[VAL_6]], ^bb4, ^bb5
+// NSW:         ^bb4:
+// NSW:           %[[VAL_20:.*]] = arith.constant 0 : i32
+// NSW:           %[[VAL_21:.*]] = fir.call @f4(%[[VAL_20]]) : (i32) -> i1
+// NSW:           br ^bb5
+// NSW:         ^bb5:
+// NSW:           fir.call @f3(%[[VAL_7]]) : (i16) -> ()
+// NSW:           return %[[VAL_5]] : index
+// NSW:         }

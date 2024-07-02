@@ -657,7 +657,8 @@ func.func @masked_extract_contract2_scalable_reduction_dim(%arg0: vector<[2]x[3]
 //  TD sequence
 // ============================================================================
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
     } : !transform.op<"func.func">

@@ -91,5 +91,5 @@ spirv.func @pointerCodeSectionINTEL(!spirv.ptr<i1, CodeSectionINTEL>) "None"
 spirv.func @pointerDeviceOnlyINTEL(!spirv.ptr<i1, DeviceOnlyINTEL>) "None"
 
 // CHECK-OPENCL:         llvm.func @pointerHostOnlyINTEL(!llvm.ptr<6>)
-// CHECK-UNKOWN:         llvm.func @pointerHostOnlyINTEL(!llvm.ptr)
+// CHECK-UNKNOWN:        llvm.func @pointerHostOnlyINTEL(!llvm.ptr)
 spirv.func @pointerHostOnlyINTEL(!spirv.ptr<i1, HostOnlyINTEL>) "None"

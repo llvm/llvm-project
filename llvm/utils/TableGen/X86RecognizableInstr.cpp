@@ -127,6 +127,7 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   HasEVEX_KZ = Rec->getValueAsBit("hasEVEX_Z");
   HasEVEX_B = Rec->getValueAsBit("hasEVEX_B");
   HasEVEX_NF = Rec->getValueAsBit("hasEVEX_NF");
+  HasTwoConditionalOps = Rec->getValueAsBit("hasTwoConditionalOps");
   IsCodeGenOnly = Rec->getValueAsBit("isCodeGenOnly");
   IsAsmParserOnly = Rec->getValueAsBit("isAsmParserOnly");
   ForceDisassemble = Rec->getValueAsBit("ForceDisassemble");
@@ -494,6 +495,8 @@ void RecognizableInstr::emitInstructionSpecifier() {
     ++additionalOperands;
   if (HasEVEX_K)
     ++additionalOperands;
+  if (HasTwoConditionalOps)
+    additionalOperands += 2;
 #endif
 
   bool IsND = OpMap == X86Local::T_MAP4 && HasEVEX_B && HasVEX_4V;
@@ -537,6 +540,13 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(relocation)
     HANDLE_OPERAND(opcodeModifier)
     break;
+  case X86Local::MRMDestRegCC:
+    assert(numPhysicalOperands == 3 &&
+           "Unexpected number of operands for MRMDestRegCC");
+    HANDLE_OPERAND(rmRegister)
+    HANDLE_OPERAND(roRegister)
+    HANDLE_OPERAND(opcodeModifier)
+    break;
   case X86Local::MRMDestReg:
     // Operand 1 is a register operand in the R/M field.
     // - In AVX512 there may be a mask operand here -
@@ -561,6 +571,14 @@ void RecognizableInstr::emitInstructionSpecifier() {
 
     HANDLE_OPERAND(roRegister)
     HANDLE_OPTIONAL(immediate)
+    HANDLE_OPTIONAL(immediate)
+    break;
+  case X86Local::MRMDestMemCC:
+    assert(numPhysicalOperands == 3 &&
+           "Unexpected number of operands for MRMDestMemCC");
+    HANDLE_OPERAND(memory)
+    HANDLE_OPERAND(roRegister)
+    HANDLE_OPERAND(opcodeModifier)
     break;
   case X86Local::MRMDestMem4VOp3CC:
     // Operand 1 is a register operand in the Reg/Opcode field.
@@ -598,6 +616,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
       HANDLE_OPERAND(vvvvRegister)
 
     HANDLE_OPERAND(roRegister)
+    HANDLE_OPTIONAL(immediate)
     HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMSrcReg:
@@ -645,8 +664,10 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMSrcRegCC:
-    assert(numPhysicalOperands == 3 &&
+    assert(numPhysicalOperands >= 3 && numPhysicalOperands <= 4 &&
            "Unexpected number of operands for MRMSrcRegCC");
+    if (IsND)
+      HANDLE_OPERAND(vvvvRegister)
     HANDLE_OPERAND(roRegister)
     HANDLE_OPERAND(rmRegister)
     HANDLE_OPERAND(opcodeModifier)
@@ -695,8 +716,10 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMSrcMemCC:
-    assert(numPhysicalOperands == 3 &&
+    assert(numPhysicalOperands >= 3 && numPhysicalOperands <= 4 &&
            "Unexpected number of operands for MRMSrcMemCC");
+    if (IsND)
+      HANDLE_OPERAND(vvvvRegister)
     HANDLE_OPERAND(roRegister)
     HANDLE_OPERAND(memory)
     HANDLE_OPERAND(opcodeModifier)
@@ -735,6 +758,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPTIONAL(rmRegister)
     HANDLE_OPTIONAL(relocation)
     HANDLE_OPTIONAL(immediate)
+    HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMXmCC:
     assert(numPhysicalOperands == 2 &&
@@ -763,6 +787,8 @@ void RecognizableInstr::emitInstructionSpecifier() {
       HANDLE_OPERAND(writemaskRegister)
     HANDLE_OPERAND(memory)
     HANDLE_OPTIONAL(relocation)
+    HANDLE_OPTIONAL(immediate)
+    HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::RawFrmImm8:
     // operand 1 is a 16-bit immediate
@@ -863,6 +889,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     filter = std::make_unique<DumbFilter>();
     break;
   case X86Local::MRMDestReg:
+  case X86Local::MRMDestRegCC:
   case X86Local::MRMSrcReg:
   case X86Local::MRMSrcReg4VOp3:
   case X86Local::MRMSrcRegOp4:
@@ -872,6 +899,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     filter = std::make_unique<ModFilter>(true);
     break;
   case X86Local::MRMDestMem:
+  case X86Local::MRMDestMemCC:
   case X86Local::MRMDestMem4VOp3CC:
   case X86Local::MRMDestMemFSIB:
   case X86Local::MRMSrcMem:
@@ -942,6 +970,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   if (Form == X86Local::AddRegFrm || Form == X86Local::MRMSrcRegCC ||
       Form == X86Local::MRMSrcMemCC || Form == X86Local::MRMXrCC ||
       Form == X86Local::MRMXmCC || Form == X86Local::AddCCFrm ||
+      Form == X86Local::MRMDestRegCC || Form == X86Local::MRMDestMemCC ||
       Form == X86Local::MRMDestMem4VOp3CC) {
     uint8_t Count = Form == X86Local::AddRegFrm ? 8 : 16;
     assert(((opcodeToSet % Count) == 0) && "ADDREG_FRM opcode not aligned");
@@ -1032,6 +1061,7 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("i16imm_brtarget", TYPE_REL)
   TYPE("i32imm_brtarget", TYPE_REL)
   TYPE("ccode", TYPE_IMM)
+  TYPE("cflags", TYPE_IMM)
   TYPE("AVX512RC", TYPE_IMM)
   TYPE("brtarget32", TYPE_REL)
   TYPE("brtarget16", TYPE_REL)
@@ -1127,6 +1157,8 @@ RecognizableInstr::immediateEncodingFromString(const std::string &s,
   ENCODING("i64i32imm", ENCODING_ID)
   ENCODING("i64i8imm", ENCODING_IB)
   ENCODING("i8imm", ENCODING_IB)
+  ENCODING("ccode", ENCODING_CC)
+  ENCODING("cflags", ENCODING_CF)
   ENCODING("u4imm", ENCODING_IB)
   ENCODING("u8imm", ENCODING_IB)
   ENCODING("i16u8imm", ENCODING_IB)

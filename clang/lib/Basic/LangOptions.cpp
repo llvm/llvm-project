@@ -48,7 +48,7 @@ void LangOptions::resetNonModularOptions() {
 
 bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {
   for (unsigned i = 0, e = NoBuiltinFuncs.size(); i != e; ++i)
-    if (FuncName.equals(NoBuiltinFuncs[i]))
+    if (FuncName == NoBuiltinFuncs[i])
       return true;
   return false;
 }
@@ -112,6 +112,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.C11 = Std.isC11();
   Opts.C17 = Std.isC17();
   Opts.C23 = Std.isC23();
+  Opts.C2y = Std.isC2y();
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
   Opts.CPlusPlus14 = Std.isCPlusPlus14();

@@ -242,8 +242,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     }
 
     SmallVector<DbgValueInst *, 4> DbgValues;
-    SmallVector<DPValue *, 4> DPValues;
-    llvm::findDbgValues(DbgValues, I, &DPValues);
+    SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+    llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
 
     // Update pre-existing debug value uses that reside outside the loop.
     for (auto *DVI : DbgValues) {
@@ -261,8 +261,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
     // RemoveDIs: copy-paste of block above, using non-instruction debug-info
     // records.
-    for (DPValue *DPV : DPValues) {
-      BasicBlock *UserBB = DPV->getMarker()->getParent();
+    for (DbgVariableRecord *DVR : DbgVariableRecords) {
+      BasicBlock *UserBB = DVR->getMarker()->getParent();
       if (InstBB == UserBB || L->contains(UserBB))
         continue;
       // We currently only handle debug values residing in blocks that were
@@ -271,7 +271,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       Value *V = AddedPHIs.size() == 1 ? AddedPHIs[0]
                                        : SSAUpdate.FindValueForBlock(UserBB);
       if (V)
-        DPV->replaceVariableLocationOp(I, V);
+        DVR->replaceVariableLocationOp(I, V);
     }
 
     // SSAUpdater might have inserted phi-nodes inside other loops. We'll need

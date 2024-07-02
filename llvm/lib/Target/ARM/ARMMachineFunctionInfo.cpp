@@ -8,6 +8,7 @@
 
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -61,13 +62,13 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
   }
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope.equals("none"))
+  if (Scope == "none")
     return {false, false};
 
-  if (Scope.equals("all"))
+  if (Scope == "all")
     return {true, true};
 
-  assert(Scope.equals("non-leaf"));
+  assert(Scope == "non-leaf");
   return {true, false};
 }
 

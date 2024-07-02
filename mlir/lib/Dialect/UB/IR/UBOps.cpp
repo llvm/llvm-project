@@ -46,7 +46,7 @@ void UBDialect::initialize() {
 #include "mlir/Dialect/UB/IR/UBOpsAttributes.cpp.inc"
       >();
   addInterfaces<UBInlinerInterface>();
-  declarePromisedInterface<UBDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, UBDialect>();
 }
 
 Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,

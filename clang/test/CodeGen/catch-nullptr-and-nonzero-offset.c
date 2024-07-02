@@ -217,8 +217,10 @@ char *nullptr_zero(void) {
 char *nullptr_one_BAD(void) {
   // CHECK:                           define{{.*}} ptr @nullptr_one_BAD()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             br i1 false, label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           br i1 icmp eq (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 1) to i64), i64 0), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-NEXT:             %[[CMP:.*]] = icmp ne i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 1) to i64), 0, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:           %[[COND:.*]] = and i1 false, %[[CMP]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:         %[[COND:.*]] = icmp eq i1 false, %[[CMP]], !nosanitize
+  // CHECK-SANITIZE-NEXT:             br i1 %[[COND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_700]], i64 0, i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 1) to i64))
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_700]], i64 0, i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 1) to i64))
@@ -235,8 +237,10 @@ char *nullptr_one_BAD(void) {
 char *nullptr_allones_BAD(void) {
   // CHECK:                           define{{.*}} ptr @nullptr_allones_BAD()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             br i1 false, label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           br i1 icmp eq (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 -1) to i64), i64 0), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-NEXT:             %[[CMP:.*]] = icmp ne i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 -1) to i64), 0, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:           %[[COND:.*]] = and i1 false, %[[CMP]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:         %[[COND:.*]] = icmp eq i1 false, %[[CMP]], !nosanitize
+  // CHECK-SANITIZE-NEXT:             br i1 %[[COND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_800]], i64 0, i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 -1) to i64))
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_800]], i64 0, i64 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 -1) to i64))
@@ -264,9 +268,10 @@ char *one_var(unsigned long offset) {
   // CHECK-SANITIZE-NEXT:               %[[OR_OV:.+]] = or i1 %[[COMPUTED_OFFSET_OVERFLOWED]], false, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 1, %[[COMPUTED_OFFSET]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[OTHER_IS_NOT_NULL:.*]] = icmp ne ptr inttoptr (i64 1 to ptr), null
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
-  // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 %[[OTHER_IS_NOT_NULL]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 %[[OTHER_IS_NOT_NULL]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[OR_OV]], true, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], 1, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
@@ -287,7 +292,9 @@ char *one_var(unsigned long offset) {
 char *one_zero(void) {
   // CHECK:                             define{{.*}} ptr @one_zero()
   // CHECK-NEXT:                        [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:               br i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               %[[CMP:.*]] = icmp ne ptr inttoptr (i64 1 to ptr), null
+  // CHECK-SANITIZE-C-NEXT:               %[[AND:.*]] = and i1 %[[CMP]], true
+  // CHECK-SANITIZE-C-NEXT:               br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-C:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-C-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1000]], i64 1, i64 1)
   // CHECK-SANITIZE-RECOVER-C-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_1000]], i64 1, i64 1)
@@ -304,9 +311,11 @@ char *one_zero(void) {
 char *one_one_OK(void) {
   // CHECK:                           define{{.*}} ptr @one_one_OK()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1), i64 0), !nosanitize
-  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP1:.*]] = icmp ne ptr inttoptr (i64 1 to ptr), null, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP2:.*]] = icmp ne i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1), 0, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[COND:.*]] = and i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:           %[[COND:.*]] = icmp eq i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               br i1 %[[COND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1100]], i64 1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1))
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_1100]], i64 1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1))
@@ -323,9 +332,11 @@ char *one_one_OK(void) {
 char *one_allones_BAD(void) {
   // CHECK:                           define{{.*}} ptr @one_allones_BAD()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1), i64 0), !nosanitize
-  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP1:.*]] = icmp ne ptr inttoptr (i64 1 to ptr), null, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP2:.*]] = icmp ne i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1), 0, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[COND:.*]] = and i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:           %[[COND:.*]] = icmp eq i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               br i1 %[[COND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1200]], i64 1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1))
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_1200]], i64 1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1))
@@ -353,9 +364,10 @@ char *allones_var(unsigned long offset) {
   // CHECK-SANITIZE-NEXT:               %[[OR_OV:.+]] = or i1 %[[COMPUTED_OFFSET_OVERFLOWED]], false, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 -1, %[[COMPUTED_OFFSET]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[OTHER_IS_NOT_NULL:.*]] = icmp ne ptr inttoptr (i64 -1 to ptr), null, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
-  // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 %[[OTHER_IS_NOT_NULL]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 %[[OTHER_IS_NOT_NULL]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[OR_OV]], true, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], -1, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
@@ -376,7 +388,9 @@ char *allones_var(unsigned long offset) {
 char *allones_zero_OK(void) {
   // CHECK:                             define{{.*}} ptr @allones_zero_OK()
   // CHECK-NEXT:                        [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:               br i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               %[[CMP:.*]] = icmp ne ptr inttoptr (i64 -1 to ptr), null, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               %[[AND:.*]] = and i1 %[[CMP]], true, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-C:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-C-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1400]], i64 -1, i64 -1)
   // CHECK-SANITIZE-RECOVER-C-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_1400]], i64 -1, i64 -1)
@@ -393,9 +407,11 @@ char *allones_zero_OK(void) {
 char *allones_one_BAD(void) {
   // CHECK: define{{.*}} ptr @allones_one_BAD()
   // CHECK-NEXT: [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1), i64 0), !nosanitize
-  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 -1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP1:.*]] = icmp ne ptr inttoptr (i64 -1 to ptr), null, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP2:.*]] = icmp ne i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1), 0, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[COND:.*]] = and i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:           %[[COND:.*]] = icmp eq i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               br i1 %[[COND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1500]], i64 -1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1))
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_1500]], i64 -1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1))
@@ -412,9 +428,11 @@ char *allones_one_BAD(void) {
 char *allones_allones_OK(void) {
   // CHECK: define{{.*}} ptr @allones_allones_OK()
   // CHECK-NEXT: [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1), i64 0), !nosanitize
-  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 -1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP1:.*]] = icmp ne ptr inttoptr (i64 -1 to ptr), null, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[CMP2:.*]] = icmp ne i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1), 0, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[COND:.*]] = and i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:           %[[COND:.*]] = icmp eq i1 %[[CMP1]], %[[CMP2]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               br i1 %[[COND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1600]], i64 -1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1))
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(ptr @[[LINE_1600]], i64 -1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1))

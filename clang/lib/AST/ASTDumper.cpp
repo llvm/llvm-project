@@ -17,7 +17,6 @@
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/JSONNodeDumper.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -343,8 +342,7 @@ LLVM_DUMP_METHOD void APValue::dump() const {
 
 LLVM_DUMP_METHOD void APValue::dump(raw_ostream &OS,
                                     const ASTContext &Context) const {
-  ASTDumper Dumper(llvm::errs(), Context,
-                   Context.getDiagnostics().getShowColors());
+  ASTDumper Dumper(OS, Context, Context.getDiagnostics().getShowColors());
   Dumper.Visit(*this, /*Ty=*/Context.getPointerType(Context.CharTy));
 }
 
@@ -360,4 +358,38 @@ LLVM_DUMP_METHOD void ConceptReference::dump(raw_ostream &OS) const {
   auto &Ctx = getNamedConcept()->getASTContext();
   ASTDumper P(OS, Ctx, Ctx.getDiagnostics().getShowColors());
   P.Visit(this);
+}
+
+//===----------------------------------------------------------------------===//
+// TemplateName method implementations
+//===----------------------------------------------------------------------===//
+
+// FIXME: These are actually using the TemplateArgument dumper, through
+// an implicit conversion. The dump will claim this is a template argument,
+// which is misleading.
+
+LLVM_DUMP_METHOD void TemplateName::dump() const {
+  ASTDumper Dumper(llvm::errs(), /*ShowColors=*/false);
+  Dumper.Visit(*this);
+}
+
+LLVM_DUMP_METHOD void TemplateName::dump(llvm::raw_ostream &OS,
+                                         const ASTContext &Context) const {
+  ASTDumper Dumper(OS, Context, Context.getDiagnostics().getShowColors());
+  Dumper.Visit(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// TemplateArgument method implementations
+//===----------------------------------------------------------------------===//
+
+LLVM_DUMP_METHOD void TemplateArgument::dump() const {
+  ASTDumper Dumper(llvm::errs(), /*ShowColors=*/false);
+  Dumper.Visit(*this);
+}
+
+LLVM_DUMP_METHOD void TemplateArgument::dump(llvm::raw_ostream &OS,
+                                             const ASTContext &Context) const {
+  ASTDumper Dumper(OS, Context, Context.getDiagnostics().getShowColors());
+  Dumper.Visit(*this);
 }

@@ -29,9 +29,10 @@ public:
   ///
   /// \param InputBuffer JSON input data.
   /// \param Destination Container to load headers into.
+  /// \param FM Optional File Manager to validate input files exist.
   static llvm::Error
   loadHeaders(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
-              HeaderSeq &Destination);
+              HeaderSeq &Destination, clang::FileManager *FM = nullptr);
 
   FileListReader() = delete;
 };

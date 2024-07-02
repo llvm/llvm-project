@@ -1,13 +1,13 @@
-// RUN: %check_clang_tidy -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- \
 // RUN:     -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.IgnoreSingleElementAggregates: false}}" \
 // RUN:     -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=POD -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -check-suffixes=POD -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.RestrictToPODTypes: true}}" \
 // RUN:     -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=,MACROS -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -check-suffixes=,MACROS -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.IgnoreMacros: false}}" \
 // RUN:     -- -fno-delayed-template-parsing
 

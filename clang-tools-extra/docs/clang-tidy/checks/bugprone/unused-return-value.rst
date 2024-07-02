@@ -5,6 +5,8 @@ bugprone-unused-return-value
 
 Warns on unused function return values. The checked functions can be configured.
 
+Operator overloading with assignment semantics are ignored.
+
 Options
 -------
 
@@ -14,22 +16,23 @@ Options
    This parameter supports regexp. The function is checked if the name
    and scope matches, with any arguments.
    By default the following functions are checked:
-   ``std::async, std::launder, std::remove, std::remove_if, std::unique,
-   std::unique_ptr::release, std::basic_string::empty, std::vector::empty,
-   std::back_inserter, std::distance, std::find, std::find_if, std::inserter,
-   std::lower_bound, std::make_pair, std::map::count, std::map::find,
-   std::map::lower_bound, std::multimap::equal_range,
-   std::multimap::upper_bound, std::set::count, std::set::find, std::setfill,
-   std::setprecision, std::setw, std::upper_bound, std::vector::at,
-   bsearch, ferror, feof, isalnum, isalpha, isblank, iscntrl, isdigit, isgraph,
-   islower, isprint, ispunct, isspace, isupper, iswalnum, iswprint, iswspace,
-   isxdigit, memchr, memcmp, strcmp, strcoll, strncmp, strpbrk, strrchr,
-   strspn, strstr, wcscmp, access, bind, connect, difftime, dlsym, fnmatch,
-   getaddrinfo, getopt, htonl, htons, iconv_open, inet_addr, isascii, isatty,
-   mmap, newlocale, openat, pathconf, pthread_equal, pthread_getspecific,
-   pthread_mutex_trylock, readdir, readlink, recvmsg, regexec, scandir,
-   semget, setjmp, shm_open, shmget, sigismember, strcasecmp, strsignal,
-   ttyname``
+   ``::std::async$, ::std::launder$, ::std::remove$, ::std::remove_if$, ::std::unique$,
+   ::std::unique_ptr::release$, ::std::basic_string::empty$, ::std::vector::empty$,
+   ::std::back_inserter$, ::std::distance$, ::std::find$, ::std::find_if$, ::std::inserter$,
+   ::std::lower_bound$, ::std::make_pair$, ::std::map::count$, ::std::map::find$,
+   ::std::map::lower_bound$, ::std::multimap::equal_range$, ::std::multimap::upper_bound$,
+   ::std::set::count$, ::std::set::find$, ::std::setfill$, ::std::setprecision$,
+   ::std::setw$, ::std::upper_bound$, ::std::vector::at$, ::bsearch$, ::ferror$,
+   ::feof$, ::isalnum$, ::isalpha$, ::isblank$, ::iscntrl$, ::isdigit$, ::isgraph$,
+   ::islower$, ::isprint$, ::ispunct$, ::isspace$, ::isupper$, ::iswalnum$, ::iswprint$,
+   ::iswspace$, ::isxdigit$, ::memchr$, ::memcmp$, ::strcmp$, ::strcoll$, ::strncmp$,
+   ::strpbrk$, ::strrchr$, ::strspn$, ::strstr$, ::wcscmp$, ::access$, ::bind$,
+   ::connect$, ::difftime$, ::dlsym$, ::fnmatch$, ::getaddrinfo$, ::getopt$,
+   ::htonl$, ::htons$, ::iconv_open$, ::inet_addr$, isascii$, isatty$, ::mmap$,
+   ::newlocale$, ::openat$, ::pathconf$, ::pthread_equal$, ::pthread_getspecific$,
+   ::pthread_mutex_trylock$, ::readdir$, ::readlink$, ::recvmsg$, ::regexec$, ::scandir$,
+   ::semget$, ::setjmp$, ::shm_open$, ::shmget$, ::sigismember$, ::strcasecmp$, ::strsignal$,
+   ::ttyname$``
 
    - ``std::async()``. Not using the return value makes the call synchronous.
    - ``std::launder()``. Not using the return value usually means that the

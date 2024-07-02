@@ -140,7 +140,8 @@ bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
   if (!hasNoImmOrEqual(MI, AMDGPU::OpName::src0_modifiers, 0, Mask) ||
       !hasNoImmOrEqual(MI, AMDGPU::OpName::src1_modifiers, 0, Mask) ||
       !hasNoImmOrEqual(MI, AMDGPU::OpName::clamp, 0) ||
-      !hasNoImmOrEqual(MI, AMDGPU::OpName::omod, 0)) {
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::omod, 0) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::byte_sel, 0)) {
     LLVM_DEBUG(dbgs() << "  Inst has non-default modifiers\n");
     return false;
   }
@@ -408,6 +409,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       auto *NegHiOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::neg_hi);
       if (NegHiOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::neg_hi)) {
         DPPInst.addImm(NegHiOpr->getImm());
+      }
+      auto *ByteSelOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::byte_sel);
+      if (ByteSelOpr &&
+          AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::byte_sel)) {
+        DPPInst.addImm(ByteSelOpr->getImm());
       }
     }
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl));

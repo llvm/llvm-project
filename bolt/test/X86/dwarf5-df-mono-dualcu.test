@@ -13,7 +13,7 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-MAIN %s
 
-; Testing dwarf5 mix of split dwarf and monolithic CUs.
+;; Testing dwarf5 mix of split dwarf and monolithic CUs.
 
 ; PRE-BOLT: version = 0x0005
 ; PRE-BOLT: DW_TAG_skeleton_unit

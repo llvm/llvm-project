@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test that breakpoint by symbol name works correctly with dynamic libs.
 """
 

@@ -263,6 +263,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  remove
+  SRCS
+    remove.cpp
+  HDRS
+    ../remove.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
   stdin
   SRCS
     stdin.cpp

@@ -37,7 +37,7 @@ Value clampFloatHelper(Location loc, Value arg, Value min, Value max,
 // Takes the parameters for a clamp and turns it into a series of ops for
 // integer inputs.
 Value clampIntHelper(Location loc, Value arg, Value min, Value max,
-                     OpBuilder &rewriter);
+                     OpBuilder &rewriter, bool isUnsigned);
 
 // Determines whether the integer value falls witin the range of integer type.
 bool validIntegerRange(IntegerType ty, int64_t value);

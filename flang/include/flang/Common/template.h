@@ -9,12 +9,12 @@
 #ifndef FORTRAN_COMMON_TEMPLATE_H_
 #define FORTRAN_COMMON_TEMPLATE_H_
 
+#include "variant.h"
 #include "flang/Common/idioms.h"
 #include <functional>
 #include <optional>
 #include <tuple>
 #include <type_traits>
-#include <variant>
 #include <vector>
 
 // Utility templates for metaprogramming and for composing the

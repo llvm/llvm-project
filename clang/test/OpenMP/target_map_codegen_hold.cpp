@@ -245,7 +245,7 @@ void ST::test_present_members() {
 // CHECK-USE-PPC64LE-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [7 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-USE-PPC64LE-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [7 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-USE-PPC64LE-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-USE-PPC64LE-NEXT:    store i32 2, ptr [[TMP37]], align 4
+// CHECK-USE-PPC64LE-NEXT:    store i32 3, ptr [[TMP37]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-USE-PPC64LE-NEXT:    store i32 7, ptr [[TMP38]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -286,7 +286,7 @@ void ST::test_present_members() {
 // CHECK-USE-PPC64LE-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK-USE-PPC64LE-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK-USE-PPC64LE-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 0
-// CHECK-USE-PPC64LE-NEXT:    store i32 2, ptr [[TMP57]], align 4
+// CHECK-USE-PPC64LE-NEXT:    store i32 3, ptr [[TMP57]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 1
 // CHECK-USE-PPC64LE-NEXT:    store i32 1, ptr [[TMP58]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 2
@@ -410,7 +410,7 @@ void ST::test_present_members() {
 // CHECK-USE-PPC64LE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-USE-PPC64LE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-USE-PPC64LE-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-USE-PPC64LE-NEXT:    store i32 2, ptr [[TMP18]], align 4
+// CHECK-USE-PPC64LE-NEXT:    store i32 3, ptr [[TMP18]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-USE-PPC64LE-NEXT:    store i32 3, ptr [[TMP19]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -546,7 +546,7 @@ void ST::test_present_members() {
 // CHECK-USE-I386-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [7 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-USE-I386-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [7 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-USE-I386-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-USE-I386-NEXT:    store i32 2, ptr [[TMP37]], align 4
+// CHECK-USE-I386-NEXT:    store i32 3, ptr [[TMP37]], align 4
 // CHECK-USE-I386-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-USE-I386-NEXT:    store i32 7, ptr [[TMP38]], align 4
 // CHECK-USE-I386-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -587,7 +587,7 @@ void ST::test_present_members() {
 // CHECK-USE-I386-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK-USE-I386-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK-USE-I386-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 0
-// CHECK-USE-I386-NEXT:    store i32 2, ptr [[TMP57]], align 4
+// CHECK-USE-I386-NEXT:    store i32 3, ptr [[TMP57]], align 4
 // CHECK-USE-I386-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 1
 // CHECK-USE-I386-NEXT:    store i32 1, ptr [[TMP58]], align 4
 // CHECK-USE-I386-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 2
@@ -711,7 +711,7 @@ void ST::test_present_members() {
 // CHECK-USE-I386-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-USE-I386-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-USE-I386-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-USE-I386-NEXT:    store i32 2, ptr [[TMP18]], align 4
+// CHECK-USE-I386-NEXT:    store i32 3, ptr [[TMP18]], align 4
 // CHECK-USE-I386-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-USE-I386-NEXT:    store i32 3, ptr [[TMP19]], align 4
 // CHECK-USE-I386-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -847,7 +847,7 @@ void ST::test_present_members() {
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [7 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [7 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-NOUSE-PPC64LE-NEXT:    store i32 2, ptr [[TMP37]], align 4
+// CHECK-NOUSE-PPC64LE-NEXT:    store i32 3, ptr [[TMP37]], align 4
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-NOUSE-PPC64LE-NEXT:    store i32 7, ptr [[TMP38]], align 4
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -888,7 +888,7 @@ void ST::test_present_members() {
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 0
-// CHECK-NOUSE-PPC64LE-NEXT:    store i32 2, ptr [[TMP57]], align 4
+// CHECK-NOUSE-PPC64LE-NEXT:    store i32 3, ptr [[TMP57]], align 4
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 1
 // CHECK-NOUSE-PPC64LE-NEXT:    store i32 1, ptr [[TMP58]], align 4
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 2
@@ -978,7 +978,7 @@ void ST::test_present_members() {
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-NOUSE-PPC64LE-NEXT:    store i32 2, ptr [[TMP18]], align 4
+// CHECK-NOUSE-PPC64LE-NEXT:    store i32 3, ptr [[TMP18]], align 4
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-NOUSE-PPC64LE-NEXT:    store i32 3, ptr [[TMP19]], align 4
 // CHECK-NOUSE-PPC64LE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1103,7 +1103,7 @@ void ST::test_present_members() {
 // CHECK-NOUSE-I386-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [7 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NOUSE-I386-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [7 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-NOUSE-I386-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-NOUSE-I386-NEXT:    store i32 2, ptr [[TMP37]], align 4
+// CHECK-NOUSE-I386-NEXT:    store i32 3, ptr [[TMP37]], align 4
 // CHECK-NOUSE-I386-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-NOUSE-I386-NEXT:    store i32 7, ptr [[TMP38]], align 4
 // CHECK-NOUSE-I386-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1144,7 +1144,7 @@ void ST::test_present_members() {
 // CHECK-NOUSE-I386-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK-NOUSE-I386-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK-NOUSE-I386-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 0
-// CHECK-NOUSE-I386-NEXT:    store i32 2, ptr [[TMP57]], align 4
+// CHECK-NOUSE-I386-NEXT:    store i32 3, ptr [[TMP57]], align 4
 // CHECK-NOUSE-I386-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 1
 // CHECK-NOUSE-I386-NEXT:    store i32 1, ptr [[TMP58]], align 4
 // CHECK-NOUSE-I386-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS6]], i32 0, i32 2
@@ -1234,7 +1234,7 @@ void ST::test_present_members() {
 // CHECK-NOUSE-I386-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NOUSE-I386-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-NOUSE-I386-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-NOUSE-I386-NEXT:    store i32 2, ptr [[TMP18]], align 4
+// CHECK-NOUSE-I386-NEXT:    store i32 3, ptr [[TMP18]], align 4
 // CHECK-NOUSE-I386-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-NOUSE-I386-NEXT:    store i32 3, ptr [[TMP19]], align 4
 // CHECK-NOUSE-I386-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2

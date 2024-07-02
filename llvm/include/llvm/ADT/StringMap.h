@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/AllocatorBase.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <initializer_list>
 #include <iterator>
@@ -54,6 +53,7 @@ protected:
   }
 
   StringMapImpl(unsigned InitSize, unsigned ItemSize);
+  ~StringMapImpl() { free(TheTable); }
   unsigned RehashTable(unsigned BucketNo = 0);
 
   /// LookupBucketFor - Look up the bucket that the specified string should end
@@ -204,7 +204,6 @@ public:
         }
       }
     }
-    free(TheTable);
   }
 
   using AllocTy::getAllocator;
@@ -292,8 +291,10 @@ public:
       if (FindInRHS == RHS.end())
         return false;
 
-      if (!(KeyValue.getValue() == FindInRHS->getValue()))
-        return false;
+      if constexpr (!std::is_same_v<ValueTy, std::nullopt_t>) {
+        if (!(KeyValue.getValue() == FindInRHS->getValue()))
+          return false;
+      }
     }
 
     return true;

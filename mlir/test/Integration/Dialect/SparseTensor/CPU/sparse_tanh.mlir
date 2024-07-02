@@ -77,9 +77,9 @@ module {
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 9
-    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31
-    // CHECK-NEXT: values : ({{ -0.761[0-9]*, 0.761[0-9]*, 0.96[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 1}}
+    // CHECK-NEXT: pos[0] : ( 0, 9 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31 )
+    // CHECK-NEXT: values : ({{ -0.761[0-9]*, 0.761[0-9]*, 0.96[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 0.99[0-9]*, 1}} )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %0 : tensor<?xf64, #SparseVector>

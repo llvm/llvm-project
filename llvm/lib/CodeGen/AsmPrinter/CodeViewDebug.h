@@ -220,7 +220,7 @@ private:
   // DIGlobalVariableExpression referencing the DIGlobalVariable.
   DenseMap<const DIGlobalVariable *, uint64_t> CVGlobalVariableOffsets;
 
-  // Map used to seperate variables according to the lexical scope they belong
+  // Map used to separate variables according to the lexical scope they belong
   // in.  This is populated by recordLocalVariable() before
   // collectLexicalBlocks() separates the variables between the FunctionInfo
   // and LexicalBlocks.
@@ -516,8 +516,6 @@ public:
   CodeViewDebug(AsmPrinter *AP);
 
   void beginModule(Module *M) override;
-
-  void setSymbolSize(const MCSymbol *, uint64_t) override {}
 
   /// Emit the COFF section that holds the line table information.
   void endModule() override;

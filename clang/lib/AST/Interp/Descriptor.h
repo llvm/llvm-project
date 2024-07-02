@@ -47,6 +47,18 @@ using BlockMoveFn = void (*)(Block *Storage, const std::byte *SrcFieldPtr,
                              std::byte *DstFieldPtr,
                              const Descriptor *FieldDesc);
 
+enum class GlobalInitState {
+  Initialized,
+  NoInitializer,
+  InitializerFailed,
+};
+
+/// Descriptor used for global variables.
+struct alignas(void *) GlobalInlineDescriptor {
+  GlobalInitState InitState = GlobalInitState::InitializerFailed;
+};
+static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
+
 /// Inline descriptor embedded in structures and arrays.
 ///
 /// Such descriptors precede all composite array elements and structure fields.
@@ -82,7 +94,11 @@ struct InlineDescriptor {
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false), Desc(D) {}
+
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
 };
+static_assert(sizeof(GlobalInlineDescriptor) != sizeof(InlineDescriptor), "");
 
 /// Describes a memory block created by an allocation site.
 struct Descriptor final {
@@ -107,11 +123,16 @@ public:
 
   using MetadataSize = std::optional<unsigned>;
   static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
+  static constexpr MetadataSize GlobalMD = sizeof(GlobalInlineDescriptor);
 
   /// Pointer to the record, if block contains records.
   const Record *const ElemRecord = nullptr;
   /// Descriptor of the array element.
   const Descriptor *const ElemDesc = nullptr;
+  /// The primitive type this descriptor was created for,
+  /// or the primitive element type in case this is
+  /// a primitive array.
+  const std::optional<PrimType> PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -121,7 +142,7 @@ public:
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
   /// Flag indicating if this is a dummy descriptor.
-  const bool IsDummy = false;
+  bool IsDummy = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
@@ -152,7 +173,11 @@ public:
   Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable);
 
-  Descriptor(const DeclTy &D, MetadataSize MD);
+  /// Allocates a dummy descriptor.
+  Descriptor(const DeclTy &D);
+
+  /// Make this descriptor a dummy descriptor.
+  void makeDummy() { IsDummy = true; }
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -160,6 +185,7 @@ public:
 
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
   const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {
     return dyn_cast_if_present<ValueDecl>(asDecl());
@@ -181,6 +207,11 @@ public:
   unsigned getSize() const {
     assert(!isUnknownSizeArray() && "Array of unknown size");
     return Size;
+  }
+
+  PrimType getPrimType() const {
+    assert(isPrimitiveArray() || isPrimitive());
+    return *PrimT;
   }
 
   /// Returns the allocated size, including metadata.

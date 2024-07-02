@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows -S -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
 // Inline builtin are not supported for odr linkage
 // CHECK-NOT: .inline
 

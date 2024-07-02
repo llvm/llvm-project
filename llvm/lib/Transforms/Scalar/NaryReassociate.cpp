@@ -205,7 +205,7 @@ bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
   SE = SE_;
   TLI = TLI_;
   TTI = TTI_;
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   bool Changed = false, ChangedInThisIteration;
   do {
@@ -519,6 +519,7 @@ Instruction *NaryReassociatePass::tryReassociatedBinaryOp(const SCEV *LHSExpr,
   default:
     llvm_unreachable("Unexpected instruction.");
   }
+  NewI->setDebugLoc(I->getDebugLoc());
   NewI->takeName(I);
   return NewI;
 }

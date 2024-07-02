@@ -117,7 +117,7 @@ public:
       return;
     uint64_t Elts = 0;
     if (const ConstantArrayType *CArrTy = dyn_cast<ConstantArrayType>(ArrTy))
-      Elts = CArrTy->getSize().getZExtValue();
+      Elts = CArrTy->getZExtSize();
     if (Elts == 0)
       return;
     const RecordType *RT = ArrTy->getElementType()->getAs<RecordType>();

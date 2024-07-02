@@ -66,6 +66,7 @@ registers:
 liveins:         
   - { reg: '$edi', virtual-reg: '%0' }
 frameInfo:       
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0.entry:

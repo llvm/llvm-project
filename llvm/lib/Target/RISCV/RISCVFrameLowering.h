@@ -88,6 +88,9 @@ private:
   void adjustStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          int64_t Amount, MachineInstr::MIFlag Flag) const;
+  void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MI,
+                                   bool HasFP) const;
   std::pair<int64_t, Align>
   assignRVVStackObjectOffsets(MachineFunction &MF) const;
 };

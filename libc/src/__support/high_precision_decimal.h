@@ -409,7 +409,8 @@ public:
       result *= 10;
       ++cur_digit;
     }
-    return result + this->should_round_up(this->decimal_point, round);
+    return result + static_cast<unsigned int>(
+                        this->should_round_up(this->decimal_point, round));
   }
 
   // Extra functions for testing.

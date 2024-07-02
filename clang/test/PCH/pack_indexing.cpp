@@ -10,7 +10,11 @@ using Type = U...[I];
 template <int I, auto...V>
 constexpr auto Var = V...[I];
 
+template <int I, auto...V>
+decltype(V...[I]) foo() { return V...[I]; }
+
 void fn1() {
   using A = Type<1, int, long, double>;
   constexpr auto V = Var<2, 0, 1, 42>;
+  foo<2, 0, 1, 42>();
 }

@@ -203,8 +203,8 @@ endfunction()
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_PREFIX;INSTALL_PREFIX;COMMON_CAPI_LINK_LIBS"
-    "DECLARED_SOURCES"
+    "ROOT_PREFIX;INSTALL_PREFIX"
+    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
   # Helper to process an individual target.
   function(_process_target modules_target sources_target)
@@ -565,8 +565,6 @@ function(add_mlir_python_sources_target name)
     message(FATAL_ERROR "Unhandled arguments to add_mlir_python_sources_target(${name}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
 
-  add_custom_target(${name})
-
   # On Windows create_symlink requires special permissions. Use copy_if_different instead.
   if(CMAKE_HOST_WIN32)
     set(_link_or_copy copy_if_different)
@@ -575,8 +573,6 @@ function(add_mlir_python_sources_target name)
   endif()
 
   foreach(_sources_target ${ARG_SOURCES_TARGETS})
-    add_dependencies(${name} ${_sources_target})
-
     get_target_property(_src_paths ${_sources_target} SOURCES)
     if(NOT _src_paths)
       get_target_property(_src_paths ${_sources_target} INTERFACE_SOURCES)
@@ -590,6 +586,8 @@ function(add_mlir_python_sources_target name)
       get_target_property(_root_dir ${_sources_target} INTERFACE_INCLUDE_DIRECTORIES)
     endif()
 
+    # Initialize an empty list of all Python source destination paths.
+    set(all_dest_paths "")
     foreach(_src_path ${_src_paths})
       file(RELATIVE_PATH _source_relative_path "${_root_dir}" "${_src_path}")
       set(_dest_path "${ARG_OUTPUT_DIRECTORY}/${_source_relative_path}")
@@ -598,13 +596,17 @@ function(add_mlir_python_sources_target name)
       file(MAKE_DIRECTORY "${_dest_dir}")
 
       add_custom_command(
-        TARGET ${name} PRE_BUILD
+        OUTPUT "${_dest_path}"
+        PRE_BUILD
         COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
         DEPENDS "${_src_path}"
-        BYPRODUCTS "${_dest_path}"
         COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
             "${_src_path}" "${_dest_path}"
       )
+
+      # Track the symlink or copy command output.
+      list(APPEND all_dest_paths "${_dest_path}")
+
       if(ARG_INSTALL_DIR)
         # We have to install each file individually because we need to preserve
         # the relative directory structure in the install destination.
@@ -621,6 +623,9 @@ function(add_mlir_python_sources_target name)
       endif()
     endforeach()
   endforeach()
+
+  # Create a new custom target that depends on all symlinked or copied sources.
+  add_custom_target("${name}" DEPENDS ${all_dest_paths})
 endfunction()
 
 ################################################################################

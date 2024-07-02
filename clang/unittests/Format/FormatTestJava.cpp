@@ -618,6 +618,177 @@ TEST_F(FormatTestJava, ConfigurableSpacesInSquareBrackets) {
   verifyFormat("types[ i ] = arguments[ i ].getClass();", Spaces);
 }
 
+TEST_F(FormatTestJava, SwitchExpression) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  EXPECT_TRUE(Style.AllowShortCaseExpressionOnASingleLine);
+
+  verifyFormat("foo(switch (day) {\n"
+               "  case THURSDAY, SATURDAY -> 8;\n"
+               "  case WEDNESDAY -> 9;\n"
+               "  default -> 1;\n"
+               "});",
+               Style);
+
+  constexpr StringRef Code1{"i = switch (day) {\n"
+                            "  case THURSDAY, SATURDAY -> 8;\n"
+                            "  case WEDNESDAY -> 9;\n"
+                            "  default -> 0;\n"
+                            "};"};
+  verifyFormat(Code1, Style);
+
+  Style.IndentCaseLabels = true;
+  verifyFormat(Code1, Style);
+
+  constexpr StringRef Code2{"i = switch (day) {\n"
+                            "  case THURSDAY, SATURDAY -> {\n"
+                            "    foo();\n"
+                            "    yield 8;\n"
+                            "  }\n"
+                            "  case WEDNESDAY -> {\n"
+                            "    bar();\n"
+                            "    yield 9;\n"
+                            "  }\n"
+                            "  default -> {\n"
+                            "    yield 0;\n"
+                            "  }\n"
+                            "};"};
+  verifyFormat(Code2, Style);
+
+  Style.IndentCaseLabels = false;
+  verifyFormat(Code2, Style);
+
+  constexpr StringRef Code3{"switch (day) {\n"
+                            "case THURSDAY, SATURDAY -> i = 8;\n"
+                            "case WEDNESDAY -> i = 9;\n"
+                            "default -> i = 0;\n"
+                            "};"};
+  verifyFormat(Code3, Style);
+
+  Style.IndentCaseLabels = true;
+  verifyFormat("switch (day) {\n"
+               "  case THURSDAY, SATURDAY -> i = 8;\n"
+               "  case WEDNESDAY -> i = 9;\n"
+               "  default -> i = 0;\n"
+               "};",
+               Code3, Style);
+}
+
+TEST_F(FormatTestJava, ShortCaseExpression) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+
+  verifyFormat("i = switch (a) {\n"
+               "  case 1 -> 1;\n"
+               "  case 2 -> // comment\n"
+               "    2;\n"
+               "  case 3 ->\n"
+               "    // comment\n"
+               "    3;\n"
+               "  case 4 -> 4; // comment\n"
+               "  default -> 0;\n"
+               "};",
+               Style);
+
+  verifyNoChange("i = switch (a) {\n"
+                 "  case 1 -> 1;\n"
+                 "  // comment\n"
+                 "  case 2 -> 2;\n"
+                 "  // comment 1\n"
+                 "  // comment 2\n"
+                 "  case 3 -> 3; /* comment */\n"
+                 "  case 4 -> /* comment */ 4;\n"
+                 "  case 5 -> x + /* comment */ 1;\n"
+                 "  default ->\n"
+                 "    0; // comment line 1\n"
+                 "       // comment line 2\n"
+                 "};",
+                 Style);
+
+  Style.ColumnLimit = 18;
+  verifyFormat("i = switch (a) {\n"
+               "  case Monday ->\n"
+               "    1;\n"
+               "  default -> 9999;\n"
+               "};",
+               Style);
+
+  Style.ColumnLimit = 80;
+  Style.AllowShortCaseExpressionOnASingleLine = false;
+  Style.IndentCaseLabels = true;
+  verifyFormat("i = switch (n) {\n"
+               "  default /*comments*/ ->\n"
+               "    1;\n"
+               "  case 0 ->\n"
+               "    0;\n"
+               "};",
+               Style);
+
+  Style.AllowShortCaseExpressionOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterCaseLabel = true;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  verifyFormat("i = switch (n)\n"
+               "{\n"
+               "  case 0 ->\n"
+               "  {\n"
+               "    yield 0;\n"
+               "  }\n"
+               "  default ->\n"
+               "  {\n"
+               "    yield 1;\n"
+               "  }\n"
+               "};",
+               Style);
+}
+
+TEST_F(FormatTestJava, AlignCaseArrows) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.AlignConsecutiveShortCaseStatements.Enabled = true;
+
+  verifyFormat("foo(switch (day) {\n"
+               "  case THURSDAY, SATURDAY -> 8;\n"
+               "  case WEDNESDAY ->          9;\n"
+               "  default ->                 1;\n"
+               "});",
+               Style);
+
+  verifyFormat("i = switch (day) {\n"
+               "  case THURSDAY, SATURDAY -> 8;\n"
+               "  case WEDNESDAY ->          9;\n"
+               "  default ->                 0;\n"
+               "};",
+               Style);
+
+  verifyFormat("switch (day) {\n"
+               "case THURSDAY, SATURDAY -> i = 8;\n"
+               "case WEDNESDAY ->          i = 9;\n"
+               "default ->                 i = 0;\n"
+               "};",
+               Style);
+
+  Style.AlignConsecutiveShortCaseStatements.AlignCaseArrows = true;
+
+  verifyFormat("foo(switch (day) {\n"
+               "  case THURSDAY, SATURDAY -> 8;\n"
+               "  case WEDNESDAY          -> 9;\n"
+               "  default                 -> 1;\n"
+               "});",
+               Style);
+
+  verifyFormat("i = switch (day) {\n"
+               "  case THURSDAY, SATURDAY -> 8;\n"
+               "  case WEDNESDAY          -> 9;\n"
+               "  default                 -> 0;\n"
+               "};",
+               Style);
+
+  verifyFormat("switch (day) {\n"
+               "case THURSDAY, SATURDAY -> i = 8;\n"
+               "case WEDNESDAY          -> i = 9;\n"
+               "default                 -> i = 0;\n"
+               "};",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

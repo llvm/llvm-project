@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target, amdgpu-registered-target
-
 // Check that clang unbundles the two bitcodes and links via llvm-link
 // RUN: rm -rf %t && mkdir %t
 // RUN: touch %t/bundle1.bc
@@ -7,7 +5,7 @@
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx906 --hip-link \
 // RUN:   -nogpulib -nogpuinc -emit-llvm -fgpu-rdc --cuda-device-only \
-// RUN:   %t/bundle1.bc %t/bundle2.bc \
+// RUN:   --no-offload-new-driver %t/bundle1.bc %t/bundle2.bc \
 // RUN:   2>&1 | FileCheck -check-prefix=BITCODE %s
 
 // BITCODE: "{{.*}}clang-offload-bundler" "-type=bc" "-targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa-gfx906" "-input={{.*}}bundle1.bc" "-output=[[B1HOST:.*\.bc]]" "-output=[[B1DEV1:.*\.bc]]" "-unbundle" "-allow-missing-bundles"
@@ -24,7 +22,7 @@
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx906 --hip-link \
 // RUN:   -nogpulib -nogpuinc -emit-llvm -fgpu-rdc --cuda-device-only \
-// RUN:   %t/bundle.bc -L%t -lhipbundle \
+// RUN:   --no-offload-new-driver %t/bundle.bc -L%t -lhipbundle \
 // RUN:   2>&1 | FileCheck -check-prefix=ARCHIVE %s
 
 // ARCHIVE: "{{.*}}clang-offload-bundler" "-type=bc" "-targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa-gfx906" "-input={{.*}}bundle.bc" "-output=[[HOST:.*\.bc]]" "-output=[[DEV1:.*\.bc]]" "-unbundle" "-allow-missing-bundles"

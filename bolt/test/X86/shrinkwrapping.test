@@ -1,9 +1,9 @@
-# Verifies that llvm-bolt updates CFI correctly after
-# shrink-wrapping when optimizing a function without
-# frame pointers.
+## Verifies that llvm-bolt updates CFI correctly after
+## shrink-wrapping when optimizing a function without
+## frame pointers.
 
-# This test has commands that rely on shell capabilities that won't execute
-# correctly on Windows e.g. subshell execution to capture command output.
+## This test has commands that rely on shell capabilities that won't execute
+## correctly on Windows e.g. subshell execution to capture command output.
 REQUIRES: shell
 
 RUN: %clangxx %cxxflags -no-pie %S/Inputs/exc4sw.S -o %t.exe -Wl,-q

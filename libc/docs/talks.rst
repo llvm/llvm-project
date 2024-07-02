@@ -6,6 +6,7 @@ Talks
 ----
 * Math functions in LLVM libc or yet another correctly rounded libm - Tue Ly
 
+  * `slides <https://drive.google.com/file/d/1Gchrc3AXKXAWFI1nk8Y1x8UsoQSp8XjF/view>`__
   * `video <https://www.youtube.com/watch?v=kBSJqVWNQLY>`__
 * The LLVM C Library for GPUs - Joseph Huber
 

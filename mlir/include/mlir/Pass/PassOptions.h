@@ -15,7 +15,6 @@
 #define MLIR_PASS_PASSOPTIONS_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -293,7 +292,8 @@ public:
   /// Parse options out as key=value pairs that can then be handed off to the
   /// `llvm::cl` command line passing infrastructure. Everything is space
   /// separated.
-  LogicalResult parseFromString(StringRef options);
+  LogicalResult parseFromString(StringRef options,
+                                raw_ostream &errorStream = llvm::errs());
 
   /// Print the options held by this struct in a form that can be parsed via
   /// 'parseFromString'.

@@ -165,7 +165,7 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
 
 Value sparse_tensor::genScalarToTensor(OpBuilder &builder, Location loc,
                                        Value elem, Type dstTp) {
-  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
+  if (auto rtp = dyn_cast<RankedTensorType>(dstTp)) {
     // Scalars can only be converted to 0-ranked tensors.
     assert(rtp.getRank() == 0);
     elem = sparse_tensor::genCast(builder, loc, elem, rtp.getElementType());

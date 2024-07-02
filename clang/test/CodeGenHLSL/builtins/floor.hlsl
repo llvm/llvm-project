@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
@@ -41,16 +41,3 @@ float3 test_floor_float3(float3 p0) { return floor(p0); }
 // CHECK: define noundef <4 x float> @
 // CHECK: call <4 x float> @llvm.floor.v4f32(
 float4 test_floor_float4(float4 p0) { return floor(p0); }
-
-// CHECK: define noundef double @
-// CHECK: call double @llvm.floor.f64(
-double test_floor_double(double p0) { return floor(p0); }
-// CHECK: define noundef <2 x double> @
-// CHECK: call <2 x double> @llvm.floor.v2f64(
-double2 test_floor_double2(double2 p0) { return floor(p0); }
-// CHECK: define noundef <3 x double> @
-// CHECK: call <3 x double> @llvm.floor.v3f64(
-double3 test_floor_double3(double3 p0) { return floor(p0); }
-// CHECK: define noundef <4 x double> @
-// CHECK: call <4 x double> @llvm.floor.v4f64(
-double4 test_floor_double4(double4 p0) { return floor(p0); }

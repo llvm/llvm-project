@@ -39,7 +39,7 @@ cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
     "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
     cl::desc("The minimum number of instructions a basic block should contain "
              "before being considered medium-sized."));
-}
+} // namespace llvm
 
 static cl::opt<unsigned> CallWithManyArgumentsThreshold(
     "call-with-many-arguments-threshold", cl::Hidden, cl::init(4),

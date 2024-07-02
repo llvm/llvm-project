@@ -99,6 +99,11 @@ public:
     ArgInfo() = default;
   };
 
+  struct PtrAuthInfo {
+    uint64_t Key;
+    Register Discriminator;
+  };
+
   struct CallLoweringInfo {
     /// Calling convention to be used for the call.
     CallingConv::ID CallConv = CallingConv::C;
@@ -117,10 +122,16 @@ public:
     /// vreg that the swifterror should be copied into after the call.
     Register SwiftErrorVReg;
 
+    /// Valid if the call is a controlled convergent operation.
+    Register ConvergenceCtrlToken;
+
     /// Original IR callsite corresponding to this call, if available.
     const CallBase *CB = nullptr;
 
     MDNode *KnownCallees = nullptr;
+
+    /// The auth-call information in the "ptrauth" bundle, if present.
+    std::optional<PtrAuthInfo> PAI;
 
     /// True if the call must be tail call optimized.
     bool IsMustTailCall = false;
@@ -584,6 +595,7 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
+                 std::optional<PtrAuthInfo> PAI, Register ConvergenceCtrlToken,
                  std::function<unsigned()> GetCalleeReg) const;
 
   /// For targets which want to use big-endian can enable it with

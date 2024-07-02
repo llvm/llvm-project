@@ -13,6 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_VTUNESHAREDSTRUCTS_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_VTUNESHAREDSTRUCTS_H
 
+#include "ExecutorAddress.h"
+#include <utility>
+#include <vector>
+
 namespace llvm {
 namespace orc {
 

@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/raise.h"
-#include "src/signal/linux/signal_utils.h"
 
+#include "hdr/types/sigset_t.h"
 #include "src/__support/common.h"
+#include "src/signal/linux/signal_utils.h"
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, raise, (int sig)) {
-  ::sigset_t sigset;
+  sigset_t sigset;
   block_all_signals(sigset);
   long pid = LIBC_NAMESPACE::syscall_impl<long>(SYS_getpid);
   long tid = LIBC_NAMESPACE::syscall_impl<long>(SYS_gettid);

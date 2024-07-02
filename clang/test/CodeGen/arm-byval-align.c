@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=armv7-none-eabi < %s -S -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -triple=armv7-none-eabi < %s -emit-llvm | FileCheck %s
 
 struct foo {
   long long a;

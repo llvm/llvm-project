@@ -4,7 +4,7 @@
 declare void @helper(i32)
 
 ;.
-; CHECK: @[[MAX_REGNO:[a-zA-Z0-9_$"\\.-]+]] = common global i32 0, align 4
+; CHECK: @max_regno = common global i32 0, align 4
 ;.
 define void @test1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test1(
@@ -169,8 +169,8 @@ define void @test5(i32 %M, i32 %N) nounwind uwtable {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW2:%.*]] [
-; CHECK-NEXT:    i32 3, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 3, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -214,9 +214,9 @@ define void @test6(i32 %M, i32 %N) nounwind uwtable {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 3, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 4, label [[SW_BB5:%.*]]
+; CHECK-NEXT:      i32 3, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 4, label [[SW_BB5:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -368,10 +368,10 @@ define i1 @test9(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[BEES:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A:%.*]]
-; CHECK-NEXT:    i32 1, label [[END:%.*]]
-; CHECK-NEXT:    i32 2, label [[END]]
-; CHECK-NEXT:    i32 92, label [[END]]
+; CHECK-NEXT:      i32 0, label [[A:%.*]]
+; CHECK-NEXT:      i32 1, label [[END:%.*]]
+; CHECK-NEXT:      i32 2, label [[END]]
+; CHECK-NEXT:      i32 92, label [[END]]
 ; CHECK-NEXT:    ], !prof [[PROF8:![0-9]+]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ [[RETA:%.*]], [[A]] ], [ [[RET:%.*]], [[END]] ]
@@ -735,7 +735,7 @@ define void @or_icmps_probably_not_harmful(i32 %x, i32 %y, ptr %p) {
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF21:![0-9]+]], !unpredictable !22
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF21:![0-9]+]], !unpredictable [[META22:![0-9]+]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1157,7 +1157,7 @@ exit:
 ; CHECK: [[PROF19]] = !{!"branch_weights", i32 99, i32 1}
 ; CHECK: [[PROF20]] = !{!"branch_weights", i32 1, i32 99}
 ; CHECK: [[PROF21]] = !{!"branch_weights", i32 199, i32 1}
-; CHECK: [[META22:![0-9]+]] = !{}
+; CHECK: [[META22]] = !{}
 ; CHECK: [[PROF23]] = !{!"branch_weights", i32 197, i32 1}
 ; CHECK: [[PROF24]] = !{!"branch_weights", i32 100, i32 98}
 ; CHECK: [[PROF25]] = !{!"branch_weights", i32 101, i32 99}

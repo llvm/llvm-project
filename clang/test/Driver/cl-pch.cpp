@@ -99,6 +99,12 @@
 // /Yu /Fpout.pch => out.pch is filename
 // RUN: %clang_cl -Werror /Yupchfile.h /FIpchfile.h /Fpout.pch /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YUFP1 %s
+// /Yu /Fp:out.pch => out.pch is filename
+// RUN: %clang_cl -Werror /Yupchfile.h /FIpchfile.h /Fp:out.pch /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YUFP1 %s
+// /Yu /Fp: out.pch => out.pch is filename
+// RUN: %clang_cl -Werror /Yupchfile.h /FIpchfile.h /Fp: out.pch /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YUFP1 %s
 // Use .pch file, but don't build it.
 // CHECK-YUFP1: -include-pch
 // CHECK-YUFP1: out.pch

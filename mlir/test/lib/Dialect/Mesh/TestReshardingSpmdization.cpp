@@ -19,7 +19,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -67,12 +66,11 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
       ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
       ShapedType sourceShardShape =
           shardShapedType(op.getResult().getType(), mesh, op.getShard());
-      TypedValue<ShapedType> sourceShard =
+      TypedValue<ShapedType> sourceShard = cast<TypedValue<ShapedType>>(
           builder
               .create<UnrealizedConversionCastOp>(sourceShardShape,
                                                   op.getOperand())
-              ->getResult(0)
-              .cast<TypedValue<ShapedType>>();
+              ->getResult(0));
       TypedValue<ShapedType> targetShard =
           reshard(builder, mesh, op, targetShardOp, sourceShard);
       Value newTargetUnsharded =

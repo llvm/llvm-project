@@ -10,27 +10,22 @@ define void @test_float(ptr %a , float %b) {
 ; CHECK64_SMALL:       # %bb.0: # %entry
 ; CHECK64_SMALL-NEXT:    movss {{.*#+}} xmm1 = [5.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK64_SMALL-NEXT:    addss %xmm0, %xmm1
-; CHECK64_SMALL-NEXT:    movd %xmm1, %eax
-; CHECK64_SMALL-NEXT:    movl %eax, (%rdi)
+; CHECK64_SMALL-NEXT:    movss %xmm1, (%rdi)
 ; CHECK64_SMALL-NEXT:    retq
 ;
 ; CHECK64_LARGE-LABEL: test_float:
 ; CHECK64_LARGE:       # %bb.0: # %entry
 ; CHECK64_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
 ; CHECK64_LARGE-NEXT:    addss (%rax), %xmm0
-; CHECK64_LARGE-NEXT:    movd %xmm0, %eax
-; CHECK64_LARGE-NEXT:    movl %eax, (%rdi)
+; CHECK64_LARGE-NEXT:    movss %xmm0, (%rdi)
 ; CHECK64_LARGE-NEXT:    retq
 ;
 ; CHECK32-LABEL: test_float:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movss {{.*#+}} xmm0 = [5.5E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK32-NEXT:    movd %ecx, %xmm1
-; CHECK32-NEXT:    addss %xmm0, %xmm1
-; CHECK32-NEXT:    movd %xmm1, %ecx
-; CHECK32-NEXT:    movl %ecx, (%eax)
+; CHECK32-NEXT:    addss {{[0-9]+}}(%esp), %xmm0
+; CHECK32-NEXT:    movss %xmm0, (%eax)
 ; CHECK32-NEXT:    retl
 entry:
   %aa = fadd float 5.500000e+00, %b

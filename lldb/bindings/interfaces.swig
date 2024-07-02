@@ -12,6 +12,8 @@
 
 /* Docstrings for SB classes and methods */
 %include "./interface/SBAddressDocstrings.i"
+%include "./interface/SBAddressRangeDocstrings.i"
+%include "./interface/SBAddressRangeListDocstrings.i"
 %include "./interface/SBAttachInfoDocstrings.i"
 %include "./interface/SBBlockDocstrings.i"
 %include "./interface/SBBreakpointDocstrings.i"
@@ -86,6 +88,8 @@
 
 /* API headers */
 %include "lldb/API/SBAddress.h"
+%include "lldb/API/SBAddressRange.h"
+%include "lldb/API/SBAddressRangeList.h"
 %include "lldb/API/SBAttachInfo.h"
 %include "lldb/API/SBBlock.h"
 %include "lldb/API/SBBreakpoint.h"
@@ -114,6 +118,7 @@
 %include "lldb/API/SBHostOS.h"
 %include "lldb/API/SBInstruction.h"
 %include "lldb/API/SBInstructionList.h"
+%include "lldb/API/SBLanguages.h"
 %include "lldb/API/SBLanguageRuntime.h"
 %include "lldb/API/SBLaunchInfo.h"
 %include "lldb/API/SBLineEntry.h"
@@ -162,6 +167,8 @@
 
 /* Extensions for SB classes */
 %include "./interface/SBAddressExtensions.i"
+%include "./interface/SBAddressRangeExtensions.i"
+%include "./interface/SBAddressRangeListExtensions.i"
 %include "./interface/SBBlockExtensions.i"
 %include "./interface/SBBreakpointExtensions.i"
 %include "./interface/SBBreakpointListExtensions.i"

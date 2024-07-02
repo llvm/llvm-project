@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -47,7 +47,8 @@ void mlir::affine::getTripCountMapAndOperands(
     loopSpan = ub - lb;
     if (loopSpan < 0)
       loopSpan = 0;
-    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
+    *tripCountMap = AffineMap::getConstantMap(
+        llvm::divideCeilSigned(loopSpan, step), context);
     tripCountOperands->clear();
     return;
   }
@@ -145,44 +146,35 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   return *gcd;
 }
 
-/// Given an induction variable `iv` of type AffineForOp and an access `index`
-/// of type index, returns `true` if `index` is independent of `iv` and
-/// false otherwise. The determination supports composition with at most one
-/// AffineApplyOp. The 'at most one AffineApplyOp' comes from the fact that
-/// the composition of AffineApplyOp needs to be canonicalized by construction
-/// to avoid writing code that composes arbitrary numbers of AffineApplyOps
-/// everywhere. To achieve this, at the very least, the compose-affine-apply
-/// pass must have been run.
+/// Given an affine.for `iv` and an access `index` of type index, returns `true`
+/// if `index` is independent of `iv` and false otherwise.
 ///
-/// Prerequisites:
-///   1. `iv` and `index` of the proper type;
-///   2. at most one reachable AffineApplyOp from index;
-///
-/// Returns false in cases with more than one AffineApplyOp, this is
-/// conservative.
+/// Prerequisites: `iv` and `index` of the proper type;
 static bool isAccessIndexInvariant(Value iv, Value index) {
-  assert(isAffineForInductionVar(iv) && "iv must be a AffineForOp");
-  assert(isa<IndexType>(index.getType()) && "index must be of IndexType");
-  SmallVector<Operation *, 4> affineApplyOps;
-  getReachableAffineApplyOps({index}, affineApplyOps);
-
-  if (affineApplyOps.empty()) {
-    // Pointer equality test because of Value pointer semantics.
-    return index != iv;
-  }
-
-  if (affineApplyOps.size() > 1) {
-    affineApplyOps[0]->emitRemark(
-        "CompositionAffineMapsPass must have been run: there should be at most "
-        "one AffineApplyOp, returning false conservatively.");
-    return false;
-  }
-
-  auto composeOp = cast<AffineApplyOp>(affineApplyOps[0]);
-  // We need yet another level of indirection because the `dim` index of the
-  // access may not correspond to the `dim` index of composeOp.
-  return !composeOp.getAffineValueMap().isFunctionOf(0, iv);
+  assert(isAffineForInductionVar(iv) && "iv must be an affine.for iv");
+  assert(isa<IndexType>(index.getType()) && "index must be of 'index' type");
+  auto map = AffineMap::getMultiDimIdentityMap(/*numDims=*/1, iv.getContext());
+  SmallVector<Value> operands = {index};
+  AffineValueMap avm(map, operands);
+  avm.composeSimplifyAndCanonicalize();
+  return !avm.isFunctionOf(0, iv);
 }
+
+// Pre-requisite: Loop bounds should be in canonical form.
+template <typename LoadOrStoreOp>
+bool mlir::affine::isInvariantAccess(LoadOrStoreOp memOp, AffineForOp forOp) {
+  AffineValueMap avm(memOp.getAffineMap(), memOp.getMapOperands());
+  avm.composeSimplifyAndCanonicalize();
+  return !llvm::is_contained(avm.getOperands(), forOp.getInductionVar());
+}
+
+// Explicitly instantiate the template so that the compiler knows we need them.
+template bool mlir::affine::isInvariantAccess(AffineReadOpInterface,
+                                              AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineWriteOpInterface,
+                                              AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineLoadOp, AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineStoreOp, AffineForOp);
 
 DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
                                                    ArrayRef<Value> indices) {

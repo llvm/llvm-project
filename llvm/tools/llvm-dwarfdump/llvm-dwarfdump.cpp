@@ -502,7 +502,7 @@ static void filterByAccelName(
     getDies(DICtx, DICtx.getDebugNames(), Name, Dies);
   }
   llvm::sort(Dies);
-  Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
+  Dies.erase(llvm::unique(Dies), Dies.end());
 
   DIDumpOptions DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
@@ -646,7 +646,7 @@ static bool collectObjectSources(ObjectFile &Obj, DWARFContext &DICtx,
 
   // Dedup and order the sources.
   llvm::sort(Sources);
-  Sources.erase(std::unique(Sources.begin(), Sources.end()), Sources.end());
+  Sources.erase(llvm::unique(Sources), Sources.end());
 
   for (StringRef Name : Sources)
     OS << Name << "\n";

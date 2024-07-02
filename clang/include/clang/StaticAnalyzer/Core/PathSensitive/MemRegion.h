@@ -781,7 +781,7 @@ class SymbolicRegion : public SubRegion {
       : SubRegion(sreg, SymbolicRegionKind), sym(s) {
     // Because pointer arithmetic is represented by ElementRegion layers,
     // the base symbol here should not contain any arithmetic.
-    assert(s && isa<SymbolData>(s));
+    assert(isa_and_nonnull<SymbolData>(s));
     assert(s->getType()->isAnyPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
@@ -1503,7 +1503,7 @@ public:
   ///  associated element type, index, and super region.
   const ElementRegion *getElementRegion(QualType elementType, NonLoc Idx,
                                         const SubRegion *superRegion,
-                                        ASTContext &Ctx);
+                                        const ASTContext &Ctx);
 
   const ElementRegion *getElementRegionWithSuper(const ElementRegion *ER,
                                                  const SubRegion *superRegion) {

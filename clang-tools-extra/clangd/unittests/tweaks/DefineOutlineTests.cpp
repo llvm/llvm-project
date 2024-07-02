@@ -19,9 +19,44 @@ TWEAK_TEST(DefineOutline);
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   FileName = "Test.cpp";
-  // Not available unless in a header file.
+  // Not available for free function unless in a header file.
   EXPECT_UNAVAILABLE(R"cpp(
     [[void [[f^o^o]]() [[{
+      return;
+    }]]]])cpp");
+
+  // Available in soure file.
+  EXPECT_AVAILABLE(R"cpp(
+    struct Foo {
+      void f^oo() {}
+    };
+  )cpp");
+
+  // Available within named namespace in source file.
+  EXPECT_AVAILABLE(R"cpp(
+    namespace N {
+      struct Foo {
+        void f^oo() {}
+      };
+    } // namespace N
+  )cpp");
+
+  // Available within anonymous namespace in source file.
+  EXPECT_AVAILABLE(R"cpp(
+    namespace {
+      struct Foo {
+        void f^oo() {}
+      };
+    } // namespace
+  )cpp");
+
+  // Not available for out-of-line method.
+  EXPECT_UNAVAILABLE(R"cpp(
+    class Bar {
+      void baz();
+    };
+
+    [[void [[Bar::[[b^a^z]]]]() [[{
       return;
     }]]]])cpp");
 
@@ -100,7 +135,7 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
     };
   )cpp");
 
-  // Not available on definitions within unnamed namespaces
+  // Not available on definitions in header file within unnamed namespaces
   EXPECT_UNAVAILABLE(R"cpp(
     namespace {
       struct Foo {
@@ -346,6 +381,40 @@ TEST_F(DefineOutlineTest, ApplyTest) {
     EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
     EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                  testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, InCppFile) {
+  FileName = "Test.cpp";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {
+          R"cpp(
+            namespace foo {
+            namespace {
+            struct Foo { void ba^r() {} };
+            struct Bar { void foo(); };
+            void Bar::foo() {}
+            }
+            }
+        )cpp",
+          R"cpp(
+            namespace foo {
+            namespace {
+            struct Foo { void bar() ; };void Foo::bar() {} 
+            struct Bar { void foo(); };
+            void Bar::foo() {}
+            }
+            }
+        )cpp"},
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    EXPECT_EQ(apply(Case.Test, nullptr), Case.ExpectedSource);
   }
 }
 

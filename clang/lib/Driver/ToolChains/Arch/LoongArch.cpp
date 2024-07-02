@@ -165,10 +165,9 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     }
   }
 
-  // Select the `ual` feature determined by -m[no-]unaligned-access
-  // or the alias -m[no-]strict-align.
-  AddTargetFeature(Args, Features, options::OPT_munaligned_access,
-                   options::OPT_mno_unaligned_access, "ual");
+  // Select the `ual` feature determined by -m[no-]strict-align.
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
 
   // Accept but warn about these TargetSpecific options.
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
@@ -182,7 +181,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     // -m*-float and -mfpu=none/0/32 conflict with -mlsx.
     if (A->getOption().matches(options::OPT_mlsx)) {
       if (llvm::find(Features, "-d") != Features.end())
-        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lsx);
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LSX*/ 0;
       else /*-mlsx*/
         Features.push_back("+lsx");
     } else /*-mno-lsx*/ {
@@ -197,7 +196,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     // -mno-lsx conflicts with -mlasx.
     if (A->getOption().matches(options::OPT_mlasx)) {
       if (llvm::find(Features, "-d") != Features.end())
-        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lasx);
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LASX*/ 1;
       else if (llvm::find(Features, "-lsx") != Features.end())
         D.Diag(diag::err_drv_loongarch_invalid_simd_option_combination);
       else { /*-mlasx*/

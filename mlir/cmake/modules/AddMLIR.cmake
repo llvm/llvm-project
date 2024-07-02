@@ -5,6 +5,28 @@ function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       PARENT_SCOPE)
+
+  # Get the current set of include paths for this td file.
+  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
+  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+  # Filter out any empty include items.
+  list(REMOVE_ITEM tblgen_includes "")
+
+  # Build the absolute path for the current input file.
+  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+  else()
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
+  endif()
+
+  # Append the includes used for this file to the tablegen_compile_commands
+  # file.
+  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
+      "--- !FileInfo:\n"
+      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
+      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
+  )
 endfunction()
 
 # Clear out any pre-existing compile_commands file before processing. This
@@ -149,6 +171,22 @@ function(add_mlir_dialect dialect dialect_namespace)
   add_dependencies(mlir-headers MLIR${dialect}IncGen)
 endfunction()
 
+# Declare sharded dialect operation declarations and definitions
+function(add_sharded_ops ops_target shard_count)
+  set(LLVM_TARGET_DEFINITIONS ${ops_target}.td)
+  mlir_tablegen(${ops_target}.h.inc -gen-op-decls -op-shard-count=${shard_count})
+  mlir_tablegen(${ops_target}.cpp.inc -gen-op-defs -op-shard-count=${shard_count})
+  set(LLVM_TARGET_DEFINITIONS ${ops_target}.cpp)
+  foreach(index RANGE ${shard_count})
+    set(SHARDED_SRC ${ops_target}.${index}.cpp)
+    list(APPEND SHARDED_SRCS ${SHARDED_SRC})
+    tablegen(MLIR_SRC_SHARDER ${SHARDED_SRC} -op-shard-index=${index})
+    set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${SHARDED_SRC})
+  endforeach()
+  add_public_tablegen_target(MLIR${ops_target}ShardGen)
+  set(SHARDED_SRCS ${SHARDED_SRCS} PARENT_SCOPE)
+endfunction()
+
 # Declare a dialect in the include directory
 function(add_mlir_interface interface)
   set(LLVM_TARGET_DEFINITIONS ${interface}.td)
@@ -172,6 +210,7 @@ function(add_mlir_doc doc_filename output_file output_directory command)
                   ${GEN_DOC_FILE}
           DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.md)
   add_custom_target(${output_file}DocGen DEPENDS ${GEN_DOC_FILE})
+  set_target_properties(${output_file}DocGen PROPERTIES FOLDER "MLIR/Tablegenning/Docs")
   add_dependencies(mlir-doc ${output_file}DocGen)
 endfunction()
 
@@ -252,7 +291,7 @@ function(add_mlir_example_library name)
   list(APPEND ARG_DEPENDS mlir-generic-headers)
 
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
-  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+  set_target_properties(${name} PROPERTIES FOLDER "MLIR/Examples")
   if (LLVM_BUILD_EXAMPLES AND NOT ${ARG_DISABLE_INSTALL})
     add_mlir_library_install(${name})
   else()
@@ -267,25 +306,22 @@ endfunction()
 #   Don't include this library in libMLIR.so.  This option should be used
 #   for test libraries, executable-specific libraries, or rarely used libraries
 #   with large dependencies.
+# OBJECT
+#   The library's object library is referenced using "obj.${name}". For this to
+#   work reliably, this flag ensures that the OBJECT library exists.
 # ENABLE_AGGREGATION
-#   Forces generation of an OBJECT library, exports additional metadata,
+#   Exports additional metadata,
 #   and installs additional object files needed to include this as part of an
 #   aggregate shared library.
 #   TODO: Make this the default for all MLIR libraries once all libraries
 #   are compatible with building an object library.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
   _set_mlir_additional_headers_as_srcs(${ARG_ADDITIONAL_HEADERS})
-
-  # Is an object library needed.
-  set(NEEDS_OBJECT_LIB OFF)
-  if(ARG_ENABLE_AGGREGATION)
-    set(NEEDS_OBJECT_LIB ON)
-  endif()
 
   # Determine type of library.
   if(ARG_SHARED)
@@ -298,18 +334,39 @@ function(add_mlir_library name)
     else()
       set(LIBTYPE STATIC)
     endif()
-    # Test libraries and such shouldn't be include in libMLIR.so
-    if(NOT ARG_EXCLUDE_FROM_LIBMLIR)
-      set(NEEDS_OBJECT_LIB ON)
-      set_property(GLOBAL APPEND PROPERTY MLIR_STATIC_LIBS ${name})
-      set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
-      set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
-    endif()
   endif()
 
-  if(NEEDS_OBJECT_LIB AND NOT XCODE)
-    # The Xcode generator doesn't handle object libraries correctly.
-    # We special case xcode when building aggregates.
+  # Is an object library needed...?
+  # Note that the XCode generator doesn't handle object libraries correctly and
+  # usability is degraded in the Visual Studio solution generators.
+  # llvm_add_library may also itself decide to create an object library.
+  set(NEEDS_OBJECT_LIB OFF)
+  if(ARG_OBJECT)
+    # Yes, because the target "obj.${name}" is referenced.
+    set(NEEDS_OBJECT_LIB ON)
+  endif ()
+  if(LLVM_BUILD_LLVM_DYLIB AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE)
+    # Yes, because in addition to the shared library, the object files are
+    # needed for linking into libMLIR.so (see mlir/tools/mlir-shlib/CMakeLists.txt).
+    # For XCode, -force_load is used instead.
+    # Windows is not supported (LLVM_BUILD_LLVM_DYLIB=ON will cause an error).
+    set(NEEDS_OBJECT_LIB ON)
+    set_property(GLOBAL APPEND PROPERTY MLIR_STATIC_LIBS ${name})
+    set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
+    set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
+  endif ()
+  if(ARG_ENABLE_AGGREGATION AND NOT XCODE)
+    # Yes, because this library is added to an aggergate library such as
+    # libMLIR-C.so which is links together all the object files.
+    # For XCode, -force_load is used instead.
+    set(NEEDS_OBJECT_LIB ON)
+  endif()
+  if (NOT ARG_SHARED AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE AND NOT MSVC_IDE)
+    # Yes, but only for legacy reasons. Also avoid object libraries for
+    # Visual Studio solutions.
+    set(NEEDS_OBJECT_LIB ON)
+  endif()
+  if(NEEDS_OBJECT_LIB)
     list(APPEND LIBTYPE OBJECT)
   endif()
 
@@ -329,7 +386,7 @@ function(add_mlir_library name)
     # Add empty "phony" target
     add_custom_target(${name})
   endif()
-  set_target_properties(${name} PROPERTIES FOLDER "MLIR libraries")
+  set_target_properties(${name} PROPERTIES FOLDER "MLIR/Libraries")
 
   # Setup aggregate.
   if(ARG_ENABLE_AGGREGATION)
@@ -341,9 +398,12 @@ function(add_mlir_library name)
       # XCode has limited support for object libraries. Instead, add dep flags
       # that force the entire library to be embedded.
       list(APPEND AGGREGATE_DEPS "-force_load" "${name}")
-    else()
+    elseif(TARGET obj.${name})
+      # FIXME: *.obj can also be added via target_link_libraries since CMake 3.12.
       list(APPEND AGGREGATE_OBJECTS "$<TARGET_OBJECTS:obj.${name}>")
       list(APPEND AGGREGATE_OBJECT_LIB "obj.${name}")
+    else()
+      message(SEND_ERROR "Aggregate library not supported on this platform")
     endif()
 
     # For each declared dependency, transform it into a generator expression
@@ -363,7 +423,7 @@ function(add_mlir_library name)
 
     # In order for out-of-tree projects to build aggregates of this library,
     # we need to install the OBJECT library.
-    if(MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
+    if(TARGET "obj.${name}" AND MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
       add_mlir_library_install(obj.${name})
     endif()
   endif()
@@ -576,6 +636,7 @@ endfunction()
 function(add_mlir_public_c_api_library name)
   add_mlir_library(${name}
     ${ARGN}
+    OBJECT
     EXCLUDE_FROM_LIBMLIR
     ENABLE_AGGREGATION
     ADDITIONAL_HEADER_DIRS

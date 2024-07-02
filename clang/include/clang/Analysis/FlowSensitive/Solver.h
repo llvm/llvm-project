@@ -87,6 +87,9 @@ public:
   ///
   ///  All elements in `Vals` must not be null.
   virtual Result solve(llvm::ArrayRef<const Formula *> Vals) = 0;
+
+  // Did the solver reach its resource limit?
+  virtual bool reachedLimit() const = 0;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Solver::Result &);

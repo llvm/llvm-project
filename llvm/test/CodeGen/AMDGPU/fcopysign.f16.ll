@@ -1639,10 +1639,7 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; VI-NEXT:    v_or_b32_e32 v2, 0x7c00, v2
 ; VI-NEXT:    v_mov_b32_e32 v3, s2
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
-; VI-NEXT:    s_lshr_b32 s0, s7, 16
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
-; VI-NEXT:    s_and_b32 s0, s0, 0x8000
-; VI-NEXT:    v_or_b32_e32 v2, s0, v2
 ; VI-NEXT:    s_movk_i32 s0, 0x7fff
 ; VI-NEXT:    v_mov_b32_e32 v3, s8
 ; VI-NEXT:    v_bfi_b32 v2, s0, v2, v3
@@ -1673,36 +1670,33 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX9-NEXT:    v_lshlrev_b32_e64 v1, v1, s2
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, s0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX9-NEXT:    s_add_i32 s9, s1, 0xfffffc10
+; GFX9-NEXT:    s_add_i32 s7, s1, 0xfffffc10
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX9-NEXT:    s_lshl_b32 s1, s9, 12
+; GFX9-NEXT:    s_lshl_b32 s1, s7, 12
 ; GFX9-NEXT:    s_or_b32 s0, s2, s0
 ; GFX9-NEXT:    s_or_b32 s1, s6, s1
-; GFX9-NEXT:    s_cmp_lt_i32 s9, 1
-; GFX9-NEXT:    s_cselect_b32 s10, s0, s1
-; GFX9-NEXT:    s_and_b32 s2, s10, 7
+; GFX9-NEXT:    s_cmp_lt_i32 s7, 1
+; GFX9-NEXT:    s_cselect_b32 s9, s0, s1
+; GFX9-NEXT:    s_and_b32 s2, s9, 7
 ; GFX9-NEXT:    s_cmp_gt_i32 s2, 5
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-NEXT:    s_cmp_eq_u32 s2, 3
 ; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX9-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; GFX9-NEXT:    s_lshr_b32 s2, s10, 2
+; GFX9-NEXT:    s_lshr_b32 s2, s9, 2
 ; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX9-NEXT:    s_addc_u32 s0, s2, 0
-; GFX9-NEXT:    s_cmp_lt_i32 s9, 31
+; GFX9-NEXT:    s_cmp_lt_i32 s7, 31
 ; GFX9-NEXT:    s_cselect_b32 s2, s0, 0x7c00
 ; GFX9-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 9, v1
-; GFX9-NEXT:    s_cmpk_eq_i32 s9, 0x40f
+; GFX9-NEXT:    s_cmpk_eq_i32 s7, 0x40f
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0x7c00, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    s_cselect_b64 vcc, -1, 0
-; GFX9-NEXT:    s_lshr_b32 s0, s7, 16
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GFX9-NEXT:    s_and_b32 s0, s0, 0x8000
-; GFX9-NEXT:    v_or_b32_e32 v1, s0, v1
 ; GFX9-NEXT:    s_movk_i32 s0, 0x7fff
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9-NEXT:    v_bfi_b32 v1, s0, v1, v2
@@ -1728,13 +1722,13 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX11-NEXT:    s_addk_i32 s1, 0xfc10
 ; GFX11-NEXT:    v_med3_i32 v1, s3, 0, 13
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX11-NEXT:    s_lshl_b32 s8, s1, 12
+; GFX11-NEXT:    s_lshl_b32 s7, s1, 12
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v1
 ; GFX11-NEXT:    s_or_b32 s2, s2, s3
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    s_or_b32 s3, s2, 0x1000
-; GFX11-NEXT:    s_or_b32 s8, s2, s8
+; GFX11-NEXT:    s_or_b32 s7, s2, s7
 ; GFX11-NEXT:    s_lshr_b32 s6, s3, s6
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_lshlrev_b32_e64 v0, v1, s6
@@ -1745,15 +1739,15 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX11-NEXT:    s_or_b32 s3, s6, s3
 ; GFX11-NEXT:    s_cmp_lt_i32 s1, 1
-; GFX11-NEXT:    s_cselect_b32 s3, s3, s8
+; GFX11-NEXT:    s_cselect_b32 s3, s3, s7
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s6, s3, 7
 ; GFX11-NEXT:    s_cmp_gt_i32 s6, 5
-; GFX11-NEXT:    s_cselect_b32 s8, -1, 0
+; GFX11-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s6, 3
 ; GFX11-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX11-NEXT:    s_lshr_b32 s3, s3, 2
-; GFX11-NEXT:    s_or_b32 s6, s6, s8
+; GFX11-NEXT:    s_or_b32 s6, s6, s7
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-NEXT:    s_addc_u32 s3, s3, 0
@@ -1764,15 +1758,11 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX11-NEXT:    s_cmpk_eq_i32 s1, 0x40f
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
 ; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX11-NEXT:    s_lshr_b32 s1, s7, 16
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    s_and_b32 s1, s1, 0x8000
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_or_b32_e32 v0, 0x7c00, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, s3, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_or_b32_e32 v0, s1, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s3, v0, vcc_lo
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, s0
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_nop 0

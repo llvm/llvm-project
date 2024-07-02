@@ -592,7 +592,41 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   ret i32 0
 }
 
+; This has a maximum trip count of 4. The codegen is currently much better with <8 x half> vectorization.
+; CHECK-LABEL: arm_q15_to_f16_remainder
+; CHECK: LV: Selecting VF: 8
+define void @arm_q15_to_f16_remainder(ptr nocapture noundef readonly %pSrc, ptr nocapture noundef writeonly noalias %pDst, i32 noundef %blockSize) #0 {
+entry:
+  %rem = and i32 %blockSize, 3
+  %cmp.not5 = icmp eq i32 %rem, 0
+  br i1 %cmp.not5, label %while.end, label %while.body.preheader
+
+while.body.preheader:                             ; preds = %entry
+  br label %while.body
+
+while.body:                                       ; preds = %while.body.preheader, %while.body
+  %blkCnt.08 = phi i32 [ %dec, %while.body ], [ %rem, %while.body.preheader ]
+  %pIn.07 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %while.body.preheader ]
+  %pDst.addr.06 = phi ptr [ %incdec.ptr2, %while.body ], [ %pDst, %while.body.preheader ]
+  %incdec.ptr = getelementptr inbounds i8, ptr %pIn.07, i32 2
+  %0 = load i16, ptr %pIn.07, align 2
+  %conv1 = sitofp i16 %0 to half
+  %1 = fmul fast half %conv1, 0xH0200
+  %incdec.ptr2 = getelementptr inbounds i8, ptr %pDst.addr.06, i32 2
+  store half %1, ptr %pDst.addr.06, align 2
+  %dec = add nsw i32 %blkCnt.08, -1
+  %cmp.not = icmp eq i32 %dec, 0
+  br i1 %cmp.not, label %while.end.loopexit, label %while.body
+
+while.end.loopexit:                               ; preds = %while.body
+  br label %while.end
+
+while.end:                                        ; preds = %while.end.loopexit, %entry
+  ret void
+}
+
+
 declare void @llvm.lifetime.start.p0(i64, ptr)
 declare void @llvm.lifetime.end.p0(i64, ptr)
 
-attributes #0 = { "target-features"="+mve" }
+attributes #0 = { "target-features"="+mve.fp" }

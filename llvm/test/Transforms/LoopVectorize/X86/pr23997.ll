@@ -88,7 +88,7 @@ loopexit:
   ret void
 }
 
-attributes #0 = { uwtable "target-cpu"="skylake" "target-features"="+sse2,+cx16,+sahf,-tbm,-avx512ifma,-sha,-gfni,-fma4,-vpclmulqdq,+prfchw,+bmi2,-cldemote,+fsgsbase,+xsavec,+popcnt,+aes,-avx512bitalg,+xsaves,-avx512er,-avx512vnni,-avx512vpopcntdq,-clwb,-avx512f,-clzero,-pku,+mmx,-lwp,-rdpid,-xop,+rdseed,-waitpkg,-sse4a,-avx512bw,+clflushopt,+xsave,-avx512vbmi2,-avx512vl,-avx512cd,+avx,-vaes,+rtm,+fma,+bmi,+rdrnd,-mwaitx,+sse4.1,+sse4.2,+avx2,-wbnoinvd,+sse,+lzcnt,+pclmul,-prefetchwt1,+f16c,+ssse3,+sgx,-shstk,+cmov,-avx512vbmi,+movbe,+xsaveopt,-avx512dq,+adx,-avx512pf,+sse3" }
+attributes #0 = { uwtable "target-cpu"="skylake" "target-features"="+sse2,+cx16,+sahf,-tbm,-avx512ifma,-sha,-gfni,-fma4,-vpclmulqdq,+prfchw,+bmi2,-cldemote,+fsgsbase,+xsavec,+popcnt,+aes,-avx512bitalg,+xsaves,-avx512vnni,-avx512vpopcntdq,-clwb,-avx512f,-clzero,-pku,+mmx,-lwp,-rdpid,-xop,+rdseed,-waitpkg,-sse4a,-avx512bw,+clflushopt,+xsave,-avx512vbmi2,-avx512vl,-avx512cd,+avx,-vaes,+rtm,+fma,+bmi,+rdrnd,-mwaitx,+sse4.1,+sse4.2,+avx2,-wbnoinvd,+sse,+lzcnt,+pclmul,+f16c,+ssse3,+sgx,-shstk,+cmov,-avx512vbmi,+movbe,+xsaveopt,-avx512dq,+adx,-avx512pf,+sse3" }
 
 !0 = !{i32 0, i32 2147483646}
 !1 = !{}

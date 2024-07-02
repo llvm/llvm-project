@@ -15,15 +15,27 @@ set(HWASAN_RTL_SOURCES
   hwasan_memintrinsics.cpp
   hwasan_poisoning.cpp
   hwasan_report.cpp
-  hwasan_setjmp_aarch64.S
-  hwasan_setjmp_riscv64.S
-  hwasan_setjmp_x86_64.S
-  hwasan_tag_mismatch_aarch64.S
-  hwasan_tag_mismatch_riscv64.S
   hwasan_thread.cpp
   hwasan_thread_list.cpp
   hwasan_type_test.cpp
   )
+
+foreach(arch ${HWASAN_SUPPORTED_ARCH})
+  if(${arch} MATCHES "aarch64")
+    list(APPEND HWASAN_RTL_SOURCES
+      hwasan_setjmp_aarch64.S
+      hwasan_tag_mismatch_aarch64.S)
+  endif()
+  if(${arch} MATCHES "riscv64")
+    list(APPEND HWASAN_RTL_SOURCES
+      hwasan_setjmp_riscv64.S
+      hwasan_tag_mismatch_riscv64.S)
+  endif()
+  if(${arch} MATCHES "x86_64")
+    list(APPEND HWASAN_RTL_SOURCES
+      hwasan_setjmp_x86_64.S)
+  endif()
+endforeach()
 
 set(HWASAN_RTL_CXX_SOURCES
   hwasan_new_delete.cpp

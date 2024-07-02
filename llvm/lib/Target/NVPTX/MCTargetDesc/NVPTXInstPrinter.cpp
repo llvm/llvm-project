@@ -60,6 +60,9 @@ void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   case 6:
     OS << "%fd";
     break;
+  case 7:
+    OS << "%rq";
+    break;
   }
 
   unsigned VReg = Reg.id() & 0x0FFFFFFF;

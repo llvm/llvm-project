@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -152,6 +154,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else
     LongWidth = LongAlign = PointerWidth = PointerAlign = 32;
 
+  BitIntMaxAlign = 128;
   MaxVectorAlign = 128;
   MaxAtomicInlineWidth = 128;
   MaxAtomicPromoteWidth = 128;
@@ -186,6 +189,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  HasUnalignedAccess = true;
+
   // AArch64 targets default to using the ARM C++ ABI.
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 
@@ -199,18 +204,40 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
   return true;
 }
 
+bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
+  if (hasFeature("fp") && ABI == "aapcs-soft") {
+    // aapcs-soft is not allowed for targets with an FPU, to avoid there being
+    // two incomatible ABIs.
+    Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
+    return false;
+  }
+  return true;
+}
+
+bool AArch64TargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  if ((RegName == "sp") || RegName.starts_with("x")) {
+    HasSizeMismatch = RegSize != 64;
+    return true;
+  } else if (RegName.starts_with("w")) {
+    HasSizeMismatch = RegSize != 32;
+    return true;
+  }
+  return false;
+}
+
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
     return false;
 
   BPI.SignReturnAddr =
@@ -231,7 +258,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
-  return Name == "generic" || llvm::AArch64::parseCpu(Name);
+  return llvm::AArch64::parseCpu(Name).has_value();
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
@@ -271,7 +298,6 @@ void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_FRINT", "1");
-  Builder.defineMacro("__ARM_FEATURE_BTI", "1");
   // Also include the Armv8.4 defines
   getTargetDefinesARMV84A(Opts, Builder);
 }
@@ -484,7 +510,10 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuthLR)
     Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
 
-  if (HasUnaligned)
+  if (HasBTI)
+    Builder.defineMacro("__ARM_FEATURE_BTI", "1");
+
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   if ((FPU & NeonMode) && HasFullFP16)
@@ -644,26 +673,22 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->FmvPriority;
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return Ext->Priority;
   return 0;
 }
 
 unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
   // Take the maximum priority as per feature cost, so more features win.
-  return llvm::AArch64::ExtensionInfo::MaxFMVPriority;
+  constexpr unsigned MaxFMVPriority = 1000;
+  return MaxFMVPriority;
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return !Ext->DependentFeatures.empty();
+  // FMV extensions which imply no backend features do not affect codegen.
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return !Ext->Features.empty();
   return false;
-}
-
-StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->DependentFeatures;
-  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
@@ -671,7 +696,7 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   llvm::SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, "+");
   for (auto &Feature : Features)
-    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+    if (!llvm::AArch64::parseFMVExtension(Feature.trim()).has_value())
       return false;
   return true;
 }
@@ -680,7 +705,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Cases("aarch64", "arm64", "arm", true)
       .Case("fmv", HasFMV)
-      .Cases("neon", "fp", "simd", FPU & NeonMode)
+      .Case("fp", FPU & FPUMode)
+      .Cases("neon", "simd", FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -908,7 +934,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     }
     if (Feature == "+strict-align")
-      HasUnaligned = false;
+      HasUnalignedAccess = false;
+
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
       ArchInfo = &llvm::AArch64::ARMV8A;
@@ -1033,57 +1060,17 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   return true;
 }
 
-bool AArch64TargetInfo::initFeatureMap(
-    llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
-    const std::vector<std::string> &FeaturesVec) const {
-  std::vector<std::string> UpdatedFeaturesVec;
-  // Parse the CPU and add any implied features.
-  std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
-  if (CpuInfo) {
-    auto Exts = CpuInfo->getImpliedExtensions();
-    std::vector<StringRef> CPUFeats;
-    llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
-    for (auto F : CPUFeats) {
-      assert((F[0] == '+' || F[0] == '-') && "Expected +/- in target feature!");
-      UpdatedFeaturesVec.push_back(F.str());
-    }
-  }
-
-  // Process target and dependent features. This is done in two loops collecting
-  // them into UpdatedFeaturesVec: first to add dependent '+'features, second to
-  // add target '+/-'features that can later disable some of features added on
-  // the first loop. Function Multi Versioning features begin with '?'.
-  for (const auto &Feature : FeaturesVec)
-    if (((Feature[0] == '?' || Feature[0] == '+')) &&
-        AArch64TargetInfo::doesFeatureAffectCodeGen(Feature.substr(1))) {
-      StringRef DepFeatures =
-          AArch64TargetInfo::getFeatureDependencies(Feature.substr(1));
-      SmallVector<StringRef, 1> AttrFeatures;
-      DepFeatures.split(AttrFeatures, ",");
-      for (auto F : AttrFeatures)
-        UpdatedFeaturesVec.push_back(F.str());
-    }
-  for (const auto &Feature : FeaturesVec)
-    if (Feature[0] != '?') {
-      std::string UpdatedFeature = Feature;
-      if (Feature[0] == '+') {
-        std::optional<llvm::AArch64::ExtensionInfo> Extension =
-          llvm::AArch64::parseArchExtension(Feature.substr(1));
-        if (Extension)
-          UpdatedFeature = Extension->Feature.str();
-      }
-      UpdatedFeaturesVec.push_back(UpdatedFeature);
-    }
-
-  return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
-}
-
 // Parse AArch64 Target attributes, which are a comma separated list of:
 //  "arch=<arch>" - parsed to features as per -march=..
 //  "cpu=<cpu>" - parsed to features as per -mcpu=.., with CPU set to <cpu>
 //  "tune=<cpu>" - TuneCPU set to <cpu>
 //  "feature", "no-feature" - Add (or remove) feature.
 //  "+feature", "+nofeature" - Add (or remove) feature.
+//
+// A feature may correspond to an Extension (anything with a corresponding
+// AEK_), in which case an ExtensionSet is used to parse it and expand its
+// dependencies. If the feature does not yield a successful parse then it
+// is passed through.
 ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
   if (Features == "default")
@@ -1093,22 +1080,30 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   bool FoundArch = false;
 
   auto SplitAndAddFeatures = [](StringRef FeatString,
-                                std::vector<std::string> &Features) {
+                                std::vector<std::string> &Features,
+                                llvm::AArch64::ExtensionSet &FeatureBits) {
     SmallVector<StringRef, 8> SplitFeatures;
     FeatString.split(SplitFeatures, StringRef("+"), -1, false);
     for (StringRef Feature : SplitFeatures) {
-      StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
-      if (!FeatureName.empty())
-        Features.push_back(FeatureName.str());
+      if (FeatureBits.parseModifier(Feature))
+        continue;
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
+      if (Feature.starts_with("no"))
+        Features.push_back("-" + Feature.drop_front(2).str());
       else
-        // Pushing the original feature string to give a sema error later on
-        // when they get checked.
-        if (Feature.starts_with("no"))
-          Features.push_back("-" + Feature.drop_front(2).str());
-        else
-          Features.push_back("+" + Feature.str());
+        Features.push_back("+" + Feature.str());
     }
   };
+
+  llvm::AArch64::ExtensionSet FeatureBits;
+  // Reconstruct the bitset from the command line option features.
+  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten,
+                                            Ret.Features);
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
@@ -1132,9 +1127,9 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       // Ret.Features.
       if (!AI)
         continue;
-      Ret.Features.push_back(AI->ArchFeature.str());
+      FeatureBits.addArchDefaults(*AI);
       // Add any extra features, after the +
-      SplitAndAddFeatures(Split.second, Ret.Features);
+      SplitAndAddFeatures(Split.second, Ret.Features, FeatureBits);
     } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
@@ -1144,7 +1139,10 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
         std::pair<StringRef, StringRef> Split =
             Feature.split("=").second.trim().split("+");
         Ret.CPU = Split.first;
-        SplitAndAddFeatures(Split.second, Ret.Features);
+        if (auto CpuInfo = llvm::AArch64::parseCpu(Ret.CPU)) {
+          FeatureBits.addCPUDefaults(*CpuInfo);
+          SplitAndAddFeatures(Split.second, Ret.Features, FeatureBits);
+        }
       }
     } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
@@ -1152,25 +1150,23 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       else
         Ret.Tune = Feature.split("=").second.trim();
     } else if (Feature.starts_with("+")) {
-      SplitAndAddFeatures(Feature, Ret.Features);
-    } else if (Feature.starts_with("no-")) {
-      StringRef FeatureName =
-          llvm::AArch64::getArchExtFeature(Feature.split("-").second);
-      if (!FeatureName.empty())
-        Ret.Features.push_back("-" + FeatureName.drop_front(1).str());
-      else
-        Ret.Features.push_back("-" + Feature.split("-").second.str());
+      SplitAndAddFeatures(Feature, Ret.Features, FeatureBits);
     } else {
-      // Try parsing the string to the internal target feature name. If it is
-      // invalid, add the original string (which could already be an internal
-      // name). These should be checked later by isValidFeatureName.
-      StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
-      if (!FeatureName.empty())
-        Ret.Features.push_back(FeatureName.str());
+      if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
+        continue;
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
+      if (Feature.starts_with("no-"))
+        Ret.Features.push_back("-" + Feature.drop_front(3).str());
       else
         Ret.Features.push_back("+" + Feature.str());
     }
   }
+  FeatureBits.toLLVMFeatureList(Ret.Features);
   return Ret;
 }
 
@@ -1186,6 +1182,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_SwiftAsync:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_OpenCLKernel:
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
@@ -1450,6 +1447,11 @@ int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   return -1;
 }
 
+bool AArch64TargetInfo::validatePointerAuthKey(
+    const llvm::APSInt &value) const {
+  return 0 <= value && value <= 3;
+}
+
 bool AArch64TargetInfo::hasInt128Type() const { return true; }
 
 AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
@@ -1459,11 +1461,11 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
 void AArch64leTargetInfo::setDataLayout() {
   if (getTriple().isOSBinFormatMachO()) {
     if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128", "_");
+      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32", "_");
     else
-      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128", "_");
+      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128-Fn32", "_");
   } else
-    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -1486,7 +1488,7 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 void AArch64beTargetInfo::setDataLayout() {
   assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
@@ -1509,8 +1511,8 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 
 void WindowsARM64TargetInfo::setDataLayout() {
   resetDataLayout(Triple.isOSBinFormatMachO()
-                      ? "e-m:o-i64:64-i128:128-n32:64-S128"
-                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128",
+                      ? "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
+                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32",
                   Triple.isOSBinFormatMachO() ? "_" : "");
 }
 
@@ -1522,15 +1524,19 @@ WindowsARM64TargetInfo::getBuiltinVaListKind() const {
 TargetInfo::CallingConvCheckResult
 WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {
+  case CC_X86VectorCall:
+    if (getTriple().isWindowsArm64EC())
+      return CCCR_OK;
+    return CCCR_Ignore;
   case CC_X86StdCall:
   case CC_X86ThisCall:
   case CC_X86FastCall:
-  case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_Swift:
   case CC_SwiftAsync:
   case CC_Win64:

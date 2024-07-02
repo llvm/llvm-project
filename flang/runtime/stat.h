@@ -11,8 +11,8 @@
 
 #ifndef FORTRAN_RUNTIME_STAT_H_
 #define FORTRAN_RUNTIME_STAT_H_
+#include "flang/Common/api-attrs.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
-#include "flang/Runtime/api-attrs.h"
 #include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime {
 
@@ -41,6 +41,7 @@ enum Stat {
   StatLocked = FORTRAN_RUNTIME_STAT_LOCKED,
   StatLockedOtherImage = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE,
   StatMissingEnvVariable = FORTRAN_RUNTIME_STAT_MISSING_ENV_VAR,
+  StatMissingCurrentWorkDirectory = FORTRAN_RUNTIME_STAT_MISSING_CWD,
   StatStoppedImage = FORTRAN_RUNTIME_STAT_STOPPED_IMAGE,
   StatUnlocked = FORTRAN_RUNTIME_STAT_UNLOCKED,
   StatUnlockedFailedImage = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE,

@@ -51,9 +51,9 @@ public:
   /// Returns the underlying declaration.
   const RecordDecl *getDecl() const { return Decl; }
   /// Returns the name of the underlying declaration.
-  const std::string getName() const { return Decl->getNameAsString(); }
+  const std::string getName() const;
   /// Checks if the record is a union.
-  bool isUnion() const { return getDecl()->isUnion(); }
+  bool isUnion() const { return IsUnion; }
   /// Returns the size of the record.
   unsigned getSize() const { return BaseSize; }
   /// Returns the full size of the record, including records.
@@ -100,6 +100,10 @@ public:
   unsigned getNumVirtualBases() const { return VirtualBases.size(); }
   const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
 
+  void dump(llvm::raw_ostream &OS, unsigned Indentation = 0,
+            unsigned Offset = 0) const;
+  void dump() const { dump(llvm::errs()); }
+
 private:
   /// Constructor used by Program to create record descriptors.
   Record(const RecordDecl *, BaseList &&Bases, FieldList &&Fields,
@@ -128,6 +132,8 @@ private:
   unsigned BaseSize;
   /// Size of all virtual bases.
   unsigned VirtualSize;
+  /// If this record is a union.
+  bool IsUnion;
 };
 
 } // namespace interp

@@ -48,6 +48,11 @@ std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 /// this method is thus able to determine non-trivial divisors.
 uint64_t getLargestDivisorOfTripCount(AffineForOp forOp);
 
+/// Checks if an affine read or write operation depends on `forOp`'s IV, i.e.,
+/// if the memory access is invariant on `forOp`.
+template <typename LoadOrStoreOp>
+bool isInvariantAccess(LoadOrStoreOp memOp, AffineForOp forOp);
+
 /// Given an induction variable `iv` of type AffineForOp and `indices` of type
 /// IndexType, returns the set of `indices` that are independent of `iv`.
 ///

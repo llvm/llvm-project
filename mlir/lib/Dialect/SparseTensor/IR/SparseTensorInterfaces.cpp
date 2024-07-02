@@ -29,7 +29,7 @@ LogicalResult sparse_tensor::detail::stageWithSortImpl(
 
   Location loc = op.getLoc();
   Type finalTp = op->getOpResult(0).getType();
-  SparseTensorType dstStt(finalTp.cast<RankedTensorType>());
+  SparseTensorType dstStt(cast<RankedTensorType>(finalTp));
   Type srcCOOTp = dstStt.getCOOType(/*ordered=*/false);
 
   // Clones the original operation but changing the output to an unordered COO.

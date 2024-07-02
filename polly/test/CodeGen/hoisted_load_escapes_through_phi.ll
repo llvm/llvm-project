@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -S -polly-codegen \
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen \
 ; RUN: -polly-invariant-load-hoisting=false < %s | FileCheck %s
-; RUN: opt %loadPolly -S -polly-codegen \
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; Check that we generate valid code even if the load of cont_STACKPOINTER is

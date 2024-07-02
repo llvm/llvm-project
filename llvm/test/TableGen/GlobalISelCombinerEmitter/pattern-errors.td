@@ -270,6 +270,19 @@ def badflagref_in_apply : GICombineRule<
   (match (G_ZEXT $dst, $src):$mi),
   (apply (G_MUL $dst, $src, $src, (MIFlags $impostor)))>;
 
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'apply' patterns cannot mix C++ code with other types of patterns
+def mixed_cxx_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src), "APPLY")>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: GIDefMatchData can only be used if 'apply' in entirely written in C++
+def dummy_md : GIDefMatchData<"unsigned">;
+def matchdata_without_cxx_apply : GICombineRule<
+  (defs root:$dst, dummy_md:$md),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -311,5 +324,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   miflags_in_builtin,
   miflags_in_intrin,
   using_flagref_in_match,
-  badflagref_in_apply
+  badflagref_in_apply,
+  mixed_cxx_apply,
+  matchdata_without_cxx_apply
 ]>;

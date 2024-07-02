@@ -590,7 +590,7 @@ Syntax:
 
 Note that %indices are not operands, they are the elemental region block
 arguments, representing the array iteration space in a one based fashion.
-The choice of using one based indicies is to match Fortran default for
+The choice of using one based indices is to match Fortran default for
 array variables, so that there is no need to generate bound adjustments
 when working with one based array variables in an expression.
 

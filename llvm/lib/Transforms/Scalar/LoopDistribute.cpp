@@ -659,9 +659,9 @@ public:
   bool processLoop() {
     assert(L->isInnermost() && "Only process inner loops.");
 
-    LLVM_DEBUG(dbgs() << "\nLDist: In \""
-                      << L->getHeader()->getParent()->getName()
-                      << "\" checking " << *L << "\n");
+    LLVM_DEBUG(dbgs() << "\nLDist: Checking a loop in '"
+                      << L->getHeader()->getParent()->getName() << "' from "
+                      << L->getLocStr() << "\n");
 
     // Having a single exit block implies there's also one exiting block.
     if (!L->getExitBlock())
@@ -685,6 +685,9 @@ public:
     auto *Dependences = LAI->getDepChecker().getDependences();
     if (!Dependences || Dependences->empty())
       return fail("NoUnsafeDeps", "no unsafe dependences to isolate");
+
+    LLVM_DEBUG(dbgs() << "LDist: Found a candidate loop: "
+                      << L->getHeader()->getName() << "\n");
 
     InstPartitionContainer Partitions(L, LI, DT);
 

@@ -219,6 +219,7 @@ bool ReportRetriever::NotifyBreakpointHit(ProcessSP process_sp,
   return true; // Return true to stop the target
 }
 
+// FIXME: Setup the breakpoint using a less fragile SPI. rdar://124399066
 Breakpoint *ReportRetriever::SetupBreakpoint(ModuleSP module_sp,
                                              ProcessSP process_sp,
                                              ConstString symbol_name) {

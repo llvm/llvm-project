@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-allow-differing-element-types -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -S -basic-aa -polly-allow-differing-element-types -polly-codegen < %s | FileCheck --check-prefix=IR %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-differing-element-types '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -S -aa-pipeline=basic-aa -polly-allow-differing-element-types -passes=polly-codegen < %s 2>&1 | FileCheck --check-prefix=IR %s
 ;
 ; CHECK:         Arrays {
 ; CHECK-NEXT:        i8 MemRef_A[*]; // Element size 1

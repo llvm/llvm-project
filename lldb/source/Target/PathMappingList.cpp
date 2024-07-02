@@ -86,8 +86,8 @@ bool PathMappingList::AppendUnique(llvm::StringRef path,
   auto normalized_replacement = NormalizePath(replacement);
   std::lock_guard<std::recursive_mutex> lock(m_mutex);
   for (const auto &pair : m_pairs) {
-    if (pair.first.GetStringRef().equals(normalized_path) &&
-        pair.second.GetStringRef().equals(normalized_replacement))
+    if (pair.first.GetStringRef() == normalized_path &&
+        pair.second.GetStringRef() == normalized_replacement)
       return false;
   }
   Append(path, replacement, notify);

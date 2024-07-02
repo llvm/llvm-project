@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_CONTAINEROF_MACRO_H
 #define LLVM_LIBC_MACROS_CONTAINEROF_MACRO_H
 
-#include <llvm-libc-macros/offsetof-macro.h>
+#include "llvm-libc-macros/offsetof-macro.h"
 
 #define __containerof(ptr, type, member)                                       \
   ({                                                                           \

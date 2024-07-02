@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
+#include "tools.h"
 #include "flang/Runtime/magic-numbers.h"
 #include "flang/Runtime/memory.h"
 #include <algorithm>
@@ -16,9 +17,8 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #ifdef _WIN32
-#define NOMINMAX
+#include "flang/Common/windows-include.h"
 #include <io.h>
-#include <windows.h>
 #else
 #include <unistd.h>
 #endif
@@ -60,7 +60,7 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   return fd;
 }
 
-void OpenFile::Open(OpenStatus status, std::optional<Action> action,
+void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,
     Position position, IoErrorHandler &handler) {
   if (fd_ >= 0 &&
       (status == OpenStatus::Old || status == OpenStatus::Unknown)) {
@@ -131,17 +131,17 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
   }
   RUNTIME_CHECK(handler, action.has_value());
   pending_.reset();
-  if (position == Position::Append && !RawSeekToEnd()) {
+  if (fd_ >= 0 && position == Position::Append && !RawSeekToEnd()) {
     handler.SignalError(IostatOpenBadAppend);
   }
-  isTerminal_ = IsATerminal(fd_) == 1;
+  isTerminal_ = fd_ >= 0 && IsATerminal(fd_) == 1;
   mayRead_ = *action != Action::Write;
   mayWrite_ = *action != Action::Read;
   if (status == OpenStatus::Old || status == OpenStatus::Unknown) {
     knownSize_.reset();
 #ifndef _WIN32
     struct stat buf;
-    if (::fstat(fd_, &buf) == 0) {
+    if (fd_ >= 0 && ::fstat(fd_, &buf) == 0) {
       mayPosition_ = S_ISREG(buf.st_mode);
       knownSize_ = buf.st_size;
     }
@@ -322,7 +322,7 @@ int OpenFile::WriteAsynchronously(FileOffset at, const char *buffer,
 }
 
 void OpenFile::Wait(int id, IoErrorHandler &handler) {
-  std::optional<int> ioStat;
+  Fortran::common::optional<int> ioStat;
   Pending *prev{nullptr};
   for (Pending *p{pending_.get()}; p; p = (prev = p)->next.get()) {
     if (p->id == id) {
@@ -424,6 +424,7 @@ void OpenFile::CloseFd(IoErrorHandler &handler) {
   }
 }
 
+#if !defined(RT_DEVICE_COMPILATION)
 bool IsATerminal(int fd) { return ::isatty(fd); }
 
 #if defined(_WIN32) && !defined(F_OK)
@@ -455,5 +456,25 @@ std::int64_t SizeInBytes(const char *path) {
   // No Fortran compiler signals an error
   return -1;
 }
+#else // defined(RT_DEVICE_COMPILATION)
+RT_API_ATTRS bool IsATerminal(int fd) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+RT_API_ATTRS bool IsExtant(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+RT_API_ATTRS bool MayRead(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+RT_API_ATTRS bool MayWrite(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+RT_API_ATTRS bool MayReadAndWrite(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+RT_API_ATTRS std::int64_t SizeInBytes(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+#endif // defined(RT_DEVICE_COMPILATION)
 
 } // namespace Fortran::runtime::io

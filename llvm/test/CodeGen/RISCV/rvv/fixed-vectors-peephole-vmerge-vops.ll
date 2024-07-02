@@ -14,9 +14,7 @@ define <8 x i32> @vpmerge_vpadd(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y,
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -31,10 +29,8 @@ define <8 x i32> @vpmerge_vpadd2(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> %mask, i32 %vl)
-  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
+  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -46,10 +42,8 @@ define <8 x i32> @vpmerge_vpadd3(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> %mask, i32 %vl)
-  %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %mask, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
+  %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> splat (i1 true), <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
 
@@ -61,9 +55,7 @@ define <8 x float> @vpmerge_vpfadd(<8 x float> %passthru, <8 x float> %x, <8 x f
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> %x, <8 x float> %y, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> %x, <8 x float> %y, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x float> @llvm.vp.merge.v8f32(<8 x i1> %m, <8 x float> %a, <8 x float> %passthru, i32 %vl)
   ret <8 x float> %b
 }
@@ -76,9 +68,7 @@ define <8 x i16> @vpmerge_vpfptosi(<8 x i16> %passthru, <8 x float> %x, <8 x i1>
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i16> @llvm.vp.fptosi.v8i16.v8f32(<8 x float> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i16> @llvm.vp.fptosi.v8i16.v8f32(<8 x float> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i16> @llvm.vp.merge.v8i16(<8 x i1> %m, <8 x i16> %a, <8 x i16> %passthru, i32 %vl)
   ret <8 x i16> %b
 }
@@ -91,9 +81,7 @@ define <8 x float> @vpmerge_vpsitofp(<8 x float> %passthru, <8 x i64> %x, <8 x i
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x float> @llvm.vp.sitofp.v8f32.v8i64(<8 x i64> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x float> @llvm.vp.sitofp.v8f32.v8i64(<8 x i64> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x float> @llvm.vp.merge.v8f32(<8 x i1> %m, <8 x float> %a, <8 x float> %passthru, i32 %vl)
   ret <8 x float> %b
 }
@@ -106,9 +94,7 @@ define <8 x i32> @vpmerge_vpzext(<8 x i32> %passthru, <8 x i8> %x, <8 x i1> %m, 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.zext.v8i32.v8i8(<8 x i8> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.zext.v8i32.v8i8(<8 x i8> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -121,9 +107,7 @@ define <8 x i32> @vpmerge_vptrunc(<8 x i32> %passthru, <8 x i64> %x, <8 x i1> %m
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.trunc.v8i32.v8i64(<8 x i64> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.trunc.v8i32.v8i64(<8 x i64> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -136,9 +120,7 @@ define <8 x double> @vpmerge_vpfpext(<8 x double> %passthru, <8 x float> %x, <8 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x double> @llvm.vp.fpext.v8f64.v8f32(<8 x float> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x double> @llvm.vp.fpext.v8f64.v8f32(<8 x float> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x double> @llvm.vp.merge.v8f64(<8 x i1> %m, <8 x double> %a, <8 x double> %passthru, i32 %vl)
   ret <8 x double> %b
 }
@@ -151,9 +133,7 @@ define <8 x float> @vpmerge_vpfptrunc(<8 x float> %passthru, <8 x double> %x, <8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x float> @llvm.vp.fptrunc.v8f32.v8f64(<8 x double> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x float> @llvm.vp.fptrunc.v8f32.v8f64(<8 x double> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x float> @llvm.vp.merge.v8f32(<8 x i1> %m, <8 x float> %a, <8 x float> %passthru, i32 %vl)
   ret <8 x float> %b
 }
@@ -167,9 +147,7 @@ define <8 x i32> @vpmerge_vpload(<8 x i32> %passthru, ptr %p, <8 x i1> %m, i32 z
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -183,10 +161,8 @@ define <8 x i32> @vpmerge_vpload2(<8 x i32> %passthru, ptr %p, <8 x i32> %x, <8 
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
-  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> splat (i1 true), i32 %vl)
+  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -203,9 +179,7 @@ define <8 x i32> @vpselect_vpadd(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -218,10 +192,8 @@ define <8 x i32> @vpselect_vpadd2(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %
 ; CHECK-NEXT:    vmseq.vv v0, v9, v10
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> %mask, i32 %vl)
-  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
+  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -233,10 +205,8 @@ define <8 x i32> @vpselect_vpadd3(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> %mask, i32 %vl)
-  %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %mask, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i1> splat (i1 true), i32 %vl)
+  %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
 
@@ -247,9 +217,7 @@ define <8 x float> @vpselect_vpfadd(<8 x float> %passthru, <8 x float> %x, <8 x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> %x, <8 x float> %y, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> %x, <8 x float> %y, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x float> @llvm.vp.select.v8f32(<8 x i1> %m, <8 x float> %a, <8 x float> %passthru, i32 %vl)
   ret <8 x float> %b
 }
@@ -261,9 +229,7 @@ define <8 x i16> @vpselect_vpfptosi(<8 x i16> %passthru, <8 x float> %x, <8 x i1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i16> @llvm.vp.fptosi.v8i16.v8f32(<8 x float> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i16> @llvm.vp.fptosi.v8i16.v8f32(<8 x float> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i16> @llvm.vp.select.v8i16(<8 x i1> %m, <8 x i16> %a, <8 x i16> %passthru, i32 %vl)
   ret <8 x i16> %b
 }
@@ -275,9 +241,7 @@ define <8 x float> @vpselect_vpsitofp(<8 x float> %passthru, <8 x i64> %x, <8 x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x float> @llvm.vp.sitofp.v8f32.v8i64(<8 x i64> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x float> @llvm.vp.sitofp.v8f32.v8i64(<8 x i64> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x float> @llvm.vp.select.v8f32(<8 x i1> %m, <8 x float> %a, <8 x float> %passthru, i32 %vl)
   ret <8 x float> %b
 }
@@ -289,9 +253,7 @@ define <8 x i32> @vpselect_vpzext(<8 x i32> %passthru, <8 x i8> %x, <8 x i1> %m,
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.zext.v8i32.v8i8(<8 x i8> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.zext.v8i32.v8i8(<8 x i8> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -303,9 +265,7 @@ define <8 x i32> @vpselect_vptrunc(<8 x i32> %passthru, <8 x i64> %x, <8 x i1> %
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.trunc.v8i32.v8i64(<8 x i64> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.trunc.v8i32.v8i64(<8 x i64> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -317,9 +277,7 @@ define <8 x double> @vpselect_vpfpext(<8 x double> %passthru, <8 x float> %x, <8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x double> @llvm.vp.fpext.v8f64.v8f32(<8 x float> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x double> @llvm.vp.fpext.v8f64.v8f32(<8 x float> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x double> @llvm.vp.select.v8f64(<8 x i1> %m, <8 x double> %a, <8 x double> %passthru, i32 %vl)
   ret <8 x double> %b
 }
@@ -331,9 +289,7 @@ define <8 x float> @vpselect_vpfptrunc(<8 x float> %passthru, <8 x double> %x, <
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x float> @llvm.vp.fptrunc.v8f32.v8f64(<8 x double> %x, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x float> @llvm.vp.fptrunc.v8f32.v8f64(<8 x double> %x, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x float> @llvm.vp.select.v8f32(<8 x i1> %m, <8 x float> %a, <8 x float> %passthru, i32 %vl)
   ret <8 x float> %b
 }
@@ -345,9 +301,7 @@ define <8 x i32> @vpselect_vpload(<8 x i32> %passthru, ptr %p, <8 x i1> %m, i32 
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
@@ -360,10 +314,8 @@ define <8 x i32> @vpselect_vpload2(<8 x i32> %passthru, ptr %p, <8 x i32> %x, <8
 ; CHECK-NEXT:    vmseq.vv v0, v9, v10
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <8 x i1> poison, i1 true, i32 0
-  %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
-  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> splat (i1 true), i32 %vl)
+  %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> splat (i1 true), i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }

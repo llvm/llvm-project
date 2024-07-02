@@ -22,7 +22,7 @@ namespace llvm {
   /// Creates a Hexagon-specific Target Transformation Info pass.
   ImmutablePass *createHexagonTargetTransformInfoPass(const HexagonTargetMachine *TM);
 
-  void initializeHexagonDAGToDAGISelPass(PassRegistry &);
+  void initializeHexagonDAGToDAGISelLegacyPass(PassRegistry &);
 } // end namespace llvm;
 
 #endif

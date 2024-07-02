@@ -35,7 +35,6 @@ struct AffineMapStorage;
 
 class Attribute;
 class Builder;
-struct LogicalResult;
 class OpFoldResult;
 class MLIRContext;
 

@@ -157,14 +157,6 @@ def add_lldb_test_package_paths(check_dir):
                 0, os.path.join(packages_python_child_dir, "test_runner", "lib")
             )
 
-            # Handle third_party module/package directory.
-            third_party_module_dir = os.path.join(
-                check_dir, "third_party", "Python", "module"
-            )
-            for child_dir in child_dirs(third_party_module_dir):
-                # Yes, we embed the module in the module parent dir
-                sys.path.insert(0, child_dir)
-
             # We're done.
             break
 

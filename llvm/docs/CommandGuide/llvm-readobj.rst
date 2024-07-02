@@ -255,10 +255,6 @@ The following options are implemented only for the ELF file format.
 
  Display the program headers.
 
-.. option:: --raw-relr
-
- Do not decode relocations in RELR relocation sections when displaying them.
-
 .. option:: --section-mapping
 
  Display the section to segment mapping.

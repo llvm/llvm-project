@@ -226,6 +226,20 @@ ProgramStateRef ProgramState::killBinding(Loc LV) const {
   return makeWithStore(newStore);
 }
 
+/// SymbolicRegions are expected to be wrapped by an ElementRegion as a
+/// canonical representation. As a canonical representation, SymbolicRegions
+/// should be wrapped by ElementRegions before getting a FieldRegion.
+/// See f8643a9b31c4029942f67d4534c9139b45173504 why.
+SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
+  const auto *BaseReg = dyn_cast_or_null<SymbolicRegion>(Val.getAsRegion());
+  if (!BaseReg)
+    return Val;
+
+  StoreManager &SM = getStateManager().getStoreManager();
+  QualType ElemTy = BaseReg->getPointeeStaticType();
+  return loc::MemRegionVal{SM.GetElementZeroRegion(BaseReg, ElemTy)};
+}
+
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
                               const StackFrameContext *CalleeCtx) const {
@@ -449,6 +463,24 @@ void ProgramState::setStore(const StoreRef &newStore) {
   if (store)
     stateMgr->getStoreManager().decrementReferenceCount(store);
   store = newStoreStore;
+}
+
+SVal ProgramState::getLValue(const FieldDecl *D, SVal Base) const {
+  Base = wrapSymbolicRegion(Base);
+  return getStateManager().StoreMgr->getLValueField(D, Base);
+}
+
+SVal ProgramState::getLValue(const IndirectFieldDecl *D, SVal Base) const {
+  StoreManager &SM = *getStateManager().StoreMgr;
+  Base = wrapSymbolicRegion(Base);
+
+  // FIXME: This should work with `SM.getLValueField(D->getAnonField(), Base)`,
+  // but that would break some tests. There is probably a bug somewhere that it
+  // would expose.
+  for (const auto *I : D->chain()) {
+    Base = SM.getLValueField(cast<FieldDecl>(I), Base);
+  }
+  return Base;
 }
 
 //===----------------------------------------------------------------------===//

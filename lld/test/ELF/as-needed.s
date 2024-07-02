@@ -32,13 +32,13 @@
 // RUN: ld.lld %t.o %t.script -o %t2
 // RUN: llvm-readobj --dynamic-table %t2 | FileCheck -check-prefix=CHECK2 %s
 
-// CHECK: NEEDED Shared library: [shared1]
-// CHECK: NEEDED Shared library: [shared2]
-// CHECK: NEEDED Shared library: [shared3]
+// CHECK: NEEDED Shared library: shared1
+// CHECK: NEEDED Shared library: shared2
+// CHECK: NEEDED Shared library: shared3
 
-// CHECK2:     NEEDED Shared library: [shared1]
-// CHECK2-NOT: NEEDED Shared library: [shared2]
-// CHECK2-NOT: NEEDED Shared library: [shared3]
+// CHECK2:     NEEDED Shared library: shared1
+// CHECK2-NOT: NEEDED Shared library: shared2
+// CHECK2-NOT: NEEDED Shared library: shared3
 
 .global _start
 _start:

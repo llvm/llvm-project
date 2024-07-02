@@ -343,10 +343,10 @@ class BTFDebug : public DebugHandlerBase {
 
   /// Get the file content for the subprogram. Certain lines of the file
   /// later may be put into string table and referenced by line info.
-  std::string populateFileContent(const DISubprogram *SP);
+  std::string populateFileContent(const DIFile *File);
 
   /// Construct a line info.
-  void constructLineInfo(const DISubprogram *SP, MCSymbol *Label, uint32_t Line,
+  void constructLineInfo(MCSymbol *Label, const DIFile *File, uint32_t Line,
                          uint32_t Column);
 
   /// Generate types and variables for globals.
@@ -419,8 +419,6 @@ public:
            "DIType not added in the BDIToIdMap");
     return DIToIdMap[Ty];
   }
-
-  void setSymbolSize(const MCSymbol *Symbol, uint64_t Size) override {}
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;

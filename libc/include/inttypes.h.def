@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_INTTYPES_H
 #define LLVM_LIBC_INTTYPES_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/inttypes-macros.h>
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/inttypes-macros.h"
 #include <stdint.h>
 
 %%public_api()

@@ -10,7 +10,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
-#include "Plugins/Process/Utility/RegisterFlagsLinux_arm64.h"
+#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -79,17 +79,19 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   ProcessElfCore *process =
       static_cast<ProcessElfCore *>(thread.GetProcess().get());
-  if (process->GetArchitecture().GetTriple().getOS() == llvm::Triple::Linux) {
+  llvm::Triple::OSType os = process->GetArchitecture().GetTriple().getOS();
+  if ((os == llvm::Triple::Linux) || (os == llvm::Triple::FreeBSD)) {
     AuxVector aux_vec(process->GetAuxvData());
-    std::optional<uint64_t> auxv_at_hwcap =
-        aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
+    std::optional<uint64_t> auxv_at_hwcap = aux_vec.GetAuxValue(
+        os == llvm::Triple::FreeBSD ? AuxVector::AUXV_FREEBSD_AT_HWCAP
+                                    : AuxVector::AUXV_AT_HWCAP);
     std::optional<uint64_t> auxv_at_hwcap2 =
         aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
 
-    m_linux_register_flags.DetectFields(auxv_at_hwcap.value_or(0),
-                                        auxv_at_hwcap2.value_or(0));
-    m_linux_register_flags.UpdateRegisterInfo(GetRegisterInfo(),
-                                              GetRegisterCount());
+    m_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
+                                           auxv_at_hwcap2.value_or(0));
+    m_register_flags_detector.UpdateRegisterInfo(GetRegisterInfo(),
+                                                 GetRegisterCount());
   }
 
   m_gpr_data.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),

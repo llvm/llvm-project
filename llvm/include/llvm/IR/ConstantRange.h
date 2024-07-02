@@ -176,6 +176,11 @@ public:
                                              const APInt &Other,
                                              unsigned NoWrapKind);
 
+  /// Initialize a range containing all values X that satisfy `(X & Mask)
+  /// != C`. Note that the range returned may contain values where `(X & Mask)
+  /// == C` holds, making it less precise, but still conservative.
+  static ConstantRange makeMaskNotEqualRange(const APInt &Mask, const APInt &C);
+
   /// Returns true if ConstantRange calculations are supported for intrinsic
   /// with \p IntrinsicID.
   static bool isIntrinsicSupported(Intrinsic::ID IntrinsicID);
@@ -418,6 +423,15 @@ public:
   /// from a multiplication of a value in this range and a value in \p Other,
   /// treating both this and \p Other as unsigned ranges.
   ConstantRange multiply(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a multiplication with wrap type \p NoWrapKind of a value in this
+  /// range and a value in \p Other.
+  /// If the result range is disjoint, the preferred range is determined by the
+  /// \p PreferredRangeType.
+  ConstantRange
+  multiplyWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                     PreferredRangeType RangeType = Smallest) const;
 
   /// Return range of possible values for a signed multiplication of this and
   /// \p Other. However, if overflow is possible always return a full range

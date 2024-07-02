@@ -49,6 +49,10 @@ struct TestInputs {
   /// Keys are plain filenames ("foo.h"), values are file content.
   llvm::StringMap<std::string> ExtraFiles = {};
 
+  /// Root of execution, all relative paths in Args/Files are resolved against
+  /// this.
+  std::string WorkingDir;
+
   /// Filename to use for translation unit. A default will be used when empty.
   std::string FileName;
 

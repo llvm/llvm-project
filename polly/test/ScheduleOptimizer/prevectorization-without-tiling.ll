@@ -1,4 +1,4 @@
-; RUN: opt -S %loadPolly -basic-aa -polly-tiling=false -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -polly-tiling=false -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @C = common global [1536 x [1536 x float]] zeroinitializer, align 16

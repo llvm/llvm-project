@@ -51,6 +51,11 @@ CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
       // this builder will have the def ready.
       setInsertPt(*CurMBB, std::next(MII));
     } else if (!dominates(MI, CurrPos)) {
+      // Update the spliced machineinstr's debug location by merging it with the
+      // debug location of the instruction at the insertion point.
+      auto *Loc = DILocation::getMergedLocation(getDebugLoc().get(),
+                                                MI->getDebugLoc().get());
+      MI->setDebugLoc(Loc);
       CurMBB->splice(CurrPos, CurMBB, MI);
     }
     return MachineInstrBuilder(getMF(), MI);
@@ -174,6 +179,20 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   switch (Opc) {
   default:
     break;
+  case TargetOpcode::G_ICMP: {
+    assert(SrcOps.size() == 3 && "Invalid sources");
+    assert(DstOps.size() == 1 && "Invalid dsts");
+    LLT SrcTy = SrcOps[1].getLLTTy(*getMRI());
+
+    if (std::optional<SmallVector<APInt>> Cst =
+            ConstantFoldICmp(SrcOps[0].getPredicate(), SrcOps[1].getReg(),
+                             SrcOps[2].getReg(), *getMRI())) {
+      if (SrcTy.isVector())
+        return buildBuildVectorConstant(DstOps[0], *Cst);
+      return buildConstant(DstOps[0], Cst->front());
+    }
+    break;
+  }
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_AND:
@@ -256,10 +275,16 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildFConstant(DstOps[0], *Cst);
     break;
   }
-  case TargetOpcode::G_CTLZ: {
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ: {
     assert(SrcOps.size() == 1 && "Expected one source");
     assert(DstOps.size() == 1 && "Expected one dest");
-    auto MaybeCsts = ConstantFoldCTLZ(SrcOps[0].getReg(), *getMRI());
+    std::function<unsigned(APInt)> CB;
+    if (Opc == TargetOpcode::G_CTLZ)
+      CB = [](APInt V) -> unsigned { return V.countl_zero(); };
+    else
+      CB = [](APInt V) -> unsigned { return V.countTrailingZeros(); };
+    auto MaybeCsts = ConstantFoldCountZeros(SrcOps[0].getReg(), *getMRI(), CB);
     if (!MaybeCsts)
       break;
     if (MaybeCsts->size() == 1)

@@ -47,3 +47,32 @@ func.func @buffer_forwarding_no_conflict(%arg0: tensor<?xf32> {bufferization.wri
   // CHECK-SAME: __equivalent_func_args__ = [0, 0]
   return %2, %2 : tensor<?xf32>, tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @buffer_forwarding_conflict_with_different_element_type
+func.func @buffer_forwarding_conflict_with_different_element_type(%arg0: tensor<?xf32> {bufferization.writable = true}, %arg1: index) -> (tensor<?xf32>, tensor<?xf32>) {
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none"]
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty(%arg1) : tensor<?xf32>
+
+  //      CHECK: bufferization.alloc_tensor(%arg1)
+  %1 = tensor.empty(%arg1) : tensor<?xbf16>
+
+  //      CHECK: linalg.copy
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
+  %2 = linalg.copy ins(%0 : tensor<?xf32>) outs(%1 : tensor<?xbf16>) -> tensor<?xbf16>
+
+  //      CHECK: linalg.copy
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true"]
+  %3 = linalg.copy ins(%2 : tensor<?xbf16>) outs(%0 : tensor<?xf32>) -> tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none"]
+  %4 = tensor.insert_slice %3 into %arg0[42] [%arg1] [1] : tensor<?xf32> into tensor<?xf32>
+
+  //      CHECK: return
+  // CHECK-SAME: __equivalent_func_args__ = [0, 0]
+  return %4, %4 : tensor<?xf32>, tensor<?xf32>
+}

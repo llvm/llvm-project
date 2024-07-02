@@ -34,7 +34,7 @@ subroutine char_ptr(p)
   ! CHECK: %[[count:.*]] = arith.muli %[[one]], %[[size]] : i64
   ! CHECK: %[[dst:.*]] = fir.convert %[[addr]] : (!fir.ptr<!fir.char<1,12>>) -> !fir.ref<i8>
   ! CHECK: %[[src:.*]] = fir.convert %[[str]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %5, %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %{{[0-9]+}}, %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   p = "hello world!"
 
   ! CHECK: %[[boxload2:.*]] = fir.load %[[arg0]]

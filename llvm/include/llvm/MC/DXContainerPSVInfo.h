@@ -9,9 +9,11 @@
 #ifndef LLVM_MC_DXCONTAINERPSVINFO_H
 #define LLVM_MC_DXCONTAINERPSVINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <array>
@@ -45,8 +47,11 @@ struct PSVSignatureElement {
 // modifiable format, and can be used to serialize the data back into valid PSV
 // RuntimeInfo.
 struct PSVRuntimeInfo {
+  PSVRuntimeInfo() : DXConStrTabBuilder(StringTableBuilder::DXContainer) {
+    memset((void *)&BaseData, 0, sizeof(dxbc::PSV::v3::RuntimeInfo));
+  }
   bool IsFinalized = false;
-  dxbc::PSV::v2::RuntimeInfo BaseData;
+  dxbc::PSV::v3::RuntimeInfo BaseData;
   SmallVector<dxbc::PSV::v2::ResourceBindInfo> Resources;
   SmallVector<PSVSignatureElement> InputElements;
   SmallVector<PSVSignatureElement> OutputElements;
@@ -64,6 +69,7 @@ struct PSVRuntimeInfo {
   std::array<SmallVector<uint32_t>, 4> InputOutputMap;
   SmallVector<uint32_t> InputPatchMap;
   SmallVector<uint32_t> PatchOutputMap;
+  llvm::StringRef EntryName;
 
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
@@ -71,19 +77,12 @@ struct PSVRuntimeInfo {
   void write(raw_ostream &OS,
              uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
 
-  void finalize(Triple::EnvironmentType Stage) {
-    IsFinalized = true;
-    BaseData.SigInputElements = static_cast<uint32_t>(InputElements.size());
-    BaseData.SigOutputElements = static_cast<uint32_t>(OutputElements.size());
-    BaseData.SigPatchOrPrimElements =
-        static_cast<uint32_t>(PatchOrPrimElements.size());
-    if (!sys::IsBigEndianHost)
-      return;
-    BaseData.swapBytes();
-    BaseData.swapBytes(Stage);
-    for (auto &Res : Resources)
-      Res.swapBytes();
-  }
+  void finalize(Triple::EnvironmentType Stage);
+
+private:
+  SmallVector<uint32_t, 64> IndexBuffer;
+  SmallVector<llvm::dxbc::PSV::v0::SignatureElement, 32> SignatureElements;
+  StringTableBuilder DXConStrTabBuilder;
 };
 
 class Signature {

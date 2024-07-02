@@ -28,7 +28,7 @@ void MarkupStackTracePrinter::RenderData(InternalScopedString *buffer,
                                          const char *format, const DataInfo *DI,
                                          const char *strip_path_prefix) {
   RenderContext(buffer);
-  buffer->AppendF(kFormatData, DI->start);
+  buffer->AppendF(kFormatData, reinterpret_cast<void *>(DI->start));
 }
 
 bool MarkupStackTracePrinter::RenderNeedsSymbolization(const char *format) {
@@ -43,12 +43,13 @@ void MarkupStackTracePrinter::RenderFrame(InternalScopedString *buffer,
                                           const char *strip_path_prefix) {
   CHECK(!RenderNeedsSymbolization(format));
   RenderContext(buffer);
-  buffer->AppendF(kFormatFrame, frame_no, address);
+  buffer->AppendF(kFormatFrame, frame_no, reinterpret_cast<void *>(address));
 }
 
 bool MarkupSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   char buffer[kFormatFunctionMax];
-  internal_snprintf(buffer, sizeof(buffer), kFormatFunction, addr);
+  internal_snprintf(buffer, sizeof(buffer), kFormatFunction,
+                    reinterpret_cast<void *>(addr));
   stack->info.function = internal_strdup(buffer);
   return true;
 }
@@ -118,7 +119,8 @@ static void RenderMmaps(InternalScopedString *buffer,
     // module.base_address == dlpi_addr
     // range.beg == dlpi_addr + p_vaddr
     // relative address == p_vaddr == range.beg - module.base_address
-    buffer->AppendF(kFormatMmap, range.beg, range.end - range.beg, moduleId,
+    buffer->AppendF(kFormatMmap, reinterpret_cast<void *>(range.beg),
+                    range.end - range.beg, static_cast<int>(moduleId),
                     accessBuffer.data(), range.beg - module.base_address());
 
     buffer->Append("\n");

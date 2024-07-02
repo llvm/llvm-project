@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 use-bare-ptr-memref-call-conv=1' -split-input-file | FileCheck %s --check-prefix=CHECK-BARE
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
 gpu.module @test_module_0 {
@@ -112,7 +113,7 @@ gpu.module @test_module_3 {
 
 gpu.module @test_module_4 {
   // CHECK-LABEL: func @gpu_shuffle()
-  func.func @gpu_shuffle() -> (f32, f32, f32, f32) {
+  func.func @gpu_shuffle() -> (f32, f32, f32, f32, i1, i1, i1, i1) {
     // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
     %arg0 = arith.constant 1.0 : f32
     // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
@@ -143,11 +144,41 @@ gpu.module @test_module_4 {
     // CHECK: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
     %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
 
+    func.return %shfl, %shflu, %shfld, %shfli, %pred, %predu, %predd, %predi
+      : f32, f32,f32, f32, i1, i1, i1, i1
+  }
+
+  // CHECK-LABEL: func @gpu_shuffle_unused_pred()
+  func.func @gpu_shuffle_unused_pred() -> (f32, f32, f32, f32) {
+    // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %arg0 = arith.constant 1.0 : f32
+    // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
+    %arg1 = arith.constant 4 : i32
+    // CHECK: %[[#WIDTH:]] = llvm.mlir.constant(23 : i32) : i32
+    %arg2 = arith.constant 23 : i32
+    // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: %[[#MINUS_ONE:]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: %[[#THIRTY_TWO:]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
+    // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
+    // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : i32
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : f32 -> f32
+    %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : f32
+    // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: %[[#MINUS_ONE:]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: %[[#THIRTY_TWO:]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
+    // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync up %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#NUM_LANES]] : f32 -> f32
+    %shflu, %predu = gpu.shuffle up %arg0, %arg1, %arg2 : f32
+    // CHECK: nvvm.shfl.sync down {{.*}} : f32 -> f32
+    %shfld, %predd = gpu.shuffle down %arg0, %arg1, %arg2 : f32
+    // CHECK: nvvm.shfl.sync idx {{.*}} : f32 -> f32
+    %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
+
     func.return %shfl, %shflu, %shfld, %shfli : f32, f32,f32, f32
   }
 }
-
-
 
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()
@@ -608,7 +639,7 @@ gpu.module @test_module_30 {
   }
   // CHECK-LABEL: @subgroup_reduce_xor
   gpu.func @subgroup_reduce_xor(%arg0 : i32) {
-    // CHECK nvvm.redux.sync xor {{.*}}
+    // CHECK: nvvm.redux.sync xor {{.*}}
     %result = gpu.subgroup_reduce xor %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
@@ -640,11 +671,33 @@ gpu.module @test_module_32 {
   }
 }
 
-gpu.module @gpumodule {
+gpu.module @test_module_33 {
 // CHECK-LABEL: func @kernel_with_block_size()
-// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>} 
-  gpu.func @kernel_with_block_size() kernel attributes {gpu.known_block_size = array<i32: 128, 1, 1>} {
+// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>}
+  gpu.func @kernel_with_block_size() kernel attributes {known_block_size = array<i32: 128, 1, 1>} {
     gpu.return
+  }
+}
+
+
+gpu.module @test_module_34 {
+  // CHECK-LABEL: llvm.func @memref_signature(
+  //  CHECK-SAME:     %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: f32) -> !llvm.struct<(struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, f32)>
+  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.insertvalue
+  //       CHECK:   llvm.return
+
+  // CHECK-BARE-LABEL: llvm.func @memref_signature(
+  //  CHECK-BARE-SAME:     %{{.*}}: !llvm.ptr, %{{.*}}: f32) -> !llvm.struct<(ptr, f32)>
+  gpu.func @memref_signature(%m: memref<2xf32>, %f: f32) -> (memref<2xf32>, f32) {
+    gpu.return %m, %f : memref<2xf32>, f32
   }
 }
 
@@ -671,9 +724,7 @@ module attributes {transform.with_named_sequence} {
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
         {index_bitwidth = 64,
-        use_bare_ptr = true,
-        use_bare_ptr_memref_call_conv = true,
-        use_opaque_pointers = true}
+        use_bare_ptr_call_conv = false}
     } {
       legal_dialects = ["llvm", "memref", "nvvm", "test"],
       legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],

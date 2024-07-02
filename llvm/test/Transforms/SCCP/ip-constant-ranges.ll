@@ -6,7 +6,7 @@ define internal i32 @f1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define {{[^@]+}}@f1
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %cmp.a = icmp sgt i32 %a, 300
@@ -81,7 +81,7 @@ define internal i32 @f3(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@f3
 ; CHECK-SAME: (i32 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %cmp = icmp sgt i32 %x, 300
@@ -118,7 +118,7 @@ define internal i32 @f4(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@f4
 ; CHECK-SAME: (i32 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %cmp = icmp sgt i32 %x, 300
@@ -172,7 +172,7 @@ define internal i1 @test_unreachable_callee(i32 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@test_unreachable_callee
 ; CHECK-SAME: (i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
 entry:
   ret i1 true
@@ -284,7 +284,7 @@ define internal i32 @callee6.1(i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@callee6.1
 ; CHECK-SAME: (i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee6.2(i32 [[I]])
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %res = call i32 @callee6.2(i32 %i)
   ret i32 %res
@@ -295,7 +295,7 @@ define internal i32 @callee6.2(i32 %i) {
 ; CHECK-SAME: (i32 [[I:%.*]]) {
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 
   %cmp = icmp ne i32 %i, 0

@@ -341,6 +341,17 @@ define i1 @extractelt_vector_fcmp_constrhs_dynidx(<2 x float> %arg, i32 %idx) {
   ret i1 %ext
 }
 
+define i1 @extractelt_vector_fcmp_copy_flags(<4 x float> %x) {
+; CHECK-LABEL: @extractelt_vector_fcmp_copy_flags(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nsz arcp oeq float [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %cmp = fcmp nsz arcp oeq <4 x float> %x, zeroinitializer
+  %r = extractelement <4 x i1> %cmp, i32 2
+  ret i1 %r
+}
+
 define i1 @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(<2 x float> %arg0, <2 x float> %arg1, <2 x float> %arg2, i32 %idx) {
 ;
 ; CHECK-LABEL: @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(

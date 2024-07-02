@@ -1,5 +1,9 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -sample-profile-use-profi=0 -S | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -sample-profile-use-profi=0 -S -o %t
+; RUN: FileCheck %s --input-file %t
+; RUN: FileCheck %s -check-prefix=YAML --input-file %t.opt.yaml
+; RUN: opt < %t -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -sample-profile-remove-probe -S | FileCheck %s -check-prefix=REMOVE-PROBE
+
+; REMOVE-PROBE-NOT: call void @llvm.pseudoprobe
 
 define dso_local i32 @foo(i32 %x, ptr %f) #0 !dbg !4 {
 entry:
@@ -22,12 +26,12 @@ if.then:
 if.else:
   ; CHECK: call {{.*}}, !dbg ![[#PROBE2:]], !prof ![[PROF2:[0-9]+]]
   call void %f(i32 2)
-  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0, i64 -1)
+  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
   store i32 2, ptr %retval, align 4
   br label %return
 
 return:
-  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
+  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 6, i32 0, i64 -1)
   %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
@@ -36,14 +40,14 @@ attributes #0 = {"use-sample-profile"}
 
 ; CHECK: ![[PD1]] = !{!"branch_weights", i32 8, i32 7}
 ; CHECK: ![[#PROBE1]] = !DILocation(line: 0, scope: ![[#SCOPE1:]])
-;; A discriminator of 119537711 which is 0x720002f in hexdecimal, stands for an indirect call probe
-;; with an index of 5.
-; CHECK: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 119537711)
+;; A discriminator of 387973151 which is 0x1720001f in hexdecimal, stands for an indirect call probe
+;; with an index of 3.
+; CHECK: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 387973151)
 ; CHECK: ![[PROF1]] = !{!"VP", i32 0, i64 7, i64 9191153033785521275, i64 5, i64 -1069303473483922844, i64 2}
-;; A discriminator of 119537719 which is 0x7200037 in hexdecimal, stands for an indirect call probe
-;; with an index of 6.
+;; A discriminator of 387973167 which is 0x1720002f in hexdecimal, stands for an indirect call probe
+;; with an index of 5.
 ; CHECK: ![[#PROBE2]] = !DILocation(line: 0, scope: ![[#SCOPE2:]])
-; CHECK: ![[#SCOPE2]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 119537719)
+; CHECK: ![[#SCOPE2]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 387973167)
 ; CHECK: ![[PROF2]] = !{!"VP", i32 0, i64 6, i64 -1069303473483922844, i64 4, i64 9191153033785521275, i64 2}
 
 !llvm.module.flags = !{!9, !10}
@@ -83,7 +87,7 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - String:          'Applied '
 ;YAML-NEXT:    - NumSamples:      '7'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
-;YAML-NEXT:    - ProbeId:         '5'
+;YAML-NEXT:    - ProbeId:         '3'
 ;YAML-NEXT:    - String:          ', Factor='
 ;YAML-NEXT:    - Factor:          '1.000000e+00'
 ;YAML-NEXT:    - String:          ', OriginalSamples='
@@ -113,7 +117,7 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - String:          'Applied '
 ;YAML-NEXT:    - NumSamples:      '6'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
-;YAML-NEXT:    - ProbeId:         '6'
+;YAML-NEXT:    - ProbeId:         '5'
 ;YAML-NEXT:    - String:          ', Factor='
 ;YAML-NEXT:    - Factor:          '1.000000e+00'
 ;YAML-NEXT:    - String:          ', OriginalSamples='
@@ -128,7 +132,7 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - String:          'Applied '
 ;YAML-NEXT:    - NumSamples:      '6'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
-;YAML-NEXT:    - ProbeId:         '3'
+;YAML-NEXT:    - ProbeId:         '4'
 ;YAML-NEXT:    - String:          ', Factor='
 ;YAML-NEXT:    - Factor:          '1.000000e+00'
 ;YAML-NEXT:    - String:          ', OriginalSamples='
@@ -143,7 +147,7 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - String:          'Applied '
 ;YAML-NEXT:    - NumSamples:      '13'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
-;YAML-NEXT:    - ProbeId:         '4'
+;YAML-NEXT:    - ProbeId:         '6'
 ;YAML-NEXT:    - String:          ', Factor='
 ;YAML-NEXT:    - Factor:          '1.000000e+00'
 ;YAML-NEXT:    - String:          ', OriginalSamples='

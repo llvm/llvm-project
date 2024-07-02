@@ -369,7 +369,13 @@ private:
     uint64_t SymbolAddr = PCtx.IsInsideLoad
                               ? Checker.getSymbolLocalAddr(Symbol)
                               : Checker.getSymbolRemoteAddr(Symbol);
-    uint64_t NextPC = SymbolAddr + InstSize;
+
+    // ARM PC offset is 8 instead of 4, because it accounts for an additional
+    // prefetch instruction that increments PC even though it is implicit.
+    auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
+    uint64_t PCOffset = TT.getArch() == Triple::ArchType::arm ? 4 : 0;
+
+    uint64_t NextPC = SymbolAddr + InstSize + PCOffset;
 
     return std::make_pair(EvalResult(NextPC), RemainingExpr);
   }

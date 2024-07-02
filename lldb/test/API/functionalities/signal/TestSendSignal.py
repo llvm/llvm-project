@@ -1,4 +1,4 @@
-﻿"""Test that lldb command 'process signal SIGUSR1' to send a signal to the inferior works."""
+"""Test that lldb command 'process signal SIGUSR1' to send a signal to the inferior works."""
 
 
 import lldb

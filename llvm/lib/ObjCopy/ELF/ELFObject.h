@@ -910,7 +910,7 @@ class RelocationSection
 
 public:
   RelocationSection(const Object &O) : Obj(O) {}
-  void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
+  void addRelocation(const Relocation &Rel) { Relocations.push_back(Rel); }
   Error accept(SectionVisitor &Visitor) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
   Error removeSectionReferences(
@@ -1210,6 +1210,7 @@ public:
 
   Error removeSections(bool AllowBrokenLinks,
                        std::function<bool(const SectionBase &)> ToRemove);
+  Error compressOrDecompressSections(const CommonConfig &Config);
   Error replaceSections(const DenseMap<SectionBase *, SectionBase *> &FromTo);
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   template <class T, class... Ts> T &addSection(Ts &&...Args) {

@@ -11,6 +11,8 @@ multiclass Eq<string name, string help> {
 def help : Flag<["--"], "help">, HelpText<"Display this help">;
 def version : Flag<["--"], "version">, HelpText<"Display the version">;
 
+def o : Arg<"o", "Destination of the primary output">;
+
 defm mode : Eq<"mode", "The preprocessing mode used to compute the dependencies">;
 
 defm format : Eq<"format", "The output format for the dependencies">;

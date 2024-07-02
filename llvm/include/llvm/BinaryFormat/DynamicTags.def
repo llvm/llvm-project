@@ -86,6 +86,10 @@ DYNAMIC_TAG(RELRSZ, 35)  // Size of Relr relocation table.
 DYNAMIC_TAG(RELR, 36)    // Address of relocation table (Relr entries).
 DYNAMIC_TAG(RELRENT, 37) // Size of a Relr relocation entry.
 
+// TODO: Experimental CREL relocations. LLVM will change the value and
+// break compatibility in the future.
+DYNAMIC_TAG(CREL,  0x40000026)   // CREL relocation table
+
 DYNAMIC_TAG_MARKER(LOOS, 0x60000000)   // Start of environment specific tags.
 DYNAMIC_TAG_MARKER(HIOS, 0x6FFFFFFF)   // End of environment specific tags.
 DYNAMIC_TAG_MARKER(LOPROC, 0x70000000) // Start of processor specific tags.

@@ -34,10 +34,6 @@ class AsmPrinterHandler {
 public:
   virtual ~AsmPrinterHandler();
 
-  /// For symbols that have a size designated (e.g. common symbols),
-  /// this tracks that size.
-  virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) = 0;
-
   virtual void beginModule(Module *M) {}
 
   /// Emit all sections that should come after the content.
@@ -72,12 +68,6 @@ public:
   virtual void beginFunclet(const MachineBasicBlock &MBB,
                             MCSymbol *Sym = nullptr) {}
   virtual void endFunclet() {}
-
-  /// Process beginning of an instruction.
-  virtual void beginInstruction(const MachineInstr *MI) = 0;
-
-  /// Process end of an instruction.
-  virtual void endInstruction() = 0;
 };
 
 } // End of namespace llvm

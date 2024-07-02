@@ -64,10 +64,10 @@ foreach (header ${TSAN_HEADERS})
   list(APPEND TSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
 
-set(TSAN_DEPS llvm_gtest tsan)
+set(TSAN_DEPS tsan)
 # TSan uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
-  set(TSAN_DEPS cxx-headers)
+  list(APPEND TSAN_DEPS cxx-headers)
 endif()
 
 # add_tsan_unittest(<name>

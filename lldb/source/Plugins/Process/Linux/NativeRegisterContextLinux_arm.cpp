@@ -506,7 +506,7 @@ uint32_t NativeRegisterContextLinux_arm::SetHardwareWatchpoint(
       return LLDB_INVALID_INDEX32;
     else if (watch_mask <= 0x02)
       size = 2;
-    else if (watch_mask <= 0x04)
+    else
       size = 4;
 
     addr = addr & (~0x03);

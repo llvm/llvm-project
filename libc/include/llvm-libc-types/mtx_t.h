@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_MTX_T_H
 #define LLVM_LIBC_TYPES_MTX_T_H
 
-#include <llvm-libc-types/__mutex_type.h>
+#include "llvm-libc-types/__mutex_type.h"
 
 typedef __mutex_type mtx_t;
 

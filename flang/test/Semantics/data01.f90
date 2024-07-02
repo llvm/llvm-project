@@ -67,6 +67,6 @@ subroutine CheckValue
   !ERROR: DATA statement value 'b(1_8)' for 'z' is not a constant
   data z / b(1) /
   type(hasAlloc) ha
-  !ERROR: DATA statement value 'hasalloc(a=0_4)' for 'ha' is not a constant
+  !ERROR: DATA statement value 'hasalloc(a=0_4)' for 'ha%a' is not a constant
   data ha / hasAlloc(0) /
 end

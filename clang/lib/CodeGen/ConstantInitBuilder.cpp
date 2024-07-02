@@ -296,3 +296,21 @@ ConstantAggregateBuilderBase::finishStruct(llvm::StructType *ty) {
   buffer.erase(buffer.begin() + Begin, buffer.end());
   return constant;
 }
+
+/// Sign the given pointer and add it to the constant initializer
+/// currently being built.
+void ConstantAggregateBuilderBase::addSignedPointer(
+    llvm::Constant *Pointer, const PointerAuthSchema &Schema,
+    GlobalDecl CalleeDecl, QualType CalleeType) {
+  if (!Schema || !Builder.CGM.shouldSignPointer(Schema))
+    return add(Pointer);
+
+  llvm::Constant *StorageAddress = nullptr;
+  if (Schema.isAddressDiscriminated()) {
+    StorageAddress = getAddrOfCurrentPosition(Pointer->getType());
+  }
+
+  llvm::Constant *SignedPointer = Builder.CGM.getConstantSignedPointer(
+      Pointer, Schema, StorageAddress, CalleeDecl, CalleeType);
+  add(SignedPointer);
+}

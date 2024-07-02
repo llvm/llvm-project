@@ -16,7 +16,6 @@ define i32 @divergent_if_swap_brtarget_order0(i32 %value) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  .LBB0_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = icmp ne i32 %value, 0
@@ -44,7 +43,6 @@ define i32 @divergent_if_swap_brtarget_order1(i32 %value) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  .LBB1_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = icmp ne i32 %value, 0
@@ -74,7 +72,6 @@ define i32 @divergent_if_nonboolean_condition0(i32 %value) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  .LBB2_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = trunc i32 %value to i1
@@ -106,7 +103,6 @@ define i32 @divergent_if_nonboolean_condition1(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  .LBB3_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %value = load i32, ptr addrspace(1) %ptr

@@ -10,11 +10,11 @@ define void @test(<2 x ptr> %ptr) {
 ; CHECK-NEXT:  # %bb.2: # %loop.127.preheader
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %ifmerge.89
-; CHECK-NEXT:    movzwl (%rax), %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    vmovd %eax, %xmm0
-; CHECK-NEXT:    vmulss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vbroadcastss %xmm0, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm2
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; CHECK-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, (%rax)
 entry:
   br label %then.13

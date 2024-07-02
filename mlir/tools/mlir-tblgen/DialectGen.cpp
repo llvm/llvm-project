@@ -166,7 +166,7 @@ static const char *const constantMaterializerDecl = R"(
 static const char *const opAttrVerifierDecl = R"(
     /// Provides a hook for verifying dialect attributes attached to the given
     /// op.
-    ::mlir::LogicalResult verifyOperationAttribute(
+    ::llvm::LogicalResult verifyOperationAttribute(
         ::mlir::Operation *op, ::mlir::NamedAttribute attribute) override;
 )";
 
@@ -174,7 +174,7 @@ static const char *const opAttrVerifierDecl = R"(
 static const char *const regionArgAttrVerifierDecl = R"(
     /// Provides a hook for verifying dialect attributes attached to the given
     /// op's region argument.
-    ::mlir::LogicalResult verifyRegionArgAttribute(
+    ::llvm::LogicalResult verifyRegionArgAttribute(
         ::mlir::Operation *op, unsigned regionIndex, unsigned argIndex,
         ::mlir::NamedAttribute attribute) override;
 )";
@@ -183,7 +183,7 @@ static const char *const regionArgAttrVerifierDecl = R"(
 static const char *const regionResultAttrVerifierDecl = R"(
     /// Provides a hook for verifying dialect attributes attached to the given
     /// op's region result.
-    ::mlir::LogicalResult verifyRegionResultAttribute(
+    ::llvm::LogicalResult verifyRegionResultAttribute(
         ::mlir::Operation *op, unsigned regionIndex, unsigned resultIndex,
         ::mlir::NamedAttribute attribute) override;
 )";

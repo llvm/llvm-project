@@ -30,10 +30,9 @@ define i1 @test_redor_v2i1(<2 x i1> %a) {
 ; GISEL-LABEL: test_redor_v2i1:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    orr w8, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    orr w8, w9, w8
 ; GISEL-NEXT:    and w0, w8, #0x1
 ; GISEL-NEXT:    ret
   %or_result = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> %a)
@@ -459,10 +458,9 @@ define i32 @test_redor_v2i32(<2 x i32> %a) {
 ; GISEL-LABEL: test_redor_v2i32:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    orr w0, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    orr w0, w9, w8
 ; GISEL-NEXT:    ret
   %or_result = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %a)
   ret i32 %or_result
@@ -482,10 +480,9 @@ define i32 @test_redor_v4i32(<4 x i32> %a) {
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    mov d1, v0.d[1]
 ; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    orr w0, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    orr w0, w9, w8
 ; GISEL-NEXT:    ret
   %or_result = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %a)
   ret i32 %or_result
@@ -507,10 +504,9 @@ define i32 @test_redor_v8i32(<8 x i32> %a) {
 ; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; GISEL-NEXT:    mov d1, v0.d[1]
 ; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    orr w0, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    orr w0, w9, w8
 ; GISEL-NEXT:    ret
   %or_result = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a)
   ret i32 %or_result
@@ -526,10 +522,9 @@ define i64 @test_redor_v2i64(<2 x i64> %a) {
 ;
 ; GISEL-LABEL: test_redor_v2i64:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov d1, v0.d[1]
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov x9, d1
-; GISEL-NEXT:    orr x0, x8, x9
+; GISEL-NEXT:    mov x8, v0.d[1]
+; GISEL-NEXT:    fmov x9, d0
+; GISEL-NEXT:    orr x0, x9, x8
 ; GISEL-NEXT:    ret
   %or_result = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %a)
   ret i64 %or_result
@@ -547,10 +542,9 @@ define i64 @test_redor_v4i64(<4 x i64> %a) {
 ; GISEL-LABEL: test_redor_v4i64:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    mov d1, v0.d[1]
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov x9, d1
-; GISEL-NEXT:    orr x0, x8, x9
+; GISEL-NEXT:    mov x8, v0.d[1]
+; GISEL-NEXT:    fmov x9, d0
+; GISEL-NEXT:    orr x0, x9, x8
 ; GISEL-NEXT:    ret
   %or_result = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %a)
   ret i64 %or_result

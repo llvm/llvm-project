@@ -118,7 +118,7 @@ namespace {
     StringRef getPassName() const override { return "Hexagon Hardware Loops"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfo>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -368,7 +368,7 @@ namespace {
 
 INITIALIZE_PASS_BEGIN(HexagonHardwareLoops, "hwloops",
                       "Hexagon Hardware Loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(HexagonHardwareLoops, "hwloops",
                     "Hexagon Hardware Loops", false, false)
@@ -386,7 +386,7 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
 
   MLI = &getAnalysis<MachineLoopInfo>();
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
   TII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
@@ -1006,8 +1006,7 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 
   static const Register Regs01[] = { LC0, SA0, LC1, SA1 };
   static const Register Regs1[]  = { LC1, SA1 };
-  auto CheckRegs = IsInnerHWLoop ? ArrayRef(Regs01, std::size(Regs01))
-                                 : ArrayRef(Regs1, std::size(Regs1));
+  auto CheckRegs = IsInnerHWLoop ? ArrayRef(Regs01) : ArrayRef(Regs1);
   for (Register R : CheckRegs)
     if (MI->modifiesRegister(R, TRI))
       return true;

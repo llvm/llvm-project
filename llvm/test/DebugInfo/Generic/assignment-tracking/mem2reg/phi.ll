@@ -9,19 +9,19 @@
 ;; dbg.assgin for another variable "b" to the alloca).
 
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[A:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[B:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[A:[0-9]+]]
 ; CHECK: if.then:
 ; CHECK-NEXT: %add =
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[A]]
+; CHECK-NEXT: #dbg_value(i32 %add, ![[B]]
+; CHECK-NEXT: #dbg_value(i32 %add, ![[A]]
 ; CHECK: if.else:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 -1, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 -1, metadata ![[A]]
+; CHECK-NEXT: #dbg_value(i32 -1, ![[B]]
+; CHECK-NEXT: #dbg_value(i32 -1, ![[A]]
 ; CHECK: if.end:
 ; CHECK-NEXT: %a.addr.0 = phi i32
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a.addr.0, metadata ![[A]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a.addr.0, metadata ![[B]]
+; CHECK-NEXT: #dbg_value(i32 %a.addr.0, ![[A]]
+; CHECK-NEXT: #dbg_value(i32 %a.addr.0, ![[B]]
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
 ; CHECK-DAG: ![[B]] = !DILocalVariable(name: "b",

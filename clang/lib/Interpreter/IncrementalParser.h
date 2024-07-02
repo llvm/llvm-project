@@ -24,6 +24,7 @@
 #include <memory>
 namespace llvm {
 class LLVMContext;
+class Module;
 } // namespace llvm
 
 namespace clang {
@@ -56,6 +57,10 @@ protected:
   /// List containing every information about every incrementally parsed piece
   /// of code.
   std::list<PartialTranslationUnit> PTUs;
+
+  /// When CodeGen is created the first llvm::Module gets cached in many places
+  /// and we must keep it alive.
+  std::unique_ptr<llvm::Module> CachedInCodeGenModule;
 
   IncrementalParser();
 
