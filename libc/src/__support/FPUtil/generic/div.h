@@ -97,14 +97,14 @@ div(InType x, InType y) {
 
   // Number of iterations = full output precision + 1 rounding bit + 1 potential
   // leading 0.
-  constexpr size_t NUM_ITERS = OutFPBits::FRACTION_LEN + 3;
+  constexpr int NUM_ITERS = OutFPBits::FRACTION_LEN + 3;
   int result_exp = xd.exponent - yd.exponent - (NUM_ITERS - 1);
 
   InStorageType q = 0;
   InStorageType r = static_cast<InStorageType>(xd.mantissa >> 2);
   InStorageType yd_mant_in = static_cast<InStorageType>(yd.mantissa >> 1);
 
-  for (size_t i = 0; i < NUM_ITERS; ++i) {
+  for (int i = 0; i < NUM_ITERS; ++i) {
     q <<= 1;
     r <<= 1;
     if (r >= yd_mant_in) {
@@ -114,8 +114,7 @@ div(InType x, InType y) {
   }
 
   DyadicFloat result(result_sign, result_exp, q);
-  result.mantissa += r != 0;
-
+  result.mantissa |= static_cast<unsigned int>(r != 0);
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 

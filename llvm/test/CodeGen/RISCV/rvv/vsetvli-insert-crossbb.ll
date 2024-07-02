@@ -1036,3 +1036,29 @@ declare <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(
   <vscale x 4 x i1>,
   i64,
   i64);
+
+; Normally a pseudo's AVL is already live in its block, so it will already be
+; live where we're inserting the vsetvli, before the pseudo.  In some cases the
+; AVL can be from a predecessor block, so make sure we extend its live range
+; across blocks.
+define <vscale x 2 x i32> @cross_block_avl_extend(i64 %avl, <vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: cross_block_avl_extend:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+entry:
+  ; Get the output vl from a vsetvli
+  %vl = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 0)
+  ; Force a vsetvli toggle so we need to insert a new vsetvli in exit
+  %d = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> %a, <vscale x 2 x i32> %b, i64 1)
+  br label %exit
+exit:
+  ; The use of the vl from the vsetvli will be replaced with its %avl because
+  ; VLMAX is the same. So %avl, which was previously only live in %entry, will
+  ; need to be extended down toe %exit.
+  %c = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> %a, <vscale x 2 x i32> %d, i64 %vl)
+  ret <vscale x 2 x i32> %c
+}

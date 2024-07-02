@@ -553,6 +553,9 @@ public:
     if (!asBlockPointer().Pointee)
       return false;
 
+    if (isUnknownSizeArray())
+      return false;
+
     return isElementPastEnd() ||
            (getSize() == getOffset() && !isZeroSizeArray());
   }

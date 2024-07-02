@@ -16,6 +16,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
@@ -722,11 +723,17 @@ private:
 
   /// Release the group and remove all the relationships.
   void releaseGroup(InterleaveGroup<Instruction> *Group) {
+    InterleaveGroups.erase(Group);
+    releaseGroupWithoutRemovingFromSet(Group);
+  }
+
+  /// Do everything necessary to release the group, apart from removing it from
+  /// the InterleaveGroups set.
+  void releaseGroupWithoutRemovingFromSet(InterleaveGroup<Instruction> *Group) {
     for (unsigned i = 0; i < Group->getFactor(); i++)
       if (Instruction *Member = Group->getMember(i))
         InterleaveGroupMap.erase(Member);
 
-    InterleaveGroups.erase(Group);
     delete Group;
   }
 
