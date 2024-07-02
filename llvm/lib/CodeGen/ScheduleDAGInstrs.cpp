@@ -1209,7 +1209,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
     oss << "<exit>";
   else
     SU->getInstr()->print(oss, /*IsStandalone=*/true);
-  return oss.str();
+  return s;
 }
 
 /// Return the basic block label. It is not necessarilly unique because a block

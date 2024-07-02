@@ -1154,7 +1154,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
     OS << ' ' << (Op.isDef() ? "def " : "killed ")
        << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());
   }
-  AP.OutStreamer->AddComment(OS.str());
+  AP.OutStreamer->AddComment(Str);
   AP.OutStreamer->addBlankLine();
 }
 
@@ -1261,7 +1261,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   }
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
-  AP.OutStreamer->emitRawComment(OS.str());
+  AP.OutStreamer->emitRawComment(Str);
   return true;
 }
 
@@ -2321,7 +2321,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
       OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
 
-  OutStreamer->emitBinaryData(OS.str());
+  OutStreamer->emitBinaryData(Buf);
 }
 
 bool AsmPrinter::doFinalization(Module &M) {
@@ -3329,7 +3329,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   OS << "Unsupported expression in static initializer: ";
   CE->printAsOperand(OS, /*PrintType=*/false,
                      !MF ? nullptr : MF->getFunction().getParent());
-  report_fatal_error(Twine(OS.str()));
+  report_fatal_error(Twine(S));
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
