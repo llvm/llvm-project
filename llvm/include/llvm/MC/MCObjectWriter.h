@@ -54,8 +54,7 @@ public:
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete.
-  virtual void executePostLayoutBinding(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) = 0;
+  virtual void executePostLayoutBinding(MCAssembler &Asm) {}
 
   /// Record a relocation entry.
   ///
