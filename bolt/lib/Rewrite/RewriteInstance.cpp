@@ -832,6 +832,20 @@ void RewriteInstance::discoverFileObjects() {
 
   std::vector<MarkerSym> SortedMarkerSymbols;
   auto addExtraDataMarkerPerSymbol = [&]() {
+    // Some ELFs have marker symbols with addresses outside their section.
+    // This occurs, for example, with some `.eh_frame` symbols, and sometimes
+    // (if rarely) they interfere with the disassembly of `.text` functions. As
+    // a workaround, we ignore all symbols that lie outside their sections.
+    auto considerSymbol = [](const SymbolInfo &S) {
+      auto SectionOrError = S.Symbol.getSection();
+      if (SectionOrError) {
+        uint64_t SecStart = (*SectionOrError)->getAddress();
+        uint64_t SecEnd = SecStart + (*SectionOrError)->getSize();
+        return (S.Address >= SecStart && S.Address < SecEnd);
+      }
+      return true;
+    };
+
     bool IsData = false;
     uint64_t LastAddr = 0;
     for (const auto &SymInfo : SortedSymbols) {
@@ -839,7 +853,7 @@ void RewriteInstance::discoverFileObjects() {
         continue;
 
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
-      if (MarkerType != MarkerSymType::NONE) {
+      if (considerSymbol(SymInfo) && MarkerType != MarkerSymType::NONE) {
         SortedMarkerSymbols.push_back(MarkerSym{SymInfo.Address, MarkerType});
         LastAddr = SymInfo.Address;
         IsData = MarkerType == MarkerSymType::DATA;
