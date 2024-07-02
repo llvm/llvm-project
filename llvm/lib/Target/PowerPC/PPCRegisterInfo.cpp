@@ -434,7 +434,6 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       }
     }
   }
-
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
