@@ -479,6 +479,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // FIXME: Need to promote bf16 FCOPYSIGN to f32, but the
     // DAGCombiner::visitFP_ROUND probably needs improvements first.
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
+
+    // To fold (bf16 bitcast (copyfromreg f16)) -> (copyfromreg bf16), we have
+    // to legalize the f16 CopyFromReg for avoiding SoftPromoteHalf.
+    setOperationAction(ISD::CopyFromReg, MVT::f16, Legal);
+    // Fold the (bf16 bitcast (copyfromreg f16)) -> (copyfromreg bf16).
+    setTargetDAGCombine(ISD::BITCAST);
   }
 
   if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
@@ -17442,10 +17448,30 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
   }
   case ISD::BITCAST: {
-    assert(Subtarget.useRVVForFixedLengthVectors());
+    assert(Subtarget.useRVVForFixedLengthVectors() ||
+           Subtarget.hasStdExtZfbfmin());
     SDValue N0 = N->getOperand(0);
     EVT VT = N->getValueType(0);
     EVT SrcVT = N0.getValueType();
+
+    // Fold the (bf16 bitcast (copyfromreg f16)) -> (copyfromreg bf16).
+    if (SrcVT == MVT::f16 && VT == MVT::bf16) {
+      if (N0.getOpcode() == ISD::CopyFromReg) {
+        SDValue F16CopyFromReg = N0->getOperand(1);
+        Register BFReg = cast<RegisterSDNode>(F16CopyFromReg)->getReg();
+        SDValue Chain = N0->getOperand(0);
+        SDValue NewCopy;
+        if (F16CopyFromReg.getNumOperands() == 3) {
+          SDValue Glue = N0->getOperand(2);
+          NewCopy = DAG.getCopyFromReg(Chain, DL, BFReg, MVT::bf16, Glue);
+        } else {
+          NewCopy = DAG.getCopyFromReg(Chain, DL, BFReg, MVT::bf16);
+        }
+        DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), NewCopy.getValue(1));
+        return NewCopy;
+      }
+      return SDValue();
+    }
     // If this is a bitcast between a MVT::v4i1/v2i1/v1i1 and an illegal integer
     // type, widen both sides to avoid a trip through memory.
     if ((SrcVT == MVT::v1i1 || SrcVT == MVT::v2i1 || SrcVT == MVT::v4i1) &&
@@ -20511,7 +20537,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::GPRPairRegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
-      if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
+      if ((Subtarget.hasStdExtZfhmin() && VT == MVT::f16) ||
+          (Subtarget.hasStdExtZfbfmin() && VT == MVT::bf16))
         return std::make_pair(0U, &RISCV::FPR16RegClass);
       if (Subtarget.hasStdExtF() && VT == MVT::f32)
         return std::make_pair(0U, &RISCV::FPR32RegClass);
@@ -20624,7 +20651,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       if (VT == MVT::f32 || VT == MVT::Other)
         return std::make_pair(FReg, &RISCV::FPR32RegClass);
-      if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16) {
+      if ((Subtarget.hasStdExtZfhmin() && VT == MVT::f16) ||
+          (Subtarget.hasStdExtZfbfmin() && VT == MVT::bf16)) {
         unsigned RegNo = FReg - RISCV::F0_F;
         unsigned HReg = RISCV::F0_H + RegNo;
         return std::make_pair(HReg, &RISCV::FPR16RegClass);
@@ -21320,6 +21348,14 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     Val = DAG.getNode(ISD::OR, DL, MVT::i32, Val,
                       DAG.getConstant(0xFFFF0000, DL, MVT::i32));
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Val);
+    Parts[0] = Val;
+    return true;
+  }
+
+  // Since the inline asm only use the first type in the RegisterClass, the bf16
+  // inline asm would choose the f16 from FPR16RegClass for doing the copy, and
+  // we correct the behavior here to avoid generating wrong SelectionDAG.
+  if (ValueVT == MVT::bf16 && PartVT == MVT::f16) {
     Parts[0] = Val;
     return true;
   }
