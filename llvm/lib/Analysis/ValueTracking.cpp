@@ -4687,7 +4687,7 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
     assert(I->getFunction() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
-    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+    assert(I->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
 
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
@@ -9537,7 +9537,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       CallInst *I = cast<CallInst>(AssumeVH);
       assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
-      assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+      assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
       if (!isValidAssumeForContext(I, CtxI, DT))
