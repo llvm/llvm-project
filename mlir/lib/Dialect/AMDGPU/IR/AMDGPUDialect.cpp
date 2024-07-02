@@ -326,6 +326,68 @@ LogicalResult MFMAOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// DPPOp
+//===----------------------------------------------------------------------===//
+LogicalResult DPPOp::verify() {
+  Type srcType = getSrc().getType();
+  if (srcType.getIntOrFloatBitWidth() > 64) {
+    return emitOpError("integer and floating point types larger than 64 bits "
+                       "are not supported");
+  }
+
+  DPPPerm kind = getKind();
+  Attribute permArgument = getPermArgument().value_or(Attribute{});
+
+  switch (kind) {
+
+  case DPPPerm::quad_perm: {
+    auto quadPermAttr = dyn_cast_or_null<ArrayAttr>(permArgument);
+    if (!quadPermAttr || quadPermAttr.size() != 4) {
+      return emitOpError("quad_perm attribute must have exactly 4 elements");
+    }
+    for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
+      uint32_t num = elem.getInt();
+      if (num < 0 || num > 3) {
+        return emitOpError(
+            "Each element of quad_perm must be in the range [0, 3]");
+      }
+    }
+  } break;
+
+  case DPPPerm::row_shl:
+  case DPPPerm::row_shr:
+  case DPPPerm::row_ror: {
+    if (!permArgument) {
+      return emitOpError("Attribute '" + Twine(stringifyDPPPerm(kind)) +
+                         "' value not specified");
+    }
+    if (auto intAttr = dyn_cast<IntegerAttr>(permArgument)) {
+      uint32_t attrValue = intAttr.getInt();
+      if (attrValue < 1 || attrValue > 15) {
+        return emitOpError("Attribute value must be between 1 and 15");
+      }
+    }
+  } break;
+
+  case DPPPerm::wave_shl:
+  case DPPPerm::wave_shr:
+  case DPPPerm::wave_rol:
+  case DPPPerm::wave_ror:
+  case DPPPerm::row_mirror:
+  case DPPPerm::row_half_mirror:
+  case DPPPerm::row_bcast_15:
+  case DPPPerm::row_bcast_31: {
+    if (permArgument && !isa<UnitAttr>(permArgument)) {
+      return emitOpError("Expected unit attribute for permArgument, but found "
+                         "non-trivial argument");
+    }
+    break;
+  }
+  }
+  return success();
+}
+
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
