@@ -8,7 +8,7 @@
 # RUN: echo "INCLUDE \"%t1.script\"" > %t2.script
 # RUN: not ld.lld %t.o %t1.script 2>&1 | FileCheck %s
 
-# CHECK: there is a cycle in linker script INCLUDEs
+# CHECK: multiple includes of the same file are not allowed
 
 .globl _start
 _start:
