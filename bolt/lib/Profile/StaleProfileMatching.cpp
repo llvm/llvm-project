@@ -248,7 +248,9 @@ private:
     FlowBlock *BestBlock = nullptr;
     uint64_t BestDist = std::numeric_limits<uint64_t>::max();
     for (const auto &[Hash, Block] : BlockIt->second) {
-      uint64_t Dist = Hash.distance(BlendedHash);
+      uint64_t Dist = Hash.OpcodeHash > BlendedHash.OpcodeHash
+                          ? Hash.OpcodeHash - BlendedHash.OpcodeHash
+                          : BlendedHash.OpcodeHash - Hash.OpcodeHash;
       if (BestBlock == nullptr || Dist < BestDist) {
         BestDist = Dist;
         BestBlock = Block;
