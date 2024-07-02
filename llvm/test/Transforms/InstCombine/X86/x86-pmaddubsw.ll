@@ -7,8 +7,7 @@
 
 define <8 x i16> @undef_pmaddubsw_128(<16 x i8> %a0) {
 ; CHECK-LABEL: @undef_pmaddubsw_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> [[A0:%.*]], <16 x i8> undef)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a0, <16 x i8> undef)
   ret <8 x i16> %1
@@ -16,8 +15,7 @@ define <8 x i16> @undef_pmaddubsw_128(<16 x i8> %a0) {
 
 define <8 x i16> @undef_pmaddubsw_128_commute(<16 x i8> %a0) {
 ; CHECK-LABEL: @undef_pmaddubsw_128_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> undef, <16 x i8> [[A0:%.*]])
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> undef, <16 x i8> %a0)
   ret <8 x i16> %1
@@ -25,8 +23,7 @@ define <8 x i16> @undef_pmaddubsw_128_commute(<16 x i8> %a0) {
 
 define <16 x i16> @undef_pmaddubsw_256(<32 x i8> %a0) {
 ; CHECK-LABEL: @undef_pmaddubsw_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> [[A0:%.*]], <32 x i8> undef)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %a0, <32 x i8> undef)
   ret <16 x i16> %1
@@ -34,8 +31,7 @@ define <16 x i16> @undef_pmaddubsw_256(<32 x i8> %a0) {
 
 define <16 x i16> @undef_pmaddubsw_256_commute(<32 x i8> %a0) {
 ; CHECK-LABEL: @undef_pmaddubsw_256_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> undef, <32 x i8> [[A0:%.*]])
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> undef, <32 x i8> %a0)
   ret <16 x i16> %1
@@ -43,8 +39,7 @@ define <16 x i16> @undef_pmaddubsw_256_commute(<32 x i8> %a0) {
 
 define <32 x i16> @undef_pmaddubsw_512(<64 x i8> %a0) {
 ; CHECK-LABEL: @undef_pmaddubsw_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> [[A0:%.*]], <64 x i8> undef)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> %a0, <64 x i8> undef)
   ret <32 x i16> %1
@@ -52,8 +47,7 @@ define <32 x i16> @undef_pmaddubsw_512(<64 x i8> %a0) {
 
 define <32 x i16> @undef_pmaddubsw_512_commute(<64 x i8> %a0) {
 ; CHECK-LABEL: @undef_pmaddubsw_512_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> undef, <64 x i8> [[A0:%.*]])
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> undef, <64 x i8> %a0)
   ret <32 x i16> %1
