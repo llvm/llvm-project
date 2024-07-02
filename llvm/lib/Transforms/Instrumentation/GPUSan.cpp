@@ -293,7 +293,7 @@ ConstantInt *GPUSanImpl::getSourceIndex(Instruction &I,
 
   auto PrettifyFunctionName = [&](StringRef Name) {
     if (Name.ends_with(".internalized"))
-      return SS.save(Name.drop_back(sizeof(".internalized")) +
+      return SS.save(Name.drop_back(sizeof("internalized")) +
                      " (internalized)");
     if (!Name.starts_with("__omp_offloading_"))
       return Name;
@@ -325,6 +325,8 @@ ConstantInt *GPUSanImpl::getSourceIndex(Instruction &I,
 
   auto FillLI = [&](LocationInfoTy &LI, DILocation &DIL) {
     LI.FileName = DIL.getFilename();
+    if (LI.FileName.empty())
+      LI.FileName = I.getFunction()->getSubprogram()->getFilename();
     LI.FunctionName = DIL.getSubprogramLinkageName();
     if (LI.FunctionName.empty())
       LI.FunctionName = I.getFunction()->getName();
@@ -338,14 +340,16 @@ ConstantInt *GPUSanImpl::getSourceIndex(Instruction &I,
     FillLI(*LI, *DILoc);
     ParentDILoc = DILoc->getInlinedAt();
   } else {
-    LI->FunctionName = I.getFunction()->getName();
+    LI->FunctionName = PrettifyFunctionName(I.getFunction()->getName());
   }
   errs() << __FUNCTION__ << " : " << I << " : " << LastLI << "\n";
 
   bool IsNew;
   uint64_t Idx;
+  errs() << "Line: " << LI->LineNo << "\n";
   std::tie(LI, Idx) = addLocationInfo(LI, IsNew);
-  errs() << "Idx: " << Idx << " : " << IsNew << "\n";
+  errs() << "Idx: " << Idx << " : IsNew " << IsNew << "\n";
+  errs() << "Line: " << LI->LineNo << "\n";
   if (LastLI)
     addParentLocationInfo(*LastLI, Idx);
   if (!IsNew)
@@ -353,15 +357,19 @@ ConstantInt *GPUSanImpl::getSourceIndex(Instruction &I,
 
   LocationInfoTy *CurLI = LI;
   while (ParentDILoc) {
+    //    if (!ParentDILoc->getScope()->getSubprogram()->isArtificial()) {
     auto *ParentLI = new LocationInfoTy();
-    FillLI(*ParentLI, *DILoc);
+    FillLI(*ParentLI, *ParentDILoc);
     uint64_t ParentIdx;
+    errs() << "Parent " << ParentLI->LineNo << "\n";
     std::tie(ParentLI, ParentIdx) = addLocationInfo(ParentLI, IsNew);
+    errs() << "Parent " << ParentIdx << " :: " << ParentLI->LineNo << "\n";
     addParentLocationInfo(*CurLI, ParentIdx);
     CurLI = ParentLI;
     if (!IsNew)
       break;
-    ParentDILoc = DILoc->getInlinedAt();
+    //   }
+    ParentDILoc = ParentDILoc->getInlinedAt();
   }
 
   Function &Fn = *I.getFunction();

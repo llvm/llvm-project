@@ -18,6 +18,8 @@
 
 [[clang::optnone]] int *deref(int **P) { return *P; }
 
+int *bar(int **P) { return deref(P); }
+
 int main(void) {
 
 #pragma omp target
@@ -36,6 +38,6 @@ int main(void) {
     // 
     // DEBUG: 0x0000000000000000 is located 0 bytes inside of a 0-byte region [0x0000000000000000,0x0000000000000000)
     // clang-format on
-    deref(&NullPtr)[10] = 42;
+    bar(&NullPtr)[10] = 42;
   }
 }
