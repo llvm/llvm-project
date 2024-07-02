@@ -354,9 +354,9 @@ def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
 
 def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
   let mnemonic = "nested_polynomial";
-  let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
+  let parameters = (ins OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">:$poly);
   let assemblyFormat = [{
-    `<` $poly `>`
+    `<` struct(params) `>`
   }];
 }
 
