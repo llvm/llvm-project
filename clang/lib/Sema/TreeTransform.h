@@ -2896,6 +2896,9 @@ public:
     SS.Adopt(QualifierLoc);
 
     Base = BaseResult.get();
+    if (Base->containsErrors())
+      return ExprError();
+
     QualType BaseType = Base->getType();
 
     if (isArrow && !BaseType->isPointerType())
