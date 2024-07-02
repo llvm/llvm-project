@@ -9,12 +9,21 @@
 #ifndef LLVM_MC_MCASMLAYOUT_H
 #define LLVM_MC_MCASMLAYOUT_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+
 namespace llvm {
 class MCAssembler;
+class MCSection;
 
 class MCAsmLayout {
+  MCAssembler &Assembler;
+
 public:
-  MCAsmLayout(MCAssembler &) {}
+  MCAsmLayout(MCAssembler &Assembler);
+
+  /// Get the assembler object this is a layout for.
+  MCAssembler &getAssembler() const { return Assembler; }
 };
 
 } // end namespace llvm

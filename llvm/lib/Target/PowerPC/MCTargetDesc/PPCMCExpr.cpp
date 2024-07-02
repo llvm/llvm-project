@@ -122,7 +122,7 @@ bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
     Res = MCValue::get(Result);
   } else {
-    if (!Asm || !Asm->hasLayout())
+    if (!Asm || !Asm->getLayout())
       return false;
 
     MCContext &Context = Asm->getContext();
