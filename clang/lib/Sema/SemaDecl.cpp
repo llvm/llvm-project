@@ -2286,7 +2286,7 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
   }
 
   FunctionDecl *New = FunctionDecl::Create(Context, Parent, Loc, Loc, II, Type,
-                                           /*TInfo=*/nullptr, SC_None,
+                                           /*TInfo=*/nullptr, SC_Extern,
                                            getCurFPFeatures().isFPConstrained(),
                                            false, Type->isFunctionProtoType());
   New->setImplicit();
