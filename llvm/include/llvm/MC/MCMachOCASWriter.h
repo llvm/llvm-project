@@ -57,22 +57,15 @@ public:
 
   uint8_t getAddressSize() { return Target.isArch32Bit() ? 4 : 8; }
 
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override {
-    MOW.recordRelocation(Asm, Layout, Fragment, Fixup, Target, FixedValue);
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                                const MCFixup &Fixup, MCValue Target,
+                                uint64_t &FixedValue) override {
+    MOW.recordRelocation(Asm, Fragment, Fixup, Target, FixedValue);
   }
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override {
     MOW.executePostLayoutBinding(Asm, Layout);
-  }
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &A,
-                                              const MCSymbol &B,
-                                              bool InSet) const override {
-    return MOW.isSymbolRefDifferenceFullyResolvedImpl(Asm, A, B, InSet);
   }
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
@@ -112,7 +105,7 @@ public:
     MOW.writeSymbolTable(Asm, Layout);
   }
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 
   void resetBuffer() { OSOffset = InternalOS.tell(); }
 

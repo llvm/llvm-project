@@ -2172,7 +2172,7 @@ MCCASBuilder::mergeMCFragmentContents(const MCSection *Section,
                  dyn_cast<MCCVInlineLineTableFragment>(&Fragment))
       llvm::append_range(mergedData, CVInlineLineTableFragment->getContents());
     else if (const auto *AlignFragment = dyn_cast<MCAlignFragment>(&Fragment)) {
-      auto FragmentSize = Asm.computeFragmentSize(Layout, Fragment);
+      auto FragmentSize = Asm.computeFragmentSize(Fragment);
       raw_svector_ostream OS(mergedData);
       if (auto E = writeAlignFragment(*this, *AlignFragment, OS, FragmentSize))
         return std::move(E);
@@ -3122,7 +3122,7 @@ Error MCCASBuilder::buildFragments() {
       else
         RelocationBuffer = SectionRelocs;
 
-      auto Size = Asm.computeFragmentSize(Layout, F);
+      auto Size = Asm.computeFragmentSize(F);
       // Don't need to encode the fragment if it doesn't contribute anything.
       if (!Size)
         continue;

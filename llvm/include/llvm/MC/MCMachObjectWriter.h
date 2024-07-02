@@ -304,7 +304,7 @@ public:
   void writeSymbolTable(MCAssembler &Asm, const MCAsmLayout &Layout);
   // END MCCAS
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 };
 
 /// Construct a new Mach-O writer instance.

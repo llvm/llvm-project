@@ -809,8 +809,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm,
                                       const MCAsmLayout &Layout) {
 // END MCCAS
   unsigned NumSections = Asm.size();
-  const MCAssembler::VersionInfoType &VersionInfo =
-    Layout.getAssembler().getVersionInfo();
+  const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
@@ -829,7 +828,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm,
   }
 
   const MCAssembler::VersionInfoType &TargetVariantVersionInfo =
-      Layout.getAssembler().getDarwinTargetVariantVersionInfo();
+      Asm.getDarwinTargetVariantVersionInfo();
 
   // Add the target variant version info load command size, if used.
   if (TargetVariantVersionInfo.Major != 0) {
@@ -880,8 +879,8 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm,
   uint64_t VMSize = 0;
   for (const MCSection &Sec : Asm) {
     uint64_t Address = getSectionAddress(&Sec);
-    uint64_t Size = Layout.getSectionAddressSize(&Sec);
-    uint64_t FileSize = Layout.getSectionFileSize(&Sec);
+    uint64_t Size = Asm.getSectionAddressSize(Sec);
+    uint64_t FileSize = Asm.getSectionFileSize(Sec);
     FileSize += getPaddingSize(&Sec, Layout);
 
     VMSize = std::max(VMSize, Address + Size);
@@ -1034,7 +1033,7 @@ void MachObjectWriter::writeSectionData(MCAssembler &Asm,
 // END MCCAS
   // Write the actual section data.
   for (const MCSection &Sec : Asm) {
-    Asm.writeSectionData(W.OS, &Sec, Layout);
+    Asm.writeSectionData(W.OS, &Sec);
 
     uint64_t Pad = getPaddingSize(&Sec, Layout);
     W.OS.write_zeros(Pad);
@@ -1142,8 +1141,8 @@ void MachObjectWriter::writeSymbolTable(MCAssembler &Asm,
 // BEGIN MCCAS
 }
 
-uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
+uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   uint64_t StartOffset = W.OS.tell();
 
   prepareObject(Asm, Layout);
