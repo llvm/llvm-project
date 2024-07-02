@@ -202,7 +202,7 @@ public:
   bool padInstructionEncoding(MCRelaxableFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
 
-  void finishLayout(MCAssembler const &Asm, MCAsmLayout &Layout) const override;
+  void finishLayout(const MCAssembler &Asm) const override;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -857,8 +857,7 @@ bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
   return Changed;
 }
 
-void X86AsmBackend::finishLayout(MCAssembler const &Asm,
-                                 MCAsmLayout &Layout) const {
+void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
