@@ -105,7 +105,7 @@ As an example, to build and test in a container for 32-bit Arm:
    .. code-block:: sh
 
      $> podman run -it \
-        -v </host/path/to/llvm-project>/:</container/path/to/llvm-project> \
+        -v </host/path/to/llvm-project>:</container/path/to/llvm-project> \
         --arch arm docker.io/ubuntu:jammy bash
 
 #. Install necessary packages, invoke CMake, build, and run tests.
