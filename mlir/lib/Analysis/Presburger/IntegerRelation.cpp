@@ -2209,7 +2209,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
         d, &otherLb, &otherLbFloorDivisor, &otherUb);
     if (!otherExtent.has_value() || lbFloorDivisor != otherLbFloorDivisor)
       // TODO: symbolic extents when necessary.
-      return success();
+      return failure();
 
     assert(lbFloorDivisor > 0 && "divisor always expected to be positive");
 
