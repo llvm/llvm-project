@@ -871,6 +871,9 @@ public:
   virtual void emitFileDirective(StringRef Filename, StringRef CompilerVersion,
                                  StringRef TimeStamp, StringRef Description);
 
+  // Emit '.machine "CPU"' assembler diretive.
+  virtual void emitMachineDirective(StringRef CPU);
+
   /// Emit the "identifiers" directive.  This implements the
   /// '.ident "version foo"' assembler directive.
   virtual void emitIdent(StringRef IdentString) {}
