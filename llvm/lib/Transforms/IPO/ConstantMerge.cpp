@@ -226,7 +226,9 @@ static bool mergeConstants(Module &M) {
     // Now that we have figured out which replacements must be made, do them all
     // now.  This avoid invalidating the pointers in CMap, which are unneeded
     // now.
-    for (const auto &[Old, New] : SameContentReplacements) {
+    for (unsigned i = 0, e = SameContentReplacements.size(); i != e; ++i) {
+      GlobalVariable *Old = SameContentReplacements[i].first;
+      GlobalVariable *New = SameContentReplacements[i].second;
       replace(M, Old, New);
       ++ChangesMade;
       ++NumIdenticalMerged;
