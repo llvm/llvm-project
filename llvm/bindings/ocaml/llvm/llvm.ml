@@ -447,7 +447,7 @@ external module_context : llmodule -> llcontext = "llvm_get_module_context"
 external get_module_identifier : llmodule -> string
                                = "llvm_get_module_identifier"
 
-external set_module_identifer : llmodule -> string -> unit
+external set_module_identifier : llmodule -> string -> unit
                               = "llvm_set_module_identifier"
 
 external get_module_flag : llmodule -> string -> llmetadata option
