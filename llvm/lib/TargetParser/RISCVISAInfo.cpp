@@ -585,6 +585,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // The canonical order specified in ISA manual.
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
   char Baseline = Arch.front();
+  // Skip the baseline.
+  StringRef Exts = Arch.drop_front();
+
+  unsigned Major, Minor, ConsumeLength;
 
   // First letter should be 'e', 'i' or 'g'.
   switch (Baseline) {
@@ -594,33 +598,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                                  "\' should be 'e', 'i' or 'g'");
   case 'e':
   case 'i':
-    break;
-  case 'g':
-    // g expands to extensions in RISCVGImplications.
-    if (Arch.size() > 1 && isDigit(Arch[1]))
-      return createStringError(errc::invalid_argument,
-                               "version not supported for 'g'");
-    break;
-  }
-
-  // Skip baseline.
-  StringRef Exts = Arch.drop_front(1);
-
-  unsigned Major, Minor, ConsumeLength;
-  if (Baseline == 'g') {
-    // Versions for g are disallowed, and this was checked for previously.
-    ConsumeLength = 0;
-
-    // No matter which version is given to `g`, we always set imafd to default
-    // version since the we don't have clear version scheme for that on
-    // ISA spec.
-    for (const auto *Ext : RISCVGImplications) {
-      auto Version = findDefaultVersion(Ext);
-      assert(Version && "Default extension version not found?");
-      // Postpone AddExtension until end of this function
-      SeenExtMap[Ext] = {Version->Major, Version->Minor};
-    }
-  } else {
     // Baseline is `i` or `e`
     if (auto E = getExtensionVersion(
             StringRef(&Baseline, 1), Exts, Major, Minor, ConsumeLength,
@@ -637,6 +614,26 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     // Postpone AddExtension until end of this function
     SeenExtMap[StringRef(&Baseline, 1).str()] = {Major, Minor};
+    break;
+  case 'g':
+    // g expands to extensions in RISCVGImplications.
+    if (Arch.size() > 1 && isDigit(Arch[1]))
+      return createStringError(errc::invalid_argument,
+                               "version not supported for 'g'");
+
+    // Versions for g are disallowed, and this was checked for previously.
+    ConsumeLength = 0;
+
+    // No matter which version is given to `g`, we always set imafd to default
+    // version since the we don't have clear version scheme for that on
+    // ISA spec.
+    for (const auto *Ext : RISCVGImplications) {
+      auto Version = findDefaultVersion(Ext);
+      assert(Version && "Default extension version not found?");
+      // Postpone AddExtension until end of this function
+      SeenExtMap[Ext] = {Version->Major, Version->Minor};
+    }
+    break;
   }
 
   // Consume the base ISA version number and any '_' between rvxxx and the
@@ -694,13 +691,13 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
                                        EnableExperimentalExtension,
                                        ExperimentalExtensionVersionCheck)) {
-        if (IgnoreUnknown) {
-          consumeError(std::move(E));
-          if (Name.size() == 1)
-            Ext = Ext.substr(ConsumeLength);
-          continue;
-        }
-        return E;
+        if (!IgnoreUnknown)
+          return E;
+
+        consumeError(std::move(E));
+        if (Name.size() == 1)
+          Ext = Ext.substr(ConsumeLength);
+        continue;
       }
 
       if (Name.size() == 1)
