@@ -652,6 +652,10 @@ static Constant *getIdentityValueForAtomicOp(Type *const Ty,
     return ConstantFP::get(C, APFloat::getZero(Ty->getFltSemantics(), false));
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMax:
+    // FIXME: atomicrmw fmax/fmin behave like llvm.maxnum/minnum so NaN is the
+    // closest thing they have to an identity, but it still does not preserve
+    // the difference between quiet and signaling NaNs or NaNs with different
+    // payloads.
     return ConstantFP::get(C, APFloat::getNaN(Ty->getFltSemantics()));
   }
 }
