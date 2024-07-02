@@ -2108,6 +2108,7 @@ module std_private_utility_pair                   [system] {
 }
 module std_private_utility_pair_fwd                [system] { header "__fwd/pair.h" }
 module std_private_utility_piecewise_construct     [system] { header "__utility/piecewise_construct.h" }
+module std_private_utility_pointer_int_pair        [system] { header "__utility/pointer_int_pair.h" }
 module std_private_utility_priority_tag            [system] { header "__utility/priority_tag.h" }
 module std_private_utility_private_constructor_tag [system] { header "__utility/private_constructor_tag.h" }
 module std_private_utility_rel_ops                 [system] { header "__utility/rel_ops.h" }
