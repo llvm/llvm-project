@@ -20,13 +20,14 @@ extern "C" int ompx_thread_id(int Dim);
 
 enum class AllocationKind { LOCAL, GLOBAL, LAST = GLOBAL };
 
-template <AllocationKind AK> struct ASTypes {};
-template <> struct ASTypes<AllocationKind::GLOBAL> {
+template <AllocationKind AK> struct ASTypes {
   using INT_TY = uint64_t;
 };
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
 template <> struct ASTypes<AllocationKind::LOCAL> {
   using INT_TY = uint32_t;
 };
+#pragma omp end declare variant
 
 template <AllocationKind AK> struct SanitizerConfig {
   static constexpr uint32_t ADDR_SPACE = AK == AllocationKind::GLOBAL ? 0 : 5;
@@ -42,17 +43,17 @@ template <AllocationKind AK> struct SanitizerConfig {
   static constexpr uint32_t OBJECT_BITS = AK == AllocationKind::GLOBAL ? 10 : 7;
   static constexpr uint32_t SLOTS = (1 << (OBJECT_BITS));
   static constexpr uint32_t KIND_BITS = 1;
-  static constexpr uint32_t ID_BITS = 9 - KIND_BITS;
+  static constexpr uint32_t Id_BITS = 9 - KIND_BITS;
 
   static constexpr uint32_t LENGTH_BITS =
-      ADDR_SPACE_PTR_SIZE - TAG_BITS - ID_BITS;
+      ADDR_SPACE_PTR_SIZE - TAG_BITS - Id_BITS;
   static constexpr uint32_t OFFSET_BITS =
       ADDR_SPACE_PTR_SIZE - TAG_BITS - OBJECT_BITS - KIND_BITS - MAGIC_BITS;
 
   static constexpr bool useTags() { return TAG_BITS > 1; }
 
-  static_assert(LENGTH_BITS + TAG_BITS + ID_BITS == ADDR_SPACE_PTR_SIZE,
-                "Length, tag, and ID bits should cover one pointer");
+  static_assert(LENGTH_BITS + TAG_BITS + Id_BITS == ADDR_SPACE_PTR_SIZE,
+                "Length, tag, and Id bits should cover one pointer");
   static_assert(OFFSET_BITS + TAG_BITS + OBJECT_BITS + MAGIC_BITS + KIND_BITS ==
                     ADDR_SPACE_PTR_SIZE,
                 "Offset, tag, object, and kind bits should cover one pointer");
@@ -67,7 +68,7 @@ template <AllocationKind AK> struct AllocationTy {
   _AS_PTR(void, AK) Start;
   typename ASTypes<AK>::INT_TY Length : SanitizerConfig<AK>::LENGTH_BITS;
   typename ASTypes<AK>::INT_TY Tag : SanitizerConfig<AK>::TAG_BITS;
-  typename ASTypes<AK>::INT_TY Id : SanitizerConfig<AK>::ID_BITS;
+  typename ASTypes<AK>::INT_TY Id : SanitizerConfig<AK>::Id_BITS;
 };
 
 template <AllocationKind AK> struct AllocationArrayTy {
@@ -95,7 +96,9 @@ template <AllocationKind AK> struct AllocationPtrTy {
   // Must be last, TODO: merge into TAG
   typename ASTypes<AK>::INT_TY Kind : SanitizerConfig<AK>::KIND_BITS;
 };
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
 static_assert(sizeof(AllocationPtrTy<AllocationKind::LOCAL>) * 8 == 32);
+#pragma omp end declare variant
 
 union TypePunUnion {
   uint64_t I;
@@ -106,7 +109,9 @@ union TypePunUnion {
     uint32_t U;
   };
 };
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
 static_assert(sizeof(TypePunUnion) * 8 == 64);
+#pragma omp end declare variant
 
 static inline void *__offload_get_new_sanitizer_ptr(int32_t Slot) {
   AllocationPtrTy<AllocationKind::GLOBAL> AP;
@@ -162,38 +167,22 @@ struct SanitizerTrapInfoTy {
   uint64_t BlockId[3];
   uint32_t ThreadId[3];
   uint64_t PC;
-  uint64_t LineNo;
-  char FunctionName[256];
-  char FileName[256];
+  uint64_t SrcId;
   /// }
 
   [[clang::disable_sanitizer_instrumentation]] void
-  setCoordinates(uint64_t PC, const char *FnName, const char *FlName,
-                 uint64_t LineNo) {
+  setCoordinates(int64_t SourceId) {
     for (int32_t Dim = 0; Dim < 3; ++Dim) {
       BlockId[Dim] = ompx_block_id(Dim);
       ThreadId[Dim] = ompx_thread_id(Dim);
     }
-    this->PC = PC;
-    this->LineNo = LineNo;
-
-    auto CopyName = [](char *Dst, const char *Src, int32_t Length) {
-      if (!Src)
-        return;
-      for (int32_t I = 0; I < Length; ++I) {
-        Dst[I] = Src[I];
-        if (!Src[I])
-          break;
-      }
-    };
-    CopyName(FunctionName, FnName, sizeof(FunctionName));
-    CopyName(FileName, FlName, sizeof(FileName));
+    SrcId = SourceId;
   }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, gnu::always_inline]] void
   allocationError(ErrorCodeTy EC, _AS_PTR(void, AK) Start, uint64_t Length,
-                  int64_t Id, int64_t Tag, uint64_t Slot, uint64_t PC) {
+                  int64_t Id, int64_t Tag, uint64_t Slot, int64_t SourceId) {
     AllocationStart = (void *)Start;
     AllocationLength = Length;
     AllocationId = Id;
@@ -202,15 +191,14 @@ struct SanitizerTrapInfoTy {
     PtrSlot = Slot;
 
     ErrorCode = EC;
-    setCoordinates(PC, nullptr, nullptr, 0);
+    setCoordinates(SourceId);
   }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, gnu::always_inline]] void
   propagateAccessError(ErrorCodeTy EC, const AllocationTy<AK> &A,
                        const AllocationPtrTy<AK> &AP, uint64_t Size, int64_t Id,
-                       uint64_t PC, const char *FunctionName,
-                       const char *FileName, uint64_t LineNo) {
+                       int64_t SourceId) {
     AllocationStart = (void *)A.Start;
     AllocationLength = A.Length;
     AllocationId = A.Id;
@@ -227,24 +215,26 @@ struct SanitizerTrapInfoTy {
     AccessSize = Size;
     AccessId = Id;
 
-    setCoordinates(PC, FunctionName, FileName, LineNo);
+    setCoordinates(SourceId);
   }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   exceedsAllocationLength(_AS_PTR(void, AK) Start, uint64_t Length,
-                          int64_t AllocationId, uint64_t Slot, uint64_t PC) {
+                          int64_t AllocationId, uint64_t Slot,
+                          int64_t SourceId) {
     allocationError<AK>(ExceedsLength, Start, Length, AllocationId, /*Tag=*/0,
-                        Slot, PC);
+                        Slot, SourceId);
     __builtin_trap();
   }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   exceedsAllocationSlots(_AS_PTR(void, AK) Start, uint64_t Length,
-                         int64_t AllocationId, uint64_t Slot, uint64_t PC) {
+                         int64_t AllocationId, uint64_t Slot,
+                         int64_t SourceId) {
     allocationError<AK>(ExceedsSlots, Start, Length, AllocationId, /*Tag=*/0,
-                        Slot, PC);
+                        Slot, SourceId);
     __builtin_trap();
   }
 
@@ -260,45 +250,35 @@ struct SanitizerTrapInfoTy {
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   outOfBoundAccess(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
-                   uint64_t Size, int64_t AccessId, uint64_t PC,
-                   const char *FunctionName, const char *FileName,
-                   uint64_t LineNo) {
-    propagateAccessError(OutOfBounds, A, AP, Size, AccessId, PC, FunctionName,
-                         FileName, LineNo);
+                   uint64_t Size, int64_t AccessId, int64_t SourceId) {
+    propagateAccessError(OutOfBounds, A, AP, Size, AccessId, SourceId);
     __builtin_trap();
   }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   useAfterScope(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
-                uint64_t Size, int64_t AccessId, uint64_t PC,
-                const char *FunctionName, const char *FileName,
-                uint64_t LineNo) {
-    propagateAccessError(UseAfterScope, A, AP, Size, AccessId, PC, FunctionName,
-                         FileName, LineNo);
+                uint64_t Size, int64_t AccessId, int64_t SourceId) {
+    propagateAccessError(UseAfterScope, A, AP, Size, AccessId, SourceId);
     __builtin_trap();
   }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   useAfterFree(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
-               uint64_t Size, int64_t AccessId, uint64_t PC,
-               const char *FunctionName, const char *FileName,
-               uint64_t LineNo) {
-    propagateAccessError(UseAfterFree, A, AP, Size, AccessId, PC, FunctionName,
-                         FileName, LineNo);
+               uint64_t Size, int64_t AccessId, int64_t SourceId) {
+    propagateAccessError(UseAfterFree, A, AP, Size, AccessId, SourceId);
     __builtin_trap();
   }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   accessError(const AllocationPtrTy<AK> AP, int64_t Size, int64_t AccessId,
-              uint64_t PC, const char *FunctionName, const char *FileName,
-              uint64_t LineNo);
+              int64_t SourceId);
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
-  garbagePointer(const AllocationPtrTy<AK> AP, void *P, uint64_t PC) {
+  garbagePointer(const AllocationPtrTy<AK> AP, void *P, int64_t SourceId) {
     ErrorCode = GarbagePointer;
     AllocationStart = P;
     AllocationKind = (decltype(AllocationKind))AK;
@@ -306,7 +286,7 @@ struct SanitizerTrapInfoTy {
     PtrSlot = AP.AllocationId;
     PtrTag = AP.AllocationTag;
     PtrKind = AP.Kind;
-    setCoordinates(PC, nullptr, nullptr, 0);
+    setCoordinates(SourceId);
     __builtin_trap();
   }
 
@@ -314,7 +294,7 @@ struct SanitizerTrapInfoTy {
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   memoryLeak(const AllocationTy<AK> A, uint64_t Slot) {
     allocationError<AK>(MemoryLeak, A.Start, A.Length, A.Id, A.Tag, Slot,
-                        /*PC=*/0);
+                        /*SourceId=*/-1);
     __builtin_trap();
   }
 };
@@ -350,20 +330,16 @@ getAllocation(const AllocationPtrTy<AK> AP, int64_t AccessId = 0) {
 template <enum AllocationKind AK>
 [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
 SanitizerTrapInfoTy::accessError(const AllocationPtrTy<AK> AP, int64_t Size,
-                                 int64_t AccessId, uint64_t PC,
-                                 const char *FunctionName, const char *FileName,
-                                 uint64_t LineNo) {
+                                 int64_t AccessId, int64_t SourceId) {
   auto &A = getAllocationArray<AK>().Arr[AP.AllocationId];
   int64_t Offset = AP.Offset;
   int64_t Length = A.Length;
   if (AK == AllocationKind::LOCAL && Length == 0)
-    useAfterScope<AK>(A, AP, Size, AccessId, PC, FunctionName, FileName,
-                      LineNo);
+    useAfterScope<AK>(A, AP, Size, AccessId, SourceId);
   else if (Offset > Length - Size)
-    outOfBoundAccess<AK>(A, AP, Size, AccessId, PC, FunctionName, FileName,
-                         LineNo);
+    outOfBoundAccess<AK>(A, AP, Size, AccessId, SourceId);
   else
-    useAfterFree<AK>(A, AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
+    useAfterFree<AK>(A, AP, Size, AccessId, SourceId);
 }
 
 #endif

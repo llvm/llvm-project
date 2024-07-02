@@ -1,6 +1,7 @@
 // clang-format off
-// RUN: %libomptarget-compileopt-generic -loffload.kernels -mllvm -enable-gpu-san
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-compileopt-generic -fsanitize=offload
+// RUN: not %libomptarget-run-generic 2>&1 > %t.out
+// RUN: %fcheck-generic --check-prefixes=CHECK < %t.out
 // clang-format on
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu

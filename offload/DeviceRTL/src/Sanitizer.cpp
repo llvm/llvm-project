@@ -78,11 +78,11 @@ template <AllocationKind AK> struct AllocationTracker {
 
   [[clang::disable_sanitizer_instrumentation]] static _AS_PTR(void, AK)
       create(_AS_PTR(void, AK) Start, uint64_t Length, int64_t AllocationId,
-             uint64_t Slot, uint64_t PC) {
+             uint64_t Slot, int64_t SourceId) {
     if constexpr (SanitizerConfig<AK>::OFFSET_BITS < 64)
       if (OMP_UNLIKELY(Length >= (1UL << (SanitizerConfig<AK>::OFFSET_BITS))))
         __sanitizer_trap_info_ptr->exceedsAllocationLength<AK>(
-            Start, Length, AllocationId, Slot, PC);
+            Start, Length, AllocationId, Slot, SourceId);
 
     // Reserve the 0 element for the null pointer in global space.
     auto &AllocArr = getAllocationArray<AK>();
@@ -93,7 +93,7 @@ template <AllocationKind AK> struct AllocationTracker {
     uint64_t NumSlots = SanitizerConfig<AK>::SLOTS;
     if (OMP_UNLIKELY(Slot >= NumSlots))
       __sanitizer_trap_info_ptr->exceedsAllocationSlots<AK>(
-          Start, Length, AllocationId, Slot, PC);
+          Start, Length, AllocationId, Slot, SourceId);
 
     auto &A = AllocArr.Arr[Slot];
 
@@ -113,7 +113,7 @@ template <AllocationKind AK> struct AllocationTracker {
   }
 
   [[clang::disable_sanitizer_instrumentation]] static void
-  remove(_AS_PTR(void, AK) P, uint64_t PC) {
+  remove(_AS_PTR(void, AK) P, int64_t SourceId) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
     uint64_t AllocationId = AP.AllocationId;
     auto &AllocArr = getAllocationArray<AK>();
@@ -138,7 +138,7 @@ template <AllocationKind AK> struct AllocationTracker {
   }
 
   [[clang::disable_sanitizer_instrumentation]] static _AS_PTR(void, AK)
-      advance(_AS_PTR(void, AK) P, uint64_t Offset, uint64_t PC) {
+      advance(_AS_PTR(void, AK) P, uint64_t Offset, int64_t SourceId) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
     AP.Offset += Offset;
     return AP;
@@ -147,36 +147,34 @@ template <AllocationKind AK> struct AllocationTracker {
   [[clang::disable_sanitizer_instrumentation]] static _AS_PTR(void, AK)
       checkWithBase(_AS_PTR(void, AK) P, _AS_PTR(void, AK) Start,
                     int64_t Length, uint32_t Tag, int64_t Size,
-                    int64_t AccessId, uint64_t PC, const char *FunctionName,
-                    const char *FileName, uint64_t LineNo) {
+                    int64_t AccessId, int64_t SourceId) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
     if constexpr (AK == AllocationKind::LOCAL)
       if (Length == 0)
         Length = getAllocation<AK>(AP, AccessId).Length;
     if constexpr (AK == AllocationKind::GLOBAL)
       if (AP.Magic != SanitizerConfig<AllocationKind::GLOBAL>::MAGIC)
-        __sanitizer_trap_info_ptr->garbagePointer<AK>(AP, (void *)P, PC);
+        __sanitizer_trap_info_ptr->garbagePointer<AK>(AP, (void *)P, SourceId);
     int64_t Offset = AP.Offset;
     if (OMP_UNLIKELY(
             Offset > Length - Size ||
             (SanitizerConfig<AK>::useTags() && Tag != AP.AllocationTag))) {
-      __sanitizer_trap_info_ptr->accessError<AK>(
-          AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
+      __sanitizer_trap_info_ptr->accessError<AK>(AP, Size, AccessId, SourceId);
     }
     return utils::advancePtr(Start, Offset);
   }
 
   [[clang::disable_sanitizer_instrumentation]] static _AS_PTR(void, AK)
-      check(_AS_PTR(void, AK) P, int64_t Size, int64_t AccessId, uint64_t PC,
-            const char *FunctionName, const char *FileName, uint64_t LineNo) {
+      check(_AS_PTR(void, AK) P, int64_t Size, int64_t AccessId,
+            int64_t SourceId) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
     auto &Alloc = getAllocation<AK>(AP, AccessId);
     return checkWithBase(P, Alloc.Start, Alloc.Length, Alloc.Tag, Size,
-                         AccessId, PC, FunctionName, FileName, LineNo);
+                         AccessId, SourceId);
   }
 
   [[clang::disable_sanitizer_instrumentation]] static _AS_PTR(void, AK)
-      unpack(_AS_PTR(void, AK) P, uint64_t PC = 0) {
+      unpack(_AS_PTR(void, AK) P, int64_t SourceId = 0) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
     auto &A = getAllocation<AK>(AP);
     uint64_t Offset = AP.Offset;
@@ -215,17 +213,17 @@ template <AllocationKind AK>
 AllocationArrayTy<AK>
     Allocations<AK>::Arr[SanitizerConfig<AK>::NUM_ALLOCATION_ARRAYS];
 
-static void checkForMagic(bool IsGlobal, void *P, uint64_t PC) {
+static void checkForMagic(bool IsGlobal, void *P, int64_t SourceId) {
   if (IsGlobal) {
     auto AP = AllocationPtrTy<AllocationKind::GLOBAL>::get(P);
     if (AP.Magic != SanitizerConfig<AllocationKind::GLOBAL>::MAGIC)
-      __sanitizer_trap_info_ptr->garbagePointer<AllocationKind::GLOBAL>(AP, P,
-                                                                        PC);
+      __sanitizer_trap_info_ptr->garbagePointer<AllocationKind::GLOBAL>(
+          AP, P, SourceId);
   } else {
     auto AP = AllocationPtrTy<AllocationKind::LOCAL>::get(P);
     if (AP.Magic != SanitizerConfig<AllocationKind::LOCAL>::MAGIC)
-      __sanitizer_trap_info_ptr->garbagePointer<AllocationKind::LOCAL>(AP, P,
-                                                                       PC);
+      __sanitizer_trap_info_ptr->garbagePointer<AllocationKind::LOCAL>(
+          AP, P, SourceId);
   }
 }
 
@@ -237,34 +235,34 @@ extern "C" {
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::LOCAL)
     ompx_new_local(_AS_PTR(void, AllocationKind::LOCAL) Start, uint64_t Length,
-                   int64_t AllocationId, uint32_t Slot, uint64_t PC) {
+                   int64_t AllocationId, uint32_t Slot, int64_t SourceId) {
   return AllocationTracker<AllocationKind::LOCAL>::create(
-      Start, Length, AllocationId, Slot, PC);
+      Start, Length, AllocationId, Slot, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::GLOBAL)
     ompx_new_global(_AS_PTR(void, AllocationKind::GLOBAL) Start,
                     uint64_t Length, int64_t AllocationId, uint32_t Slot,
-                    uint64_t PC) {
+                    int64_t SourceId) {
   return AllocationTracker<AllocationKind::GLOBAL>::create(
-      Start, Length, AllocationId, Slot, PC);
+      Start, Length, AllocationId, Slot, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void
 __sanitizer_register_host(_AS_PTR(void, AllocationKind::GLOBAL) Start,
-                          uint64_t Length, uint64_t Slot, uint64_t PC) {
+                          uint64_t Length, uint64_t Slot, int64_t SourceId) {
   AllocationTracker<AllocationKind::GLOBAL>::create(Start, Length, Slot, Slot,
-                                                    PC);
+                                                    SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void *
 ompx_new(void *Start, uint64_t Length, int64_t AllocationId, uint32_t Slot,
-         uint64_t PC) {
+         int64_t SourceId) {
   if (REAL_PTR_IS_LOCAL(Start))
     return (void *)ompx_new_local((_AS_PTR(void, AllocationKind::LOCAL))Start,
-                                  Length, AllocationId, Slot, PC);
+                                  Length, AllocationId, Slot, SourceId);
   return (void *)ompx_new_global((_AS_PTR(void, AllocationKind::GLOBAL))Start,
-                                 Length, AllocationId, Slot, PC);
+                                 Length, AllocationId, Slot, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void
@@ -274,80 +272,77 @@ ompx_free_local_n(int32_t N) {
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void
 __sanitizer_unregister_host(_AS_PTR(void, AllocationKind::GLOBAL) P) {
-  AllocationTracker<AllocationKind::GLOBAL>::remove(P, /*PC=*/0);
+  AllocationTracker<AllocationKind::GLOBAL>::remove(P, /*SourceId=*/0);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void
-ompx_free_local(_AS_PTR(void, AllocationKind::LOCAL) P) {
-  return AllocationTracker<AllocationKind::LOCAL>::remove(P, /*PC=*/0);
+ompx_free_local(_AS_PTR(void, AllocationKind::LOCAL) P, int64_t SourceId) {
+  return AllocationTracker<AllocationKind::LOCAL>::remove(P, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void
-ompx_free_global(_AS_PTR(void, AllocationKind::GLOBAL) P) {
-  return AllocationTracker<AllocationKind::GLOBAL>::remove(P, /*PC=*/0);
+ompx_free_global(_AS_PTR(void, AllocationKind::GLOBAL) P, int64_t SourceId) {
+  return AllocationTracker<AllocationKind::GLOBAL>::remove(P, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void
-ompx_free(void *P, uint64_t PC) {
+ompx_free(void *P, int64_t SourceId) {
   bool IsGlobal = IS_GLOBAL(P);
-  checkForMagic(IsGlobal, P, PC);
+  checkForMagic(IsGlobal, P, SourceId);
   if (IsGlobal)
-    return ompx_free_global((_AS_PTR(void, AllocationKind::GLOBAL))P);
-  return ompx_free_local((_AS_PTR(void, AllocationKind::LOCAL))P);
+    return ompx_free_global((_AS_PTR(void, AllocationKind::GLOBAL))P, SourceId);
+  return ompx_free_local((_AS_PTR(void, AllocationKind::LOCAL))P, SourceId);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::LOCAL)
     ompx_gep_local(_AS_PTR(void, AllocationKind::LOCAL) P, uint64_t Offset,
-                   uint64_t PC) {
-  return AllocationTracker<AllocationKind::LOCAL>::advance(P, Offset, PC);
+                   int64_t SourceId) {
+  return AllocationTracker<AllocationKind::LOCAL>::advance(P, Offset, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::GLOBAL)
     ompx_gep_global(_AS_PTR(void, AllocationKind::GLOBAL) P, uint64_t Offset,
-                    uint64_t PC) {
-  return AllocationTracker<AllocationKind::GLOBAL>::advance(P, Offset, PC);
+                    int64_t SourceId) {
+  return AllocationTracker<AllocationKind::GLOBAL>::advance(P, Offset,
+                                                            SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void *
-ompx_gep(void *P, uint64_t Offset, uint64_t PC) {
+ompx_gep(void *P, uint64_t Offset, int64_t SourceId) {
   bool IsGlobal = IS_GLOBAL(P);
-  checkForMagic(IsGlobal, P, PC);
+  checkForMagic(IsGlobal, P, SourceId);
   if (IsGlobal)
     return (void *)ompx_gep_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
-                                   Offset, PC);
+                                   Offset, SourceId);
   return (void *)ompx_gep_local((_AS_PTR(void, AllocationKind::LOCAL))P, Offset,
-                                PC);
+                                SourceId);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::LOCAL)
     ompx_check_local(_AS_PTR(void, AllocationKind::LOCAL) P, uint64_t Size,
-                     uint64_t AccessId, uint64_t PC, const char *FunctionName,
-                     const char *FileName, uint64_t LineNo) {
-  return AllocationTracker<AllocationKind::LOCAL>::check(
-      P, Size, AccessId, PC, FunctionName, FileName, LineNo);
+                     uint64_t AccessId, int64_t SourceId) {
+  return AllocationTracker<AllocationKind::LOCAL>::check(P, Size, AccessId,
+                                                         SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::GLOBAL)
     ompx_check_global(_AS_PTR(void, AllocationKind::GLOBAL) P, uint64_t Size,
-                      uint64_t AccessId, uint64_t PC, const char *FunctionName,
-                      const char *FileName, uint64_t LineNo) {
-  return AllocationTracker<AllocationKind::GLOBAL>::check(
-      P, Size, AccessId, PC, FunctionName, FileName, LineNo);
+                      uint64_t AccessId, int64_t SourceId) {
+  return AllocationTracker<AllocationKind::GLOBAL>::check(P, Size, AccessId,
+                                                          SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void *
-ompx_check(void *P, uint64_t Size, uint64_t AccessId, uint64_t PC,
-           const char *FunctionName, const char *FileName, uint64_t LineNo) {
+ompx_check(void *P, uint64_t Size, uint64_t AccessId, int64_t SourceId) {
   bool IsGlobal = IS_GLOBAL(P);
-  checkForMagic(IsGlobal, P, PC);
+  checkForMagic(IsGlobal, P, SourceId);
   if (IsGlobal)
     return (void *)ompx_check_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
-                                     Size, AccessId, PC, FunctionName, FileName,
-                                     LineNo);
+                                     Size, AccessId, SourceId);
   return (void *)ompx_check_local((_AS_PTR(void, AllocationKind::LOCAL))P, Size,
-                                  AccessId, PC, FunctionName, FileName, LineNo);
+                                  AccessId, SourceId);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
@@ -355,12 +350,9 @@ ompx_check(void *P, uint64_t Size, uint64_t AccessId, uint64_t PC,
     ompx_check_with_base_local(_AS_PTR(void, AllocationKind::LOCAL) P,
                                _AS_PTR(void, AllocationKind::LOCAL) Start,
                                uint64_t Length, uint32_t Tag, uint64_t Size,
-                               uint64_t AccessId, uint64_t PC,
-                               const char *FunctionName, const char *FileName,
-                               uint64_t LineNo) {
+                               uint64_t AccessId, int64_t SourceId) {
   return AllocationTracker<AllocationKind::LOCAL>::checkWithBase(
-      P, Start, Length, Tag, Size, AccessId, PC, FunctionName, FileName,
-      LineNo);
+      P, Start, Length, Tag, Size, AccessId, SourceId);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
@@ -368,33 +360,33 @@ ompx_check(void *P, uint64_t Size, uint64_t AccessId, uint64_t PC,
     ompx_check_with_base_global(_AS_PTR(void, AllocationKind::GLOBAL) P,
                                 _AS_PTR(void, AllocationKind::GLOBAL) Start,
                                 uint64_t Length, uint32_t Tag, uint64_t Size,
-                                uint64_t AccessId, uint64_t PC,
-                                const char *FunctionName, const char *FileName,
-                                uint64_t LineNo) {
+                                uint64_t AccessId, int64_t SourceId) {
   return AllocationTracker<AllocationKind::GLOBAL>::checkWithBase(
-      P, Start, Length, Tag, Size, AccessId, PC, FunctionName, FileName,
-      LineNo);
+      P, Start, Length, Tag, Size, AccessId, SourceId);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::LOCAL)
-    ompx_unpack_local(_AS_PTR(void, AllocationKind::LOCAL) P, uint64_t PC) {
-  return AllocationTracker<AllocationKind::LOCAL>::unpack(P, PC);
+    ompx_unpack_local(_AS_PTR(void, AllocationKind::LOCAL) P,
+                      int64_t SourceId) {
+  return AllocationTracker<AllocationKind::LOCAL>::unpack(P, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::GLOBAL)
-    ompx_unpack_global(_AS_PTR(void, AllocationKind::GLOBAL) P, uint64_t PC) {
-  return AllocationTracker<AllocationKind::GLOBAL>::unpack(P, PC);
+    ompx_unpack_global(_AS_PTR(void, AllocationKind::GLOBAL) P,
+                       int64_t SourceId) {
+  return AllocationTracker<AllocationKind::GLOBAL>::unpack(P, SourceId);
 }
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void *
-ompx_unpack(void *P, uint64_t PC) {
+ompx_unpack(void *P, int64_t SourceId) {
   bool IsGlobal = IS_GLOBAL(P);
-  checkForMagic(IsGlobal, P, PC);
+  checkForMagic(IsGlobal, P, SourceId);
   if (IsGlobal)
     return (void *)ompx_unpack_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
-                                      PC);
-  return (void *)ompx_unpack_local((_AS_PTR(void, AllocationKind::LOCAL))P, PC);
+                                      SourceId);
+  return (void *)ompx_unpack_local((_AS_PTR(void, AllocationKind::LOCAL))P,
+                                   SourceId);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,

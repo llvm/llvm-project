@@ -2200,6 +2200,7 @@ void GPUSanTy::checkAndReportError() {
   auto Red = []() { return "\033[1m\033[31m"; };
   auto Default = []() { return "\033[1m\033[0m"; };
 
+#if 0
   std::string KernelName;
   StringRef FunctionName =
       STI.FunctionName[0] ? StringRef(STI.FunctionName) : "<unknown>";
@@ -2236,9 +2237,15 @@ void GPUSanTy::checkAndReportError() {
       }
     }
   }
+#endif
 
   fprintf(stderr, "============================================================"
                   "====================\n");
+
+  auto PrintStackTrace = [&](int64_t SourceId) {
+    fprintf(stderr, "    #0 " DPxMOD " %s in %s:%lu\n\n", DPxPTR(0), "unknown",
+            "unknown", 0UL);
+  };
 
   auto DiagnoseAccess = [&](StringRef Name) {
     void *PC = reinterpret_cast<void *>(STI.PC);
@@ -2254,8 +2261,7 @@ void GPUSanTy::checkAndReportError() {
             DPxPTR(Addr), STI.ThreadId[0], STI.ThreadId[1], STI.ThreadId[2],
             STI.BlockId[0], STI.BlockId[1], STI.BlockId[2], STI.AccessId,
             (STI.AllocationKind ? "heap" : "stack"), Default());
-    fprintf(stderr, "    #0 " DPxMOD " %s in %s:%lu\n\n", DPxPTR(PC),
-            FunctionName.str().c_str(), FileName.data(), STI.LineNo);
+    PrintStackTrace(STI.SrcId);
     fprintf(
         stderr,
         "%s" DPxMOD " is located %lu bytes inside of a %lu-byte region [" DPxMOD
