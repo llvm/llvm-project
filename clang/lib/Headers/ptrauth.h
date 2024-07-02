@@ -36,6 +36,9 @@ typedef enum {
      The extra data is always 0. */
   ptrauth_key_cxx_vtable_pointer = ptrauth_key_process_independent_data,
 
+  /* The key used to sign pointers in ELF .init_array/.fini_array. */
+  ptrauth_key_init_fini_pointer = ptrauth_key_process_independent_code,
+
   /* Other pointers signed under the ABI use private ABI rules. */
 
 } ptrauth_key;
@@ -214,6 +217,11 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
                                    extra_discrimination...)                    \
   [[clang::ptrauth_vtable_pointer(key, address_discrimination,                 \
                                   extra_discrimination)]]
+
+#define __ptrauth_init_fini_discriminator 0xd9d4
+#define __ptrauth_init_fini_pointer(address_discrimination)                    \
+  __ptrauth(ptrauth_key_init_fini_pointer, address_discrimination,             \
+            __ptrauth_init_fini_discriminator)
 
 #else
 

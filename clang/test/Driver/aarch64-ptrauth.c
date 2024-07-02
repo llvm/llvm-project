@@ -10,12 +10,13 @@
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fno-ptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fno-ptrauth-init-fini -fptrauth-init-fini \
+// RUN:   -fno-ptrauth-init-fini-address-discrimination -fptrauth-init-fini-address-discrimination \
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=ALL
-// ALL: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini"
+// ALL: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination"
 
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=ERR
+// RUN:   -fptrauth-init-fini -fptrauth-init-fini-address-discrimination %s 2>&1 | FileCheck %s --check-prefix=ERR
 // ERR:      error: unsupported option '-fptrauth-intrinsics' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-calls' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-returns' for target '{{.*}}'
@@ -23,3 +24,4 @@
 // ERR-NEXT: error: unsupported option '-fptrauth-vtable-pointer-address-discrimination' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-vtable-pointer-type-discrimination' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-init-fini' for target '{{.*}}'
+// ERR-NEXT: error: unsupported option '-fptrauth-init-fini-address-discrimination' for target '{{.*}}'

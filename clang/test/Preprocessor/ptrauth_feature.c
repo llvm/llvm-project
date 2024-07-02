@@ -4,56 +4,72 @@
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-init-fini-address-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,INITFINI_ADDR_DISCR
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-init-fini-address-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,INITFINI_ADDR_DISCR
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-init-fini-address-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,INITFINI_ADDR_DISCR
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,NORETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-init-fini-address-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,NORETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,INITFINI_ADDR_DISCR
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-init-fini-address-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,INITFINI_ADDR_DISCR
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-init-fini-address-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,INITFINI,INITFINI_ADDR_DISCR
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
-// RUN:   -fptrauth-vtable-pointer-type-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-init-fini-address-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI,INITFINI_ADDR_DISCR
+
+// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN:   -fptrauth-intrinsics \
+// RUN:   -fptrauth-calls \
+// RUN:   -fptrauth-returns \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-init-fini | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,NOINITFINI_ADDR_DISCR
 
 #if __has_feature(ptrauth_intrinsics)
 // INTRIN: has_ptrauth_intrinsics
@@ -110,4 +126,12 @@ void has_ptrauth_init_fini() {}
 #else
 // NOINITFINI: no_ptrauth_init_fini
 void no_ptrauth_init_fini() {}
+#endif
+
+#if __has_feature(ptrauth_init_fini_address_discrimination)
+// INITFINI_ADDR_DISCR: has_ptrauth_init_fini_address_discrimination
+void has_ptrauth_init_fini_address_discrimination() {}
+#else
+// NOINITFINI_ADDR_DISCR: no_ptrauth_init_fini_address_discrimination
+void no_ptrauth_init_fini_address_discrimination() {}
 #endif
