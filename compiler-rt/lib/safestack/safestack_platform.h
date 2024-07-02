@@ -91,7 +91,11 @@ inline int TgKill(pid_t pid, ThreadId tid, int sig) {
   (void)pid;
   return _REAL(_lwp_kill, tid, sig);
 #elif SANITIZER_SOLARIS
+#  ifdef SYS_lwp_kill
   return syscall(SYS_lwp_kill, tid, sig);
+#  else
+  return -1;
+#  endif
 #elif SANITIZER_FREEBSD
   return syscall(SYS_thr_kill2, pid, tid, sig);
 #else
@@ -105,6 +109,9 @@ inline void *Mmap(void *addr, size_t length, int prot, int flags, int fd,
   return __mmap(addr, length, prot, flags, fd, 0, offset);
 #elif SANITIZER_FREEBSD && (defined(__aarch64__) || defined(__x86_64__))
   return (void *)__syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#elif SANITIZER_SOLARIS
+  return (void *)(uintptr_t)syscall(SYS_mmap, addr, length, prot, flags, fd,
+                                    offset);
 #else
   return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
 #endif
