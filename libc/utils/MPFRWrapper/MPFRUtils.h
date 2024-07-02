@@ -244,8 +244,7 @@ private:
                                                  rounding);
   }
 
-  template <typename T>
-  bool match(T in, const BinaryOutput<T> &out) {
+  template <typename T> bool match(T in, const BinaryOutput<T> &out) {
     return compare_unary_operation_two_outputs(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -274,15 +273,13 @@ private:
                                                 rounding);
   }
 
-  template <typename T>
-  void explain_error(T in, const BinaryOutput<T> &out) {
+  template <typename T> void explain_error(T in, const BinaryOutput<T> &out) {
     explain_unary_operation_two_outputs_error(op, in, out, ulp_tolerance,
                                               rounding);
   }
 
   template <typename T>
-  void explain_error(const BinaryInput<T> &in,
-                     const BinaryOutput<T> &out) {
+  void explain_error(const BinaryInput<T> &in, const BinaryOutput<T> &out) {
     explain_binary_operation_two_outputs_error(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -310,7 +307,8 @@ constexpr bool is_valid_operation() {
       (op == Operation::Sqrt && cpp::is_floating_point_v<InputType> &&
        cpp::is_floating_point_v<OutputType> &&
        sizeof(OutputType) <= sizeof(InputType)) ||
-    ((op == Operation::Div || op == Operation::Fmul) && internal::IsBinaryInput<InputType>::VALUE &&
+      ((op == Operation::Div || op == Operation::Fmul) &&
+       internal::IsBinaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
        cpp::is_floating_point_v<OutputType>) ||
