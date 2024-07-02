@@ -984,7 +984,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       dump(); });
 
   // Finalize the layout, including fragment lowering.
-  finishLayout(Layout);
+  getBackend().finishLayout(*this);
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - final-layout\n--\n";
@@ -1348,11 +1348,6 @@ bool MCAssembler::layoutOnce() {
       if (relaxFragment(Frag))
         Changed = true;
   return Changed;
-}
-
-void MCAssembler::finishLayout(MCAsmLayout &Layout) {
-  assert(getBackendPtr() && "Expected assembler backend");
-  getBackend().finishLayout(*this, Layout);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
