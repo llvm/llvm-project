@@ -844,34 +844,4 @@ def LinalgStructuredInterface
   let verifyWithRegions = 1;
 }
 
-def AggregatedOpInterface : OpInterface<"AggregatedOpInterface"> {
-  let description = [{
-    Interface for decomposing aggregated operations into a sequence of simpler
-    ops.
-  }];
-  let cppNamespace = "::mlir::linalg";
-  let methods = [
-      InterfaceMethod<
-        /*desc=*/[{
-          Method to decompose the operation into simpler operations.
-
-          On success, this method returns one `Value` per result in the
-          original operation.
-          The order of the returned values must match the order of the
-          original values.
-          In other words, the returned vector can be used directly with
-          `RewriterBase::replaceOp(this, returnedValues)`.
-        }],
-        /*retType=*/"FailureOr<SmallVector<Value>>",
-        /*methodName=*/"decomposeOperation",
-        /*args=*/(ins
-            "OpBuilder &":$b),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          return {};
-        }]
-      >
-  ];
-}
-
 #endif // LINALG_IR_LINALGINTERFACES
