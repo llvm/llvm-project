@@ -116,6 +116,30 @@ static void removeStringFunctionAttributes(Function &F,
   F.removeRetAttrs(DeadAttrs);
 }
 
+static void cleanModuleFlags(Module &M) {
+  NamedMDNode *MDFlags = M.getModuleFlagsMetadata();
+  if (!MDFlags)
+    return;
+
+  StringSet<> LiveKeys = {"Dwarf Version", "Debug Info Version"};
+
+  SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
+  M.getModuleFlagsMetadata(FlagEntries);
+  SmallVector<llvm::Module::ModuleFlagEntry> LiveFlagEntries;
+  for (auto &Flag : FlagEntries) {
+    if (LiveKeys.count(Flag.Key->getString()))
+      LiveFlagEntries.push_back(Flag);
+  }
+
+  if (LiveFlagEntries.size() == FlagEntries.size())
+    return;
+
+  MDFlags->eraseFromParent();
+
+  for (auto &Flag : LiveFlagEntries)
+    M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
+}
+
 class DXILPrepareModule : public ModulePass {
 
   static Value *maybeGenerateBitcast(IRBuilder<> &Builder,
@@ -213,6 +237,8 @@ public:
         }
       }
     }
+    // Remove flags not for DXIL.
+    cleanModuleFlags(M);
     return true;
   }
 
