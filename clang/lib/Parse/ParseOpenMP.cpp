@@ -2397,10 +2397,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 StmtResult Parser::ParseOpenMPExecutableDirective(
     ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
     bool ReadDirectiveWithinMetadirective) {
-  assert((DKind == OMPD_error ||
-          getDirectiveCategory(DKind) == Category::Executable ||
-          getDirectiveCategory(DKind) == Category::Subsidiary) &&
-         "Directive with an unexpected category");
+  assert(isOpenMPExecutableDirective(DKind) && "Unexpected directive category");
+
   bool HasAssociatedStatement = true;
   Association Assoc = getDirectiveAssociation(DKind);
 
