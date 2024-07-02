@@ -48,6 +48,7 @@ public:
   virtual ~BTFTypeBase() = default;
   void setId(uint32_t Id) { this->Id = Id; }
   uint32_t getId() { return Id; }
+  uint32_t getKind() { return Kind; }
   uint32_t roundupToBytes(uint32_t NumBits) { return (NumBits + 7) >> 3; }
   /// Get the size of this BTF type entry.
   virtual uint32_t getSize() { return BTF::CommonTypeSize; }
@@ -68,10 +69,12 @@ class BTFTypeDerived : public BTFTypeBase {
 
 public:
   BTFTypeDerived(const DIDerivedType *Ty, unsigned Tag, bool NeedsFixup);
-  BTFTypeDerived(unsigned NextTypeId, unsigned Tag, StringRef Name);
+  BTFTypeDerived(unsigned NextTypeId, enum BTF::TypeKinds Kind,
+                 StringRef Name = StringRef());
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
   void setPointeeType(uint32_t PointeeType);
+  uint32_t getPointeeType();
 };
 
 /// Handle struct or union forward declaration.
@@ -240,6 +243,8 @@ public:
   BTFTypeTypeTag(uint32_t NextTypeId, StringRef Tag);
   BTFTypeTypeTag(const DIDerivedType *DTy, StringRef Tag);
   void completeType(BTFDebug &BDebug) override;
+  uint32_t getNextTypeId();
+  StringRef getTag();
 };
 
 /// String table.
@@ -285,6 +290,20 @@ struct BTFFieldReloc {
   uint32_t RelocKind;     ///< What to patch the instruction
 };
 
+/// Used for de-duplication for types annotated with btf_type_tag annotation,
+/// See comment at BTFDebug.cpp:addType() for details.
+struct BTFTypeDedupKey {
+  const DIType *CanonTy;
+
+  BTFTypeDedupKey(const DIType *CanonTy) : CanonTy(CanonTy) {}
+
+  bool operator==(const BTFTypeDedupKey &Other) const;
+
+  struct Hash {
+    size_t operator()(BTFTypeDedupKey const &Key) const;
+  };
+};
+
 /// Collect and emit BTF information.
 class BTFDebug : public DebugHandlerBase {
   MCStreamer &OS;
@@ -296,6 +315,8 @@ class BTFDebug : public DebugHandlerBase {
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
   std::unordered_map<const DIType *, uint32_t> DIToIdMap;
+  std::unordered_map<BTFTypeDedupKey, uint32_t, BTFTypeDedupKey::Hash>
+      DIDedupMap;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
@@ -311,10 +332,16 @@ class BTFDebug : public DebugHandlerBase {
   /// Add types to TypeEntries.
   /// @{
   /// Add types to TypeEntries and DIToIdMap.
-  uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry, const DIType *Ty);
+  uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry, const DIType *Ty,
+                   uint32_t *RealId = nullptr);
   /// Add types to TypeEntries only and return type id.
   uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry);
+  uint32_t replaceType(uint32_t Id, std::unique_ptr<BTFTypeBase> TypeEntry);
   /// @}
+
+  BTFTypeBase *getType(uint32_t Id);
+
+  std::optional<uint32_t> lookupType(const DIType *Ty);
 
   /// IR type visiting functions.
   /// @{
@@ -368,7 +395,10 @@ class BTFDebug : public DebugHandlerBase {
   /// the base type of DTy. Return the type id of the first BTF type_tag
   /// in the chain. If no type_tag's are generated, a negative value
   /// is returned.
-  int genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId);
+  uint32_t genBTFTypeTags(const DIType *Ty, int BaseId,
+                          const DIDerivedType *DTy, StringRef AnnotName);
+  uint32_t genBTFTypeTagsV1(const DIDerivedType *DTy);
+  uint32_t genBTFTypeTagsV2(const DIType *Ty, uint32_t BaseId);
 
   /// Generate one field relocation record.
   void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
@@ -389,6 +419,16 @@ class BTFDebug : public DebugHandlerBase {
 
   /// Emit the .BTF.ext section.
   void emitBTFExtSection();
+
+  uint32_t skipBTFTypeTags(uint32_t Id);
+
+  /// BTF post processing phase rewriting type chains like below:
+  ///   CONST -> TYPE_TAG '...' -> ...
+  /// To:
+  ///   TYPE_TAG '...' -> CONST -> ...
+  void moveTypeTagsBeforeCVR();
+  class QualifiedTypesCache;
+  void rebuildTypeTagsChain(uint32_t Id, QualifiedTypesCache &Cache);
 
 protected:
   /// Gather pre-function debug information.
