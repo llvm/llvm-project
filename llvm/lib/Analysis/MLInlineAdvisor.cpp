@@ -311,11 +311,13 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   int64_t NewCallerAndCalleeEdges =
       getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
 
-  if (CalleeWasDeleted)
+  if (CalleeWasDeleted) {
     --NodeCount;
-  else
+    DeadFunctions.insert(Callee);
+  } else {
     NewCallerAndCalleeEdges +=
         getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
+  }
   EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
   assert(CurrentIRSize >= 0 && EdgeCount >= 0 && NodeCount >= 0);
 }
@@ -493,7 +495,9 @@ void MLInlineAdvisor::print(raw_ostream &OS) const {
   OS << "\n";
   OS << "[MLInlineAdvisor] FuncLevels:\n";
   for (auto I : FunctionLevels)
-    OS << (I.first->isDead() ? "<deleted>" : I.first->getFunction().getName())
+    OS << (DeadFunctions.contains(&I.first->getFunction())
+               ? "<deleted>"
+               : I.first->getFunction().getName())
        << " : " << I.second << "\n";
 
   OS << "\n";

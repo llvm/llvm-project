@@ -618,6 +618,44 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
 
 SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
 
+FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
+    RewriterBase &rewriter, ValueRange newInitOperands,
+    bool replaceInitOperandUsesInLoop,
+    const NewYieldValuesFn &newYieldValuesFn) {
+  // Create a new loop before the existing one, with the extra operands.
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(getOperation());
+  SmallVector<Value> inits(getOutputs());
+  llvm::append_range(inits, newInitOperands);
+  scf::ForallOp newLoop = rewriter.create<scf::ForallOp>(
+      getLoc(), getMixedLowerBound(), getMixedUpperBound(), getMixedStep(),
+      inits, getMapping(),
+      /*bodyBuilderFn =*/[](OpBuilder &, Location, ValueRange) {});
+
+  // Move the loop body to the new op.
+  rewriter.mergeBlocks(getBody(), newLoop.getBody(),
+                       newLoop.getBody()->getArguments().take_front(
+                           getBody()->getNumArguments()));
+
+  if (replaceInitOperandUsesInLoop) {
+    // Replace all uses of `newInitOperands` with the corresponding basic block
+    // arguments.
+    for (auto &&[newOperand, oldOperand] :
+         llvm::zip(newInitOperands, newLoop.getBody()->getArguments().take_back(
+                                        newInitOperands.size()))) {
+      rewriter.replaceUsesWithIf(newOperand, oldOperand, [&](OpOperand &use) {
+        Operation *user = use.getOwner();
+        return newLoop->isProperAncestor(user);
+      });
+    }
+  }
+
+  // Replace the old loop.
+  rewriter.replaceOp(getOperation(),
+                     newLoop->getResults().take_front(getNumResults()));
+  return cast<LoopLikeOpInterface>(newLoop.getOperation());
+}
+
 /// Promotes the loop body of a forallOp to its containing block if it can be
 /// determined that the loop has a single iteration.
 LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {

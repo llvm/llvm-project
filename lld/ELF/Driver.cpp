@@ -2021,16 +2021,22 @@ void LinkerDriver::inferMachineType() {
   if (config->ekind != ELFNoneKind)
     return;
 
+  bool inferred = false;
   for (InputFile *f : files) {
     if (f->ekind == ELFNoneKind)
       continue;
-    config->ekind = f->ekind;
-    config->emachine = f->emachine;
+    if (!inferred) {
+      inferred = true;
+      config->ekind = f->ekind;
+      config->emachine = f->emachine;
+      config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
+    }
     config->osabi = f->osabi;
-    config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
-    return;
+    if (f->osabi != ELFOSABI_NONE)
+      return;
   }
-  error("target emulation unknown: -m or at least one .o file required");
+  if (!inferred)
+    error("target emulation unknown: -m or at least one .o file required");
 }
 
 // Parse -z max-page-size=<value>. The default value is defined by
