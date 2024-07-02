@@ -3853,3 +3853,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sincos
 )
+
+add_fp_unittest(
+  tan_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tan_test.cpp
+  DEPENDS
+    libc.src.math.tan
+)
