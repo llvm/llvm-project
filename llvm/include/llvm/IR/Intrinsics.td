@@ -1734,6 +1734,9 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
     [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
      NoCapture<ArgIndex<0>>]>;
 
+def int_coro_safe_elide : DefaultAttrsIntrinsic<
+    [], [llvm_ptr_ty], []>;
+
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
 // TODO: We should introduce a new memory kind fo traps (and other side effects

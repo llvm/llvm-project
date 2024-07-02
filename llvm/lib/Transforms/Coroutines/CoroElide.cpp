@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines/CoroElide.h"
+#include "CoroInstr.h"
 #include "CoroInternal.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -56,7 +58,8 @@ private:
 class CoroIdElider {
 public:
   CoroIdElider(CoroIdInst *CoroId, FunctionElideInfo &FEI, AAResults &AA,
-               DominatorTree &DT, OptimizationRemarkEmitter &ORE);
+               DominatorTree &DT, PostDominatorTree &PDT,
+               OptimizationRemarkEmitter &ORE);
   void elideHeapAllocations(uint64_t FrameSize, Align FrameAlign);
   bool lifetimeEligibleForElide() const;
   bool attemptElide();
@@ -68,6 +71,7 @@ private:
   FunctionElideInfo &FEI;
   AAResults &AA;
   DominatorTree &DT;
+  PostDominatorTree &PDT;
   OptimizationRemarkEmitter &ORE;
 
   SmallVector<CoroBeginInst *, 1> CoroBegins;
@@ -183,8 +187,9 @@ void FunctionElideInfo::collectPostSplitCoroIds() {
 
 CoroIdElider::CoroIdElider(CoroIdInst *CoroId, FunctionElideInfo &FEI,
                            AAResults &AA, DominatorTree &DT,
+                           PostDominatorTree &PDT,
                            OptimizationRemarkEmitter &ORE)
-    : CoroId(CoroId), FEI(FEI), AA(AA), DT(DT), ORE(ORE) {
+    : CoroId(CoroId), FEI(FEI), AA(AA), DT(DT), PDT(PDT), ORE(ORE) {
   // Collect all coro.begin and coro.allocs associated with this coro.id.
   for (User *U : CoroId->users()) {
     if (auto *CB = dyn_cast<CoroBeginInst>(U))
@@ -336,6 +341,41 @@ bool CoroIdElider::canCoroBeginEscape(
   return false;
 }
 
+// FIXME: This is not accounting for the stores to tasks whose handle is not
+// zero offset.
+static const StoreInst *getPostDominatingStoreToTask(const CoroBeginInst *CB,
+                                                     PostDominatorTree &PDT) {
+  const StoreInst *OnlyStore = nullptr;
+
+  for (auto *U : CB->users()) {
+    auto *Store = dyn_cast<StoreInst>(U);
+    if (Store && Store->getValueOperand() == CB) {
+      if (OnlyStore) {
+        // Store must be unique. one coro begin getting stored to multiple
+        // stores is not accepted.
+        return nullptr;
+      }
+      OnlyStore = Store;
+    }
+  }
+
+  if (!OnlyStore || !PDT.dominates(OnlyStore, CB)) {
+    return nullptr;
+  }
+
+  return OnlyStore;
+}
+
+static bool isMarkedSafeElide(const llvm::Value *V) {
+  for (auto *U : V->users()) {
+    auto *II = dyn_cast<IntrinsicInst>(U);
+    if (II && (II->getIntrinsicID() == Intrinsic::coro_safe_elide)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool CoroIdElider::lifetimeEligibleForElide() const {
   // If no CoroAllocs, we cannot suppress allocation, so elision is not
   // possible.
@@ -364,6 +404,17 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
 
   // Filter out the coro.destroy that lie along exceptional paths.
   for (const auto *CB : CoroBegins) {
+    // This might be too strong of a condition but should be very safe.
+    // If the CB is unconditionally stored into a "Task Like Object",
+    // and such object is "safe elide".
+    if (FEI.ContainingFunction->isPresplitCoroutine()) {
+      if (auto *MaybeStoreToTask = getPostDominatingStoreToTask(CB, PDT)) {
+        auto Dest = MaybeStoreToTask->getPointerOperand();
+        if (isMarkedSafeElide(Dest))
+          continue;
+      }
+    }
+
     auto It = DestroyAddr.find(CB);
 
     // FIXME: If we have not found any destroys for this coro.begin, we
@@ -476,11 +527,12 @@ PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
 
   AAResults &AA = AM.getResult<AAManager>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   bool Changed = false;
   for (auto *CII : FEI.getCoroIds()) {
-    CoroIdElider CIE(CII, FEI, AA, DT, ORE);
+    CoroIdElider CIE(CII, FEI, AA, DT, PDT, ORE);
     Changed |= CIE.attemptElide();
   }
 

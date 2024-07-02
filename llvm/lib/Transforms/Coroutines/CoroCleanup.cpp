@@ -11,6 +11,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
@@ -81,7 +82,7 @@ bool Lowerer::lower(Function &F) {
         } else
           continue;
         break;
-      case Intrinsic::coro_async_size_replace:
+      case Intrinsic::coro_async_size_replace: {
         auto *Target = cast<ConstantStruct>(
             cast<GlobalVariable>(II->getArgOperand(0)->stripPointerCasts())
                 ->getInitializer());
@@ -99,6 +100,9 @@ bool Lowerer::lower(Function &F) {
         Target->replaceAllUsesWith(NewFuncPtrStruct);
         break;
       }
+      case Intrinsic::coro_safe_elide:
+        break;
+      }
       II->eraseFromParent();
       Changed = true;
     }
@@ -112,7 +116,8 @@ static bool declaresCoroCleanupIntrinsics(const Module &M) {
       M, {"llvm.coro.alloc", "llvm.coro.begin", "llvm.coro.subfn.addr",
           "llvm.coro.free", "llvm.coro.id", "llvm.coro.id.retcon",
           "llvm.coro.id.async", "llvm.coro.id.retcon.once",
-          "llvm.coro.async.size.replace", "llvm.coro.async.resume"});
+          "llvm.coro.async.size.replace", "llvm.coro.async.resume",
+          "llvm.coro.safe.elide"});
 }
 
 PreservedAnalyses CoroCleanupPass::run(Module &M,

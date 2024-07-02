@@ -15,6 +15,7 @@
 
 #include "CoroutineStmtBuilder.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -825,6 +826,32 @@ ExprResult Sema::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
   return CoawaitOp;
 }
 
+static bool isAttributedCoroInplaceTask(const QualType &QT) {
+  auto *Record = QT->getAsCXXRecordDecl();
+  return Record && Record->hasAttr<CoroInplaceTaskAttr>();
+}
+
+static bool isCoroInplaceCall(Expr *Operand) {
+  if (!Operand->isPRValue()) {
+    return false;
+  }
+
+  return isAttributedCoroInplaceTask(Operand->getType());
+}
+
+template <typename DesiredExpr>
+DesiredExpr *getExprWrappedByTemporary(Expr *E) {
+  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E)) {
+    E = BTE->getSubExpr();
+  }
+
+  if (auto *S = dyn_cast<DesiredExpr>(E)) {
+    return S;
+  }
+
+  return nullptr;
+}
+
 // Attempts to resolve and build a CoawaitExpr from "raw" inputs, bailing out to
 // DependentCoawaitExpr if needed.
 ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
@@ -848,10 +875,31 @@ ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   }
 
   auto *RD = Promise->getType()->getAsCXXRecordDecl();
+  bool InplaceCall =
+      isCoroInplaceCall(Operand) &&
+      isAttributedCoroInplaceTask(
+          getCurFunctionDecl(/*AllowLambda=*/true)->getReturnType());
+
+  OpaqueValueExpr *OpaqueCallExpr = nullptr;
+
   auto *Transformed = Operand;
+
+  if (InplaceCall) {
+    if (auto *Temporary = dyn_cast<CXXBindTemporaryExpr>(Operand)) {
+      auto *SubExpr = Temporary->getSubExpr();
+      if (CallExpr *Call = dyn_cast<CallExpr>(SubExpr)) {
+        OpaqueCallExpr = new (Context)
+            OpaqueValueExpr(Call->getRParenLoc(), Call->getType(),
+                            Call->getValueKind(), Call->getObjectKind(), Call);
+        Transformed = CXXBindTemporaryExpr::Create(
+            Context, Temporary->getTemporary(), OpaqueCallExpr);
+      }
+    }
+  }
+
   if (lookupMember(*this, "await_transform", RD, Loc)) {
     ExprResult R =
-        buildPromiseCall(*this, Promise, Loc, "await_transform", Operand);
+        buildPromiseCall(*this, Promise, Loc, "await_transform", Transformed);
     if (R.isInvalid()) {
       Diag(Loc,
            diag::note_coroutine_promise_implicit_await_transform_required_here)
@@ -864,7 +912,13 @@ ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   if (Awaiter.isInvalid())
     return ExprError();
 
-  return BuildResolvedCoawaitExpr(Loc, Operand, Awaiter.get());
+  auto Res = BuildResolvedCoawaitExpr(Loc, Operand, Awaiter.get());
+  if (!Res.isInvalid() && InplaceCall) {
+    // BuildResolvedCoawaitExpr must return a CoawaitExpr, if valid.
+    CoawaitExpr *CE = Res.getAs<CoawaitExpr>();
+    CE->setInplaceCallOpaqueValue(OpaqueCallExpr);
+  }
+  return Res;
 }
 
 ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,

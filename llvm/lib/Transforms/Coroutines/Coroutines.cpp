@@ -86,6 +86,7 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.prepare.retcon",
     "llvm.coro.promise",
     "llvm.coro.resume",
+    "llvm.coro.safe.elide",
     "llvm.coro.save",
     "llvm.coro.size",
     "llvm.coro.subfn.addr",
