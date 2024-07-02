@@ -215,7 +215,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
 
   int64_t Value;
   [[maybe_unused]] bool IsAbsolute =
-      AddrDelta.evaluateKnownAbsolute(Value, *Asm.getLayout());
+      AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
   Data.clear();
@@ -271,17 +271,16 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
 bool RISCVAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
                                     MCDwarfCallFrameFragment &DF,
                                     bool &WasRelaxed) const {
-  auto &Layout = *Asm.getLayout();
   const MCExpr &AddrDelta = DF.getAddrDelta();
   SmallVectorImpl<char> &Data = DF.getContents();
   SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
   [[maybe_unused]] bool IsAbsolute =
-      AddrDelta.evaluateKnownAbsolute(Value, Layout);
+      AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
   Data.clear();
@@ -341,8 +340,7 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(const MCAssembler &Asm,
     LF.getFixups().push_back(
         MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   }
-  return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm.getLayout()),
-                        false);
+  return std::make_pair(Expr.evaluateKnownAbsolute(Value, Asm), false);
 }
 
 // Given a compressed control flow instruction this function returns
@@ -549,8 +547,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     // MCAssembler::evaluateFixup will emit an error for this case when it sees
     // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
     const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
-    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, Asm.getLayout(),
-                                          AUIPCFixup))
+    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm, AUIPCFixup))
       return true;
     break;
   }
