@@ -133,36 +133,25 @@ def PPCfrsqrte: SDNode<"PPCISD::FRSQRTE", SDTFPUnaryOp, []>;
 def PPCfsqrt  : SDNode<"PPCISD::FSQRT",   SDTFPUnaryOp, []>;
 def PPCftsqrt : SDNode<"PPCISD::FTSQRT",  SDT_PPCFtsqrt,[]>;
 
-def PPCfcfid  : SDNode<"PPCISD::FCFID",   SDTFPUnaryOp, []>;
-def PPCfcfidu : SDNode<"PPCISD::FCFIDU",  SDTFPUnaryOp, []>;
-def PPCfcfids : SDNode<"PPCISD::FCFIDS",  SDTFPRoundOp, []>;
-def PPCfcfidus: SDNode<"PPCISD::FCFIDUS", SDTFPRoundOp, []>;
-def PPCfctidz : SDNode<"PPCISD::FCTIDZ", SDTFPUnaryOp, []>;
-def PPCfctiwz : SDNode<"PPCISD::FCTIWZ", SDTFPUnaryOp, []>;
-def PPCfctiduz: SDNode<"PPCISD::FCTIDUZ",SDTFPUnaryOp, []>;
-def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
+def SDTToFpInRegOp : SDTypeProfile<1, 1, [ SDTCisFP<0>, SDTCisVT<1, f64> ]>;
+def PPCsint_to_fp: SDNode<"PPCISD::SINT_TO_FP_INREG", SDTToFpInRegOp, []>;
+def PPCuint_to_fp: SDNode<"PPCISD::UINT_TO_FP_INREG", SDTToFpInRegOp, []>;
+def PPCfp_to_i64 : SDNode<"PPCISD::FP_TO_I64_INREG", SDTFPUnaryOp, []>;
+def PPCfp_to_i32 : SDNode<"PPCISD::FP_TO_I32_INREG", SDTFPUnaryOp, []>;
+def PPCfp_to_u64 : SDNode<"PPCISD::FP_TO_U64_INREG", SDTFPUnaryOp, []>;
+def PPCfp_to_u32 : SDNode<"PPCISD::FP_TO_U32_INREG", SDTFPUnaryOp, []>;
 
-def PPCstrict_fcfid : SDNode<"PPCISD::STRICT_FCFID",
-                             SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fcfidu : SDNode<"PPCISD::STRICT_FCFIDU",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fcfids : SDNode<"PPCISD::STRICT_FCFIDS",
-                             SDTFPRoundOp, [SDNPHasChain]>;
-def PPCstrict_fcfidus : SDNode<"PPCISD::STRICT_FCFIDUS",
-                              SDTFPRoundOp, [SDNPHasChain]>;
+def PPCstrict_sint_to_fp: SDNode<"PPCISD::STRICT_SINT_TO_FP_INREG",
+                                  SDTToFpInRegOp, [SDNPHasChain]>;
+def PPCstrict_uint_to_fp: SDNode<"PPCISD::STRICT_UINT_TO_FP_INREG",
+                                  SDTToFpInRegOp, [SDNPHasChain]>;
 
-def PPCany_fcfid : PatFrags<(ops node:$op),
-                             [(PPCfcfid node:$op),
-                              (PPCstrict_fcfid node:$op)]>;
-def PPCany_fcfidu : PatFrags<(ops node:$op),
-                             [(PPCfcfidu node:$op),
-                              (PPCstrict_fcfidu node:$op)]>;
-def PPCany_fcfids : PatFrags<(ops node:$op),
-                              [(PPCfcfids node:$op),
-                               (PPCstrict_fcfids node:$op)]>;
-def PPCany_fcfidus : PatFrags<(ops node:$op),
-                              [(PPCfcfidus node:$op),
-                               (PPCstrict_fcfidus node:$op)]>;
+def PPCany_sint_to_fp: PatFrags<(ops node:$op),
+                                [(PPCsint_to_fp node:$op),
+                                 (PPCstrict_sint_to_fp node:$op)]>;
+def PPCany_uint_to_fp: PatFrags<(ops node:$op),
+                                [(PPCuint_to_fp node:$op),
+                                 (PPCstrict_uint_to_fp node:$op)]>;
 
 def PPCstore_scal_int_from_vsr:
    SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
@@ -251,27 +240,27 @@ def PPCfnmsub     : SDNode<"PPCISD::FNMSUB"    , SDTFPTernaryOp>;
 
 def PPCextswsli : SDNode<"PPCISD::EXTSWSLI" , SDT_PPCextswsli>;
 
-def PPCstrict_fctidz : SDNode<"PPCISD::STRICT_FCTIDZ",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiwz : SDNode<"PPCISD::STRICT_FCTIWZ",
-                              SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiduz : SDNode<"PPCISD::STRICT_FCTIDUZ",
-                               SDTFPUnaryOp, [SDNPHasChain]>;
-def PPCstrict_fctiwuz : SDNode<"PPCISD::STRICT_FCTIWUZ",
+def PPCstrict_fp_to_i64: SDNode<"PPCISD::STRICT_FP_TO_I64_INREG",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fp_to_i32: SDNode<"PPCISD::STRICT_FP_TO_I32_INREG",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fp_to_u64: SDNode<"PPCISD::STRICT_FP_TO_U64_INREG",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fp_to_u32: SDNode<"PPCISD::STRICT_FP_TO_U32_INREG",
                                 SDTFPUnaryOp, [SDNPHasChain]>;
 
-def PPCany_fctidz : PatFrags<(ops node:$op),
-                             [(PPCstrict_fctidz node:$op),
-                              (PPCfctidz node:$op)]>;
-def PPCany_fctiwz : PatFrags<(ops node:$op),
-                             [(PPCstrict_fctiwz node:$op),
-                              (PPCfctiwz node:$op)]>;
-def PPCany_fctiduz : PatFrags<(ops node:$op),
-                              [(PPCstrict_fctiduz node:$op),
-                               (PPCfctiduz node:$op)]>;
-def PPCany_fctiwuz : PatFrags<(ops node:$op),
-                              [(PPCstrict_fctiwuz node:$op),
-                               (PPCfctiwuz node:$op)]>;
+def PPCany_fp_to_i64: PatFrags<(ops node:$op),
+                               [(PPCstrict_fp_to_i64 node:$op),
+                                (PPCfp_to_i64 node:$op)]>;
+def PPCany_fp_to_i32: PatFrags<(ops node:$op),
+                               [(PPCstrict_fp_to_i32 node:$op),
+                                (PPCfp_to_i32 node:$op)]>;
+def PPCany_fp_to_u64: PatFrags<(ops node:$op),
+                               [(PPCstrict_fp_to_u64 node:$op),
+                                (PPCfp_to_u64 node:$op)]>;
+def PPCany_fp_to_u32: PatFrags<(ops node:$op),
+                               [(PPCstrict_fp_to_u32 node:$op),
+                                (PPCfp_to_u32 node:$op)]>;
 
 // Move 2 i64 values into a VSX register
 def PPCbuild_fp128: SDNode<"PPCISD::BUILD_FP128",
@@ -2512,7 +2501,7 @@ let Uses = [RM], mayRaiseFPException = 1, hasSideEffects = 0 in {
                           []>;
   defm FCTIWZ : XForm_26r<63, 15, (outs f8rc:$RST), (ins f8rc:$RB),
                           "fctiwz", "$RST, $RB", IIC_FPGeneral,
-                          [(set f64:$RST, (PPCany_fctiwz f64:$RB))]>;
+                          [(set f64:$RST, (PPCany_fp_to_i32 f64:$RB))]>;
 
   defm FRSP   : XForm_26r<63, 12, (outs f4rc:$RST), (ins f8rc:$RB),
                           "frsp", "$RST, $RB", IIC_FPGeneral,
