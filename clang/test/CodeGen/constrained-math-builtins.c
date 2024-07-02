@@ -78,12 +78,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call x86_fp80 @llvm.experimental.constrained.floor.f80(x86_fp80 %{{.*}}, metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.floor.f128(fp128 %{{.*}}, metadata !"fpexcept.strict")
 
-  __builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f); __builtin_fmaf128(f,f,f);
+  __builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f);  __builtin_fmaf128(f,f,f); __builtin_fmaf16(f,f,f);
 
 // CHECK: call double @llvm.experimental.constrained.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call float @llvm.experimental.constrained.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call x86_fp80 @llvm.experimental.constrained.fma.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.fma.f128(fp128 %{{.*}}, fp128 %{{.*}}, fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call half @llvm.experimental.constrained.fma.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, metadata !"fpexcept.strict")
 
   __builtin_fmax(f,f);       __builtin_fmaxf(f,f);      __builtin_fmaxl(f,f); __builtin_fmaxf128(f,f);
 
