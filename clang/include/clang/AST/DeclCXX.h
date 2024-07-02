@@ -1392,7 +1392,9 @@ public:
   bool allowConstDefaultInit() const {
     return !data().HasUninitializedFields ||
            !(data().HasDefaultedDefaultConstructor ||
-             needsImplicitDefaultConstructor());
+             needsImplicitDefaultConstructor()) ||
+           (!hasUninitializedReferenceMember() && isUnion() &&
+            hasInClassInitializer());
   }
 
   /// Determine whether this class has a destructor which has no

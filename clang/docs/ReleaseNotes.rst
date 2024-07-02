@@ -760,6 +760,12 @@ Bug Fixes in This Version
 
 - ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
   zero-sized arrays. Fixes (#GH54705).
+  
+- Clang incorrectly considers a class with an anonymous union member to not be 
+  const-default-constructible even if a union member has a default member initializer. 
+  This is valid as per ``8.3`` in `Draft C++ Standard <https://eel.is/c++draft/dcl.init#general-8.3>`_.
+  The ``allowConstDefaultInit`` member function in ``CXXRecordDecl`` needs 
+  special-case unions to handle the rule. (#GH95854).
 
 - Correctly reject declarations where a statement is required in C.
   Fixes #GH92775
