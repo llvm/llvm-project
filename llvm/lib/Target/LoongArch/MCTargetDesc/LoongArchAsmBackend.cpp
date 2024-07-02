@@ -402,6 +402,7 @@ bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
       Layout.getAssembler().getContext().getAsmInfo()->getMinInstAlignment() ==
           1 &&
       "expected 1-byte alignment");
+  (void)Layout;
   if (Value == 0) {
     WasRelaxed = OldSize != Data.size();
     return true;
