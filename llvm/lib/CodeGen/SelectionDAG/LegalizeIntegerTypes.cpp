@@ -655,24 +655,46 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     }
   }
 
-  // Subtract off the extra leading bits in the bigger type.
-  SDValue ExtractLeadingBits = DAG.getConstant(
-      NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits(), dl, NVT);
-  if (!N->isVPOpcode()) {
-    // Zero extend to the promoted type and do the count there.
-    SDValue Op = ZExtPromotedInteger(N->getOperand(0));
-    return DAG.getNode(ISD::SUB, dl, NVT,
-                       DAG.getNode(N->getOpcode(), dl, NVT, Op),
-                       ExtractLeadingBits);
-  }
+  unsigned CtlzOpcode = N->getOpcode();
+  if (CtlzOpcode == ISD::CTLZ || CtlzOpcode == ISD::VP_CTLZ) {
+    // Subtract off the extra leading bits in the bigger type.
+    SDValue ExtractLeadingBits = DAG.getConstant(
+        NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits(), dl, NVT);
 
-  SDValue Mask = N->getOperand(1);
-  SDValue EVL = N->getOperand(2);
-  // Zero extend to the promoted type and do the count there.
-  SDValue Op = VPZExtPromotedInteger(N->getOperand(0), Mask, EVL);
-  return DAG.getNode(ISD::VP_SUB, dl, NVT,
-                     DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
-                     ExtractLeadingBits, Mask, EVL);
+    if (!N->isVPOpcode()) {
+      // Zero extend to the promoted type and do the count there.
+      SDValue Op = ZExtPromotedInteger(N->getOperand(0));
+      return DAG.getNode(ISD::SUB, dl, NVT,
+                         DAG.getNode(N->getOpcode(), dl, NVT, Op),
+                         ExtractLeadingBits);
+    }
+    SDValue Mask = N->getOperand(1);
+    SDValue EVL = N->getOperand(2);
+    // Zero extend to the promoted type and do the count there.
+    SDValue Op = VPZExtPromotedInteger(N->getOperand(0), Mask, EVL);
+    return DAG.getNode(ISD::VP_SUB, dl, NVT,
+                       DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
+                       ExtractLeadingBits, Mask, EVL);
+  }
+  if (CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
+      CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) {
+    // Any Extend the argument
+    SDValue Op = GetPromotedInteger(N->getOperand(0));
+    // Op = Op << (sizeinbits(NVT) - sizeinbits(Old VT))
+    unsigned SHLAmount = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
+    auto ShiftConst =
+        DAG.getShiftAmountConstant(SHLAmount, Op.getValueType(), dl);
+    if (!N->isVPOpcode()) {
+      Op = DAG.getNode(ISD::SHL, dl, NVT, Op, ShiftConst);
+      return DAG.getNode(CtlzOpcode, dl, NVT, Op);
+    }
+
+    SDValue Mask = N->getOperand(1);
+    SDValue EVL = N->getOperand(2);
+    Op = DAG.getNode(ISD::VP_SHL, dl, NVT, Op, ShiftConst, Mask, EVL);
+    return DAG.getNode(CtlzOpcode, dl, NVT, Op, Mask, EVL);
+  }
+  llvm_unreachable("Invalid CTLZ Opcode");
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP_PARITY(SDNode *N) {

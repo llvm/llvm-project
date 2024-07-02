@@ -50,13 +50,10 @@ define i16 @ctlz_i16(i16 %a0) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = zxth(r0)
+; CHECK-NEXT:     r0 = aslh(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = cl0(r0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = add(r0,#-16)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %v0 = tail call i16 @llvm.ctlz.i16(i16 %a0, i1 true) #1
