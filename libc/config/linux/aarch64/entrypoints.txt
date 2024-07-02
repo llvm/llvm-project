@@ -344,6 +344,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll_l
     libc.src.ctype.isdigit_l
     libc.src.ctype.isxdigit_l
+    libc.src.stdio.vsscanf
+    libc.src.stdio.vaprintf
     
 )
 
