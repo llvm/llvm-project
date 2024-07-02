@@ -652,12 +652,12 @@ in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
    comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
    be meaningful to build systems which elect to support two-phase compilation.
 
-Experimental Non Cascade Change
--------------------------------
+Experimental Non-Cascading Changes
+----------------------------------
 
 This section is primarily for build system vendors. For end compiler users,
-if you don't want to read it all, this is helpful to reduce recompilations
-We encourage build system vendors and end users try this out and bring feedbacks
+if you don't want to read it all, this is helpful to reduce recompilations.
+We encourage build system vendors and end users try this out and bring feedback.
 
 Before Clang 19, a change in BMI of any (transitive) dependency would cause the
 outputs of the BMI to change. Starting with Clang 19, changes to non-direct
@@ -727,7 +727,7 @@ then the contents of ``useBOnly.pcm`` remain unchanged.
 Consequently, if the build system only bases recompilation decisions on directly imported modules,
 it becomes possible to skip the recompilation of ``Use.cc``.
 It should be fine because the altered interfaces do not affect ``Use.cc`` in any way;
-there are non cascade changes.
+the changes do not cascade.
 
 When ``Clang`` generates a BMI, it records the hash values of all potentially contributory BMIs
 for the BMI being produced. This ensures that build systems are not required to consider
@@ -737,13 +737,18 @@ What is considered to be a potential contributory BMIs is currently unspecified.
 However, it is a severe bug for a BMI to remain unchanged following an observable change
 that affects its consumers.
 
-We recommend that build systems support this feature as a configurable option so that users
+We encourage build systems to add an experimental mode that
+reuses the cached BMI when **direct** dependencies did not change,
+even if **transitive** dependencies did change.
+
+Given there are potential compiler bugs, we recommend that build systems
+support this feature as a configurable option so that users
 can go back to the transitive change mode safely at any time.
 
 Interactions with Reduced BMI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With reduced BMI, the non cascade change feature can be more powerful. For example,
+With reduced BMI, non-cascading changes can be more powerful. For example,
 
 .. code-block:: c++
 
@@ -780,11 +785,11 @@ and recompile the example:
   $ md5sum B.pcm
   6c2bd452ca32ab418bf35cd141b060b9  B.pcm
 
-We should find the contents of ``B.pcm`` keeps the same. In such case, the build system is
-allowed to skip recompilations of TUs which solely and directly dependent on module B.
+We should find the contents of ``B.pcm`` remains the same. In this case, the build system is
+allowed to skip recompilations of TUs which solely and directly depend on module ``B``.
 
-This only happens with reduced BMI. Since with reduced BMI, we won't record the function body
-of ``int b()`` in the BMI for ``B`` so that the module A doesn't contribute to the BMI of ``B``
+This only happens with a reduced BMI. With reduced BMIs, we won't record the function body
+of ``int b()`` in the BMI for ``B`` so that the module ``A`` doesn't contribute to the BMI of ``B``
 and we have less dependencies.
 
 Performance Tips

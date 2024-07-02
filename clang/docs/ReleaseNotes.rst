@@ -157,10 +157,10 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
-- Clang implemented improvements to BMI of C++20 Modules that can reduce
+- Implemented improvements to BMIs for C++20 Modules that can reduce
   the number of rebuilds during incremental recompilation. We are seeking
   feedback from Build System authors and other interested users, especially
-  when you feel Clang changes the BMI and missses an opportunity to avoid
+  when you feel Clang changes the BMI and misses an opportunity to avoid
   recompilations or causes correctness issues. See StandardCPlusPlusModules
   `StandardCPlusPlusModules <StandardCPlusPlusModules.html>`_ for more details.
 
