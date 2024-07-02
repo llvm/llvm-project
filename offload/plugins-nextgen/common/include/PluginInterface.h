@@ -887,7 +887,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
-  SanitizerTrapInfoTy *SanitizerTrapInfo = nullptr;
+  DenseMap<DeviceImageTy *, SanitizerTrapInfoTy *> SanitizerTrapInfos;
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;

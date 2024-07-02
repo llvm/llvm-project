@@ -50,6 +50,9 @@ public:
   const std::string &getName() const { return Name; }
   uint32_t getSize() const { return Size; }
   void *getPtr() const { return Ptr; }
+  template <typename T> T *getPtrAs() const {
+    return reinterpret_cast<T *>(Ptr);
+  }
 
   void setSize(int32_t S) { Size = S; }
   void setPtr(void *P) { Ptr = P; }

@@ -1026,6 +1026,7 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
   if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
     return Err;
 
+  auto *&SanitizerTrapInfo = SanitizerTrapInfos[&Image];
   SanitizerTrapInfo = reinterpret_cast<SanitizerTrapInfoTy *>(allocate(
       sizeof(*SanitizerTrapInfo), &SanitizerTrapInfo, TARGET_ALLOC_HOST));
   memset(SanitizerTrapInfo, '\0', sizeof(SanitizerTrapInfoTy));
@@ -2189,10 +2190,18 @@ Error GPUSanTy::notifyDataUnmapped(void *FakeHstPtr) {
 }
 
 void GPUSanTy::checkAndReportError() {
-  if (!Device.SanitizerTrapInfo)
-    return;
-  SanitizerTrapInfoTy &STI = *Device.SanitizerTrapInfo;
-  if (STI.ErrorCode == SanitizerTrapInfoTy::None)
+  SanitizerTrapInfoTy *STI;
+  DeviceImageTy *Image = nullptr;
+  for (auto &It : Device.SanitizerTrapInfos) {
+    STI = It.second;
+    errs() << "STI " << STI << "\n";
+    if (!STI || STI->ErrorCode == SanitizerTrapInfoTy::None)
+      continue;
+    Image = It.first;
+    break;
+  }
+  errs() << "Img " << Image << "\n";
+  if (!Image)
     return;
 
   auto Green = []() { return "\033[1m\033[32m"; };
@@ -2200,56 +2209,48 @@ void GPUSanTy::checkAndReportError() {
   auto Red = []() { return "\033[1m\033[31m"; };
   auto Default = []() { return "\033[1m\033[0m"; };
 
-#if 0
-  std::string KernelName;
-  StringRef FunctionName =
-      STI.FunctionName[0] ? StringRef(STI.FunctionName) : "<unknown>";
-  StringRef FileName = STI.FileName[0] ? StringRef(STI.FileName) : "<unknown>";
-
-  if (FunctionName.starts_with("__omp_offloading_")) {
-    FunctionName = FunctionName.drop_front(sizeof("__omp_offloading_"));
-    auto It = FunctionName.find_first_of("_");
-    if (It != StringRef::npos && It + 1 < FunctionName.size())
-      FunctionName = FunctionName.drop_front(It + 1);
-    It = FunctionName.find_first_of("_");
-    if (It != StringRef::npos && It + 1 < FunctionName.size())
-      FunctionName = FunctionName.drop_front(It + 1);
-  }
-
-  if (FunctionName.ends_with("_debug__"))
-    FunctionName = FunctionName.drop_back(sizeof("debug__"));
-  if (FunctionName.ends_with("_debug___omp_outlined_debug__"))
-    FunctionName =
-        FunctionName.drop_back(sizeof("debug___omp_outlined_debug__"));
-
-  auto It = FunctionName.find_last_of("_");
-  if (It != StringRef::npos && It + 1 < FunctionName.size()) {
-    if (FunctionName[It + 1] == 'l') {
-      int64_t KernelLineNo = 0;
-      FunctionName
-          .take_back(FunctionName.size() - It -
-                     /* '_' and 'l' */ 2)
-          .getAsInteger(10, KernelLineNo);
-      if (KernelLineNo) {
-        KernelName = "omp target (" + FunctionName.take_front(It).str() + ":" +
-                     std::to_string(KernelLineNo) + ")";
-        FunctionName = KernelName;
-      }
+  GenericGlobalHandlerTy &GHandler = Device.Plugin.getGlobalHandler();
+  auto GetImagePtr = [&](GlobalTy &GV) {
+    if (auto Err = GHandler.getGlobalMetadataFromImage(Device, *Image, GV)) {
+      REPORT("WARNING: Failed to read backtrace "
+             "(%s)\n",
+             toString(std::move(Err)).data());
+      return false;
     }
-  }
-#endif
+    return true;
+  };
+  GlobalTy LocationsGV("__san.locations", -1);
+  GlobalTy LocationNamesGV("__san.location_names", -1);
+  if (GetImagePtr(LocationsGV))
+    GetImagePtr(LocationNamesGV);
 
   fprintf(stderr, "============================================================"
                   "====================\n");
 
-  auto PrintStackTrace = [&](int64_t SourceId) {
-    fprintf(stderr, "    #0 " DPxMOD " %s in %s:%lu\n\n", DPxPTR(0), "unknown",
-            "unknown", 0UL);
+  auto PrintStackTrace = [&](int64_t LocationId) {
+    if (!LocationsGV.getPtr() || !LocationNamesGV.getPtr()) {
+      fprintf(stderr, "    no backtrace available\n");
+      return;
+    }
+    printf("Loc %p : %u\n", LocationsGV.getPtr(), LocationsGV.getSize());
+    printf("Nam %p : %u\n", LocationNamesGV.getPtr(),
+           LocationNamesGV.getSize());
+    char *LocationNames = LocationNamesGV.getPtrAs<char>();
+    LocationEncodingTy *Locations = LocationsGV.getPtrAs<LocationEncodingTy>();
+    int32_t FrameIdx = 0;
+    do {
+      LocationEncodingTy &LE = Locations[LocationId];
+      fprintf(stderr, "    #%i %s in %s:%lu:%lu\n", FrameIdx,
+              &LocationNames[LE.FunctionNameIdx],
+              &LocationNames[LE.FileNameIdx], LE.LineNo, LE.ColumnNo);
+      LocationId = LE.ParentIdx;
+      FrameIdx++;
+    } while (LocationId >= 0);
   };
 
   auto DiagnoseAccess = [&](StringRef Name) {
-    void *PC = reinterpret_cast<void *>(STI.PC);
-    void *Addr = utils::advancePtr(STI.AllocationStart, STI.PtrOffset);
+    void *PC = reinterpret_cast<void *>(STI->PC);
+    void *Addr = utils::advancePtr(STI->AllocationStart, STI->PtrOffset);
     fprintf(stderr,
             "%sERROR: OffloadSanitizer %s access on address " DPxMOD
             " at pc " DPxMOD "\n%s",
@@ -2257,27 +2258,27 @@ void GPUSanTy::checkAndReportError() {
     fprintf(stderr,
             "%s%s of size %u at " DPxMOD
             " thread <%u, %u, %u> block <%lu, %lu, %lu> (acc %li, %s)\n%s",
-            Blue(), STI.AccessId > 0 ? "WRITE" : "READ", STI.AccessSize,
-            DPxPTR(Addr), STI.ThreadId[0], STI.ThreadId[1], STI.ThreadId[2],
-            STI.BlockId[0], STI.BlockId[1], STI.BlockId[2], STI.AccessId,
-            (STI.AllocationKind ? "heap" : "stack"), Default());
-    PrintStackTrace(STI.SrcId);
+            Blue(), STI->AccessId > 0 ? "WRITE" : "READ", STI->AccessSize,
+            DPxPTR(Addr), STI->ThreadId[0], STI->ThreadId[1], STI->ThreadId[2],
+            STI->BlockId[0], STI->BlockId[1], STI->BlockId[2], STI->AccessId,
+            (STI->AllocationKind ? "heap" : "stack"), Default());
+    PrintStackTrace(STI->LocationId);
     fprintf(
         stderr,
         "%s" DPxMOD " is located %lu bytes inside of a %lu-byte region [" DPxMOD
         "," DPxMOD ")\n%s",
-        Green(), DPxPTR(Addr), STI.PtrOffset, STI.AllocationLength,
-        DPxPTR(STI.AllocationStart),
-        DPxPTR(utils::advancePtr(STI.AllocationStart, STI.AllocationLength)),
+        Green(), DPxPTR(Addr), STI->PtrOffset, STI->AllocationLength,
+        DPxPTR(STI->AllocationStart),
+        DPxPTR(utils::advancePtr(STI->AllocationStart, STI->AllocationLength)),
         Default());
     fprintf(stderr,
             "%s Pointer[slot:%lu,tag:%u,kind:%i] "
             "Allocation[slot:%d,tag:%u,kind:%i]\n%s",
-            Green(), STI.PtrSlot, STI.PtrTag, STI.PtrKind, STI.AllocationId,
-            STI.AllocationTag, STI.AllocationKind, Default());
+            Green(), STI->PtrSlot, STI->PtrTag, STI->PtrKind, STI->AllocationId,
+            STI->AllocationTag, STI->AllocationKind, Default());
   };
 
-  switch (STI.ErrorCode) {
+  switch (STI->ErrorCode) {
   case SanitizerTrapInfoTy::None:
     llvm_unreachable("Unexpected exception");
   case SanitizerTrapInfoTy::ExceedsLength:
@@ -2290,8 +2291,9 @@ void GPUSanTy::checkAndReportError() {
     break;
   case SanitizerTrapInfoTy::PointerOutsideAllocation:
     fprintf(stderr, "%sERROR: OffloadSanitizer %s : %p : %i %lu (%s)\n%s",
-            Red(), "outside allocation", STI.AllocationStart, STI.AllocationId,
-            STI.PtrSlot, (STI.AllocationKind ? "heap" : "stack"), Default());
+            Red(), "outside allocation", STI->AllocationStart,
+            STI->AllocationId, STI->PtrSlot,
+            (STI->AllocationKind ? "heap" : "stack"), Default());
     break;
   case SanitizerTrapInfoTy::OutOfBounds: {
     DiagnoseAccess("out-of-bounds");
@@ -2308,13 +2310,7 @@ void GPUSanTy::checkAndReportError() {
             Default());
     break;
   case SanitizerTrapInfoTy::GarbagePointer:
-    fprintf(stderr, "%sERROR: OffloadSanitizer %s : %p\n%s", Red(),
-            "garbage pointer", STI.AllocationStart, Default());
-    fprintf(stderr,
-            "%s Pointer[slot:%lu,tag:%u,kind:%i] "
-            "Allocation[kind:%i]\n%s",
-            Green(), STI.PtrSlot, STI.PtrTag, STI.PtrKind, STI.AllocationKind,
-            Default());
+    DiagnoseAccess("garbage-pointer");
     break;
   }
   fflush(stderr);
