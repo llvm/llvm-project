@@ -38,20 +38,20 @@ entry:
 
 ; CHECK:      foo:
 ; CHECK:              prologue_end
-; CHECK-NEXT: .Ltmp[[LABEL1:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL1:.*]]:
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:         r[[#A:]] = *(u64 *)(r1 + 0)
 ; CHECK-NEXT:         .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:         *(u64 *)(r2 + 0) = r[[#A]]
 ; CHECK-NEXT:         .loc
-; CHECK-NEXT: .Ltmp[[LABEL2:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL2:.*]]:
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:         r[[#B:]] = *(u64 *)(r1 + 0)
-; CHECK-NEXT: .Ltmp
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:         .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:         *(u64 *)(r2 + 0) = r[[#B]]
 
 ; CHECK: .section .BTF
@@ -61,11 +61,11 @@ entry:
 ; CHECK: .ascii  "0:0"   # string offset=[[STR_A:.*]]
 
 ; CHECK:     # FieldReloc
-; CHECK:      .long .Ltmp[[LABEL1]]
+; CHECK:      .long Ltmp[[LABEL1]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_A]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL2]]
+; CHECK:      .long Ltmp[[LABEL2]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_A]]
 ; CHECK-NEXT: .long 0
