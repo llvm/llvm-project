@@ -8,6 +8,7 @@ def StdC : StandardSpec<"stdc"> {
   NamedType DivTType = NamedType<"div_t">;
   NamedType LDivTType = NamedType<"ldiv_t">;
   NamedType LLDivTType = NamedType<"lldiv_t">;
+  NamedType LocaleTType = NamedType<"locale_t">;
 
   NamedType JmpBuf = NamedType<"jmp_buf">;
 
@@ -1134,6 +1135,15 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"strtoll", RetValSpec<LongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoul", RetValSpec<UnsignedLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoull", RetValSpec<UnsignedLongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
+
+
+          FunctionSpec<"strtof_l", RetValSpec<FloatType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<LocaleTType>]>,
+          FunctionSpec<"strtod_l", RetValSpec<DoubleType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<LocaleTType>]>,
+          FunctionSpec<"strtold_l", RetValSpec<LongDoubleType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<LocaleTType>]>,
+          FunctionSpec<"strtol_l", RetValSpec<LongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleTType>]>,
+          FunctionSpec<"strtoll_l", RetValSpec<LongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleTType>]>,
+          FunctionSpec<"strtoul_l", RetValSpec<UnsignedLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleTType>]>,
+          FunctionSpec<"strtoull_l", RetValSpec<UnsignedLongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleTType>]>,
 
           FunctionSpec<"malloc", RetValSpec<VoidPtr>, [ArgSpec<SizeTType>]>,
           FunctionSpec<"calloc", RetValSpec<VoidPtr>, [ArgSpec<SizeTType>, ArgSpec<SizeTType>]>,

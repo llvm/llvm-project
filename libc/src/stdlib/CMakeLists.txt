@@ -516,3 +516,51 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.abort
 )
+
+add_entrypoint_object(
+  strtof_l
+  SRCS
+    strtof_l.cpp
+  HDRS
+    strtof_l.h
+  DEPENDS
+    libc.src.stdlib.strtof
+    libc.src.errno.errno
+    .llvm-libc-types.locale_t
+)
+
+add_entrypoint_object(
+  strtod_l
+  SRCS
+    strtod_l.cpp
+  HDRS
+    strtod_l.h
+  DEPENDS
+    libc.src.stdlib.strtod
+    libc.src.errno.errno
+    .llvm-libc-types.locale_t
+)
+
+add_entrypoint_object(
+  strtold_l
+  SRCS
+    strtold_l.cpp
+  HDRS
+    strtold_l.h
+  DEPENDS
+    libc.src.stdlib.strtold
+    libc.src.errno.errno
+    .llvm-libc-types.locale_t
+)
+
+add_entrypoint_object(
+  strtoull_l
+  SRCS
+    strtoull_l.cpp
+  HDRS
+    strtoull_l.h
+  DEPENDS
+    libc.src.stdlib.strtoull_l
+    libc.src.errno.errno
+    .llvm-libc-types.locale_t
+)

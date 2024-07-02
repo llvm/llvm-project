@@ -333,6 +333,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.locale.newlocale
     libc.src.locale.setlocale
     libc.src.locale.uselocale
+    libc.src.stdio.scanf
+    libc.src.stdio.sscanf
+    libc.src.stdlib.strtof_l
+    libc.src.stdlib.strtod_l
+    libc.src.stdlib.strtold_l
+    libc.src.stdlib.strtoull_l
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
