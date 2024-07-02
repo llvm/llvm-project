@@ -6,10 +6,10 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @umin() {
 ; CHECK-LABEL: 'umin'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i8 = call i8 @llvm.umin.i8(i8 undef, i8 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i16 = call i16 @llvm.umin.i16(i16 undef, i16 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i32 = call i32 @llvm.umin.i32(i32 undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i64 = call i64 @llvm.umin.i64(i64 undef, i64 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i8 = call i8 @llvm.umin.i8(i8 undef, i8 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i16 = call i16 @llvm.umin.i16(i16 undef, i16 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i32 = call i32 @llvm.umin.i32(i32 undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i64 = call i64 @llvm.umin.i64(i64 undef, i64 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1i8 = call <1 x i8> @llvm.umin.v1i8(<1 x i8> undef, <1 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V3i8 = call <3 x i8> @llvm.umin.v3i8(<3 x i8> undef, <3 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i8 = call <4 x i8> @llvm.umin.v4i8(<4 x i8> undef, <4 x i8> undef)
@@ -53,10 +53,10 @@ define void @umin() {
 
 define void @umax() {
 ; CHECK-LABEL: 'umax'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i8 = call i8 @llvm.umax.i8(i8 undef, i8 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i16 = call i16 @llvm.umax.i16(i16 undef, i16 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i32 = call i32 @llvm.umax.i32(i32 undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i64 = call i64 @llvm.umax.i64(i64 undef, i64 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i8 = call i8 @llvm.umax.i8(i8 undef, i8 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i16 = call i16 @llvm.umax.i16(i16 undef, i16 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i32 = call i32 @llvm.umax.i32(i32 undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i64 = call i64 @llvm.umax.i64(i64 undef, i64 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1i8 = call <1 x i8> @llvm.umax.v1i8(<1 x i8> undef, <1 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V3i8 = call <3 x i8> @llvm.umax.v3i8(<3 x i8> undef, <3 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i8 = call <4 x i8> @llvm.umax.v4i8(<4 x i8> undef, <4 x i8> undef)
@@ -100,10 +100,10 @@ define void @umax() {
 
 define void @smin() {
 ; CHECK-LABEL: 'smin'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i8 = call i8 @llvm.smin.i8(i8 undef, i8 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i16 = call i16 @llvm.smin.i16(i16 undef, i16 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i32 = call i32 @llvm.smin.i32(i32 undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i8 = call i8 @llvm.smin.i8(i8 undef, i8 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i16 = call i16 @llvm.smin.i16(i16 undef, i16 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i32 = call i32 @llvm.smin.i32(i32 undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1i8 = call <1 x i8> @llvm.smin.v1i8(<1 x i8> undef, <1 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V3i8 = call <3 x i8> @llvm.smin.v3i8(<3 x i8> undef, <3 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i8 = call <4 x i8> @llvm.smin.v4i8(<4 x i8> undef, <4 x i8> undef)
@@ -147,10 +147,10 @@ define void @smin() {
 
 define void @smax() {
 ; CHECK-LABEL: 'smax'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i8 = call i8 @llvm.smax.i8(i8 undef, i8 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i16 = call i16 @llvm.smax.i16(i16 undef, i16 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i32 = call i32 @llvm.smax.i32(i32 undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i8 = call i8 @llvm.smax.i8(i8 undef, i8 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i16 = call i16 @llvm.smax.i16(i16 undef, i16 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i32 = call i32 @llvm.smax.i32(i32 undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1i8 = call <1 x i8> @llvm.smax.v1i8(<1 x i8> undef, <1 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V3i8 = call <3 x i8> @llvm.smax.v3i8(<3 x i8> undef, <3 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i8 = call <4 x i8> @llvm.smax.v4i8(<4 x i8> undef, <4 x i8> undef)
