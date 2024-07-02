@@ -8,20 +8,20 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @mulsi_extended_i1(%v1 : i1, %v2 : i1) -> (i1, i1) {
+func.func @mulsi_extended_i1(%v1 : i1, %v2 : i1) {
   vector.print str "@mulsi_extended_i1\n"
   %low, %high = arith.mulsi_extended %v1, %v2 : i1
   vector.print %low : i1
   vector.print %high : i1
-  func.return %low, %high : i1, i1
+  return
 }
 
-func.func @mulsi_extended_i8(%v1 : i8, %v2 : i8) -> (i8, i8) {
+func.func @mulsi_extended_i8(%v1 : i8, %v2 : i8) {
   vector.print str "@mulsi_extended_i8\n"
   %low, %high = arith.mulsi_extended %v1, %v2 : i8
   vector.print %low : i8
   vector.print %high : i8
-  func.return %low, %high : i8, i8
+  return
 }
 
 func.func @mulsi_extended() {
@@ -37,22 +37,22 @@ func.func @mulsi_extended() {
   // CHECK-LABEL: @mulsi_extended_i1
   // CHECK-NEXT:  1
   // CHECK-NEXT:  0
-  func.call @mulsi_extended_i1(%true, %true) : (i1, i1) -> (i1, i1)
+  func.call @mulsi_extended_i1(%true, %true) : (i1, i1) -> ()
 
   // CHECK-LABEL: @mulsi_extended_i1
   // CHECK-NEXT:  0
   // CHECK-NEXT:  0
-  func.call @mulsi_extended_i1(%true, %false) : (i1, i1) -> (i1, i1)
+  func.call @mulsi_extended_i1(%true, %false) : (i1, i1) -> ()
 
   // CHECK-LABEL: @mulsi_extended_i1
   // CHECK-NEXT:  0
   // CHECK-NEXT:  0
-  func.call @mulsi_extended_i1(%false, %true) : (i1, i1) -> (i1, i1)
+  func.call @mulsi_extended_i1(%false, %true) : (i1, i1) -> ()
 
   // CHECK-LABEL: @mulsi_extended_i1
   // CHECK-NEXT:  0
   // CHECK-NEXT:  0
-  func.call @mulsi_extended_i1(%false, %false) : (i1, i1) -> (i1, i1)
+  func.call @mulsi_extended_i1(%false, %false) : (i1, i1) -> ()
 
   // ------------------------------------------------
   // Test i8
@@ -64,7 +64,7 @@ func.func @mulsi_extended() {
   // CHECK-LABEL: @mulsi_extended_i8
   // CHECK-NEXT:  16
   // CHECK-NEXT:  39
-  func.call @mulsi_extended_i8(%c_100_i8, %c_100_i8) : (i8, i8) -> (i8, i8)
+  func.call @mulsi_extended_i8(%c_100_i8, %c_100_i8) : (i8, i8) -> ()
 
   // ------------------------------------------------
   // Test i16, i32 etc.. TODO
@@ -72,15 +72,15 @@ func.func @mulsi_extended() {
   return
 }
 
-func.func @mului_extended_i8(%v1 : i8, %v2 : i8) -> (i8, i8) {
+func.func @mului_extended_i8(%v1 : i8, %v2 : i8) {
   vector.print str "@mului_extended_i8\n"
   %low, %high = arith.mului_extended %v1, %v2 : i8
   vector.print %low : i8
   vector.print %high : i8
-  func.return %low, %high : i8, i8
+  return
 }
 
-func.func @mului_extended() -> () {
+func.func @mului_extended() {
   // ------------------------------------------------
   // Test i1, i16, i32 etc.. TODO
   // ------------------------------------------------
@@ -97,22 +97,22 @@ func.func @mului_extended() -> () {
   // CHECK-LABEL: @mului_extended_i8
   // CHECK-NEXT:  16
   // CHECK-NEXT:  95
-  func.call @mului_extended_i8(%c_n100_i8, %c_n100_i8) : (i8, i8) -> (i8, i8)
+  func.call @mului_extended_i8(%c_n100_i8, %c_n100_i8) : (i8, i8) -> ()
 
   // CHECK-LABEL: @mului_extended_i8
   // CHECK-NEXT:  16
   // CHECK-NEXT:  95
-  func.call @mului_extended_i8(%c_n100_i8, %c_156_i8) : (i8, i8) -> (i8, i8)
+  func.call @mului_extended_i8(%c_n100_i8, %c_156_i8) : (i8, i8) -> ()
 
   // CHECK-LABEL: @mului_extended_i8
   // CHECK-NEXT:  16
   // CHECK-NEXT:  95
-  func.call @mului_extended_i8(%c_156_i8, %c_n100_i8) : (i8, i8) -> (i8, i8)
+  func.call @mului_extended_i8(%c_156_i8, %c_n100_i8) : (i8, i8) -> ()
 
   // CHECK-LABEL: @mului_extended_i8
   // CHECK-NEXT:  16
   // CHECK-NEXT:  95
-  func.call @mului_extended_i8(%c_156_i8, %c_156_i8) : (i8, i8) -> (i8, i8)
+  func.call @mului_extended_i8(%c_156_i8, %c_156_i8) : (i8, i8) -> ()
   return
 }
 
