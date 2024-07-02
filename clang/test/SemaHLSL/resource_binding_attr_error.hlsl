@@ -1,9 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
-// FIXME: emit a diagnostic because float doesn't match the 'c' register type
-float a : register(c0, space1);
+// valid, The register keyword in this statement isn't binding a resource, rather it is
+// specifying a constant register binding offset within the $Globals cbuffer, which is legacy behavior from DX9.
+float a : register(c0);
 
-// FIXME: emit a diagnostic because cbuffer doesn't match the 'i' register type
+// expected-error@+1 {{cbv type 'cbuffer' requires register type 'b', but register type 'i' was used}}
 cbuffer b : register(i0) {
 
 }
