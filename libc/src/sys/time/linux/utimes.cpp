@@ -5,7 +5,7 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, utimes, (int, const char *, const struct timeval[2])) {
+LLVM_LIBC_FUNCTION(int, utimes, (const char *, const struct timeval[2])) {
   return EINVAL;
 }
 

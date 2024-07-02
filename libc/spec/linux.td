@@ -156,7 +156,6 @@ def Linux : StandardSpec<"Linux"> {
           "utimes",
           RetValSpec<IntType>,
           [
-            ArgSpec<IntType>,
             ArgSpec<ConstCharPtr>,
             ArgSpec<ConstStructTimevalPtr>,
           ]

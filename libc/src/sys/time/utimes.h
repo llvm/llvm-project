@@ -11,7 +11,7 @@
 
 namespace LIBC_NAMESPACE {
 
-int utimes(int dirfd, const char *pathname, const struct timeval times[2]);
+int utimes(const char *pathname, const struct timeval times[2]);
 
 } // namespace LIBC_NAMESPACE
 
