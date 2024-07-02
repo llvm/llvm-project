@@ -2935,6 +2935,20 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   if (SubRangeJoin)
     return CR_Replace;
 
+  // If the other live range is killed by DefMI and the live ranges are still
+  // overlapping, it must be because we're looking at an early clobber def:
+  //
+  //   %dst<def,early-clobber> = ASM killed %src
+  //
+  // In this case, it is illegal to merge the two live ranges since the early
+  // clobber def would clobber %src before it was read.
+  if (OtherLRQ.isKill()) {
+    // This case where the def doesn't overlap the kill is handled above.
+    assert(VNI->def.isEarlyClobber() &&
+           "Only early clobber defs can overlap a kill");
+    return CR_Impossible;
+  }
+
   // If the lanes written by this instruction were all undef in OtherVNI, it is
   // still safe to join the live ranges. This can't be done with a simple value
   // mapping, though - OtherVNI will map to multiple values:
@@ -2949,20 +2963,6 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   // handles this complex value mapping.
   if ((V.WriteLanes & OtherV.ValidLanes).none())
     return CR_Replace;
-
-  // If the other live range is killed by DefMI and the live ranges are still
-  // overlapping, it must be because we're looking at an early clobber def:
-  //
-  //   %dst<def,early-clobber> = ASM killed %src
-  //
-  // In this case, it is illegal to merge the two live ranges since the early
-  // clobber def would clobber %src before it was read.
-  if (OtherLRQ.isKill()) {
-    // This case where the def doesn't overlap the kill is handled above.
-    assert(VNI->def.isEarlyClobber() &&
-           "Only early clobber defs can overlap a kill");
-    return CR_Impossible;
-  }
 
   // VNI is clobbering live lanes in OtherVNI, but there is still the
   // possibility that no instructions actually read the clobbered lanes.
