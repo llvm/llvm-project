@@ -17,6 +17,12 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("lzcnt")))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 #ifndef _MSC_VER
 /// Counts the number of leading zero bits in the operand.
 ///
@@ -42,9 +48,8 @@
 /// \returns An unsigned 32-bit integer containing the number of leading zero
 ///    bits in the operand.
 /// \see _lzcnt_u32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
-__lzcnt32(unsigned int __X)
-{
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
+__lzcnt32(unsigned int __X) {
   return __builtin_ia32_lzcnt_u32(__X);
 }
 
@@ -59,9 +64,8 @@ __lzcnt32(unsigned int __X)
 /// \returns An unsigned 32-bit integer containing the number of leading zero
 ///    bits in the operand.
 /// \see __lzcnt32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_lzcnt_u32(unsigned int __X)
-{
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
+_lzcnt_u32(unsigned int __X) {
   return __builtin_ia32_lzcnt_u32(__X);
 }
 
@@ -92,13 +96,13 @@ _lzcnt_u32(unsigned int __X)
 /// \returns An unsigned 64-bit integer containing the number of leading zero
 ///    bits in the operand.
 /// \see __lzcnt64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-_lzcnt_u64(unsigned long long __X)
-{
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
+_lzcnt_u64(unsigned long long __X) {
   return __builtin_ia32_lzcnt_u64(__X);
 }
 #endif
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif /* __LZCNTINTRIN_H */
