@@ -317,6 +317,9 @@ Resolutions to C++ Defect Reports
 - Clang now considers ``noexcept(typeid(expr))`` more carefully, instead of always assuming that ``std::bad_typeid`` can be thrown.
   (`CWG2191: Incorrect result for noexcept(typeid(v)) <https://cplusplus.github.io/CWG/issues/2191.html>`_).
 
+- Allow floating-point promotions and conversions in converted constant expressions.
+  (`CWG2851 Allow floating-point conversions in converted constant expressions <https://cplusplus.github.io/CWG/issues/2851.html>`_).
+
 C Language Changes
 ------------------
 
