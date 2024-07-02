@@ -320,6 +320,12 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+C2y Feature Support
+^^^^^^^^^^^^^^^^^^^
+- Clang now enables C2y mode with ``-std=c2y``. This sets ``__STDC_VERSION__``
+  to ``202400L`` so that it's greater than the value for C23. The value of this
+  macro is subject to change in the future.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - No longer diagnose use of binary literals as an extension in C23 mode. Fixes
