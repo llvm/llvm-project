@@ -3017,11 +3017,12 @@ private:
       const IdentifierInfo *EnclosingScope = nullptr);
 
   void MaybeParseHLSLAnnotations(Declarator &D,
-                                 SourceLocation *EndLoc = nullptr) {
+                                 SourceLocation *EndLoc = nullptr,
+                                 bool CouldBeBitField = false) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
-      ParseHLSLAnnotations(Attrs, EndLoc);
+      ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
       D.takeAttributes(Attrs);
     }
   }
@@ -3029,12 +3030,13 @@ private:
   void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
                                  SourceLocation *EndLoc = nullptr) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
-    if (getLangOpts().HLSL && Tok.is(tok::colon))
+    if (Tok.is(tok::colon))
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
-                            SourceLocation *EndLoc = nullptr);
+                            SourceLocation *EndLoc = nullptr,
+                            bool CouldBeBitField = false);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
