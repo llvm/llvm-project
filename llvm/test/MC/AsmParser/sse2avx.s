@@ -84,3 +84,5 @@
 	blendvps   %xmm0, %xmm0, %xmm2
 # CHECK-NEXT: vblendvpd       %xmm0, %xmm0, %xmm2, %xmm2
 	blendvpd   %xmm0, %xmm0, %xmm2
+# CHECK-NEXT: vblendvpd       %xmm0, %xmm0, %xmm2, %xmm2
+	blendvpd   %xmm0, %xmm2
