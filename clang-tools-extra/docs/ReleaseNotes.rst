@@ -269,6 +269,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
 
+- Improved :doc:`container-data-pointer
+  <clang-tidy/checks/readability/container-data-pointer>` check
+  to use ``c_str()`` when it's present on a container.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   with a new option `AllowInternalLinkage` to disable the warning for variables
