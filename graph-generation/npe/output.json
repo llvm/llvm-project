@@ -662,19 +662,6 @@
                     "content": "A *c1 = fooHasReturnNull()"
                 }
             ]
-        },
-        {
-            "type": "npe-good-source",
-            "locations": [
-                {
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
-                    "beginLine": 26,
-                    "beginColumn": 5,
-                    "endLine": 26,
-                    "endColumn": 21,
-                    "content": "ASSIGN_NULL(ptr)"
-                }
-            ]
         }
     ]
 }
