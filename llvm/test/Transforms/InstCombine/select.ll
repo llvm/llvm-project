@@ -1456,6 +1456,126 @@ define <2 x i32> @select_icmp_slt0_xor_vec(<2 x i32> %x) {
   ret <2 x i32> %x.xor
 }
 
+define i8 @select_icmp_eq_mul_and(i8 noundef %a, i8 %b)  {
+; CHECK-LABEL: @select_icmp_eq_mul_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i8 [[A]], [[A]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i8 [[TMP2]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %1 = and i8 %a, 1
+  %cmp = icmp eq i8 %1, 0
+  %div7 = and i8 %a, -2
+  %mul = mul i8 %div7, %div7
+  %retval.0 = select i1 %cmp, i8 %mul, i8 %b
+  ret i8 %retval.0
+}
+
+define i8 @select_icmp_eq_shl_and(i8 noundef %a, i8 %b)  {
+; CHECK-LABEL: @select_icmp_eq_shl_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[A]], [[A]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i8 [[TMP2]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %1 = and i8 %a, 1
+  %cmp = icmp eq i8 %1, 0
+  %div7 = and i8 %a, -2
+  %shl = shl i8 %div7, %div7
+  %retval.0 = select i1 %cmp, i8 %shl, i8 %b
+  ret i8 %retval.0
+}
+
+define i8 @select_icmp_eq_and(i8 noundef %a, i8 %b)  {
+; CHECK-LABEL: @select_icmp_eq_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i8 [[A]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %1 = and i8 %a, 1
+  %cmp = icmp eq i8 %1, 0
+  %div7 = and i8 %a, -2
+  %retval.0 = select i1 %cmp, i8 %div7, i8 %b
+  ret i8 %retval.0
+}
+
+;negative test
+define i8 @select_icmp_eq_mul_and_undef(i8 %a, i8 %b)  {
+; CHECK-LABEL: @select_icmp_eq_mul_and_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i8 [[A]], [[A]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i8 [[TMP2]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %1 = and i8 %a, 1
+  %cmp = icmp eq i8 %1, 0
+  %div7 = and i8 %a, -2
+  %mul = mul i8 %div7, %div7
+  %retval.0 = select i1 %cmp, i8 %mul, i8 %b
+  ret i8 %retval.0
+}
+
+;negative test
+define i8 @select_icmp_eq_and_undef(i8 %a, i8 %b)  {
+; CHECK-LABEL: @select_icmp_eq_and_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i8 [[A]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %1 = and i8 %a, 1
+  %cmp = icmp eq i8 %1, 0
+  %div7 = and i8 %a, -2
+  %retval.0 = select i1 %cmp, i8 %div7, i8 %b
+  ret i8 %retval.0
+}
+
+;negative test
+define i8 @select_and(i8 noundef %a, i8 %b, i1 %cmp)  {
+; CHECK-LABEL: @select_and(
+; CHECK-NEXT:    [[DIV7:%.*]] = and i8 [[A:%.*]], -2
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP:%.*]], i8 [[DIV7]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %div7 = and i8 %a, -2
+  %retval.0 = select i1 %cmp, i8 %div7, i8 %b
+  ret i8 %retval.0
+}
+
+;negative test
+define i8 @select_mul_and(i8 noundef %a, i8 %b, i1 %cmp)  {
+; CHECK-LABEL: @select_mul_and(
+; CHECK-NEXT:    [[DIV7:%.*]] = and i8 [[A:%.*]], -2
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[DIV7]], [[DIV7]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP:%.*]], i8 [[MUL]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %div7 = and i8 %a, -2
+  %mul = mul i8 %div7, %div7
+  %retval.0 = select i1 %cmp, i8 %mul, i8 %b
+  ret i8 %retval.0
+}
+
+;negative test
+define i8 @select_icmp_eq_and_diff(i8 noundef %a, i8 %b, i8 %c)  {
+; CHECK-LABEL: @select_icmp_eq_and_diff(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[DIV7:%.*]] = and i8 [[C:%.*]], -2
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i8 [[DIV7]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[RETVAL_0]]
+;
+  %1 = and i8 %a, 1
+  %cmp = icmp eq i8 %1, 0
+  %div7 = and i8 %c, -2
+  %retval.0 = select i1 %cmp, i8 %div7, i8 %b
+  ret i8 %retval.0
+}
+
 define <4 x i32> @canonicalize_to_shuffle(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @canonicalize_to_shuffle(
 ; CHECK-NEXT:    [[SEL:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>

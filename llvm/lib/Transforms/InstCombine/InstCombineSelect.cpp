@@ -1078,6 +1078,53 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   return nullptr;
 }
 
+// When the lsb of cond is 0:
+// cond ? A & -2 : B --> cond ? A : B
+// cond ? BinOp (A & -2), (A & -2) : B --> cond ? BinOp A, A : B
+static Value *foldSelectWithIcmpEqAndPattern(ICmpInst *Cmp, Value *TVal,
+                                             Value *FVal,
+                                             InstCombiner::BuilderTy &Builder,
+                                             SelectInst &SI,
+                                             InstCombinerImpl &IC) {
+  auto matchesAndPattern = [](ICmpInst *Cmp,
+                              Value *TVal, Value *&A,
+                              SelectInst &SI,
+                              InstCombinerImpl &IC) -> bool {
+    ConstantInt *MaskedConstant;
+
+    // Check if TVal matches the pattern 'A & -2'
+    if (match(TVal, m_c_And(m_Value(A), m_ConstantInt(MaskedConstant))) &&
+        MaskedConstant->getValue().getSExtValue() == -2 &&
+        isGuaranteedNotToBeUndef(A)) {
+      KnownBits Known;
+      Known = IC.computeKnownBits(A, 0, &SI);
+      IC.computeKnownBitsFromCond(A, Cmp, Known, 0, &SI, false);
+      if (Known.Zero[0])
+        return true;
+    }
+    return false;
+  };
+
+  Value *A;
+
+  // Checks if true branch matches the pattern 'A % 2'.
+  if (matchesAndPattern(Cmp, TVal, A, SI, IC))
+    return Builder.CreateSelect(Cmp, A, FVal);
+
+  // Checks if true branch matches nested 'A % 2' within a binary operation.
+
+  Value *MulVal;
+  if (match(TVal, m_OneUse(m_BinOp(m_Value(MulVal), m_Deferred(MulVal)))))
+    if (matchesAndPattern(Cmp, MulVal, A, SI, IC)) {
+      // Use replaceInInstruction to substitute `and i8 %a, -2` with `%a`
+      if (IC.replaceInInstruction(TVal, MulVal, A, 0)) {
+        return &SI;
+      }
+    }
+
+  return nullptr;
+}
+
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
@@ -1954,6 +2001,10 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectWithIcmpEqAndPattern(ICI, TrueVal, FalseVal, Builder,
+                                                SI, *this))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
