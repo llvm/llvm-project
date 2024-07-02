@@ -46,6 +46,10 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
+      # Manually disable all standard include paths.
+      if(LIBC_C_SUPPORTS_NOSTDLIBINC)
+        list(APPEND compile_options "-nostdlibinc")
+      endif()
     endif()
 
     if(LIBC_COMPILER_HAS_FIXED_POINT)
