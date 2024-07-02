@@ -742,6 +742,10 @@ def warn_drv_fjmc_for_elf_only : Warning<
   "-fjmc works only for ELF; option ignored">,
   InGroup<OptionIgnored>;
 
+def warn_drv_ptrauth_elf_got_for_elf_only : Warning<
+  "-fptrauth-elf-got works only for ELF; option ignored">,
+  InGroup<OptionIgnored>;
+
 def warn_target_override_arm64ec : Warning<
   "/arm64EC has been overridden by specified target: %0; option ignored">,
   InGroup<OptionIgnored>;
