@@ -131,8 +131,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
 namespace {
   class SparcAsmBackend : public MCAsmBackend {
   protected:
-    const Target &TheTarget;
-    const MCSubtargetInfo &TheSTI;
     bool Is64Bit;
     bool HasV9;
 
@@ -141,9 +139,8 @@ namespace {
         : MCAsmBackend(StringRef(T.getName()) == "sparcel"
                            ? llvm::endianness::little
                            : llvm::endianness::big),
-          TheTarget(T), TheSTI(STI),
-          Is64Bit(StringRef(TheTarget.getName()) == "sparcv9"),
-          HasV9(TheSTI.hasFeature(Sparc::FeatureV9)) {}
+          Is64Bit(StringRef(T.getName()) == "sparcv9"),
+          HasV9(STI.hasFeature(Sparc::FeatureV9)) {}
 
     unsigned getNumFixupKinds() const override {
       return Sparc::NumTargetFixupKinds;
