@@ -298,7 +298,7 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   // Do not inline expressions used by subscript operations, since the
   // way the subscript operation translation is implemented requires that
   // variables be materialized.
-  if (isa<emitc::SubscriptOp>(user))
+  if (isa<emitc::SubscriptOp, emitc::GetGlobalOp>(user))
     return false;
 
   // Do not inline expressions used by ops with the CExpression trait. If this
@@ -375,6 +375,13 @@ static LogicalResult printOperation(CppEmitter &emitter,
   // Add name to cache so that `hasValueInScope` works.
   emitter.getOrCreateName(op.getResult());
   return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::LoadOp loadOp) {
+  if (failed(emitter.emitAssignPrefix(*loadOp)))
+    return failure();
+
+  return emitter.emitOperand(loadOp.getOperand());
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -977,9 +984,9 @@ static LogicalResult printFunctionBody(CppEmitter &emitter,
       if (emitter.hasValueInScope(arg))
         return functionOp->emitOpError(" block argument #")
                << arg.getArgNumber() << " is out of scope";
-      if (isa<ArrayType>(arg.getType()))
+      if (isa<ArrayType, LValueType>(arg.getType()))
         return functionOp->emitOpError("cannot emit block argument #")
-               << arg.getArgNumber() << " with array type";
+               << arg.getArgNumber() << " with type " << arg.getType();
       if (failed(
               emitter.emitType(block.getParentOp()->getLoc(), arg.getType()))) {
         return failure();
@@ -1021,6 +1028,11 @@ static LogicalResult printOperation(CppEmitter &emitter,
       functionOp.getBlocks().size() > 1) {
     return functionOp.emitOpError(
         "with multiple blocks needs variables declared at top");
+  }
+
+  if (llvm::any_of(functionOp.getArgumentTypes(), llvm::IsaPred<LValueType>)) {
+    return functionOp.emitOpError()
+           << "cannot emit lvalue type as argument type";
   }
 
   if (llvm::any_of(functionOp.getResultTypes(), llvm::IsaPred<ArrayType>)) {
@@ -1399,7 +1411,7 @@ LogicalResult CppEmitter::emitVariableAssignment(OpResult result) {
 
 LogicalResult CppEmitter::emitVariableDeclaration(OpResult result,
                                                   bool trailingSemicolon) {
-  if (isa<emitc::SubscriptOp>(result.getDefiningOp()))
+  if (isa<emitc::SubscriptOp, emitc::GetGlobalOp>(result.getDefiningOp()))
     return success();
   if (hasValueInScope(result)) {
     return result.getDefiningOp()->emitError(
@@ -1500,9 +1512,10 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::DivOp, emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp,
                 emitc::GlobalOp, emitc::GetGlobalOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
-                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
-                emitc::SubOp, emitc::SubscriptOp, emitc::UnaryMinusOp,
-                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::LogicalOrOp, emitc::LoadOp, emitc::MulOp, emitc::RemOp,
+                emitc::ReturnOp, emitc::SubOp, emitc::SubscriptOp,
+                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
+                emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
@@ -1611,6 +1624,8 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
       os << "[" << dim << "]";
     return success();
   }
+  if (auto lType = dyn_cast<emitc::LValueType>(type))
+    return emitType(loc, lType.getValueType());
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
     if (isa<ArrayType>(pType.getPointee()))
       return emitError(loc, "cannot emit pointer to array type ") << type;

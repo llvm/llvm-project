@@ -47,9 +47,11 @@ func.func @c() {
   return
 }
 
-func.func @a(%arg0: i32, %arg1: i32) {
-  %1 = "emitc.apply"(%arg0) {applicableOperator = "&"} : (i32) -> !emitc.ptr<i32>
-  %2 = emitc.apply "&"(%arg1) : (i32) -> !emitc.ptr<i32>
+func.func @a() {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %2 = "emitc.apply"(%0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+  %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   return
 }
 
@@ -173,8 +175,8 @@ func.func @test_if_else(%arg0: i1, %arg1: f32) {
 }
 
 func.func @test_assign(%arg1: f32) {
-  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-  emitc.assign %arg1 : f32 to %v : f32
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
+  emitc.assign %arg1 : f32 to %v : !emitc.lvalue<f32>
   return
 }
 
@@ -218,9 +220,9 @@ func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
 }
 
 func.func @test_subscript(%arg0 : !emitc.array<2x3xf32>, %arg1 : !emitc.ptr<i32>, %arg2 : !emitc.opaque<"std::map<char, int>">, %idx0 : index, %idx1 : i32, %idx2 : !emitc.opaque<"char">) {
-  %0 = emitc.subscript %arg0[%idx0, %idx1] : (!emitc.array<2x3xf32>, index, i32) -> f32
-  %1 = emitc.subscript %arg1[%idx0] : (!emitc.ptr<i32>, index) -> i32
-  %2 = emitc.subscript %arg2[%idx2] : (!emitc.opaque<"std::map<char, int>">, !emitc.opaque<"char">) -> !emitc.opaque<"int">
+  %0 = emitc.subscript %arg0[%idx0, %idx1] : (!emitc.array<2x3xf32>, index, i32) -> !emitc.lvalue<f32>
+  %1 = emitc.subscript %arg1[%idx0] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+  %2 = emitc.subscript %arg2[%idx2] : (!emitc.opaque<"std::map<char, int>">, !emitc.opaque<"char">) -> !emitc.lvalue<!emitc.opaque<"int">>
   return
 }
 
@@ -245,6 +247,7 @@ emitc.global const @myconstant : !emitc.array<2xi16> = dense<2>
 
 func.func @use_global(%i: index) -> f32 {
   %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
-  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
-  return %1 : f32
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> !emitc.lvalue<f32>
+  %2 = emitc.load %1 : <f32>
+  return %2 : f32
 }
