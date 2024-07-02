@@ -146,6 +146,14 @@ static bool startsNextParameter(const FormatToken &Current,
            Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
 }
 
+// Returns \c true if \c Current starts a new operand in a binary operation.
+static bool startsNextOperand(const FormatToken &Current) {
+  const FormatToken &Previous = *Current.Previous;
+  return Previous.is(TT_BinaryOperator) && !Current.isTrailingComment() &&
+         (Previous.getPrecedence() > prec::Conditional) &&
+         (Previous.getPrecedence() < prec::PointerToMember);
+}
+
 static bool opensProtoMessageField(const FormatToken &LessTok,
                                    const FormatStyle &Style) {
   if (LessTok.isNot(tok::less))
@@ -837,6 +845,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
   if (CurrentState.AvoidBinPacking && startsNextParameter(Current, Style))
     CurrentState.NoLineBreak = true;
+  if (!Style.BinPackBinaryOperations && startsNextOperand(Current))
+    CurrentState.NoLineBreak = true;
+
   if (startsSegmentOfBuilderTypeCall(Current) &&
       State.Column > getNewLineColumn(State)) {
     CurrentState.ContainsUnwrappedBuilder = true;
@@ -1203,6 +1214,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
+  if (!Style.BinPackBinaryOperations && startsNextOperand(Current))
+    CurrentState.BreakBeforeParameter = true;
   return Penalty;
 }
 

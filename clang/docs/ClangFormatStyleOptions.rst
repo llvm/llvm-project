@@ -2065,6 +2065,23 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
+.. _BinPackBinaryOperations:
+
+**BinPackBinaryOperations** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <BinPackBinaryOperations>`
+  If ``false``, binary operations will either be all on the same line
+  or each operation will have one line each.
+
+  .. code-block:: c++
+
+    true:
+    aaaaaaaaaaaaaaaaaaaa && aaaaaaaaaaaaaaaaaaaa ||
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+
+    false:
+    aaaaaaaaaaaaaaaaaaaa &&
+    aaaaaaaaaaaaaaaaaaaa ||
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+
 .. _BinPackParameters:
 
 **BinPackParameters** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
