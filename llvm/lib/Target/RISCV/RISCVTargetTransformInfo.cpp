@@ -959,6 +959,32 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
+  // vp integer arithmetic ops.
+  case Intrinsic::vp_add:
+  case Intrinsic::vp_and:
+  case Intrinsic::vp_ashr:
+  case Intrinsic::vp_lshr:
+  case Intrinsic::vp_mul:
+  case Intrinsic::vp_or:
+  case Intrinsic::vp_sdiv:
+  case Intrinsic::vp_shl:
+  case Intrinsic::vp_srem:
+  case Intrinsic::vp_sub:
+  case Intrinsic::vp_udiv:
+  case Intrinsic::vp_urem:
+  case Intrinsic::vp_xor:
+  // vp float arithmetic ops.
+  case Intrinsic::vp_fadd:
+  case Intrinsic::vp_fsub:
+  case Intrinsic::vp_fmul:
+  case Intrinsic::vp_fdiv:
+  case Intrinsic::vp_frem: {
+    std::optional<unsigned> FOp =
+        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+    if (FOp)
+      return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
+    break;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
