@@ -783,8 +783,10 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   // Replace the inner loop backedge with an unconditional branch to the exit.
   BasicBlock *InnerExitBlock = FI.InnerLoop->getExitBlock();
   BasicBlock *InnerExitingBlock = FI.InnerLoop->getExitingBlock();
-  InnerExitingBlock->getTerminator()->eraseFromParent();
-  BranchInst::Create(InnerExitBlock, InnerExitingBlock);
+  Instruction *Term = InnerExitingBlock->getTerminator();
+  Instruction *BI = BranchInst::Create(InnerExitBlock, InnerExitingBlock);
+  BI->setDebugLoc(Term->getDebugLoc());
+  Term->eraseFromParent();
 
   // Update the DomTree and MemorySSA.
   DT->deleteEdge(InnerExitingBlock, FI.InnerLoop->getHeader());
