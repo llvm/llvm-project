@@ -87,11 +87,10 @@ void HexagonTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 void HexagonTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                            TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
+  std::optional<unsigned> MaxTripCount = SE.getSmallConstantMaxTripCount(L);
   // Only try to peel innermost loops with small runtime trip counts.
-  if (L && L->isInnermost() && canPeel(L) &&
-      SE.getSmallConstantTripCount(L) == 0 &&
-      SE.getSmallConstantMaxTripCount(L) > 0 &&
-      SE.getSmallConstantMaxTripCount(L) <= 5) {
+  if (L && L->isInnermost() && canPeel(L) && !SE.getSmallConstantTripCount(L) &&
+      MaxTripCount && MaxTripCount <= 5) {
     PP.PeelCount = 2;
   }
 }
