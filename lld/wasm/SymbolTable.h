@@ -50,6 +50,8 @@ public:
 
   void trace(StringRef name);
 
+  bool isTraced(StringRef name);
+
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
@@ -132,6 +134,8 @@ private:
 
   // For LTO.
   std::unique_ptr<BitcodeCompiler> lto;
+
+  bool tracingEnabled = false;
 };
 
 extern SymbolTable *symtab;
