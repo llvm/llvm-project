@@ -1165,11 +1165,8 @@ public:
 
   /// Checks if the root graph node can be emitted with narrower bitwidth at
   /// codegen and returns it signedness, if so.
-  std::optional<bool> isSignedMinBitwidthRootNode() const {
-    auto It = MinBWs.find(VectorizableTree.front().get());
-    if (It == MinBWs.end())
-      return std::nullopt;
-    return It->second.second;
+  bool isSignedMinBitwidthRootNode() const {
+    return MinBWs.at(VectorizableTree.front().get()).second;
   }
 
   /// Builds external uses of the vectorized scalars, i.e. the list of
@@ -17374,7 +17371,7 @@ public:
                  "Expected different reduction type.");
           ReducedSubTree =
               Builder.CreateIntCast(ReducedSubTree, VL.front()->getType(),
-                                    *V.isSignedMinBitwidthRootNode());
+                                    V.isSignedMinBitwidthRootNode());
         }
 
         // Improved analysis for add/fadd/xor reductions with same scale factor
