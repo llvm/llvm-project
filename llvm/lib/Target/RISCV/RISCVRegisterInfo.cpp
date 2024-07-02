@@ -513,6 +513,15 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
       // offset can by construction, at worst, a LUI and a ADD.
+
+      // Special case, try to split the offset across two ADDIs.
+      uint64_t ValSubLo12 = (uint64_t)Val - (uint64_t)Lo12;
+      const RISCVFrameLowering *TFI = getFrameLowering(MF);
+      const uint64_t Align = TFI->getStackAlign().value();
+      int64_t MaxPosAdjStep = 2048 - Align;
+      if (ValSubLo12 == 4096 && Lo12 < 0 && Val <= (2 * MaxPosAdjStep))
+        Lo12 = MaxPosAdjStep;
+
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
       Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
                                 Offset.getScalable());
