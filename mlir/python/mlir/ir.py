@@ -4,7 +4,11 @@
 
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
-from ._mlir_libs._mlir import register_type_caster, register_value_caster
+from ._mlir_libs._mlir import (
+    register_type_caster,
+    register_value_caster,
+    add_dialect_to_dialect_registry,
+)
 from ._mlir_libs import get_dialect_registry
 
 
