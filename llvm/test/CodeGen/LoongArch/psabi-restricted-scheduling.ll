@@ -8,10 +8,6 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --code-model=large --post-RA-scheduler=1 < %s \
 ; RUN:     | FileCheck %s --check-prefix=LARGE_SCH
 
-;; FIXME: According to the description of the psABI v2.30, the code sequences
-;; of `PseudoLA*_LARGE` instruction and Medium code model's function call must
-;; be adjacent.
-
 @g = dso_local global i64 zeroinitializer, align 4
 @G = global i64 zeroinitializer, align 4
 @gd = external thread_local global i64
@@ -36,13 +32,13 @@ define void @foo() nounwind {
 ; MEDIUM_NO_SCH-NEXT:    jirl $ra, $ra, 0
 ; MEDIUM_NO_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(gd)
 ; MEDIUM_NO_SCH-NEXT:    ld.d $a0, $a0, %ie_pc_lo12(gd)
+; MEDIUM_NO_SCH-NEXT:    pcalau12i $a1, %ie_pc_hi20(ld)
+; MEDIUM_NO_SCH-NEXT:    ld.d $a1, $a1, %ie_pc_lo12(ld)
+; MEDIUM_NO_SCH-NEXT:    pcalau12i $a2, %ie_pc_hi20(ie)
+; MEDIUM_NO_SCH-NEXT:    ld.d $a2, $a2, %ie_pc_lo12(ie)
 ; MEDIUM_NO_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; MEDIUM_NO_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ld)
-; MEDIUM_NO_SCH-NEXT:    ld.d $a0, $a0, %ie_pc_lo12(ld)
-; MEDIUM_NO_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; MEDIUM_NO_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; MEDIUM_NO_SCH-NEXT:    ld.d $a0, $a0, %ie_pc_lo12(ie)
-; MEDIUM_NO_SCH-NEXT:    ldx.d $zero, $a0, $tp
+; MEDIUM_NO_SCH-NEXT:    ldx.d $zero, $a1, $tp
+; MEDIUM_NO_SCH-NEXT:    ldx.d $zero, $a2, $tp
 ; MEDIUM_NO_SCH-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; MEDIUM_NO_SCH-NEXT:    addi.d $sp, $sp, 16
 ; MEDIUM_NO_SCH-NEXT:    ret
@@ -61,14 +57,14 @@ define void @foo() nounwind {
 ; MEDIUM_SCH-NEXT:    pcaddu18i $ra, %call36(bar)
 ; MEDIUM_SCH-NEXT:    jirl $ra, $ra, 0
 ; MEDIUM_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(gd)
+; MEDIUM_SCH-NEXT:    pcalau12i $a1, %ie_pc_hi20(ld)
+; MEDIUM_SCH-NEXT:    pcalau12i $a2, %ie_pc_hi20(ie)
 ; MEDIUM_SCH-NEXT:    ld.d $a0, $a0, %ie_pc_lo12(gd)
+; MEDIUM_SCH-NEXT:    ld.d $a1, $a1, %ie_pc_lo12(ld)
+; MEDIUM_SCH-NEXT:    ld.d $a2, $a2, %ie_pc_lo12(ie)
 ; MEDIUM_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; MEDIUM_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ld)
-; MEDIUM_SCH-NEXT:    ld.d $a0, $a0, %ie_pc_lo12(ld)
-; MEDIUM_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; MEDIUM_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; MEDIUM_SCH-NEXT:    ld.d $a0, $a0, %ie_pc_lo12(ie)
-; MEDIUM_SCH-NEXT:    ldx.d $zero, $a0, $tp
+; MEDIUM_SCH-NEXT:    ldx.d $zero, $a1, $tp
+; MEDIUM_SCH-NEXT:    ldx.d $zero, $a2, $tp
 ; MEDIUM_SCH-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; MEDIUM_SCH-NEXT:    addi.d $sp, $sp, 16
 ; MEDIUM_SCH-NEXT:    ret
@@ -101,19 +97,19 @@ define void @foo() nounwind {
 ; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %ie64_pc_lo20(gd)
 ; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(gd)
 ; LARGE_NO_SCH-NEXT:    ldx.d $a0, $t8, $a0
-; LARGE_NO_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; LARGE_NO_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ld)
+; LARGE_NO_SCH-NEXT:    pcalau12i $a1, %ie_pc_hi20(ld)
 ; LARGE_NO_SCH-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ld)
 ; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ld)
 ; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ld)
-; LARGE_NO_SCH-NEXT:    ldx.d $a0, $t8, $a0
-; LARGE_NO_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; LARGE_NO_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
+; LARGE_NO_SCH-NEXT:    ldx.d $a1, $t8, $a1
+; LARGE_NO_SCH-NEXT:    pcalau12i $a2, %ie_pc_hi20(ie)
 ; LARGE_NO_SCH-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
 ; LARGE_NO_SCH-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ie)
 ; LARGE_NO_SCH-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ie)
-; LARGE_NO_SCH-NEXT:    ldx.d $a0, $t8, $a0
+; LARGE_NO_SCH-NEXT:    ldx.d $a2, $t8, $a2
 ; LARGE_NO_SCH-NEXT:    ldx.d $zero, $a0, $tp
+; LARGE_NO_SCH-NEXT:    ldx.d $zero, $a1, $tp
+; LARGE_NO_SCH-NEXT:    ldx.d $zero, $a2, $tp
 ; LARGE_NO_SCH-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LARGE_NO_SCH-NEXT:    addi.d $sp, $sp, 16
 ; LARGE_NO_SCH-NEXT:    ret
@@ -146,19 +142,19 @@ define void @foo() nounwind {
 ; LARGE_SCH-NEXT:    lu32i.d $t8, %ie64_pc_lo20(gd)
 ; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(gd)
 ; LARGE_SCH-NEXT:    ldx.d $a0, $t8, $a0
-; LARGE_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; LARGE_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ld)
+; LARGE_SCH-NEXT:    pcalau12i $a1, %ie_pc_hi20(ld)
 ; LARGE_SCH-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ld)
 ; LARGE_SCH-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ld)
 ; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ld)
-; LARGE_SCH-NEXT:    ldx.d $a0, $t8, $a0
-; LARGE_SCH-NEXT:    ldx.d $zero, $a0, $tp
-; LARGE_SCH-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
+; LARGE_SCH-NEXT:    ldx.d $a1, $t8, $a1
+; LARGE_SCH-NEXT:    pcalau12i $a2, %ie_pc_hi20(ie)
 ; LARGE_SCH-NEXT:    addi.d $t8, $zero, %ie_pc_lo12(ie)
 ; LARGE_SCH-NEXT:    lu32i.d $t8, %ie64_pc_lo20(ie)
 ; LARGE_SCH-NEXT:    lu52i.d $t8, $t8, %ie64_pc_hi12(ie)
-; LARGE_SCH-NEXT:    ldx.d $a0, $t8, $a0
+; LARGE_SCH-NEXT:    ldx.d $a2, $t8, $a2
 ; LARGE_SCH-NEXT:    ldx.d $zero, $a0, $tp
+; LARGE_SCH-NEXT:    ldx.d $zero, $a1, $tp
+; LARGE_SCH-NEXT:    ldx.d $zero, $a2, $tp
 ; LARGE_SCH-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LARGE_SCH-NEXT:    addi.d $sp, $sp, 16
 ; LARGE_SCH-NEXT:    ret

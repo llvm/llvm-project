@@ -242,6 +242,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
       .Case("half", MIToken::kw_half)
+      .Case("bfloat", MIToken::kw_bfloat)
       .Case("float", MIToken::kw_float)
       .Case("double", MIToken::kw_double)
       .Case("x86_fp80", MIToken::kw_x86_fp80)

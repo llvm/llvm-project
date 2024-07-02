@@ -77,6 +77,7 @@ public:
                        mlir::omp::NumTeamsClauseOps &result) const;
   bool processNumThreads(lower::StatementContext &stmtCtx,
                          mlir::omp::NumThreadsClauseOps &result) const;
+  bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
@@ -128,12 +129,12 @@ public:
                                 mlir::omp::ReductionClauseOps &result) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processUseDeviceAddr(
-      mlir::omp::UseDeviceClauseOps &result,
+      mlir::omp::UseDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
   bool processUseDevicePtr(
-      mlir::omp::UseDeviceClauseOps &result,
+      mlir::omp::UseDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;

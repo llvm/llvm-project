@@ -92,7 +92,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if a value can be loaded from a block.
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK = AK_Read);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
@@ -724,9 +725,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
@@ -738,9 +737,7 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
@@ -753,9 +750,7 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
@@ -767,9 +762,7 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
@@ -797,9 +790,7 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -807,9 +798,7 @@ inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, RM);
@@ -817,11 +806,7 @@ inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -829,10 +814,7 @@ inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, RM);
@@ -1255,7 +1237,10 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 /// Same as GetGlobal, but without the checks.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
+  const Pointer &Ptr = S.P.getPtrGlobal(I);
+  if (!Ptr.isInitialized())
+    return false;
+  const Block *B = S.P.getGlobal(I);
   S.Stk.push<T>(B->deref<T>());
   return true;
 }
@@ -1280,16 +1265,20 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
-  assert(Temp);
+  const Pointer &Ptr = S.P.getGlobal(I);
+
   const T Value = S.Stk.peek<T>();
   APValue APV = Value.toAPValue();
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
-  const Pointer &P = S.P.getGlobal(I);
-  P.deref<T>() = S.Stk.pop<T>();
-  P.initialize();
+  assert(Ptr.getDeclDesc()->asExpr());
 
+  S.SeenGlobalTemporaries.push_back(
+      std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
+
+  Ptr.deref<T>() = S.Stk.pop<T>();
+  Ptr.initialize();
   return true;
 }
 
@@ -1301,6 +1290,9 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   assert(Temp);
   const Pointer &P = S.Stk.peek<Pointer>();
   APValue *Cached = Temp->getOrCreateValue(true);
+
+  S.SeenGlobalTemporaries.push_back(
+      std::make_pair(P.getDeclDesc()->asExpr(), Temp));
 
   if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
     *Cached = *APV;
@@ -2694,6 +2686,25 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
 
   const FromT &OldPtr = S.Stk.pop<FromT>();
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
+  return true;
+}
+
+inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
+  // An expression E is a core constant expression unless the evaluation of E
+  // would evaluate one of the following: [C++23] - a control flow that passes
+  // through a declaration of a variable with static or thread storage duration
+  // unless that variable is usable in constant expressions.
+  assert(VD->isLocalVarDecl() &&
+         VD->isStaticLocal()); // Checked before emitting this.
+
+  if (VD == S.EvaluatingDecl)
+    return true;
+
+  if (!VD->isUsableInConstantExpressions(S.getCtx())) {
+    S.CCEDiag(VD->getLocation(), diag::note_constexpr_static_local)
+        << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
+    return false;
+  }
   return true;
 }
 
