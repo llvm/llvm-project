@@ -37,7 +37,7 @@ define void @test_s_sleep_var2() {
 define amdgpu_kernel void @test_s_sleep_var3(i32 %arg) {
 ; GCN-LABEL: test_s_sleep_var3:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GCN-NEXT:    s_load_b32 s0, s[2:3], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_sleep_var s0
 ; GCN-NEXT:    s_endpgm

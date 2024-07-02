@@ -8,7 +8,7 @@
 define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX6-LABEL: sin_f16:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_mov_b32 s10, s6
@@ -30,7 +30,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX8-LABEL: sin_f16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
@@ -46,7 +46,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX9-LABEL: sin_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[2:3]
@@ -58,7 +58,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX10-LABEL: sin_f16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_ushort v1, v0, s[2:3]
@@ -70,7 +70,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX11-LABEL: sin_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[2:3]
@@ -91,7 +91,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX6-LABEL: sin_v2f16:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_mov_b32 s10, s6
@@ -121,7 +121,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX8-LABEL: sin_v2f16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
@@ -142,7 +142,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX9-LABEL: sin_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x3118
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -158,7 +158,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX10-LABEL: sin_v2f16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0x3118
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -174,7 +174,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX11-LABEL: sin_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]

@@ -23,7 +23,7 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ; def s[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_writelane_b32 v23, s2, 0
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x8
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x8
 ; CHECK-NEXT:    v_writelane_b32 v23, s3, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[4:7]

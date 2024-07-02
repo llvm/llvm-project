@@ -4,7 +4,7 @@
 define amdgpu_kernel void @test(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0

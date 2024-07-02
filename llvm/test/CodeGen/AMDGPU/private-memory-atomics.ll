@@ -513,8 +513,8 @@ define amdgpu_kernel void @alloca_promote_atomicrmw_private_lds_promote(ptr addr
 ;
 ; GCN-LABEL: alloca_promote_atomicrmw_private_lds_promote:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s4, s[2:3], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -555,8 +555,8 @@ define amdgpu_kernel void @alloca_promote_cmpxchg_private(ptr addrspace(1) %out,
 ;
 ; GCN-LABEL: alloca_promote_cmpxchg_private:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s4, s[2:3], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

@@ -114,9 +114,9 @@ define amdgpu_ps void @only_kill() #0 {
 ; CHECK-NEXT:  ; %bb.3: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:  	 s_mov_b64 exec, 0
-; CHECK-NEXT:  	 exp null off, off, off, off done vm
-; CHECK-NEXT:  	 s_endpgm
+; CHECK-NEXT:    s_mov_b64 exec, 0
+; CHECK-NEXT:    exp null off, off, off, off done vm
+; CHECK-NEXT:    s_endpgm
 main_body:
   br label %loop
 

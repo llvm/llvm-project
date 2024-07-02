@@ -731,6 +731,14 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
 
+  // FIXME: Why is AMDGPUAttributor not in CGSCC?
+  PB.registerOptimizerLastEPCallback(
+      [this](ModulePassManager &MPM, OptimizationLevel Level) {
+        if (Level != OptimizationLevel::O0) {
+          MPM.addPass(AMDGPUAttributorPass(*this));
+        }
+      });
+
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         // We want to support the -lto-partitions=N option as "best effort".
@@ -1036,11 +1044,6 @@ void AMDGPUPassConfig::addIRPasses() {
   if (EnableLowerModuleLDS) {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
-
-  // AMDGPUAttributor infers lack of llvm.amdgcn.lds.kernel.id calls, so run
-  // after their introduction
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPUAttributorLegacyPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(createInferAddressSpacesPass());
