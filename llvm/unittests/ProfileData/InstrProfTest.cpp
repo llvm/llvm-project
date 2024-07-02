@@ -174,6 +174,61 @@ TEST_P(MaybeSparseInstrProfTest, get_function_counts) {
   ASSERT_TRUE(ErrorEquals(instrprof_error::unknown_function, std::move(E2)));
 }
 
+// Test that reader could read compatible future versions even if header has
+// unknown new fields.
+TEST_F(InstrProfTest, read_compatible_future_profiles) {
+  Writer.setProfileVersion(std::numeric_limits<uint32_t>::max() - 1);
+  Writer.setMinCompatibleReaderProfileVersion(
+      IndexedInstrProf::ProfVersion::CurrentVersion);
+  Writer.setAppendAdditionalHeaderFields();
+  Writer.addRecord({"foo", 0x1234, {1, 2}}, Err);
+  Writer.addRecord({"foo", 0x1235, {3, 4}}, Err);
+
+  auto Profile = Writer.writeBuffer();
+
+  auto ReaderOrErr = IndexedInstrProfReader::create(std::move(Profile));
+  EXPECT_THAT_ERROR(ReaderOrErr.takeError(), Succeeded());
+
+  // Sanity check the profile counts are correct.
+  auto ProfReader = std::move(ReaderOrErr.get());
+  std::vector<uint64_t> Counts;
+  EXPECT_THAT_ERROR(ProfReader->getFunctionCounts("foo", 0x1234, Counts),
+                    Succeeded());
+  EXPECT_EQ(Counts.size(), 2U);
+  EXPECT_EQ(Counts[0], 1U);
+  EXPECT_EQ(Counts[1], 2U);
+
+  EXPECT_THAT_ERROR(ProfReader->getFunctionCounts("foo", 0x1235, Counts),
+                    Succeeded());
+  ASSERT_EQ(Counts.size(), 2U);
+  ASSERT_EQ(Counts[0], 3U);
+  ASSERT_EQ(Counts[1], 4U);
+
+  // Reset test-only states for other test cases.
+  Writer.resetTestOnlyStatesForHeaderSection();
+}
+
+// Test that reader returns error when reading incompatible profiles.
+TEST_F(InstrProfTest, error_incompatible_profiles) {
+  Writer.setProfileVersion(std::numeric_limits<uint32_t>::max() - 1);
+  Writer.setMinCompatibleReaderProfileVersion(
+      std::numeric_limits<uint32_t>::max() - 1);
+  Writer.setAppendAdditionalHeaderFields();
+  Writer.addRecord({"foo", 0x1234, {1, 2}}, Err);
+  Writer.addRecord({"foo", 0x1235, {3, 4}}, Err);
+
+  auto Profile = Writer.writeBuffer();
+
+  auto ReaderOrErr = IndexedInstrProfReader::create(std::move(Profile));
+
+  ASSERT_TRUE(
+      ErrorEquals(instrprof_error::unsupported_incompatible_future_version,
+                  ReaderOrErr.takeError()));
+
+  // Reset test-only states for other test cases.
+  Writer.resetTestOnlyStatesForHeaderSection();
+}
+
 // Profile data is copied from general.proftext
 TEST_F(InstrProfTest, get_profile_summary) {
   Writer.addRecord({"func1", 0x1234, {97531}}, Err);
