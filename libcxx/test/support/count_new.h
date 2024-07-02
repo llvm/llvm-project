@@ -16,6 +16,8 @@
 #include <new>
 #include <type_traits>
 
+#include <__memory/aligned_alloc.h> // reuse aligned allocation helper
+
 #include "test_macros.h"
 
 #if defined(TEST_HAS_SANITIZERS)
@@ -455,10 +457,12 @@ void operator delete[](void* p, std::nothrow_t const&) TEST_NOEXCEPT {
 #      define USE_ALIGNED_ALLOC
 #    endif
 
-inline void* alocate_aligned_impl(std::size_t size, std::align_val_t align) {
+inline void* allocate_aligned_impl(std::size_t size, std::align_val_t align) {
   const std::size_t alignment = static_cast<std::size_t>(align);
   void* ret                   = nullptr;
-#    ifdef USE_ALIGNED_ALLOC
+#    ifndef _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+  ret = std::__libcpp_aligned_alloc(alignment, size);
+#    elif defined USE_ALIGNED_ALLOC
   ret = _aligned_malloc(size, alignment);
 #    else
   assert(posix_memalign(&ret, std::max(alignment, sizeof(void*)), size) != EINVAL);
@@ -468,7 +472,9 @@ inline void* alocate_aligned_impl(std::size_t size, std::align_val_t align) {
 
 inline void free_aligned_impl(void* ptr, std::align_val_t) {
   if (ptr) {
-#    ifdef USE_ALIGNED_ALLOC
+#    ifndef _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+    std::__libcpp_aligned_free(ptr);
+#    elif defined USE_ALIGNED_ALLOC
     ::_aligned_free(ptr);
 #    else
     ::free(ptr);
@@ -479,7 +485,7 @@ inline void free_aligned_impl(void* ptr, std::align_val_t) {
 // operator new(size_t, align_val_t[, nothrow_t]) and operator delete(size_t, align_val_t[, nothrow_t])
 void* operator new(std::size_t s, std::align_val_t av) TEST_THROW_SPEC(std::bad_alloc) {
   getGlobalMemCounter()->alignedNewCalled(s, static_cast<std::size_t>(av));
-  void* p = alocate_aligned_impl(s, av);
+  void* p = allocate_aligned_impl(s, av);
   if (p == nullptr)
     detail::throw_bad_alloc_helper();
   return p;
@@ -495,7 +501,7 @@ void* operator new(std::size_t s, std::align_val_t av, std::nothrow_t const&) TE
     return nullptr;
   }
 #    endif
-  return alocate_aligned_impl(s, av);
+  return allocate_aligned_impl(s, av);
 }
 
 void operator delete(void* p, std::align_val_t av) TEST_NOEXCEPT {
@@ -511,7 +517,7 @@ void operator delete(void* p, std::align_val_t av, std::nothrow_t const&) TEST_N
 // operator new[](size_t, align_val_t[, nothrow_t]) and operator delete[](size_t, align_val_t[, nothrow_t])
 void* operator new[](std::size_t s, std::align_val_t av) TEST_THROW_SPEC(std::bad_alloc) {
   getGlobalMemCounter()->alignedNewArrayCalled(s, static_cast<std::size_t>(av));
-  void* p = alocate_aligned_impl(s, av);
+  void* p = allocate_aligned_impl(s, av);
   if (p == nullptr)
     detail::throw_bad_alloc_helper();
   return p;
@@ -527,7 +533,7 @@ void* operator new[](std::size_t s, std::align_val_t av, std::nothrow_t const&) 
     return nullptr;
   }
 #    endif
-  return alocate_aligned_impl(s, av);
+  return allocate_aligned_impl(s, av);
 }
 
 void operator delete[](void* p, std::align_val_t av) TEST_NOEXCEPT {
