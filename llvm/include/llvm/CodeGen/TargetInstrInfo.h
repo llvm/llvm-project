@@ -45,6 +45,7 @@ class InstrItineraryData;
 class LiveIntervals;
 class LiveVariables;
 class MachineLoop;
+class MachineLoopInfo;
 class MachineMemOperand;
 class MachineRegisterInfo;
 class MCAsmInfo;
@@ -652,6 +653,17 @@ public:
                              SmallVectorImpl<MachineOperand> &Cond,
                              bool AllowModify = false) const {
     return true;
+  }
+
+  // Same as above but also if IsPredictable is non-null set IsPredictable to
+  // "true" if target considers this branch to be predictable and to false
+  // otherwise.
+  virtual bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                             MachineBasicBlock *&FBB,
+                             SmallVectorImpl<MachineOperand> &Cond,
+                             bool *IsPredictable, const MachineLoopInfo *MLI,
+                             bool AllowModify = false) const {
+    return analyzeBranch(MBB, TBB, FBB, Cond, AllowModify);
   }
 
   /// Represents a predicate at the MachineFunction level.  The control flow a

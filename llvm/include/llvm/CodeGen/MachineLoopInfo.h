@@ -82,7 +82,8 @@ public:
   /// ExcludeReg can be used to exclude the given register from the check
   /// i.e. when we're considering hoisting it's definition but not hoisted it
   /// yet
-  bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
+  bool isLoopInvariant(const MachineInstr &I, const Register ExcludeReg = 0,
+                       unsigned RecursionDepth = 1) const;
 
   void dump() const;
 
@@ -90,7 +91,8 @@ private:
   friend class LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
   /// Returns true if the given physreg has no defs inside the loop.
-  bool isLoopInvariantImplicitPhysReg(Register Reg) const;
+  bool isLoopInvariantImplicitPhysReg(Register Reg, Register ExcludeReg,
+                                      unsigned RecursionDepth = 1) const;
 
   explicit MachineLoop(MachineBasicBlock *MBB)
     : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}

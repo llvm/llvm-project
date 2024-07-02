@@ -432,9 +432,16 @@ public:
 
 
   // Branch analysis.
+  bool isCondBranchPredictable(const MachineInstr &CondBr,
+                               const MachineLoopInfo &MLI) const;
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
+                     bool AllowModify) const override;
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond, bool *IsPredictable,
+                     const MachineLoopInfo *MLI,
                      bool AllowModify) const override;
   unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;

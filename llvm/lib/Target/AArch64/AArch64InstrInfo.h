@@ -374,9 +374,16 @@ public:
                             MachineBasicBlock &RestoreBB, const DebugLoc &DL,
                             int64_t BrOffset, RegScavenger *RS) const override;
 
+  bool isCondBranchPredictable(const MachineInstr &CondBr,
+                               const MachineLoopInfo &MLI) const;
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
+                     bool AllowModify = false) const override;
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond, bool *IsPredictable,
+                     const MachineLoopInfo *MLI,
                      bool AllowModify = false) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               MachineBranchPredicate &MBP,
