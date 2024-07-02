@@ -14740,16 +14740,16 @@ The return type must match the first argument type.
 
 The second argument must be a constant and is a flag to indicate whether the
 result value of the '``llvm.abs``' intrinsic is a
-:ref:`poison value <poisonvalues>` if the argument is statically or dynamically
-an ``INT_MIN`` value.
+:ref:`poison value <poisonvalues>` if the first argument is statically or
+dynamically an ``INT_MIN`` value.
 
 Semantics:
 """"""""""
 
 The '``llvm.abs``' intrinsic returns the magnitude (always positive) of the
-argument or each element of a vector argument.". If the argument is ``INT_MIN``,
-then the result is also ``INT_MIN`` if ``is_int_min_poison == 0`` and
-``poison`` otherwise.
+first argument or each element of a vector argument.". If the first argument is
+``INT_MIN``, then the result is also ``INT_MIN`` if ``is_int_min_poison == 0``
+and ``poison`` otherwise.
 
 
 .. _int_smax:
@@ -20812,10 +20812,10 @@ Arguments:
 The first operand and the result have the same vector of integer type. The
 second operand is the vector mask and has the same number of elements as the
 result vector type. The third operand is the explicit vector length of the
-operation. The fourth argument must be a constant and is a flag to indicate
+operation. The fourth operand must be a constant and is a flag to indicate
 whether the result value of the '``llvm.vp.abs``' intrinsic is a
-:ref:`poison value <poisonvalues>` if the argument is statically or dynamically
-an ``INT_MIN`` value.
+:ref:`poison value <poisonvalues>` if the first argument is statically or
+dynamically an ``INT_MIN`` value.
 
 Semantics:
 """"""""""
