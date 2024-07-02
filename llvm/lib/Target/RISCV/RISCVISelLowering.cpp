@@ -1317,7 +1317,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
                              VT, Custom);
           setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                              ISD::EXTRACT_SUBVECTOR},
+                              ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_SHUFFLE},
                              VT, Custom);
           setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
           setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
