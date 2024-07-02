@@ -2644,7 +2644,7 @@ static bool inlineGetBaseAndOffset(Function &F,
   return Changed;
 }
 
-static bool insertParsePoints(Function &F, DominatorTree &DT,
+static bool insertParsePoints(Function &F, DomTreeUpdater &DTU,
                               TargetTransformInfo &TTI,
                               SmallVectorImpl<CallBase *> &ToUpdate,
                               DefiningValueMapTy &DVCache,
@@ -2665,7 +2665,6 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // the top of the successor blocks.  See the comment on
   // normalForInvokeSafepoint on exactly what is needed.  Note that this step
   // may restructure the CFG.
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   for (CallBase *Call : ToUpdate) {
     auto *II = dyn_cast<InvokeInst>(Call);
     if (!II)
@@ -2699,6 +2698,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 
   // A) Identify all gc pointers which are statically live at the given call
   // site.
+  DominatorTree &DT = DTU.getDomTree();
   findLiveReferences(F, DT, ToUpdate, Records, GC.get());
 
   /// Global mapping from live pointers to a base-defining-value.
@@ -3174,7 +3174,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
 
   if (!ParsePointNeeded.empty())
     MadeChange |=
-        insertParsePoints(F, DT, TTI, ParsePointNeeded, DVCache, KnownBases);
+        insertParsePoints(F, DTU, TTI, ParsePointNeeded, DVCache, KnownBases);
 
   return MadeChange;
 }
