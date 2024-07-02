@@ -36,6 +36,11 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
+                             raw_pwrite_stream *, CodeGenFileType,
+                             const CGPassBuilderOption &,
+                             PassInstrumentationCallbacks *) override;
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
