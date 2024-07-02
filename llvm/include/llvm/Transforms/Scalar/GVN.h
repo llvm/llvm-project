@@ -329,7 +329,8 @@ private:
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.
   std::optional<gvn::AvailableValue>
-  AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo, Value *Address);
+  AnalyzeLoadAvailability(LoadInst *Load, BasicBlock *DepBB,
+                          MemDepResult DepInfo, Value *Address);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
