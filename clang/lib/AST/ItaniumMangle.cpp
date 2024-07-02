@@ -3431,7 +3431,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case BuiltinType::Id:                                                        \
-    type_name = Name;                                                          \
+    type_name = #Name;                                                         \
     Out << type_name.size() << type_name;                                      \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"

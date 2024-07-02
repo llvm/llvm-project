@@ -4757,6 +4757,13 @@ void Parser::ParseDeclarationSpecifiers(
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
 
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case tok::kw_##Name:                                                         \
+    isInvalid = DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec,        \
+                                   DiagID, Policy);                            \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
     case tok::less:
       // GCC ObjC supports types like "<SomeProtocol>" as a synonym for
       // "id<SomeProtocol>".  This is hopelessly old fashioned and dangerous,
@@ -5768,6 +5775,8 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw___vector:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -5852,6 +5861,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___vector:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -6196,6 +6207,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___write_only:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   case tok::kw___funcref:
   case tok::kw_groupshared:

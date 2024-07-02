@@ -2606,7 +2606,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case BuiltinType::Id:                                                        \
-    mangleArtificialTagType(TagTypeKind::Struct, Name);                        \
+    mangleArtificialTagType(TagTypeKind::Struct, #Name);                       \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 

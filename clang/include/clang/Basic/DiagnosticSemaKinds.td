@@ -12256,6 +12256,11 @@ def warn_hlsl_availability_unavailable :
   Warning<err_unavailable.Summary>,
   InGroup<HLSLAvailability>, DefaultError;
 
+def err_hlsl_intangible_type_cannot_be_declared : Error<
+"HLSL intangible type cannot be declared here">;
+def err_hlsl_intangible_type_as_function_arg_or_return : Error<
+"HLSL intangible type cannot be used as function %select{argument|return value}0">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;

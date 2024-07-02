@@ -2447,9 +2447,9 @@ bool Type::isSizelessBuiltinType() const {
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
       // HLSL intangible types
-      // #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case
-      // BuiltinType::Id: #include "clang/Basic/HLSLIntangibleTypes.def"
-      //       return true;
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      return true;
     default:
       return false;
     }
@@ -3518,7 +3518,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case Id:                                                                     \
-    return Name;
+    return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   }
 

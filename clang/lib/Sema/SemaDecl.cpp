@@ -8166,6 +8166,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
+  if (getLangOpts().HLSL) {
+    if (R->isHLSLSpecificType() && !NewVD->isImplicit()) {
+      Diag(D.getBeginLoc(), diag::err_hlsl_intangible_type_cannot_be_declared);
+    }
+  }
+
   // Diagnose shadowed variables iff this isn't a redeclaration.
   if (!IsPlaceholderVariable && ShadowedDecl && !D.isRedeclaration())
     CheckShadow(NewVD, ShadowedDecl, Previous);
@@ -8896,7 +8902,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   if (!NewVD->hasLocalStorage() && T->isSizelessType() &&
-      !T.isWebAssemblyReferenceType()) {
+      !T.isWebAssemblyReferenceType() && !T->isHLSLSpecificType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;
     NewVD->setInvalidDecl();
     return;
@@ -10778,13 +10784,27 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
   }
 
-  if (getLangOpts().HLSL && D.isFunctionDefinition()) {
-    // Any top level function could potentially be specified as an entry.
-    if (!NewFD->isInvalidDecl() && S->getDepth() == 0 && Name.isIdentifier())
-      HLSL().ActOnTopLevelFunction(NewFD);
+  if (getLangOpts().HLSL) {
+    // Diagnose HLSL intangible types as function argument or return value
+    if (NewFD->getReturnType()->isHLSLSpecificType())
+      Diag(NewFD->getReturnTypeSourceRange().getBegin(),
+           diag::err_hlsl_intangible_type_as_function_arg_or_return)
+          << 1 /* return value */;
+    for (const ParmVarDecl *Parm : NewFD->parameters()) {
+      if (Parm->getType()->isHLSLSpecificType())
+        Diag(Parm->getTypeSpecStartLoc(),
+             diag::err_hlsl_intangible_type_as_function_arg_or_return)
+            << 0 /* argument */;
+    }
 
-    if (NewFD->hasAttr<HLSLShaderAttr>())
-      HLSL().CheckEntryPoint(NewFD);
+    if (D.isFunctionDefinition()) {
+      // Any top level function could potentially be specified as an entry.
+      if (!NewFD->isInvalidDecl() && S->getDepth() == 0 && Name.isIdentifier())
+        HLSL().ActOnTopLevelFunction(NewFD);
+
+      if (NewFD->hasAttr<HLSLShaderAttr>())
+        HLSL().CheckEntryPoint(NewFD);
+    }
   }
 
   // If this is the first declaration of a library builtin function, add

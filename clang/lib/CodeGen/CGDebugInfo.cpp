@@ -745,7 +745,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case BuiltinType::Id:                                                        \
-    return getOrCreateStructPtrType(Name, SingletonId);
+    return getOrCreateStructPtrType(#Name, SingletonId);
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
