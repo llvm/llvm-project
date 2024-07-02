@@ -538,7 +538,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.f16add
     libc.src.math.f16addf
+    libc.src.math.f16addl
     libc.src.math.f16div
     libc.src.math.f16divf
     libc.src.math.f16divl
@@ -548,7 +550,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
     libc.src.math.f16sqrtl
+    libc.src.math.f16sub
     libc.src.math.f16subf
+    libc.src.math.f16subl
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
@@ -601,9 +605,11 @@ if(LIBC_TYPES_HAS_FLOAT16)
   if(LIBC_TYPES_HAS_FLOAT128)
     list(APPEND TARGET_LIBM_ENTRYPOINTS
       # math.h C23 mixed _Float16 and _Float128 entrypoints
+      libc.src.math.f16addf128
       libc.src.math.f16divf128
       libc.src.math.f16fmaf128
       libc.src.math.f16sqrtf128
+      libc.src.math.f16subf128
     )
   endif()
 endif()

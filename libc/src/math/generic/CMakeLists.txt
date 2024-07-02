@@ -3796,6 +3796,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16add
+  SRCS
+    f16add.cpp
+  HDRS
+    ../f16add.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16addf
   SRCS
     f16addf.cpp
@@ -3809,11 +3822,76 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16addl
+  SRCS
+    f16addl.cpp
+  HDRS
+    ../f16addl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16addf128
+  SRCS
+    f16addf128.cpp
+  HDRS
+    ../f16addf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16sub
+  SRCS
+    f16sub.cpp
+  HDRS
+    ../f16sub.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16subf
   SRCS
     f16subf.cpp
   HDRS
     ../f16subf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16subl
+  SRCS
+    f16subl.cpp
+  HDRS
+    ../f16subl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16subf128
+  SRCS
+    f16subf128.cpp
+  HDRS
+    ../f16subf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.add_sub
