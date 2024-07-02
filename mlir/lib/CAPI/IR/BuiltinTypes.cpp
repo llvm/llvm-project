@@ -97,6 +97,18 @@ MlirType mlirFloat8E5M2TypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E5M2(unwrap(ctx)));
 }
 
+MlirTypeID mlirFloat8E4M3TypeGetTypeID() {
+  return wrap(Float8E4M3Type::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E4M3(MlirType type) {
+  return unwrap(type).isFloat8E4M3();
+}
+
+MlirType mlirFloat8E4M3TypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E4M3(unwrap(ctx)));
+}
+
 MlirTypeID mlirFloat8E4M3FNTypeGetTypeID() {
   return wrap(Float8E4M3FNType::getTypeID());
 }

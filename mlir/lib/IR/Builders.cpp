@@ -38,6 +38,10 @@ FloatType Builder::getFloat8E5M2Type() {
   return FloatType::getFloat8E5M2(context);
 }
 
+FloatType Builder::getFloat8E4M3Type() {
+  return FloatType::getFloat8E4M3(context);
+}
+
 FloatType Builder::getFloat8E4M3FNType() {
   return FloatType::getFloat8E4M3FN(context);
 }
