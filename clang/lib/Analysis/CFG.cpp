@@ -2356,6 +2356,9 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
     case Stmt::ObjCAtTryStmtClass:
       return VisitObjCAtTryStmt(cast<ObjCAtTryStmt>(S));
 
+    case Stmt::ObjCAtFinallyStmtClass:
+      return VisitObjCAtFinallyStmt(cast<ObjCAtFinallyStmt>(S));
+
     case Stmt::ObjCForCollectionStmtClass:
       return VisitObjCForCollectionStmt(cast<ObjCForCollectionStmt>(S));
 
@@ -4060,6 +4063,32 @@ CFGBlock *CFGBuilder::VisitObjCAtThrowStmt(ObjCAtThrowStmt *S) {
   return VisitStmt(S, AddStmtChoice::AlwaysAdd);
 }
 
+CFGBlock *CFGBuilder::VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *FS) {
+  // ObjCAtFinallyStmt are treated like labels, so they are the first statement
+  // in a block.
+
+  if (FS->getFinallyBody())
+    addStmt(FS->getFinallyBody());
+
+  CFGBlock *FinallyBlock = Block;
+  if (!FinallyBlock)
+    FinallyBlock = createBlock();
+
+  appendStmt(FinallyBlock, FS);
+
+  // Also add the ObjCAtFinallyStmt as a label, like with regular labels.
+  FinallyBlock->setLabel(FS);
+
+  // Bail out if the CFG is bad.
+  if (badCFG)
+    return nullptr;
+
+  // We set Block to NULL to allow lazy creation of a new block (if necessary).
+  Block = nullptr;
+
+  return FinallyBlock;
+}
+
 CFGBlock *CFGBuilder::VisitObjCAtTryStmt(ObjCAtTryStmt *Terminator) {
   // "@try"/"@catch" is a control-flow statement.  Thus we stop processing the
   // current block.
@@ -4072,16 +4101,26 @@ CFGBlock *CFGBuilder::VisitObjCAtTryStmt(ObjCAtTryStmt *Terminator) {
   } else
     TrySuccessor = Succ;
 
-  // FIXME: Implement @finally support.
-  if (Terminator->getFinallyStmt())
-    return NYS();
-
   CFGBlock *PrevTryTerminatedBlock = TryTerminatedBlock;
-
   // Create a new block that will contain the try statement.
   CFGBlock *NewTryTerminatedBlock = createBlock(false);
   // Add the terminator in the try block.
   NewTryTerminatedBlock->setTerminator(Terminator);
+
+  CFGBlock *FinallyBlock = nullptr;
+
+  if (Terminator->getFinallyStmt()) {
+    Succ = TrySuccessor;
+
+    Block = nullptr;
+    FinallyBlock = VisitObjCAtFinallyStmt(Terminator->getFinallyStmt());
+
+    if (!FinallyBlock)
+      return nullptr;
+
+    // The code after the finally is the implicit successor.
+    addSuccessor(NewTryTerminatedBlock, FinallyBlock);
+  }
 
   bool HasCatchAll = false;
   for (ObjCAtCatchStmt *CS : Terminator->catch_stmts()) {
@@ -4092,19 +4131,31 @@ CFGBlock *CFGBuilder::VisitObjCAtTryStmt(ObjCAtTryStmt *Terminator) {
     }
     Block = nullptr;
     CFGBlock *CatchBlock = VisitObjCAtCatchStmt(CS);
+
     if (!CatchBlock)
       return nullptr;
+
     // Add this block to the list of successors for the block with the try
     // statement.
     addSuccessor(NewTryTerminatedBlock, CatchBlock);
+
+    // After visiting the catch block, add the @finally block as a successor.
+    if (FinallyBlock)
+      addSuccessor(CatchBlock, FinallyBlock);
   }
 
-  // FIXME: This needs updating when @finally support is added.
+  // The @finally block, if it exists, should always be a successor.
+
   if (!HasCatchAll) {
-    if (PrevTryTerminatedBlock)
-      addSuccessor(NewTryTerminatedBlock, PrevTryTerminatedBlock);
-    else
-      addSuccessor(NewTryTerminatedBlock, &cfg->getExit());
+    CFGBlock *endBlock = NewTryTerminatedBlock;
+    if (FinallyBlock)
+      endBlock = FinallyBlock;
+
+    if (PrevTryTerminatedBlock) {
+      addSuccessor(endBlock, PrevTryTerminatedBlock);
+    } else {
+      addSuccessor(endBlock, &cfg->getExit());
+    }
   }
 
   // The code after the try is the implicit successor.
