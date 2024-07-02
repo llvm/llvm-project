@@ -349,6 +349,11 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Every two weeks, Wednesdays at 2:00pm US Pacific, for 90 minutes.
     - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
     - English
+  * - Renato Golin
+    - General LLVM, MLIR & Linalg, distributed computing, research, socials.
+    - Every first Tuesday of the month, 11:00am UK time, for 60 minutes.
+    - `Google meet <https://meet.google.com/esg-fggc-hfe>`__
+    - English, Portuguese
   * - Rotating hosts
     - Getting Started, beginner questions, new contributors.
     - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.

@@ -189,7 +189,7 @@ class MCInst {
   unsigned Flags = 0;
 
   SMLoc Loc;
-  SmallVector<MCOperand, 10> Operands;
+  SmallVector<MCOperand, 6> Operands;
 
 public:
   MCInst() = default;

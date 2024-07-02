@@ -7,7 +7,7 @@
 ; RUN: opt --mtriple=nvptx64-- -S -passes=openmp-opt-postlink < %s | FileCheck %s --check-prefix=NVPTX-DISABLED2
 
 ;; void unknown(void);
-;; void spmd_amenable(void) __attribute__((assume("ompx_spmd_amenable")));
+;; [[omp::assume("ompx_spmd_amenable")]] void spmd_amenable(void);
 ;;
 ;; void sequential_loop() {
 ;;   #pragma omp target teams
@@ -22,7 +22,7 @@
 ;;   }
 ;; }
 ;;
-;; void use(__attribute__((noescape)) int *) __attribute__((assume("ompx_spmd_amenable")));
+;; [[omp::assume("ompx_spmd_amenable")]] void use(__attribute__((noescape)) int *);
 ;;
 ;; void sequential_loop_to_stack_var() {
 ;;   #pragma omp target teams

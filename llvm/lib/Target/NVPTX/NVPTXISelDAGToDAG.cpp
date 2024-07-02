@@ -38,16 +38,21 @@ static cl::opt<bool>
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
                                        llvm::CodeGenOptLevel OptLevel) {
-  return new NVPTXDAGToDAGISel(TM, OptLevel);
+  return new NVPTXDAGToDAGISelLegacy(TM, OptLevel);
 }
 
-char NVPTXDAGToDAGISel::ID = 0;
+NVPTXDAGToDAGISelLegacy::NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
+                                                 CodeGenOptLevel OptLevel)
+    : SelectionDAGISelLegacy(
+          ID, std::make_unique<NVPTXDAGToDAGISel>(tm, OptLevel)) {}
 
-INITIALIZE_PASS(NVPTXDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+char NVPTXDAGToDAGISelLegacy::ID = 0;
+
+INITIALIZE_PASS(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {
+    : SelectionDAGISel(tm, OptLevel), TM(tm) {
   doMulWide = (OptLevel > CodeGenOptLevel::None);
 }
 
@@ -514,6 +519,20 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryConstantFP(N))
       return;
     break;
+  case ISD::CopyToReg: {
+    if (N->getOperand(1).getValueType() == MVT::i128) {
+      SelectV2I64toI128(N);
+      return;
+    }
+    break;
+  }
+  case ISD::CopyFromReg: {
+    if (N->getOperand(1).getValueType() == MVT::i128) {
+      SelectI128toV2I64(N);
+      return;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -3791,6 +3810,60 @@ bool NVPTXDAGToDAGISel::SelectInlineAsmMemoryOperand(
     break;
   }
   return true;
+}
+
+void NVPTXDAGToDAGISel::SelectV2I64toI128(SDNode *N) {
+  // Lower a CopyToReg with two 64-bit inputs
+  // Dst:i128, lo:i64, hi:i64
+  //
+  // CopyToReg Dst, lo, hi;
+  //
+  // ==>
+  //
+  // tmp = V2I64toI128 {lo, hi};
+  // CopyToReg Dst, tmp;
+  SDValue Dst = N->getOperand(1);
+  SDValue Lo = N->getOperand(2);
+  SDValue Hi = N->getOperand(3);
+
+  SDLoc DL(N);
+  SDNode *Mov =
+      CurDAG->getMachineNode(NVPTX::V2I64toI128, DL, MVT::i128, {Lo, Hi});
+
+  SmallVector<SDValue, 4> NewOps(N->getNumOperands() - 1);
+  NewOps[0] = N->getOperand(0);
+  NewOps[1] = Dst;
+  NewOps[2] = SDValue(Mov, 0);
+  if (N->getNumOperands() == 5)
+    NewOps[3] = N->getOperand(4);
+  SDValue NewValue = CurDAG->getNode(ISD::CopyToReg, DL, SmallVector<EVT>(N->values()), NewOps);
+
+  ReplaceNode(N, NewValue.getNode());
+}
+
+void NVPTXDAGToDAGISel::SelectI128toV2I64(SDNode *N) {
+  // Lower CopyFromReg from a 128-bit regs to two 64-bit regs
+  // Dst:i128, Src:i128
+  //
+  // {lo, hi} = CopyFromReg Src
+  //
+  // ==>
+  //
+  // {lo, hi} = I128toV2I64 Src
+  //
+  SDValue Ch = N->getOperand(0);
+  SDValue Src = N->getOperand(1);
+  SDValue Glue = N->getOperand(2);
+  SDLoc DL(N);
+
+  // Add Glue and Ch to the operands and results to avoid break the execution
+  // order
+  SDNode *Mov = CurDAG->getMachineNode(
+      NVPTX::I128toV2I64, DL,
+      {MVT::i64, MVT::i64, Ch.getValueType(), Glue.getValueType()},
+      {Src, Ch, Glue});
+
+  ReplaceNode(N, Mov);
 }
 
 /// GetConvertOpcode - Returns the CVT_ instruction opcode that implements a

@@ -7,7 +7,8 @@ declare arm_aapcs_vfpcc void @force_emission()
 
 define arm_aapcs_vfpcc void @bundle() {
 entry:
-  br i1 icmp uge (i32 sub (i32 ptrtoint (ptr @_end to i32), i32 ptrtoint (ptr @_begin to i32)), i32 4), label %if.then, label %if.end
+  %cmp = icmp uge i32 sub (i32 ptrtoint (ptr @_end to i32), i32 ptrtoint (ptr @_begin to i32)), 4
+  br i1 %cmp, label %if.then, label %if.end
 
 if.then:
   tail call arm_aapcs_vfpcc void @force_emission()

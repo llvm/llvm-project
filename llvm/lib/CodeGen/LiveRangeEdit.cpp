@@ -414,7 +414,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
       DeadRemats->insert(MI);
       const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
       MI->substituteRegister(Dest, NewLI.reg(), 0, TRI);
-      MI->getOperand(0).setIsDead(true);
+      assert(MI->registerDefIsDead(NewLI.reg(), &TRI));
     } else {
       if (TheDelegate)
         TheDelegate->LRE_WillEraseInstruction(MI);

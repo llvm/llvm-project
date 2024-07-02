@@ -999,11 +999,11 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
             DeclarationFragments::FragmentKind::GenericParameter);
 
       if (TemplateParam->hasDefaultArgument()) {
-        DeclarationFragments After;
+        const auto Default = TemplateParam->getDefaultArgument();
         Fragments.append(" = ", DeclarationFragments::FragmentKind::Text)
-            .append(getFragmentsForType(TemplateParam->getDefaultArgument(),
-                                        TemplateParam->getASTContext(), After));
-        Fragments.append(std::move(After));
+            .append(getFragmentsForTemplateArguments(
+                {Default.getArgument()}, TemplateParam->getASTContext(),
+                {Default}));
       }
     } else if (const auto *NTP =
                    dyn_cast<NonTypeTemplateParmDecl>(ParameterArray[i])) {
@@ -1023,8 +1023,9 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
       if (NTP->hasDefaultArgument()) {
         SmallString<8> ExprStr;
         raw_svector_ostream Output(ExprStr);
-        NTP->getDefaultArgument()->printPretty(
-            Output, nullptr, NTP->getASTContext().getPrintingPolicy());
+        NTP->getDefaultArgument().getArgument().print(
+            NTP->getASTContext().getPrintingPolicy(), Output,
+            /*IncludeType=*/false);
         Fragments.append(" = ", DeclarationFragments::FragmentKind::Text)
             .append(ExprStr, DeclarationFragments::FragmentKind::Text);
       }
@@ -1083,12 +1084,22 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
 
       if (StringRef(ArgumentFragment.begin()->Spelling)
               .starts_with("type-parameter")) {
-        std::string ProperArgName = TemplateArgumentLocs.value()[i]
-                                        .getTypeSourceInfo()
-                                        ->getType()
-                                        .getAsString();
-        ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+        if (TemplateArgumentLocs.has_value() &&
+            TemplateArgumentLocs->size() > i) {
+          std::string ProperArgName = TemplateArgumentLocs.value()[i]
+                                          .getTypeSourceInfo()
+                                          ->getType()
+                                          .getAsString();
+          ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+        } else {
+          auto &Spelling = ArgumentFragment.begin()->Spelling;
+          Spelling.clear();
+          raw_string_ostream OutStream(Spelling);
+          CTA.print(Context.getPrintingPolicy(), OutStream, false);
+          OutStream.flush();
+        }
       }
+
       Fragments.append(std::move(ArgumentFragment));
       break;
     }
@@ -1211,9 +1222,9 @@ DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
           cast<CXXRecordDecl>(Decl)))
       .pop_back() // there is an extra semicolon now
       .append("<", DeclarationFragments::FragmentKind::Text)
-      .append(
-          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
-                                           Decl->getASTContext(), std::nullopt))
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateArgsAsWritten()->arguments()))
       .append(">", DeclarationFragments::FragmentKind::Text)
       .appendSemicolon();
 }
@@ -1254,9 +1265,9 @@ DeclarationFragmentsBuilder::getFragmentsForVarTemplateSpecialization(
       .append(DeclarationFragmentsBuilder::getFragmentsForVarTemplate(Decl))
       .pop_back() // there is an extra semicolon now
       .append("<", DeclarationFragments::FragmentKind::Text)
-      .append(
-          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
-                                           Decl->getASTContext(), std::nullopt))
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateArgsAsWritten()->arguments()))
       .append(">", DeclarationFragments::FragmentKind::Text)
       .appendSemicolon();
 }

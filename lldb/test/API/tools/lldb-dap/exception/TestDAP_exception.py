@@ -9,7 +9,6 @@ import lldbdap_testcase
 
 
 class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfRemote
     @skipIfWindows
     def test_stopped_description(self):
         """

@@ -186,6 +186,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPURewriteUndefForPHI.cpp",
     "AMDGPUSetWavePriority.cpp",
+    "AMDGPUSplitModule.cpp",
     "AMDGPUSubtarget.cpp",
     "AMDGPUTargetMachine.cpp",
     "AMDGPUTargetObjectFile.cpp",

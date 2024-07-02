@@ -9,8 +9,6 @@
 #include "clang-tidy/ClangTidyCheck.h"
 #include "clang-tidy/ClangTidyModuleRegistry.h"
 
-#include "clang/Basic/Module.h"
-
 #include "llvm/ADT/ArrayRef.h"
 
 #include "header_exportable_declarations.hpp"

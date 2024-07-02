@@ -229,7 +229,7 @@ __cpp_lib_string_view                                   201803L <string> <string
 __cpp_lib_submdspan                                     202306L <mdspan>
 __cpp_lib_syncbuf                                       201803L <syncstream>
 __cpp_lib_text_encoding                                 202306L <text_encoding>
-__cpp_lib_three_way_comparison                          201907L <compare>
+__cpp_lib_three_way_comparison                          201711L <compare>
 __cpp_lib_to_address                                    201711L <memory>
 __cpp_lib_to_array                                      201907L <array>
 __cpp_lib_to_chars                                      202306L <charconv>
@@ -255,7 +255,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 
 */
 
-#include <__availability>
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -438,7 +437,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
 #   define __cpp_lib_syncbuf                            201803L
 # endif
-// # define __cpp_lib_three_way_comparison                 201907L
+# define __cpp_lib_three_way_comparison                 201711L
 # define __cpp_lib_to_address                           201711L
 # define __cpp_lib_to_array                             201907L
 # define __cpp_lib_type_identity                        201806L
@@ -459,7 +458,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_typeinfo                   202106L
 # define __cpp_lib_containers_ranges                    202202L
 # define __cpp_lib_expected                             202211L
-// # define __cpp_lib_format_path                          202403L
 # define __cpp_lib_format_ranges                        202207L
 // # define __cpp_lib_formatters                           202302L
 # define __cpp_lib_forward_like                         202207L
@@ -467,6 +465,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_ios_noreplace                        202207L
 # define __cpp_lib_is_scoped_enum                       202011L
 # define __cpp_lib_mdspan                               202207L
+# define __cpp_lib_modules                              202207L
 // # define __cpp_lib_move_only_function                   202110L
 # undef  __cpp_lib_optional
 # define __cpp_lib_optional                             202110L
@@ -490,7 +489,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
 # define __cpp_lib_string_resize_and_overwrite          202110L
-// # define __cpp_lib_to_string                            202306L
 # define __cpp_lib_to_underlying                        202102L
 // # define __cpp_lib_tuple_like                           202207L
 # define __cpp_lib_unreachable                          202202L
@@ -506,6 +504,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_copyable_function                    202306L
 // # define __cpp_lib_debugging                            202311L
 // # define __cpp_lib_default_template_type_for_algorithm_values 202403L
+// # define __cpp_lib_format_path                          202403L
 // # define __cpp_lib_freestanding_algorithm               202311L
 // # define __cpp_lib_freestanding_array                   202311L
 // # define __cpp_lib_freestanding_cstring                 202306L
@@ -537,6 +536,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_text_encoding                        202306L
 # undef  __cpp_lib_to_chars
 // # define __cpp_lib_to_chars                             202306L
+// # define __cpp_lib_to_string                            202306L
 # undef  __cpp_lib_tuple_like
 // # define __cpp_lib_tuple_like                           202311L
 #endif

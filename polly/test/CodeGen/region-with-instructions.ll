@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 
 ; CHECK-LABEL:   polly.stmt.bb48:
 ; CHECK-NEXT:   %[[offset:.*]] = shl i64 %polly.indvar, 3

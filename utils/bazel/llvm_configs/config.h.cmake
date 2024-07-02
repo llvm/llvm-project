@@ -209,9 +209,6 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #cmakedefine HAVE_SYS_TYPES_H ${HAVE_SYS_TYPES_H}
 
-/* Define if the setupterm() function is supported this platform. */
-#cmakedefine LLVM_ENABLE_TERMINFO ${LLVM_ENABLE_TERMINFO}
-
 /* Define to 1 if you have the <termios.h> header file. */
 #cmakedefine HAVE_TERMIOS_H ${HAVE_TERMIOS_H}
 

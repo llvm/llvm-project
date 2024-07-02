@@ -167,7 +167,10 @@ cc_library(
     ]),
     hdrs = glob([
         "include/bolt/Passes/*.h",
-    ]),
+    ]) + [
+        # To avoid circular dependency on "Profile".
+        "include/bolt/Profile/BoltAddressTranslation.h",
+    ],
     includes = ["include"],
     deps = [
         ":Core",

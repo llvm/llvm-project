@@ -61,9 +61,8 @@ public:
   /// formats, and to DWARF otherwise. Users can use -gcodeview and -gdwarf to
   /// override the default.
   llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const override {
-    return getTriple().isOSBinFormatMachO()
-               ? llvm::codegenoptions::DIF_DWARF
-               : llvm::codegenoptions::DIF_CodeView;
+    return getTriple().isOSBinFormatCOFF() ? llvm::codegenoptions::DIF_CodeView
+                                           : llvm::codegenoptions::DIF_DWARF;
   }
 
   /// Set the debugger tuning to "default", since we're definitely not tuning

@@ -1943,11 +1943,9 @@ def : RWSysReg<"PM",                0b11, 0b000, 0b0100, 0b0011, 0b001>;
 // 2023 ISA Extension
 // AArch64 Floating-point Mode Register controls behaviors of the FP8
 // instructions (FEAT_FPMR)
-let Requires = [{ {AArch64::FeatureFPMR} }] in {
 //                                 Op0   Op1    CRn     CRm     Op2
 def : ROSysReg<"ID_AA64FPFR0_EL1", 0b11, 0b000, 0b0000, 0b0100, 0b111>;
 def : RWSysReg<"FPMR",             0b11, 0b011, 0b0100, 0b0100, 0b010>;
-}
 
 // v9.5a Software Stepping Enhancements (FEAT_STEP2)
 //                                  Op0   Op1    CRn     CRm     Op2

@@ -104,7 +104,13 @@ int msan_report_count = 0;
 // in some configurations (e.g., "relocation R_X86_64_PC32 out of range:
 // ... is not in [-2147483648, 2147483647]; references section '.bss'").
 // We use kNumStackOriginDescrs * (sizeof(char*) + sizeof(uptr)) == 64MB.
+#if SANITIZER_PPC
+// soft_rss_limit test (release_origin.c) fails on PPC if kNumStackOriginDescrs
+// is too high
+static const uptr kNumStackOriginDescrs = 1 * 1024 * 1024;
+#else
 static const uptr kNumStackOriginDescrs = 4 * 1024 * 1024;
+#endif  // SANITIZER_PPC
 static const char *StackOriginDescr[kNumStackOriginDescrs];
 static uptr StackOriginPC[kNumStackOriginDescrs];
 static atomic_uint32_t NumStackOriginDescrs;

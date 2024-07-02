@@ -134,4 +134,9 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel private((float)ArrayParam[2])
   while(1);
+
+  // expected-error@+2{{OpenACC 'private' clause is not valid on 'init' directive}}
+  // expected-warning@+1{{OpenACC construct 'init' not yet implemented}}
+#pragma acc init private(LocalInt)
+  for(;;);
 }

@@ -59,12 +59,9 @@ endif()
 add_lit_testsuite(check-memprof "Running the MemProfiler tests"
   ${MEMPROF_TESTSUITES}
   DEPENDS ${MEMPROF_TEST_DEPS})
-set_target_properties(check-memprof PROPERTIES FOLDER "Compiler-RT Misc")
 
 add_lit_testsuite(check-memprof-dynamic
 	"Running the MemProfiler tests with dynamic runtime"
   ${MEMPROF_DYNAMIC_TESTSUITES}
   ${exclude_from_check_all.g}
   DEPENDS ${MEMPROF_DYNAMIC_TEST_DEPS})
-set_target_properties(check-memprof-dynamic
-  PROPERTIES FOLDER "Compiler-RT Misc")

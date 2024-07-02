@@ -19,6 +19,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include <optional>
+#include <variant>
 
 namespace llvm {
 
@@ -182,8 +183,9 @@ public:
   };
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
+                   const DenseMap<Value *, const SCEV *> &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits)
-      : PSE(PSE), InnermostLoop(L),
+      : PSE(PSE), InnermostLoop(L), SymbolicStrides(SymbolicStrides),
         MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
 
   /// Register the location (instructions are given increasing numbers)
@@ -198,7 +200,6 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-                   const DenseMap<Value *, const SCEV *> &Strides,
                    const DenseMap<Value *, SmallVector<const Value *, 16>>
                        &UnderlyingObjects);
 
@@ -278,6 +279,10 @@ private:
   PredicatedScalarEvolution &PSE;
   const Loop *InnermostLoop;
 
+  /// Reference to map of pointer values to
+  /// their stride symbols, if they have a symbolic stride.
+  const DenseMap<Value *, const SCEV *> &SymbolicStrides;
+
   /// Maps access locations (ptr, read/write) to program order.
   DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
 
@@ -336,7 +341,7 @@ private:
   /// Otherwise, this function returns true signaling a possible dependence.
   Dependence::DepType
   isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
-              unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+              unsigned BIdx,
               const DenseMap<Value *, SmallVector<const Value *, 16>>
                   &UnderlyingObjects);
 
@@ -351,6 +356,35 @@ private:
   /// either PossiblySafeWithRtChecks or Unsafe and from
   /// PossiblySafeWithRtChecks to Unsafe.
   void mergeInStatus(VectorizationSafetyStatus S);
+
+  struct DepDistanceStrideAndSizeInfo {
+    const SCEV *Dist;
+    uint64_t StrideA;
+    uint64_t StrideB;
+    uint64_t TypeByteSize;
+    bool AIsWrite;
+    bool BIsWrite;
+
+    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
+                                 uint64_t StrideB, uint64_t TypeByteSize,
+                                 bool AIsWrite, bool BIsWrite)
+        : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+          TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+  };
+
+  /// Get the dependence distance, strides, type size and whether it is a write
+  /// for the dependence between A and B. Returns a DepType, if we can prove
+  /// there's no dependence or the analysis fails. Outlined to lambda to limit
+  /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
+  /// others. Returns either the dependence result, if it could already be
+  /// determined, or a struct containing (Distance, Stride, TypeSize, AIsWrite,
+  /// BIsWrite).
+  std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
+  getDependenceDistanceStrideAndSize(
+      const MemAccessInfo &A, Instruction *AInst, const MemAccessInfo &B,
+      Instruction *BInst,
+      const DenseMap<Value *, SmallVector<const Value *, 16>>
+          &UnderlyingObjects);
 };
 
 class RuntimePointerChecking;
@@ -670,9 +704,10 @@ public:
   const PredicatedScalarEvolution &getPSE() const { return *PSE; }
 
 private:
-  /// Analyze the loop.
-  void analyzeLoop(AAResults *AA, LoopInfo *LI,
-                   const TargetLibraryInfo *TLI, DominatorTree *DT);
+  /// Analyze the loop. Returns true if all memory access in the loop can be
+  /// vectorized.
+  bool analyzeLoop(AAResults *AA, LoopInfo *LI, const TargetLibraryInfo *TLI,
+                   DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.

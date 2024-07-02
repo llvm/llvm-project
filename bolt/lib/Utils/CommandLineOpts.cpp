@@ -128,6 +128,9 @@ cl::opt<bool>
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
 
+cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
+                   cl::cat(BoltCategory));
+
 cl::opt<std::string>
 OutputFilename("o",
   cl::desc("<output file>"),
@@ -178,6 +181,10 @@ cl::opt<bool>
 cl::opt<bool> TimeOpts("time-opts",
                        cl::desc("print time spent in each optimization"),
                        cl::cat(BoltOptCategory));
+
+cl::opt<bool> TimeRewrite("time-rewrite",
+                          cl::desc("print time spent in rewriting passes"),
+                          cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> UseOldText(
     "use-old-text",

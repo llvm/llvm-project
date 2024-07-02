@@ -199,8 +199,8 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32I-NEXT:    addi s4, a0, %lo(.LCPI3_0)
+; RV32I-NEXT:    lui s4, %hi(.LCPI3_0)
+; RV32I-NEXT:    addi s4, s4, %lo(.LCPI3_0)
 ; RV32I-NEXT:    neg a0, s2
 ; RV32I-NEXT:    and a0, s2, a0
 ; RV32I-NEXT:    mv a1, s3
@@ -1355,4 +1355,65 @@ define i64 @bswap_i64(i64 %a) {
 ; RV32ZBB-NEXT:    ret
   %1 = call i64 @llvm.bswap.i64(i64 %a)
   ret i64 %1
+}
+
+define i16 @orc_b_i16(i16 %a) {
+; RV32I-LABEL: orc_b_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 257
+; RV32I-NEXT:    slli a1, a0, 8
+; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: orc_b_i16:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    andi a0, a0, 257
+; RV32ZBB-NEXT:    orc.b a0, a0
+; RV32ZBB-NEXT:    ret
+  %1 = and i16 %a, 257
+  %2 = mul nuw i16 %1, 255
+  ret i16 %2
+}
+
+define i32 @orc_b_i32(i32 %a) {
+; RV32I-LABEL: orc_b_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 4112
+; RV32I-NEXT:    addi a1, a1, 257
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a1, a0, 8
+; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: orc_b_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lui a1, 4112
+; RV32ZBB-NEXT:    addi a1, a1, 257
+; RV32ZBB-NEXT:    and a0, a0, a1
+; RV32ZBB-NEXT:    orc.b a0, a0
+; RV32ZBB-NEXT:    ret
+  %1 = and i32 %a, 16843009
+  %2 = mul nuw i32 %1, 255
+  ret i32 %2
+}
+
+define i64 @orc_b_i64(i64 %a) {
+; CHECK-LABEL: orc_b_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 4112
+; CHECK-NEXT:    addi a2, a2, 257
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    slli a2, a0, 8
+; CHECK-NEXT:    sltu a3, a2, a0
+; CHECK-NEXT:    srli a4, a0, 24
+; CHECK-NEXT:    slli a5, a1, 8
+; CHECK-NEXT:    or a4, a5, a4
+; CHECK-NEXT:    sub a1, a4, a1
+; CHECK-NEXT:    sub a1, a1, a3
+; CHECK-NEXT:    sub a0, a2, a0
+; CHECK-NEXT:    ret
+  %1 = and i64 %a, 72340172838076673
+  %2 = mul nuw i64 %1, 255
+  ret i64 %2
 }

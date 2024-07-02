@@ -254,11 +254,15 @@ TYPE_PARSER(construct<ConcurrentControl>(name / "=", scalarIntExpr / ":",
 
 // R1130 locality-spec ->
 //         LOCAL ( variable-name-list ) | LOCAL_INIT ( variable-name-list ) |
+//         REDUCE ( reduce-operation : variable-name-list ) |
 //         SHARED ( variable-name-list ) | DEFAULT ( NONE )
 TYPE_PARSER(construct<LocalitySpec>(construct<LocalitySpec::Local>(
                 "LOCAL" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(construct<LocalitySpec::LocalInit>(
         "LOCAL_INIT"_sptok >> parenthesized(listOfNames))) ||
+    construct<LocalitySpec>(construct<LocalitySpec::Reduce>(
+        "REDUCE (" >> Parser<LocalitySpec::Reduce::Operator>{} / ":",
+        listOfNames / ")")) ||
     construct<LocalitySpec>(construct<LocalitySpec::Shared>(
         "SHARED" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(

@@ -232,6 +232,11 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
+def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
+  let arguments = (ins NestedPolynomialAttr:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -457,7 +462,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
-    static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
+    static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
           mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
@@ -1363,7 +1368,7 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
+    ::llvm::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
         SmallVectorImpl<OpFoldResult> &results) {
       return success();
     }
@@ -1695,6 +1700,12 @@ def : Pat<
                     ConstantAttr<I32Attr, "0">:$attr1),
   (MixedVOperandOp5 $input1a, $input1b, $input2, $attr1,
                     ConstantStrAttr<StrAttr, "MatchVariadic">)>;
+
+def : Pat<
+  (MixedVOperandOp5 $input1a, $input1b, $input2, $attr1,
+                    ConstantStrAttr<StrAttr, "MatchInverseVariadic">),
+  (MixedVOperandOp3 $input2, (variadic $input1b), (variadic $input1a),
+                    ConstantAttr<I32Attr, "1">:$attr1)>;
 
 def : Pat<
   (MixedVOperandOp4 (variadic (MixedVOperandInOutI32Op $input1a),
@@ -2099,6 +2110,17 @@ def SideEffectOp : TEST_Op<"side_effect_op",
   let results = (outs AnyType:$result);
 }
 
+def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType:$result);
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    `(` $operand`)` $region attr-dict `:`  type($operand)  `->` type($result)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test CopyOpInterface
 //===----------------------------------------------------------------------===//
@@ -2198,7 +2220,7 @@ def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
 def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
   let description = [{
     Reify a bound for the given index-typed value or dimension size of a shaped
-    value. "LB", "EQ" and "UB" bounds are supported. If `scalable` is set, 
+    value. "LB", "EQ" and "UB" bounds are supported. If `scalable` is set,
     `vscale_min` and `vscale_max` must be provided, which allows computing
     a bound in terms of "vector.vscale" for a given range of vscale.
   }];
@@ -2386,7 +2408,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -2744,7 +2766,7 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
 def InferIntRangeType : AnyTypeOf<[AnyInteger, Index]>;
 
 def TestWithBoundsOp : TEST_Op<"with_bounds",
-                          [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
@@ -2756,7 +2778,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
 }
 
 def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
-                          [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            SingleBlock, NoTerminator]> {
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
@@ -2768,7 +2790,7 @@ def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
 }
 
 def TestIncrementOp : TEST_Op<"increment",
-                         [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                          NoMemoryEffect, AllTypesMatch<["value", "result"]>]> {
   let arguments = (ins InferIntRangeType:$value);
   let results = (outs InferIntRangeType:$result);
@@ -2777,7 +2799,8 @@ def TestIncrementOp : TEST_Op<"increment",
 }
 
 def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
-                         [DeclareOpInterfaceMethods<InferIntRangeInterface>, AllTypesMatch<["value", "result"]>]> {
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                          AllTypesMatch<["value", "result"]>]> {
   let arguments = (ins InferIntRangeType:$value,
                        OptionalAttr<APIntAttr>:$umin,
                        OptionalAttr<APIntAttr>:$umax,
@@ -3014,7 +3037,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::PropertiesWithCustomPrint &prop);
     static void writeToMlirBytecode(
@@ -3022,7 +3045,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
         const test::PropertiesWithCustomPrint &prop);
   }];
   let extraClassDefinition = [{
-    ::mlir::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
+    ::llvm::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &reader,
         test::PropertiesWithCustomPrint &prop) {
       StringRef label;
@@ -3078,7 +3101,7 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::VersionedProperties &prop);
     static void writeToMlirBytecode(
@@ -3105,6 +3128,11 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
 def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a);
+}
+
+def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins OptionalAttr<I32Attr>:$a, OptionalAttr<I32Attr>:$b);
 }
 
 //===----------------------------------------------------------------------===//

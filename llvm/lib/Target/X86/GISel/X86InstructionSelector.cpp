@@ -548,7 +548,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   unsigned Opc = I.getOpcode();
 
   assert((Opc == TargetOpcode::G_STORE || Opc == TargetOpcode::G_LOAD) &&
-         "unexpected instruction");
+         "Only G_STORE and G_LOAD are expected for selection");
 
   const Register DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
@@ -576,11 +576,32 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   if (NewOpc == Opc)
     return false;
 
-  X86AddressMode AM;
-  X86SelectAddress(*MRI.getVRegDef(I.getOperand(1).getReg()), MRI, AM);
-
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
+  const MachineInstr *Ptr = MRI.getVRegDef(I.getOperand(1).getReg());
+
+  if (Ptr->getOpcode() == TargetOpcode::G_CONSTANT_POOL) {
+    assert(Opc == TargetOpcode::G_LOAD &&
+           "Only G_LOAD from constant pool is expected");
+    // TODO: Need a separate move for Large model
+    if (TM.getCodeModel() == CodeModel::Large)
+      return false;
+
+    unsigned char OpFlag = STI.classifyLocalReference(nullptr);
+    unsigned PICBase = 0;
+    if (OpFlag == X86II::MO_GOTOFF)
+      PICBase = TII.getGlobalBaseReg(&MF);
+    else if (STI.is64Bit())
+      PICBase = X86::RIP;
+
+    I.removeOperand(1);
+    addConstantPoolReference(MIB, Ptr->getOperand(1).getIndex(), PICBase,
+                             OpFlag);
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
+  X86AddressMode AM;
+  X86SelectAddress(*Ptr, MRI, AM);
   if (Opc == TargetOpcode::G_LOAD) {
     I.removeOperand(1);
     addFullAddress(MIB, AM);

@@ -1,13 +1,13 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="CHECK" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR","LLVM" %s
 !
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64-unknown-aix -o - | FileCheck --check-prefixes="BE-LLVMIR" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64-unknown-aix -o - | FileCheck --check-prefixes="BE-LLVMIR","LLVM" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !----------------------
 ! vec_sld
 !----------------------
 
-! CHECK-LABEL: vec_sld_test_i1i1
+! LLVM-LABEL: vec_sld_test_i1i1
 subroutine vec_sld_test_i1i1(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -23,7 +23,7 @@ subroutine vec_sld_test_i1i1(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i1i1
 
-! CHECK-LABEL: vec_sld_test_i1i2
+! LLVM-LABEL: vec_sld_test_i1i2
 subroutine vec_sld_test_i1i2(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_2)
@@ -39,7 +39,7 @@ subroutine vec_sld_test_i1i2(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i1i2
 
-! CHECK-LABEL: vec_sld_test_i1i4
+! LLVM-LABEL: vec_sld_test_i1i4
 subroutine vec_sld_test_i1i4(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_4)
@@ -55,7 +55,7 @@ subroutine vec_sld_test_i1i4(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i1i4
 
-! CHECK-LABEL: vec_sld_test_i1i8
+! LLVM-LABEL: vec_sld_test_i1i8
 subroutine vec_sld_test_i1i8(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_8)
@@ -71,7 +71,7 @@ subroutine vec_sld_test_i1i8(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i1i8
 
-! CHECK-LABEL: vec_sld_test_i2i1
+! LLVM-LABEL: vec_sld_test_i2i1
 subroutine vec_sld_test_i2i1(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -93,7 +93,7 @@ subroutine vec_sld_test_i2i1(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i2i1
 
-! CHECK-LABEL: vec_sld_test_i2i2
+! LLVM-LABEL: vec_sld_test_i2i2
 subroutine vec_sld_test_i2i2(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 8_2)
@@ -115,7 +115,7 @@ subroutine vec_sld_test_i2i2(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i2i2
 
-! CHECK-LABEL: vec_sld_test_i2i4
+! LLVM-LABEL: vec_sld_test_i2i4
 subroutine vec_sld_test_i2i4(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_4)
@@ -137,7 +137,7 @@ subroutine vec_sld_test_i2i4(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i2i4
 
-! CHECK-LABEL: vec_sld_test_i2i8
+! LLVM-LABEL: vec_sld_test_i2i8
 subroutine vec_sld_test_i2i8(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 11_8)
@@ -159,7 +159,7 @@ subroutine vec_sld_test_i2i8(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i2i8
 
-! CHECK-LABEL: vec_sld_test_i4i1
+! LLVM-LABEL: vec_sld_test_i4i1
 subroutine vec_sld_test_i4i1(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -181,7 +181,7 @@ subroutine vec_sld_test_i4i1(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i4i1
 
-! CHECK-LABEL: vec_sld_test_i4i2
+! LLVM-LABEL: vec_sld_test_i4i2
 subroutine vec_sld_test_i4i2(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_2)
@@ -203,7 +203,7 @@ subroutine vec_sld_test_i4i2(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i4i2
 
-! CHECK-LABEL: vec_sld_test_i4i4
+! LLVM-LABEL: vec_sld_test_i4i4
 subroutine vec_sld_test_i4i4(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_4)
@@ -225,7 +225,7 @@ subroutine vec_sld_test_i4i4(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i4i4
 
-! CHECK-LABEL: vec_sld_test_i4i8
+! LLVM-LABEL: vec_sld_test_i4i8
 subroutine vec_sld_test_i4i8(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_8)
@@ -247,7 +247,7 @@ subroutine vec_sld_test_i4i8(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_i4i8
 
-! CHECK-LABEL: vec_sld_test_u1i1
+! LLVM-LABEL: vec_sld_test_u1i1
 subroutine vec_sld_test_u1i1(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -263,7 +263,7 @@ subroutine vec_sld_test_u1i1(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u1i1
 
-! CHECK-LABEL: vec_sld_test_u1i2
+! LLVM-LABEL: vec_sld_test_u1i2
 subroutine vec_sld_test_u1i2(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_2)
@@ -279,7 +279,7 @@ subroutine vec_sld_test_u1i2(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u1i2
 
-! CHECK-LABEL: vec_sld_test_u1i4
+! LLVM-LABEL: vec_sld_test_u1i4
 subroutine vec_sld_test_u1i4(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -295,7 +295,7 @@ subroutine vec_sld_test_u1i4(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u1i4
 
-! CHECK-LABEL: vec_sld_test_u1i8
+! LLVM-LABEL: vec_sld_test_u1i8
 subroutine vec_sld_test_u1i8(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -311,7 +311,7 @@ subroutine vec_sld_test_u1i8(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u1i8
 
-! CHECK-LABEL: vec_sld_test_u2i1
+! LLVM-LABEL: vec_sld_test_u2i1
 subroutine vec_sld_test_u2i1(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -333,7 +333,7 @@ subroutine vec_sld_test_u2i1(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u2i1
 
-! CHECK-LABEL: vec_sld_test_u2i2
+! LLVM-LABEL: vec_sld_test_u2i2
 subroutine vec_sld_test_u2i2(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_2)
@@ -355,7 +355,7 @@ subroutine vec_sld_test_u2i2(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u2i2
 
-! CHECK-LABEL: vec_sld_test_u2i4
+! LLVM-LABEL: vec_sld_test_u2i4
 subroutine vec_sld_test_u2i4(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_4)
@@ -377,7 +377,7 @@ subroutine vec_sld_test_u2i4(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u2i4
 
-! CHECK-LABEL: vec_sld_test_u2i8
+! LLVM-LABEL: vec_sld_test_u2i8
 subroutine vec_sld_test_u2i8(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_8)
@@ -399,7 +399,7 @@ subroutine vec_sld_test_u2i8(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u2i8
 
-! CHECK-LABEL: vec_sld_test_u4i1
+! LLVM-LABEL: vec_sld_test_u4i1
 subroutine vec_sld_test_u4i1(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -421,7 +421,7 @@ subroutine vec_sld_test_u4i1(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u4i1
 
-! CHECK-LABEL: vec_sld_test_u4i2
+! LLVM-LABEL: vec_sld_test_u4i2
 subroutine vec_sld_test_u4i2(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_2)
@@ -443,7 +443,7 @@ subroutine vec_sld_test_u4i2(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u4i2
 
-! CHECK-LABEL: vec_sld_test_u4i4
+! LLVM-LABEL: vec_sld_test_u4i4
 subroutine vec_sld_test_u4i4(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_4)
@@ -465,7 +465,7 @@ subroutine vec_sld_test_u4i4(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u4i4
 
-! CHECK-LABEL: vec_sld_test_u4i8
+! LLVM-LABEL: vec_sld_test_u4i8
 subroutine vec_sld_test_u4i8(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_8)
@@ -487,7 +487,7 @@ subroutine vec_sld_test_u4i8(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_u4i8
 
-! CHECK-LABEL: vec_sld_test_r4i1
+! LLVM-LABEL: vec_sld_test_r4i1
 subroutine vec_sld_test_r4i1(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_1)
@@ -509,7 +509,7 @@ subroutine vec_sld_test_r4i1(arg1, arg2)
 ! BE-LLVMIR: store <4 x float> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_r4i1
 
-! CHECK-LABEL: vec_sld_test_r4i2
+! LLVM-LABEL: vec_sld_test_r4i2
 subroutine vec_sld_test_r4i2(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_2)
@@ -531,7 +531,7 @@ subroutine vec_sld_test_r4i2(arg1, arg2)
 ! BE-LLVMIR: store <4 x float> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_r4i2
 
-! CHECK-LABEL: vec_sld_test_r4i4
+! LLVM-LABEL: vec_sld_test_r4i4
 subroutine vec_sld_test_r4i4(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 3_4)
@@ -553,7 +553,7 @@ subroutine vec_sld_test_r4i4(arg1, arg2)
 ! BE-LLVMIR: store <4 x float> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sld_test_r4i4
 
-! CHECK-LABEL: vec_sld_test_r4i8
+! LLVM-LABEL: vec_sld_test_r4i8
 subroutine vec_sld_test_r4i8(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sld(arg1, arg2, 1_8)
@@ -578,7 +578,7 @@ end subroutine vec_sld_test_r4i8
 !----------------------
 ! vec_sldw
 !----------------------
-! CHECK-LABEL: vec_sldw_test_i1i1
+! LLVM-LABEL: vec_sldw_test_i1i1
 subroutine vec_sldw_test_i1i1(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -594,7 +594,7 @@ subroutine vec_sldw_test_i1i1(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i1i1
 
-! CHECK-LABEL: vec_sldw_test_i1i2
+! LLVM-LABEL: vec_sldw_test_i1i2
 subroutine vec_sldw_test_i1i2(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -610,7 +610,7 @@ subroutine vec_sldw_test_i1i2(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i1i2
 
-! CHECK-LABEL: vec_sldw_test_i1i4
+! LLVM-LABEL: vec_sldw_test_i1i4
 subroutine vec_sldw_test_i1i4(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -626,7 +626,7 @@ subroutine vec_sldw_test_i1i4(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i1i4
 
-! CHECK-LABEL: vec_sldw_test_i1i8
+! LLVM-LABEL: vec_sldw_test_i1i8
 subroutine vec_sldw_test_i1i8(arg1, arg2)
   vector(integer(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -642,7 +642,7 @@ subroutine vec_sldw_test_i1i8(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i1i8
 
-! CHECK-LABEL: vec_sldw_test_i2i1
+! LLVM-LABEL: vec_sldw_test_i2i1
 subroutine vec_sldw_test_i2i1(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -664,7 +664,7 @@ subroutine vec_sldw_test_i2i1(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i2i1
 
-! CHECK-LABEL: vec_sldw_test_i2i2
+! LLVM-LABEL: vec_sldw_test_i2i2
 subroutine vec_sldw_test_i2i2(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -686,7 +686,7 @@ subroutine vec_sldw_test_i2i2(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i2i2
 
-! CHECK-LABEL: vec_sldw_test_i2i4
+! LLVM-LABEL: vec_sldw_test_i2i4
 subroutine vec_sldw_test_i2i4(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -708,7 +708,7 @@ subroutine vec_sldw_test_i2i4(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i2i4
 
-! CHECK-LABEL: vec_sldw_test_i2i8
+! LLVM-LABEL: vec_sldw_test_i2i8
 subroutine vec_sldw_test_i2i8(arg1, arg2)
   vector(integer(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -730,7 +730,7 @@ subroutine vec_sldw_test_i2i8(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i2i8
 
-! CHECK-LABEL: vec_sldw_test_i4i1
+! LLVM-LABEL: vec_sldw_test_i4i1
 subroutine vec_sldw_test_i4i1(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -752,7 +752,7 @@ subroutine vec_sldw_test_i4i1(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i4i1
 
-! CHECK-LABEL: vec_sldw_test_i4i2
+! LLVM-LABEL: vec_sldw_test_i4i2
 subroutine vec_sldw_test_i4i2(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -774,7 +774,7 @@ subroutine vec_sldw_test_i4i2(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i4i2
 
-! CHECK-LABEL: vec_sldw_test_i4i4
+! LLVM-LABEL: vec_sldw_test_i4i4
 subroutine vec_sldw_test_i4i4(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -796,7 +796,7 @@ subroutine vec_sldw_test_i4i4(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i4i4
 
-! CHECK-LABEL: vec_sldw_test_i4i8
+! LLVM-LABEL: vec_sldw_test_i4i8
 subroutine vec_sldw_test_i4i8(arg1, arg2)
   vector(integer(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -818,7 +818,7 @@ subroutine vec_sldw_test_i4i8(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i4i8
 
-! CHECK-LABEL: vec_sldw_test_i8i1
+! LLVM-LABEL: vec_sldw_test_i8i1
 subroutine vec_sldw_test_i8i1(arg1, arg2)
   vector(integer(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -840,7 +840,7 @@ subroutine vec_sldw_test_i8i1(arg1, arg2)
 ! BE-LLVMIR: store <2 x i64> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i8i1
 
-! CHECK-LABEL: vec_sldw_test_i8i2
+! LLVM-LABEL: vec_sldw_test_i8i2
 subroutine vec_sldw_test_i8i2(arg1, arg2)
   vector(integer(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -862,7 +862,7 @@ subroutine vec_sldw_test_i8i2(arg1, arg2)
 ! BE-LLVMIR: store <2 x i64> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i8i2
 
-! CHECK-LABEL: vec_sldw_test_i8i4
+! LLVM-LABEL: vec_sldw_test_i8i4
 subroutine vec_sldw_test_i8i4(arg1, arg2)
   vector(integer(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -884,7 +884,7 @@ subroutine vec_sldw_test_i8i4(arg1, arg2)
 ! BE-LLVMIR: store <2 x i64> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_i8i4
 
-! CHECK-LABEL: vec_sldw_test_i8i8
+! LLVM-LABEL: vec_sldw_test_i8i8
 subroutine vec_sldw_test_i8i8(arg1, arg2)
   vector(integer(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -907,7 +907,7 @@ subroutine vec_sldw_test_i8i8(arg1, arg2)
 
 end subroutine vec_sldw_test_i8i8
 
-! CHECK-LABEL: vec_sldw_test_u1i1
+! LLVM-LABEL: vec_sldw_test_u1i1
 subroutine vec_sldw_test_u1i1(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -923,7 +923,7 @@ subroutine vec_sldw_test_u1i1(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u1i1
 
-! CHECK-LABEL: vec_sldw_test_u1i2
+! LLVM-LABEL: vec_sldw_test_u1i2
 subroutine vec_sldw_test_u1i2(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -939,7 +939,7 @@ subroutine vec_sldw_test_u1i2(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u1i2
 
-! CHECK-LABEL: vec_sldw_test_u1i4
+! LLVM-LABEL: vec_sldw_test_u1i4
 subroutine vec_sldw_test_u1i4(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -955,7 +955,7 @@ subroutine vec_sldw_test_u1i4(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u1i4
 
-! CHECK-LABEL: vec_sldw_test_u1i8
+! LLVM-LABEL: vec_sldw_test_u1i8
 subroutine vec_sldw_test_u1i8(arg1, arg2)
   vector(unsigned(1)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -971,7 +971,7 @@ subroutine vec_sldw_test_u1i8(arg1, arg2)
 ! BE-LLVMIR: store <16 x i8> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u1i8
 
-! CHECK-LABEL: vec_sldw_test_u2i1
+! LLVM-LABEL: vec_sldw_test_u2i1
 subroutine vec_sldw_test_u2i1(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -993,7 +993,7 @@ subroutine vec_sldw_test_u2i1(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u2i1
 
-! CHECK-LABEL: vec_sldw_test_u2i2
+! LLVM-LABEL: vec_sldw_test_u2i2
 subroutine vec_sldw_test_u2i2(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -1015,7 +1015,7 @@ subroutine vec_sldw_test_u2i2(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u2i2
 
-! CHECK-LABEL: vec_sldw_test_u2i4
+! LLVM-LABEL: vec_sldw_test_u2i4
 subroutine vec_sldw_test_u2i4(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -1037,7 +1037,7 @@ subroutine vec_sldw_test_u2i4(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u2i4
 
-! CHECK-LABEL: vec_sldw_test_u2i8
+! LLVM-LABEL: vec_sldw_test_u2i8
 subroutine vec_sldw_test_u2i8(arg1, arg2)
   vector(unsigned(2)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -1059,7 +1059,7 @@ subroutine vec_sldw_test_u2i8(arg1, arg2)
 ! BE-LLVMIR: store <8 x i16> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u2i8
 
-! CHECK-LABEL: vec_sldw_test_u4i1
+! LLVM-LABEL: vec_sldw_test_u4i1
 subroutine vec_sldw_test_u4i1(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -1081,7 +1081,7 @@ subroutine vec_sldw_test_u4i1(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u4i1
 
-! CHECK-LABEL: vec_sldw_test_u4i2
+! LLVM-LABEL: vec_sldw_test_u4i2
 subroutine vec_sldw_test_u4i2(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -1103,7 +1103,7 @@ subroutine vec_sldw_test_u4i2(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u4i2
 
-! CHECK-LABEL: vec_sldw_test_u4i4
+! LLVM-LABEL: vec_sldw_test_u4i4
 subroutine vec_sldw_test_u4i4(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -1125,7 +1125,7 @@ subroutine vec_sldw_test_u4i4(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u4i4
 
-! CHECK-LABEL: vec_sldw_test_u4i8
+! LLVM-LABEL: vec_sldw_test_u4i8
 subroutine vec_sldw_test_u4i8(arg1, arg2)
   vector(unsigned(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -1147,7 +1147,7 @@ subroutine vec_sldw_test_u4i8(arg1, arg2)
 ! BE-LLVMIR: store <4 x i32> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u4i8
 
-! CHECK-LABEL: vec_sldw_test_u8i1
+! LLVM-LABEL: vec_sldw_test_u8i1
 subroutine vec_sldw_test_u8i1(arg1, arg2)
   vector(unsigned(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -1169,7 +1169,7 @@ subroutine vec_sldw_test_u8i1(arg1, arg2)
 ! BE-LLVMIR: store <2 x i64> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u8i1
 
-! CHECK-LABEL: vec_sldw_test_u8i2
+! LLVM-LABEL: vec_sldw_test_u8i2
 subroutine vec_sldw_test_u8i2(arg1, arg2)
   vector(unsigned(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -1191,7 +1191,7 @@ subroutine vec_sldw_test_u8i2(arg1, arg2)
 ! BE-LLVMIR: store <2 x i64> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u8i2
 
-! CHECK-LABEL: vec_sldw_test_u8i4
+! LLVM-LABEL: vec_sldw_test_u8i4
 subroutine vec_sldw_test_u8i4(arg1, arg2)
   vector(unsigned(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -1213,7 +1213,7 @@ subroutine vec_sldw_test_u8i4(arg1, arg2)
 ! BE-LLVMIR: store <2 x i64> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u8i4
 
-! CHECK-LABEL: vec_sldw_test_u8i8
+! LLVM-LABEL: vec_sldw_test_u8i8
 subroutine vec_sldw_test_u8i8(arg1, arg2)
   vector(unsigned(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -1235,7 +1235,7 @@ subroutine vec_sldw_test_u8i8(arg1, arg2)
 ! BE-LLVMIR: store <2 x i64> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_u8i8
 
-! CHECK-LABEL: vec_sldw_test_r4i1
+! LLVM-LABEL: vec_sldw_test_r4i1
 subroutine vec_sldw_test_r4i1(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -1257,7 +1257,7 @@ subroutine vec_sldw_test_r4i1(arg1, arg2)
 ! BE-LLVMIR: store <4 x float> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_r4i1
 
-! CHECK-LABEL: vec_sldw_test_r4i2
+! LLVM-LABEL: vec_sldw_test_r4i2
 subroutine vec_sldw_test_r4i2(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -1279,7 +1279,7 @@ subroutine vec_sldw_test_r4i2(arg1, arg2)
 ! BE-LLVMIR: store <4 x float> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_r4i2
 
-! CHECK-LABEL: vec_sldw_test_r4i4
+! LLVM-LABEL: vec_sldw_test_r4i4
 subroutine vec_sldw_test_r4i4(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -1301,7 +1301,7 @@ subroutine vec_sldw_test_r4i4(arg1, arg2)
 ! BE-LLVMIR: store <4 x float> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_r4i4
 
-! CHECK-LABEL: vec_sldw_test_r4i8
+! LLVM-LABEL: vec_sldw_test_r4i8
 subroutine vec_sldw_test_r4i8(arg1, arg2)
   vector(real(4)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)
@@ -1323,7 +1323,7 @@ subroutine vec_sldw_test_r4i8(arg1, arg2)
 ! BE-LLVMIR: store <4 x float> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_r4i8
 
-! CHECK-LABEL: vec_sldw_test_r8i1
+! LLVM-LABEL: vec_sldw_test_r8i1
 subroutine vec_sldw_test_r8i1(arg1, arg2)
   vector(real(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_1)
@@ -1345,7 +1345,7 @@ subroutine vec_sldw_test_r8i1(arg1, arg2)
 ! BE-LLVMIR: store <2 x double> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_r8i1
 
-! CHECK-LABEL: vec_sldw_test_r8i2
+! LLVM-LABEL: vec_sldw_test_r8i2
 subroutine vec_sldw_test_r8i2(arg1, arg2)
   vector(real(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_2)
@@ -1367,7 +1367,7 @@ subroutine vec_sldw_test_r8i2(arg1, arg2)
 ! BE-LLVMIR: store <2 x double> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_r8i2
 
-! CHECK-LABEL: vec_sldw_test_r8i4
+! LLVM-LABEL: vec_sldw_test_r8i4
 subroutine vec_sldw_test_r8i4(arg1, arg2)
   vector(real(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_4)
@@ -1389,7 +1389,7 @@ subroutine vec_sldw_test_r8i4(arg1, arg2)
 ! BE-LLVMIR: store <2 x double> %[[br]], ptr %{{.*}}, align 16
 end subroutine vec_sldw_test_r8i4
 
-! CHECK-LABEL: vec_sldw_test_r8i8
+! LLVM-LABEL: vec_sldw_test_r8i8
 subroutine vec_sldw_test_r8i8(arg1, arg2)
   vector(real(8)) :: arg1, arg2, r
   r = vec_sldw(arg1, arg2, 3_8)

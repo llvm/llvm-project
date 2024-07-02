@@ -71,3 +71,9 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseAMDGPUAtomicOptimizerStrategy, "strategy=dpp|iterative|none")
 #undef FUNCTION_PASS_WITH_PARAMS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
+#undef MACHINE_FUNCTION_PASS

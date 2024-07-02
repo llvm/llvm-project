@@ -61,7 +61,7 @@ private:
   const DWARFUnit *U = nullptr; /// Remember the DWARFUnit at extract time.
   const DWARFContext *C = nullptr; /// Context for extract time.
 
-  DWARFFormValue(dwarf::Form F, ValueType V) : Form(F), Value(V) {}
+  DWARFFormValue(dwarf::Form F, const ValueType &V) : Form(F), Value(V) {}
 
 public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}

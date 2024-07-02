@@ -31,6 +31,8 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -100,7 +102,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86PartialReductionPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
-  initializeX86DAGToDAGISelPass(PR);
+  initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
@@ -344,6 +346,24 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+yaml::MachineFunctionInfo *X86TargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::X86MachineFunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+X86TargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  const auto *MFI = MF.getInfo<X86MachineFunctionInfo>();
+  return new yaml::X86MachineFunctionInfo(*MFI);
+}
+
+bool X86TargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI = static_cast<const yaml::X86MachineFunctionInfo &>(MFI);
+  PFS.MF.getInfo<X86MachineFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
+  return false;
+}
+
 bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   assert(SrcAS != DestAS && "Expected different address spaces!");
@@ -505,6 +525,9 @@ bool X86PassConfig::addRegBankSelect() {
 
 bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
+  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
+  if (isGlobalISelAbortEnabled())
+    addPass(createX86GlobalBaseRegPass());
   return false;
 }
 

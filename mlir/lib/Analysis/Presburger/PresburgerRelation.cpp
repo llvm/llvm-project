@@ -8,13 +8,10 @@
 
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -122,7 +119,7 @@ PresburgerRelation::unionSet(const PresburgerRelation &set) const {
 }
 
 /// A point is contained in the union iff any of the parts contain the point.
-bool PresburgerRelation::containsPoint(ArrayRef<MPInt> point) const {
+bool PresburgerRelation::containsPoint(ArrayRef<DynamicAPInt> point) const {
   return llvm::any_of(disjuncts, [&](const IntegerRelation &disjunct) {
     return (disjunct.containsPointNoLocal(point));
   });
@@ -286,15 +283,15 @@ SymbolicLexOpt PresburgerRelation::findSymbolicIntegerLexMax() const {
 ///
 /// For every eq `coeffs == 0` there are two possible ineqs to index into.
 /// The first is coeffs >= 0 and the second is coeffs <= 0.
-static SmallVector<MPInt, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
-                                                  unsigned idx) {
+static SmallVector<DynamicAPInt, 8>
+getIneqCoeffsFromIdx(const IntegerRelation &rel, unsigned idx) {
   assert(idx < rel.getNumInequalities() + 2 * rel.getNumEqualities() &&
          "idx out of bounds!");
   if (idx < rel.getNumInequalities())
     return llvm::to_vector<8>(rel.getInequality(idx));
 
   idx -= rel.getNumInequalities();
-  ArrayRef<MPInt> eqCoeffs = rel.getEquality(idx / 2);
+  ArrayRef<DynamicAPInt> eqCoeffs = rel.getEquality(idx / 2);
 
   if (idx % 2 == 0)
     return llvm::to_vector<8>(eqCoeffs);
@@ -554,7 +551,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
         // state before adding this complement constraint, and add s_ij to b.
         simplex.rollback(frame.simplexSnapshot);
         b.truncate(frame.bCounts);
-        SmallVector<MPInt, 8> ineq =
+        SmallVector<DynamicAPInt, 8> ineq =
             getIneqCoeffsFromIdx(frame.sI, *frame.lastIneqProcessed);
         b.addInequality(ineq);
         simplex.addInequality(ineq);
@@ -572,7 +569,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       frame.simplexSnapshot = simplex.getSnapshot();
 
       unsigned idx = frame.ineqsToProcess.back();
-      SmallVector<MPInt, 8> ineq =
+      SmallVector<DynamicAPInt, 8> ineq =
           getComplementIneq(getIneqCoeffsFromIdx(frame.sI, idx));
       b.addInequality(ineq);
       simplex.addInequality(ineq);
@@ -670,10 +667,11 @@ bool PresburgerRelation::isIntegerEmpty() const {
   return llvm::all_of(disjuncts, std::mem_fn(&IntegerRelation::isIntegerEmpty));
 }
 
-bool PresburgerRelation::findIntegerSample(SmallVectorImpl<MPInt> &sample) {
+bool PresburgerRelation::findIntegerSample(
+    SmallVectorImpl<DynamicAPInt> &sample) {
   // A sample exists iff any of the disjuncts contains a sample.
   for (const IntegerRelation &disjunct : disjuncts) {
-    if (std::optional<SmallVector<MPInt, 8>> opt =
+    if (std::optional<SmallVector<DynamicAPInt, 8>> opt =
             disjunct.findIntegerSample()) {
       sample = std::move(*opt);
       return true;
@@ -682,13 +680,13 @@ bool PresburgerRelation::findIntegerSample(SmallVectorImpl<MPInt> &sample) {
   return false;
 }
 
-std::optional<MPInt> PresburgerRelation::computeVolume() const {
+std::optional<DynamicAPInt> PresburgerRelation::computeVolume() const {
   assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
   // The sum of the volumes of the disjuncts is a valid overapproximation of the
   // volume of their union, even if they overlap.
-  MPInt result(0);
+  DynamicAPInt result(0);
   for (const IntegerRelation &disjunct : disjuncts) {
-    std::optional<MPInt> volume = disjunct.computeVolume();
+    std::optional<DynamicAPInt> volume = disjunct.computeVolume();
     if (!volume)
       return {};
     result += *volume;
@@ -723,20 +721,20 @@ private:
 
   /// The list of all inversed equalities during typing. This ensures that
   /// the constraints exist even after the typing function has concluded.
-  SmallVector<SmallVector<MPInt, 2>, 2> negEqs;
+  SmallVector<SmallVector<DynamicAPInt, 2>, 2> negEqs;
 
   /// `redundantIneqsA` is the inequalities of `a` that are redundant for `b`
   /// (similarly for `cuttingIneqsA`, `redundantIneqsB`, and `cuttingIneqsB`).
-  SmallVector<ArrayRef<MPInt>, 2> redundantIneqsA;
-  SmallVector<ArrayRef<MPInt>, 2> cuttingIneqsA;
+  SmallVector<ArrayRef<DynamicAPInt>, 2> redundantIneqsA;
+  SmallVector<ArrayRef<DynamicAPInt>, 2> cuttingIneqsA;
 
-  SmallVector<ArrayRef<MPInt>, 2> redundantIneqsB;
-  SmallVector<ArrayRef<MPInt>, 2> cuttingIneqsB;
+  SmallVector<ArrayRef<DynamicAPInt>, 2> redundantIneqsB;
+  SmallVector<ArrayRef<DynamicAPInt>, 2> cuttingIneqsB;
 
   /// Given a Simplex `simp` and one of its inequalities `ineq`, check
   /// that the facet of `simp` where `ineq` holds as an equality is contained
   /// within `a`.
-  bool isFacetContained(ArrayRef<MPInt> ineq, Simplex &simp);
+  bool isFacetContained(ArrayRef<DynamicAPInt> ineq, Simplex &simp);
 
   /// Removes redundant constraints from `disjunct`, adds it to `disjuncts` and
   /// removes the disjuncts at position `i` and `j`. Updates `simplices` to
@@ -755,18 +753,18 @@ private:
   ///     \___\|/            \_____/
   ///
   ///
-  LogicalResult coalescePairCutCase(unsigned i, unsigned j);
+  bool coalescePairCutCase(unsigned i, unsigned j);
 
   /// Types the inequality `ineq` according to its `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeInequality(ArrayRef<MPInt> ineq, Simplex &simp);
+  bool typeInequality(ArrayRef<DynamicAPInt> ineq, Simplex &simp);
 
   /// Types the equality `eq`, i.e. for `eq` == 0, types both `eq` >= 0 and
   /// -`eq` >= 0 according to their `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeEquality(ArrayRef<MPInt> eq, Simplex &simp);
+  bool typeEquality(ArrayRef<DynamicAPInt> eq, Simplex &simp);
 
   /// Replaces the element at position `i` with the last element and erases
   /// the last element for both `disjuncts` and `simplices`.
@@ -777,7 +775,7 @@ private:
   /// successfully coalesced. The simplices in `simplices` need to be the ones
   /// constructed from `disjuncts`. At this point, there are no empty
   /// disjuncts in `disjuncts` left.
-  LogicalResult coalescePair(unsigned i, unsigned j);
+  bool coalescePair(unsigned i, unsigned j);
 };
 
 /// Constructs a `SetCoalescer` from a `PresburgerRelation`. Only adds non-empty
@@ -820,7 +818,7 @@ PresburgerRelation SetCoalescer::coalesce() {
       cuttingIneqsB.clear();
       if (i == j)
         continue;
-      if (coalescePair(i, j).succeeded()) {
+      if (coalescePair(i, j)) {
         broken = true;
         break;
       }
@@ -843,10 +841,11 @@ PresburgerRelation SetCoalescer::coalesce() {
 /// Given a Simplex `simp` and one of its inequalities `ineq`, check
 /// that all inequalities of `cuttingIneqsB` are redundant for the facet of
 /// `simp` where `ineq` holds as an equality is contained within `a`.
-bool SetCoalescer::isFacetContained(ArrayRef<MPInt> ineq, Simplex &simp) {
+bool SetCoalescer::isFacetContained(ArrayRef<DynamicAPInt> ineq,
+                                    Simplex &simp) {
   SimplexRollbackScopeExit scopeExit(simp);
   simp.addEquality(ineq);
-  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<MPInt> curr) {
+  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<DynamicAPInt> curr) {
     return simp.isRedundantInequality(curr);
   });
 }
@@ -903,47 +902,44 @@ void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,
 ///     \___\|/            \_____/
 ///
 ///
-LogicalResult SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
+bool SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
   /// All inequalities of `b` need to be redundant. We already know that the
   /// redundant ones are, so only the cutting ones remain to be checked.
   Simplex &simp = simplices[i];
   IntegerRelation &disjunct = disjuncts[i];
-  if (llvm::any_of(cuttingIneqsA, [this, &simp](ArrayRef<MPInt> curr) {
+  if (llvm::any_of(cuttingIneqsA, [this, &simp](ArrayRef<DynamicAPInt> curr) {
         return !isFacetContained(curr, simp);
       }))
-    return failure();
+    return false;
   IntegerRelation newSet(disjunct.getSpace());
 
-  for (ArrayRef<MPInt> curr : redundantIneqsA)
+  for (ArrayRef<DynamicAPInt> curr : redundantIneqsA)
     newSet.addInequality(curr);
 
-  for (ArrayRef<MPInt> curr : redundantIneqsB)
+  for (ArrayRef<DynamicAPInt> curr : redundantIneqsB)
     newSet.addInequality(curr);
 
   addCoalescedDisjunct(i, j, newSet);
-  return success();
+  return true;
 }
 
-LogicalResult SetCoalescer::typeInequality(ArrayRef<MPInt> ineq,
-                                           Simplex &simp) {
+bool SetCoalescer::typeInequality(ArrayRef<DynamicAPInt> ineq, Simplex &simp) {
   Simplex::IneqType type = simp.findIneqType(ineq);
   if (type == Simplex::IneqType::Redundant)
     redundantIneqsB.push_back(ineq);
   else if (type == Simplex::IneqType::Cut)
     cuttingIneqsB.push_back(ineq);
   else
-    return failure();
-  return success();
+    return false;
+  return true;
 }
 
-LogicalResult SetCoalescer::typeEquality(ArrayRef<MPInt> eq, Simplex &simp) {
-  if (typeInequality(eq, simp).failed())
-    return failure();
+bool SetCoalescer::typeEquality(ArrayRef<DynamicAPInt> eq, Simplex &simp) {
+  if (!typeInequality(eq, simp))
+    return false;
   negEqs.push_back(getNegatedCoeffs(eq));
-  ArrayRef<MPInt> inv(negEqs.back());
-  if (typeInequality(inv, simp).failed())
-    return failure();
-  return success();
+  ArrayRef<DynamicAPInt> inv(negEqs.back());
+  return typeInequality(inv, simp);
 }
 
 void SetCoalescer::eraseDisjunct(unsigned i) {
@@ -955,7 +951,7 @@ void SetCoalescer::eraseDisjunct(unsigned i) {
   simplices.pop_back();
 }
 
-LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
+bool SetCoalescer::coalescePair(unsigned i, unsigned j) {
 
   IntegerRelation &a = disjuncts[i];
   IntegerRelation &b = disjuncts[j];
@@ -963,7 +959,7 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   /// skipped.
   /// TODO: implement local id support.
   if (a.getNumLocalVars() != 0 || b.getNumLocalVars() != 0)
-    return failure();
+    return false;
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
 
@@ -973,34 +969,34 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   // inequality is encountered during typing, the two IntegerRelations
   // cannot be coalesced.
   for (int k = 0, e = a.getNumInequalities(); k < e; ++k)
-    if (typeInequality(a.getInequality(k), simpB).failed())
-      return failure();
+    if (!typeInequality(a.getInequality(k), simpB))
+      return false;
 
   for (int k = 0, e = a.getNumEqualities(); k < e; ++k)
-    if (typeEquality(a.getEquality(k), simpB).failed())
-      return failure();
+    if (!typeEquality(a.getEquality(k), simpB))
+      return false;
 
   std::swap(redundantIneqsA, redundantIneqsB);
   std::swap(cuttingIneqsA, cuttingIneqsB);
 
   for (int k = 0, e = b.getNumInequalities(); k < e; ++k)
-    if (typeInequality(b.getInequality(k), simpA).failed())
-      return failure();
+    if (!typeInequality(b.getInequality(k), simpA))
+      return false;
 
   for (int k = 0, e = b.getNumEqualities(); k < e; ++k)
-    if (typeEquality(b.getEquality(k), simpA).failed())
-      return failure();
+    if (!typeEquality(b.getEquality(k), simpA))
+      return false;
 
   // If there are no cutting inequalities of `a`, `b` is contained
   // within `a`.
   if (cuttingIneqsA.empty()) {
     eraseDisjunct(j);
-    return success();
+    return true;
   }
 
   // Try to apply the cut case
-  if (coalescePairCutCase(i, j).succeeded())
-    return success();
+  if (coalescePairCutCase(i, j))
+    return true;
 
   // Swap the vectors to compare the pair (j,i) instead of (i,j).
   std::swap(redundantIneqsA, redundantIneqsB);
@@ -1010,14 +1006,11 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   // within `a`.
   if (cuttingIneqsA.empty()) {
     eraseDisjunct(i);
-    return success();
+    return true;
   }
 
   // Try to apply the cut case
-  if (coalescePairCutCase(j, i).succeeded())
-    return success();
-
-  return failure();
+  return coalescePairCutCase(j, i);
 }
 
 PresburgerRelation PresburgerRelation::coalesce() const {

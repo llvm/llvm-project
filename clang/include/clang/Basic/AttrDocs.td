@@ -2027,9 +2027,6 @@ Different optimisers are likely to react differently to the presence of
 this attribute; in some cases, adding ``assume`` may affect performance
 negatively. It should be used with parsimony and care.
 
-Note that `clang::assume` is a different attribute. Always write ``assume``
-without a namespace if you intend to use the standard C++ attribute.
-
 Example:
 
 .. code-block:: c++
@@ -4740,7 +4737,7 @@ def OMPAssumeDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "assume";
   let Content = [{
-Clang supports the ``__attribute__((assume("assumption")))`` attribute to
+Clang supports the ``[[omp::assume("assumption")]]`` attribute to
 provide additional information to the optimizer. The string-literal, here
 "assumption", will be attached to the function declaration such that later
 analysis and optimization passes can assume the "assumption" to hold.
@@ -4752,7 +4749,7 @@ A function can have multiple assume attributes and they propagate from prior
 declarations to later definitions. Multiple assumptions are aggregated into a
 single comma separated string. Thus, one can provide multiple assumptions via
 a comma separated string, i.a.,
-``__attribute__((assume("assumption1,assumption2")))``.
+``[[omp::assume("assumption1,assumption2")]]``.
 
 While LLVM plugins might provide more assumption strings, the default LLVM
 optimization passes are aware of the following assumptions:
@@ -5663,18 +5660,22 @@ experimental at this time.
 def PreserveNoneDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On X86-64 target, this attribute changes the calling convention of a function.
+On X86-64 and AArch64 targets, this attribute changes the calling convention of a function.
 The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
-impact floating-point registers (XMMs/YMMs). Floating-point registers still
-follow the c calling convention. ``preserve_none``'s ABI is still unstable, and
+impact floating-point registers. ``preserve_none``'s ABI is still unstable, and
 may be changed in the future.
 
-- Only RSP and RBP are preserved by callee.
-
-- Register R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
-  be used to pass function arguments.
+- On X86-64, only RSP and RBP are preserved by the callee.
+  Registers R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
+  be used to pass function arguments. Floating-point registers (XMMs/YMMs) still
+  follow the C calling convention.
+- On AArch64, only LR and FP are preserved by the callee.
+  Registers X20-X28, X0-X7, and X9-X14 are used to pass function arguments.
+  X8, X16-X19, SIMD and floating-point registers follow the AAPCS calling
+  convention. X15 is not available for argument passing on Windows, but is
+  used to pass arguments on other platforms.
   }];
 }
 
@@ -6584,7 +6585,8 @@ like pointers to an object of type ``T``:
   private:
     int *valuePointer;
   public:
-    int *getInt() { return &valuePointer; }
+    IntPointer(const IntOwner&);
+    int *getInt() { return valuePointer; }
   };
 
 The argument ``T`` is optional and is ignored.
@@ -6600,12 +6602,8 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
 .. code-block:: c++
 
   int f() {
-    IntPointer P;
-    if (true) {
-      IntOwner O(7);
-      P = IntPointer(O); // P "points into" O
-    } // P is dangling
-    return P.get(); // error: Using a dangling Pointer.
+    IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
+    P.getInt(); // P is dangling
   }
 
 }];
@@ -8106,3 +8104,72 @@ Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify func
 .. _`libclc`: https://libclc.llvm.org
 }];
 }
+
+def DocCatNonBlockingNonAllocating : DocumentationCategory<"Performance Constraint Attributes"> {
+  let Content = [{
+The ``nonblocking``, ``blocking``, ``nonallocating`` and ``allocating`` attributes can be attached
+to function types, including blocks, C++ lambdas, and member functions. The attributes declare
+constraints about a function's behavior pertaining to blocking and heap memory allocation.
+
+There are several rules for function types with these attributes, enforced with
+compiler warnings:
+
+- When assigning or otherwise converting to a function pointer of ``nonblocking`` or
+  ``nonallocating`` type, the source must also be a function or function pointer of
+  that type, unless it is a null pointer, i.e. the attributes should not be "spoofed". Conversions
+  that remove the attributes are transparent and valid.
+
+- An override of a ``nonblocking`` or ``nonallocating`` virtual method must also be declared
+  with that same attribute (or a stronger one.) An overriding method may add an attribute.
+
+- A redeclaration of a ``nonblocking`` or ``nonallocating`` function must also be declared with
+  the same attribute (or a stronger one). A redeclaration may add an attribute.
+
+The warnings are controlled by ``-Wfunction-effects``, which is enabled by default.
+
+In a future commit, the compiler will diagnose function calls from ``nonblocking`` and ``nonallocating``
+functions to other functions which lack the appropriate attribute.
+  }];
+}
+
+def NonBlockingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "nonblocking";
+  let Content = [{
+Declares that a function or function type either does or does not block in any way, according
+to the optional, compile-time constant boolean argument, which defaults to true. When the argument
+is false, the attribute is equivalent to ``blocking``.
+
+For the purposes of diagnostics, ``nonblocking`` is considered to include the
+``nonallocating`` guarantee and is therefore a "stronger" constraint or attribute.
+  }];
+}
+
+def NonAllocatingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "nonallocating";
+  let Content = [{
+Declares that a function or function type either does or does not allocate heap memory, according
+to the optional, compile-time constant boolean argument, which defaults to true. When the argument
+is false, the attribute is equivalent to ``allocating``.
+  }];
+}
+
+def BlockingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "blocking";
+  let Content = [{
+Declares that a function potentially blocks, and prevents any potential inference of ``nonblocking``
+by the compiler.
+  }];
+}
+
+def AllocatingDocs : Documentation {
+  let Category = DocCatNonBlockingNonAllocating;
+  let Heading = "allocating";
+  let Content = [{
+Declares that a function potentially allocates heap memory, and prevents any potential inference
+of ``nonallocating`` by the compiler.
+  }];
+}
+

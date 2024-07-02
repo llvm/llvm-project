@@ -1730,12 +1730,11 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
   llvm.return
 }
 
 // CHECK: attributes #[[ATTR_GROUP]] = {
-// CHECK-DAG: noinline
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
@@ -2331,39 +2330,47 @@ llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
 // -----
 
 // CHECK-LABEL: @new_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @new_za_func() attributes {arm_new_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_new_za" }
+// CHECK: #[[ATTR]] = { "aarch64_new_za" }
+
+// -----
 
 // CHECK-LABEL: @in_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @in_za_func() attributes {arm_in_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_in_za" }
+// CHECK: #[[ATTR]] = { "aarch64_in_za" }
+
+// -----
 
 // CHECK-LABEL: @out_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @out_za_func() attributes {arm_out_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_out_za" }
+// CHECK: #[[ATTR]] = { "aarch64_out_za" }
+
+// -----
 
 // CHECK-LABEL: @inout_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @inout_za_func() attributes {arm_inout_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_inout_za" }
+// CHECK: #[[ATTR]] = { "aarch64_inout_za" }
+
+// -----
 
 // CHECK-LABEL: @preserves_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @preserves_za_func() attributes {arm_preserves_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_preserves_za" }
+// CHECK: #[[ATTR]] = { "aarch64_preserves_za" }
 
 // -----
 
@@ -2396,3 +2403,41 @@ llvm.func @zeroinit_complex_local_aggregate() {
 llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
 //CHECK: ![[MD1]] = !{!"/DEFAULTLIB:", !"libcmtd"}
 llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
+
+// -----
+
+// CHECK: @big_ = common global [4294967296 x i8] zeroinitializer
+llvm.mlir.global common @big_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
+
+// -----
+
+// CHECK-LABEL: @no_inline
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_inline() attributes { no_inline } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noinline
+
+// -----
+
+// CHECK-LABEL: @always_inline
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @always_inline() attributes { always_inline } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: alwaysinline
+
+// -----
+
+// CHECK-LABEL: @optimize_none
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @optimize_none() attributes { no_inline, optimize_none } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optnone
