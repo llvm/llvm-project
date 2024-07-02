@@ -818,7 +818,7 @@ func.func @main(%arg0 : index) {
              threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1)
              dynamic_shared_memory_size %shmemSize
   {
-    // expected-error @below {{'gpu.dynamic_shared_memory' op result #0 must be 1D memref of 8-bit signless integer values, but got 'memref<?xf32, #gpu.address_space<workgroup>}}
+    // expected-error @below {{'gpu.dynamic_shared_memory' op result memref type must be memref<?xi8, #gpu.address_space<workgroup>>}}
     %0 = gpu.dynamic_shared_memory : memref<?xf32, #gpu.address_space<workgroup>>
     gpu.terminator
   }

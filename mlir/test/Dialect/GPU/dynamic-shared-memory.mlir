@@ -99,4 +99,13 @@ gpu.module @modules {
 
     func.return
   }
+
+// CHECK-LABEL: llvm.func @func_device_function_plain_pointer
+func.func @func_device_function_plain_pointer()  {
+  // CHECK-DAG: %[[S5:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
+  //     CHECK: "test.use.shared.memory"(%[[S5]]) : (!llvm.ptr<3>) -> ()
+  %shmem = gpu.dynamic_shared_memory : !llvm.ptr<3>
+  "test.use.shared.memory"(%shmem) : (!llvm.ptr<3>) -> ()
+  func.return
+}
 }

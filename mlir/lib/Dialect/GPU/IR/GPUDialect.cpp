@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -2218,19 +2219,27 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 LogicalResult gpu::DynamicSharedMemoryOp::verify() {
   if (!getOperation()->getParentWithTrait<OpTrait::SymbolTable>())
     return emitOpError() << "must be inside an op with symbol table";
-
-  MemRefType memrefType = getResultMemref().getType();
-  // Check address space
-  if (!GPUDialect::hasWorkgroupMemoryAddressSpace(memrefType)) {
-    return emitOpError() << "address space must be "
-                         << gpu::AddressSpaceAttr::getMnemonic() << "<"
-                         << stringifyEnum(gpu::AddressSpace::Workgroup) << ">";
+  if (auto ptr = dyn_cast<LLVM::LLVMPointerType>(getResult().getType())) {
+    return success();
   }
-  if (memrefType.hasStaticShape()) {
-    return emitOpError() << "result memref type must be memref<?xi8, "
-                            "#gpu.address_space<workgroup>>";
+  if (MemRefType memrefType =
+          llvm::dyn_cast<MemRefType>(getResult().getType())) {
+    // Check address space
+    if (!GPUDialect::hasWorkgroupMemoryAddressSpace(memrefType)) {
+      return emitOpError() << "address space must be "
+                           << gpu::AddressSpaceAttr::getMnemonic() << "<"
+                           << stringifyEnum(gpu::AddressSpace::Workgroup)
+                           << ">";
+    }
+    if (memrefType.hasStaticShape() ||
+        !memrefType.getElementType().isInteger(8)) {
+      return emitOpError() << "result memref type must be memref<?xi8, "
+                              "#gpu.address_space<workgroup>>";
+    }
+    return success();
   }
-  return success();
+  return emitOpError() << "result type must be either llvm.ptr or memref<?xi8, "
+                          "#gpu.address_space<workgroup>>";
 }
 
 //===----------------------------------------------------------------------===//
