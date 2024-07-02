@@ -34,7 +34,7 @@ void llvm::createMemCpyLoopKnownSize(
   BasicBlock *PostLoopBB = nullptr;
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
   StringRef Name = "MemCopyAliasScope";
@@ -186,7 +186,7 @@ void llvm::createMemCpyLoopUnknownSize(
       PreLoopBB->splitBasicBlock(InsertBefore, "post-loop-memcpy-expansion");
 
   Function *ParentFunc = PreLoopBB->getParent();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   LLVMContext &Ctx = PreLoopBB->getContext();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
@@ -374,7 +374,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   // TODO: Use different element type if possible?
   Type *EltTy = Type::getInt8Ty(F->getContext());
 
@@ -461,7 +461,7 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   BasicBlock *NewBB =
       OrigBB->splitBasicBlock(InsertBefore, "split");
   BasicBlock *LoopBB

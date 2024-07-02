@@ -310,6 +310,10 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
       return convertPointerLikeType(heapTy.getElementType(), fileAttr, scope,
                                     loc, /*genAllocated=*/true,
                                     /*genAssociated=*/false);
+    if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(elTy))
+      return convertPointerLikeType(ptrTy.getElementType(), fileAttr, scope,
+                                    loc, /*genAllocated=*/false,
+                                    /*genAssociated=*/true);
     return genPlaceholderType(context);
   } else {
     // FIXME: These types are currently unhandled. We are generating a

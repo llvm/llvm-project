@@ -101,7 +101,7 @@ TEST_F(InterpreterTest, Errors) {
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
   auto Err = Interp->Parse("intentional_error v1 = 42; ").takeError();
   using ::testing::HasSubstr;
-  EXPECT_THAT(DiagnosticsOS.str(),
+  EXPECT_THAT(DiagnosticOutput,
               HasSubstr("error: unknown type name 'intentional_error'"));
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 
@@ -186,7 +186,7 @@ static std::string MangleName(NamedDecl *ND) {
   std::string mangledName;
   llvm::raw_string_ostream RawStr(mangledName);
   MangleC->mangleName(ND, RawStr);
-  return RawStr.str();
+  return mangledName;
 }
 
 TEST_F(InterpreterTest, FindMangledNameSymbol) {

@@ -457,13 +457,11 @@ public:
   Register getOrCreateConstVector(APFloat Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
-  Register getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
-                                   SPIRVType *SpvType,
-                                   const SPIRVInstrInfo &TII);
+  Register getOrCreateConstIntArray(uint64_t Val, size_t Num, MachineInstr &I,
+                                    SPIRVType *SpvType,
+                                    const SPIRVInstrInfo &TII);
   Register getOrCreateConsIntVector(uint64_t Val, MachineIRBuilder &MIRBuilder,
                                     SPIRVType *SpvType, bool EmitIR = true);
-  Register getOrCreateConsIntArray(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                                   SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                    SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,

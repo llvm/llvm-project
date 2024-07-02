@@ -351,6 +351,9 @@ private:
   MCSymbol *getOrCreateDirectionalLocalSymbol(unsigned LocalLabelVal,
                                               unsigned Instance);
 
+  template <typename Symbol>
+  Symbol *getOrCreateSectionSymbol(StringRef Section);
+
   MCSectionELF *createELFSectionImpl(StringRef Section, unsigned Type,
                                      unsigned Flags, unsigned EntrySize,
                                      const MCSymbolELF *Group, bool IsComdat,
@@ -604,11 +607,9 @@ public:
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 StringRef COMDATSymName, int Selection,
-                                unsigned UniqueID = GenericSectionID,
-                                const char *BeginSymName = nullptr);
+                                unsigned UniqueID = GenericSectionID);
 
-  MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
-                                const char *BeginSymName = nullptr);
+  MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics);
 
   /// Gets or creates a section equivalent to Sec that is associated with the
   /// section containing KeySym. For example, to create a debug info section
@@ -622,27 +623,16 @@ public:
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags = 0) {
-    return getWasmSection(Section, K, Flags, nullptr);
-  }
-
-  MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                unsigned Flags, const char *BeginSymName) {
-    return getWasmSection(Section, K, Flags, "", ~0, BeginSymName);
+    return getWasmSection(Section, K, Flags, "", ~0);
   }
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const Twine &Group,
-                                unsigned UniqueID) {
-    return getWasmSection(Section, K, Flags, Group, UniqueID, nullptr);
-  }
-
-  MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                unsigned Flags, const Twine &Group,
-                                unsigned UniqueID, const char *BeginSymName);
+                                unsigned UniqueID);
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const MCSymbolWasm *Group,
-                                unsigned UniqueID, const char *BeginSymName);
+                                unsigned UniqueID);
 
   /// Get the section for the provided Section name
   MCSectionDXContainer *getDXContainerSection(StringRef Section, SectionKind K);

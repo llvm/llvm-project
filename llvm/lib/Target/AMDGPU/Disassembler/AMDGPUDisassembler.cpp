@@ -494,10 +494,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
         break;
-    }
 
-    // Reinitialize Bytes
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
+      // Reinitialize Bytes
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    }
 
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
@@ -552,10 +552,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
         break;
-    }
 
-    // Reinitialize Bytes
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
+      // Reinitialize Bytes
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    }
 
     // Try decode 32-bit instruction
     if (Bytes.size() >= 4) {
