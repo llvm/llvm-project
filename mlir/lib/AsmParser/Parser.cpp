@@ -41,6 +41,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Alignment.h"
@@ -294,6 +295,51 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   StringRef spelling = curTok.getSpelling();
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (spelling.getAsInteger(isHex ? 0 : 10, result))
+    return emitError(curTok.getLoc(), "integer value too large");
+
+  // Make sure we have a zero at the top so we return the right signedness.
+  if (result.isNegative())
+    result = result.zext(result.getBitWidth() + 1);
+
+  // Process the negative sign if present.
+  if (negative)
+    result.negate();
+
+  return success();
+}
+
+namespace {
+bool isBinOrHexOrOctIndicator(char c) {
+  return (llvm::toLower(c) == 'x' || llvm::toLower(c) == 'b' ||
+          llvm::isDigit(c));
+}
+} // namespace
+
+/// Parse an optional integer value only in decimal format from the stream.
+OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
+  Token curToken = getToken();
+  if (curToken.isNot(Token::integer, Token::minus)) {
+    return std::nullopt;
+  }
+
+  bool negative = consumeIf(Token::minus);
+  Token curTok = getToken();
+  if (parseToken(Token::integer, "expected integer value")) {
+    return failure();
+  }
+
+  StringRef spelling = curTok.getSpelling();
+  // If the integer is in bin, hex, or oct format, return only the 0 and reset
+  // the lex pointer.
+  if (spelling[0] == '0' && spelling.size() > 1 &&
+      isBinOrHexOrOctIndicator(spelling[1])) {
+    result = 0;
+    state.lex.resetPointer(spelling.data() + 1);
+    consumeToken();
+    return success();
+  }
+
+  if (spelling.getAsInteger(10, result))
     return emitError(curTok.getLoc(), "integer value too large");
 
   // Make sure we have a zero at the top so we return the right signedness.
