@@ -491,9 +491,7 @@ define i8 @urem_mul_sdiv(i8 %x, i8 %y) {
 
 define <2 x i8> @simplfy_srem_of_mul(<2 x i8> %x) {
 ; CHECK-LABEL: @simplfy_srem_of_mul(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i8> [[X:%.*]], <i8 20, i8 10>
-; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[MUL]], <i8 5, i8 5>
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %mul = mul nsw <2 x i8> %x, <i8 20, i8 10>
   %r = srem <2 x i8> %mul, <i8 5, i8 5>
@@ -513,9 +511,7 @@ define <2 x i8> @simplfy_srem_of_mul_fail_bad_mod(<2 x i8> %x) {
 
 define i8 @simplfy_urem_of_mul(i8 %x) {
 ; CHECK-LABEL: @simplfy_urem_of_mul(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[X:%.*]], 30
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[MUL]], 10
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %mul = mul nuw i8 %x, 30
   %r = urem i8 %mul, 10
