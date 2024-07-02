@@ -30,6 +30,9 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                                 int Priority, Constant *Data) {
   IRBuilder<> IRB(M.getContext());
   FunctionType *FnTy = FunctionType::get(IRB.getVoidTy(), false);
+  // The pointer to associated data MUST be emitted as an unqualified ptr, see
+  // the comment in CodeGenModule::EmitCtorList().
+  PointerType *AssocDataPtrTy = PointerType::getUnqual(M.getContext());
 
   // Get the current set of static global constructors and add the new ctor
   // to the list.
@@ -47,15 +50,15 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   } else {
     EltTy = StructType::get(IRB.getInt32Ty(),
                             PointerType::get(FnTy, F->getAddressSpace()),
-                            IRB.getPtrTy());
+                            AssocDataPtrTy);
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.
   Constant *CSVals[3];
   CSVals[0] = IRB.getInt32(Priority);
   CSVals[1] = F;
-  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getPtrTy())
-                   : Constant::getNullValue(IRB.getPtrTy());
+  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, AssocDataPtrTy)
+                   : Constant::getNullValue(AssocDataPtrTy);
   Constant *RuntimeCtorInit =
       ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements()));
 
@@ -437,12 +440,9 @@ bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
 
   InitBuilder.CreateRetVoid();
 
-  PointerType *ConstantDataTy = PointerType::get(Ctx, 0);
-
   // TODO: Is this the right priority? Probably should be before any other
   // constructors?
   const int Priority = 10;
-  appendToGlobalCtors(M, NewCtor, Priority,
-                      ConstantPointerNull::get(ConstantDataTy));
+  appendToGlobalCtors(M, NewCtor, Priority, nullptr);
   return UnhandledUsers;
 }

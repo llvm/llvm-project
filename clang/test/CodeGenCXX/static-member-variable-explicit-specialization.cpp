@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 %s -std=c++1y -triple=x86_64-pc-linux -emit-llvm -o - | FileCheck --check-prefix=ELF --check-prefix=ALL %s
 // RUN: %clang_cc1 %s -std=c++1y -triple=x86_64-apple-darwin -emit-llvm -o - | FileCheck --check-prefix=MACHO --check-prefix=ALL %s
 // RUN: %clang_cc1 %s -std=c++1y -triple=x86_64-pc-linux -emit-llvm -fdeclspec -DSELECTANY -o - | FileCheck --check-prefix=ELF-SELECTANY %s
+// RUN: %clang_cc1 %s -std=c++1y -triple=amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck --check-prefix=GLOBALAS-ELF %s
+// RUN: %clang_cc1 %s -std=c++1y -triple=amdgcn-amd-amdhsa -emit-llvm -fdeclspec -DSELECTANY -o - | FileCheck --check-prefix=GLOBALAS-ELF-SELECTANY %s
 
 #ifdef SELECTANY
 struct S {
@@ -12,6 +14,7 @@ int f();
 
 // ELF-SELECTANY: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @selectany }]
 // ELF-SELECTANY: @llvm.used = appending global [1 x ptr] [ptr @selectany]
+// GLOBALAS-ELF-SELECTANY: @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr addrspacecast (ptr addrspace(1) @selectany to ptr) }]
 int __declspec(selectany) selectany = f();
 
 #else
@@ -30,6 +33,7 @@ template<> int A<char>::a;
 template<> int A<bool>::a = 10;
 
 // ALL: @llvm.global_ctors = appending global [16 x { i32, ptr, ptr }]
+// GLOBALAS-ELF: @llvm.global_ctors = appending addrspace(1) global [16 x { i32, ptr, ptr }]
 
 // ELF:  [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr @_ZN1AIsE1aE },
 // MACHO: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr null },
@@ -73,7 +77,7 @@ template<> int A<bool>::a = 10;
 // MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered22:[^,]*]], ptr null },
 
 // ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr @_ZN4Fib2ILi5EE1aE },
-// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr null }, 
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr null },
 
 // ALL:  { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_static_member_variable_explicit_specialization.cpp, ptr null }]
 

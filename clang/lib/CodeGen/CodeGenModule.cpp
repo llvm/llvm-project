@@ -2056,10 +2056,16 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   llvm::FunctionType* CtorFTy = llvm::FunctionType::get(VoidTy, false);
   llvm::Type *CtorPFTy = llvm::PointerType::get(CtorFTy,
       TheModule.getDataLayout().getProgramAddressSpace());
+  llvm::PointerType *AssocDataPtrTy =
+      llvm::PointerType::getUnqual(getLLVMContext());
 
-  // Get the type of a ctor entry, { i32, void ()*, i8* }.
-  llvm::StructType *CtorStructTy = llvm::StructType::get(
-      Int32Ty, CtorPFTy, VoidPtrTy);
+  // Get the type of a ctor entry, { i32, program void ()*, i8* }.
+  // Note that we unconditionally emit an unqualified pointer to the associated
+  // data - this is intentional as this is a fake global, serving only as a
+  // lifetime extension hook; this must match the type we use in the llvm.used
+  // and llvm.compiler.used arrays.
+  llvm::StructType *CtorStructTy =
+      llvm::StructType::get(Int32Ty, CtorPFTy, AssocDataPtrTy);
 
   // Construct the constructor and destructor arrays.
   ConstantInitBuilder builder(*this);
@@ -2069,16 +2075,17 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
     ctor.addInt(Int32Ty, I.Priority);
     ctor.add(I.Initializer);
     if (I.AssociatedData)
-      ctor.add(I.AssociatedData);
+      ctor.add(
+          llvm::ConstantExpr::getPointerCast(I.AssociatedData, AssocDataPtrTy));
     else
-      ctor.addNullPointer(VoidPtrTy);
+      ctor.addNullPointer(AssocDataPtrTy);
     ctor.finishAndAddTo(ctors);
   }
 
-  auto list =
-    ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
-                                /*constant*/ false,
-                                llvm::GlobalValue::AppendingLinkage);
+  auto list = ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
+                                          /*constant*/ false,
+                                          llvm::GlobalValue::AppendingLinkage,
+                                          GlobalsInt8PtrTy->getAddressSpace());
 
   // The LTO linker doesn't seem to like it when we set an alignment
   // on appending variables.  Take it off as a workaround.
