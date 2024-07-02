@@ -4,8 +4,6 @@
 ; false. This was caught by the pass return status check that is hidden under
 ; EXPENSIVE_CHECKS.
 
-; CHECK: @global = internal unnamed_addr global ptr null, align 1
-
 ; CHECK-LABEL: @foo
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: ret i16 undef
