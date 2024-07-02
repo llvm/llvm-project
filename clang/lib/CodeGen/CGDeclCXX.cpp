@@ -154,21 +154,28 @@ static void EmitDeclInvariant(CodeGenFunction &CGF, const VarDecl &D,
       Addr, CGF.getContext().getTypeSizeInChars(D.getType()));
 }
 
-void CodeGenFunction::EmitInvariantStart(llvm::Constant *Addr, CharUnits Size) {
+void CodeGenFunction::EmitInvariantStart(llvm::Constant *Addr, CharUnits Size,
+                                         bool IsTLS) {
   // Do not emit the intrinsic if we're not optimizing.
   if (!CGM.getCodeGenOpts().OptimizationLevel)
     return;
 
   // Grab the llvm.invariant.start intrinsic.
   llvm::Intrinsic::ID InvStartID = llvm::Intrinsic::invariant_start;
+  llvm::Value *AddrPtr = Addr;
+  // Get the thread-local address via intrinsic.
+  if (IsTLS)
+    AddrPtr = Builder.CreateThreadLocalAddress(AddrPtr);
+
   // Overloaded address space type.
-  assert(Addr->getType()->isPointerTy() && "Address must be a pointer");
-  llvm::Type *ObjectPtr[1] = {Addr->getType()};
+  assert(AddrPtr->getType()->isPointerTy() && "Address must be a pointer");
+  llvm::Type *ObjectPtr[1] = {AddrPtr->getType()};
   llvm::Function *InvariantStart = CGM.getIntrinsic(InvStartID, ObjectPtr);
 
   // Emit a call with the size in bytes of the object.
   uint64_t Width = Size.getQuantity();
-  llvm::Value *Args[2] = {llvm::ConstantInt::getSigned(Int64Ty, Width), Addr};
+  llvm::Value *Args[2] = {llvm::ConstantInt::getSigned(Int64Ty, Width),
+                          AddrPtr};
   Builder.CreateCall(InvariantStart, Args);
 }
 
@@ -760,6 +767,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     // If we have a completely empty initializer then we do not want to create
     // the guard variable.
     ConstantAddress GuardAddr = ConstantAddress::invalid();
+    bool IsTLS = false;
     if (!ModuleInits.empty()) {
       // Create the guard var.
       llvm::GlobalVariable *Guard = new llvm::GlobalVariable(
@@ -769,9 +777,10 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
       CharUnits GuardAlign = CharUnits::One();
       Guard->setAlignment(GuardAlign.getAsAlign());
       GuardAddr = ConstantAddress(Guard, Int8Ty, GuardAlign);
+      IsTLS = Guard->isThreadLocal();
     }
-    CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, ModuleInits,
-                                                     GuardAddr);
+    CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, ModuleInits, GuardAddr,
+                                                     IsTLS);
   }
 
   // We allow for the case that a module object is added to a linked binary
@@ -1044,10 +1053,9 @@ void CodeGenFunction::GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
   FinishFunction();
 }
 
-void
-CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
-                                           ArrayRef<llvm::Function *> Decls,
-                                           ConstantAddress Guard) {
+void CodeGenFunction::GenerateCXXGlobalInitFunc(
+    llvm::Function *Fn, ArrayRef<llvm::Function *> Decls, ConstantAddress Guard,
+    bool IsTLS) {
   {
     auto NL = ApplyDebugLocation::CreateEmpty(*this);
     StartFunction(GlobalDecl(), getContext().VoidTy, Fn,
@@ -1060,11 +1068,11 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       // If we have a guard variable, check whether we've already performed
       // these initializations. This happens for TLS initialization functions.
       Address GuardAddr = Guard;
-      if (auto *GV = dyn_cast<llvm::GlobalValue>(Guard.getPointer()))
-        // Get the thread-local address via intrinsic.
-        if (GV->isThreadLocal())
-          GuardAddr = GuardAddr.withPointer(
-              Builder.CreateThreadLocalAddress(GV), NotKnownNonNull);
+      // Get the thread-local address via intrinsic.
+      if (IsTLS)
+        GuardAddr = GuardAddr.withPointer(
+            Builder.CreateThreadLocalAddress(Guard.getPointer()),
+            NotKnownNonNull);
       llvm::Value *GuardVal = Builder.CreateLoad(GuardAddr);
       llvm::Value *Uninit =
           Builder.CreateIsNull(GuardVal, "guard.uninitialized");
@@ -1076,26 +1084,20 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       // Mark as initialized before initializing anything else. If the
       // initializers use previously-initialized thread_local vars, that's
       // probably supposed to be OK, but the standard doesn't say.
-      if (auto *GV = dyn_cast<llvm::GlobalValue>(Guard.getPointer()))
-        // Get the thread-local address via intrinsic.
-        if (GV->isThreadLocal())
-          GuardAddr = GuardAddr.withPointer(
-              Builder.CreateThreadLocalAddress(GV), NotKnownNonNull);
+      // Get the thread-local address via intrinsic.
+      if (IsTLS)
+        GuardAddr = GuardAddr.withPointer(
+            Builder.CreateThreadLocalAddress(Guard.getPointer()),
+            NotKnownNonNull);
       Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(), 1),
                           GuardAddr);
 
       // Emit invariant start for TLS guard address.
-      if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
-        uint64_t Width =
-            CGM.getDataLayout().getTypeAllocSize(GuardVal->getType());
-        llvm::Value *TLSAddr = Guard.getPointer();
-        if (auto *GV = dyn_cast<llvm::GlobalValue>(Guard.getPointer()))
-          // Get the thread-local address via intrinsic.
-          if (GV->isThreadLocal())
-            TLSAddr = Builder.CreateThreadLocalAddress(GV);
-        Builder.CreateInvariantStart(
-            TLSAddr, llvm::ConstantInt::getSigned(Int64Ty, Width));
-      }
+      EmitInvariantStart(
+          Guard.getPointer(),
+          CharUnits::fromQuantity(
+              CGM.getDataLayout().getTypeAllocSize(GuardVal->getType())),
+          IsTLS);
     }
 
     RunCleanupsScope Scope(*this);
