@@ -175,8 +175,9 @@ function(add_compiler_rt_runtime name type)
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
-  # to allow non-LTO projects to link with it.
-  if(COMPILER_RT_HAS_FNO_LTO_FLAG)
+  # to allow non-LTO projects to link with it. GPU targets can currently only be
+  # distributed as LLVM-IR and ignore this.
+  if(COMPILER_RT_HAS_FNO_LTO_FLAG AND NOT COMPILER_RT_GPU_BUILD)
     set(NO_LTO_FLAGS "-fno-lto")
   else()
     set(NO_LTO_FLAGS "")
