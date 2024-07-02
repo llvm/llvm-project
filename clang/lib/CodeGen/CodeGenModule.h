@@ -435,7 +435,7 @@ private:
 
   // Store deferred function annotations so they can be emitted at the end with
   // most up to date ValueDecl that will have all the inherited annotations.
-  llvm::DenseMap<StringRef, const ValueDecl *> DeferredAnnotations;
+  llvm::MapVector<StringRef, const ValueDecl *> DeferredAnnotations;
 
   /// Signed constant pointers.
   void *ConstantSignedPointersByDecl = nullptr;
