@@ -157,6 +157,15 @@ New checks
   Detects variables and functions that can be marked as static or moved into
   an anonymous namespace to enforce internal linkage.
 
+- New :doc:`bugprone-move-shared-pointer-contents
+  <clang-tidy/checks/bugprone/move-shared-pointer-contents>` check.
+
+  Detects calls to move the contents out of a ``std::shared_ptr`` rather than
+  moving the pointer itself.
+  
+- New :doc:`bugprone-multi-level-implicit-pointer-conversion
+  <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check.
+
 - New :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
 
