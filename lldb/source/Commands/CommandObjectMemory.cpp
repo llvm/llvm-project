@@ -1333,6 +1333,7 @@ protected:
       case eFormatBytesWithASCII:
       case eFormatComplex:
       case eFormatEnum:
+      case eFormatEnumWithValues:
       case eFormatUnicode8:
       case eFormatUnicode16:
       case eFormatUnicode32:

@@ -160,6 +160,7 @@ TEST_F(DumpDataExtractorTest, Formats) {
   TestDump<uint16_t>(99, lldb::Format::eFormatDecimal, "99");
   // Just prints as a signed integer.
   TestDump(-1, lldb::Format::eFormatEnum, "-1");
+  TestDump(-1, lldb::Format::eFormatEnumWithValues, "-1");
   TestDump(0xcafef00d, lldb::Format::eFormatHex, "0xcafef00d");
   TestDump(0xcafef00d, lldb::Format::eFormatHexUppercase, "0xCAFEF00D");
   TestDump(0.456, lldb::Format::eFormatFloat, "0.45600000000000002");

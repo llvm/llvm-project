@@ -195,11 +195,15 @@ enum Format {
                          ///< character arrays that can contain non printable
                          ///< characters
   eFormatAddressInfo,    ///< Describe what an address points to (func + offset
-                      ///< with file/line, symbol + offset, data, etc)
-  eFormatHexFloat,    ///< ISO C99 hex float string
-  eFormatInstruction, ///< Disassemble an opcode
-  eFormatVoid,        ///< Do not print this
+                         ///< with file/line, symbol + offset, data, etc)
+  eFormatHexFloat,       ///< ISO C99 hex float string
+  eFormatInstruction,    ///< Disassemble an opcode
+  eFormatVoid,           ///< Do not print this
   eFormatUnicode8,
+  eFormatEnumWithValues, ///< Format as an enum but if the value matches one or
+                         ///< more enumerators, print the enumerator name and
+                         ///< value of those enumerators. For example "foo (1)"
+                         ///< instead of "foo".
   kNumFormats
 };
 
