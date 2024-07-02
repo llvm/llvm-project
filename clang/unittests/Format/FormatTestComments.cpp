@@ -1459,6 +1459,37 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // comment\n"
                "    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // comment\n"
                "    0x00, 0x00, 0x00, 0x00};            // comment");
+
+  // The usual 'open brace with trailing comment' behaviour is to forcibly
+  // break the trailing comment onto onto a new line -
+  FormatStyle Style = getLLVMStyle();
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  StringRef Input = "int a[2][2] = {\n"
+                    "    { // a\n"
+                    "        0, // x\n"
+                    "        1,\n"
+                    "    },\n"
+                    "    {\n"
+                    "        2,\n"
+                    "        3, // y\n"
+                    "    }\n"
+                    "};";
+  verifyFormat("int a[2][2] = {\n"
+               "    {\n"
+               "        // a\n"
+               "        0, // x\n"
+               "        1,\n"
+               "    },\n"
+               "    {\n"
+               "        2,\n"
+               "        3, // y\n"
+               "    }\n"
+               "};",
+               Input, Style);
+  // But, especially for nested, multi-dimensional initialization, allowing
+  // open braces with trailing comments can be desirable -
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
+  verifyNoChange(Input, Style);
 }
 
 TEST_F(FormatTestComments, LineCommentsAfterRightBrace) {
