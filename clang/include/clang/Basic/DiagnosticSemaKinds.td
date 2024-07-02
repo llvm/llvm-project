@@ -3547,6 +3547,12 @@ def warn_alignment_not_power_of_two : Warning<
   InGroup<DiagGroup<"non-power-of-two-alignment">>;
 def err_alignment_dependent_typedef_name : Error<
   "requested alignment is dependent but declaration is not dependent">;
+def ext_c2y_alignof_incomplete_array : Extension<
+  "'alignof' on an incomplete array type is a C2y extension">,
+  InGroup<C2y>;
+def warn_c2y_compat_alignof_incomplete_array : Warning<
+  "'alignof' on an incomplete array type is incompatible with C standards "
+  "before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def warn_alignment_builtin_useless : Warning<
   "%select{aligning a value|the result of checking whether a value is aligned}0"
