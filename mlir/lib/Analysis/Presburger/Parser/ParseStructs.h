@@ -74,9 +74,7 @@ struct CoefficientVector {
   }
 
   ArrayRef<int64_t> getCoefficients() const { return coefficients; }
-  int64_t getConstant() const {
-    return coefficients[info.getConstantIdx()];
-  }
+  int64_t getConstant() const { return coefficients[info.getConstantIdx()]; }
   size_t size() const { return coefficients.size(); }
   operator ArrayRef<int64_t>() const { return coefficients; }
   void resize(size_t size) { coefficients.resize(size); }
@@ -223,20 +221,14 @@ struct PureAffineExprImpl {
 
   constexpr bool isMod() const { return kind == DivKind::Mod; }
   constexpr bool hasDivisor() const { return divisor != 1; }
-  bool isLinear() const {
-    return nestedDivTerms.empty() && !hasDivisor();
-  }
+  bool isLinear() const { return nestedDivTerms.empty() && !hasDivisor(); }
   constexpr int64_t getDivisor() const { return divisor; }
   constexpr int64_t getMulFactor() const { return mulFactor; }
   bool isConstant() const {
     return nestedDivTerms.empty() && getLinearDividend().isConstant();
   }
-  int64_t getConstant() const {
-    return getLinearDividend().getConstant();
-  }
-  size_t hash() const {
-    return std::hash<const PureAffineExprImpl *>{}(this);
-  }
+  int64_t getConstant() const { return getLinearDividend().getConstant(); }
+  size_t hash() const { return std::hash<const PureAffineExprImpl *>{}(this); }
   ArrayRef<PureAffineExpr> getNestedDivTerms() const { return nestedDivTerms; }
 
   PureAffineExprImpl &mulConstant(int64_t c) {
