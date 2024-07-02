@@ -147,6 +147,14 @@ def cs_profile_path: Joined<["--"], "cs-profile-path=">,
 defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
+def profile_guided_function_order: Joined<["--"], "profile-guided-function-order=">,
+    MetaVarName<"<profile>">, 
+    HelpText<"Read traces from <profile> to order functions to improve startup time">,
+    Group<grp_lld>;
+def function_order_for_compression: Flag<["--"], "function-order-for-compression">,
+    HelpText<"Order functions to improve compressed size">, Group<grp_lld>;
+def data_order_for_compression: Flag<["--"], "data-order-for-compression">,
+    HelpText<"Order data to improve compressed size">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
