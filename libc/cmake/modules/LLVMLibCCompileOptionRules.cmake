@@ -50,7 +50,7 @@ function(_get_common_compile_options output_var flags)
       # being included.
       if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
         list(APPEND compile_options "-nostdlibinc")
-      else()
+      elseif(COMPILER_RESOURCE_DIR)
         list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
         list(APPEND compile_options "-nostdinc")
       endif()
