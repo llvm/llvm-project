@@ -839,6 +839,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCOS   , MVT::f80, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
     setOperationAction(ISD::FTAN   , MVT::f80, Expand);
+    setOperationAction(ISD::FASIN  , MVT::f80, Expand);
+    setOperationAction(ISD::FACOS  , MVT::f80, Expand);
+    setOperationAction(ISD::FATAN  , MVT::f80, Expand);
+    setOperationAction(ISD::FSINH  , MVT::f80, Expand);
+    setOperationAction(ISD::FCOSH  , MVT::f80, Expand);
+    setOperationAction(ISD::FTANH  , MVT::f80, Expand);
     // clang-format on
 
     setOperationAction(ISD::FFLOOR, MVT::f80, Expand);
