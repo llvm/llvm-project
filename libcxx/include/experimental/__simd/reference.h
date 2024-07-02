@@ -12,6 +12,7 @@
 
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_same.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <cstddef>
@@ -58,6 +59,32 @@ public:
   _LIBCPP_HIDE_FROM_ABI __simd_reference operator=(_Up&& __v) && noexcept {
     __set(static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
+  }
+
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() + _Up{1})>
+  __simd_reference _LIBCPP_HIDE_FROM_ABI operator++() && noexcept {
+    __set(__get() + 1);
+    return {__s_, __idx_};
+  }
+
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() + _Up{1})>
+  value_type _LIBCPP_HIDE_FROM_ABI operator++(int) && noexcept {
+    auto __r = __get();
+    __set(__get() + 1);
+    return __r;
+  }
+
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() - _Up{1})>
+  __simd_reference _LIBCPP_HIDE_FROM_ABI operator--() && noexcept {
+    __set(__get() - 1);
+    return {__s_, __idx_};
+  }
+
+  template <class _Up = value_type, class = decltype(std::declval<_Up>() - _Up{1})>
+  value_type _LIBCPP_HIDE_FROM_ABI operator--(int) && noexcept {
+    auto __r = __get();
+    __set(__get() - 1);
+    return __r;
   }
 
   // Note: This approach might not fully align with the specification,
