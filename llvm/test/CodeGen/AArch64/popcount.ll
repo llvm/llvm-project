@@ -3,6 +3,12 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+neon | FileCheck %s --check-prefixes=CHECK,NEON
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+neon,+dotprod | FileCheck %s --check-prefixes=CHECK,DOT
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+sve | FileCheck %s --check-prefixes=CHECK,SVE
+; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=GISEL
+; RUN: llc < %s -O0 -global-isel -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=GISELO0
+; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown -mattr=+neon | FileCheck %s --check-prefixes=GISEL,NEON-GISEL
+; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown -mattr=+neon,+dotprod | FileCheck %s --check-prefixes=GISEL,DOT-GISEL
+; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown -mattr=+sve | FileCheck %s --check-prefixes=GISEL,SVE-GISEL
+
 
 ; Function Attrs: nobuiltin nounwind readonly
 define i8 @popcount128(ptr nocapture nonnull readonly %0) {
@@ -25,6 +31,24 @@ define i8 @popcount128(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    uaddlv h0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: popcount128:
+; GISEL:       // %bb.0: // %Entry
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    cnt v0.16b, v0.16b
+; GISEL-NEXT:    uaddlv h0, v0.16b
+; GISEL-NEXT:    fmov w0, s0
+; GISEL-NEXT:    ret
+;
+; GISELO0-LABEL: popcount128:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    ldr q0, [x0]
+; GISELO0-NEXT:    cnt v0.16b, v0.16b
+; GISELO0-NEXT:    uaddlv h0, v0.16b
+; GISELO0-NEXT:    // kill: def $q0 killed $h0
+; GISELO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; GISELO0-NEXT:    fmov w0, s0
+; GISELO0-NEXT:    ret
 Entry:
   %1 = load i128, ptr %0, align 16
   %2 = tail call i128 @llvm.ctpop.i128(i128 %1)
@@ -86,6 +110,57 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: popcount256:
+; GISEL:       // %bb.0: // %Entry
+; GISEL-NEXT:    ldp x8, x9, [x0, #16]
+; GISEL-NEXT:    mov v0.d[0], x8
+; GISEL-NEXT:    ldp x8, x10, [x0]
+; GISEL-NEXT:    mov v1.d[0], x8
+; GISEL-NEXT:    mov v0.d[1], x9
+; GISEL-NEXT:    mov v1.d[1], x10
+; GISEL-NEXT:    cnt v0.16b, v0.16b
+; GISEL-NEXT:    cnt v1.16b, v1.16b
+; GISEL-NEXT:    uaddlv h0, v0.16b
+; GISEL-NEXT:    uaddlv h1, v1.16b
+; GISEL-NEXT:    mov w8, v0.s[0]
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    add x0, x8, w9, uxtw
+; GISEL-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; GISEL-NEXT:    ret
+;
+; GISELO0-LABEL: popcount256:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    ldr x11, [x0]
+; GISELO0-NEXT:    ldr x10, [x0, #8]
+; GISELO0-NEXT:    ldr x9, [x0, #16]
+; GISELO0-NEXT:    ldr x8, [x0, #24]
+; GISELO0-NEXT:    // implicit-def: $q1
+; GISELO0-NEXT:    mov v1.d[0], x11
+; GISELO0-NEXT:    mov v1.d[1], x10
+; GISELO0-NEXT:    // implicit-def: $q0
+; GISELO0-NEXT:    mov v0.d[0], x9
+; GISELO0-NEXT:    mov v0.d[1], x8
+; GISELO0-NEXT:    cnt v1.16b, v1.16b
+; GISELO0-NEXT:    uaddlv h1, v1.16b
+; GISELO0-NEXT:    // kill: def $q1 killed $h1
+; GISELO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; GISELO0-NEXT:    fmov w0, s1
+; GISELO0-NEXT:    mov w10, wzr
+; GISELO0-NEXT:    mov w9, w0
+; GISELO0-NEXT:    mov w8, w10
+; GISELO0-NEXT:    bfi x9, x8, #32, #32
+; GISELO0-NEXT:    cnt v0.16b, v0.16b
+; GISELO0-NEXT:    uaddlv h0, v0.16b
+; GISELO0-NEXT:    // kill: def $q0 killed $h0
+; GISELO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; GISELO0-NEXT:    fmov w0, s0
+; GISELO0-NEXT:    mov w8, w0
+; GISELO0-NEXT:    // kill: def $x10 killed $w10
+; GISELO0-NEXT:    bfi x8, x10, #32, #32
+; GISELO0-NEXT:    adds x8, x8, x9
+; GISELO0-NEXT:    mov w0, w8
+; GISELO0-NEXT:    ret
 Entry:
   %1 = load i256, ptr %0, align 16
   %2 = tail call i256 @llvm.ctpop.i256(i256 %1)
@@ -125,6 +200,33 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK-NEXT:    mov x1, v0.d[1]
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: popcount1x128:
+; GISEL:       // %bb.0: // %Entry
+; GISEL-NEXT:    mov v0.d[0], x0
+; GISEL-NEXT:    mov v0.d[1], x1
+; GISEL-NEXT:    mov x1, xzr
+; GISEL-NEXT:    cnt v0.16b, v0.16b
+; GISEL-NEXT:    uaddlv h0, v0.16b
+; GISEL-NEXT:    mov w0, v0.s[0]
+; GISEL-NEXT:    ret
+;
+; GISELO0-LABEL: popcount1x128:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    // implicit-def: $q0
+; GISELO0-NEXT:    mov v0.d[0], x0
+; GISELO0-NEXT:    mov v0.d[1], x1
+; GISELO0-NEXT:    cnt v0.16b, v0.16b
+; GISELO0-NEXT:    uaddlv h0, v0.16b
+; GISELO0-NEXT:    // kill: def $q0 killed $h0
+; GISELO0-NEXT:    mov x1, xzr
+; GISELO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; GISELO0-NEXT:    fmov w0, s0
+; GISELO0-NEXT:    mov w8, wzr
+; GISELO0-NEXT:    // kill: def $x0 killed $w0
+; GISELO0-NEXT:    // kill: def $x8 killed $w8
+; GISELO0-NEXT:    bfi x0, x8, #32, #32
+; GISELO0-NEXT:    ret
 Entry:
   %1 = tail call <1 x i128> @llvm.ctpop.v1i128(<1 x i128> %0)
   ret <1 x i128> %1
@@ -165,6 +267,39 @@ define <2 x i64> @popcount2x64(<2 x i64> %0) {
 ; SVE-NEXT:    uaddlp v0.4s, v0.8h
 ; SVE-NEXT:    uaddlp v0.2d, v0.4s
 ; SVE-NEXT:    ret
+;
+; GISELO0-LABEL: popcount2x64:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    cnt v0.16b, v0.16b
+; GISELO0-NEXT:    uaddlp v0.8h, v0.16b
+; GISELO0-NEXT:    uaddlp v0.4s, v0.8h
+; GISELO0-NEXT:    uaddlp v0.2d, v0.4s
+; GISELO0-NEXT:    ret
+;
+; NEON-GISEL-LABEL: popcount2x64:
+; NEON-GISEL:       // %bb.0: // %Entry
+; NEON-GISEL-NEXT:    cnt v0.16b, v0.16b
+; NEON-GISEL-NEXT:    uaddlp v0.8h, v0.16b
+; NEON-GISEL-NEXT:    uaddlp v0.4s, v0.8h
+; NEON-GISEL-NEXT:    uaddlp v0.2d, v0.4s
+; NEON-GISEL-NEXT:    ret
+;
+; DOT-GISEL-LABEL: popcount2x64:
+; DOT-GISEL:       // %bb.0: // %Entry
+; DOT-GISEL-NEXT:    movi v1.2d, #0000000000000000
+; DOT-GISEL-NEXT:    cnt v0.16b, v0.16b
+; DOT-GISEL-NEXT:    movi v2.16b, #1
+; DOT-GISEL-NEXT:    udot v1.4s, v2.16b, v0.16b
+; DOT-GISEL-NEXT:    uaddlp v0.2d, v1.4s
+; DOT-GISEL-NEXT:    ret
+;
+; SVE-GISEL-LABEL: popcount2x64:
+; SVE-GISEL:       // %bb.0: // %Entry
+; SVE-GISEL-NEXT:    cnt v0.16b, v0.16b
+; SVE-GISEL-NEXT:    uaddlp v0.8h, v0.16b
+; SVE-GISEL-NEXT:    uaddlp v0.4s, v0.8h
+; SVE-GISEL-NEXT:    uaddlp v0.2d, v0.4s
+; SVE-GISEL-NEXT:    ret
 Entry:
   %1 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   ret <2 x i64> %1
@@ -192,6 +327,26 @@ define <1 x i64> @popcount1x64(<1 x i64> %0) {
 ; CHECK-NEXT:    uaddlp v0.2s, v0.4h
 ; CHECK-NEXT:    uaddlp v0.1d, v0.2s
 ; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: popcount1x64:
+; GISEL:       // %bb.0: // %Entry
+; GISEL-NEXT:    cnt v0.8b, v0.8b
+; GISEL-NEXT:    uaddlv h0, v0.8b
+; GISEL-NEXT:    mov w8, v0.s[0]
+; GISEL-NEXT:    fmov d0, x8
+; GISEL-NEXT:    ret
+;
+; GISELO0-LABEL: popcount1x64:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    fmov x0, d0
+; GISELO0-NEXT:    fmov d0, x0
+; GISELO0-NEXT:    cnt v0.8b, v0.8b
+; GISELO0-NEXT:    uaddlv h0, v0.8b
+; GISELO0-NEXT:    // kill: def $q0 killed $h0
+; GISELO0-NEXT:    mov w8, v0.s[0]
+; GISELO0-NEXT:    // kill: def $x8 killed $w8
+; GISELO0-NEXT:    fmov d0, x8
+; GISELO0-NEXT:    ret
 Entry:
   %1 = tail call <1 x i64> @llvm.ctpop.v1i64(<1 x i64> %0)
   ret <1 x i64> %1
@@ -228,6 +383,36 @@ define <4 x i32> @popcount4x32(<4 x i32> %0) {
 ; SVE-NEXT:    uaddlp v0.8h, v0.16b
 ; SVE-NEXT:    uaddlp v0.4s, v0.8h
 ; SVE-NEXT:    ret
+;
+; GISELO0-LABEL: popcount4x32:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    cnt v0.16b, v0.16b
+; GISELO0-NEXT:    uaddlp v0.8h, v0.16b
+; GISELO0-NEXT:    uaddlp v0.4s, v0.8h
+; GISELO0-NEXT:    ret
+;
+; NEON-GISEL-LABEL: popcount4x32:
+; NEON-GISEL:       // %bb.0: // %Entry
+; NEON-GISEL-NEXT:    cnt v0.16b, v0.16b
+; NEON-GISEL-NEXT:    uaddlp v0.8h, v0.16b
+; NEON-GISEL-NEXT:    uaddlp v0.4s, v0.8h
+; NEON-GISEL-NEXT:    ret
+;
+; DOT-GISEL-LABEL: popcount4x32:
+; DOT-GISEL:       // %bb.0: // %Entry
+; DOT-GISEL-NEXT:    movi v1.2d, #0000000000000000
+; DOT-GISEL-NEXT:    cnt v0.16b, v0.16b
+; DOT-GISEL-NEXT:    movi v2.16b, #1
+; DOT-GISEL-NEXT:    udot v1.4s, v2.16b, v0.16b
+; DOT-GISEL-NEXT:    mov v0.16b, v1.16b
+; DOT-GISEL-NEXT:    ret
+;
+; SVE-GISEL-LABEL: popcount4x32:
+; SVE-GISEL:       // %bb.0: // %Entry
+; SVE-GISEL-NEXT:    cnt v0.16b, v0.16b
+; SVE-GISEL-NEXT:    uaddlp v0.8h, v0.16b
+; SVE-GISEL-NEXT:    uaddlp v0.4s, v0.8h
+; SVE-GISEL-NEXT:    ret
 Entry:
   %1 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   ret <4 x i32> %1
@@ -265,6 +450,36 @@ define <2 x i32> @popcount2x32(<2 x i32> %0) {
 ; SVE-NEXT:    uaddlp v0.4h, v0.8b
 ; SVE-NEXT:    uaddlp v0.2s, v0.4h
 ; SVE-NEXT:    ret
+;
+; GISELO0-LABEL: popcount2x32:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    cnt v0.8b, v0.8b
+; GISELO0-NEXT:    uaddlp v0.4h, v0.8b
+; GISELO0-NEXT:    uaddlp v0.2s, v0.4h
+; GISELO0-NEXT:    ret
+;
+; NEON-GISEL-LABEL: popcount2x32:
+; NEON-GISEL:       // %bb.0: // %Entry
+; NEON-GISEL-NEXT:    cnt v0.8b, v0.8b
+; NEON-GISEL-NEXT:    uaddlp v0.4h, v0.8b
+; NEON-GISEL-NEXT:    uaddlp v0.2s, v0.4h
+; NEON-GISEL-NEXT:    ret
+;
+; DOT-GISEL-LABEL: popcount2x32:
+; DOT-GISEL:       // %bb.0: // %Entry
+; DOT-GISEL-NEXT:    movi v1.2d, #0000000000000000
+; DOT-GISEL-NEXT:    cnt v0.8b, v0.8b
+; DOT-GISEL-NEXT:    movi v2.8b, #1
+; DOT-GISEL-NEXT:    udot v1.2s, v2.8b, v0.8b
+; DOT-GISEL-NEXT:    fmov d0, d1
+; DOT-GISEL-NEXT:    ret
+;
+; SVE-GISEL-LABEL: popcount2x32:
+; SVE-GISEL:       // %bb.0: // %Entry
+; SVE-GISEL-NEXT:    cnt v0.8b, v0.8b
+; SVE-GISEL-NEXT:    uaddlp v0.4h, v0.8b
+; SVE-GISEL-NEXT:    uaddlp v0.2s, v0.4h
+; SVE-GISEL-NEXT:    ret
 Entry:
   %1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %0)
   ret <2 x i32> %1
@@ -284,6 +499,18 @@ define <8 x i16> @popcount8x16(<8 x i16> %0) {
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: popcount8x16:
+; GISEL:       // %bb.0: // %Entry
+; GISEL-NEXT:    cnt v0.16b, v0.16b
+; GISEL-NEXT:    uaddlp v0.8h, v0.16b
+; GISEL-NEXT:    ret
+;
+; GISELO0-LABEL: popcount8x16:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    cnt v0.16b, v0.16b
+; GISELO0-NEXT:    uaddlp v0.8h, v0.16b
+; GISELO0-NEXT:    ret
 Entry:
   %1 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   ret <8 x i16> %1
@@ -303,6 +530,18 @@ define <4 x i16> @popcount4x16(<4 x i16> %0) {
 ; CHECK-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: popcount4x16:
+; GISEL:       // %bb.0: // %Entry
+; GISEL-NEXT:    cnt v0.8b, v0.8b
+; GISEL-NEXT:    uaddlp v0.4h, v0.8b
+; GISEL-NEXT:    ret
+;
+; GISELO0-LABEL: popcount4x16:
+; GISELO0:       // %bb.0: // %Entry
+; GISELO0-NEXT:    cnt v0.8b, v0.8b
+; GISELO0-NEXT:    uaddlp v0.4h, v0.8b
+; GISELO0-NEXT:    ret
 Entry:
   %1 = tail call <4 x i16> @llvm.ctpop.v4i16(<4 x i16> %0)
   ret <4 x i16> %1
