@@ -14,6 +14,7 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP:       # %bb.0:
 ; ILP-NEXT:    movq %rdi, %rax
 ; ILP-NEXT:    leal (%rsi,%rsi), %ecx
+; ILP-NEXT:    addb $3, %cl
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -22,10 +23,9 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; ILP-NEXT:    addb $3, %cl
 ; ILP-NEXT:    movl %ecx, %edx
 ; ILP-NEXT:    shrb $3, %dl
-; ILP-NEXT:    andb $7, %cl
+; ILP-NEXT:    andb $24, %dl
 ; ILP-NEXT:    negb %dl
 ; ILP-NEXT:    movsbq %dl, %rdx
 ; ILP-NEXT:    movq -16(%rsp,%rdx), %rsi
@@ -60,13 +60,13 @@ define i256 @test1(i256 %a) nounwind {
 ; HYBRID-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; HYBRID-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; HYBRID-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; HYBRID-NEXT:    addl %esi, %esi
-; HYBRID-NEXT:    addb $3, %sil
-; HYBRID-NEXT:    movl %esi, %ecx
-; HYBRID-NEXT:    andb $7, %cl
-; HYBRID-NEXT:    shrb $3, %sil
-; HYBRID-NEXT:    negb %sil
-; HYBRID-NEXT:    movsbq %sil, %rdx
+; HYBRID-NEXT:    leal (%rsi,%rsi), %ecx
+; HYBRID-NEXT:    addb $3, %cl
+; HYBRID-NEXT:    movl %ecx, %edx
+; HYBRID-NEXT:    shrb $3, %dl
+; HYBRID-NEXT:    andb $24, %dl
+; HYBRID-NEXT:    negb %dl
+; HYBRID-NEXT:    movsbq %dl, %rdx
 ; HYBRID-NEXT:    movq -16(%rsp,%rdx), %rsi
 ; HYBRID-NEXT:    movq -8(%rsp,%rdx), %rdi
 ; HYBRID-NEXT:    shldq %cl, %rsi, %rdi
@@ -81,6 +81,7 @@ define i256 @test1(i256 %a) nounwind {
 ; HYBRID-NEXT:    shlq %cl, %rsi
 ; HYBRID-NEXT:    notb %cl
 ; HYBRID-NEXT:    shrq %rdx
+; HYBRID-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; HYBRID-NEXT:    shrq %cl, %rdx
 ; HYBRID-NEXT:    orq %rsi, %rdx
 ; HYBRID-NEXT:    movq %rdx, 16(%rax)
@@ -97,13 +98,13 @@ define i256 @test1(i256 %a) nounwind {
 ; BURR-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; BURR-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; BURR-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; BURR-NEXT:    addl %esi, %esi
-; BURR-NEXT:    addb $3, %sil
-; BURR-NEXT:    movl %esi, %ecx
-; BURR-NEXT:    andb $7, %cl
-; BURR-NEXT:    shrb $3, %sil
-; BURR-NEXT:    negb %sil
-; BURR-NEXT:    movsbq %sil, %rdx
+; BURR-NEXT:    leal (%rsi,%rsi), %ecx
+; BURR-NEXT:    addb $3, %cl
+; BURR-NEXT:    movl %ecx, %edx
+; BURR-NEXT:    shrb $3, %dl
+; BURR-NEXT:    andb $24, %dl
+; BURR-NEXT:    negb %dl
+; BURR-NEXT:    movsbq %dl, %rdx
 ; BURR-NEXT:    movq -16(%rsp,%rdx), %rsi
 ; BURR-NEXT:    movq -8(%rsp,%rdx), %rdi
 ; BURR-NEXT:    shldq %cl, %rsi, %rdi
@@ -118,6 +119,7 @@ define i256 @test1(i256 %a) nounwind {
 ; BURR-NEXT:    shlq %cl, %rsi
 ; BURR-NEXT:    notb %cl
 ; BURR-NEXT:    shrq %rdx
+; BURR-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; BURR-NEXT:    shrq %cl, %rdx
 ; BURR-NEXT:    orq %rsi, %rdx
 ; BURR-NEXT:    movq %rdx, 16(%rax)
@@ -126,8 +128,8 @@ define i256 @test1(i256 %a) nounwind {
 ; SRC-LABEL: test1:
 ; SRC:       # %bb.0:
 ; SRC-NEXT:    movq %rdi, %rax
-; SRC-NEXT:    addl %esi, %esi
-; SRC-NEXT:    addb $3, %sil
+; SRC-NEXT:    leal (%rsi,%rsi), %edx
+; SRC-NEXT:    addb $3, %dl
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -136,11 +138,11 @@ define i256 @test1(i256 %a) nounwind {
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; SRC-NEXT:    movl %esi, %edx
-; SRC-NEXT:    andb $7, %dl
-; SRC-NEXT:    shrb $3, %sil
-; SRC-NEXT:    negb %sil
-; SRC-NEXT:    movsbq %sil, %rsi
+; SRC-NEXT:    movl %edx, %ecx
+; SRC-NEXT:    shrb $3, %cl
+; SRC-NEXT:    andb $24, %cl
+; SRC-NEXT:    negb %cl
+; SRC-NEXT:    movsbq %cl, %rsi
 ; SRC-NEXT:    movq -16(%rsp,%rsi), %rdi
 ; SRC-NEXT:    movq %rdi, %r8
 ; SRC-NEXT:    movl %edx, %ecx
@@ -171,6 +173,7 @@ define i256 @test1(i256 %a) nounwind {
 ; LIN-NEXT:    addb $3, %dl
 ; LIN-NEXT:    movl %edx, %ecx
 ; LIN-NEXT:    shrb $3, %cl
+; LIN-NEXT:    andb $24, %cl
 ; LIN-NEXT:    negb %cl
 ; LIN-NEXT:    movsbq %cl, %rsi
 ; LIN-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -182,7 +185,6 @@ define i256 @test1(i256 %a) nounwind {
 ; LIN-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; LIN-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; LIN-NEXT:    movq -32(%rsp,%rsi), %rdi
-; LIN-NEXT:    andb $7, %dl
 ; LIN-NEXT:    movq %rdi, %r8
 ; LIN-NEXT:    movl %edx, %ecx
 ; LIN-NEXT:    shlq %cl, %r8

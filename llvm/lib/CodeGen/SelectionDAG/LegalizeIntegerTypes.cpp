@@ -4530,14 +4530,35 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
   SDValue ShAmt = N->getOperand(1);
   EVT ShAmtVT = ShAmt.getValueType();
 
-  // This legalization is optimal when the shift is by a multiple of byte width,
-  //   %x * 8 <-> %x << 3   so 3 low bits should be be known zero.
-  bool ShiftByByteMultiple =
-      DAG.computeKnownBits(ShAmt).countMinTrailingZeros() >= 3;
+  EVT LoadStoreVT = VT;
+  do {
+    LoadStoreVT = TLI.getTypeToTransformTo(*DAG.getContext(), LoadStoreVT);
+  } while (!TLI.isTypeLegal(LoadStoreVT));
+
+  const unsigned KnownTrailingZeros =
+      DAG.computeKnownBits(ShAmt).countMinTrailingZeros();
+
+  const Align LoadStoreAlign = [&]() -> Align {
+    unsigned IsFast = 0;
+    const bool AllowsFastMisalignedMemoryAccesses =
+        TLI.allowsMisalignedMemoryAccesses(
+            LoadStoreVT, /*AddrSpace=*/DAG.getDataLayout().getAllocaAddrSpace(),
+            /*Alignment=*/Align(LoadStoreVT.getStoreSize()),
+            /*Flags=*/MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
+            &IsFast) &&
+        IsFast;
+    if (AllowsFastMisalignedMemoryAccesses && KnownTrailingZeros >= 3)
+      return Align(1);
+
+    return DAG.getReducedAlign(LoadStoreVT, /*UseABI=*/false);
+  }();
+
+  const unsigned ShiftUnitInBits = LoadStoreAlign.value() * 8;
+  const bool IsOneStepShift = KnownTrailingZeros >= Log2_32(ShiftUnitInBits);
 
   // If we can't do it as one step, we'll have two uses of shift amount,
   // and thus must freeze it.
-  if (!ShiftByByteMultiple)
+  if (!IsOneStepShift)
     ShAmt = DAG.getFreeze(ShAmt);
 
   unsigned VTBitWidth = VT.getScalarSizeInBits();
@@ -4551,8 +4572,7 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
 
   // Get a temporary stack slot 2x the width of our VT.
   // FIXME: reuse stack slots?
-  // FIXME: should we be more picky about alignment?
-  Align StackSlotAlignment(1);
+  Align StackSlotAlignment(LoadStoreAlign);
   SDValue StackPtr = DAG.CreateStackTemporary(
       TypeSize::getFixed(StackSlotByteWidth), StackSlotAlignment);
   EVT PtrTy = StackPtr.getValueType();
@@ -4577,17 +4597,26 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
   Ch = DAG.getStore(Ch, dl, Init, StackPtr, StackPtrInfo, StackSlotAlignment);
 
   // Now, compute the full-byte offset into stack slot from where we can load.
-  // We have shift amount, which is in bits, but in multiples of byte.
-  // So just divide by CHAR_BIT.
+  // We have shift amount, which is in bits. Offset should point to an aligned
+  // address.
   SDNodeFlags Flags;
-  if (ShiftByByteMultiple)
+
+  if (IsOneStepShift)
     Flags.setExact(true);
-  SDValue ByteOffset = DAG.getNode(ISD::SRL, dl, ShAmtVT, ShAmt,
-                                   DAG.getConstant(3, dl, ShAmtVT), Flags);
+  SDValue SrlTmp = DAG.getNode(
+      ISD::SRL, dl, ShAmtVT, ShAmt,
+      DAG.getConstant(Log2_32(ShiftUnitInBits), dl, ShAmtVT), Flags);
+  SDValue OffsetInBits =
+      DAG.getNode(ISD::SHL, dl, ShAmtVT, SrlTmp,
+                  DAG.getConstant(Log2_32(ShiftUnitInBits), dl, ShAmtVT));
+
+  Flags.setExact(true);
+  SDValue Offset = DAG.getNode(ISD::SRL, dl, ShAmtVT, OffsetInBits,
+                               DAG.getConstant(3, dl, ShAmtVT), Flags);
   // And clamp it, because OOB load is an immediate UB,
   // while shift overflow would have *just* been poison.
-  ByteOffset = DAG.getNode(ISD::AND, dl, ShAmtVT, ByteOffset,
-                           DAG.getConstant(VTByteWidth - 1, dl, ShAmtVT));
+  Offset = DAG.getNode(ISD::AND, dl, ShAmtVT, Offset,
+                       DAG.getConstant(VTByteWidth - 1, dl, ShAmtVT));
   // We have exactly two strategies on indexing into stack slot here:
   // 1. upwards starting from the beginning of the slot
   // 2. downwards starting from the middle of the slot
@@ -4603,23 +4632,25 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
   } else {
     AdjStackPtr = DAG.getMemBasePlusOffset(
         StackPtr, DAG.getConstant(VTByteWidth, dl, PtrTy), dl);
-    ByteOffset = DAG.getNegative(ByteOffset, dl, ShAmtVT);
+    Offset = DAG.getNegative(Offset, dl, ShAmtVT);
   }
 
   // Get the pointer somewhere into the stack slot from which we need to load.
-  ByteOffset = DAG.getSExtOrTrunc(ByteOffset, dl, PtrTy);
-  AdjStackPtr = DAG.getMemBasePlusOffset(AdjStackPtr, ByteOffset, dl);
+  Offset = DAG.getSExtOrTrunc(Offset, dl, PtrTy);
+  AdjStackPtr = DAG.getMemBasePlusOffset(AdjStackPtr, Offset, dl);
 
   // And load it! While the load is not legal, legalizing it is obvious.
-  SDValue Res = DAG.getLoad(
-      VT, dl, Ch, AdjStackPtr,
-      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), Align(1));
-  // We've performed the shift by a CHAR_BIT * [_ShAmt / CHAR_BIT_]
+  SDValue Res =
+      DAG.getLoad(VT, dl, Ch, AdjStackPtr,
+                  MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()),
+                  LoadStoreAlign);
+  // We've performed the shift by a CHAR_BIT * [ShAmt / LoadAlign]
 
-  // If we may still have a less-than-CHAR_BIT to shift by, do so now.
-  if (!ShiftByByteMultiple) {
-    SDValue ShAmtRem = DAG.getNode(ISD::AND, dl, ShAmtVT, ShAmt,
-                                   DAG.getConstant(7, dl, ShAmtVT));
+  // If we may still have a remaining bits to shift by, do so now.
+  if (!IsOneStepShift) {
+    SDValue ShAmtRem =
+        DAG.getNode(ISD::AND, dl, ShAmtVT, ShAmt,
+                    DAG.getConstant(ShiftUnitInBits - 1, dl, ShAmtVT));
     Res = DAG.getNode(N->getOpcode(), dl, VT, Res, ShAmtRem);
   }
 
