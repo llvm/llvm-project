@@ -9,7 +9,6 @@
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "Lexer.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Constraint.h"
