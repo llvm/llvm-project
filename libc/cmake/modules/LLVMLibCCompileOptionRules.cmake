@@ -46,9 +46,13 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
-      # Manually disable all standard include paths.
+      # Manually disable standard include paths to prevent system headers from
+      # being included.
       if(LIBC_C_SUPPORTS_NOSTDLIBINC)
         list(APPEND compile_options "-nostdlibinc")
+      else()
+        list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+        list(APPEND compile_options "-nostdinc")
       endif()
     endif()
 
@@ -113,10 +117,14 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
     endif()
 
-    # Manually disable all standard include paths and include the resource
-    # directory to prevent system headers from being included.
-    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-    list(APPEND compile_options "-nostdinc")
+    # Manually disable standard include paths to prevent system headers from
+    # being included.
+    if(LIBC_C_SUPPORTS_NOSTDLIBINC)
+      list(APPEND compile_options "-nostdlibinc")
+    else()
+      list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+      list(APPEND compile_options "-nostdinc")
+    endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
