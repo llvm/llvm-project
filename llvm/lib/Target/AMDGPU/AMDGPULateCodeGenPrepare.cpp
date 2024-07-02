@@ -50,6 +50,8 @@ class AMDGPULateCodeGenPrepare
   AssumptionCache *AC = nullptr;
   UniformityInfo *UA = nullptr;
 
+  SmallVector<WeakTrackingVH, 8> DeadInsts;
+
 public:
   static char ID;
 
@@ -92,8 +94,6 @@ private:
   Type *ConvertToScalar;
   /// The set of visited Instructions
   SmallPtrSet<Instruction *, 4> Visited;
-  /// The set of Instructions to be deleted
-  SmallPtrSet<Instruction *, 4> DeadInstrs;
   /// Map of Value -> Converted Value
   ValueToValueMap ValMap;
   /// Map of containing conversions from Optimal Type -> Original Type per BB.
@@ -115,10 +115,8 @@ public:
   /// Check for problematic PHI nodes or cross-bb values based on the value
   /// defined by \p I, and coerce to legal types if necessary. For problematic
   /// PHI node, we coerce all incoming values in a single invocation.
-  bool optimizeLiveType(Instruction *I);
-
-  /// Remove all instructions that have become dead (i.e. all the re-typed PHIs)
-  void removeDeadInstrs();
+  bool optimizeLiveType(Instruction *I,
+                        SmallVectorImpl<WeakTrackingVH> &DeadInsts);
 
   // Whether or not the type should be replaced to avoid inefficient
   // legalization code
@@ -163,6 +161,7 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
   if (ST.hasScalarSubwordLoads())
     return false;
 
@@ -180,20 +179,13 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
 
   bool Changed = false;
 
-  for (auto &BB : F)
-    for (Instruction &I : make_early_inc_range(BB)) {
+  for (auto &BB : reverse(F))
+    for (Instruction &I : make_early_inc_range(reverse(BB))) {
       Changed |= visit(I);
+      Changed |= LRO.optimizeLiveType(&I, DeadInsts);
     }
 
-  // TODO -- combine the loops. visitLoad instruction deletes loads, which may
-  // cause use after free in optimizeLiveType. However, deferring the deletion
-  // of those may corrupt the logic in optimizeLiveType.
-  for (auto &BB : F)
-    for (Instruction &I : make_early_inc_range(BB)) {
-      Changed |= LRO.optimizeLiveType(&I);
-    }
-
-  LRO.removeDeadInstrs();
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
   return Changed;
 }
 
@@ -283,7 +275,8 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   return Builder.CreateShuffleVector(Converted, ShuffleMask);
 }
 
-bool LiveRegOptimizer::optimizeLiveType(Instruction *I) {
+bool LiveRegOptimizer::optimizeLiveType(
+    Instruction *I, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   SmallVector<Instruction *, 4> Worklist;
   SmallPtrSet<PHINode *, 4> PhiNodes;
   SmallPtrSet<Instruction *, 4> Defs;
@@ -373,7 +366,13 @@ bool LiveRegOptimizer::optimizeLiveType(Instruction *I) {
       else
         MissingIncVal = true;
     }
-    DeadInstrs.insert(MissingIncVal ? cast<Instruction>(ValMap[Phi]) : Phi);
+    Instruction *DeadInst = Phi;
+    if (MissingIncVal) {
+      DeadInst = cast<Instruction>(ValMap[Phi]);
+      // Do not use the dead phi
+      ValMap[Phi] = Phi;
+    }
+    DeadInsts.emplace_back(DeadInst);
   }
   // Coerce back to the original type and replace the uses.
   for (Instruction *U : Uses) {
@@ -398,14 +397,6 @@ bool LiveRegOptimizer::optimizeLiveType(Instruction *I) {
   }
 
   return true;
-}
-
-void LiveRegOptimizer::removeDeadInstrs() {
-  // Remove instrs that have been marked dead after type-coercion.
-  for (auto *I : DeadInstrs) {
-    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
-    I->eraseFromParent();
-  }
 }
 
 bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
@@ -479,7 +470,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   auto *NewVal = IRB.CreateBitCast(
       IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt), IntNTy), LI.getType());
   LI.replaceAllUsesWith(NewVal);
-  RecursivelyDeleteTriviallyDeadInstructions(&LI);
+  DeadInsts.emplace_back(&LI);
 
   return true;
 }
