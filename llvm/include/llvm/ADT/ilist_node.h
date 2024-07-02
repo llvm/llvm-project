@@ -336,7 +336,7 @@ public:
   /// @name Adjacent Node Accessors
   /// @{
   /// Get the previous node, or \c nullptr for the list head.
-  NodeTy *getPrevNode() {
+  template<int = 0> NodeTy *getPrevNode() {
     // Should be separated to a reused function, but then we couldn't use auto
     // (and would need the type of the list).
     const auto &List =
@@ -345,12 +345,12 @@ public:
   }
 
   /// Get the previous node, or \c nullptr for the list head.
-  const NodeTy *getPrevNode() const {
+  template<int = 0> const NodeTy *getPrevNode() const {
     return const_cast<ilist_node_with_parent *>(this)->getPrevNode();
   }
 
   /// Get the next node, or \c nullptr for the list tail.
-  NodeTy *getNextNode() {
+  template<int = 0> NodeTy *getNextNode() {
     // Should be separated to a reused function, but then we couldn't use auto
     // (and would need the type of the list).
     const auto &List =
@@ -359,7 +359,7 @@ public:
   }
 
   /// Get the next node, or \c nullptr for the list tail.
-  const NodeTy *getNextNode() const {
+  template<int = 0> const NodeTy *getNextNode() const {
     return const_cast<ilist_node_with_parent *>(this)->getNextNode();
   }
   /// @}

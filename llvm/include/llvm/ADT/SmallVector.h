@@ -1327,9 +1327,9 @@ template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
 }
 
 // Explicit instantiations
-extern template class llvm::SmallVectorBase<uint32_t>;
+extern template class LLVM_TEMPLATE_ABI llvm::SmallVectorBase<uint32_t>;
 #if SIZE_MAX > UINT32_MAX
-extern template class llvm::SmallVectorBase<uint64_t>;
+extern template class LLVM_TEMPLATE_ABI llvm::SmallVectorBase<uint64_t>;
 #endif
 
 } // end namespace llvm

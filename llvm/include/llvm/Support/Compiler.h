@@ -114,7 +114,7 @@
 /// this attribute will be made public and visible outside of any shared library
 /// they are linked in to.
 
-#if LLVM_HAS_CPP_ATTRIBUTE(gnu::visibility)
+#if LLVM_HAS_CPP_ATTRIBUTE(gnu::visibility) && defined(__GNUC__) && !defined(__clang__)
 #define LLVM_ATTRIBUTE_VISIBILITY_HIDDEN [[gnu::visibility("hidden")]]
 #define LLVM_ATTRIBUTE_VISIBILITY_DEFAULT [[gnu::visibility("default")]]
 #elif __has_attribute(visibility)
@@ -129,14 +129,72 @@
 #if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
      (defined(__MINGW32__) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
-#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
-#define LLVM_EXTERNAL_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#else
-#define LLVM_EXTERNAL_VISIBILITY
-#endif
+#define LLVM_ALWAYS_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif defined(_WIN32)
+#define LLVM_ALWAYS_EXPORT __declspec(dllexport)
+#define LLVM_LIBRARY_VISIBILITY
 #else
 #define LLVM_LIBRARY_VISIBILITY
-#define LLVM_EXTERNAL_VISIBILITY
+#define LLVM_ALWAYS_EXPORT
+#endif
+
+/// LLVM_ABI is the main export/visibility macro to mark something as explicitly
+/// exported when llvm is built as a shared library with everything else that is 
+/// unannotated will have internal visibility.
+/// 
+/// LLVM_EXPORT_TEMPLATE is used on explicit template instantiations in source
+/// files that were declared extern in a header. This macro is only set as a 
+/// compiler export attribute on windows, on other platforms it does nothing.
+/// 
+/// LLVM_TEMPLATE_ABI is for annotating extern template declarations in headers 
+/// for both functions and classes. On windows its turned in to dllimport for 
+/// library consumers, for other platforms its a default visibility attribute.
+/// 
+/// LLVM_C_ABI is used to annotated functions and data that need to be exported 
+/// for the libllvm-c API. This used both for the llvm-c headers and for the 
+/// functions declared in the different Target's c++ source files that don't include
+/// the header forward declaring them.
+#ifndef LLVM_ABI_GENERATING_ANNOTATIONS
+// Marker to add to classes or functions in public headers that should not have
+// export macros added to them by the clang tool
+#define LLVM_ABI_NOT_EXPORTED
+#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
+#if defined(_WIN32)
+#if defined(LLVM_ABI_EXPORTS)
+#define LLVM_ABI __declspec(dllexport)
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE LLVM_ABI
+#elif defined(LLVM_DLL_IMPORT)
+#define LLVM_ABI __declspec(dllimport)
+#define LLVM_TEMPLATE_ABI __declspec(dllimport)
+#define LLVM_EXPORT_TEMPLATE
+#else
+#define LLVM_ABI
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#endif
+#define LLVM_ABI_EXPORT __declspec(dllexport)
+#elif defined(__ELF__)
+#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif defined(__MACH__) || defined(__WASM__)
+#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#endif
+#define LLVM_C_ABI LLVM_ABI
+#define LLVM_CLASS_ABI LLVM_ABI
+#else
+#define LLVM_C_ABI 
+#define LLVM_ABI
+#define LLVM_ABI_EXPORT
+#define LLVM_CLASS_ABI
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#endif
 #endif
 
 #if defined(__GNUC__)

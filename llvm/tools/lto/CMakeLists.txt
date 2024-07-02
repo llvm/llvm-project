@@ -32,6 +32,10 @@ endif()
 add_llvm_library(${LTO_LIBRARY_NAME} ${LTO_LIBRARY_TYPE} INSTALL_WITH_TOOLCHAIN
     ${SOURCES} DEPENDS intrinsics_gen)
 
+if (LLVM_BUILD_LLVM_DYLIB)
+  target_compile_definitions(${LTO_LIBRARY_NAME} PRIVATE LLVM_BUILDING_LIBLTO) 
+endif()
+
 install(FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/lto.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-c"
   COMPONENT LTO)

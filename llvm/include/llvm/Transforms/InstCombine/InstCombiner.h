@@ -44,7 +44,7 @@ class TargetTransformInfo;
 ///
 /// This class provides both the logic to recursively visit instructions and
 /// combine them.
-class LLVM_LIBRARY_VISIBILITY InstCombiner {
+class LLVM_ABI_NOT_EXPORTED InstCombiner {
   /// Only used to call target specific intrinsic combining.
   /// It must **NOT** be used for any other purpose, as InstCombine is a
   /// target-independent canonicalization transform.

@@ -1080,6 +1080,7 @@ public:
   void printrWithDepth(raw_ostream &O, const SelectionDAG *G = nullptr,
                        unsigned depth = 100) const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump this node, for debugging.
   void dump() const;
 
@@ -1109,6 +1110,7 @@ public:
   ///
   void dumprWithDepth(const SelectionDAG *G = nullptr,
                       unsigned depth = 100) const;
+#endif
 
   /// Gather unique data for the node.
   void Profile(FoldingSetNodeID &ID) const;
@@ -1235,6 +1237,7 @@ inline const DebugLoc &SDValue::getDebugLoc() const {
   return Node->getDebugLoc();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 inline void SDValue::dump() const {
   return Node->dump();
 }
@@ -1250,6 +1253,7 @@ inline void SDValue::dumpr() const {
 inline void SDValue::dumpr(const SelectionDAG *G) const {
   return Node->dumpr(G);
 }
+#endif
 
 // Define inline functions from the SDUse class.
 
