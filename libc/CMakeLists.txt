@@ -385,6 +385,7 @@ add_subdirectory(config)
 add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
+add_subdirectory(newhdrgen)
 
 if(LLVM_LIBC_FULL_BUILD)
   # The startup system can potentially depend on the library components so add

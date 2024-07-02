@@ -4,7 +4,6 @@ from pathlib import Path
 import os
 import argparse
 
-
 class TestHeaderGenIntegration(unittest.TestCase):
     def setUp(self):
         parser = argparse.ArgumentParser(
@@ -19,16 +18,21 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.output_dir = Path(
             args.output_dir
             if args.output_dir
-            else output_dir_env if output_dir_env else "libc/newhdrgen/tests/output"
+            else output_dir_env 
+            if output_dir_env 
+            else "libc/newhdrgen/tests/output"
         )
 
         self.maxDiff = None
+        self.source_dir = Path(__file__).resolve().parent.parent.parent.parent  # Adjust based on your directory structure
 
     def run_script(self, yaml_file, h_def_file, output_dir):
+        yaml_file = self.source_dir / yaml_file
+        h_def_file = self.source_dir / h_def_file
         result = subprocess.run(
             [
                 "python3",
-                "libc/newhdrgen/yaml_to_classes.py",
+                str(self.source_dir / "libc/newhdrgen/yaml_to_classes.py"),
                 str(yaml_file),
                 str(h_def_file),
                 "--output_dir",
@@ -48,30 +52,20 @@ class TestHeaderGenIntegration(unittest.TestCase):
         with expected_file.open("r") as exp_file:
             exp_content = exp_file.read()
 
-        self.assertEqual(
-            gen_content,
-            exp_content,
-            f"Generated file {generated_file} does not match expected file {expected_file}",
-        )
+        self.assertEqual(gen_content, exp_content)
 
     def test_generate_header(self):
-        yaml_file = Path("libc/newhdrgen/tests/input/test_small.yaml")
-        h_def_file = Path("libc/newhdrgen/tests/input/test_small.h.def")
-        expected_output_file = Path(
-            "libc/newhdrgen/tests/expected_output/test_header.h"
-        )
+        yaml_file = "libc/newhdrgen/tests/input/test_small.yaml"
+        h_def_file = "libc/newhdrgen/tests/input/test_small.h.def"
+        expected_output_file = self.source_dir / "libc/newhdrgen/tests/expected_output/test_header.h"
         output_file = self.output_dir / "test_small.h"
 
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True)
 
-        try:
-            self.run_script(yaml_file, h_def_file, self.output_dir)
-        except subprocess.CalledProcessError as e:
-            self.fail(f"Subprocess failed with return code {e.returncode}")
+        self.run_script(yaml_file, h_def_file, self.output_dir)
 
         self.compare_files(output_file, expected_output_file)
-
 
 if __name__ == "__main__":
     unittest.main()
