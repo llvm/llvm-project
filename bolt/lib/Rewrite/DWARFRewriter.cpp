@@ -646,6 +646,15 @@ void DWARFRewriter::updateDebugInfo() {
 
     } else {
       LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>();
+      if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
+        assert(LegacyRangesWritersByCU.count(*DWOId) == 0 &&
+               "LegacyRangeLists writer for DWO unit already exists.");
+        auto LegacyRangesSectionWriterByCU =
+            std::make_unique<DebugRangesSectionWriter>();
+        LegacyRangesSectionWriterByCU->initSection(CU);
+        LegacyRangesWritersByCU[*DWOId] =
+            std::move(LegacyRangesSectionWriterByCU);
+      }
     }
     return LocListWritersByCU[CUIndex++].get();
   };
@@ -693,6 +702,7 @@ void DWARFRewriter::updateDebugInfo() {
       if (Unit->getVersion() >= 5) {
         TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
       } else {
+        TempRangesSectionWriter = LegacyRangesWritersByCU[*DWOId].get();
         RangesBase = RangesSectionWriter->getSectionOffset();
         setDwoRangesBase(*DWOId, *RangesBase);
       }
@@ -1274,9 +1284,17 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
     }
 
     if (RangesBaseInfo) {
-      DIEBldr.replaceValue(&Die, RangesBaseInfo.getAttribute(),
-                           RangesBaseInfo.getForm(),
-                           DIEInteger(static_cast<uint32_t>(*RangesBase)));
+      if (RangesBaseInfo.getAttribute() == dwarf::DW_AT_GNU_ranges_base) {
+        auto RangesWriterIterator =
+            LegacyRangesWritersByCU.find(*Unit.getDWOId());
+        assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
+               "RangesWriter does not exist for DWOId");
+        RangesWriterIterator->second->setDie(&Die);
+      } else {
+        DIEBldr.replaceValue(&Die, RangesBaseInfo.getAttribute(),
+                             RangesBaseInfo.getForm(),
+                             DIEInteger(static_cast<uint32_t>(*RangesBase)));
+      }
       RangesBase = std::nullopt;
     }
   }
@@ -1294,20 +1312,12 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
         RangesAttrInfo.getForm() == dwarf::DW_FORM_sec_offset)
       NeedConverted = true;
 
-    uint64_t CurRangeBase = 0;
-    if (Unit.isDWOUnit()) {
-      if (std::optional<uint64_t> DWOId = Unit.getDWOId())
-        CurRangeBase = getDwoRangesBase(*DWOId);
-      else
-        errs() << "BOLT-WARNING: [internal-dwarf-error]: DWOId is not found "
-                  "for DWO Unit.";
-    }
     if (NeedConverted || RangesAttrInfo.getForm() == dwarf::DW_FORM_rnglistx)
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_ranges, dwarf::DW_FORM_rnglistx,
                            DIEInteger(DebugRangesOffset));
     else
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_ranges, RangesAttrInfo.getForm(),
-                           DIEInteger(DebugRangesOffset - CurRangeBase));
+                           DIEInteger(DebugRangesOffset));
 
     if (!RangesBase) {
       if (LowPCAttrInfo &&
@@ -1324,15 +1334,21 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
 
     // If we are at this point we are in the CU/Skeleton CU, and
     // DW_AT_GNU_ranges_base or DW_AT_rnglists_base doesn't exist.
-    if (Unit.getVersion() <= 4)
+    if (Unit.getVersion() <= 4) {
       DIEBldr.addValue(&Die, dwarf::DW_AT_GNU_ranges_base, dwarf::DW_FORM_data4,
-                       DIEInteger(*RangesBase));
-    else if (Unit.getVersion() == 5)
+                       DIEInteger(INT_MAX));
+      auto RangesWriterIterator =
+          LegacyRangesWritersByCU.find(*Unit.getDWOId());
+      assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
+             "RangesWriter does not exist for DWOId");
+      RangesWriterIterator->second->setDie(&Die);
+    } else if (Unit.getVersion() == 5) {
       DIEBldr.addValue(&Die, dwarf::DW_AT_rnglists_base,
                        dwarf::DW_FORM_sec_offset, DIEInteger(*RangesBase));
-    else
+    } else {
       DIEBldr.addValue(&Die, dwarf::DW_AT_rnglists_base,
                        dwarf::DW_FORM_sec_offset, DIEInteger(*RangesBase));
+    }
     return;
   }
 
@@ -1611,6 +1627,30 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
                                          DIEStreamer &Streamer,
                                          CUOffsetMap &CUMap,
                                          const std::list<DWARFUnit *> &CUs) {
+  for (DWARFUnit *CU : CUs) {
+    if (CU->getVersion() != 4)
+      continue;
+    std::optional<uint64_t> DWOId = CU->getDWOId();
+    if (!DWOId)
+      continue;
+    auto RangesWriterIterator = LegacyRangesWritersByCU.find(*DWOId);
+    assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
+           "RangesWriter does not exist for DWOId");
+    std::unique_ptr<DebugRangesSectionWriter> &LegacyRangesWriter =
+        RangesWriterIterator->second;
+    std::optional<DIE *> Die = LegacyRangesWriter->getDie();
+    if (!Die || !Die.value())
+      continue;
+    DIEValue DvalGNUBase =
+        Die.value()->findAttribute(dwarf::DW_AT_GNU_ranges_base);
+    assert(DvalGNUBase && "GNU_ranges_base attribute does not exist for DWOId");
+    DIEBlder.replaceValue(
+        Die.value(), dwarf::DW_AT_GNU_ranges_base, DvalGNUBase.getForm(),
+        DIEInteger(LegacyRangesSectionWriter->getSectionOffset()));
+    std::unique_ptr<DebugBufferVector> RangesWritersContents =
+        LegacyRangesWriter->releaseBuffer();
+    LegacyRangesSectionWriter->appendToRangeBuffer(*RangesWritersContents);
+  }
   DIEBlder.generateAbbrevs();
   DIEBlder.finish();
   // generate debug_info and CUMap
@@ -2098,7 +2138,6 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die,
     uint64_t RangesSectionOffset, DIEValue &LowPCAttrInfo,
     DIEValue &HighPCAttrInfo, std::optional<uint64_t> RangesBase) {
-  uint32_t BaseOffset = 0;
   dwarf::Form LowForm = LowPCAttrInfo.getForm();
   dwarf::Attribute RangeBaseAttribute = dwarf::DW_AT_GNU_ranges_base;
   dwarf::Form RangesForm = dwarf::DW_FORM_sec_offset;
@@ -2113,45 +2152,40 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
                    Die.getTag() == dwarf::DW_TAG_skeleton_unit;
   if (!IsUnitDie)
     DIEBldr.deleteValue(&Die, LowPCAttrInfo.getAttribute());
-  // In DWARF4 for DW_AT_low_pc in binary DW_FORM_addr is used. In the DWO
-  // section DW_FORM_GNU_addr_index is used. So for if we are converting
-  // DW_AT_low_pc/DW_AT_high_pc and see DW_FORM_GNU_addr_index. We are
-  // converting in DWO section, and DW_AT_ranges [DW_FORM_sec_offset] is
-  // relative to DW_AT_GNU_ranges_base.
-  if (LowForm == dwarf::DW_FORM_GNU_addr_index) {
-    // Ranges are relative to DW_AT_GNU_ranges_base.
-    uint64_t CurRangeBase = 0;
-    if (std::optional<uint64_t> DWOId = Unit.getDWOId()) {
-      CurRangeBase = getDwoRangesBase(*DWOId);
+
+  // In DWARF 5 we can have DW_AT_low_pc either as DW_FORM_addr, or
+  // DW_FORM_addrx. Former is when DW_AT_rnglists_base is present. Latter is
+  // when it's absent.
+  if (IsUnitDie) {
+    if (LowForm == dwarf::DW_FORM_addrx) {
+      const uint32_t Index = AddrWriter->getIndexFromAddress(0, Unit);
+      DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
+                           LowPCAttrInfo.getForm(), DIEInteger(Index));
+    } else {
+      DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
+                           LowPCAttrInfo.getForm(), DIEInteger(0));
     }
-    BaseOffset = CurRangeBase;
-  } else {
-    // In DWARF 5 we can have DW_AT_low_pc either as DW_FORM_addr, or
-    // DW_FORM_addrx. Former is when DW_AT_rnglists_base is present. Latter is
-    // when it's absent.
-    if (IsUnitDie) {
-      if (LowForm == dwarf::DW_FORM_addrx) {
-        const uint32_t Index = AddrWriter->getIndexFromAddress(0, Unit);
-        DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
-                             LowPCAttrInfo.getForm(), DIEInteger(Index));
-      } else {
-        DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
-                             LowPCAttrInfo.getForm(), DIEInteger(0));
-      }
-    }
-    // Original CU didn't have DW_AT_*_base. We converted it's children (or
-    // dwo), so need to insert it into CU.
-    if (RangesBase)
+  }
+  // Original CU didn't have DW_AT_*_base. We converted it's children (or
+  // dwo), so need to insert it into CU.
+  if (RangesBase) {
+    if (Unit.getVersion() >= 5) {
       DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
                        DIEInteger(*RangesBase));
+    } else {
+      DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
+                       DIEInteger(INT_MAX));
+      auto RangesWriterIterator =
+          LegacyRangesWritersByCU.find(*Unit.getDWOId());
+      assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
+             "RangesWriter does not exist for DWOId");
+      RangesWriterIterator->second->setDie(&Die);
+    }
   }
 
-  uint64_t RangeAttrVal = RangesSectionOffset - BaseOffset;
-  if (Unit.getVersion() >= 5)
-    RangeAttrVal = RangesSectionOffset;
   // HighPC was conveted into DW_AT_ranges.
   // For DWARF5 we only access ranges through index.
 
   DIEBldr.replaceValue(&Die, HighPCAttrInfo.getAttribute(), dwarf::DW_AT_ranges,
-                       RangesForm, DIEInteger(RangeAttrVal));
+                       RangesForm, DIEInteger(RangesSectionOffset));
 }
