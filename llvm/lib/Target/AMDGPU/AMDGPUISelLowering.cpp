@@ -349,6 +349,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v2f64, MVT::v2f16, Expand);
 
   setTruncStoreAction(MVT::v3i32, MVT::v3i8, Expand);
+  setTruncStoreAction(MVT::v5i32, MVT::v5i8, Expand);
 
   setTruncStoreAction(MVT::v3i64, MVT::v3i32, Expand);
   setTruncStoreAction(MVT::v3i64, MVT::v3i16, Expand);
@@ -1196,7 +1197,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
       if (NumRegs == 1) {
         // This argument is not split, so the IR type is the memory type.
-        if (ArgVT.isExtended()) {
+        if (ArgVT.isExtended() || (ArgVT.isVector() && !ArgVT.isPow2VectorType())) {
           // We have an extended type, like i24, so we should just use the
           // register type.
           MemVT = RegisterVT;
