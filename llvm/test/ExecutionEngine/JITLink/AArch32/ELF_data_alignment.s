@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llvm-mc -triple=armv7-linux-gnueabi -arm-add-build-attributes -filetype=obj -o %t_armv7.o %s
 # RUN: llvm-objdump -s --section=.rodata %t_armv7.o | FileCheck --check-prefix=CHECK-OBJ %s
 # RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb \
