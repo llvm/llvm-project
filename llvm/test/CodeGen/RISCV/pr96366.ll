@@ -8,10 +8,14 @@ define i32 @f(i32 %0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    negw a0, a0
 ; CHECK-NEXT:    call mumble
 ; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    subw a0, a0, s0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %2 = sub nuw i32 0, %0

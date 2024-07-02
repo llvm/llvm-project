@@ -6,11 +6,13 @@ declare void @mumble(i32)
 define i32 @f(i32 %0) nounwind {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    neg w0, w0
 ; CHECK-NEXT:    bl mumble
-; CHECK-NEXT:    mov w0, #4 // =0x4
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    sub w0, w8, w19
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %2 = sub nuw i32 0, %0
   call void @mumble(i32 %2)
