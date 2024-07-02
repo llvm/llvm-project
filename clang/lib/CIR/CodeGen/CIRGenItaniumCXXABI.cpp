@@ -293,7 +293,7 @@ public:
   mlir::Value buildDynamicCast(CIRGenFunction &CGF, mlir::Location Loc,
                                QualType SrcRecordTy, QualType DestRecordTy,
                                mlir::cir::PointerType DestCIRTy, bool isRefCast,
-                               mlir::Value Src) override;
+                               Address Src) override;
 
   /**************************** RTTI Uniqueness ******************************/
 protected:
@@ -2209,14 +2209,18 @@ static mlir::cir::FuncOp getBadCastFn(CIRGenFunction &CGF) {
   return CGF.CGM.createRuntimeFunction(FTy, "__cxa_bad_cast");
 }
 
-void CIRGenItaniumCXXABI::buildBadCastCall(CIRGenFunction &CGF,
-                                           mlir::Location loc) {
+static void buildCallToBadCast(CIRGenFunction &CGF, mlir::Location loc) {
   // TODO(cir): set the calling convention to the runtime function.
   assert(!MissingFeatures::setCallingConv());
 
   CGF.buildRuntimeCall(loc, getBadCastFn(CGF));
   CGF.getBuilder().create<mlir::cir::UnreachableOp>(loc);
   CGF.getBuilder().clearInsertionPoint();
+}
+
+void CIRGenItaniumCXXABI::buildBadCastCall(CIRGenFunction &CGF,
+                                           mlir::Location loc) {
+  buildCallToBadCast(CGF, loc);
 }
 
 static CharUnits computeOffsetHint(ASTContext &Context,
@@ -2290,14 +2294,146 @@ static mlir::cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &CGF) {
   return CGF.CGM.createRuntimeFunction(FTy, "__dynamic_cast");
 }
 
-static mlir::Value buildDynamicCastToVoid(CIRGenFunction &CGF,
-                                          mlir::Location Loc,
-                                          QualType SrcRecordTy,
-                                          mlir::Value Src) {
+static Address buildDynamicCastToVoid(CIRGenFunction &CGF, mlir::Location Loc,
+                                      QualType SrcRecordTy, Address Src) {
   auto vtableUsesRelativeLayout =
       CGF.CGM.getItaniumVTableContext().isRelativeLayout();
-  return CGF.getBuilder().createDynCastToVoid(Loc, Src,
-                                              vtableUsesRelativeLayout);
+  auto ptr = CGF.getBuilder().createDynCastToVoid(Loc, Src.getPointer(),
+                                                  vtableUsesRelativeLayout);
+  return Address{ptr, Src.getAlignment()};
+}
+
+static mlir::Value
+buildExactDynamicCast(CIRGenItaniumCXXABI &ABI, CIRGenFunction &CGF,
+                      mlir::Location Loc, QualType SrcRecordTy,
+                      QualType DestRecordTy, mlir::cir::PointerType DestCIRTy,
+                      bool IsRefCast, Address Src) {
+  // Find all the inheritance paths from SrcRecordTy to DestRecordTy.
+  const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
+  const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
+  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                     /*DetectVirtual=*/false);
+  (void)DestDecl->isDerivedFrom(SrcDecl, Paths);
+
+  // Find an offset within `DestDecl` where a `SrcDecl` instance and its vptr
+  // might appear.
+  std::optional<CharUnits> Offset;
+  for (const CXXBasePath &Path : Paths) {
+    // dynamic_cast only finds public inheritance paths.
+    if (Path.Access != AS_public)
+      continue;
+
+    CharUnits PathOffset;
+    for (const CXXBasePathElement &PathElement : Path) {
+      // Find the offset along this inheritance step.
+      const CXXRecordDecl *Base =
+          PathElement.Base->getType()->getAsCXXRecordDecl();
+      if (PathElement.Base->isVirtual()) {
+        // For a virtual base class, we know that the derived class is exactly
+        // DestDecl, so we can use the vbase offset from its layout.
+        const ASTRecordLayout &L =
+            CGF.getContext().getASTRecordLayout(DestDecl);
+        PathOffset = L.getVBaseClassOffset(Base);
+      } else {
+        const ASTRecordLayout &L =
+            CGF.getContext().getASTRecordLayout(PathElement.Class);
+        PathOffset += L.getBaseClassOffset(Base);
+      }
+    }
+
+    if (!Offset)
+      Offset = PathOffset;
+    else if (Offset != PathOffset) {
+      // Base appears in at least two different places. Find the most-derived
+      // object and see if it's a DestDecl. Note that the most-derived object
+      // must be at least as aligned as this base class subobject, and must
+      // have a vptr at offset 0.
+      Src = buildDynamicCastToVoid(CGF, Loc, SrcRecordTy, Src);
+      SrcDecl = DestDecl;
+      Offset = CharUnits::Zero();
+      break;
+    }
+  }
+
+  if (!Offset) {
+    // If there are no public inheritance paths, the cast always fails.
+    mlir::Value NullPtrValue = CGF.getBuilder().getNullPtr(DestCIRTy, Loc);
+    if (IsRefCast) {
+      auto *CurrentRegion = CGF.getBuilder().getBlock()->getParent();
+      buildCallToBadCast(CGF, Loc);
+
+      // The call to bad_cast will terminate the block. Create a new block to
+      // hold any follow up code.
+      CGF.getBuilder().createBlock(CurrentRegion, CurrentRegion->end());
+    }
+
+    return NullPtrValue;
+  }
+
+  // Compare the vptr against the expected vptr for the destination type at
+  // this offset. Note that we do not know what type Src points to in the case
+  // where the derived class multiply inherits from the base class so we can't
+  // use GetVTablePtr, so we load the vptr directly instead.
+
+  mlir::Value ExpectedVPtr =
+      ABI.getVTableAddressPoint(BaseSubobject(SrcDecl, *Offset), DestDecl);
+
+  // TODO(cir): handle address space here.
+  assert(!MissingFeatures::addressSpace());
+  mlir::Type VPtrTy = ExpectedVPtr.getType();
+  mlir::Type VPtrPtrTy = CGF.getBuilder().getPointerTo(VPtrTy);
+  Address SrcVPtrPtr(
+      CGF.getBuilder().createBitcast(Src.getPointer(), VPtrPtrTy),
+      Src.getAlignment());
+  mlir::Value SrcVPtr = CGF.getBuilder().createLoad(Loc, SrcVPtrPtr);
+
+  // TODO(cir): decorate SrcVPtr with TBAA info.
+  assert(!MissingFeatures::tbaa());
+
+  mlir::Value Success = CGF.getBuilder().createCompare(
+      Loc, mlir::cir::CmpOpKind::eq, SrcVPtr, ExpectedVPtr);
+
+  auto buildCastResult = [&] {
+    if (Offset->isZero())
+      return CGF.getBuilder().createBitcast(Src.getPointer(), DestCIRTy);
+
+    // TODO(cir): handle address space here.
+    assert(!MissingFeatures::addressSpace());
+    mlir::Type U8PtrTy =
+        CGF.getBuilder().getPointerTo(CGF.getBuilder().getUInt8Ty());
+
+    mlir::Value StrideToApply = CGF.getBuilder().getConstInt(
+        Loc, CGF.getBuilder().getUInt64Ty(), Offset->getQuantity());
+    mlir::Value SrcU8Ptr =
+        CGF.getBuilder().createBitcast(Src.getPointer(), U8PtrTy);
+    mlir::Value ResultU8Ptr = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
+        Loc, U8PtrTy, SrcU8Ptr, StrideToApply);
+    return CGF.getBuilder().createBitcast(ResultU8Ptr, DestCIRTy);
+  };
+
+  if (IsRefCast) {
+    mlir::Value Failed = CGF.getBuilder().createNot(Success);
+    CGF.getBuilder().create<mlir::cir::IfOp>(
+        Loc, Failed, /*withElseRegion=*/false,
+        [&](mlir::OpBuilder &, mlir::Location) {
+          buildCallToBadCast(CGF, Loc);
+        });
+    return buildCastResult();
+  }
+
+  return CGF.getBuilder()
+      .create<mlir::cir::TernaryOp>(
+          Loc, Success,
+          [&](mlir::OpBuilder &, mlir::Location) {
+            auto Result = buildCastResult();
+            CGF.getBuilder().createYield(Loc, Result);
+          },
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value NullPtrValue =
+                CGF.getBuilder().getNullPtr(DestCIRTy, Loc);
+            CGF.getBuilder().createYield(Loc, NullPtrValue);
+          })
+      .getResult();
 }
 
 static mlir::cir::DynamicCastInfoAttr
@@ -2328,14 +2464,21 @@ buildDynamicCastInfo(CIRGenFunction &CGF, mlir::Location Loc,
 mlir::Value CIRGenItaniumCXXABI::buildDynamicCast(
     CIRGenFunction &CGF, mlir::Location Loc, QualType SrcRecordTy,
     QualType DestRecordTy, mlir::cir::PointerType DestCIRTy, bool isRefCast,
-    mlir::Value Src) {
+    Address Src) {
   bool isCastToVoid = DestRecordTy.isNull();
   assert((!isCastToVoid || !isRefCast) && "cannot cast to void reference");
 
   if (isCastToVoid)
-    return buildDynamicCastToVoid(CGF, Loc, SrcRecordTy, Src);
+    return buildDynamicCastToVoid(CGF, Loc, SrcRecordTy, Src).getPointer();
+
+  // If the destination is effectively final, the cast succeeds if and only
+  // if the dynamic type of the pointer is exactly the destination type.
+  if (DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
+      CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
+    return buildExactDynamicCast(*this, CGF, Loc, SrcRecordTy, DestRecordTy,
+                                 DestCIRTy, isRefCast, Src);
 
   auto castInfo = buildDynamicCastInfo(CGF, Loc, SrcRecordTy, DestRecordTy);
-  return CGF.getBuilder().createDynCast(Loc, Src, DestCIRTy, isRefCast,
-                                        castInfo);
+  return CGF.getBuilder().createDynCast(Loc, Src.getPointer(), DestCIRTy,
+                                        isRefCast, castInfo);
 }
