@@ -45,7 +45,7 @@ add_or_sub(InType x, InType y) {
   InFPBits x_bits(x);
   InFPBits y_bits(y);
 
-  bool is_effectively_add = (x_bits.sign() == y_bits.sign()) ^ IsSub;
+  bool is_effectively_add = (x_bits.sign() == y_bits.sign()) != IsSub;
 
   if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
                     x_bits.is_zero() || y_bits.is_zero())) {
