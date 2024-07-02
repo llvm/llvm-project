@@ -29,7 +29,9 @@ public:
     static_assert(kMaxSizeT <= std::numeric_limits<uint8_t>::max(),
                   "FixedWord::kMaxSizeT cannot fit in a uint8_t.");
     assert(S <= kMaxSize);
-    memcpy(Data, B, S);
+    // memcpy cannot be passed empty slices when the pointers are null.
+    if (S)
+      memcpy(Data, B, S);
     Size = static_cast<uint8_t>(S);
   }
 
