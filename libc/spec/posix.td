@@ -24,6 +24,10 @@ def PThreadOnceCallback : NamedType<"__pthread_once_func_t">;
 def DlInfo : NamedType<"Dl_info">;
 def DlInfoPtr : PtrType<DlInfo>;
 
+def StructLconv : NamedType<"struct lconv">;
+def StructLconvPtr : PtrType<StructLconv>;
+def LocaleT : NamedType<"locale_t">;
+
 def InoT : NamedType<"ino_t">;
 def UidT : NamedType<"uid_t">;
 def GidT : NamedType<"gid_t">;
@@ -1744,6 +1748,58 @@ def POSIX : StandardSpec<"POSIX"> {
     []  // Functions
   >;
 
+  HeaderSpec Locale = HeaderSpec<
+     "locale.h",
+      [], // Macros
+      [LocaleT, StructLconv], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "duplocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "freelocale",
+          RetValSpec<VoidType>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "localeconv",
+          RetValSpec<StructLconvPtr>,
+          []
+        >,
+        FunctionSpec<
+          "newlocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>,
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "setlocale",
+          RetValSpec<CharPtr>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>
+          ]
+        >,
+        FunctionSpec<
+          "uselocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >
+      ]  // Functions
+  >;
+
   let Headers = [
     ArpaInet,
     CType,
@@ -1751,6 +1807,7 @@ def POSIX : StandardSpec<"POSIX"> {
     DlFcn,
     Errno,
     FCntl,
+    Locale,
     PThread,
     Sched,
     Signal,

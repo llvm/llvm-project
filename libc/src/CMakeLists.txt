@@ -13,6 +13,7 @@ add_subdirectory(string)
 add_subdirectory(wchar)
 add_subdirectory(dlfcn)
 add_subdirectory(link)
+add_subdirectory(locale)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(dirent)

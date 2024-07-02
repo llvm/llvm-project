@@ -321,3 +321,10 @@ def DlfcnAPI : PublicAPI<"dlfcn.h"> {
     "Dl_info"
   ];
 }
+
+def LocaleAPI : PublicAPI<"locale.h"> {
+  let Types = [
+    "struct lconv",
+    "locale_t"
+  ];
+}

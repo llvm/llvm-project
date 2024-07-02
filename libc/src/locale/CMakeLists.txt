@@ -1,0 +1,60 @@
+add_entrypoint_object(
+  duplocale
+  SRCS
+    duplocale.cpp
+  HDRS
+    duplocale.h
+  DEPENDS
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
+  freelocale
+  SRCS
+    freelocale.cpp
+  HDRS
+    freelocale.h
+  DEPENDS
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
+  localeconv
+  SRCS
+    localeconv.cpp
+  HDRS
+    localeconv.h
+  DEPENDS
+    libc.src.__support.common
+    libc.include.limits
+)
+
+add_entrypoint_object(
+  newlocale
+  SRCS
+    newlocale.cpp
+  HDRS
+    newlocale.h
+  DEPENDS
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
+  setlocale
+  SRCS
+    setlocale.cpp
+  HDRS
+    setlocale.h
+  DEPENDS
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
+  uselocale
+  SRCS
+    uselocale.cpp
+  HDRS
+    uselocale.h
+  DEPENDS
+    libc.src.__support.common
+)

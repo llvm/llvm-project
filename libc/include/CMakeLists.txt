@@ -380,6 +380,17 @@ add_gen_header(
 )
 
 add_gen_header(
+  locale
+  DEF_FILE locale.h.def
+  GEN_HDR locale.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_lconv
+    .llvm-libc-types.locale_t
+    .llvm-libc-macros.locale_macros
+)
+
+add_gen_header(
   elf
   DEF_FILE elf.h.def
   GEN_HDR elf.h

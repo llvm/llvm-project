@@ -45,4 +45,5 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_resource
     libc.include.sys_types
     libc.include.sys_prctl
+    libc.include.locale
 )

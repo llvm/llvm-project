@@ -326,6 +326,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dirent.opendir
     libc.src.dirent.readdir
     libc.src.sys.resource.getrusage
+    libc.src.wchar.wctob
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

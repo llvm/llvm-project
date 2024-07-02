@@ -341,6 +341,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dlfcn.dladdr
     libc.src.link.dl_iterate_phdr
     libc.src.sys.resource.getrusage
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
+ 
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

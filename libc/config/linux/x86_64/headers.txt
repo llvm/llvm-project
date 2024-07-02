@@ -55,4 +55,5 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.dlfcn
     libc.include.link
     libc.include.elf
+    libc.include.locale
 )
