@@ -137,7 +137,7 @@ public:
     MCSymbol *BeginLabel, *EndLabel;
   };
 
-  MapVector<unsigned, MBBSectionRange> MBBSectionRanges;
+  MapVector<MBBSectionID, MBBSectionRange> MBBSectionRanges;
 
   /// Map global GOT equivalent MCSymbols to GlobalVariables and keep track of
   /// its number of uses by other globals.
@@ -157,7 +157,7 @@ private:
   /// Map a basic block section ID to the exception symbol associated with that
   /// section. Map entries are assigned and looked up via
   /// AsmPrinter::getMBBExceptionSym.
-  DenseMap<unsigned, MCSymbol *> MBBSectionExceptionSyms;
+  DenseMap<MBBSectionID, MCSymbol *> MBBSectionExceptionSyms;
 
   // The symbol used to represent the start of the current BB section of the
   // function. This is used to calculate the size of the BB section.
