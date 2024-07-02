@@ -83,6 +83,10 @@ set(ALL_BUILTIN_SUPPORTED_ARCH
   ${RISCV32} ${RISCV64} ${SPARC} ${SPARCV9}
   ${WASM32} ${WASM64} ${VE} ${LOONGARCH64})
 
+# Check host cpu support for certain features
+builtin_check_host_cpu_feature(AVX2                    HOST_CPU_HAS_AVX2)
+builtin_check_host_cpu_feature(AVX512F                 HOST_CPU_HAS_AVX512F)
+
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)
 

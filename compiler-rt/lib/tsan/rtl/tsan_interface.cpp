@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "tsan_interface.h"
-#include "tsan_interface_ann.h"
-#include "tsan_rtl.h"
+
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_ptrauth.h"
+#include "tsan_interface_ann.h"
+#include "tsan_rtl.h"
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
@@ -42,18 +43,42 @@ void __tsan_write16_pc(void *addr, void *pc) {
 
 // __tsan_unaligned_read/write calls are emitted by compiler.
 
-void __tsan_unaligned_read16(const void *addr) {
+template <unsigned int N>
+void __tsan_unaligned_readx(const void *addr) {
   uptr pc = CALLERPC;
   ThreadState *thr = cur_thread();
-  UnalignedMemoryAccess(thr, pc, (uptr)addr, 8, kAccessRead);
-  UnalignedMemoryAccess(thr, pc, (uptr)addr + 8, 8, kAccessRead);
+  for (unsigned int i = 0; i < N / 8; i++)
+    UnalignedMemoryAccess(thr, pc, (uptr)addr + (i * 8), 8, kAccessRead);
 }
 
-void __tsan_unaligned_write16(void *addr) {
+template <unsigned int N>
+void __tsan_unaligned_writex(void *addr) {
   uptr pc = CALLERPC;
   ThreadState *thr = cur_thread();
-  UnalignedMemoryAccess(thr, pc, (uptr)addr, 8, kAccessWrite);
-  UnalignedMemoryAccess(thr, pc, (uptr)addr + 8, 8, kAccessWrite);
+  for (unsigned int i = 0; i < N / 8; i++)
+    UnalignedMemoryAccess(thr, pc, (uptr)addr + (i * 8), 8, kAccessWrite);
+}
+
+void __tsan_unaligned_read16(const void *addr) {
+  __tsan_unaligned_readx<16>(addr);
+}
+
+void __tsan_unaligned_write16(void *addr) { __tsan_unaligned_writex<16>(addr); }
+
+extern "C" void __tsan_unaligned_read32(const void *addr) {
+  __tsan_unaligned_readx<32>(addr);
+}
+
+extern "C" void __tsan_unaligned_write32(void *addr) {
+  __tsan_unaligned_writex<32>(addr);
+}
+
+extern "C" void __tsan_unaligned_read64(const void *addr) {
+  __tsan_unaligned_readx<64>(addr);
+}
+
+extern "C" void __tsan_unaligned_write64(void *addr) {
+  __tsan_unaligned_writex<64>(addr);
 }
 
 extern "C" {
