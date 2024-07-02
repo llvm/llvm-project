@@ -83,8 +83,8 @@ static void placeSplitBlockCarefully(BasicBlock *NewBB,
                                      Loop *L) {
   // Check to see if NewBB is already well placed.
   Function::iterator BBI = --NewBB->getIterator();
-  for (unsigned i = 0, e = SplitPreds.size(); i != e; ++i) {
-    if (&*BBI == SplitPreds[i])
+  for (BasicBlock *Pred : SplitPreds) {
+    if (&*BBI == Pred)
       return;
   }
 
@@ -95,10 +95,10 @@ static void placeSplitBlockCarefully(BasicBlock *NewBB,
   // Figure out *which* outside block to put this after.  Prefer an outside
   // block that neighbors a BB actually in the loop.
   BasicBlock *FoundBB = nullptr;
-  for (unsigned i = 0, e = SplitPreds.size(); i != e; ++i) {
-    Function::iterator BBI = SplitPreds[i]->getIterator();
+  for (BasicBlock *Pred : SplitPreds) {
+    Function::iterator BBI = Pred->getIterator();
     if (++BBI != NewBB->getParent()->end() && L->contains(&*BBI)) {
-      FoundBB = SplitPreds[i];
+      FoundBB = Pred;
       break;
     }
   }
@@ -630,8 +630,7 @@ ReprocessLoop:
     return true;
   };
   if (HasUniqueExitBlock()) {
-    for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
-      BasicBlock *ExitingBlock = ExitingBlocks[i];
+    for (BasicBlock *ExitingBlock : ExitingBlocks) {
       if (!ExitingBlock->getSinglePredecessor()) continue;
       BranchInst *BI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
       if (!BI || !BI->isConditional()) continue;
