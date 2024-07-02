@@ -89,6 +89,7 @@ private:
   int32_t CurrentIRSize = 0;
   llvm::SmallPtrSet<const LazyCallGraph::Node *, 1> NodesInLastSCC;
   DenseSet<const LazyCallGraph::Node *> AllNodes;
+  DenseSet<Function *> DeadFunctions;
   bool ForceStop = false;
   ProfileSummaryInfo &PSI;
 };
