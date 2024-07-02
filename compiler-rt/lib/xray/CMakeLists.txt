@@ -189,6 +189,10 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(XRAY_DEPS cxx-headers)
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL "SunOS")
+  set(XRAY_LINK_LIBS ${XRAY_LINK_LIBS} kstat)
+endif()
+
 if (APPLE)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
