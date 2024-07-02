@@ -16211,7 +16211,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Ty->print(rso);
         return OptimizationRemarkMissed(SV_NAME, "UnsupportedType", I0)
                << "Cannot SLP vectorize list: type "
-               << rso.str() + " is unsupported by vectorizer";
+               << TypeStr + " is unsupported by vectorizer";
       });
       return false;
     }
