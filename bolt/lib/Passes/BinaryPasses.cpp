@@ -13,6 +13,7 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Passes/ProfileStats.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "llvm/Support/CommandLine.h"
@@ -1279,96 +1280,7 @@ Error AssignSections::runOnFunctions(BinaryContext &BC) {
 }
 
 Error PrintProfileStats::runOnFunctions(BinaryContext &BC) {
-  double FlowImbalanceMean = 0.0;
-  size_t NumBlocksConsidered = 0;
-  double WorstBias = 0.0;
-  const BinaryFunction *WorstBiasFunc = nullptr;
-
-  // For each function CFG, we fill an IncomingMap with the sum of the frequency
-  // of incoming edges for each BB. Likewise for each OutgoingMap and the sum
-  // of the frequency of outgoing edges.
-  using FlowMapTy = std::unordered_map<const BinaryBasicBlock *, uint64_t>;
-  std::unordered_map<const BinaryFunction *, FlowMapTy> TotalIncomingMaps;
-  std::unordered_map<const BinaryFunction *, FlowMapTy> TotalOutgoingMaps;
-
-  // Compute mean
-  for (const auto &BFI : BC.getBinaryFunctions()) {
-    const BinaryFunction &Function = BFI.second;
-    if (Function.empty() || !Function.isSimple())
-      continue;
-    FlowMapTy &IncomingMap = TotalIncomingMaps[&Function];
-    FlowMapTy &OutgoingMap = TotalOutgoingMaps[&Function];
-    for (const BinaryBasicBlock &BB : Function) {
-      uint64_t TotalOutgoing = 0ULL;
-      auto SuccBIIter = BB.branch_info_begin();
-      for (BinaryBasicBlock *Succ : BB.successors()) {
-        uint64_t Count = SuccBIIter->Count;
-        if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0) {
-          ++SuccBIIter;
-          continue;
-        }
-        TotalOutgoing += Count;
-        IncomingMap[Succ] += Count;
-        ++SuccBIIter;
-      }
-      OutgoingMap[&BB] = TotalOutgoing;
-    }
-
-    size_t NumBlocks = 0;
-    double Mean = 0.0;
-    for (const BinaryBasicBlock &BB : Function) {
-      // Do not compute score for low frequency blocks, entry or exit blocks
-      if (IncomingMap[&BB] < 100 || OutgoingMap[&BB] == 0 || BB.isEntryPoint())
-        continue;
-      ++NumBlocks;
-      const double Difference = (double)OutgoingMap[&BB] - IncomingMap[&BB];
-      Mean += fabs(Difference / IncomingMap[&BB]);
-    }
-
-    FlowImbalanceMean += Mean;
-    NumBlocksConsidered += NumBlocks;
-    if (!NumBlocks)
-      continue;
-    double FuncMean = Mean / NumBlocks;
-    if (FuncMean > WorstBias) {
-      WorstBias = FuncMean;
-      WorstBiasFunc = &Function;
-    }
-  }
-  if (NumBlocksConsidered > 0)
-    FlowImbalanceMean /= NumBlocksConsidered;
-
-  // Compute standard deviation
-  NumBlocksConsidered = 0;
-  double FlowImbalanceVar = 0.0;
-  for (const auto &BFI : BC.getBinaryFunctions()) {
-    const BinaryFunction &Function = BFI.second;
-    if (Function.empty() || !Function.isSimple())
-      continue;
-    FlowMapTy &IncomingMap = TotalIncomingMaps[&Function];
-    FlowMapTy &OutgoingMap = TotalOutgoingMaps[&Function];
-    for (const BinaryBasicBlock &BB : Function) {
-      if (IncomingMap[&BB] < 100 || OutgoingMap[&BB] == 0)
-        continue;
-      ++NumBlocksConsidered;
-      const double Difference = (double)OutgoingMap[&BB] - IncomingMap[&BB];
-      FlowImbalanceVar +=
-          pow(fabs(Difference / IncomingMap[&BB]) - FlowImbalanceMean, 2);
-    }
-  }
-  if (NumBlocksConsidered) {
-    FlowImbalanceVar /= NumBlocksConsidered;
-    FlowImbalanceVar = sqrt(FlowImbalanceVar);
-  }
-
-  // Report to user
-  BC.outs() << format("BOLT-INFO: Profile bias score: %.4lf%% StDev: %.4lf%%\n",
-                      (100.0 * FlowImbalanceMean), (100.0 * FlowImbalanceVar));
-  if (WorstBiasFunc && opts::Verbosity >= 1) {
-    BC.outs() << "Worst average bias observed in "
-              << WorstBiasFunc->getPrintName() << "\n";
-    LLVM_DEBUG(WorstBiasFunc->dump());
-  }
+  ProfileStats::printAll(BC.outs(), BC);
   return Error::success();
 }
 
