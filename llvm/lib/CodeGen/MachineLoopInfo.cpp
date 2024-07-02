@@ -49,7 +49,7 @@ bool MachineLoopInfo::runOnMachineFunction(MachineFunction &) {
 
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
-  LI.analyze(MDT.getBase());
+  LI.analyze(MDT);
 }
 
 void MachineLoopInfo::getAnalysisUsage(AnalysisUsage &AU) const {

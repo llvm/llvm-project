@@ -1699,7 +1699,7 @@ void AsmPrinter::emitFunctionBody() {
     MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
     if (!MDT) {
       OwnedMDT = std::make_unique<MachineDominatorTree>();
-      OwnedMDT->getBase().recalculate(*MF);
+      OwnedMDT->recalculate(*MF);
       MDT = OwnedMDT.get();
     }
 
@@ -1707,7 +1707,7 @@ void AsmPrinter::emitFunctionBody() {
     MLI = getAnalysisIfAvailable<MachineLoopInfo>();
     if (!MLI) {
       OwnedMLI = std::make_unique<MachineLoopInfo>();
-      OwnedMLI->getBase().analyze(MDT->getBase());
+      OwnedMLI->getBase().analyze(*MDT);
       MLI = OwnedMLI.get();
     }
   }
