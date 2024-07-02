@@ -400,8 +400,7 @@ class GlobalsImporter final {
         // later, in ComputeCrossModuleImport, after import decisions are
         // complete, which is more efficient than adding them here.
         if (ExportLists)
-          (*ExportLists)[RefSummary->modulePath()][VI] =
-              GlobalValueSummary::Definition;
+          (*ExportLists)[RefSummary->modulePath()].insert(VI);
 
         // If variable is not writeonly we attempt to recursively analyze
         // its references in order to import referenced constants.
@@ -582,7 +581,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
           GlobalValueSummary::Definition;
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
-        (*ExportLists)[ExportingModule][VI] = GlobalValueSummary::Definition;
+        (*ExportLists)[ExportingModule].insert(VI);
     }
     LLVM_DEBUG(dbgs() << "[Workload] Done\n");
   }
@@ -818,10 +817,8 @@ static void computeImportForFunction(
           // Since definition takes precedence over declaration for the same VI,
           // try emplace <VI, declaration> pair without checking insert result.
           // If insert doesn't happen, there must be an existing entry keyed by
-          // VI.
-          if (ExportLists)
-            (*ExportLists)[DeclSourceModule].try_emplace(
-                VI, GlobalValueSummary::Declaration);
+          // VI. Note `ExportLists` only keeps track of definitions so VI won't
+          // be inserted.
           ImportList[DeclSourceModule].try_emplace(
               VI.getGUID(), GlobalValueSummary::Declaration);
         }
@@ -892,7 +889,7 @@ static void computeImportForFunction(
       // later, in ComputeCrossModuleImport, after import decisions are
       // complete, which is more efficient than adding them here.
       if (ExportLists)
-        (*ExportLists)[ExportModulePath][VI] = GlobalValueSummary::Definition;
+        (*ExportLists)[ExportModulePath].insert(VI);
     }
 
     auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
@@ -998,14 +995,29 @@ static bool isGlobalVarSummary(const ModuleSummaryIndex &Index,
   return false;
 }
 
-template <class T>
-static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index, T &Cont,
+static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
+                                      FunctionImporter::ExportSetTy &ExportSet,
                                       unsigned &DefinedGVS,
                                       unsigned &DefinedFS) {
+  DefinedGVS = 0;
+  DefinedFS = 0;
+  for (auto &VI : ExportSet) {
+    if (isGlobalVarSummary(Index, VI.getGUID())) {
+      ++DefinedGVS;
+    } else
+      ++DefinedFS;
+  }
+  return DefinedGVS;
+}
+
+static unsigned
+numGlobalVarSummaries(const ModuleSummaryIndex &Index,
+                      FunctionImporter::FunctionsToImportTy &ImportMap,
+                      unsigned &DefinedGVS, unsigned &DefinedFS) {
   unsigned NumGVS = 0;
   DefinedGVS = 0;
   DefinedFS = 0;
-  for (auto &[GUID, Type] : Cont) {
+  for (auto &[GUID, Type] : ImportMap) {
     if (isGlobalVarSummary(Index, GUID)) {
       if (Type == GlobalValueSummary::Definition)
         ++DefinedGVS;
@@ -1046,7 +1058,7 @@ static bool checkVariableImport(
   };
 
   for (auto &ExportPerModule : ExportLists)
-    for (auto &[VI, Unused] : ExportPerModule.second)
+    for (auto &VI : ExportPerModule.second)
       if (!FlattenedImports.count(VI.getGUID()) &&
           IsReadOrWriteOnlyVarNeedingImporting(ExportPerModule.first, VI))
         return false;
@@ -1079,14 +1091,12 @@ void llvm::ComputeCrossModuleImport(
   // since we may import the same values multiple times into different modules
   // during the import computation.
   for (auto &ELI : ExportLists) {
+    // `NewExports` tracks the VI that gets exported because the full definition
+    // of its user/referencer gets exported.
     FunctionImporter::ExportSetTy NewExports;
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ELI.first);
-    for (auto &[EI, Type] : ELI.second) {
-      // If a variable is exported as a declaration, its 'refs' and 'calls' are
-      // not further exported.
-      if (Type == GlobalValueSummary::Declaration)
-        continue;
+    for (auto &EI : ELI.second) {
       // Find the copy defined in the exporting module so that we can mark the
       // values it references in that specific definition as exported.
       // Below we will add all references and called values, without regard to
@@ -1108,19 +1118,19 @@ void llvm::ComputeCrossModuleImport(
           for (const auto &VI : GVS->refs()) {
             // Try to emplace the declaration entry. If a definition entry
             // already exists for key `VI`, this is a no-op.
-            NewExports.try_emplace(VI, GlobalValueSummary::Declaration);
+            NewExports.insert(VI);
           }
       } else {
         auto *FS = cast<FunctionSummary>(S);
         for (const auto &Edge : FS->calls()) {
           // Try to emplace the declaration entry. If a definition entry
           // already exists for key `VI`, this is a no-op.
-          NewExports.try_emplace(Edge.first, GlobalValueSummary::Declaration);
+          NewExports.insert(Edge.first);
         }
         for (const auto &Ref : FS->refs()) {
           // Try to emplace the declaration entry. If a definition entry
           // already exists for key `VI`, this is a no-op.
-          NewExports.try_emplace(Ref, GlobalValueSummary::Declaration);
+          NewExports.insert(Ref);
         }
       }
     }
@@ -1129,7 +1139,7 @@ void llvm::ComputeCrossModuleImport(
     // the same ref/call target multiple times in above loop, and it is more
     // efficient to avoid a set lookup each time.
     for (auto EI = NewExports.begin(); EI != NewExports.end();) {
-      if (!DefinedGVSummaries.count(EI->first.getGUID()))
+      if (!DefinedGVSummaries.count(EI->getGUID()))
         NewExports.erase(EI++);
       else
         ++EI;

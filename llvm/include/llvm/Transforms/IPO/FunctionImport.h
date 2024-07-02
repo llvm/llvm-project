@@ -104,13 +104,10 @@ public:
   /// index's module path string table).
   using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
-  /// The map contains an entry for every global value the module exports.
-  /// The key is ValueInfo, and the value indicates whether the definition
-  /// or declaration is visible to another module. If a function's definition is
-  /// visible to other modules, the global values this function referenced are
-  /// visible and shouldn't be internalized.
-  /// TODO: Rename to `ExportMapTy`.
-  using ExportSetTy = DenseMap<ValueInfo, GlobalValueSummary::ImportKind>;
+  /// The set contains an entry for every global value that the module exports.
+  /// Depending on the user context, this container is allowed to contain
+  /// definitions, declarations or a mix of both.
+  using ExportSetTy = DenseSet<ValueInfo>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =
