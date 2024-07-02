@@ -21,6 +21,9 @@ def PThreadOnceT : NamedType<"pthread_once_t">;
 def PThreadOnceTPtr : PtrType<PThreadOnceT>;
 def PThreadOnceCallback : NamedType<"__pthread_once_func_t">;
 
+def DlInfo : NamedType<"Dl_info">;
+def DlInfoPtr : PtrType<DlInfo>;
+
 def InoT : NamedType<"ino_t">;
 def UidT : NamedType<"uid_t">;
 def GidT : NamedType<"gid_t">;
@@ -230,9 +233,14 @@ def POSIX : StandardSpec<"POSIX"> {
       Macro<"RTLD_GLOBAL">,
       Macro<"RTLD_LOCAL">,
     ],
-    [],  // Types
+    [DlInfo],  // Types
     [], // Enumerations
     [
+      FunctionSpec<
+          "dladdr",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstVoidPtr>, ArgSpec<DlInfoPtr>]
+      >,
       FunctionSpec<
           "dlclose",
           RetValSpec<IntType>,

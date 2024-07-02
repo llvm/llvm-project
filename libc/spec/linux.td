@@ -3,6 +3,9 @@ def StructEpollEventPtr : PtrType<StructEpollEvent>;
 
 def StructEpollData : NamedType<"struct epoll_data">;
 
+def StructDlPhdrInfo : NamedType<"struct dl_phdr_info">;
+def DlIteratePhdrCallback : NamedType<"__dl_iterate_phdr_callback_t">;
+
 def Linux : StandardSpec<"Linux"> {
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
@@ -264,8 +267,35 @@ def Linux : StandardSpec<"Linux"> {
       ]
   >;
 
+  HeaderSpec Link = HeaderSpec<
+     "link.h",
+      [], // Macros
+      [StructDlPhdrInfo, DlIteratePhdrCallback], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "dl_iterate_phdr",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<DlIteratePhdrCallback>,
+            ArgSpec<VoidPtr>
+          ]
+        >,
+      ]  // Functions
+  >;
+
+  HeaderSpec Elf = HeaderSpec<
+     "elf.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      []  // Functions
+  >;
+
   let Headers = [
+    Elf,
     Errno,
+    Link,
     SysEpoll,
     SysMMan,
     SysPrctl,

@@ -1,4 +1,15 @@
 add_entrypoint_object(
+  dladdr
+  SRCS
+    dladdr.cpp
+  HDRS
+    dladdr.h
+  DEPENDS
+    libc.include.dlfcn
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   dlclose
   SRCS
     dlclose.cpp

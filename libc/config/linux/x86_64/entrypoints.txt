@@ -18,6 +18,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toupper
 
     # dlfcn.h entrypoints
+    libc.src.dlfcn.dladdr
     libc.src.dlfcn.dlclose
     libc.src.dlfcn.dlerror
     libc.src.dlfcn.dlopen
@@ -31,6 +32,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
+
+    # link.h entrypoints
+    libc.src.link.dl_iterate_phdr
 
     # sched.h entrypoints
     libc.src.sched.sched_get_priority_max
