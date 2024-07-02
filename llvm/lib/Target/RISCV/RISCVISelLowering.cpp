@@ -11666,31 +11666,54 @@ SDValue RISCVTargetLowering::lowerVPStridedLoad(SDValue Op,
   auto *VPNode = cast<VPStridedLoadSDNode>(Op);
   // Check if the mask is known to be all ones
   SDValue Mask = VPNode->getMask();
+  SDValue VL = VPNode->getVectorLength();
+  SDValue Stride = VPNode->getStride();
   bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+  SDValue Result, Chain;
 
-  SDValue IntID = DAG.getTargetConstant(IsUnmasked ? Intrinsic::riscv_vlse
-                                                   : Intrinsic::riscv_vlse_mask,
-                                        DL, XLenVT);
-  SmallVector<SDValue, 8> Ops{VPNode->getChain(), IntID,
-                              DAG.getUNDEF(ContainerVT), VPNode->getBasePtr(),
-                              VPNode->getStride()};
-  if (!IsUnmasked) {
-    if (VT.isFixedLengthVector()) {
-      MVT MaskVT = ContainerVT.changeVectorElementType(MVT::i1);
-      Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
+  // TODO: We restrict this to unmasked loads currently in consideration of
+  // the complexity of handling all falses masks.
+  MVT ScalarVT = ContainerVT.getVectorElementType();
+  if (IsUnmasked && isNullConstant(Stride) && ContainerVT.isInteger()) {
+    SDValue ScalarLoad =
+        DAG.getExtLoad(ISD::EXTLOAD, DL, XLenVT, VPNode->getChain(),
+                       VPNode->getBasePtr(), ScalarVT, VPNode->getMemOperand());
+    Chain = ScalarLoad.getValue(1);
+    Result = lowerScalarSplat(SDValue(), ScalarLoad, VL, ContainerVT, DL, DAG,
+                              Subtarget);
+  } else if (IsUnmasked && isNullConstant(Stride) && isTypeLegal(ScalarVT)) {
+    SDValue ScalarLoad =
+        DAG.getLoad(ScalarVT, DL, VPNode->getChain(), VPNode->getBasePtr(),
+                    VPNode->getMemOperand());
+    Chain = ScalarLoad.getValue(1);
+    Result = lowerScalarSplat(SDValue(), ScalarLoad, VL, ContainerVT, DL, DAG,
+                              Subtarget);
+  } else {
+    SDValue IntID = DAG.getTargetConstant(
+        IsUnmasked ? Intrinsic::riscv_vlse : Intrinsic::riscv_vlse_mask, DL,
+        XLenVT);
+    SmallVector<SDValue, 8> Ops{VPNode->getChain(), IntID,
+                                DAG.getUNDEF(ContainerVT), VPNode->getBasePtr(),
+                                Stride};
+    if (!IsUnmasked) {
+      if (VT.isFixedLengthVector()) {
+        MVT MaskVT = ContainerVT.changeVectorElementType(MVT::i1);
+        Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
+      }
+      Ops.push_back(Mask);
     }
-    Ops.push_back(Mask);
-  }
-  Ops.push_back(VPNode->getVectorLength());
-  if (!IsUnmasked) {
-    SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
-    Ops.push_back(Policy);
-  }
+    Ops.push_back(VL);
+    if (!IsUnmasked) {
+      SDValue Policy =
+          DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+      Ops.push_back(Policy);
+    }
 
-  SDValue Result =
-      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
-                              VPNode->getMemoryVT(), VPNode->getMemOperand());
-  SDValue Chain = Result.getValue(1);
+    Result =
+        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                                VPNode->getMemoryVT(), VPNode->getMemOperand());
+    Chain = Result.getValue(1);
+  }
 
   if (VT.isFixedLengthVector())
     Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
