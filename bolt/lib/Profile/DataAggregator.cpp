@@ -2009,9 +2009,6 @@ std::error_code DataAggregator::parseMMapEvents() {
       return MI.second.PID == FileMMapInfo.second.PID;
     });
 
-    if (PIDExists)
-      continue;
-
     GlobalMMapInfo.insert(FileMMapInfo);
   }
 
@@ -2067,7 +2064,21 @@ std::error_code DataAggregator::parseMMapEvents() {
       }
     }
 
-    BinaryMMapInfo.insert(std::make_pair(MMapInfo.PID, MMapInfo));
+    // In some larger binaries, the loaded binary gets a a second text segment
+    // memory mapped, right after its read-write segments. Below, we encounter
+    // and process such text segments, and recompute the size of the binary.
+    // When this happens, the correctly computed size comes from this second
+    // memory mapping, as the one processed earlier has an incorrect
+    // BaseAddress.
+    if (!BinaryMMapInfo.insert(std::make_pair(MMapInfo.PID, MMapInfo)).second) {
+      auto EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
+      auto Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
+      if (Size != BinaryMMapInfo[MMapInfo.PID].Size) {
+        LLVM_DEBUG(outs() << "MMap size fixed: " << Twine::utohexstr(Size)
+                          << " \n");
+        BinaryMMapInfo[MMapInfo.PID].Size = Size;
+      }
+    }
   }
 
   if (BinaryMMapInfo.empty()) {
