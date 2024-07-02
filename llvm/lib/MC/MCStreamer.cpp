@@ -411,11 +411,6 @@ void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
-void MCStreamer::assignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
-  assert(Fragment);
-  Symbol->setFragment(Fragment);
-}
-
 void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Symbol->redefineIfPossible();
 
