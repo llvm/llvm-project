@@ -2661,7 +2661,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       if (NewLdexp) {
         Select->takeName(II);
-        cast<Instruction>(NewLdexp)->copyIRFlags(II);
+        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
         return replaceInstUsesWith(*II, Select);
       }
     }
