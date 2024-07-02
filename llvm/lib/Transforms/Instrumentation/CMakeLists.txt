@@ -8,7 +8,6 @@ add_llvm_component_library(LLVMInstrumentation
   BlockCoverageInference.cpp
   MemProfiler.cpp
   MemorySanitizer.cpp
-  NumericalStabilitySanitizer.cpp
   IndirectCallPromotion.cpp
   Instrumentation.cpp
   InstrOrderFile.cpp
