@@ -496,8 +496,7 @@ define <4 x i64> @eq_1_v4i64(<4 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: eq_1_v4i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %ymm0, %ymm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: eq_1_v4i64:
@@ -583,8 +582,7 @@ define <4 x i64> @ne_1_v4i64(<4 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ne_1_v4i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %ymm0, %ymm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
@@ -663,8 +661,7 @@ define <8 x i32> @eq_1_v8i32(<8 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: eq_1_v8i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: eq_1_v8i32:
@@ -744,8 +741,7 @@ define <8 x i32> @ne_1_v8i32(<8 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ne_1_v8i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;

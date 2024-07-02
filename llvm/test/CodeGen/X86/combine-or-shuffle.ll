@@ -633,8 +633,7 @@ define <4 x float> @test25(<4 x float> %a0) {
 ;
 ; AVX512-LABEL: test25:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = mem[0],xmm0[1,2],mem[3]
 ; AVX512-NEXT:    retq
   %bc1 = bitcast <4 x float> %a0 to <4 x i32>
   %bc2 = bitcast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0> to <4 x i32>
@@ -807,7 +806,7 @@ define <2 x i64> @or_and_v2i64(<2 x i64> %a0) {
 ;
 ; AVX512-LABEL: or_and_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7,7]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [7,7]
 ; AVX512-NEXT:    vpternlogq $200, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 7, i64 7>

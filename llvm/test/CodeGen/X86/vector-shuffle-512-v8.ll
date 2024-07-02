@@ -202,14 +202,14 @@ define <8 x double> @shuffle_v8f64_81a3c5e7(<8 x double> %a, <8 x double> %b) {
 define <8 x double> @shuffle_v8f64_08080808(<8 x double> %a, <8 x double> %b) {
 ; AVX512F-LABEL: shuffle_v8f64_08080808:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [0,8,0,8,0,8,0,8]
+; AVX512F-NEXT:    vbroadcastf32x4 {{.*#+}} zmm2 = [0,8,0,8,0,8,0,8]
 ; AVX512F-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512F-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: shuffle_v8f64_08080808:
 ; AVX512F-32:       # %bb.0:
-; AVX512F-32-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [0,0,8,0,0,0,8,0,0,0,8,0,0,0,8,0]
+; AVX512F-32-NEXT:    vbroadcastf32x4 {{.*#+}} zmm2 = [0,0,8,0,0,0,8,0,0,0,8,0,0,0,8,0]
 ; AVX512F-32-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512F-32-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
 ; AVX512F-32-NEXT:    retl
@@ -1038,19 +1038,11 @@ define <8 x i64> @shuffle_v8i64_81a3c5e7(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_08080808(<8 x i64> %a, <8 x i64> %b) {
-; AVX512F-LABEL: shuffle_v8i64_08080808:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [0,8,0,8,0,8,0,8]
-; AVX512F-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512F-32-LABEL: shuffle_v8i64_08080808:
-; AVX512F-32:       # %bb.0:
-; AVX512F-32-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [0,0,8,0,0,0,8,0,0,0,8,0,0,0,8,0]
-; AVX512F-32-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; AVX512F-32-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
-; AVX512F-32-NEXT:    retl
+; ALL-LABEL: shuffle_v8i64_08080808:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,8,0,8,0,8,0,8]
+; ALL-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
+; ALL-NEXT:    ret{{[l|q]}}
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 0, i32 8, i32 0, i32 8, i32 0, i32 8, i32 0, i32 8>
   ret <8 x i64> %shuffle
 }

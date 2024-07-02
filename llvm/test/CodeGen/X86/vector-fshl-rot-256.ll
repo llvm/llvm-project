@@ -795,7 +795,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %amt) nounw
 ;
 ; AVX512VL-LABEL: splatvar_funnnel_v16i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [15,0,0,0,15,0,0,0]
+; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [15,0]
 ; AVX512VL-NEXT:    vpandn %xmm2, %xmm1, %xmm3
 ; AVX512VL-NEXT:    vpsrlw $1, %ymm0, %ymm4
 ; AVX512VL-NEXT:    vpsrlw %xmm3, %ymm4, %ymm3
@@ -817,7 +817,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %amt) nounw
 ;
 ; AVX512VLBW-LABEL: splatvar_funnnel_v16i16:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [15,0,0,0,15,0,0,0]
+; AVX512VLBW-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [15,0]
 ; AVX512VLBW-NEXT:    vpandn %xmm2, %xmm1, %xmm3
 ; AVX512VLBW-NEXT:    vpsrlw $1, %ymm0, %ymm4
 ; AVX512VLBW-NEXT:    vpsrlw %xmm3, %ymm4, %ymm3

@@ -335,12 +335,15 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ; X64-AVX512-NEXT:    vpblendmb %zmm0, %zmm1, %zmm0 {%k1}
 ; X64-AVX512-NEXT:    retq
 ;
-; AVX512F-LABEL: test_mm512_mask_blend_epi8:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
-; AVX512F-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
-; AVX512F-NEXT:    ret{{[l|q]}}
+; X86-AVX512F-LABEL: test_mm512_mask_blend_epi8:
+; X86-AVX512F:       # %bb.0: # %entry
+; X86-AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %zmm0
+; X86-AVX512F-NEXT:    retl
+;
+; X64-AVX512F-LABEL: test_mm512_mask_blend_epi8:
+; X64-AVX512F:       # %bb.0: # %entry
+; X64-AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
+; X64-AVX512F-NEXT:    retq
 entry:
   %0 = shufflevector <64 x i8> %A, <64 x i8> %W, <64 x i32>  <i32 64, i32 1, i32 66, i32 3, i32 68, i32 5, i32 70, i32 7, i32 72, i32 9, i32 74, i32 11, i32 76, i32 13, i32 78, i32 15, i32 80, i32 17, i32 82, i32 19, i32 84, i32 21, i32 86, i32 23, i32 88, i32 25, i32 90, i32 27, i32 92, i32 29, i32 94, i32 31, i32 96, i32 33, i32 98, i32 35, i32 100, i32 37, i32 102, i32 39, i32 104, i32 41, i32 106, i32 43, i32 108, i32 45, i32 110, i32 47, i32 112, i32 49, i32 114, i32 51, i32 116, i32 53, i32 118, i32 55, i32 120, i32 57, i32 122, i32 59, i32 124, i32 61, i32 126, i32 63>
   ret <64 x i8> %0
@@ -658,7 +661,7 @@ define <32 x float> @PR47534(<8 x float> %tmp) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [7,25,26,27,7,29,30,31,7,25,26,27,7,29,30,31]
+; CHECK-NEXT:    vbroadcastf64x4 {{.*#+}} zmm1 = [7,25,26,27,7,29,30,31,7,25,26,27,7,29,30,31]
 ; CHECK-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    ret{{[l|q]}}

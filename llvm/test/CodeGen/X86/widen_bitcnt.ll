@@ -1170,12 +1170,12 @@ define <4 x i32> @widen_cttz_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpaddd %xmm2, %xmm0, %xmm3
 ; AVX512VL-NEXT:    vpandn %xmm3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
 ; AVX512VL-NEXT:    vpaddd %xmm2, %xmm1, %xmm2
 ; AVX512VL-NEXT:    vpandn %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-NEXT:    vplzcntd %xmm0, %xmm0
-; AVX512VL-NEXT:    vpsubd %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [32,32,32,32]
+; AVX512VL-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VPOPCNT-LABEL: widen_cttz_v2i32_v4i32:
@@ -1515,12 +1515,12 @@ define <4 x i32> @widen_cttz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpaddd %xmm2, %xmm0, %xmm3
 ; AVX512VL-NEXT:    vpandn %xmm3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
 ; AVX512VL-NEXT:    vpaddd %xmm2, %xmm1, %xmm2
 ; AVX512VL-NEXT:    vpandn %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-NEXT:    vplzcntd %xmm0, %xmm0
-; AVX512VL-NEXT:    vpsubd %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [32,32,32,32]
+; AVX512VL-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VPOPCNT-LABEL: widen_cttz_undef_v2i32_v4i32:

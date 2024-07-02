@@ -884,7 +884,7 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ;
 ; CHECK-FMA-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-FMA:       # %bb.0:
-; CHECK-FMA-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
+; CHECK-FMA-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,2]
 ; CHECK-FMA-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    vcvtqq2ps %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0

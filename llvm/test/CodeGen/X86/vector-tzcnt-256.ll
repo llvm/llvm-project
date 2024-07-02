@@ -64,7 +64,7 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX512CDVL-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512CDVL-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vplzcntq %ymm0, %ymm0
-; AVX512CDVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [64,64,64,64]
+; AVX512CDVL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [64,64,64,64]
 ; AVX512CDVL-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
 ; AVX512CDVL-NEXT:    retq
 ;
@@ -189,7 +189,7 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ; AVX512CDVL-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; AVX512CDVL-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vplzcntq %ymm0, %ymm0
-; AVX512CDVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [64,64,64,64]
+; AVX512CDVL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [64,64,64,64]
 ; AVX512CDVL-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
 ; AVX512CDVL-NEXT:    retq
 ;

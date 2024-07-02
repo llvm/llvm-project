@@ -1669,7 +1669,7 @@ define <64 x i8> @var_rotr_v64i8(<64 x i8> %a, <64 x i8> %amt) nounwind {
 ; GFNIAVX512VL-NEXT:    vpor %ymm7, %ymm9, %ymm7
 ; GFNIAVX512VL-NEXT:    vpaddb %ymm6, %ymm6, %ymm6
 ; GFNIAVX512VL-NEXT:    vpblendvb %ymm6, %ymm7, %ymm2, %ymm2
-; GFNIAVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm7 = [1,1,1,1]
+; GFNIAVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm7 = [1,1,1,1]
 ; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %ymm7, %ymm2, %ymm9
 ; GFNIAVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm10 = [145249953336295424,145249953336295424,145249953336295424,145249953336295424]
 ; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %ymm10, %ymm2, %ymm11
