@@ -1705,8 +1705,10 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
             if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
                 MRI->use_nodbg_empty(OldVLReg)) {
               VLOpDef->eraseFromParent();
-              if (LIS)
+              if (LIS) {
                 LIS->removeInterval(OldVLReg);
+                LIS->RemoveMachineInstrFromMaps(*VLOpDef);
+              }
             }
           }
           MI.setDesc(NextMI->getDesc());
