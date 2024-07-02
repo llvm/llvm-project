@@ -3180,6 +3180,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::SChar:
     Out << 'a';
     break;
+  case BuiltinType::Fpm8:
   case BuiltinType::WChar_S:
   case BuiltinType::WChar_U:
     Out << 'w';

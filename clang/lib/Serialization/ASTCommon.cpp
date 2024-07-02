@@ -35,6 +35,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Char_U:
     ID = PREDEF_TYPE_CHAR_U_ID;
     break;
+  case BuiltinType::Fpm8:
+    ID = PREDEF_TYPE_FPM8_ID;
+    break;
   case BuiltinType::UChar:
     ID = PREDEF_TYPE_UCHAR_ID;
     break;

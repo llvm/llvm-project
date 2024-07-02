@@ -3366,6 +3366,7 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::Float:
     case BuiltinType::Double:
     case BuiltinType::LongDouble:
+    case BuiltinType::Fpm8:
     case BuiltinType::Float16:
     case BuiltinType::Float128:
     case BuiltinType::Ibm128:

@@ -1139,6 +1139,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__bf16";
     Result = Context.BFloat16Ty;
     break;
+  case DeclSpec::TST_Fpm8:
+    Result = Context.Fpm8Ty;
+    break;
   case DeclSpec::TST_float:   Result = Context.FloatTy; break;
   case DeclSpec::TST_double:
     if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Long)
