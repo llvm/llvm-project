@@ -591,7 +591,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   }
   CurCGF = nullptr;
 
-  // TODO: setNonAliasAttributes
+  setNonAliasAttributes(GD, Op);
   // TODO: SetLLVMFunctionAttributesForDeclaration
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
@@ -679,7 +679,67 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
 }
 
 void CIRGenModule::setCommonAttributes(GlobalDecl GD, mlir::Operation *GV) {
-  assert(!MissingFeatures::setCommonAttributes());
+  const Decl *D = GD.getDecl();
+  if (isa_and_nonnull<NamedDecl>(D))
+    setGVProperties(GV, dyn_cast<NamedDecl>(D));
+  else
+    assert(!MissingFeatures::setDefaultVisibility());
+
+  if (D && D->hasAttr<UsedAttr>())
+    assert(!MissingFeatures::addUsedOrCompilerUsedGlobal());
+
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(D);
+      VD &&
+      ((codeGenOpts.KeepPersistentStorageVariables &&
+        (VD->getStorageDuration() == SD_Static ||
+         VD->getStorageDuration() == SD_Thread)) ||
+       (codeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
+        VD->getType().isConstQualified())))
+    assert(!MissingFeatures::addUsedOrCompilerUsedGlobal());
+}
+
+void CIRGenModule::setNonAliasAttributes(GlobalDecl GD, mlir::Operation *GO) {
+  const Decl *D = GD.getDecl();
+  setCommonAttributes(GD, GO);
+
+  if (D) {
+    auto GV = llvm::dyn_cast_or_null<mlir::cir::GlobalOp>(GO);
+    if (GV) {
+      if (D->hasAttr<RetainAttr>())
+        assert(!MissingFeatures::addUsedGlobal());
+      if (auto *SA = D->getAttr<PragmaClangBSSSectionAttr>())
+        assert(!MissingFeatures::addSectionAttributes());
+      if (auto *SA = D->getAttr<PragmaClangDataSectionAttr>())
+        assert(!MissingFeatures::addSectionAttributes());
+      if (auto *SA = D->getAttr<PragmaClangRodataSectionAttr>())
+        assert(!MissingFeatures::addSectionAttributes());
+      if (auto *SA = D->getAttr<PragmaClangRelroSectionAttr>())
+        assert(!MissingFeatures::addSectionAttributes());
+    }
+    auto F = llvm::dyn_cast_or_null<mlir::cir::FuncOp>(GO);
+    if (F) {
+      if (D->hasAttr<RetainAttr>())
+        assert(!MissingFeatures::addUsedGlobal());
+      if (auto *SA = D->getAttr<PragmaClangTextSectionAttr>())
+        if (!D->getAttr<SectionAttr>())
+          assert(!MissingFeatures::setSectionForFuncOp());
+
+      assert(!MissingFeatures::updateCPUAndFeaturesAttributes());
+    }
+
+    if (const auto *CSA = D->getAttr<CodeSegAttr>()) {
+      assert(!MissingFeatures::setSectionForFuncOp());
+      if (GV)
+        GV.setSection(CSA->getName());
+      if (F)
+        assert(!MissingFeatures::setSectionForFuncOp());
+    } else if (const auto *SA = D->getAttr<SectionAttr>())
+      if (GV)
+        GV.setSection(SA->getName());
+    if (F)
+      assert(!MissingFeatures::setSectionForFuncOp());
+  }
+  assert(!MissingFeatures::setTargetAttributes());
 }
 
 void CIRGenModule::replaceGlobal(mlir::cir::GlobalOp Old,
