@@ -117,20 +117,11 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
   if (VInst->hasOneUse()) {
     // If the instruction has one use, we can directly simplify it.
     NewVal = SimplifyDemandedUseBits(VInst, DemandedMask, Known, Depth, Q);
-  } else if (Depth != 0) {
-    // If there are multiple uses of this instruction and we aren't at the root,
-    // then we can simplify VInst to some other value, but not modify the
-    // instruction.
+  } else {
+    // If there are multiple uses of this instruction, then we can simplify
+    // VInst to some other value, but not modify the instruction.
     NewVal =
         SimplifyMultipleUseDemandedBits(VInst, DemandedMask, Known, Depth, Q);
-  } else {
-    // If this is the root being simplified, allow it to have multiple uses,
-    // just set the DemandedMask to all bits and reset the context instruction.
-    // This allows visitTruncInst (for example) to simplify the operand of a
-    // trunc without duplicating all the SimplifyDemandedUseBits() logic.
-    NewVal =
-        SimplifyDemandedUseBits(VInst, APInt::getAllOnes(Known.getBitWidth()),
-                                Known, Depth, Q.getWithInstruction(VInst));
   }
   if (!NewVal) return false;
   if (Instruction* OpInst = dyn_cast<Instruction>(U))
