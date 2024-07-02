@@ -231,15 +231,17 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-NEXT:    srliw a0, a0, 1
 ; RV64I-NEXT:    beqz a0, .LBB4_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
-; RV64I-NEXT:    srliw a1, a0, 1
+; RV64I-NEXT:    srli a1, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srliw a1, a0, 2
+; RV64I-NEXT:    srli a1, a0, 2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srliw a1, a0, 4
+; RV64I-NEXT:    srli a1, a0, 4
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srliw a1, a0, 8
+; RV64I-NEXT:    slli a1, a0, 33
+; RV64I-NEXT:    srli a1, a1, 41
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srliw a1, a0, 16
+; RV64I-NEXT:    slli a1, a0, 33
+; RV64I-NEXT:    srli a1, a1, 49
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    srli a1, a0, 1
@@ -1336,7 +1338,7 @@ define i32 @abs_i32(i32 %x) {
 define signext i32 @abs_i32_sext(i32 signext %x) {
 ; RV64I-LABEL: abs_i32_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraiw a1, a0, 31
+; RV64I-NEXT:    srai a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
