@@ -62,7 +62,7 @@ define amdgpu_ps void @test_scale_bias_activate_f32_ssrc_null(<4 x float> %acc_i
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %dst = call <4 x float> @llvm.amdgcn.scale.bias.activate.f32(<4 x float> %acc_in, float 0.0, float %bias, i32 65538, i1 1)
+  %dst = call <4 x float> @llvm.amdgcn.scale.bias.activate.f32(<4 x float> %acc_in, float 0.0, float %bias, i32 67108866, i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
   ret void
 }
@@ -106,7 +106,7 @@ define amdgpu_ps void @test_scale_bias_activate_f16_ssrc_null(<8 x half> %acc_in
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %dst = call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> %acc_in, float 0.0, <2 x half> %bias, i32 65538, i1 1)
+  %dst = call <8 x half> @llvm.amdgcn.scale.bias.activate.f16(<8 x half> %acc_in, float 0.0, <2 x half> %bias, i32 67108866, i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
   ret void
 }
@@ -150,7 +150,7 @@ define amdgpu_ps void @test_scale_bias_activate_bf16_ssrc_null(<8 x bfloat> %acc
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %dst = call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> %acc_in, float 0.0, <2 x bfloat> %bias, i32 65538, i1 1)
+  %dst = call <8 x bfloat> @llvm.amdgcn.scale.bias.activate.bf16(<8 x bfloat> %acc_in, float 0.0, <2 x bfloat> %bias, i32 67108866, i1 1)
   store <8 x bfloat> %dst, ptr addrspace(1) %out
   ret void
 }
@@ -206,7 +206,7 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_f16_ssrc_null(<4 x half
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> %acc_in, float 0.0, <2 x half> %bias, i32 65538, i1 1)
+  %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter2.f16(<4 x half> %acc_in, float 0.0, <2 x half> %bias, i32 67108866, i1 1)
   %dst0 = extractvalue { <2 x half>, <2 x half> } %pair, 0
   %dst1 = extractvalue { <2 x half>, <2 x half> } %pair, 1
   store <2 x half> %dst0, ptr addrspace(1) %out0
@@ -263,7 +263,7 @@ define amdgpu_ps void @test_scale_bias_activate_scatter2_bf16_ssrc_null(<4 x bfl
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> %acc_in, float 0.0, <2 x bfloat> %bias, i32 65538, i1 1)
+  %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter2.bf16(<4 x bfloat> %acc_in, float 0.0, <2 x bfloat> %bias, i32 67108866, i1 1)
   %dst0 = extractvalue { <2 x bfloat>, <2 x bfloat> } %pair, 0
   %dst1 = extractvalue { <2 x bfloat>, <2 x bfloat> } %pair, 1
   store <2 x bfloat> %dst0, ptr addrspace(1) %out0
@@ -336,7 +336,7 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_f16_ssrc_null(<8 x half
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> %acc_in, float 0.0, <2 x half> %bias, i32 65538, i1 1)
+  %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.scale.bias.activate.scatter4.f16(<8 x half> %acc_in, float 0.0, <2 x half> %bias, i32 67108866, i1 1)
   %dst0 = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } %quad, 0
   %dst1 = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } %quad, 1
   %dst2 = extractvalue { <2 x half>, <2 x half>, <2 x half>, <2 x half> } %quad, 2
@@ -416,7 +416,7 @@ define amdgpu_ps void @test_scale_bias_activate_scatter4_bf16_ssrc_null(<8 x bfl
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> %acc_in, float 0.0, <2 x bfloat> %bias, i32 65538, i1 1)
+  %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.scale.bias.activate.scatter4.bf16(<8 x bfloat> %acc_in, float 0.0, <2 x bfloat> %bias, i32 67108866, i1 1)
   %dst0 = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } %quad, 0
   %dst1 = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } %quad, 1
   %dst2 = extractvalue { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } %quad, 2

@@ -224,8 +224,8 @@ def PixelShape {
 }
 
 def FilterType {
-  int 3X3 = 0;
-  int 1X1 = 1;
+  int 1X1 = 0;
+  int 3X3 = 1;
 }
 
 class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy, _HasAux, 0, 0, 0> {
@@ -589,8 +589,8 @@ multiclass VOPM_Cvt_To_Tensor_Shape_Pseudo<string ProfilePrefix, int acc16bit> {
 }
 
 multiclass VOPM_Cvt_To_Tensor_Acc_Pseudo<string ProfilePrefix> {
-  defm _FP32 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 0>;
-  defm _FP16 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 1>;
+  defm _F32 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 0>;
+  defm _F16 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 1>;
   defm _BF16 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 1>;
 }
 
@@ -603,7 +603,7 @@ multiclass VOPM_Cvt_To_Tensor_MultiPseudos<string ProfilePrefix> {
  defm _FP8 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_8B">;
  defm _BF8 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_8B">;
 
- defm _FP16 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_16B">;
+ defm _F16 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_16B">;
  defm _BF16 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_16B">;
 }
 
@@ -1156,34 +1156,30 @@ multiclass Cvt_To_Tensor_16b_Real_gfx13<bits<8> op> {
   defm _4x2 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2", !tolower(NAME)>;
 }
 
-// TODO-GFX13: Replace invented opcodes
-
-defm V_CVT_TO_TENSOR_I4_FP32 : Cvt_To_Tensor_4b_Real_gfx13<0x90>;
-defm V_CVT_TO_TENSOR_I4_FP16 : Cvt_To_Tensor_4b_Real_gfx13<0x91>;
-defm V_CVT_TO_TENSOR_I4_BF16 : Cvt_To_Tensor_4b_Real_gfx13<0x92>;
-defm V_CVT_TO_TENSOR_U4_FP32 : Cvt_To_Tensor_4b_Real_gfx13<0x93>;
-defm V_CVT_TO_TENSOR_U4_FP16 : Cvt_To_Tensor_4b_Real_gfx13<0x94>;
-defm V_CVT_TO_TENSOR_U4_BF16 : Cvt_To_Tensor_4b_Real_gfx13<0x95>;
-
-defm V_CVT_TO_TENSOR_I8_FP32 : Cvt_To_Tensor_8b_Real_gfx13<0x96>;
-defm V_CVT_TO_TENSOR_I8_FP16 : Cvt_To_Tensor_8b_Real_gfx13<0x97>;
-defm V_CVT_TO_TENSOR_I8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x98>;
-defm V_CVT_TO_TENSOR_U8_FP32 : Cvt_To_Tensor_8b_Real_gfx13<0x99>;
-defm V_CVT_TO_TENSOR_U8_FP16 : Cvt_To_Tensor_8b_Real_gfx13<0x9a>;
-defm V_CVT_TO_TENSOR_U8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x9b>;
-defm V_CVT_TO_TENSOR_FP8_FP32 : Cvt_To_Tensor_8b_Real_gfx13<0x9c>;
-defm V_CVT_TO_TENSOR_FP8_FP16 : Cvt_To_Tensor_8b_Real_gfx13<0x9d>;
-defm V_CVT_TO_TENSOR_FP8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x9e>;
-defm V_CVT_TO_TENSOR_BF8_FP32 : Cvt_To_Tensor_8b_Real_gfx13<0x9f>;
-defm V_CVT_TO_TENSOR_BF8_FP16 : Cvt_To_Tensor_8b_Real_gfx13<0xa0>;
-defm V_CVT_TO_TENSOR_BF8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0xa1>;
-
-defm V_CVT_TO_TENSOR_FP16_FP32 : Cvt_To_Tensor_16b_Real_gfx13<0xa2>;
-defm V_CVT_TO_TENSOR_FP16_FP16 : Cvt_To_Tensor_16b_Real_gfx13<0xa3>;
-defm V_CVT_TO_TENSOR_FP16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0xa4>;
-defm V_CVT_TO_TENSOR_BF16_FP32 : Cvt_To_Tensor_16b_Real_gfx13<0xa5>;
-defm V_CVT_TO_TENSOR_BF16_FP16 : Cvt_To_Tensor_16b_Real_gfx13<0xa6>;
-defm V_CVT_TO_TENSOR_BF16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0xa7>;
+defm V_CVT_TO_TENSOR_I4_F32 : Cvt_To_Tensor_4b_Real_gfx13<0x30>;
+defm V_CVT_TO_TENSOR_U4_F32 : Cvt_To_Tensor_4b_Real_gfx13<0x31>;
+defm V_CVT_TO_TENSOR_I8_F32 : Cvt_To_Tensor_8b_Real_gfx13<0x32>;
+defm V_CVT_TO_TENSOR_U8_F32 : Cvt_To_Tensor_8b_Real_gfx13<0x33>;
+defm V_CVT_TO_TENSOR_FP8_F32 : Cvt_To_Tensor_8b_Real_gfx13<0x34>;
+defm V_CVT_TO_TENSOR_BF8_F32 : Cvt_To_Tensor_8b_Real_gfx13<0x35>;
+defm V_CVT_TO_TENSOR_F16_F32 : Cvt_To_Tensor_16b_Real_gfx13<0x36>;
+defm V_CVT_TO_TENSOR_BF16_F32 : Cvt_To_Tensor_16b_Real_gfx13<0x37>;
+defm V_CVT_TO_TENSOR_I4_F16 : Cvt_To_Tensor_4b_Real_gfx13<0x38>;
+defm V_CVT_TO_TENSOR_U4_F16 : Cvt_To_Tensor_4b_Real_gfx13<0x39>;
+defm V_CVT_TO_TENSOR_I8_F16 : Cvt_To_Tensor_8b_Real_gfx13<0x3a>;
+defm V_CVT_TO_TENSOR_U8_F16 : Cvt_To_Tensor_8b_Real_gfx13<0x3b>;
+defm V_CVT_TO_TENSOR_FP8_F16 : Cvt_To_Tensor_8b_Real_gfx13<0x3c>;
+defm V_CVT_TO_TENSOR_BF8_F16 : Cvt_To_Tensor_8b_Real_gfx13<0x3d>;
+defm V_CVT_TO_TENSOR_F16_F16 : Cvt_To_Tensor_16b_Real_gfx13<0x3e>;
+defm V_CVT_TO_TENSOR_BF16_F16 : Cvt_To_Tensor_16b_Real_gfx13<0x3f>;
+defm V_CVT_TO_TENSOR_I4_BF16 : Cvt_To_Tensor_4b_Real_gfx13<0x40>;
+defm V_CVT_TO_TENSOR_U4_BF16 : Cvt_To_Tensor_4b_Real_gfx13<0x41>;
+defm V_CVT_TO_TENSOR_I8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x42>;
+defm V_CVT_TO_TENSOR_U8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x43>;
+defm V_CVT_TO_TENSOR_FP8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x44>;
+defm V_CVT_TO_TENSOR_BF8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x45>;
+defm V_CVT_TO_TENSOR_F16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0x46>;
+defm V_CVT_TO_TENSOR_BF16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0x47>;
 
 multiclass SBA<string Suffix, bits<8> op> {
   defm NAME # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;
@@ -1191,13 +1187,13 @@ multiclass SBA<string Suffix, bits<8> op> {
   defm NAME # "_SCATTER4" # "_" # Suffix : VOP5M_Real_gfx13<op>;
 }
 
-defm V_SCALE_BIAS_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x82>;
-defm V_SCALE_BIAS_ACTIVATE : SBA<"F16", 0x83>;
-defm V_SCALE_BIAS_ACTIVATE : SBA<"BF16", 0x84>;
+defm V_SCALE_BIAS_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x20>;
+defm V_SCALE_BIAS_ACTIVATE : SBA<"F16", 0x21>;
+defm V_SCALE_BIAS_ACTIVATE : SBA<"BF16", 0x22>;
 
-defm V_UNIFORM_SCALE_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x87>;
-defm V_UNIFORM_SCALE_ACTIVATE : SBA<"F16", 0x88>;
-defm V_UNIFORM_SCALE_ACTIVATE : SBA<"BF16", 0x89>;
+defm V_UNIFORM_SCALE_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x25>;
+defm V_UNIFORM_SCALE_ACTIVATE : SBA<"F16", 0x26>;
+defm V_UNIFORM_SCALE_ACTIVATE : SBA<"BF16", 0x27>;
 
 multiclass VOP3M_WMMA_K1_K2_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X16_", NAME) : VOP3M_WMMA_Real_gfx13<op, !tolower(NAME)>;
@@ -1210,28 +1206,24 @@ multiclass VOP3M_WMMA_K1_K2_K4_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X64_", NAME) : VOP3M_WMMA_Real_gfx13<op, !tolower(NAME)>;
 }
 
-defm V_WMMA_BF16_16X16X16_BF16   : VOP3M_WMMA_Real_gfx13 <0x040>;
-defm V_WMMA_F32_16X16X16_BF16    : VOP3M_WMMA_Real_gfx13 <0x041>;
-defm V_WMMA_F16_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x042>;
-defm V_WMMA_F32_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x045>;
-
-defm V_WMMA_F16_16X16_BF8_BF8 : VOP3M_WMMA_K1_K2_Real <0x04b>;
-defm V_WMMA_F16_16X16_BF8_FP8 : VOP3M_WMMA_K1_K2_Real <0x04c>;
-defm V_WMMA_F16_16X16_FP8_BF8 : VOP3M_WMMA_K1_K2_Real <0x04e>;
-defm V_WMMA_F16_16X16_FP8_FP8 : VOP3M_WMMA_K1_K2_Real <0x04d>;
-
-defm V_WMMA_F32_16X16_BF8_BF8 : VOP3M_WMMA_K1_K2_Real <0x043>;
-defm V_WMMA_F32_16X16_BF8_FP8 : VOP3M_WMMA_K1_K2_Real <0x044>;
-defm V_WMMA_F32_16X16_FP8_BF8 : VOP3M_WMMA_K1_K2_Real <0x047>;
-defm V_WMMA_F32_16X16_FP8_FP8 : VOP3M_WMMA_K1_K2_Real <0x046>;
-
-defm V_WMMA_I32_16X16_IU8 : VOP3M_WMMA_K1_K2_Real <0x048>;
-defm V_WMMA_F32_16X16_IU8 : VOP3M_WMMA_K1_K2_Real <0x049>;
-defm V_WMMA_F32I32_16X16_IU8 : VOP3M_WMMA_K1_K2_Real <0x04a>;
-
-defm V_WMMA_I32_16X16_IU4 : VOP3M_WMMA_K1_K2_K4_Real <0x04f>;
-defm V_WMMA_F32_16X16_IU4 : VOP3M_WMMA_K1_K2_K4_Real <0x050>;
-defm V_WMMA_F32I32_16X16_IU4 : VOP3M_WMMA_K1_K2_K4_Real <0x051>;
+defm V_WMMA_F32_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x70>;
+defm V_WMMA_F16_16X16X16_F16     : VOP3M_WMMA_Real_gfx13 <0x71>;
+defm V_WMMA_F32_16X16X16_BF16    : VOP3M_WMMA_Real_gfx13 <0x72>;
+defm V_WMMA_BF16_16X16X16_BF16   : VOP3M_WMMA_Real_gfx13 <0x73>;
+defm V_WMMA_F32_16X16_FP8_FP8    : VOP3M_WMMA_K1_K2_Real <0x74>;
+defm V_WMMA_F32_16X16_FP8_BF8    : VOP3M_WMMA_K1_K2_Real <0x75>;
+defm V_WMMA_F32_16X16_BF8_FP8    : VOP3M_WMMA_K1_K2_Real <0x76>;
+defm V_WMMA_F32_16X16_BF8_BF8    : VOP3M_WMMA_K1_K2_Real <0x77>;
+defm V_WMMA_F16_16X16_FP8_FP8    : VOP3M_WMMA_K1_K2_Real <0x78>;
+defm V_WMMA_F16_16X16_FP8_BF8    : VOP3M_WMMA_K1_K2_Real <0x79>;
+defm V_WMMA_F16_16X16_BF8_FP8    : VOP3M_WMMA_K1_K2_Real <0x7a>;
+defm V_WMMA_F16_16X16_BF8_BF8    : VOP3M_WMMA_K1_K2_Real <0x7b>;
+defm V_WMMA_I32_16X16_IU8        : VOP3M_WMMA_K1_K2_Real <0x7c>;
+defm V_WMMA_F32_16X16_IU8        : VOP3M_WMMA_K1_K2_Real <0x7d>;
+defm V_WMMA_I32_16X16_IU4        : VOP3M_WMMA_K1_K2_K4_Real <0x7e>;
+defm V_WMMA_F32_16X16_IU4        : VOP3M_WMMA_K1_K2_K4_Real <0x7f>;
+defm V_WMMA_F32I32_16X16_IU8     : VOP3M_WMMA_K1_K2_Real <0x8a>;
+defm V_WMMA_F32I32_16X16_IU4     : VOP3M_WMMA_K1_K2_K4_Real <0x8b>;
 
 multiclass VOP3M_SWMMAC_K1_K2_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X32_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
@@ -1244,26 +1236,28 @@ multiclass VOP3M_SWMMAC_K1_K2_K4_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X128_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
 }
 
-defm V_SWMMAC_F16_16X16X32_F16     : VOP3M_SWMMAC_Real_gfx13 <0x62>;
-defm V_SWMMAC_F32_16X16X32_F16     : VOP3M_SWMMAC_Real_gfx13 <0x63>;
-defm V_SWMMAC_F32_16X16X32_BF16    : VOP3M_SWMMAC_Real_gfx13 <0x64>;
-defm V_SWMMAC_BF16_16X16X32_BF16   : VOP3M_SWMMAC_Real_gfx13 <0x65>;
+// TODO-GFX13: Replace invented opcodes (SWMMAC)
 
-defm V_SWMMAC_F32_16X16_FP8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x66>;
-defm V_SWMMAC_F32_16X16_FP8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x67>;
-defm V_SWMMAC_F32_16X16_BF8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x68>;
-defm V_SWMMAC_F32_16X16_BF8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x69>;
-defm V_SWMMAC_F16_16X16_FP8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x6a>;
-defm V_SWMMAC_F16_16X16_FP8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x6b>;
-defm V_SWMMAC_F16_16X16_BF8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x6c>;
-defm V_SWMMAC_F16_16X16_BF8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x6d>;
+defm V_SWMMAC_F16_16X16X32_F16     : VOP3M_SWMMAC_Real_gfx13 <0x52>;
+defm V_SWMMAC_F32_16X16X32_F16     : VOP3M_SWMMAC_Real_gfx13 <0x53>;
+defm V_SWMMAC_F32_16X16X32_BF16    : VOP3M_SWMMAC_Real_gfx13 <0x54>;
+defm V_SWMMAC_BF16_16X16X32_BF16   : VOP3M_SWMMAC_Real_gfx13 <0x55>;
 
-defm V_SWMMAC_I32_16X16_IU8     : VOP3M_SWMMAC_K1_K2_Real <0x06e>;
-defm V_SWMMAC_F32_16X16_IU8     : VOP3M_SWMMAC_K1_K2_Real <0x06f>;
-defm V_SWMMAC_F32I32_16X16_IU8  : VOP3M_SWMMAC_K1_K2_Real <0x070>;
-defm V_SWMMAC_I32_16X16_IU4     : VOP3M_SWMMAC_K1_K2_K4_Real <0x071>;
-defm V_SWMMAC_F32_16X16_IU4     : VOP3M_SWMMAC_K1_K2_K4_Real <0x072>;
-defm V_SWMMAC_F32I32_16X16_IU4  : VOP3M_SWMMAC_K1_K2_K4_Real <0x073>;
+defm V_SWMMAC_F32_16X16_FP8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x56>;
+defm V_SWMMAC_F32_16X16_FP8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x57>;
+defm V_SWMMAC_F32_16X16_BF8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x58>;
+defm V_SWMMAC_F32_16X16_BF8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x59>;
+defm V_SWMMAC_F16_16X16_FP8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x5a>;
+defm V_SWMMAC_F16_16X16_FP8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x5b>;
+defm V_SWMMAC_F16_16X16_BF8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x5c>;
+defm V_SWMMAC_F16_16X16_BF8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x5d>;
+
+defm V_SWMMAC_I32_16X16_IU8     : VOP3M_SWMMAC_K1_K2_Real <0x5e>;
+defm V_SWMMAC_F32_16X16_IU8     : VOP3M_SWMMAC_K1_K2_Real <0x5f>;
+defm V_SWMMAC_F32I32_16X16_IU8  : VOP3M_SWMMAC_K1_K2_Real <0x60>;
+defm V_SWMMAC_I32_16X16_IU4     : VOP3M_SWMMAC_K1_K2_K4_Real <0x61>;
+defm V_SWMMAC_F32_16X16_IU4     : VOP3M_SWMMAC_K1_K2_K4_Real <0x62>;
+defm V_SWMMAC_F32I32_16X16_IU4  : VOP3M_SWMMAC_K1_K2_K4_Real <0x63>;
 
 // TODO-GFX13: Add support for VOP3 encoding.
 multiclass FMA_Tensor_Real_Shape<bits<8> op, string psName, string mnemo> {
@@ -1277,28 +1271,28 @@ multiclass FMA_Tensor_Real<bits<8> op> {
   defm _regular : FMA_Tensor_Real_Shape<op, NAME # "_regular", !tolower(NAME)>;
 }
 
-defm V_FMA_FROM_TENSOR_F32_I4 : FMA_Tensor_Real <0x60>;
-defm V_FMA_FROM_TENSOR_F32_U4 : FMA_Tensor_Real <0x61>;
-defm V_FMA_FROM_TENSOR_F32_I8 : FMA_Tensor_Real <0x62>;
-defm V_FMA_FROM_TENSOR_F32_U8 : FMA_Tensor_Real <0x63>;
-defm V_FMA_FROM_TENSOR_F32_FP8 : FMA_Tensor_Real <0x64>;
-defm V_FMA_FROM_TENSOR_F32_BF8 : FMA_Tensor_Real <0x65>;
-defm V_FMA_FROM_TENSOR_F32_F16 : FMA_Tensor_Real <0x66>;
-defm V_FMA_FROM_TENSOR_F32_BF16 : FMA_Tensor_Real <0x67>;
-defm V_FMA_FROM_TENSOR_F16_I4 : FMA_Tensor_Real <0x68>;
-defm V_FMA_FROM_TENSOR_F16_U4 : FMA_Tensor_Real <0x69>;
-defm V_FMA_FROM_TENSOR_F16_I8 : FMA_Tensor_Real <0x6a>;
-defm V_FMA_FROM_TENSOR_F16_U8 : FMA_Tensor_Real <0x6b>;
-defm V_FMA_FROM_TENSOR_F16_FP8 : FMA_Tensor_Real <0x6c>;
-defm V_FMA_FROM_TENSOR_F16_BF8 : FMA_Tensor_Real <0x6d>;
-defm V_FMA_FROM_TENSOR_F16_F16 : FMA_Tensor_Real <0x6e>;
-defm V_FMA_FROM_TENSOR_BF16_I4 : FMA_Tensor_Real <0x70>;
-defm V_FMA_FROM_TENSOR_BF16_U4 : FMA_Tensor_Real <0x71>;
-defm V_FMA_FROM_TENSOR_BF16_I8 : FMA_Tensor_Real <0x72>;
-defm V_FMA_FROM_TENSOR_BF16_U8 : FMA_Tensor_Real <0x73>;
-defm V_FMA_FROM_TENSOR_BF16_FP8 : FMA_Tensor_Real <0x74>;
-defm V_FMA_FROM_TENSOR_BF16_BF8 : FMA_Tensor_Real <0x75>;
-defm V_FMA_FROM_TENSOR_BF16_BF16 : FMA_Tensor_Real <0x77>;
+defm V_FMA_FROM_TENSOR_F32_I4 : FMA_Tensor_Real <0x50>;
+defm V_FMA_FROM_TENSOR_F32_U4 : FMA_Tensor_Real <0x51>;
+defm V_FMA_FROM_TENSOR_F32_I8 : FMA_Tensor_Real <0x52>;
+defm V_FMA_FROM_TENSOR_F32_U8 : FMA_Tensor_Real <0x53>;
+defm V_FMA_FROM_TENSOR_F32_FP8 : FMA_Tensor_Real <0x54>;
+defm V_FMA_FROM_TENSOR_F32_BF8 : FMA_Tensor_Real <0x55>;
+defm V_FMA_FROM_TENSOR_F32_F16 : FMA_Tensor_Real <0x56>;
+defm V_FMA_FROM_TENSOR_F32_BF16 : FMA_Tensor_Real <0x57>;
+defm V_FMA_FROM_TENSOR_F16_I4 : FMA_Tensor_Real <0x58>;
+defm V_FMA_FROM_TENSOR_F16_U4 : FMA_Tensor_Real <0x59>;
+defm V_FMA_FROM_TENSOR_F16_I8 : FMA_Tensor_Real <0x5a>;
+defm V_FMA_FROM_TENSOR_F16_U8 : FMA_Tensor_Real <0x5b>;
+defm V_FMA_FROM_TENSOR_F16_FP8 : FMA_Tensor_Real <0x5c>;
+defm V_FMA_FROM_TENSOR_F16_BF8 : FMA_Tensor_Real <0x5d>;
+defm V_FMA_FROM_TENSOR_F16_F16 : FMA_Tensor_Real <0x5e>;
+defm V_FMA_FROM_TENSOR_BF16_I4 : FMA_Tensor_Real <0x60>;
+defm V_FMA_FROM_TENSOR_BF16_U4 : FMA_Tensor_Real <0x61>;
+defm V_FMA_FROM_TENSOR_BF16_I8 : FMA_Tensor_Real <0x62>;
+defm V_FMA_FROM_TENSOR_BF16_U8 : FMA_Tensor_Real <0x63>;
+defm V_FMA_FROM_TENSOR_BF16_FP8 : FMA_Tensor_Real <0x64>;
+defm V_FMA_FROM_TENSOR_BF16_BF8 : FMA_Tensor_Real <0x65>;
+defm V_FMA_FROM_TENSOR_BF16_BF16 : FMA_Tensor_Real <0x67>;
 
 //===----------------------------------------------------------------------===//
 // VOPM Patterns
