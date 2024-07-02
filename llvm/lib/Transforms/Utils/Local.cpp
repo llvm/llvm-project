@@ -1733,6 +1733,19 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                     SI->getIterator());
 }
 
+void llvm::InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII, StoreInst *SI,
+                                      DIBuilder &Builder) {
+  auto *DIVar = DII->getVariable();
+  assert(DIVar && "Missing variable");
+  auto *DIExpr = DII->getExpression();
+  Value *DV = SI->getValueOperand();
+
+  DebugLoc NewLoc = getDebugValueLoc(DII);
+
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
+                                    SI->getIterator());
+}
+
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
@@ -1805,6 +1818,19 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   DbgVariableRecord *NewDVR =
       new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
   SI->getParent()->insertDbgRecordBefore(NewDVR, SI->getIterator());
+}
+
+void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
+                                      DIBuilder &Builder) {
+  auto *DIVar = DVR->getVariable();
+  assert(DIVar && "Missing variable");
+  auto *DIExpr = DVR->getExpression();
+  Value *DV = SI->getValueOperand();
+
+  DebugLoc NewLoc = getDebugValueLoc(DVR);
+
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
+                                    SI->getIterator());
 }
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
