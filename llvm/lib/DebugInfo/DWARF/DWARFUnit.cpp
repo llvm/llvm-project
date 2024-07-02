@@ -496,6 +496,12 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
+  // Acquire the FreeDIEsMutex recursive lock to prevent a different thread
+  // from freeing the DIE arrays while they're being extracted. It needs to
+  // be recursive, as there is a potentially recursive path through
+  // determineStringOffsetsTableContribution.
+  std::lock_guard<std::recursive_mutex> FreeLock(FreeDIEsMutex);
+
   if ((CUDieOnly && !DieArray.empty()) ||
       DieArray.size() > 1)
     return Error::success(); // Already parsed.
@@ -653,6 +659,10 @@ bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie) {
+  // We need to acquire the FreeDIEsMutex lock in write-mode, because we are
+  // going to free the DIEs, when other threads might be trying to create them.
+  std::lock_guard<std::recursive_mutex> FreeLock(FreeDIEsMutex);
+
   // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
   // shrink_to_fit() is a *non-binding* request to reduce capacity() to size().
   // It depends on the implementation whether the request is fulfilled.
