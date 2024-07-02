@@ -8,7 +8,6 @@
 
 #include "AVRMCExpr.h"
 
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
@@ -80,7 +79,7 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
   if (Value.isAbsolute()) {
     Result = MCValue::get(evaluateAsInt64(Value.getConstant()));
   } else {
-    if (!Asm || !Asm->getLayout())
+    if (!Asm || !Asm->hasLayout())
       return false;
 
     MCContext &Context = Asm->getContext();
