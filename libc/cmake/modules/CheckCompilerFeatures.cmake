@@ -75,4 +75,4 @@ check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTE
 check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
 
 # clang-3.0+
-check_c_compiler_flag("-nostdlibinc" LIBC_C_SUPPORTS_NOSTDLIBINC)
+check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)

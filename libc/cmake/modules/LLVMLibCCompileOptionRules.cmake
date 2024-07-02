@@ -48,7 +48,7 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-ffreestanding")
       # Manually disable standard include paths to prevent system headers from
       # being included.
-      if(LIBC_C_SUPPORTS_NOSTDLIBINC)
+      if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
         list(APPEND compile_options "-nostdlibinc")
       else()
         list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
@@ -115,15 +115,6 @@ function(_get_common_compile_options output_var flags)
       endif()
     elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
       list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
-    endif()
-
-    # Manually disable standard include paths to prevent system headers from
-    # being included.
-    if(LIBC_C_SUPPORTS_NOSTDLIBINC)
-      list(APPEND compile_options "-nostdlibinc")
-    else()
-      list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-      list(APPEND compile_options "-nostdinc")
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
