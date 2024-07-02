@@ -24,6 +24,7 @@
 
 // CHECK-FMV-OFF: "-target-feature" "-fmv"
 // CHECK-FMV-NOT: "-target-feature" "-fmv"
+// CHECK-FMV:     "-target-feature" "+fmv"
 
 // Check for AArch64 out-of-line atomics default settings.
 // RUN: %clang --target=aarch64-linux-android -rtlib=compiler-rt \
