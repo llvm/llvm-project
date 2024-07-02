@@ -112,19 +112,27 @@ void test() {
 #endif
 }
 
-// std::back_insert_iterator<std::string>, copyable
-static_assert(std::is_copy_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
-static_assert(std::is_copy_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+// The default constructor is suppressed by the deleted copy operations.
+// The move operations are implicitly deleted due to the deleted copy operations.
 
-static_assert(std::is_move_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
-static_assert(std::is_move_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+// std::back_insert_iterator<std::string>, copyable
+static_assert(
+    !std::is_default_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+
+static_assert(!std::is_copy_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+static_assert(!std::is_copy_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+
+static_assert(!std::is_move_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+static_assert(!std::is_move_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
 
 // cpp20_output_iterator, move only
+static_assert(!std::is_default_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+
 static_assert(!std::is_copy_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
 static_assert(!std::is_copy_assignable_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
 
-static_assert(std::is_move_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
-static_assert(std::is_move_assignable_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+static_assert(!std::is_move_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+static_assert(!std::is_move_assignable_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
 
 int main(int, char**) {
   test<std::back_insert_iterator<std::basic_string<char>>, char>();
