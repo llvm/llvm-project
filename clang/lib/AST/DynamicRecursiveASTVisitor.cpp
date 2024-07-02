@@ -117,16 +117,21 @@ struct Impl : RecursiveASTVisitor<Impl> {
   #include "clang/AST/AttrVisitor.inc"
   #undef ATTR_VISITOR_DECLS*/
 
+  // Declarations.
 #define ABSTRACT_DECL(DECL)
 #define DECL(CLASS, BASE)                                                      \
   bool Traverse##CLASS##Decl(CLASS##Decl *D) {                                 \
     return Visitor.Traverse##CLASS##Decl(D);                                   \
-  }                                                                            \
+  }
+#include "clang/AST/DeclNodes.inc"
+
+#define DECL(CLASS, BASE)                                                      \
   bool Visit##CLASS##Decl(CLASS##Decl *D) {                                    \
     return Visitor.Visit##CLASS##Decl(D);                                      \
   }
 #include "clang/AST/DeclNodes.inc"
 
+  // Statements.
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
   bool Traverse##CLASS(CLASS *S) { return Visitor.Traverse##CLASS(S); }
@@ -136,17 +141,21 @@ struct Impl : RecursiveASTVisitor<Impl> {
   bool Visit##CLASS(CLASS *S) { return Visitor.Visit##CLASS(S); }
 #include "clang/AST/StmtNodes.inc"
 
-  // Declare Traverse*() and friends for all concrete Typeclasses.
+  // Types.
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
   bool Traverse##CLASS##Type(CLASS##Type *T) {                                 \
     return Visitor.Traverse##CLASS##Type(T);                                   \
-  }                                                                            \
+  }
+#include "clang/AST/TypeNodes.inc"
+
+#define TYPE(CLASS, BASE)                                                      \
   bool Visit##CLASS##Type(CLASS##Type *T) {                                    \
     return Visitor.Visit##CLASS##Type(T);                                      \
   }
 #include "clang/AST/TypeNodes.inc"
 
+  // TypeLocs.
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
   bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL) {                           \
