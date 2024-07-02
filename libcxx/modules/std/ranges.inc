@@ -334,14 +334,16 @@ export namespace std {
     }
 #endif // _LIBCPP_STD_VER >= 23
 
-#if 0
+#if _LIBCPP_STD_VER >= 23
     // [range.stride], stride view
     using std::ranges::stride_view;
 
     namespace views {
       using std::ranges::views::stride;
-    }
+    } // namespace views
+#endif // _LIBCPP_STD_VER >= 23
 
+#if 0
     using std::ranges::cartesian_product_view;
 
     namespace views {

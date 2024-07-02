@@ -11,6 +11,11 @@
 #include <ranges>
 #include <vector>
 
+static_assert(std::ranges::enable_borrowed_range<std::ranges::empty_view<int>>);
 static_assert(std::ranges::enable_borrowed_range<std::ranges::as_rvalue_view<std::ranges::empty_view<int>>>);
+
+static_assert(std::ranges::enable_borrowed_range<std::views::all_t<std::vector<int>&>>);
 static_assert(std::ranges::enable_borrowed_range<std::ranges::as_rvalue_view<std::views::all_t<std::vector<int>&>>>);
+
+static_assert(!std::ranges::enable_borrowed_range<std::views::all_t<std::vector<int>>>);
 static_assert(!std::ranges::enable_borrowed_range<std::ranges::as_rvalue_view<std::views::all_t<std::vector<int>>>>);
