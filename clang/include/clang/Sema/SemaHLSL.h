@@ -31,6 +31,7 @@ class SemaHLSL : public SemaBase {
 public:
   SemaHLSL(Sema &S);
 
+  HLSLResourceAttr *mergeHLSLResourceAttr(bool CBuffer);
   Decl *ActOnStartBuffer(Scope *BufferScope, bool CBuffer, SourceLocation KwLoc,
                          IdentifierInfo *Ident, SourceLocation IdentLoc,
                          SourceLocation LBrace);
