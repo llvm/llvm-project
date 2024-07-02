@@ -409,6 +409,10 @@ Non-comprehensive list of changes in this release
 - ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
   errors and certain default-to-error ``-W`` diagnostics to warnings.
 
+- Clang now emits distinct type-based alias analysis tags for incompatible
+  pointers, enabling more powerful alias analysis when accessing pointer types.
+  The new behavior can be disabledusing ``-fno-pointer-tbaa``.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -436,6 +440,9 @@ New Compiler Flags
 - ``-fms-define-stdc`` and its clang-cl counterpart ``/Zc:__STDC__``.
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
+
+- ``-fno-pointer-tbaa`` disables emission of distinct type-based alias
+  analysis tags for incompatible pointers.
 
 Deprecated Compiler Flags
 -------------------------
