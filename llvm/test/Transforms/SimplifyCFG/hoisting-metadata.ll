@@ -8,10 +8,8 @@ define i64 @hoist_load_with_matching_pointers_and_tbaa(i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    call void @init(ptr [[TMP]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[TMP]], align 8
-; CHECK-NOT:       !tbaa
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP]], align 8
-; CHECK-NOT:       !tbaa
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[TMP]], align 8, !tbaa [[M:!.+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP]], align 8, !tbaa [[M]]
 ; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 [[TMP0]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
