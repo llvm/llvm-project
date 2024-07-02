@@ -163,6 +163,11 @@ New checks
   Replaces nested ``std::min`` and ``std::max`` calls with an initializer list
   where applicable.
 
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses>` check.
+
+  Flags the unsafe ``operator[]`` and suggests replacing it with ``at()``.
+
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
 
