@@ -46,6 +46,7 @@ class MCRelaxableFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
+class MCAsmLayout;
 class MCContext;
 class MCCodeEmitter;
 class MCFragment;
@@ -340,7 +341,7 @@ public:
   void Finish();
 
   // Layout all section and prepare them for emission.
-  void layout();
+  void layout(MCAsmLayout &Layout);
 
   // FIXME: This does not belong here.
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }

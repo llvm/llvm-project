@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -2415,7 +2416,8 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
 
   MCAssembler &Assembler =
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler();
-  Assembler.layout();
+  MCAsmLayout Layout(Assembler);
+  Assembler.layout(Layout);
 
   // Obtain fragment sizes.
   std::vector<uint64_t> FragmentSizes;
