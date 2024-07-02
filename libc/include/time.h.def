@@ -11,6 +11,7 @@
 
 #include "__llvm-libc-common.h"
 #include "llvm-libc-macros/time-macros.h"
+#include "llvm-libc-types/size_t.h"
 
 %%public_api()
 
