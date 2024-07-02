@@ -741,8 +741,9 @@ define i32 @mul_splat_fold_wrong_lshr_const(i32 %x) {
 
 define i32 @mul_splat_fold_no_nuw(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_no_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 16
-; CHECK-NEXT:    [[T:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[DOTFR]], 16
+; CHECK-NEXT:    [[T:%.*]] = add nsw i32 [[DOTFR]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %m = mul nsw i32 %x, 65537

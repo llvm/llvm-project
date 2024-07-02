@@ -1500,6 +1500,8 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
         // lshr (mul nuw (X, 2^N + 1)), N -> add nuw (X, lshr(X, N))
         if (Op0->hasOneUse()) {
+          if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
+            X = Builder.CreateFreeze(X, ".fr");
           auto *NewAdd = BinaryOperator::CreateNUWAdd(
               X, Builder.CreateLShr(X, ConstantInt::get(Ty, ShAmtC), "",
                                     I.isExact()));
@@ -1531,6 +1533,8 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     if (match(Op0, m_OneUse(m_NSWMul(m_Value(X), m_APInt(MulC))))) {
       if (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
           MulC->logBase2() == ShAmtC) {
+        if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
+          X = Builder.CreateFreeze(X, ".fr");
         return BinaryOperator::CreateNSWAdd(
             X, Builder.CreateLShr(X, ConstantInt::get(Ty, ShAmtC), "",
                                   I.isExact()));
