@@ -10,9 +10,9 @@
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index
 func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  // CHECK: %[[ARG2:.*]] = builtin.unrealized_conversion_cast %[[ARG2F:.*]]
-  // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0F:.*]]
-  // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[ARG1F:.*]]
+  // CHECK-DAG: %[[ARG2:.*]] = builtin.unrealized_conversion_cast %[[ARG2F]]
+  // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0F]]
+  // CHECK-DAG: %[[ARG1:.*]] = builtin.unrealized_conversion_cast %[[ARG1F]]
   // CHECK: llvm.mlir.constant(2048 : index) : i64
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   %0 = memref.alloc() : memref<2048xi8>
@@ -408,8 +408,8 @@ func.func @atomic_rmw_with_offset(%I : memref<10xi32, strided<[1], offset: 5>>, 
 // CHECK-SAME:   %[[ARG0:.+]]: memref<10xi32, strided<[1], offset: 5>>
 // CHECK-SAME:   %[[ARG1:.+]]: i32
 // CHECK-SAME:   %[[ARG2:.+]]: index
-// CHECK:        %[[MEMREF_STRUCT:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<10xi32, strided<[1], offset: 5>> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK:        %[[INDEX:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : index to i64
+// CHECK-DAG:    %[[MEMREF_STRUCT:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<10xi32, strided<[1], offset: 5>> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-DAG:    %[[INDEX:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : index to i64
 // CHECK:        %[[BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_STRUCT]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
 // CHECK:        %[[OFFSET:.+]] = llvm.mlir.constant(5 : index) : i64
 // CHECK:        %[[OFFSET_PTR:.+]] = llvm.getelementptr %[[BASE_PTR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32

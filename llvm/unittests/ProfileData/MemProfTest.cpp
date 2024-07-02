@@ -247,7 +247,7 @@ TEST(MemProf, FillsValue) {
 TEST(MemProf, PortableWrapper) {
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   const auto Schema = llvm::memprof::getFullSchema();
   PortableMemInfoBlock WriteBlock(Info, Schema);
@@ -276,7 +276,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   llvm::SmallVector<llvm::SmallVector<FrameId>> AllocCallStacks = {
       {0x123, 0x345}, {0x123, 0x567}};
@@ -310,7 +310,7 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   llvm::SmallVector<llvm::memprof::CallStackId> CallStackIds = {0x123, 0x456};
 

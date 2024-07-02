@@ -191,10 +191,14 @@ tileAndFuseProducerOfSlice(RewriterBase &rewriter,
 /// where `%0` had other uses as well. If not reconstructed from within the loop
 /// body, uses of `%0` could not be replaced, making it still live and the
 /// fusion immaterial.
+///
+/// The @param `yieldResultNumber` decides which result would be yield. If not
+/// given, yield all `opResult` of fused producer.
 LogicalResult yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
-    MutableArrayRef<LoopLikeOpInterface> loops);
+    MutableArrayRef<LoopLikeOpInterface> loops,
+    ArrayRef<unsigned> yieldResultNumber = ArrayRef<unsigned>{});
 
 /// Transformation information returned after tile and fuse.
 struct SCFTileAndFuseResult {
@@ -261,13 +265,15 @@ lowerToLoopsUsingSCFForOp(RewriterBase &rewriter, TilingInterface op);
 /// Transformation information returned after reduction tiling.
 struct SCFReductionTilingResult {
   /// The partial reduction tiled op generated.
-  Operation *parallelTiledOp;
+  SmallVector<Operation *> parallelTiledOps;
   /// The final reduction operation merging all the partial reductions.
-  Operation *mergeOp;
+  SmallVector<Operation *> mergeOps;
   /// Initial values used for reduction.
   SmallVector<Value> initialValues;
   /// The loop operations that iterate over the tiles.
   SmallVector<LoopLikeOpInterface> loops;
+  /// The replacements to use for the results of the tiled operation.
+  SmallVector<Value> replacements;
 };
 
 /// Method to tile a reduction and generate a parallel op within a serial loop.

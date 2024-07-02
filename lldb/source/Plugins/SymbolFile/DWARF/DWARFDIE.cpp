@@ -394,14 +394,12 @@ static void GetDeclContextImpl(DWARFDIE die,
     case DW_TAG_namespace:
       push_ctx(CompilerContextKind::Namespace, die.GetName());
       break;
+    case DW_TAG_class_type:
     case DW_TAG_structure_type:
-      push_ctx(CompilerContextKind::Struct, die.GetName());
+      push_ctx(CompilerContextKind::ClassOrStruct, die.GetName());
       break;
     case DW_TAG_union_type:
       push_ctx(CompilerContextKind::Union, die.GetName());
-      break;
-    case DW_TAG_class_type:
-      push_ctx(CompilerContextKind::Class, die.GetName());
       break;
     case DW_TAG_enumeration_type:
       push_ctx(CompilerContextKind::Enum, die.GetName());
@@ -456,14 +454,12 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
     case DW_TAG_namespace:
       push_ctx(CompilerContextKind::Namespace, die.GetName());
       break;
+    case DW_TAG_class_type:
     case DW_TAG_structure_type:
-      push_ctx(CompilerContextKind::Struct, die.GetName());
+      push_ctx(CompilerContextKind::ClassOrStruct, die.GetName());
       break;
     case DW_TAG_union_type:
       push_ctx(CompilerContextKind::Union, die.GetName());
-      break;
-    case DW_TAG_class_type:
-      push_ctx(CompilerContextKind::Class, die.GetName());
       break;
     case DW_TAG_enumeration_type:
       push_ctx(CompilerContextKind::Enum, die.GetName());

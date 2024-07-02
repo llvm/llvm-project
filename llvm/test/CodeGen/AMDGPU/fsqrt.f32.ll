@@ -4464,7 +4464,7 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; GISEL-IEEE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, 0x80000000
+; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v3, 1
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v3
@@ -4560,7 +4560,7 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
 ; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
-; GISEL-DAZ-NEXT:    v_mov_b32_e32 v3, 0x80000000
+; GISEL-DAZ-NEXT:    v_bfrev_b32_e32 v3, 1
 ; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
 ; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v3
@@ -4668,7 +4668,7 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ; GISEL-IEEE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, 0x80000000
+; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v3, 1
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
 ; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e32 vcc, s6, v3
@@ -4764,7 +4764,7 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
 ; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
-; GISEL-DAZ-NEXT:    v_mov_b32_e32 v3, 0x80000000
+; GISEL-DAZ-NEXT:    v_bfrev_b32_e32 v3, 1
 ; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
 ; GISEL-DAZ-NEXT:    v_cmp_nge_f32_e32 vcc, s6, v3

@@ -216,7 +216,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   // ((1 << MaskShAmt) - 1)
   auto MaskA = m_Add(m_Shl(m_One(), m_Value(MaskShAmt)), m_AllOnes());
   // (~(-1 << maskNbits))
-  auto MaskB = m_Xor(m_Shl(m_AllOnes(), m_Value(MaskShAmt)), m_AllOnes());
+  auto MaskB = m_Not(m_Shl(m_AllOnes(), m_Value(MaskShAmt)));
   // (-1 l>> MaskShAmt)
   auto MaskC = m_LShr(m_AllOnes(), m_Value(MaskShAmt));
   // ((-1 << MaskShAmt) l>> MaskShAmt)
@@ -257,8 +257,11 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
 
     // And compute the mask as usual: ~(-1 << (SumOfShAmts))
     auto *ExtendedAllOnes = ConstantExpr::getAllOnesValue(ExtendedTy);
-    auto *ExtendedInvertedMask =
-        ConstantExpr::getShl(ExtendedAllOnes, ExtendedSumOfShAmts);
+    Constant *ExtendedInvertedMask = ConstantFoldBinaryOpOperands(
+        Instruction::Shl, ExtendedAllOnes, ExtendedSumOfShAmts, Q.DL);
+    if (!ExtendedInvertedMask)
+      return nullptr;
+
     NewMask = ConstantExpr::getNot(ExtendedInvertedMask);
   } else if (match(Masked, m_c_And(m_CombineOr(MaskC, MaskD), m_Value(X))) ||
              match(Masked, m_Shr(m_Shl(m_Value(X), m_Value(MaskShAmt)),
@@ -1218,16 +1221,16 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   }
 
   Constant *C1;
-  if (match(Op1, m_Constant(C1))) {
+  if (match(Op1, m_ImmConstant(C1))) {
     Constant *C2;
     Value *X;
     // (X * C2) << C1 --> X * (C2 << C1)
-    if (match(Op0, m_Mul(m_Value(X), m_Constant(C2))))
-      return BinaryOperator::CreateMul(X, ConstantExpr::getShl(C2, C1));
+    if (match(Op0, m_Mul(m_Value(X), m_ImmConstant(C2))))
+      return BinaryOperator::CreateMul(X, Builder.CreateShl(C2, C1));
 
     // shl (zext i1 X), C1 --> select (X, 1 << C1, 0)
     if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
-      auto *NewC = ConstantExpr::getShl(ConstantInt::get(Ty, 1), C1);
+      auto *NewC = Builder.CreateShl(ConstantInt::get(Ty, 1), C1);
       return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
     }
   }

@@ -51,11 +51,11 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC]]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <16 x i32> [[TMP7]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <16 x i32> [[TMP8]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[SMAX2]], 56
@@ -78,8 +78,8 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT18]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[CMP_N14:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP13]])
 ; CHECK-NEXT:    br i1 [[CMP_N14]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC13]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
@@ -359,5 +359,36 @@ latch:
   br i1 %cond, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
+  ret void
+}
+
+define void @test_store_of_final_reduction_value(i64 %x, ptr %dst) {
+; CHECK-LABEL: @test_store_of_final_reduction_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV4:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED_NEXT]] = mul i64 [[RED]], [[X:%.*]]
+; CHECK-NEXT:    store i64 [[RED_NEXT]], ptr [[DST:%.*]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV4]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV4]], 1
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv4 = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i64 [ 0, %entry ], [ %red.next, %loop ]
+  %red.next = mul i64 %red, %x
+  store i64 %red.next, ptr %dst, align 8
+  %iv.next = add i64 %iv4, 1
+  %ec = icmp eq i64 %iv4, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
   ret void
 }

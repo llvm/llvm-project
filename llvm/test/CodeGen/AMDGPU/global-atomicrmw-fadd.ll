@@ -11978,22 +11978,9 @@ define void @global_agent_atomic_fadd_noret_v2f16(ptr addrspace(1) %ptr, <2 x ha
 ; GFX908-LABEL: global_agent_atomic_fadd_noret_v2f16:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    global_load_dword v4, v[0:1], off
-; GFX908-NEXT:    s_mov_b64 s[4:5], 0
-; GFX908-NEXT:  .LBB45_1: ; %atomicrmw.start
-; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_pk_add_f16 v3, v4, v2
-; GFX908-NEXT:    global_atomic_cmpswap v3, v[0:1], v[3:4], off glc
+; GFX908-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    buffer_wbinvl1
-; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
-; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    v_mov_b32_e32 v4, v3
-; GFX908-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GFX908-NEXT:    s_cbranch_execnz .LBB45_1
-; GFX908-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX908-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: global_agent_atomic_fadd_noret_v2f16:
@@ -12199,22 +12186,9 @@ define void @global_agent_atomic_fadd_noret_v2f16__offset12b_pos(ptr addrspace(1
 ; GFX908-LABEL: global_agent_atomic_fadd_noret_v2f16__offset12b_pos:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    global_load_dword v4, v[0:1], off offset:2044
-; GFX908-NEXT:    s_mov_b64 s[4:5], 0
-; GFX908-NEXT:  .LBB46_1: ; %atomicrmw.start
-; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_pk_add_f16 v3, v4, v2
-; GFX908-NEXT:    global_atomic_cmpswap v3, v[0:1], v[3:4], off offset:2044 glc
+; GFX908-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off offset:2044
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    buffer_wbinvl1
-; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
-; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    v_mov_b32_e32 v4, v3
-; GFX908-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GFX908-NEXT:    s_cbranch_execnz .LBB46_1
-; GFX908-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX908-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: global_agent_atomic_fadd_noret_v2f16__offset12b_pos:
@@ -12423,22 +12397,9 @@ define void @global_agent_atomic_fadd_noret_v2f16__offset12b_neg(ptr addrspace(1
 ; GFX908-LABEL: global_agent_atomic_fadd_noret_v2f16__offset12b_neg:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    global_load_dword v4, v[0:1], off offset:-2048
-; GFX908-NEXT:    s_mov_b64 s[4:5], 0
-; GFX908-NEXT:  .LBB47_1: ; %atomicrmw.start
-; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_pk_add_f16 v3, v4, v2
-; GFX908-NEXT:    global_atomic_cmpswap v3, v[0:1], v[3:4], off offset:-2048 glc
+; GFX908-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off offset:-2048
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    buffer_wbinvl1
-; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
-; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    v_mov_b32_e32 v4, v3
-; GFX908-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GFX908-NEXT:    s_cbranch_execnz .LBB47_1
-; GFX908-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX908-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: global_agent_atomic_fadd_noret_v2f16__offset12b_neg:

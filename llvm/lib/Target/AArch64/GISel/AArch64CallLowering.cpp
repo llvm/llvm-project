@@ -53,6 +53,8 @@
 using namespace llvm;
 using namespace AArch64GISelUtils;
 
+extern cl::opt<bool> EnableSVEGISel;
+
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
 
@@ -370,7 +372,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     MachineRegisterInfo &MRI = MF.getRegInfo();
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-    auto &DL = F.getParent()->getDataLayout();
+    auto &DL = F.getDataLayout();
     LLVMContext &Ctx = Val->getType()->getContext();
 
     SmallVector<EVT, 4> SplitEVTs;
@@ -404,14 +406,13 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             ExtendOp = TargetOpcode::G_ZEXT;
 
           LLT NewLLT(NewVT);
-          LLT OldLLT(MVT::getVT(CurArgInfo.Ty));
+          LLT OldLLT = getLLTForType(*CurArgInfo.Ty, DL);
           CurArgInfo.Ty = EVT(NewVT).getTypeForEVT(Ctx);
           // Instead of an extend, we might have a vector type which needs
           // padding with more elements, e.g. <2 x half> -> <4 x half>.
           if (NewVT.isVector()) {
             if (OldLLT.isVector()) {
               if (NewLLT.getNumElements() > OldLLT.getNumElements()) {
-
                 CurVReg =
                     MIRBuilder.buildPadVectorWithUndefElements(NewLLT, CurVReg)
                         .getReg(0);
@@ -525,10 +526,10 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
 
 bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
-  if (F.getReturnType()->isScalableTy() ||
-      llvm::any_of(F.args(), [](const Argument &A) {
-        return A.getType()->isScalableTy();
-      }))
+  if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
+                          llvm::any_of(F.args(), [](const Argument &A) {
+                            return A.getType()->isScalableTy();
+                          })))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {
@@ -638,7 +639,7 @@ bool AArch64CallLowering::lowerFormalArguments(
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   // Arm64EC has extra requirements for varargs calls which are only implemented
@@ -1256,7 +1257,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
