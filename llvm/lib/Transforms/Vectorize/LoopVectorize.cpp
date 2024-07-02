@@ -1642,12 +1642,7 @@ private:
 
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
-  VectorizationCostTy getInstructionCost(Instruction *I, ElementCount VF);
-
-  /// The cost-computation logic from getInstructionCost which provides
-  /// the vector type as an output parameter.
-  InstructionCost getInstructionCost(Instruction *I, ElementCount VF,
-                                     Type *&VectorTy);
+  InstructionCost getInstructionCost(Instruction *I, ElementCount VF);
 
   /// Return the cost of instructions in an inloop reduction pattern, if I is
   /// part of that pattern.
@@ -4873,6 +4868,52 @@ static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
   } while (!Tail.empty());
 }
 
+static bool willGenerateVectorInstructions(VPlan &Plan, ElementCount VF,
+                                           const TargetTransformInfo &TTI) {
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
+                          Plan.getCanonicalIV()->getScalarType()->getContext());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe, VPScalarCastRecipe,
+              VPReplicateRecipe, VPInstruction, VPActiveLaneMaskPHIRecipe,
+              VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
+              VPVectorPointerRecipe>(&R))
+        continue;
+
+      auto WillWiden = [&TypeInfo, &TTI, VF](VPValue *VPV) {
+        Type *ScalarTy = TypeInfo.inferScalarType(VPV);
+        Type *VectorTy = ToVectorTy(ScalarTy, VF);
+        unsigned NumParts = TTI.getNumberOfParts(VectorTy);
+        if (!NumParts)
+          return false;
+        if (VF.isScalable())
+          // <vscale x 1 x iN> is assumed to be profitable over iN because
+          // scalable registers are a distinct register class from scalar ones.
+          // If we ever find a target which wants to lower scalable vectors
+          // back to scalars, we'll need to update this code to explicitly
+          // ask TTI about the register class uses for each part.
+          return NumParts <= VF.getKnownMinValue();
+        else
+          return NumParts < VF.getKnownMinValue();
+      };
+      SmallVector<VPValue *> VPValuesToCheck;
+      if (auto *WidenStore = dyn_cast<VPWidenStoreRecipe>(&R)) {
+        VPValuesToCheck.push_back(WidenStore->getOperand(1));
+      } else if (auto *IG = dyn_cast<VPInterleaveRecipe>(&R)) {
+        append_range(VPValuesToCheck, IG->getStoredValues());
+      } else {
+        append_range(VPValuesToCheck, R.definedValues());
+      }
+      if (any_of(VPValuesToCheck,
+                 [&WillWiden](VPValue *VPV) { return WillWiden(VPV); }))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
   InstructionCost ExpectedCost =
       CM.expectedCost(ElementCount::getFixed(1)).first;
@@ -4923,7 +4964,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       LLVM_DEBUG(dbgs() << ".\n");
 #endif
 
-      if (!C.second && !ForceVectorization) {
+      if (!willGenerateVectorInstructions(*P, VF, TTI) && !ForceVectorization) {
         LLVM_DEBUG(
             dbgs()
             << "LV: Not considering vector loop of width " << VF
@@ -5795,15 +5836,14 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
 
     // Compute the cost of the vector instruction. Note that this cost already
     // includes the scalarization overhead of the predicated instruction.
-    InstructionCost VectorCost = getInstructionCost(I, VF).first;
+    InstructionCost VectorCost = getInstructionCost(I, VF);
 
     // Compute the cost of the scalarized instruction. This cost is the cost of
     // the instruction as if it wasn't if-converted and instead remained in the
     // predicated block. We will scale this cost by block probability after
     // computing the scalarization overhead.
     InstructionCost ScalarCost =
-        VF.getFixedValue() *
-        getInstructionCost(I, ElementCount::getFixed(1)).first;
+        VF.getFixedValue() * getInstructionCost(I, ElementCount::getFixed(1));
 
     // Compute the scalarization overhead of needed insertelement instructions
     // and phi nodes.
@@ -5863,22 +5903,19 @@ LoopVectorizationCostModel::expectedCost(
           (VF.isVector() && VecValuesToIgnore.count(&I)))
         continue;
 
-      VectorizationCostTy C = getInstructionCost(&I, VF);
+      InstructionCost C = getInstructionCost(&I, VF);
 
       // Check if we should override the cost.
-      if (C.first.isValid() &&
-          ForceTargetInstructionCost.getNumOccurrences() > 0)
-        C.first = InstructionCost(ForceTargetInstructionCost);
+      if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0)
+        C = InstructionCost(ForceTargetInstructionCost);
 
       // Keep a list of instructions with invalid costs.
-      if (Invalid && !C.first.isValid())
+      if (Invalid && !C.isValid())
         Invalid->emplace_back(&I, VF);
 
-      BlockCost.first += C.first;
-      BlockCost.second |= C.second;
-      LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C.first
-                        << " for VF " << VF << " For instruction: " << I
-                        << '\n');
+      BlockCost.first += C;
+      LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
+                        << VF << " For instruction: " << I << '\n');
     }
 
     // If we are vectorizing a predicated block, it will have been
@@ -6291,49 +6328,6 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   return getWideningCost(I, VF);
 }
 
-LoopVectorizationCostModel::VectorizationCostTy
-LoopVectorizationCostModel::getInstructionCost(Instruction *I,
-                                               ElementCount VF) {
-  // If we know that this instruction will remain uniform, check the cost of
-  // the scalar version.
-  if (isUniformAfterVectorization(I, VF))
-    VF = ElementCount::getFixed(1);
-
-  if (VF.isVector() && isProfitableToScalarize(I, VF))
-    return VectorizationCostTy(InstsToScalarize[VF][I], false);
-
-  // Forced scalars do not have any scalarization overhead.
-  auto ForcedScalar = ForcedScalars.find(VF);
-  if (VF.isVector() && ForcedScalar != ForcedScalars.end()) {
-    auto InstSet = ForcedScalar->second;
-    if (InstSet.count(I))
-      return VectorizationCostTy(
-          (getInstructionCost(I, ElementCount::getFixed(1)).first *
-           VF.getKnownMinValue()),
-          false);
-  }
-
-  Type *VectorTy;
-  InstructionCost C = getInstructionCost(I, VF, VectorTy);
-
-  bool TypeNotScalarized = false;
-  if (VF.isVector() && VectorTy->isVectorTy()) {
-    if (unsigned NumParts = TTI.getNumberOfParts(VectorTy)) {
-      if (VF.isScalable())
-        // <vscale x 1 x iN> is assumed to be profitable over iN because
-        // scalable registers are a distinct register class from scalar ones.
-        // If we ever find a target which wants to lower scalable vectors
-        // back to scalars, we'll need to update this code to explicitly
-        // ask TTI about the register class uses for each part.
-        TypeNotScalarized = NumParts <= VF.getKnownMinValue();
-      else
-        TypeNotScalarized = NumParts < VF.getKnownMinValue();
-    } else
-      C = InstructionCost::getInvalid();
-  }
-  return VectorizationCostTy(C, TypeNotScalarized);
-}
-
 InstructionCost LoopVectorizationCostModel::getScalarizationOverhead(
     Instruction *I, ElementCount VF, TTI::TargetCostKind CostKind) const {
 
@@ -6724,8 +6718,25 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 }
 
 InstructionCost
-LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
-                                               Type *&VectorTy) {
+LoopVectorizationCostModel::getInstructionCost(Instruction *I,
+                                               ElementCount VF) {
+  // If we know that this instruction will remain uniform, check the cost of
+  // the scalar version.
+  if (isUniformAfterVectorization(I, VF))
+    VF = ElementCount::getFixed(1);
+
+  if (VF.isVector() && isProfitableToScalarize(I, VF))
+    return InstsToScalarize[VF][I];
+
+  // Forced scalars do not have any scalarization overhead.
+  auto ForcedScalar = ForcedScalars.find(VF);
+  if (VF.isVector() && ForcedScalar != ForcedScalars.end()) {
+    auto InstSet = ForcedScalar->second;
+    if (InstSet.count(I))
+      return getInstructionCost(I, ElementCount::getFixed(1)) *
+             VF.getKnownMinValue();
+  }
+
   Type *RetTy = I->getType();
   if (canTruncateToMinimalBitwidth(I, VF))
     RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
@@ -6748,6 +6759,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
   };
   (void) hasSingleCopyAfterVectorization;
 
+  Type *VectorTy;
   if (isScalarAfterVectorization(I, VF)) {
     // With the exception of GEPs and PHIs, after scalarization there should
     // only be one copy of the instruction generated in the loop. This is
@@ -6762,6 +6774,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     VectorTy = RetTy;
   } else
     VectorTy = ToVectorTy(RetTy, VF);
+
+  if (VF.isVector() && VectorTy->isVectorTy() &&
+      !TTI.getNumberOfParts(VectorTy))
+    return InstructionCost::getInvalid();
 
   // TODO: We need to estimate the cost of intrinsic calls.
   switch (I->getOpcode()) {

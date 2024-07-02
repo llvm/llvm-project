@@ -622,38 +622,15 @@ define void @wide_iv_trunc_reuse(ptr %dst) {
 ; CHECK-LABEL: define void @wide_iv_trunc_reuse(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], 5
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 6
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], 7
-; CHECK-NEXT:    store i32 [[TMP7]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[IV_2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    [[IV_TRUNC]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -701,6 +678,4 @@ attributes #0 = { "min-legal-vector-width"="0" "target-cpu"="skylake-avx512" }
 ; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP24]] = distinct !{[[LOOP24]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP25]] = distinct !{[[LOOP25]], [[META2]], [[META1]]}
-; CHECK: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]], [[META2]]}
-; CHECK: [[LOOP27]] = distinct !{[[LOOP27]], [[META2]], [[META1]]}
 ;.
