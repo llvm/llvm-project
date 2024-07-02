@@ -20064,10 +20064,10 @@ condition vector, without IR-level branching.
 Arguments:
 """"""""""
 
-The first operand is a vector of ``i1`` and indicates the condition.  The
-second operand is the value that is selected where the condition vector is
-true.  The third operand is the value that is selected where the condition
-vector is false.  The vectors must be of the same size.  The fourth operand is
+The first argument is a vector of ``i1`` and indicates the condition.  The
+second argument is the value that is selected where the condition vector is
+true.  The third argument is the value that is selected where the condition
+vector is false.  The vectors must be of the same size.  The fourth argument is
 the explicit vector length.
 
 #. The optional ``fast-math flags`` marker indicates that the select has one or
@@ -20079,13 +20079,13 @@ the explicit vector length.
 Semantics:
 """"""""""
 
-The intrinsic selects lanes from the second and third operand depending on a
+The intrinsic selects lanes from the second and third argument depending on a
 condition vector.
 
 All result lanes at positions greater or equal than ``%evl`` are undefined.
 For all lanes below ``%evl`` where the condition vector is true the lane is
-taken from the second operand.  Otherwise, the lane is taken from the third
-operand.
+taken from the second argument.  Otherwise, the lane is taken from the third
+argument.
 
 Example:
 """"""""
@@ -20117,15 +20117,15 @@ Overview:
 """""""""
 
 The '``llvm.vp.merge``' intrinsic is used to choose one value based on a
-condition vector and an index operand, without IR-level branching.
+condition vector and an index argument, without IR-level branching.
 
 Arguments:
 """"""""""
 
-The first operand is a vector of ``i1`` and indicates the condition.  The
-second operand is the value that is merged where the condition vector is true.
-The third operand is the value that is selected where the condition vector is
-false or the lane position is greater equal than the pivot. The fourth operand
+The first argument is a vector of ``i1`` and indicates the condition.  The
+second argument is the value that is merged where the condition vector is true.
+The third argument is the value that is selected where the condition vector is
+false or the lane position is greater equal than the pivot. The fourth argument
 is the pivot.
 
 #. The optional ``fast-math flags`` marker indicates that the merge has one or
@@ -20137,12 +20137,12 @@ is the pivot.
 Semantics:
 """"""""""
 
-The intrinsic selects lanes from the second and third operand depending on a
+The intrinsic selects lanes from the second and third argument depending on a
 condition vector and pivot value.
 
 For all lanes where the condition vector is true and the lane position is less
-than ``%pivot`` the lane is taken from the second operand.  Otherwise, the lane
-is taken from the third operand.
+than ``%pivot`` the lane is taken from the second argument.  Otherwise, the lane
+is taken from the third argument.
 
 Example:
 """"""""
@@ -20185,16 +20185,16 @@ Predicated integer addition of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.add``' intrinsic performs integer addition (:ref:`add <i_add>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20232,16 +20232,16 @@ Predicated integer subtraction of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.sub``' intrinsic performs integer subtraction
-(:ref:`sub <i_sub>`)  of the first and second vector operand on each enabled
+(:ref:`sub <i_sub>`)  of the first and second vector arguments on each enabled
 lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20281,15 +20281,15 @@ Predicated integer multiplication of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 The '``llvm.vp.mul``' intrinsic performs integer multiplication
-(:ref:`mul <i_mul>`) of the first and second vector operand on each enabled
+(:ref:`mul <i_mul>`) of the first and second vector arguments on each enabled
 lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20328,16 +20328,16 @@ Predicated, signed division of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.sdiv``' intrinsic performs signed division (:ref:`sdiv <i_sdiv>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20376,13 +20376,16 @@ Predicated, unsigned division of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The third operand is the vector mask and has the same number of elements as the result vector type. The fourth operand is the explicit vector length of the operation.
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
+operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.udiv``' intrinsic performs unsigned division
-(:ref:`udiv <i_udiv>`) of the first and second vector operand on each enabled
+(:ref:`udiv <i_udiv>`) of the first and second vector arguments on each enabled
 lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20422,16 +20425,16 @@ Predicated computations of the signed remainder of two integer vectors.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.srem``' intrinsic computes the remainder of the signed division
-(:ref:`srem <i_srem>`) of the first and second vector operand on each enabled
+(:ref:`srem <i_srem>`) of the first and second vector arguments on each enabled
 lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20471,16 +20474,16 @@ Predicated computation of the unsigned remainder of two integer vectors.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.urem``' intrinsic computes the remainder of the unsigned division
-(:ref:`urem <i_urem>`) of the first and second vector operand on each enabled
+(:ref:`urem <i_urem>`) of the first and second vector arguments on each enabled
 lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20519,16 +20522,16 @@ Vector-predicated arithmetic right-shift.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.ashr``' intrinsic computes the arithmetic right shift
-(:ref:`ashr <i_ashr>`) of the first operand by the second operand on each
+(:ref:`ashr <i_ashr>`) of the first argument by the second argument on each
 enabled lane. The result on disabled lanes is a
 :ref:`poison value <poisonvalues>`.
 
@@ -20569,16 +20572,16 @@ Vector-predicated logical right-shift.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.lshr``' intrinsic computes the logical right shift
-(:ref:`lshr <i_lshr>`) of the first operand by the second operand on each
+(:ref:`lshr <i_lshr>`) of the first argument by the second argument on each
 enabled lane. The result on disabled lanes is a
 :ref:`poison value <poisonvalues>`.
 
@@ -20618,16 +20621,16 @@ Vector-predicated left shift.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.shl``' intrinsic computes the left shift (:ref:`shl <i_shl>`) of
-the first operand by the second operand on each enabled lane.  The result on
+the first argument by the second argument on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20666,16 +20669,16 @@ Vector-predicated or.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.or``' intrinsic performs a bitwise or (:ref:`or <i_or>`) of the
-first two operands on each enabled lane.  The result on disabled lanes is
+first two arguments on each enabled lane.  The result on disabled lanes is
 a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20714,16 +20717,16 @@ Vector-predicated and.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.and``' intrinsic performs a bitwise and (:ref:`and <i_or>`) of
-the first two operands on each enabled lane.  The result on disabled lanes is
+the first two arguments on each enabled lane.  The result on disabled lanes is
 a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20762,16 +20765,16 @@ Vector-predicated, bitwise xor.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.xor``' intrinsic performs a bitwise xor (:ref:`xor <i_xor>`) of
-the first two operands on each enabled lane.
+the first two arguments on each enabled lane.
 The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20809,10 +20812,10 @@ Predicated abs of a vector of integers.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of integer type. The
-second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
-operation. The fourth operand must be a constant and is a flag to indicate
+The first argument and the result have the same vector of integer type. The
+second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
+operation. The fourth argument must be a constant and is a flag to indicate
 whether the result value of the '``llvm.vp.abs``' intrinsic is a
 :ref:`poison value <poisonvalues>` if the first argument is statically or
 dynamically an ``INT_MIN`` value.
@@ -20820,7 +20823,7 @@ dynamically an ``INT_MIN`` value.
 Semantics:
 """"""""""
 
-The '``llvm.vp.abs``' intrinsic performs abs (:ref:`abs <int_abs>`) of the first operand on each
+The '``llvm.vp.abs``' intrinsic performs abs (:ref:`abs <int_abs>`) of the first argument on each
 enabled lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20860,16 +20863,16 @@ Predicated integer signed maximum of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.smax``' intrinsic performs integer signed maximum (:ref:`smax <int_smax>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20908,16 +20911,16 @@ Predicated integer signed minimum of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.smin``' intrinsic performs integer signed minimum (:ref:`smin <int_smin>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -20956,16 +20959,16 @@ Predicated integer unsigned maximum of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.umax``' intrinsic performs integer unsigned maximum (:ref:`umax <int_umax>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -21004,16 +21007,16 @@ Predicated integer unsigned minimum of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.umin``' intrinsic performs integer unsigned minimum (:ref:`umin <int_umin>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -21052,16 +21055,16 @@ Predicated floating-point copysign of two vectors of floating-point values.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.copysign``' intrinsic performs floating-point copysign (:ref:`copysign <int_copysign>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21101,16 +21104,16 @@ Predicated floating-point IEEE-754 minNum of two vectors of floating-point value
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.minnum``' intrinsic performs floating-point minimum (:ref:`minnum <i_minnum>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21150,16 +21153,16 @@ Predicated floating-point IEEE-754 maxNum of two vectors of floating-point value
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.maxnum``' intrinsic performs floating-point maximum (:ref:`maxnum <i_maxnum>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21199,17 +21202,17 @@ propagating NaNs and treating -0.0 as less than +0.0.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.minimum``' intrinsic performs floating-point minimum (:ref:`minimum <i_minimum>`)
-of the first and second vector operand on each enabled lane, the result being 
-NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
+of the first and second vector arguments on each enabled lane, the result being 
+NaN if either argument is a NaN. -0.0 is considered to be less than +0.0 for this
 intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
 The operation is performed in the default floating-point environment.
 
@@ -21249,18 +21252,18 @@ propagating NaNs and treating -0.0 as less than +0.0.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.maximum``' intrinsic performs floating-point maximum (:ref:`maximum <i_maximum>`)
-of the first and second vector operand on each enabled lane, the result being 
-NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
-intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+of the first and second vector arguments on each enabled lane, the result being
+NaN if either argument is a NaN. -0.0 is considered to be less than +0.0 for this
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 The operation is performed in the default floating-point environment.
 
 Examples:
@@ -21299,16 +21302,16 @@ Predicated floating-point addition of two vectors of floating-point values.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fadd``' intrinsic performs floating-point addition (:ref:`fadd <i_fadd>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21348,16 +21351,16 @@ Predicated floating-point subtraction of two vectors of floating-point values.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fsub``' intrinsic performs floating-point subtraction (:ref:`fsub <i_fsub>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21397,16 +21400,16 @@ Predicated floating-point multiplication of two vectors of floating-point values
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fmul``' intrinsic performs floating-point multiplication (:ref:`fmul <i_fmul>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21446,16 +21449,16 @@ Predicated floating-point division of two vectors of floating-point values.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fdiv``' intrinsic performs floating-point division (:ref:`fdiv <i_fdiv>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21495,16 +21498,16 @@ Predicated floating-point remainder of two vectors of floating-point values.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of floating-point type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.frem``' intrinsic performs floating-point remainder (:ref:`frem <i_frem>`)
-of the first and second vector operand on each enabled lane.  The result on
+of the first and second vector arguments on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21544,16 +21547,16 @@ Predicated floating-point negation of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fneg``' intrinsic performs floating-point negation (:ref:`fneg <i_fneg>`)
-of the first vector operand on each enabled lane.  The result on disabled lanes
+of the first vector argument on each enabled lane.  The result on disabled lanes
 is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -21592,16 +21595,16 @@ Predicated floating-point absolute value of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fabs``' intrinsic performs floating-point absolute value
-(:ref:`fabs <int_fabs>`) of the first vector operand on each enabled lane.  The
+(:ref:`fabs <int_fabs>`) of the first vector argument on each enabled lane.  The
 result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -21640,16 +21643,16 @@ Predicated floating-point square root of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.sqrt``' intrinsic performs floating-point square root (:ref:`sqrt <int_sqrt>`) of
-the first vector operand on each enabled lane.  The result on disabled lanes is
+the first vector argument on each enabled lane.  The result on disabled lanes is
 a :ref:`poison value <poisonvalues>`. The operation is performed in the default
 floating-point environment.
 
@@ -21689,16 +21692,16 @@ Predicated floating-point fused multiply-add of two vectors of floating-point va
 Arguments:
 """"""""""
 
-The first three operands and the result have the same vector of floating-point type. The
-fourth operand is the vector mask and has the same number of elements as the
-result vector type. The fifth operand is the explicit vector length of the
+The first three arguments and the result have the same vector of floating-point type. The
+fourth argument is the vector mask and has the same number of elements as the
+result vector type. The fifth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fma``' intrinsic performs floating-point fused multiply-add (:ref:`llvm.fma <int_fma>`)
-of the first, second, and third vector operand on each enabled lane.  The result on
+of the first, second, and third vector argument on each enabled lane.  The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21740,16 +21743,16 @@ efficient than the equivalent, separate pair of mul and add instructions.
 Arguments:
 """"""""""
 
-The first three operands and the result have the same vector of floating-point
-type. The fourth operand is the vector mask and has the same number of elements
-as the result vector type. The fifth operand is the explicit vector length of
+The first three arguments and the result have the same vector of floating-point
+type. The fourth argument is the vector mask and has the same number of elements
+as the result vector type. The fifth argument is the explicit vector length of
 the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fmuladd``' intrinsic performs floating-point multiply-add (:ref:`llvm.fuladd <int_fmuladd>`)
-of the first, second, and third vector operand on each enabled lane.  The result
+of the first, second, and third vector argument on each enabled lane.  The result
 on disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
 performed in the default floating-point environment.
 
@@ -21788,18 +21791,18 @@ returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.add``' intrinsic performs the integer ``ADD`` reduction
-(:ref:`llvm.vector.reduce.add <int_vector_reduce_add>`) of the vector operand
+(:ref:`llvm.vector.reduce.add <int_vector_reduce_add>`) of the vector argument
 ``val`` on each enabled lane, adding it to the scalar ``start_value``. Disabled
 lanes are treated as containing the neutral value ``0`` (i.e. having no effect
 on the reduction operation). If the vector length is zero, the result is equal
@@ -21844,12 +21847,12 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
+The first argument is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second argument is the vector
 on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
+values whose element type is the result/start type. The third argument is the
 vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
+as the vector argument. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
@@ -21857,7 +21860,7 @@ Semantics:
 
 The '``llvm.vp.reduce.fadd``' intrinsic performs the floating-point ``ADD``
 reduction (:ref:`llvm.vector.reduce.fadd <int_vector_reduce_fadd>`) of the
-vector operand ``val`` on each enabled lane, adding it to the scalar
+vector argument ``val`` on each enabled lane, adding it to the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
 ``-0.0`` (i.e. having no effect on the reduction operation). If no lanes are
 enabled, the resulting value will be equal to ``start_value``.
@@ -21904,18 +21907,18 @@ returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.mul``' intrinsic performs the integer ``MUL`` reduction
-(:ref:`llvm.vector.reduce.mul <int_vector_reduce_mul>`) of the vector operand ``val``
+(:ref:`llvm.vector.reduce.mul <int_vector_reduce_mul>`) of the vector argument ``val``
 on each enabled lane, multiplying it by the scalar ``start_value``. Disabled
 lanes are treated as containing the neutral value ``1`` (i.e. having no effect
 on the reduction operation). If the vector length is zero, the result is the
@@ -21960,12 +21963,12 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
+The first argument is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second argument is the vector
 on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
+values whose element type is the result/start type. The third argument is the
 vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
+as the vector argument. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
@@ -21973,7 +21976,7 @@ Semantics:
 
 The '``llvm.vp.reduce.fmul``' intrinsic performs the floating-point ``MUL``
 reduction (:ref:`llvm.vector.reduce.fmul <int_vector_reduce_fmul>`) of the
-vector operand ``val`` on each enabled lane, multiplying it by the scalar
+vector argument ``val`` on each enabled lane, multiplying it by the scalar
 `start_value``. Disabled lanes are treated as containing the neutral value
 ``1.0`` (i.e. having no effect on the reduction operation). If no lanes are
 enabled, the resulting value will be equal to the starting value.
@@ -22020,18 +22023,18 @@ returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.and``' intrinsic performs the integer ``AND`` reduction
-(:ref:`llvm.vector.reduce.and <int_vector_reduce_and>`) of the vector operand
+(:ref:`llvm.vector.reduce.and <int_vector_reduce_and>`) of the vector argument
 ``val`` on each enabled lane, performing an '``and``' of that with with the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
 value ``UINT_MAX``, or ``-1`` (i.e. having no effect on the reduction
@@ -22077,18 +22080,18 @@ returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.or``' intrinsic performs the integer ``OR`` reduction
-(:ref:`llvm.vector.reduce.or <int_vector_reduce_or>`) of the vector operand
+(:ref:`llvm.vector.reduce.or <int_vector_reduce_or>`) of the vector argument
 ``val`` on each enabled lane, performing an '``or``' of that with the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
 ``0`` (i.e. having no effect on the reduction operation). If the vector length
@@ -22133,18 +22136,18 @@ returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.xor``' intrinsic performs the integer ``XOR`` reduction
-(:ref:`llvm.vector.reduce.xor <int_vector_reduce_xor>`) of the vector operand
+(:ref:`llvm.vector.reduce.xor <int_vector_reduce_xor>`) of the vector argument
 ``val`` on each enabled lane, performing an '``xor``' of that with the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
 ``0`` (i.e. having no effect on the reduction operation). If the vector length
@@ -22190,19 +22193,19 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.smax``' intrinsic performs the signed-integer ``MAX``
 reduction (:ref:`llvm.vector.reduce.smax <int_vector_reduce_smax>`) of the
-vector operand ``val`` on each enabled lane, and taking the maximum of that and
+vector argument ``val`` on each enabled lane, and taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
 neutral value ``INT_MIN`` (i.e. having no effect on the reduction operation).
 If the vector length is zero, the result is the start value.
@@ -22247,19 +22250,19 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.smin``' intrinsic performs the signed-integer ``MIN``
 reduction (:ref:`llvm.vector.reduce.smin <int_vector_reduce_smin>`) of the
-vector operand ``val`` on each enabled lane, and taking the minimum of that and
+vector argument ``val`` on each enabled lane, and taking the minimum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
 neutral value ``INT_MAX`` (i.e. having no effect on the reduction operation).
 If the vector length is zero, the result is the start value.
@@ -22304,19 +22307,19 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.umax``' intrinsic performs the unsigned-integer ``MAX``
 reduction (:ref:`llvm.vector.reduce.umax <int_vector_reduce_umax>`) of the
-vector operand ``val`` on each enabled lane, and taking the maximum of that and
+vector argument ``val`` on each enabled lane, and taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
 neutral value ``0`` (i.e. having no effect on the reduction operation). If the
 vector length is zero, the result is the start value.
@@ -22361,19 +22364,19 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-integer type equal to the result type. The second operand is the vector on
+The first argument is the start value of the reduction, which must be a scalar
+integer type equal to the result type. The second argument is the vector on
 which the reduction is performed and must be a vector of integer values whose
-element type is the result/start type. The third operand is the vector mask and
+element type is the result/start type. The third argument is the vector mask and
 is a vector of boolean values with the same number of elements as the vector
-operand. The fourth operand is the explicit vector length of the operation.
+argument. The fourth argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.reduce.umin``' intrinsic performs the unsigned-integer ``MIN``
 reduction (:ref:`llvm.vector.reduce.umin <int_vector_reduce_umin>`) of the
-vector operand ``val`` on each enabled lane, taking the minimum of that and the
+vector argument ``val`` on each enabled lane, taking the minimum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
 value ``UINT_MAX``, or ``-1`` (i.e. having no effect on the reduction
 operation). If the vector length is zero, the result is the start value.
@@ -22418,12 +22421,12 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
+The first argument is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second argument is the vector
 on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
+values whose element type is the result/start type. The third argument is the
 vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
+as the vector argument. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
@@ -22431,7 +22434,7 @@ Semantics:
 
 The '``llvm.vp.reduce.fmax``' intrinsic performs the floating-point ``MAX``
 reduction (:ref:`llvm.vector.reduce.fmax <int_vector_reduce_fmax>`) of the
-vector operand ``val`` on each enabled lane, taking the maximum of that and the
+vector argument ``val`` on each enabled lane, taking the maximum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
 value (i.e. having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
@@ -22488,12 +22491,12 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
+The first argument is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second argument is the vector
 on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
+values whose element type is the result/start type. The third argument is the
 vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
+as the vector argument. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
@@ -22501,7 +22504,7 @@ Semantics:
 
 The '``llvm.vp.reduce.fmin``' intrinsic performs the floating-point ``MIN``
 reduction (:ref:`llvm.vector.reduce.fmin <int_vector_reduce_fmin>`) of the
-vector operand ``val`` on each enabled lane, taking the minimum of that and the
+vector argument ``val`` on each enabled lane, taking the minimum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
 value (i.e. having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
@@ -22558,12 +22561,12 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
+The first argument is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second argument is the vector
 on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
+values whose element type is the result/start type. The third argument is the
 vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
+as the vector argument. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
@@ -22571,7 +22574,7 @@ Semantics:
 
 The '``llvm.vp.reduce.fmaximum``' intrinsic performs the floating-point ``MAX``
 reduction (:ref:`llvm.vector.reduce.fmaximum <int_vector_reduce_fmaximum>`) of
-the vector operand ``val`` on each enabled lane, taking the maximum of that and
+the vector argument ``val`` on each enabled lane, taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
 neutral value (i.e. having no effect on the reduction operation). If the vector
 length is zero, the result is the start value.
@@ -22628,12 +22631,12 @@ value, returning the result as a scalar.
 Arguments:
 """"""""""
 
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
+The first argument is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second argument is the vector
 on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
+values whose element type is the result/start type. The third argument is the
 vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
+as the vector argument. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
@@ -22641,7 +22644,7 @@ Semantics:
 
 The '``llvm.vp.reduce.fminimum``' intrinsic performs the floating-point ``MIN``
 reduction (:ref:`llvm.vector.reduce.fminimum <int_vector_reduce_fminimum>`) of
-the vector operand ``val`` on each enabled lane, taking the minimum of that and
+the vector argument ``val`` on each enabled lane, taking the minimum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the neutral
 value (i.e. having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
@@ -22700,7 +22703,7 @@ Create a mask representing active and inactive vector lanes.
 Arguments:
 """"""""""
 
-Both operands have the same scalar integer type. The result is a vector with
+Both arguments have the same scalar integer type. The result is a vector with
 the i1 element type.
 
 Semantics:
@@ -22869,23 +22872,23 @@ the :ref:`llvm.masked.load <int_mload>` intrinsic.
 Arguments:
 """"""""""
 
-The first operand is the base pointer for the load. The second operand is a
+The first argument is the base pointer for the load. The second argument is a
 vector of boolean values with the same number of elements as the return type.
 The third is the explicit vector length of the operation. The return type and
 underlying type of the base pointer are the same vector types.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the first
-operand.
+argument.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.load``' intrinsic reads a vector from memory in the same way as
 the '``llvm.masked.load``' intrinsic, where the mask is taken from the
-combination of the '``mask``' and '``evl``' operands in the usual VP way.
-Certain '``llvm.masked.load``' operands do not have corresponding operands in
-'``llvm.vp.load``': the '``passthru``' operand is implicitly ``poison``; the
-'``alignment``' operand is taken as the ``align`` parameter attribute, if
+combination of the '``mask``' and '``evl``' arguments in the usual VP way.
+Certain '``llvm.masked.load``' arguments do not have corresponding arguments in
+'``llvm.vp.load``': the '``passthru``' argument is implicitly ``poison``; the
+'``alignment``' argument is taken as the ``align`` parameter attribute, if
 provided. The default alignment is taken as the ABI alignment of the return
 type as specified by the :ref:`datalayout string<langref_datalayout>`.
 
@@ -22925,25 +22928,25 @@ the :ref:`llvm.masked.store <int_mstore>` intrinsic.
 Arguments:
 """"""""""
 
-The first operand is the vector value to be written to memory. The second
-operand is the base pointer for the store. It has the same underlying type as
-the value operand. The third operand is a vector of boolean values with the
+The first argument is the vector value to be written to memory. The second
+argument is the base pointer for the store. It has the same underlying type as
+the value argument. The third argument is a vector of boolean values with the
 same number of elements as the return type. The fourth is the explicit vector
 length of the operation.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the
-second operand.
+second argument.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.store``' intrinsic reads a vector from memory in the same way as
 the '``llvm.masked.store``' intrinsic, where the mask is taken from the
-combination of the '``mask``' and '``evl``' operands in the usual VP way. The
-alignment of the operation (corresponding to the '``alignment``' operand of
+combination of the '``mask``' and '``evl``' arguments in the usual VP way. The
+alignment of the operation (corresponding to the '``alignment``' argument of
 '``llvm.masked.store``') is specified by the ``align`` parameter attribute (see
 above). If it is not provided then the ABI alignment of the type of the
-'``value``' operand as specified by the :ref:`datalayout
+'``value``' argument as specified by the :ref:`datalayout
 string<langref_datalayout>` is used instead.
 
 Examples:
@@ -22980,14 +22983,14 @@ memory locations evenly spaced apart by '``stride``' number of bytes, starting f
 Arguments:
 """"""""""
 
-The first operand is the base pointer for the load. The second operand is the stride
-value expressed in bytes. The third operand is a vector of boolean values
+The first argument is the base pointer for the load. The second argument is the stride
+value expressed in bytes. The third argument is a vector of boolean values
 with the same number of elements as the return type. The fourth is the explicit
 vector length of the operation. The base pointer underlying type matches the type of the scalar
-elements of the return operand.
+elements of the return argument.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the first
-operand.
+argument.
 
 Semantics:
 """"""""""
@@ -23040,15 +23043,15 @@ bytes, starting from '``ptr``'.
 Arguments:
 """"""""""
 
-The first operand is the vector value to be written to memory. The second
-operand is the base pointer for the store. Its underlying type matches the
-scalar element type of the value operand. The third operand is the stride value
-expressed in bytes. The fourth operand is a vector of boolean values with the
+The first argument is the vector value to be written to memory. The second
+argument is the base pointer for the store. Its underlying type matches the
+scalar element type of the value argument. The third argument is the stride value
+expressed in bytes. The fourth argument is a vector of boolean values with the
 same number of elements as the return type. The fifth is the explicit vector
 length of the operation.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the
-second operand.
+second argument.
 
 Semantics:
 """"""""""
@@ -23102,24 +23105,24 @@ the :ref:`llvm.masked.gather <int_mgather>` intrinsic.
 Arguments:
 """"""""""
 
-The first operand is a vector of pointers which holds all memory addresses to
-read. The second operand is a vector of boolean values with the same number of
+The first argument is a vector of pointers which holds all memory addresses to
+read. The second argument is a vector of boolean values with the same number of
 elements as the return type. The third is the explicit vector length of the
 operation. The return type and underlying type of the vector of pointers are
 the same vector types.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the first
-operand.
+argument.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.gather``' intrinsic reads multiple scalar values from memory in
 the same way as the '``llvm.masked.gather``' intrinsic, where the mask is taken
-from the combination of the '``mask``' and '``evl``' operands in the usual VP
-way. Certain '``llvm.masked.gather``' operands do not have corresponding
-operands in '``llvm.vp.gather``': the '``passthru``' operand is implicitly
-``poison``; the '``alignment``' operand is taken as the ``align`` parameter, if
+from the combination of the '``mask``' and '``evl``' arguments in the usual VP
+way. Certain '``llvm.masked.gather``' arguments do not have corresponding
+arguments in '``llvm.vp.gather``': the '``passthru``' argument is implicitly
+``poison``; the '``alignment``' argument is taken as the ``align`` parameter, if
 provided. The default alignment is taken as the ABI alignment of the source
 addresses as specified by the :ref:`datalayout string<langref_datalayout>`.
 
@@ -23159,25 +23162,25 @@ the :ref:`llvm.masked.scatter <int_mscatter>` intrinsic.
 Arguments:
 """"""""""
 
-The first operand is a vector value to be written to memory. The second operand
+The first argument is a vector value to be written to memory. The second argument
 is a vector of pointers, pointing to where the value elements should be stored.
-The third operand is a vector of boolean values with the same number of
+The third argument is a vector of boolean values with the same number of
 elements as the return type. The fourth is the explicit vector length of the
 operation.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the
-second operand.
+second argument.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.scatter``' intrinsic writes multiple scalar values to memory in
 the same way as the '``llvm.masked.scatter``' intrinsic, where the mask is
-taken from the combination of the '``mask``' and '``evl``' operands in the
-usual VP way. The '``alignment``' operand of the '``llvm.masked.scatter``' does
-not have a corresponding operand in '``llvm.vp.scatter``': it is instead
+taken from the combination of the '``mask``' and '``evl``' arguments in the
+usual VP way. The '``alignment``' argument of the '``llvm.masked.scatter``' does
+not have a corresponding argument in '``llvm.vp.scatter``': it is instead
 provided via the optional ``align`` parameter attribute on the
-vector-of-pointers operand. Otherwise it is taken as the ABI alignment of the
+vector-of-pointers argument. Otherwise it is taken as the ABI alignment of the
 destination addresses as specified by the :ref:`datalayout
 string<langref_datalayout>`.
 
@@ -23209,19 +23212,19 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vp.trunc``' intrinsic truncates its first operand to the return
+The '``llvm.vp.trunc``' intrinsic truncates its first argument to the return
 type. The operation has a mask and an explicit vector length parameter.
 
 
 Arguments:
 """"""""""
 
-The '``llvm.vp.trunc``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.trunc``' intrinsic takes a value to cast as its first argument.
 The return type is the type to cast the value to. Both types must be vector of
 :ref:`integer <t_integer>` type. The bit size of the value must be larger than
-the bit size of the return type. The second operand is the vector mask. The
+the bit size of the return type. The second argument is the vector mask. The
 return type, the value to cast, and the vector mask have the same number of
-elements.  The third operand is the explicit vector length of the operation.
+elements.  The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
@@ -23262,19 +23265,19 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vp.zext``' intrinsic zero extends its first operand to the return
+The '``llvm.vp.zext``' intrinsic zero extends its first argument to the return
 type. The operation has a mask and an explicit vector length parameter.
 
 
 Arguments:
 """"""""""
 
-The '``llvm.vp.zext``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.zext``' intrinsic takes a value to cast as its first argument.
 The return type is the type to cast the value to. Both types must be vectors of
 :ref:`integer <t_integer>` type. The bit size of the value must be smaller than
-the bit size of the return type. The second operand is the vector mask. The
+the bit size of the return type. The second argument is the vector mask. The
 return type, the value to cast, and the vector mask have the same number of
-elements.  The third operand is the explicit vector length of the operation.
+elements.  The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
@@ -23314,19 +23317,19 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vp.sext``' intrinsic sign extends its first operand to the return
+The '``llvm.vp.sext``' intrinsic sign extends its first argument to the return
 type. The operation has a mask and an explicit vector length parameter.
 
 
 Arguments:
 """"""""""
 
-The '``llvm.vp.sext``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.sext``' intrinsic takes a value to cast as its first argument.
 The return type is the type to cast the value to. Both types must be vectors of
 :ref:`integer <t_integer>` type. The bit size of the value must be smaller than
-the bit size of the return type. The second operand is the vector mask. The
+the bit size of the return type. The second argument is the vector mask. The
 return type, the value to cast, and the vector mask have the same number of
-elements.  The third operand is the explicit vector length of the operation.
+elements.  The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
@@ -23366,20 +23369,20 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vp.fptrunc``' intrinsic truncates its first operand to the return
+The '``llvm.vp.fptrunc``' intrinsic truncates its first argument to the return
 type. The operation has a mask and an explicit vector length parameter.
 
 
 Arguments:
 """"""""""
 
-The '``llvm.vp.fptrunc``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.fptrunc``' intrinsic takes a value to cast as its first argument.
 The return type is the type to cast the value to. Both types must be vector of
 :ref:`floating-point <t_floating>` type. The bit size of the value must be
 larger than the bit size of the return type. This implies that
-'``llvm.vp.fptrunc``' cannot be used to make a *no-op cast*. The second operand
+'``llvm.vp.fptrunc``' cannot be used to make a *no-op cast*. The second argument
 is the vector mask. The return type, the value to cast, and the vector mask have
-the same number of elements.  The third operand is the explicit vector length of
+the same number of elements.  The third argument is the explicit vector length of
 the operation.
 
 Semantics:
@@ -23422,20 +23425,20 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vp.fpext``' intrinsic extends its first operand to the return
+The '``llvm.vp.fpext``' intrinsic extends its first argument to the return
 type. The operation has a mask and an explicit vector length parameter.
 
 
 Arguments:
 """"""""""
 
-The '``llvm.vp.fpext``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.fpext``' intrinsic takes a value to cast as its first argument.
 The return type is the type to cast the value to. Both types must be vector of
 :ref:`floating-point <t_floating>` type. The bit size of the value must be
 smaller than the bit size of the return type. This implies that
-'``llvm.vp.fpext``' cannot be used to make a *no-op cast*. The second operand
+'``llvm.vp.fpext``' cannot be used to make a *no-op cast*. The second argument
 is the vector mask. The return type, the value to cast, and the vector mask have
-the same number of elements.  The third operand is the explicit vector length of
+the same number of elements.  The third argument is the explicit vector length of
 the operation.
 
 Semantics:
@@ -23480,26 +23483,26 @@ Overview:
 """""""""
 
 The '``llvm.vp.fptoui``' intrinsic converts the :ref:`floating-point
-<t_floating>` operand to the unsigned integer return type.
+<t_floating>` argument to the unsigned integer return type.
 The operation has a mask and an explicit vector length parameter.
 
 
 Arguments:
 """"""""""
 
-The '``llvm.vp.fptoui``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.fptoui``' intrinsic takes a value to cast as its first argument.
 The value to cast must be a vector of :ref:`floating-point <t_floating>` type.
 The return type is the type to cast the value to. The return type must be
-vector of :ref:`integer <t_integer>` type.  The second operand is the vector
+vector of :ref:`integer <t_integer>` type.  The second argument is the vector
 mask. The return type, the value to cast, and the vector mask have the same
-number of elements.  The third operand is the explicit vector length of the
+number of elements.  The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fptoui``' intrinsic converts its :ref:`floating-point
-<t_floating>` operand into the nearest (rounding towards zero) unsigned integer
+<t_floating>` argument into the nearest (rounding towards zero) unsigned integer
 value where the lane position is below the explicit vector length and the
 vector mask is true.  Masked-off lanes are ``poison``. On enabled lanes where
 conversion takes place and the value cannot fit in the return type, the result
@@ -23536,26 +23539,26 @@ Overview:
 """""""""
 
 The '``llvm.vp.fptosi``' intrinsic converts the :ref:`floating-point
-<t_floating>` operand to the signed integer return type.
+<t_floating>` argument to the signed integer return type.
 The operation has a mask and an explicit vector length parameter.
 
 
 Arguments:
 """"""""""
 
-The '``llvm.vp.fptosi``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.fptosi``' intrinsic takes a value to cast as its first argument.
 The value to cast must be a vector of :ref:`floating-point <t_floating>` type.
 The return type is the type to cast the value to. The return type must be
-vector of :ref:`integer <t_integer>` type.  The second operand is the vector
+vector of :ref:`integer <t_integer>` type.  The second argument is the vector
 mask. The return type, the value to cast, and the vector mask have the same
-number of elements.  The third operand is the explicit vector length of the
+number of elements.  The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fptosi``' intrinsic converts its :ref:`floating-point
-<t_floating>` operand into the nearest (rounding towards zero) signed integer
+<t_floating>` argument into the nearest (rounding towards zero) signed integer
 value where the lane position is below the explicit vector length and the
 vector mask is true.  Masked-off lanes are ``poison``. On enabled lanes where
 conversion takes place and the value cannot fit in the return type, the result
@@ -23591,7 +23594,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vp.uitofp``' intrinsic converts its unsigned integer operand to the
+The '``llvm.vp.uitofp``' intrinsic converts its unsigned integer argument to the
 :ref:`floating-point <t_floating>` return type.  The operation has a mask and
 an explicit vector length parameter.
 
@@ -23599,18 +23602,18 @@ an explicit vector length parameter.
 Arguments:
 """"""""""
 
-The '``llvm.vp.uitofp``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.uitofp``' intrinsic takes a value to cast as its first argument.
 The value to cast must be vector of :ref:`integer <t_integer>` type.  The
 return type is the type to cast the value to.  The return type must be a vector
-of :ref:`floating-point <t_floating>` type.  The second operand is the vector
+of :ref:`floating-point <t_floating>` type.  The second argument is the vector
 mask. The return type, the value to cast, and the vector mask have the same
-number of elements.  The third operand is the explicit vector length of the
+number of elements.  The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.uitofp``' intrinsic interprets its first operand as an unsigned
+The '``llvm.vp.uitofp``' intrinsic interprets its first argument as an unsigned
 integer quantity and converts it to the corresponding floating-point value. If
 the value cannot be exactly represented, it is rounded using the default
 rounding mode.  The conversion is performed on lane positions below the
@@ -23647,7 +23650,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vp.sitofp``' intrinsic converts its signed integer operand to the
+The '``llvm.vp.sitofp``' intrinsic converts its signed integer argument to the
 :ref:`floating-point <t_floating>` return type.  The operation has a mask and
 an explicit vector length parameter.
 
@@ -23655,18 +23658,18 @@ an explicit vector length parameter.
 Arguments:
 """"""""""
 
-The '``llvm.vp.sitofp``' intrinsic takes a value to cast as its first operand.
+The '``llvm.vp.sitofp``' intrinsic takes a value to cast as its first argument.
 The value to cast must be vector of :ref:`integer <t_integer>` type.  The
 return type is the type to cast the value to.  The return type must be a vector
-of :ref:`floating-point <t_floating>` type.  The second operand is the vector
+of :ref:`floating-point <t_floating>` type.  The second argument is the vector
 mask. The return type, the value to cast, and the vector mask have the same
-number of elements.  The third operand is the explicit vector length of the
+number of elements.  The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.sitofp``' intrinsic interprets its first operand as a signed
+The '``llvm.vp.sitofp``' intrinsic interprets its first argument as a signed
 integer quantity and converts it to the corresponding floating-point value. If
 the value cannot be exactly represented, it is rounded using the default
 rounding mode.  The conversion is performed on lane positions below the
@@ -23710,12 +23713,12 @@ type.  The operation has a mask and an explicit vector length parameter.
 Arguments:
 """"""""""
 
-The '``llvm.vp.ptrtoint``' intrinsic takes a value to cast as its first operand
+The '``llvm.vp.ptrtoint``' intrinsic takes a value to cast as its first argument
 , which must be a vector of pointers, and a type to cast it to return type,
 which must be a vector of :ref:`integer <t_integer>` type.
-The second operand is the vector mask. The return type, the value to cast, and
+The second argument is the vector mask. The return type, the value to cast, and
 the vector mask have the same number of elements.
-The third operand is the explicit vector length of the operation.
+The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
@@ -23767,12 +23770,12 @@ return type. The operation has a mask and an explicit vector length parameter.
 Arguments:
 """"""""""
 
-The '``llvm.vp.inttoptr``' intrinsic takes a value to cast as its first operand
+The '``llvm.vp.inttoptr``' intrinsic takes a value to cast as its first argument
 , which must be a vector of :ref:`integer <t_integer>` type, and a type to cast
 it to return type, which must be a vector of pointers type.
-The second operand is the vector mask. The return type, the value to cast, and
+The second argument is the vector mask. The return type, the value to cast, and
 the vector mask have the same number of elements.
-The third operand is the explicit vector length of the operation.
+The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
@@ -23816,7 +23819,7 @@ Overview:
 """""""""
 
 The '``llvm.vp.fcmp``' intrinsic returns a vector of boolean values based on
-the comparison of its operands. The operation has a mask and an explicit vector
+the comparison of its arguments. The operation has a mask and an explicit vector
 length parameter.
 
 
@@ -23824,21 +23827,21 @@ Arguments:
 """"""""""
 
 The '``llvm.vp.fcmp``' intrinsic takes the two values to compare as its first
-and second operands. These two values must be vectors of :ref:`floating-point
+and second arguments. These two values must be vectors of :ref:`floating-point
 <t_floating>` types.
 The return type is the result of the comparison. The return type must be a
-vector of :ref:`i1 <t_integer>` type. The fourth operand is the vector mask.
+vector of :ref:`i1 <t_integer>` type. The fourth argument is the vector mask.
 The return type, the values to compare, and the vector mask have the same
-number of elements. The third operand is the condition code indicating the kind
+number of elements. The third argument is the condition code indicating the kind
 of comparison to perform. It must be a metadata string with :ref:`one of the
-supported floating-point condition code values <fcmp_md_cc>`. The fifth operand
+supported floating-point condition code values <fcmp_md_cc>`. The fifth argument
 is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.fcmp``' compares its first two operands according to the
-condition code given as the third operand. The operands are compared element by
+The '``llvm.vp.fcmp``' compares its first two arguments according to the
+condition code given as the third argument. The arguments are compared element by
 element on each enabled lane, where the semantics of the comparison are
 defined :ref:`according to the condition code <fcmp_md_cc_sem>`. Masked-off
 lanes are ``poison``.
@@ -23874,7 +23877,7 @@ Overview:
 """""""""
 
 The '``llvm.vp.icmp``' intrinsic returns a vector of boolean values based on
-the comparison of its operands. The operation has a mask and an explicit vector
+the comparison of its arguments. The operation has a mask and an explicit vector
 length parameter.
 
 
@@ -23882,21 +23885,21 @@ Arguments:
 """"""""""
 
 The '``llvm.vp.icmp``' intrinsic takes the two values to compare as its first
-and second operands. These two values must be vectors of :ref:`integer
+and second arguments. These two values must be vectors of :ref:`integer
 <t_integer>` types.
 The return type is the result of the comparison. The return type must be a
-vector of :ref:`i1 <t_integer>` type. The fourth operand is the vector mask.
+vector of :ref:`i1 <t_integer>` type. The fourth argument is the vector mask.
 The return type, the values to compare, and the vector mask have the same
-number of elements. The third operand is the condition code indicating the kind
+number of elements. The third argument is the condition code indicating the kind
 of comparison to perform. It must be a metadata string with :ref:`one of the
-supported integer condition code values <icmp_md_cc>`. The fifth operand is the
+supported integer condition code values <icmp_md_cc>`. The fifth argument is the
 explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.icmp``' compares its first two operands according to the
-condition code given as the third operand. The operands are compared element by
+The '``llvm.vp.icmp``' compares its first two arguments according to the
+condition code given as the third argument. The arguments are compared element by
 element on each enabled lane, where the semantics of the comparison are
 defined :ref:`according to the condition code <icmp_md_cc_sem>`. Masked-off
 lanes are ``poison``.
@@ -23936,16 +23939,16 @@ Predicated floating-point ceiling of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.ceil``' intrinsic performs floating-point ceiling
-(:ref:`ceil <int_ceil>`) of the first vector operand on each enabled lane. The
+(:ref:`ceil <int_ceil>`) of the first vector argument on each enabled lane. The
 result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -23983,16 +23986,16 @@ Predicated floating-point floor of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.floor``' intrinsic performs floating-point floor
-(:ref:`floor <int_floor>`) of the first vector operand on each enabled lane.
+(:ref:`floor <int_floor>`) of the first vector argument on each enabled lane.
 The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24030,16 +24033,16 @@ Predicated floating-point rint of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.rint``' intrinsic performs floating-point rint
-(:ref:`rint <int_rint>`) of the first vector operand on each enabled lane.
+(:ref:`rint <int_rint>`) of the first vector argument on each enabled lane.
 The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24077,16 +24080,16 @@ Predicated floating-point nearbyint of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.nearbyint``' intrinsic performs floating-point nearbyint
-(:ref:`nearbyint <int_nearbyint>`) of the first vector operand on each enabled lane.
+(:ref:`nearbyint <int_nearbyint>`) of the first vector argument on each enabled lane.
 The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24124,16 +24127,16 @@ Predicated floating-point round of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.round``' intrinsic performs floating-point round
-(:ref:`round <int_round>`) of the first vector operand on each enabled lane.
+(:ref:`round <int_round>`) of the first vector argument on each enabled lane.
 The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24171,16 +24174,16 @@ Predicated floating-point roundeven of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.roundeven``' intrinsic performs floating-point roundeven
-(:ref:`roundeven <int_roundeven>`) of the first vector operand on each enabled
+(:ref:`roundeven <int_roundeven>`) of the first vector argument on each enabled
 lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24218,16 +24221,16 @@ Predicated floating-point round-to-zero of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of floating-point type.
-The second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of floating-point type.
+The second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.roundtozero``' intrinsic performs floating-point roundeven
-(:ref:`llvm.trunc <int_llvm_trunc>`) of the first vector operand on each enabled lane.  The
+(:ref:`llvm.trunc <int_llvm_trunc>`) of the first vector argument on each enabled lane.  The
 result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24265,16 +24268,16 @@ Predicated lrint of a vector of floating-point values.
 Arguments:
 """"""""""
 
-The result is an integer vector and the first operand is a vector of :ref:`floating-point <t_floating>`
+The result is an integer vector and the first argument is a vector of :ref:`floating-point <t_floating>`
 type with the same number of elements as the result vector type. The second
-operand is the vector mask and has the same number of elements as the result
-vector type. The third operand is the explicit vector length of the operation.
+argument is the vector mask and has the same number of elements as the result
+vector type. The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.lrint``' intrinsic performs lrint (:ref:`lrint <int_lrint>`) of
-the first vector operand on each enabled lane. The result on disabled lanes is a
+the first vector argument on each enabled lane. The result on disabled lanes is a
 :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24311,16 +24314,16 @@ Predicated llrint of a vector of floating-point values.
 
 Arguments:
 """"""""""
-The result is an integer vector and the first operand is a vector of :ref:`floating-point <t_floating>`
+The result is an integer vector and the first argument is a vector of :ref:`floating-point <t_floating>`
 type with the same number of elements as the result vector type. The second
-operand is the vector mask and has the same number of elements as the result
-vector type. The third operand is the explicit vector length of the operation.
+argument is the vector mask and has the same number of elements as the result
+vector type. The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.llrint``' intrinsic performs lrint (:ref:`llrint <int_llrint>`) of
-the first vector operand on each enabled lane. The result on disabled lanes is a
+the first vector argument on each enabled lane. The result on disabled lanes is a
 :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24359,15 +24362,15 @@ Predicated bitreverse of a vector of integers.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of integer type. The
-second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of integer type. The
+second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.bitreverse``' intrinsic performs bitreverse (:ref:`bitreverse <int_bitreverse>`) of the first operand on each
+The '``llvm.vp.bitreverse``' intrinsic performs bitreverse (:ref:`bitreverse <int_bitreverse>`) of the first argument on each
 enabled lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24406,15 +24409,15 @@ Predicated bswap of a vector of integers.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of integer type. The
-second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of integer type. The
+second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.bswap``' intrinsic performs bswap (:ref:`bswap <int_bswap>`) of the first operand on each
+The '``llvm.vp.bswap``' intrinsic performs bswap (:ref:`bswap <int_bswap>`) of the first argument on each
 enabled lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24453,15 +24456,15 @@ Predicated ctpop of a vector of integers.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of integer type. The
-second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
+The first argument and the result have the same vector of integer type. The
+second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.ctpop``' intrinsic performs ctpop (:ref:`ctpop <int_ctpop>`) of the first operand on each
+The '``llvm.vp.ctpop``' intrinsic performs ctpop (:ref:`ctpop <int_ctpop>`) of the first argument on each
 enabled lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24500,17 +24503,17 @@ Predicated ctlz of a vector of integers.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of integer type. The
-second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
-operation. The fourth operand is a constant flag that indicates whether the
-intrinsic returns a valid result if the first operand is zero. If the first
-operand is zero and the fourth operand is true, the result is poison.
+The first argument and the result have the same vector of integer type. The
+second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
+operation. The fourth argument is a constant flag that indicates whether the
+intrinsic returns a valid result if the first argument is zero. If the first
+argument is zero and the fourth argument is true, the result is poison.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.ctlz``' intrinsic performs ctlz (:ref:`ctlz <int_ctlz>`) of the first operand on each
+The '``llvm.vp.ctlz``' intrinsic performs ctlz (:ref:`ctlz <int_ctlz>`) of the first argument on each
 enabled lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24549,17 +24552,17 @@ Predicated cttz of a vector of integers.
 Arguments:
 """"""""""
 
-The first operand and the result have the same vector of integer type. The
-second operand is the vector mask and has the same number of elements as the
-result vector type. The third operand is the explicit vector length of the
-operation. The fourth operand is a constant flag that indicates whether the
-intrinsic returns a valid result if the first operand is zero. If the first
-operand is zero and the fourth operand is true, the result is poison.
+The first argument and the result have the same vector of integer type. The
+second argument is the vector mask and has the same number of elements as the
+result vector type. The third argument is the explicit vector length of the
+operation. The fourth argument is a constant flag that indicates whether the
+intrinsic returns a valid result if the first argument is zero. If the first
+argument is zero and the fourth argument is true, the result is poison.
 
 Semantics:
 """"""""""
 
-The '``llvm.vp.cttz``' intrinsic performs cttz (:ref:`cttz <int_cttz>`) of the first operand on each
+The '``llvm.vp.cttz``' intrinsic performs cttz (:ref:`cttz <int_cttz>`) of the first argument on each
 enabled lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
@@ -24609,18 +24612,18 @@ for the number of elements in the input vector.
 The second argument is a constant flag that indicates whether the intrinsic
 returns a valid result if the first argument is all zero.
 
-The third operand is the vector mask and has the same number of elements as the
-input vector type. The fourth operand is the explicit vector length of the
+The third argument is the vector mask and has the same number of elements as the
+input vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.cttz.elts``' intrinsic counts the trailing (least
-significant / lowest-numbered) zero elements in the first operand on each
+significant / lowest-numbered) zero elements in the first argument on each
 enabled lane. If the first argument is all zero and the second argument is true,
 the result is poison. Otherwise, it returns the explicit vector length (i.e. the
-fourth operand).
+fourth argument).
 
 .. _int_vp_sadd_sat:
 
@@ -24646,16 +24649,16 @@ Predicated signed saturating addition of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.sadd.sat``' intrinsic performs sadd.sat (:ref:`sadd.sat <int_sadd_sat>`)
-of the first and second vector operands on each enabled lane. The result on
+of the first and second vector arguments on each enabled lane. The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
@@ -24695,16 +24698,16 @@ Predicated unsigned saturating addition of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.uadd.sat``' intrinsic performs uadd.sat (:ref:`uadd.sat <int_uadd_sat>`)
-of the first and second vector operands on each enabled lane. The result on
+of the first and second vector arguments on each enabled lane. The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
@@ -24744,16 +24747,16 @@ Predicated signed saturating subtraction of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.ssub.sat``' intrinsic performs ssub.sat (:ref:`ssub.sat <int_ssub_sat>`)
-of the first and second vector operands on each enabled lane. The result on
+of the first and second vector arguments on each enabled lane. The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
@@ -24793,16 +24796,16 @@ Predicated unsigned saturating subtraction of two vectors of integers.
 Arguments:
 """"""""""
 
-The first two operands and the result have the same vector of integer type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+The first two arguments and the result have the same vector of integer type. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.usub.sat``' intrinsic performs usub.sat (:ref:`usub.sat <int_usub_sat>`)
-of the first and second vector operands on each enabled lane. The result on
+of the first and second vector arguments on each enabled lane. The result on
 disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
@@ -24842,16 +24845,16 @@ Predicated fshl of three vectors of integers.
 Arguments:
 """"""""""
 
-The first three operand and the result have the same vector of integer type. The
-fourth operand is the vector mask and has the same number of elements as the
-result vector type. The fifth operand is the explicit vector length of the
+The first three arguments and the result have the same vector of integer type. The
+fourth argument is the vector mask and has the same number of elements as the
+result vector type. The fifth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fshl``' intrinsic performs fshl (:ref:`fshl <int_fshl>`) of the first, second, and third
-vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+vector argument on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
 Examples:
@@ -24888,16 +24891,16 @@ Predicated fshr of three vectors of integers.
 Arguments:
 """"""""""
 
-The first three operand and the result have the same vector of integer type. The
-fourth operand is the vector mask and has the same number of elements as the
-result vector type. The fifth operand is the explicit vector length of the
+The first three arguments and the result have the same vector of integer type. The
+fourth argument is the vector mask and has the same number of elements as the
+result vector type. The fifth argument is the explicit vector length of the
 operation.
 
 Semantics:
 """"""""""
 
 The '``llvm.vp.fshr``' intrinsic performs fshr (:ref:`fshr <int_fshr>`) of the first, second, and third
-vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+vector argument on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 
 Examples:
@@ -24931,11 +24934,11 @@ Predicated llvm.is.fpclass :ref:`llvm.is.fpclass <llvm.is.fpclass>`
 Arguments:
 """"""""""
 
-The first operand is a floating-point vector, the result type is a vector of
+The first argument is a floating-point vector, the result type is a vector of
 boolean with the same number of elements as the first argument.  The second
-operand specifies, which tests to perform :ref:`llvm.is.fpclass <llvm.is.fpclass>`.
-The third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
+argument specifies, which tests to perform :ref:`llvm.is.fpclass <llvm.is.fpclass>`.
+The third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
 operation.
 
 Semantics:
