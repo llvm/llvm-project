@@ -11,6 +11,8 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include <memory>
+
 namespace clang {
 namespace clangd {
 
