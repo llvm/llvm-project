@@ -92,7 +92,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if a value can be loaded from a block.
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK = AK_Read);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
@@ -724,9 +725,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
@@ -738,9 +737,7 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
@@ -753,9 +750,7 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
@@ -767,9 +762,7 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
@@ -797,9 +790,7 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -807,9 +798,7 @@ inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, RM);
@@ -817,11 +806,7 @@ inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -829,10 +814,7 @@ inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, RM);
