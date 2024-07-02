@@ -284,6 +284,9 @@ def warn_drv_unknown_argument_clang_cl_with_suggestion : Warning<
   InGroup<UnknownArgument>;
 def err_drv_unknown_target_triple : Error<"unknown target triple '%0'">;
 
+def err_drv_stdlib_hardening_unavailable : Error<
+    "libc++ hardening is available only when libc++ is used">;
+
 def warn_drv_ycyu_different_arg_clang_cl : Warning<
   "support for '/Yc' and '/Yu' with different filenames not implemented yet; flags ignored">,
   InGroup<ClangClPch>;
