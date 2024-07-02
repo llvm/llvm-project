@@ -17518,65 +17518,46 @@ performVecReduceAddZextCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue VecOp = ZEXT->getOperand(0);
   VecVT = VecOp.getValueType();
   bool IsScalableType = VecVT.isScalableVector();
+  SmallVector<SDValue, 2> ResultValues;
 
-  if (TLI.isTypeLegal(VecVT)) {
-    if (!IsScalableType &&
-        !TLI.useSVEForFixedLengthVectorVT(
-            VecVT,
-            /*OverrideNEON=*/Subtarget.useSVEForFixedLengthVectors(VecVT)))
-      return SDValue();
+  if (!TLI.isTypeLegal(VecVT)) {
+    SmallVector<SDValue, 2> PrevValues;
+    PrevValues.push_back(VecOp);
+    while (true) {
 
-    if (!IsScalableType) {
-      EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecVT);
-      VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+      if (!VecVT.isScalableVector() &&
+          !PrevValues[0].getValueType().getVectorElementCount().isKnownEven())
+        return SDValue();
+
+      for (SDValue Vec : PrevValues) {
+        SDValue Lo, Hi;
+        std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
+        ResultValues.push_back(Lo);
+        ResultValues.push_back(Hi);
+      }
+      if (TLI.isTypeLegal(ResultValues[0].getValueType()))
+        break;
+      PrevValues.clear();
+      std::copy(ResultValues.begin(), ResultValues.end(),
+                std::back_inserter(PrevValues));
+      ResultValues.clear();
     }
-    VecVT = VecOp.getValueType();
-    EVT RdxVT = N->getValueType(0);
-    RdxVT = getPackedSVEVectorVT(RdxVT);
-    SDValue Pg = getPredicateForVector(DAG, DL, VecVT);
-    SDValue Res = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-        DAG.getConstant(Intrinsic::aarch64_sve_uaddv, DL, MVT::i64), Pg, VecOp);
-    EVT ResVT = MVT::i64;
-    if (ResVT != N->getValueType(0))
-      Res = DAG.getAnyExtOrTrunc(Res, DL, N->getValueType(0));
-    return Res;
-  }
-
-  SmallVector<SDValue, 4> SplitVals;
-  SmallVector<SDValue, 4> PrevVals;
-  PrevVals.push_back(VecOp);
-  while (true) {
-
-    if (!VecVT.isScalableVector() &&
-        !PrevVals[0].getValueType().getVectorElementCount().isKnownEven())
-      return SDValue();
-
-    for (SDValue Vec : PrevVals) {
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
-      SplitVals.push_back(Lo);
-      SplitVals.push_back(Hi);
-    }
-    if (TLI.isTypeLegal(SplitVals[0].getValueType()))
-      break;
-    PrevVals.clear();
-    std::copy(SplitVals.begin(), SplitVals.end(), std::back_inserter(PrevVals));
-    SplitVals.clear();
+  } else {
+    ResultValues.push_back(VecOp);
   }
   SDNode *VecRed = N;
   EVT ElemType = VecRed->getValueType(0);
-  SmallVector<SDValue, 4> Results;
+  SmallVector<SDValue, 2> Results;
 
   if (!IsScalableType &&
       !TLI.useSVEForFixedLengthVectorVT(
-          SplitVals[0].getValueType(),
+          ResultValues[0].getValueType(),
           /*OverrideNEON=*/Subtarget.useSVEForFixedLengthVectors(
-              SplitVals[0].getValueType())))
+              ResultValues[0].getValueType())))
     return SDValue();
 
-  for (unsigned Num = 0; Num < SplitVals.size(); ++Num) {
-    SDValue Reg = SplitVals[Num];
+  for (unsigned Num = 0; Num < ResultValues.size(); ++Num) {
+    SDValue Reg = ResultValues[Num];
     EVT RdxVT = Reg->getValueType(0);
     SDValue Pg = getPredicateForVector(DAG, DL, RdxVT);
     if (!IsScalableType) {
@@ -17591,7 +17572,7 @@ performVecReduceAddZextCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     Results.push_back(Res);
   }
   SDValue ToAdd = Results[0];
-  for (unsigned I = 1; I < SplitVals.size(); ++I)
+  for (unsigned I = 1; I < ResultValues.size(); ++I)
     ToAdd = DAG.getNode(ISD::ADD, DL, ElemType, ToAdd, Results[I]);
   return ToAdd;
 }
