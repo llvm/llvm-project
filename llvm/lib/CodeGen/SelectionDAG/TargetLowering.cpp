@@ -9215,6 +9215,21 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, LHS, RHS),
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
 
+  // If the subtract doesn't overflow then just use abs(sub())
+  // NOTE: don't use frozen operands for value tracking.
+  bool IsNonNegative = DAG.SignBitIsZero(N->getOperand(0)) &&
+                       DAG.SignBitIsZero(N->getOperand(1));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, N->getOperand(0),
+                             N->getOperand(1)))
+    return DAG.getNode(ISD::ABS, dl, VT,
+                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, N->getOperand(1),
+                             N->getOperand(0)))
+    return DAG.getNode(ISD::ABS, dl, VT,
+                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
   SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
@@ -9227,6 +9242,11 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
     SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Diff, Cmp);
     return DAG.getNode(ISD::SUB, dl, VT, Cmp, Xor);
   }
+
+  // FIXME: Should really try to split the vector in case it's legal on a
+  // subvector.
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return DAG.UnrollVectorOp(N);
 
   // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
