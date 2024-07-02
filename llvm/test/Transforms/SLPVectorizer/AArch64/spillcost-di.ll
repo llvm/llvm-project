@@ -9,12 +9,12 @@ target triple = "aarch64"
 define void @patatino(i64 %n, i64 %i, ptr %p) !dbg !7 {
 ; CHECK-LABEL: @patatino(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[N:%.*]], metadata [[META18:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[I:%.*]], metadata [[META19:![0-9]+]], metadata !DIExpression()), !dbg [[DBG24:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[P:%.*]], metadata [[META20:![0-9]+]], metadata !DIExpression()), !dbg [[DBG25:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i64 [[N:%.*]], [[META18:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i64 [[I:%.*]], [[META19:![0-9]+]], !DIExpression(), [[META24:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(ptr [[P:%.*]], [[META20:![0-9]+]], !DIExpression(), [[META25:![0-9]+]])
 ; CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[P]], i64 [[N]], i32 0, !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 undef, metadata [[META21:![0-9]+]], metadata !DIExpression()), !dbg [[DBG27:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 undef, metadata [[META22:![0-9]+]], metadata !DIExpression()), !dbg [[DBG28:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i64 undef, [[META21:![0-9]+]], !DIExpression(), [[META27:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i64 undef, [[META22:![0-9]+]], !DIExpression(), [[META28:![0-9]+]])
 ; CHECK-NEXT:    [[X5:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 [[I]], i32 0, !dbg [[DBG29:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X1]], align 8, !dbg [[DBG26]], !tbaa [[TBAA30:![0-9]+]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[X5]], align 8, !dbg [[DBG34:![0-9]+]], !tbaa [[TBAA30]]

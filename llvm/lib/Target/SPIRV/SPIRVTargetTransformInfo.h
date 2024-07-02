@@ -35,7 +35,7 @@ class SPIRVTTIImpl : public BasicTTIImplBase<SPIRVTTIImpl> {
 
 public:
   explicit SPIRVTTIImpl(const SPIRVTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 };
 

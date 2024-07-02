@@ -25,12 +25,7 @@
 #  - Fails if stack is executable. Should only be readable and writable. Not executable.
 #  - Program dependencies: perl, readelf
 #  - Available for Unix dynamic library builds. Not available otherwise.
-# (4) test-instr (Intel(R) MIC Architecture only)
-#  - Tests Intel(R) MIC Architecture libraries for valid instruction set
-#  - Fails if finds invalid instruction for Intel(R) MIC Architecture (wasn't compiled with correct flags)
-#  - Program dependencies: perl, objdump
-#  - Available for Intel(R) MIC Architecture and i386 builds. Not available otherwise.
-# (5) test-deps
+# (4) test-deps
 #  - Tests newly created libomp for library dependencies
 #  - Fails if sees a dependence not listed in td_exp variable below
 #  - Program dependencies: perl, (unix)readelf, (mac)otool[64], (windows)link.exe
@@ -93,7 +88,6 @@ endif()
 macro(libomp_test_touch_recipe test_touch_dir)
   set(libomp_test_touch_dependencies ${LIBOMP_SRC_DIR}/test-touch.c omp)
   set(libomp_test_touch_exe ${test_touch_dir}/test-touch${CMAKE_EXECUTABLE_SUFFIX})
-  set(libomp_test_touch_obj ${test_touch_dir}/test-touch${CMAKE_C_OUTPUT_EXTENSION})
   if(WIN32)
     if(${RELEASE_BUILD} OR ${RELWITHDEBINFO_BUILD})
       if(${test_touch_dir} MATCHES "test-touch-mt")
@@ -108,13 +102,13 @@ macro(libomp_test_touch_recipe test_touch_dir)
         libomp_append(libomp_test_touch_cflags /MDd)
       endif()
     endif()
-    set(libomp_test_touch_out_flags -Fe${libomp_test_touch_exe} -Fo${libomp_test_touch_obj})
+    set(libomp_test_touch_out_flags -Fe${libomp_test_touch_exe})
     list(APPEND libomp_test_touch_dependencies ompimp)
   else()
     set(libomp_test_touch_out_flags -o ${libomp_test_touch_exe})
   endif()
   add_custom_command(
-    OUTPUT  ${test_touch_dir}/.success ${libomp_test_touch_exe} ${libomp_test_touch_obj}
+    OUTPUT  ${test_touch_dir}/.success ${libomp_test_touch_exe}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${test_touch_dir}
     COMMAND ${CMAKE_COMMAND} -E remove -f ${test_touch_dir}/*
     COMMAND ${libomp_test_touch_compiler} ${libomp_test_touch_out_flags} ${libomp_test_touch_cflags}
@@ -152,22 +146,10 @@ set_target_properties(libomp-test-execstack PROPERTIES FOLDER "OpenMP/Tests")
 add_custom_command(
   OUTPUT  test-execstack/.success
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-execstack
-  COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-execstack.pl
-    --arch=${LIBOMP_PERL_SCRIPT_ARCH} ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
+  COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-execstack.py
+          ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
   COMMAND ${CMAKE_COMMAND} -E touch test-execstack/.success
-  DEPENDS omp
-)
-
-# test-instr
-add_custom_target(libomp-test-instr DEPENDS test-instr/.success)
-set_target_properties(libomp-test-instr PROPERTIES FOLDER "OpenMP/Tests")
-add_custom_command(
-  OUTPUT  test-instr/.success
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-instr
-  COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-instruction-set.pl --os=${LIBOMP_PERL_SCRIPT_OS}
-    --arch=${LIBOMP_PERL_SCRIPT_ARCH} --show --mic-arch=${LIBOMP_MIC_ARCH} ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
-  COMMAND ${CMAKE_COMMAND} -E touch test-instr/.success
-  DEPENDS omp ${LIBOMP_TOOLS_DIR}/check-instruction-set.pl
+  DEPENDS omp ${LIBOMP_TOOLS_DIR}/check-execstack.py
 )
 
 # test-deps
@@ -187,7 +169,15 @@ elseif(APPLE)
   set(libomp_expected_library_deps /usr/lib/libSystem.B.dylib)
 elseif(WIN32)
   set(libomp_expected_library_deps kernel32.dll)
-  libomp_append(libomp_expected_library_deps psapi.dll LIBOMP_OMPT_SUPPORT)
+  libomp_append(libomp_expected_library_deps api-ms-win-crt-convert-l1-1-0.dll)
+  libomp_append(libomp_expected_library_deps api-ms-win-crt-environment-l1-1-0.dll)
+  libomp_append(libomp_expected_library_deps api-ms-win-crt-heap-l1-1-0.dll)
+  libomp_append(libomp_expected_library_deps api-ms-win-crt-runtime-l1-1-0.dll)
+  libomp_append(libomp_expected_library_deps api-ms-win-crt-stdio-l1-1-0.dll)
+  libomp_append(libomp_expected_library_deps api-ms-win-crt-string-l1-1-0.dll)
+  libomp_append(libomp_expected_library_deps api-ms-win-crt-utility-l1-1-0.dll)
+  libomp_append(libomp_expected_library_deps vcruntime140.dll)
+  libomp_append(libomp_expected_library_deps psapi.dll)
 else()
   if(${MIC})
     set(libomp_expected_library_deps libc.so.6 libpthread.so.0 libdl.so.2)
@@ -202,9 +192,11 @@ else()
     if(${IA32})
       libomp_append(libomp_expected_library_deps libc.so.6)
       libomp_append(libomp_expected_library_deps ld-linux.so.2)
+      libomp_append(libomp_expected_library_deps librt.so.1)
     elseif(${INTEL64})
       libomp_append(libomp_expected_library_deps libc.so.6)
       libomp_append(libomp_expected_library_deps ld-linux-x86-64.so.2)
+      libomp_append(libomp_expected_library_deps librt.so.1)
     elseif(${ARM})
       libomp_append(libomp_expected_library_deps libc.so.6)
       libomp_append(libomp_expected_library_deps libffi.so.6)
@@ -232,13 +224,14 @@ else()
   libomp_append(libomp_expected_library_deps libstdc++.so.6 LIBOMP_USE_STDCPPLIB)
   libomp_append(libomp_expected_library_deps libm.so.6 LIBOMP_STATS)
 endif()
-# Perl script expects comma separated list
+# Check depends script expects comma separated list
 string(REPLACE ";" "," libomp_expected_library_deps "${libomp_expected_library_deps}")
 add_custom_command(
   OUTPUT  test-deps/.success
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-deps
-  COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-depends.pl --os=${LIBOMP_PERL_SCRIPT_OS}
-    --arch=${LIBOMP_PERL_SCRIPT_ARCH} --expected="${libomp_expected_library_deps}" ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
+  COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-depends.py
+          --expected="${libomp_expected_library_deps}"
+          ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
   COMMAND ${CMAKE_COMMAND} -E touch test-deps/.success
-  DEPENDS omp ${LIBOMP_TOOLS_DIR}/check-depends.pl
+  DEPENDS omp ${LIBOMP_TOOLS_DIR}/check-depends.py
 )

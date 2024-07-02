@@ -136,15 +136,13 @@ define <4 x double> @deinterleave_shuffle_v8f64(<8 x double> %a) {
 define <4 x i32> @udot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: udot:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v3.8h, v1.8b, #0
-; CHECK-NEXT:    ushll v4.8h, v2.8b, #0
-; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    ushll2 v2.8h, v2.16b, #0
-; CHECK-NEXT:    umull2 v5.4s, v3.8h, v4.8h
-; CHECK-NEXT:    umull v3.4s, v3.4h, v4.4h
-; CHECK-NEXT:    umull2 v4.4s, v1.8h, v2.8h
-; CHECK-NEXT:    umull v1.4s, v1.4h, v2.4h
-; CHECK-NEXT:    addp v2.4s, v3.4s, v5.4s
+; CHECK-NEXT:    umull v3.8h, v1.8b, v2.8b
+; CHECK-NEXT:    umull2 v1.8h, v1.16b, v2.16b
+; CHECK-NEXT:    ushll2 v2.4s, v3.8h, #0
+; CHECK-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-NEXT:    ushll2 v4.4s, v1.8h, #0
+; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-NEXT:    addp v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    addp v1.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
@@ -165,15 +163,13 @@ define <4 x i32> @udot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 define <4 x i32> @sdot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: sdot:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v3.8h, v1.8b, #0
-; CHECK-NEXT:    sshll v4.8h, v2.8b, #0
-; CHECK-NEXT:    sshll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-NEXT:    smull2 v5.4s, v3.8h, v4.8h
-; CHECK-NEXT:    smull v3.4s, v3.4h, v4.4h
-; CHECK-NEXT:    smull2 v4.4s, v1.8h, v2.8h
-; CHECK-NEXT:    smull v1.4s, v1.4h, v2.4h
-; CHECK-NEXT:    addp v2.4s, v3.4s, v5.4s
+; CHECK-NEXT:    smull v3.8h, v1.8b, v2.8b
+; CHECK-NEXT:    smull2 v1.8h, v1.16b, v2.16b
+; CHECK-NEXT:    sshll2 v2.4s, v3.8h, #0
+; CHECK-NEXT:    sshll v3.4s, v3.4h, #0
+; CHECK-NEXT:    sshll2 v4.4s, v1.8h, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    addp v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    addp v1.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s

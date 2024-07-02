@@ -1296,7 +1296,7 @@ static bool FindFunctionInModule(ConstString &mangled_name,
   return false;
 }
 
-lldb_private::Status ClangExpressionParser::PrepareForExecution(
+lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     lldb::addr_t &func_addr, lldb::addr_t &func_end,
     lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx,
     bool &can_interpret, ExecutionPolicy execution_policy) {
@@ -1468,50 +1468,6 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     }
   } else {
     execution_unit_sp->GetRunnableInfo(err, func_addr, func_end);
-  }
-
-  return err;
-}
-
-lldb_private::Status ClangExpressionParser::RunStaticInitializers(
-    lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx) {
-  lldb_private::Status err;
-
-  lldbassert(execution_unit_sp.get());
-  lldbassert(exe_ctx.HasThreadScope());
-
-  if (!execution_unit_sp.get()) {
-    err.SetErrorString(
-        "can't run static initializers for a NULL execution unit");
-    return err;
-  }
-
-  if (!exe_ctx.HasThreadScope()) {
-    err.SetErrorString("can't run static initializers without a thread");
-    return err;
-  }
-
-  std::vector<lldb::addr_t> static_initializers;
-
-  execution_unit_sp->GetStaticInitializers(static_initializers);
-
-  for (lldb::addr_t static_initializer : static_initializers) {
-    EvaluateExpressionOptions options;
-
-    lldb::ThreadPlanSP call_static_initializer(new ThreadPlanCallFunction(
-        exe_ctx.GetThreadRef(), Address(static_initializer), CompilerType(),
-        llvm::ArrayRef<lldb::addr_t>(), options));
-
-    DiagnosticManager execution_errors;
-    lldb::ExpressionResults results =
-        exe_ctx.GetThreadRef().GetProcess()->RunThreadPlan(
-            exe_ctx, call_static_initializer, options, execution_errors);
-
-    if (results != lldb::eExpressionCompleted) {
-      err.SetErrorStringWithFormat("couldn't run static initializer: %s",
-                                   execution_errors.GetString().c_str());
-      return err;
-    }
   }
 
   return err;

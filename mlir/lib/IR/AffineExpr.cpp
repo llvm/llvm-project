@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdint>
+#include <limits>
 #include <utility>
 
 #include "AffineExprDetail.h"
@@ -13,14 +15,18 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
+
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
+using llvm::mod;
 
 MLIRContext *AffineExpr::getContext() const { return expr->context; }
 
@@ -641,10 +647,14 @@ mlir::getAffineConstantExprs(ArrayRef<int64_t> constants,
 static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
-  // Fold if both LHS, RHS are a constant.
-  if (lhsConst && rhsConst)
-    return getAffineConstantExpr(lhsConst.getValue() + rhsConst.getValue(),
-                                 lhs.getContext());
+  // Fold if both LHS, RHS are a constant and the sum does not overflow.
+  if (lhsConst && rhsConst) {
+    int64_t sum;
+    if (llvm::AddOverflow(lhsConst.getValue(), rhsConst.getValue(), sum)) {
+      return nullptr;
+    }
+    return getAffineConstantExpr(sum, lhs.getContext());
+  }
 
   // Canonicalize so that only the RHS is a constant. (4 + d0 becomes d0 + 4).
   // If only one of them is a symbolic expressions, make it the RHS.
@@ -770,9 +780,13 @@ static AffineExpr simplifyMul(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  if (lhsConst && rhsConst)
-    return getAffineConstantExpr(lhsConst.getValue() * rhsConst.getValue(),
-                                 lhs.getContext());
+  if (lhsConst && rhsConst) {
+    int64_t product;
+    if (llvm::MulOverflow(lhsConst.getValue(), rhsConst.getValue(), product)) {
+      return nullptr;
+    }
+    return getAffineConstantExpr(product, lhs.getContext());
+  }
 
   if (!lhs.isSymbolicOrConstant() && !rhs.isSymbolicOrConstant())
     return nullptr;
@@ -841,25 +855,31 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  // mlir floordiv by zero or negative numbers is undefined and preserved as is.
-  if (!rhsConst || rhsConst.getValue() < 1)
+  if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
-  if (lhsConst)
+  if (lhsConst) {
+    // divideFloorSigned can only overflow in this case:
+    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
+        rhsConst.getValue() == -1) {
+      return nullptr;
+    }
     return getAffineConstantExpr(
-        floorDiv(lhsConst.getValue(), rhsConst.getValue()), lhs.getContext());
+        divideFloorSigned(lhsConst.getValue(), rhsConst.getValue()),
+        lhs.getContext());
+  }
 
   // Fold floordiv of a multiply with a constant that is a multiple of the
   // divisor. Eg: (i * 128) floordiv 64 = i * 2.
   if (rhsConst == 1)
     return lhs;
 
-  // Simplify (expr * const) floordiv divConst when expr is known to be a
-  // multiple of divConst.
+  // Simplify `(expr * lrhs) floordiv rhsConst` when `lrhs` is known to be a
+  // multiple of `rhsConst`.
   auto lBin = dyn_cast<AffineBinaryOpExpr>(lhs);
   if (lBin && lBin.getKind() == AffineExprKind::Mul) {
     if (auto lrhs = dyn_cast<AffineConstantExpr>(lBin.getRHS())) {
-      // rhsConst is known to be a positive constant.
+      // `rhsConst` is known to be a nonzero constant.
       if (lrhs.getValue() % rhsConst.getValue() == 0)
         return lBin.getLHS() * (lrhs.getValue() / rhsConst.getValue());
     }
@@ -870,7 +890,7 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
   if (lBin && lBin.getKind() == AffineExprKind::Add) {
     int64_t llhsDiv = lBin.getLHS().getLargestKnownDivisor();
     int64_t lrhsDiv = lBin.getRHS().getLargestKnownDivisor();
-    // rhsConst is known to be a positive constant.
+    // rhsConst is known to be a nonzero constant.
     if (llhsDiv % rhsConst.getValue() == 0 ||
         lrhsDiv % rhsConst.getValue() == 0)
       return lBin.getLHS().floorDiv(rhsConst.getValue()) +
@@ -897,24 +917,31 @@ static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  if (!rhsConst || rhsConst.getValue() < 1)
+  if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
-  if (lhsConst)
+  if (lhsConst) {
+    // divideCeilSigned can only overflow in this case:
+    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
+        rhsConst.getValue() == -1) {
+      return nullptr;
+    }
     return getAffineConstantExpr(
-        ceilDiv(lhsConst.getValue(), rhsConst.getValue()), lhs.getContext());
+        divideCeilSigned(lhsConst.getValue(), rhsConst.getValue()),
+        lhs.getContext());
+  }
 
   // Fold ceildiv of a multiply with a constant that is a multiple of the
   // divisor. Eg: (i * 128) ceildiv 64 = i * 2.
   if (rhsConst.getValue() == 1)
     return lhs;
 
-  // Simplify (expr * const) ceildiv divConst when const is known to be a
-  // multiple of divConst.
+  // Simplify `(expr * lrhs) ceildiv rhsConst` when `lrhs` is known to be a
+  // multiple of `rhsConst`.
   auto lBin = dyn_cast<AffineBinaryOpExpr>(lhs);
   if (lBin && lBin.getKind() == AffineExprKind::Mul) {
     if (auto lrhs = dyn_cast<AffineConstantExpr>(lBin.getRHS())) {
-      // rhsConst is known to be a positive constant.
+      // `rhsConst` is known to be a nonzero constant.
       if (lrhs.getValue() % rhsConst.getValue() == 0)
         return lBin.getLHS() * (lrhs.getValue() / rhsConst.getValue());
     }
@@ -944,9 +971,11 @@ static AffineExpr simplifyMod(AffineExpr lhs, AffineExpr rhs) {
   if (!rhsConst || rhsConst.getValue() < 1)
     return nullptr;
 
-  if (lhsConst)
+  if (lhsConst) {
+    // mod never overflows.
     return getAffineConstantExpr(mod(lhsConst.getValue(), rhsConst.getValue()),
                                  lhs.getContext());
+  }
 
   // Fold modulo of an expression that is known to be a multiple of a constant
   // to zero if that constant is a multiple of the modulo factor. Eg: (i * 128)
@@ -1570,7 +1599,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                 constLowerBounds, constUpperBounds, isUpper);
       if (!bound)
         return std::nullopt;
-      return mlir::floorDiv(*bound, rhsConst.getValue());
+      return divideFloorSigned(*bound, rhsConst.getValue());
     }
     if (binOpExpr.getKind() == AffineExprKind::CeilDiv) {
       auto rhsConst = dyn_cast<AffineConstantExpr>(binOpExpr.getRHS());
@@ -1580,7 +1609,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                   constLowerBounds, constUpperBounds, isUpper);
         if (!bound)
           return std::nullopt;
-        return mlir::ceilDiv(*bound, rhsConst.getValue());
+        return divideCeilSigned(*bound, rhsConst.getValue());
       }
       return std::nullopt;
     }
@@ -1598,7 +1627,8 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
             getBoundForAffineExpr(binOpExpr.getLHS(), numDims, numSymbols,
                                   constLowerBounds, constUpperBounds, isUpper);
         if (ub && lb &&
-            floorDiv(*lb, rhsConstVal) == floorDiv(*ub, rhsConstVal))
+            divideFloorSigned(*lb, rhsConstVal) ==
+                divideFloorSigned(*ub, rhsConstVal))
           return isUpper ? mod(*ub, rhsConstVal) : mod(*lb, rhsConstVal);
         return isUpper ? rhsConstVal - 1 : 0;
       }

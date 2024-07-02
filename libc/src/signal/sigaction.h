@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_SIGACTION_H
 #define LLVM_LIBC_SRC_SIGNAL_SIGACTION_H
 
-#include <signal.h>
+#include "hdr/types/struct_sigaction.h"
 
 namespace LIBC_NAMESPACE {
 

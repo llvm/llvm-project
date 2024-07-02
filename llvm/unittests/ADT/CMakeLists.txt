@@ -25,6 +25,7 @@ add_llvm_unittest(ADTTests
   DenseSetTest.cpp
   DepthFirstIteratorTest.cpp
   DirectedGraphTest.cpp
+  DynamicAPIntTest.cpp
   EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp

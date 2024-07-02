@@ -120,7 +120,7 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
     Alloca = Builder.CreateAlloca(Ty, ArraySize, Name);
   else
     Alloca = new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
-                                  ArraySize, Name, AllocaInsertPt);
+                                  ArraySize, Name, &*AllocaInsertPt);
   if (Allocas) {
     Allocas->Add(Alloca);
   }
@@ -650,16 +650,13 @@ unsigned CodeGenFunction::getAccessedFieldNo(unsigned Idx,
       ->getZExtValue();
 }
 
-/// Emit the hash_16_bytes function from include/llvm/ADT/Hashing.h.
-static llvm::Value *emitHash16Bytes(CGBuilderTy &Builder, llvm::Value *Low,
-                                    llvm::Value *High) {
-  llvm::Value *KMul = Builder.getInt64(0x9ddfea08eb382d69ULL);
-  llvm::Value *K47 = Builder.getInt64(47);
-  llvm::Value *A0 = Builder.CreateMul(Builder.CreateXor(Low, High), KMul);
-  llvm::Value *A1 = Builder.CreateXor(Builder.CreateLShr(A0, K47), A0);
-  llvm::Value *B0 = Builder.CreateMul(Builder.CreateXor(High, A1), KMul);
-  llvm::Value *B1 = Builder.CreateXor(Builder.CreateLShr(B0, K47), B0);
-  return Builder.CreateMul(B1, KMul);
+static llvm::Value *emitHashMix(CGBuilderTy &Builder, llvm::Value *Acc,
+                                llvm::Value *Ptr) {
+  llvm::Value *A0 =
+      Builder.CreateMul(Ptr, Builder.getInt64(0xbf58476d1ce4e5b9u));
+  llvm::Value *A1 =
+      Builder.CreateXor(A0, Builder.CreateLShr(A0, Builder.getInt64(31)));
+  return Builder.CreateXor(Acc, A1);
 }
 
 bool CodeGenFunction::isNullPointerAllowed(TypeCheckKind TCK) {
@@ -821,11 +818,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       EmitBlock(VptrNotNull);
     }
 
-    // Compute a hash of the mangled name of the type.
-    //
-    // FIXME: This is not guaranteed to be deterministic! Move to a
-    //        fingerprinting mechanism once LLVM provides one. For the time
-    //        being the implementation happens to be deterministic.
+    // Compute a deterministic hash of the mangled name of the type.
     SmallString<64> MangledName;
     llvm::raw_svector_ostream Out(MangledName);
     CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty.getUnqualifiedType(),
@@ -834,15 +827,19 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     // Contained in NoSanitizeList based on the mangled type.
     if (!CGM.getContext().getNoSanitizeList().containsType(SanitizerKind::Vptr,
                                                            Out.str())) {
-      llvm::hash_code TypeHash = hash_value(Out.str());
+      // Load the vptr, and mix it with TypeHash.
+      llvm::Value *TypeHash =
+          llvm::ConstantInt::get(Int64Ty, xxh3_64bits(Out.str()));
 
-      // Load the vptr, and compute hash_16_bytes(TypeHash, vptr).
-      llvm::Value *Low = llvm::ConstantInt::get(Int64Ty, TypeHash);
+      llvm::Type *VPtrTy = llvm::PointerType::get(IntPtrTy, 0);
       Address VPtrAddr(Ptr, IntPtrTy, getPointerAlign());
-      llvm::Value *VPtrVal = Builder.CreateLoad(VPtrAddr);
-      llvm::Value *High = Builder.CreateZExt(VPtrVal, Int64Ty);
+      llvm::Value *VPtrVal = GetVTablePtr(VPtrAddr, VPtrTy,
+                                          Ty->getAsCXXRecordDecl(),
+                                          VTableAuthMode::UnsafeUbsanStrip);
+      VPtrVal = Builder.CreateBitOrPointerCast(VPtrVal, IntPtrTy);
 
-      llvm::Value *Hash = emitHash16Bytes(Builder, Low, High);
+      llvm::Value *Hash =
+          emitHashMix(Builder, TypeHash, Builder.CreateZExt(VPtrVal, Int64Ty));
       Hash = Builder.CreateTrunc(Hash, IntPtrTy);
 
       // Look the hash up in our cache.
@@ -2161,6 +2158,21 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
   return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
 }
 
+RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
+                                           SourceLocation Loc) {
+  QualType Ty = LV.getType();
+  switch (getEvaluationKind(Ty)) {
+  case TEK_Scalar:
+    return EmitLoadOfLValue(LV, Loc);
+  case TEK_Complex:
+    return RValue::getComplex(EmitLoadOfComplex(LV, Loc));
+  case TEK_Aggregate:
+    EmitAggFinalDestCopy(Ty, Slot, LV, EVK_NonRValue);
+    return Slot.asRValue();
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
 /// EmitLoadOfLValue - Given an expression that represents a value lvalue, this
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
@@ -2850,22 +2862,22 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
-                                               GlobalDecl GD) {
+llvm::Constant *CodeGenModule::getRawFunctionPointer(GlobalDecl GD,
+                                                     llvm::Type *Ty) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (FD->hasAttr<WeakRefAttr>()) {
-    ConstantAddress aliasee = CGM.GetWeakRefReference(FD);
+    ConstantAddress aliasee = GetWeakRefReference(FD);
     return aliasee.getPointer();
   }
 
-  llvm::Constant *V = CGM.GetAddrOfFunction(GD);
+  llvm::Constant *V = GetAddrOfFunction(GD, Ty);
   return V;
 }
 
 static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment,
                             AlignmentSource::Decl);
@@ -3571,9 +3583,8 @@ void CodeGenFunction::EmitCheck(
   llvm::BasicBlock *Handlers = createBasicBlock("handler." + CheckName);
   llvm::Instruction *Branch = Builder.CreateCondBr(JointCond, Cont, Handlers);
   // Give hint that we very much don't expect to execute the handler
-  // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
   llvm::MDBuilder MDHelper(getLLVMContext());
-  llvm::MDNode *Node = MDHelper.createBranchWeights((1U << 20) - 1, 1);
+  llvm::MDNode *Node = MDHelper.createLikelyBranchWeights();
   Branch->setMetadata(llvm::LLVMContext::MD_prof, Node);
   EmitBlock(Handlers);
 
@@ -3641,7 +3652,7 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::BranchInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
 
   llvm::MDBuilder MDHelper(getLLVMContext());
-  llvm::MDNode *Node = MDHelper.createBranchWeights((1U << 20) - 1, 1);
+  llvm::MDNode *Node = MDHelper.createLikelyBranchWeights();
   BI->setMetadata(llvm::LLVMContext::MD_prof, Node);
 
   EmitBlock(CheckBB);
@@ -5501,7 +5512,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
         OnlyHasInlineBuiltinDeclaration(FD)) {
-      llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+      llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
       llvm::Function *Clone = M->getFunction(FDInlineName);
@@ -5524,7 +5535,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
-  llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
   if (CGF.CGM.getLangOpts().CUDA && !CGF.CGM.getLangOpts().CUDAIsDevice &&
       FD->hasAttr<CUDAGlobalAttr>())
     CalleePtr = CGF.CGM.getCUDARuntime().getKernelStub(
@@ -5581,7 +5592,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     GD = GlobalDecl(VD);
 
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
-  CGCallee callee(calleeInfo, calleePtr);
+  CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
+  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;
 }
 

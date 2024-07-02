@@ -78,6 +78,7 @@ static_library("CodeGen") {
     "CGOpenCLRuntime.cpp",
     "CGOpenMPRuntime.cpp",
     "CGOpenMPRuntimeGPU.cpp",
+    "CGPointerAuth.cpp",
     "CGRecordLayoutBuilder.cpp",
     "CGStmt.cpp",
     "CGStmtOpenMP.cpp",

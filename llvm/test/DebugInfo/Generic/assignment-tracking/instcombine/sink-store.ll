@@ -21,10 +21,10 @@
 
 ; CHECK: if.then:
 ; CHECK-NEXT: %call = call
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 2, metadata ![[LOCAL:[0-9]+]], metadata !DIExpression(), metadata ![[MERGED_ID:[0-9]+]], metadata ptr %local, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(i32 2, ![[LOCAL:[0-9]+]], !DIExpression(), ![[MERGED_ID:[0-9]+]], ptr %local, !DIExpression(),
 
 ; CHECK: if.else:
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 2, metadata ![[LOCAL]], metadata !DIExpression(), metadata ![[MERGED_ID]], metadata ptr %local, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(i32 2, ![[LOCAL]], !DIExpression(), ![[MERGED_ID]], ptr %local, !DIExpression(),
 
 ; CHECK: if.end:
 ; CHECK-NEXT: store i32 2, ptr %local{{.*}}!DIAssignID ![[MERGED_ID]]

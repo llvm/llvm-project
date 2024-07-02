@@ -89,8 +89,8 @@ steps:
     <<: *common
 
     # Build with the configuration we use to generate libc++.dylib on Apple platforms
-  - label: Apple system
-    command: libcxx/utils/ci/run-buildbot apple-system
+  - label: Apple system configuration
+    command: libcxx/utils/ci/run-buildbot apple-configuration
     agents:
       queue: libcxx-builders
       os: macos
