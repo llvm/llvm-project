@@ -201,7 +201,8 @@ MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
   assert(!Sec.curFragList()->Head);
   auto *F = allocFragment<MCDataFragment>();
   F->setParent(&Sec);
-  Sec.addFragment(*F);
+  Sec.curFragList()->Head = F;
+  Sec.curFragList()->Tail = F;
   return F;
 }
 
