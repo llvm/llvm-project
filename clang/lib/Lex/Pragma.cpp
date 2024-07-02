@@ -2125,6 +2125,51 @@ struct PragmaFinalHandler : public PragmaHandler {
   }
 };
 
+struct FenvRoundHandler : public PragmaHandler {
+  FenvRoundHandler() : PragmaHandler("FENV_ROUND") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override {
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_round_expected_mode);
+      return;
+    }
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+
+    auto RM =
+        llvm::StringSwitch<llvm::RoundingMode>(II->getName())
+            .Case("FE_TOWARDZERO", llvm::RoundingMode::TowardZero)
+            .Case("FE_TONEAREST", llvm::RoundingMode::NearestTiesToEven)
+            .Case("FE_UPWARD", llvm::RoundingMode::TowardPositive)
+            .Case("FE_DOWNWARD", llvm::RoundingMode::TowardNegative)
+            .Case("FE_TONEARESTFROMZERO", llvm::RoundingMode::NearestTiesToAway)
+            .Case("FE_DYNAMIC", llvm::RoundingMode::Dynamic)
+            .Default(llvm::RoundingMode::Invalid);
+    if (RM == llvm::RoundingMode::Invalid) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_round_unknown_mode);
+      return;
+    }
+    PP.Lex(Tok);
+
+    if (Tok.isNot(tok::eod)) {
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol)
+          << "pragma STDC FENV_ROUND";
+      return;
+    }
+
+    PP.setRoundingMode(RM);
+
+    Token PragmaFenvRound;
+    PragmaFenvRound.startToken();
+    PragmaFenvRound.setKind(tok::annot_pragma_fenv_round);
+    PragmaFenvRound.setAnnotationRange(SourceRange(Tok.getLocation()));
+    PragmaFenvRound.setAnnotationValue(
+        reinterpret_cast<void *>(static_cast<uintptr_t>(RM)));
+    PP.EnterToken(PragmaFenvRound, /*IsReinject*/ false);
+  }
+};
+
 } // namespace
 
 /// RegisterBuiltinPragmas - Install the standard preprocessor pragmas:
@@ -2183,6 +2228,9 @@ void Preprocessor::RegisterBuiltinPragmas() {
     AddPragmaHandler(new PragmaManagedHandler("managed"));
     AddPragmaHandler(new PragmaManagedHandler("unmanaged"));
   }
+
+  // #pragma STDC FENV_ROUND
+  AddPragmaHandler("STDC", new FenvRoundHandler());
 
   // Pragmas added by plugins
   for (const PragmaHandlerRegistry::entry &handler :
