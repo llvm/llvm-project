@@ -528,6 +528,10 @@ createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
                                bool SoftFloatABI);
 
 std::unique_ptr<TargetCodeGenInfo>
+createSystemZ_ZOS_TargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
+                                    bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
 createTCETargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
