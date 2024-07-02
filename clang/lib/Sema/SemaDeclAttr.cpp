@@ -3010,12 +3010,10 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 }
 
 bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                                  StringRef &AttrStr, bool &isDefault) {
+                                  StringRef AttrStr) {
   enum FirstParam { Unsupported };
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
-  if (AttrStr.trim() == "default")
-    isDefault = true;
   llvm::SmallVector<StringRef, 8> Features;
   AttrStr.split(Features, "+");
   for (auto &CurFeature : Features) {
@@ -3035,16 +3033,12 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
-  bool isDefault = false;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
-      S.checkTargetVersionAttr(LiteralLoc, D, Str, isDefault))
+      S.checkTargetVersionAttr(LiteralLoc, D, Str))
     return;
-  // Do not create default only target_version attribute
-  if (!isDefault) {
-    TargetVersionAttr *NewAttr =
-        ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
-    D->addAttr(NewAttr);
-  }
+  TargetVersionAttr *NewAttr =
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
+  D->addAttr(NewAttr);
 }
 
 static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
