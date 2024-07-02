@@ -306,7 +306,13 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
-unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) {
+  // For certain 8 bit ops, we can pack a v4i8 into a single part
+  // (e.g. v4i8 shufflevectors -> v_perm v4i8, v4i8). Thus, we
+  // do not limit the numberOfParts for 8 bit vectors to the
+  // legalization costs of such. It is left up to other target
+  // queries (e.g. get*InstrCost) to decide the proper handling
+  // of 8 bit vectors.
   if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(Tp)) {
     if (DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
       unsigned ElCount = VTy->getElementCount().getFixedValue();
@@ -314,8 +320,7 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
     }
   }
 
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-  return LT.first.isValid() ? *LT.first.getValue() : 0;
+  return BaseT::getNumberOfParts(Tp);
 }
 
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
