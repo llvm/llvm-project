@@ -35,6 +35,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
@@ -61,6 +62,8 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <optional>
+#include <sys/types.h>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -2914,7 +2917,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
 
   if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
     if (isa<SCEVUnknown>(C->getOperand()))
-      return V;
+      return C->getOperand();
 
   return nullptr;
 }
@@ -2930,7 +2933,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // computation of an interesting IV - but we chose not to as we
   // don't have a cost model here, and broadening the scope exposes
   // far too many unprofitable cases.
-  const SCEV *StrideExpr = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
+  ScalarEvolution *SE = PSE->getSE();
+  const SCEV *StrideExpr = getStrideFromPointer(Ptr, SE, TheLoop);
   if (!StrideExpr)
     return;
 
@@ -2943,10 +2947,6 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
     return;
   }
 
-  // Avoid adding the "Stride == 1" predicate when we know that
-  // Stride >= Trip-Count. Such a predicate will effectively optimize a single
-  // or zero iteration loop, as Trip-Count <= Stride == 1.
-  //
   // TODO: We are currently not making a very informed decision on when it is
   // beneficial to apply stride versioning. It might make more sense that the
   // users of this analysis (such as the vectorizer) will trigger it, based on
@@ -2956,40 +2956,30 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // of various possible stride specializations, considering the alternatives
   // of using gather/scatters (if available).
 
-  const SCEV *MaxBTC = PSE->getSymbolicMaxBackedgeTakenCount();
+  // Get two signed ranges and compare them, after adjusting for bitwidth. BTC
+  // range could extend into -1.
+  const SCEV *BTC = PSE->getBackedgeTakenCount();
+  ConstantRange BTCRange = SE->getSignedRange(BTC);
+  ConstantRange StrideRange =
+      SE->getSignedRange(StrideExpr).sextOrTrunc(BTCRange.getBitWidth());
 
-  // Match the types so we can compare the stride and the MaxBTC.
-  // The Stride can be positive/negative, so we sign extend Stride;
-  // The backedgeTakenCount is non-negative, so we zero extend MaxBTC.
-  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
-  uint64_t StrideTypeSizeBits = DL.getTypeSizeInBits(StrideExpr->getType());
-  uint64_t BETypeSizeBits = DL.getTypeSizeInBits(MaxBTC->getType());
-  const SCEV *CastedStride = StrideExpr;
-  const SCEV *CastedBECount = MaxBTC;
-  ScalarEvolution *SE = PSE->getSE();
-  if (BETypeSizeBits >= StrideTypeSizeBits)
-    CastedStride = SE->getNoopOrSignExtend(StrideExpr, MaxBTC->getType());
-  else
-    CastedBECount = SE->getZeroExtendExpr(MaxBTC, StrideExpr->getType());
-  const SCEV *StrideMinusBETaken = SE->getMinusSCEV(CastedStride, CastedBECount);
-  // Since TripCount == BackEdgeTakenCount + 1, checking:
-  // "Stride >= TripCount" is equivalent to checking:
-  // Stride - MaxBTC> 0
-  if (SE->isKnownPositive(StrideMinusBETaken)) {
-    LLVM_DEBUG(
-        dbgs() << "LAA: Stride>=TripCount; No point in versioning as the "
-                  "Stride==1 predicate will imply that the loop executes "
-                  "at most once.\n");
+  // Stride is zero-extended to compare with BTC.
+  const SCEV *CastedStride =
+      SE->getTruncateOrZeroExtend(StrideExpr, BTC->getType());
+  const SCEV *StrideMinusOne =
+      SE->getMinusSCEV(CastedStride, SE->getOne(CastedStride->getType()));
+
+  // Stride - 1 exactly equal to BTC is a special case for which the loop should
+  // not be versioned. Otherwise, the loop should not be versioned if the range
+  // difference is all positive.
+  if (StrideMinusOne == BTC ||
+      StrideRange.difference(BTCRange).isAllPositive()) {
+    LLVM_DEBUG(dbgs() << "LAA: Not versioning with Stride==1 predicate.\n");
     return;
   }
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
 
-  // Strip back off the integer cast, and check that our result is a
-  // SCEVUnknown as we expect.
-  const SCEV *StrideBase = StrideExpr;
-  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
-    StrideBase = C->getOperand();
-  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
+  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideExpr);
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
