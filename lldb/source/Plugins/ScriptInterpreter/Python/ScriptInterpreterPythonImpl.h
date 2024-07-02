@@ -160,13 +160,16 @@ public:
       lldb_private::CommandReturnObject &cmd_retobj, Status &error,
       const lldb_private::ExecutionContext &exe_ctx) override;
 
-    virtual bool RunScriptBasedParsedCommand(
-      StructuredData::GenericSP impl_obj_sp, Args& args,
+  bool RunScriptBasedParsedCommand(
+      StructuredData::GenericSP impl_obj_sp, Args &args,
       ScriptedCommandSynchronicity synchronicity,
       lldb_private::CommandReturnObject &cmd_retobj, Status &error,
       const lldb_private::ExecutionContext &exe_ctx) override;
 
-  
+  std::optional<std::string>
+  GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
+                                     Args &args) override;
+
   Status GenerateFunction(const char *signature, const StringList &input,
                           bool is_callback) override;
 

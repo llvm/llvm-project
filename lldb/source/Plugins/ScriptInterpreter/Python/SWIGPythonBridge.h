@@ -206,6 +206,10 @@ public:
                                   lldb_private::CommandReturnObject &cmd_retobj,
                                   lldb::ExecutionContextRefSP exe_ctx_ref_sp);
 
+  static std::optional<std::string>
+  LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
+                                                   std::string &command);
+
   static bool LLDBSwigPythonCallModuleInit(const char *python_module_name,
                                            const char *session_dictionary_name,
                                            lldb::DebuggerSP debugger);
