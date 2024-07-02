@@ -1168,6 +1168,13 @@ defm SCRATCH_LOAD_DWORD    : FLAT_Scratch_Load_Pseudo <"scratch_load_dword", VGP
 defm SCRATCH_LOAD_DWORDX2  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx2", VReg_64>;
 defm SCRATCH_LOAD_DWORDX3  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx3", VReg_96>;
 defm SCRATCH_LOAD_DWORDX4  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx4", VReg_128>;
+// DWORDX5 and larger are pseudos only used during instruction-selection for v_load_idx conversion
+defm SCRATCH_LOAD_DWORDX5  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx5", VReg_160>;
+defm SCRATCH_LOAD_DWORDX6 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx6", VReg_192>;
+defm SCRATCH_LOAD_DWORDX8 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx8", VReg_256>;
+defm SCRATCH_LOAD_DWORDX9 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx9", VReg_288>;
+defm SCRATCH_LOAD_DWORDX16 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx16", VReg_512>;
+defm SCRATCH_LOAD_DWORDX18 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx18", VReg_576>;
 }
 
 let TiedSourceNotRead = 1 in {
@@ -1187,6 +1194,13 @@ defm SCRATCH_STORE_DWORD   : FLAT_Scratch_Store_Pseudo <"scratch_store_dword", V
 defm SCRATCH_STORE_DWORDX2 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx2", VReg_64>;
 defm SCRATCH_STORE_DWORDX3 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx3", VReg_96>;
 defm SCRATCH_STORE_DWORDX4 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx4", VReg_128>;
+// DWORDX5 and larger are pseudos only used during instruction-selection for v_store_idx conversion
+defm SCRATCH_STORE_DWORDX5 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx5", VReg_160>;
+defm SCRATCH_STORE_DWORDX6 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx6", VReg_192>;
+defm SCRATCH_STORE_DWORDX8 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx8", VReg_256>;
+defm SCRATCH_STORE_DWORDX9 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx9", VReg_288>;
+defm SCRATCH_STORE_DWORDX16 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx16", VReg_512>;
+defm SCRATCH_STORE_DWORDX18 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx18", VReg_576>;
 }
 
 defm SCRATCH_STORE_BYTE_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_byte_d16_hi", VGPR_32>;
@@ -2148,17 +2162,36 @@ foreach as = [ "private", "laneshared" ] in {
   }
 
   defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX3, "load_"#as, v3i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX3, "store_"#as, v3i32>;
 
   foreach vt = VReg_128.RegTypes in {
     defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX4, "load_"#as, vt>;
     defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX4, "store_"#as, vt>;
   }
 
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX5, "load_"#as, v5i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX5, "store_"#as, v5i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX6, "load_"#as, v6i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX6, "store_"#as, v6i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX8, "load_"#as, v8i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX8, "store_"#as, v8i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX9, "load_"#as, v9i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX9, "store_"#as, v9i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX16, "load_"#as, v16i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX16, "store_"#as, v16i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX18, "load_"#as, v18i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX18, "store_"#as, v18i32>;
+
   defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, "truncstorei8_"#as, i32>;
   defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, "truncstorei8_"#as, i16>;
   defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, "truncstorei16_"#as, i32>;
   defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, "store_"#as, i16>;
-  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX3, "store_"#as, v3i32>;
+
 
   let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, EnableFlatScratch] in {
     defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT_D16_HI, "truncstorei16_hi16_"#as, i32>;
