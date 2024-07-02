@@ -2918,6 +2918,39 @@ def : Pat<(PPCstore_scal_int_from_vsr f64:$src, XForm:$dst, 8),
           (STXSDX $src, XForm:$dst)>;
 def : Pat<(PPCstore_scal_int_from_vsr f128:$src, XForm:$dst, 8),
           (STXSDX (COPY_TO_REGCLASS $src, VSFRC), XForm:$dst)>;
+
+def : Pat<(f32 (PPCvsx_cmpsel f32:$lhs, f32:$rhs, f32:$tval, f32:$fval, SETOEQ)),
+          (COPY_TO_REGCLASS (XXSEL
+            (COPY_TO_REGCLASS $tval, VSRC), (COPY_TO_REGCLASS $fval, VSRC),
+            (XVCMPEQSP (COPY_TO_REGCLASS $lhs, VSRC),
+                       (COPY_TO_REGCLASS $rhs, VSRC))), VSSRC)>;
+def : Pat<(f32 (PPCvsx_cmpsel f32:$lhs, f32:$rhs, f32:$tval, f32:$fval, SETOGE)),
+          (COPY_TO_REGCLASS (XXSEL
+            (COPY_TO_REGCLASS $tval, VSRC), (COPY_TO_REGCLASS $fval, VSRC),
+            (XVCMPGESP (COPY_TO_REGCLASS $lhs, VSRC),
+                       (COPY_TO_REGCLASS $rhs, VSRC))), VSSRC)>;
+def : Pat<(f32 (PPCvsx_cmpsel f32:$lhs, f32:$rhs, f32:$tval, f32:$fval, SETOGT)),
+          (COPY_TO_REGCLASS (XXSEL
+            (COPY_TO_REGCLASS $tval, VSRC),
+            (COPY_TO_REGCLASS $fval, VSRC),
+            (XVCMPGTSP (COPY_TO_REGCLASS $lhs, VSRC),
+                       (COPY_TO_REGCLASS $rhs, VSRC))), VSSRC)>;
+def : Pat<(f64 (PPCvsx_cmpsel f64:$lhs, f64:$rhs, f64:$tval, f64:$fval, SETOEQ)),
+          (COPY_TO_REGCLASS (XXSEL
+            (COPY_TO_REGCLASS $tval, VSRC), (COPY_TO_REGCLASS $fval, VSRC),
+            (XVCMPEQDP (COPY_TO_REGCLASS $lhs, VSRC),
+                       (COPY_TO_REGCLASS $rhs, VSRC))), VSFRC)>;
+def : Pat<(f64 (PPCvsx_cmpsel f64:$lhs, f64:$rhs, f64:$tval, f64:$fval, SETOGE)),
+          (COPY_TO_REGCLASS (XXSEL
+            (COPY_TO_REGCLASS $tval, VSRC), (COPY_TO_REGCLASS $fval, VSRC),
+            (XVCMPGEDP (COPY_TO_REGCLASS $lhs, VSRC),
+                       (COPY_TO_REGCLASS $rhs, VSRC))), VSFRC)>;
+def : Pat<(f64 (PPCvsx_cmpsel f64:$lhs, f64:$rhs, f64:$tval, f64:$fval, SETOGT)),
+          (COPY_TO_REGCLASS (XXSEL
+            (COPY_TO_REGCLASS $tval, VSRC),
+            (COPY_TO_REGCLASS $fval, VSRC),
+            (XVCMPGTDP (COPY_TO_REGCLASS $lhs, VSRC),
+                       (COPY_TO_REGCLASS $rhs, VSRC))), VSFRC)>;
 } // HasVSX
 
 // Any big endian VSX subtarget.
@@ -3932,6 +3965,19 @@ foreach Ty = [v4i32, v4f32, v2i64, v2f64] in {
   def : Pat<(store Ty:$rS, DQForm:$dst), (STXV $rS, memrix16:$dst)>;
   def : Pat<(store Ty:$rS, XForm:$dst), (STXVX $rS, XForm:$dst)>;
 }
+
+def : Pat<(f64 (PPCvsx_cmpsel f64:$lhs, f64:$rhs, f64:$tval, f64:$fval, SETOEQ)),
+          (COPY_TO_REGCLASS (XXSEL (COPY_TO_REGCLASS $tval, VSRC),
+                                   (COPY_TO_REGCLASS $fval, VSRC),
+                                   (XSCMPEQDP $lhs, $rhs)), VSFRC)>;
+def : Pat<(f64 (PPCvsx_cmpsel f64:$lhs, f64:$rhs, f64:$tval, f64:$fval, SETOGE)),
+          (COPY_TO_REGCLASS (XXSEL (COPY_TO_REGCLASS $tval, VSRC),
+                                   (COPY_TO_REGCLASS $fval, VSRC),
+                                   (XSCMPGEDP $lhs, $rhs)), VSFRC)>;
+def : Pat<(f64 (PPCvsx_cmpsel f64:$lhs, f64:$rhs, f64:$tval, f64:$fval, SETOGT)),
+          (COPY_TO_REGCLASS (XXSEL (COPY_TO_REGCLASS $tval, VSRC),
+                                   (COPY_TO_REGCLASS $fval, VSRC),
+                                   (XSCMPGTDP $lhs, $rhs)), VSFRC)>;
 
 def : Pat<(f128 (load DQForm:$src)),
           (COPY_TO_REGCLASS (LXV memrix16:$src), VRRC)>;

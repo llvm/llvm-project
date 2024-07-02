@@ -950,46 +950,42 @@ define float @goo3_fmf(float %a) nounwind {
 ;
 ; CHECK-P8-LABEL: goo3_fmf:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
-; CHECK-P8-NEXT:    xsabsdp 0, 1
-; CHECK-P8-NEXT:    lfs 2, .LCPI23_1@toc@l(3)
-; CHECK-P8-NEXT:    fcmpu 0, 0, 2
-; CHECK-P8-NEXT:    xxlxor 0, 0, 0
-; CHECK-P8-NEXT:    blt 0, .LBB23_2
-; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 1
 ; CHECK-P8-NEXT:    vspltisw 2, -3
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
-; CHECK-P8-NEXT:    xvcvsxwdp 2, 34
-; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
-; CHECK-P8-NEXT:    xsmaddasp 2, 1, 0
+; CHECK-P8-NEXT:    xvcvsxwdp 3, 34
+; CHECK-P8-NEXT:    xsmulsp 2, 1, 0
+; CHECK-P8-NEXT:    xsabsdp 1, 1
+; CHECK-P8-NEXT:    xsmaddasp 3, 2, 0
 ; CHECK-P8-NEXT:    lfs 0, .LCPI23_0@toc@l(3)
-; CHECK-P8-NEXT:    xsmulsp 0, 1, 0
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 2
-; CHECK-P8-NEXT:  .LBB23_2:
-; CHECK-P8-NEXT:    fmr 1, 0
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
+; CHECK-P8-NEXT:    xsmulsp 0, 2, 0
+; CHECK-P8-NEXT:    lfs 2, .LCPI23_1@toc@l(3)
+; CHECK-P8-NEXT:    xvcmpgesp 1, 2, 1
+; CHECK-P8-NEXT:    xxlxor 2, 2, 2
+; CHECK-P8-NEXT:    xsmulsp 0, 0, 3
+; CHECK-P8-NEXT:    xxsel 1, 2, 0, 1
+; CHECK-P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: goo3_fmf:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
-; CHECK-P9-NEXT:    xsabsdp 0, 1
-; CHECK-P9-NEXT:    lfs 2, .LCPI23_1@toc@l(3)
-; CHECK-P9-NEXT:    fcmpu 0, 0, 2
-; CHECK-P9-NEXT:    xxlxor 0, 0, 0
-; CHECK-P9-NEXT:    blt 0, .LBB23_2
-; CHECK-P9-NEXT:  # %bb.1:
 ; CHECK-P9-NEXT:    xsrsqrtesp 0, 1
 ; CHECK-P9-NEXT:    vspltisw 2, -3
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
-; CHECK-P9-NEXT:    xsmulsp 1, 1, 0
-; CHECK-P9-NEXT:    xvcvsxwdp 2, 34
-; CHECK-P9-NEXT:    xsmaddasp 2, 1, 0
+; CHECK-P9-NEXT:    xsmulsp 2, 1, 0
+; CHECK-P9-NEXT:    xvcvsxwdp 3, 34
+; CHECK-P9-NEXT:    xsabsdp 1, 1
+; CHECK-P9-NEXT:    xsmaddasp 3, 2, 0
 ; CHECK-P9-NEXT:    lfs 0, .LCPI23_0@toc@l(3)
-; CHECK-P9-NEXT:    xsmulsp 0, 1, 0
-; CHECK-P9-NEXT:    xsmulsp 0, 0, 2
-; CHECK-P9-NEXT:  .LBB23_2:
-; CHECK-P9-NEXT:    fmr 1, 0
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
+; CHECK-P9-NEXT:    xsmulsp 0, 2, 0
+; CHECK-P9-NEXT:    lfs 2, .LCPI23_1@toc@l(3)
+; CHECK-P9-NEXT:    xsmulsp 0, 0, 3
+; CHECK-P9-NEXT:    xvcmpgesp 1, 2, 1
+; CHECK-P9-NEXT:    xxlxor 2, 2, 2
+; CHECK-P9-NEXT:    xxsel 1, 2, 0, 1
+; CHECK-P9-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-P9-NEXT:    blr
   %r = call contract reassoc ninf afn float @llvm.sqrt.f32(float %a)
   ret float %r

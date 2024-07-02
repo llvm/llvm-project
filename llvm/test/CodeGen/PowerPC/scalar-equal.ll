@@ -35,22 +35,22 @@ define double @testoeq(double %a, double %b, double %c, double %d) {
 ;
 ; NO-FAST-P9-LABEL: testoeq:
 ; NO-FAST-P9:       # %bb.0: # %entry
-; NO-FAST-P9-NEXT:    xscmpudp cr0, f1, f2
-; NO-FAST-P9-NEXT:    beq cr0, .LBB0_2
-; NO-FAST-P9-NEXT:  # %bb.1: # %entry
-; NO-FAST-P9-NEXT:    fmr f3, f4
-; NO-FAST-P9-NEXT:  .LBB0_2: # %entry
-; NO-FAST-P9-NEXT:    fmr f1, f3
+; NO-FAST-P9-NEXT:    xscmpeqdp vs0, f1, f2
+; NO-FAST-P9-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; NO-FAST-P9-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; NO-FAST-P9-NEXT:    xxsel vs1, vs3, vs4, vs0
+; NO-FAST-P9-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; NO-FAST-P9-NEXT:    blr
 ;
 ; NO-FAST-P8-LABEL: testoeq:
 ; NO-FAST-P8:       # %bb.0: # %entry
-; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f2
-; NO-FAST-P8-NEXT:    beq cr0, .LBB0_2
-; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f3, f4
-; NO-FAST-P8-NEXT:  .LBB0_2: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f3
+; NO-FAST-P8-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; NO-FAST-P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; NO-FAST-P8-NEXT:    xvcmpeqdp vs0, vs1, vs2
+; NO-FAST-P8-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; NO-FAST-P8-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; NO-FAST-P8-NEXT:    xxsel vs1, vs3, vs4, vs0
+; NO-FAST-P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp oeq double %a, %b
