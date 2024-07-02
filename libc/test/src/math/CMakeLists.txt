@@ -1903,6 +1903,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16div_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.f16div
+)
+
+add_fp_unittest(
   f16divf_test
   NEED_MPFR
   SUITE
@@ -1913,6 +1926,19 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.src.math.f16divf
+)
+
+add_fp_unittest(
+  f16divl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16divl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.f16divl
 )
 
 add_fp_unittest(
