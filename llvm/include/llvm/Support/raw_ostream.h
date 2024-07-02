@@ -464,6 +464,10 @@ class raw_fd_ostream : public raw_pwrite_stream {
   bool IsRegularFile = false;
   mutable std::optional<bool> HasColors;
 
+  /// Optional stream this stream is tied to. If this stream is written to, the
+  /// tied-to stream will be flushed first.
+  raw_ostream *TiedStream = nullptr;
+
 #ifdef _WIN32
   /// True if this fd refers to a Windows console device. Mintty and other
   /// terminal emulators are TTYs, but they are not consoles.
@@ -541,6 +545,13 @@ public:
   bool is_displayed() const override;
 
   bool has_colors() const override;
+
+  /// Tie this stream to the specified stream. Replaces any existing tied-to
+  /// stream. Specifying a nullptr unties the stream. This is intended for to
+  /// tie errs() to outs(), so that outs() is flushed whenever something is
+  /// written to errs(), preventing weird and hard-to-test output when stderr
+  /// is redirected to stdout.
+  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
 
   std::error_code error() const { return EC; }
 

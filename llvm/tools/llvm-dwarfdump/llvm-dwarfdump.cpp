@@ -821,6 +821,10 @@ static bool handleFile(StringRef Filename, HandlerFn HandleObj,
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
+  // Flush outs() when printing to errs(). This avoids interleaving output
+  // between the two.
+  errs().tie(&outs());
+
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
 

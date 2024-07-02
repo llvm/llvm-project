@@ -736,6 +736,9 @@ static bool write_console_impl(int FD, StringRef Data) {
 #endif
 
 void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
+  if (TiedStream)
+    TiedStream->flush();
+
   assert(FD >= 0 && "File already closed.");
   pos += Size;
 
