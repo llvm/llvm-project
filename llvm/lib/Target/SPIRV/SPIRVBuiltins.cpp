@@ -184,10 +184,16 @@ lookupBuiltin(StringRef DemangledCall,
               SPIRV::InstructionSet::InstructionSet Set,
               Register ReturnRegister, const SPIRVType *ReturnType,
               const SmallVectorImpl<Register> &Arguments) {
+  const static std::string PassPrefix = "(anonymous namespace)::";
+  std::string BuiltinName;
+  // Itanium Demangler result may have "(anonymous namespace)::" prefix
+  if (DemangledCall.starts_with(PassPrefix.c_str()))
+    BuiltinName = DemangledCall.substr(PassPrefix.length());
+  else
+    BuiltinName = DemangledCall;
   // Extract the builtin function name and types of arguments from the call
   // skeleton.
-  std::string BuiltinName =
-      DemangledCall.substr(0, DemangledCall.find('(')).str();
+  BuiltinName = BuiltinName.substr(0, BuiltinName.find('('));
 
   // Account for possible "__spirv_ocl_" prefix in SPIR-V friendly LLVM IR
   if (BuiltinName.rfind("__spirv_ocl_", 0) == 0)
