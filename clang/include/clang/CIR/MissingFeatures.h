@@ -209,6 +209,8 @@ struct MissingFeatures {
 
   static bool fixedWidthIntegers() { return false; }
   static bool vectorType() { return false; }
+  static bool functionMemberPointerType() { return false; }
+  static bool fixedSizeIntType() { return false; }
 
   //-- Missing LLVM attributes
 

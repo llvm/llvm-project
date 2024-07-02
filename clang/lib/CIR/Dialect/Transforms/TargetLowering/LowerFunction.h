@@ -86,6 +86,10 @@ public:
 
   /// Return the TypeEvaluationKind of Type \c T.
   static ::cir::TypeEvaluationKind getEvaluationKind(Type T);
+
+  static bool hasScalarEvaluationKind(Type T) {
+    return getEvaluationKind(T) == ::cir::TypeEvaluationKind::TEK_Scalar;
+  }
 };
 
 } // namespace cir
