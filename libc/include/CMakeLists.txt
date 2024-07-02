@@ -223,6 +223,7 @@ add_gen_header(
   GEN_HDR errno.h
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
+    .llvm-libc-macros.error_number_macros
 )
 
 add_gen_header(
