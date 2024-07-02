@@ -1527,7 +1527,7 @@ Currently, only the following parameter attributes are defined:
     +-------+----------------------+---------------+
     |  inf  | +/- infinity         |      516      |
     +-------+----------------------+---------------+
-    |  norm | +/- normal           |       26      |
+    |  norm | +/- normal           |      264      |
     +-------+----------------------+---------------+
     |  sub  | +/- subnormal        |      144      |
     +-------+----------------------+---------------+
@@ -5381,6 +5381,7 @@ NVPTX:
 - ``c`` or ``h``: A 16-bit integer register.
 - ``r``: A 32-bit integer register.
 - ``l`` or ``N``: A 64-bit integer register.
+- ``q``: A 128-bit integer register.
 - ``f``: A 32-bit float register.
 - ``d``: A 64-bit float register.
 

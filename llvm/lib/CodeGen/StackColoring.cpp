@@ -964,14 +964,14 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       MFI->setObjectSSPLayout(SI.second, FromKind);
 
     // The new alloca might not be valid in a llvm.dbg.declare for this
-    // variable, so undef out the use to make the verifier happy.
+    // variable, so poison out the use to make the verifier happy.
     AllocaInst *FromAI = const_cast<AllocaInst *>(From);
     if (FromAI->isUsedByMetadata())
-      ValueAsMetadata::handleRAUW(FromAI, UndefValue::get(FromAI->getType()));
+      ValueAsMetadata::handleRAUW(FromAI, PoisonValue::get(FromAI->getType()));
     for (auto &Use : FromAI->uses()) {
       if (BitCastInst *BCI = dyn_cast<BitCastInst>(Use.get()))
         if (BCI->isUsedByMetadata())
-          ValueAsMetadata::handleRAUW(BCI, UndefValue::get(BCI->getType()));
+          ValueAsMetadata::handleRAUW(BCI, PoisonValue::get(BCI->getType()));
     }
 
     // Note that this will not replace uses in MMOs (which we'll update below),
