@@ -987,8 +987,8 @@ define amdgpu_kernel void @phi_v7i16_switch(<7 x i16> %in, ptr %out, i8 %cond) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[X:%.*]] = insertelement <7 x i16> [[IN:%.*]], i16 3, i32 3
 ; OPT-NEXT:    switch i8 [[COND:%.*]], label [[ELSE:%.*]] [
-; OPT-NEXT:    i8 0, label [[THEN_1:%.*]]
-; OPT-NEXT:    i8 3, label [[THEN_2:%.*]]
+; OPT-NEXT:      i8 0, label [[THEN_1:%.*]]
+; OPT-NEXT:      i8 3, label [[THEN_2:%.*]]
 ; OPT-NEXT:    ]
 ; OPT:       then.1:
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = shufflevector <7 x i16> [[X]], <7 x i16> poison, <2 x i32> <i32 0, i32 1>
@@ -1025,8 +1025,8 @@ define amdgpu_kernel void @phi_v7i16_switch(<7 x i16> %in, ptr %out, i8 %cond) {
 ; NOOPT-NEXT:  entry:
 ; NOOPT-NEXT:    [[X:%.*]] = insertelement <7 x i16> [[IN:%.*]], i16 3, i32 3
 ; NOOPT-NEXT:    switch i8 [[COND:%.*]], label [[ELSE:%.*]] [
-; NOOPT-NEXT:    i8 0, label [[THEN_1:%.*]]
-; NOOPT-NEXT:    i8 3, label [[THEN_2:%.*]]
+; NOOPT-NEXT:      i8 0, label [[THEN_1:%.*]]
+; NOOPT-NEXT:      i8 3, label [[THEN_2:%.*]]
 ; NOOPT-NEXT:    ]
 ; NOOPT:       then.1:
 ; NOOPT-NEXT:    br label [[FINALLY:%.*]]
