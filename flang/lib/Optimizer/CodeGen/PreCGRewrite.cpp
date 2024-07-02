@@ -80,7 +80,7 @@ class EmboxConversion : public mlir::OpRewritePattern<fir::EmboxOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::EmboxOp embox,
                   mlir::PatternRewriter &rewriter) const override {
     // If the embox does not include a shape, then do not convert it
@@ -95,7 +95,7 @@ public:
     return mlir::failure();
   }
 
-  mlir::LogicalResult rewriteStaticShape(fir::EmboxOp embox,
+  llvm::LogicalResult rewriteStaticShape(fir::EmboxOp embox,
                                          mlir::PatternRewriter &rewriter,
                                          fir::SequenceType seqTy) const {
     auto loc = embox.getLoc();
@@ -115,7 +115,7 @@ public:
     return mlir::success();
   }
 
-  mlir::LogicalResult rewriteDynamicShape(fir::EmboxOp embox,
+  llvm::LogicalResult rewriteDynamicShape(fir::EmboxOp embox,
                                           mlir::PatternRewriter &rewriter,
                                           mlir::Value shapeVal) const {
     auto loc = embox.getLoc();
@@ -168,7 +168,7 @@ class ReboxConversion : public mlir::OpRewritePattern<fir::ReboxOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ReboxOp rebox,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = rebox.getLoc();
@@ -227,7 +227,7 @@ class ArrayCoorConversion : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ArrayCoorOp arrCoor,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = arrCoor.getLoc();
@@ -277,7 +277,7 @@ public:
   DeclareOpConversion(mlir::MLIRContext *ctx, bool preserveDecl)
       : OpRewritePattern(ctx), preserveDeclare(preserveDecl) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     if (!preserveDeclare) {
@@ -316,7 +316,7 @@ class DummyScopeOpConversion
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::DummyScopeOp dummyScopeOp,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::UndefOp>(dummyScopeOp,
