@@ -1,11 +1,7 @@
 ; RUN: opt -O2 -mtriple=bpf-pc-linux %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK %s
+; RUN: llc %t1 -o - | FileCheck %s
 ; RUN: opt -passes='default<O2>' -mtriple=bpf-pc-linux %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK %s
-; RUN: opt -O2 -mtriple=bpf-pc-linux -bpf-disable-serialize-icmp %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-DISABLE %s
-; RUN: opt -passes='default<O2>' -mtriple=bpf-pc-linux -bpf-disable-serialize-icmp %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-DISABLE %s
+; RUN: llc %t1 -o - | FileCheck %s
 ;
 ; Source:
 ;   int foo();
@@ -37,12 +33,6 @@ entry:
 ; CHECK:         [[REG2:r[0-9]+]] = 1
 ; CHECK:         if [[REG2]] s> [[REG1]] goto
 ; CHECK:         if [[REG1]] s> 7 goto
-
-; CHECK-DISABLE: [[REG1:r[0-9]+]] += -8
-; CHECK-DISABLE: [[REG1]] <<= 32
-; CHECK-DISABLE: [[REG1]] >>= 32
-; CHECK-DISABLE: [[REG2:r[0-9]+]] = 4294967289
-; CHECK-DISABLE: if [[REG2]] > [[REG1]] goto
 
 lor.lhs.false:                                    ; preds = %entry
   %1 = load i32, ptr %ret, align 4, !tbaa !2

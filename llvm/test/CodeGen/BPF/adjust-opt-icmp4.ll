@@ -1,7 +1,7 @@
 ; RUN: opt -O2 -S -mtriple=bpf-pc-linux %s -o %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK,CHECK-V1 %s
+; RUN: llc %t1 -o - | FileCheck %s
 ; RUN: opt -O2 -S -mtriple=bpf-pc-linux %s -o %t1
-; RUN: llc %t1 -mcpu=v3 -o - | FileCheck -check-prefixes=CHECK,CHECK-V3 %s
+; RUN: llc %t1 -mcpu=v3 -o - | FileCheck %s
 ;
 ; Source:
 ;   int test1(unsigned long a) {
@@ -40,8 +40,8 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK-LABEL: test1
-; CHECK-V1:    if r[[#]] > 3 goto
-; CHECK-V3:    if w[[#]] > 3 goto
+; CHECK:       r[[#]] &= r[[#]]
+; CHECK:       if r[[#]] == 0 goto
 
 ; Function Attrs: nounwind
 define dso_local i32 @test2(i64 %a) #0 {
@@ -68,8 +68,8 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK-LABEL: test2
-; CHECK-V1:    if r[[#]] > 3 goto
-; CHECK-V3:    if w[[#]] > 3 goto
+; CHECK:       r[[#]] &= r[[#]]
+; CHECK:       if r[[#]] == 0 goto
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 

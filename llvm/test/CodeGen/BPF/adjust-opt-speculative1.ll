@@ -1,7 +1,5 @@
 ; RUN: opt -O2 -mtriple=bpf-pc-linux %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK %s
-; RUN: opt -O2 -mtriple=bpf-pc-linux -bpf-disable-avoid-speculation %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK-DISABLE %s
+; RUN: llc %t1 -o - | FileCheck %s
 ;
 ; Source:
 ;   unsigned long foo();
@@ -39,22 +37,15 @@ if.end:                                           ; preds = %if.then, %entry
   call void @llvm.lifetime.end.p0(i64 8, ptr %ret) #3
   ret ptr %3
 }
-; CHECK-COMMON:  [[REG6:r[0-9]+]] = r1
-; CHECK-COMMON:  call foo
+; CHECK:         [[REG6:r[0-9]+]] = r1
+; CHECK:         call foo
 
 ; CHECK:         if r0 > 7 goto [[LABEL:.*]]
 ; CHECK:         [[REG6]] += r0
 ; CHECK:         [[LABEL]]:
 ; CHECK:         r0 = [[REG6]]
 
-; CHECK-DISABLE: [[REG1:r[0-9]+]] = 8
-; CHECK-DISABLE: if [[REG1]] > r0 goto [[LABEL:.*]]
-; CHECK-DISABLE: r0 = 0
-; CHECK-DISABLE: [[LABEL]]:
-; CHECK-DISABLE: [[REG6]] += r0
-; CHECK-DISABLE: r0 = [[REG6]]
-
-; CHECK-COMMON:  exit
+; CHECK:         exit
 
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1

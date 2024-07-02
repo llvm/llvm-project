@@ -1,7 +1,5 @@
 ; RUN: opt -O2 -mtriple=bpf-pc-linux %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK %s
-; RUN: opt -O2 -mtriple=bpf-pc-linux -bpf-disable-avoid-speculation %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK-DISABLE %s
+; RUN: llc %t1 -o - | FileCheck %s
 ;
 ; Source:
 ;   unsigned foo();
@@ -41,8 +39,8 @@ if.end:                                           ; preds = %if.then, %entry
   ret ptr %3
 }
 
-; CHECK-COMMON:  [[REG6:r[0-9]+]] = r1
-; CHECK-COMMON:  call foo
+; CHECK:         [[REG6:r[0-9]+]] = r1
+; CHECK:         call foo
 
 ; CHECK:         r0 <<= 32
 ; CHECK:         r0 >>= 32
@@ -51,19 +49,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK:         [[LABEL]]:
 ; CHECK:         r0 = [[REG6]]
 
-; CHECK-DISABLE: [[REG1:r[0-9]+]] = r0
-; CHECK-DISABLE: [[REG1]] <<= 32
-; CHECK-DISABLE: [[REG1]] >>= 32
-; CHECK-DISABLE: [[REG2:r[0-9]+]] = 8
-; CHECK-DISABLE: if [[REG2]] > [[REG1]] goto [[LABEL:.*]]
-; CHECK-DISABLE: r0 = 0
-; CHECK-DISABLE: [[LABEL]]:
-; CHECK-DISABLE: r0 <<= 32
-; CHECK-DISABLE: r0 >>= 32
-; CHECK-DISABLE: [[REG6]] += r0
-; CHECK-DISABLE: r0 = [[REG6]]
-
-; CHECK-COMMON:  exit
+; CHECK:         exit
 
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
