@@ -311,15 +311,6 @@ namespace llvm {
 
 } // end namespace llvm
 
-// EmitInstrWithCustomInserter - This method should be implemented by targets
-// that mark instructions with the 'usesCustomInserter' flag.  These
-// instructions are special in various ways, which require special support to
-// insert.  The specified MachineInstr is created but not inserted into any
-// basic blocks, and this method is called to expand it into a sequence of
-// instructions, potentially also creating new basic blocks and control flow.
-// When new basic blocks are inserted and the edges from MBB to its successors
-// are modified, the method should insert pairs of <OldSucc, NewSucc> into the
-// DenseMap.
 MachineBasicBlock *
 TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const {
