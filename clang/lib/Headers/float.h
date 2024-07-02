@@ -86,6 +86,12 @@
 #    undef DBL_HAS_SUBNORM
 #    undef LDBL_HAS_SUBNORM
 #  endif
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#    undef FLT_NORM_MAX
+#    undef DBL_NORM_MAX
+#    undef LDBL_NORM_MAX
+#endif
 #endif
 
 /* Characteristics of floating point types, C99 5.2.4.2.2 */
@@ -153,6 +159,13 @@
 #  define FLT_HAS_SUBNORM __FLT_HAS_DENORM__
 #  define DBL_HAS_SUBNORM __DBL_HAS_DENORM__
 #  define LDBL_HAS_SUBNORM __LDBL_HAS_DENORM__
+#endif
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#  define FLT_NORM_MAX __FLT_NORM_MAX__
+#  define DBL_NORM_MAX __DBL_NORM_MAX__
+#  define LDBL_NORM_MAX __LDBL_NORM_MAX__
 #endif
 
 #ifdef __STDC_WANT_IEC_60559_TYPES_EXT__
