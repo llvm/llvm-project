@@ -1,0 +1,82 @@
+{
+    "project": "test_6_22",
+    "root": "/usr1/",
+    "compile_commands": "/usr1/compile_commands.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "CodeXIssueID": "0",
+            "nodes": [
+                2,
+                0,
+                8,
+                7,
+                6
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/usr1/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 9,
+                    "endLine": 7,
+                    "endColumn": 20,
+                    "content": "return NULL",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/usr1/main.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 1,
+                    "endLine": 11,
+                    "endColumn": 2,
+                    "content": "int *func2(int id)\r\n{\r\n    if (id >= 2) {\r\n        return NULL;\r\n    }\r\n\r\n    re ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/usr1/main.cpp",
+                    "beginLine": 15,
+                    "beginColumn": 5,
+                    "endLine": 15,
+                    "endColumn": 26,
+                    "content": "int *ptr = func2(id);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/usr1/main.cpp",
+                    "beginLine": 17,
+                    "beginColumn": 8,
+                    "endLine": 17,
+                    "endColumn": 9,
+                    "content": "1",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/usr1/main.cpp",
+                    "beginLine": 19,
+                    "beginColumn": 5,
+                    "endLine": 19,
+                    "endColumn": 18,
+                    "content": "return (*ptr)",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/usr1/main.cpp",
+                    "beginLine": 15,
+                    "beginColumn": 5,
+                    "endLine": 15,
+                    "endColumn": 25,
+                    "content": "int *ptr = func2(id)"
+                }
+            ]
+        }
+    ]
+}

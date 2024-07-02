@@ -1,0 +1,7 @@
+[
+    {
+        "command": "c++ -c -Wall -Wextra -std=c++11 -o main.o main.cpp",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/main.cpp"
+    }
+]

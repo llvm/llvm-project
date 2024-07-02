@@ -1,0 +1,70 @@
+{
+    "project": "test_6_22",
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/input.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "sourceIndex": 0,
+            "nodes": [
+                2,
+                0,
+                8,
+                7,
+                6
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 9,
+                    "endLine": 7,
+                    "endColumn": 20,
+                    "content": "return NULL",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/main.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 1,
+                    "endLine": 11,
+                    "endColumn": 2,
+                    "content": "int *func2(int id)\n{\n    if (id >= 2) {\n        return NULL;\n    }\n\n    return ( ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/main.cpp",
+                    "beginLine": 15,
+                    "beginColumn": 5,
+                    "endLine": 15,
+                    "endColumn": 26,
+                    "content": "int *ptr = func2(id);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/main.cpp",
+                    "beginLine": 17,
+                    "beginColumn": 8,
+                    "endLine": 17,
+                    "endColumn": 9,
+                    "content": "1",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-124/main.cpp",
+                    "beginLine": 19,
+                    "beginColumn": 5,
+                    "endLine": 19,
+                    "endColumn": 18,
+                    "content": "return (*ptr)",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        }
+    ]
+}
