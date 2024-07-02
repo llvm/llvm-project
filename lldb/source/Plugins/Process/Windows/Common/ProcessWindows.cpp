@@ -382,7 +382,7 @@ void ProcessWindows::RefreshStateAfterStop() {
   if (RegisterContextSP register_context = stop_thread->GetRegisterContext()) {
     const uint64_t pc = register_context->GetPC();
     BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-    if (site)
+    if (site && site->IsEnabled())
       stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
   }
 
