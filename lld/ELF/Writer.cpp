@@ -601,10 +601,16 @@ static bool isRelroSection(const OutputSection *sec) {
   // ELF in spirit. But in reality many linker features depend on
   // magic section names.
   StringRef s = sec->name;
-  return s == ".data.rel.ro" || s == ".bss.rel.ro" || s == ".ctors" ||
-         s == ".dtors" || s == ".jcr" || s == ".eh_frame" ||
-         s == ".fini_array" || s == ".init_array" ||
-         s == ".openbsd.randomdata" || s == ".preinit_array";
+
+  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
+                     s == ".ctors" || s == ".dtors" || s == ".jcr" ||
+                     s == ".eh_frame" || s == ".fini_array" ||
+                     s == ".init_array" || s == ".preinit_array";
+
+  bool abiSpecific =
+      config->osabi == ELFOSABI_OPENBSD && s == ".openbsd.randomdata";
+
+  return abiAgnostic || abiSpecific;
 }
 
 // We compute a rank for each section. The rank indicates where the
@@ -2281,10 +2287,26 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     addHdr(PT_GNU_EH_FRAME, part.ehFrameHdr->getParent()->getPhdrFlags())
         ->add(part.ehFrameHdr->getParent());
 
-  // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
-  // the dynamic linker fill the segment with random data.
-  if (OutputSection *cmd = findSection(".openbsd.randomdata", partNo))
-    addHdr(PT_OPENBSD_RANDOMIZE, cmd->getPhdrFlags())->add(cmd);
+  // Handle OpenBSD-specific section types for OpenBSD "OS ABI".
+  //
+  // Scoped to just this "OS ABI" because, as is written below "section
+  // names shouldn't be significant in ELF in spirit".
+  if (config->osabi == ELFOSABI_OPENBSD) {
+    // PT_OPENBSD_MUTABLE makes the dynamic linker fill the segment with
+    // zero data, like bss, but it can be treated differently.
+    if (OutputSection *cmd = findSection(".openbsd.mutable", partNo))
+      addHdr(PT_OPENBSD_MUTABLE, cmd->getPhdrFlags())->add(cmd);
+
+    // PT_OPENBSD_RANDOMIZE makes the dynamic linker fill the segment
+    // with random data.
+    if (OutputSection *cmd = findSection(".openbsd.randomdata", partNo))
+      addHdr(PT_OPENBSD_RANDOMIZE, cmd->getPhdrFlags())->add(cmd);
+
+    // PT_OPENBSD_SYSCALLS makes the kernel and dynamic linker register
+    // system call sites.
+    if (OutputSection *cmd = findSection(".openbsd.syscalls", partNo))
+      addHdr(PT_OPENBSD_SYSCALLS, cmd->getPhdrFlags())->add(cmd);
+  }
 
   if (config->zGnustack != GnuStackKind::None) {
     // PT_GNU_STACK is a special section to tell the loader to make the
