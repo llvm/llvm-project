@@ -99,7 +99,7 @@ ABI Changes in This Version
   ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
   suffix got removed from the name mangling. The alias interacts badly with
   GlobalOpt (see the issue #96197).
-  
+
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
@@ -353,6 +353,9 @@ C23 Feature Support
 
 - Properly promote bit-fields of bit-precise integer types to the field's type
   rather than to ``int``. #GH87641
+
+- Clang now diagnoses `N3006 Underspecified object declarations
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
