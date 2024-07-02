@@ -36,6 +36,8 @@ class XCOFFDumper : public objdump::Dumper {
   unsigned Width;
 public:
   XCOFFDumper(const object::XCOFFObjectFile &O) : Dumper(O), Obj(O) {}
+
+private:
   void printPrivateHeaders() override;
   void printFileHeader();
   void printAuxiliaryHeader(){};
@@ -44,7 +46,7 @@ public:
   void printHex(StringRef Name, uint64_t Value);
   void printNumber(StringRef Name, uint64_t Value);
   void printStrHex(StringRef Name, StringRef Str, uint64_t Value);
-  void setWidth(unsigned W) {Width =W;};
+  void setWidth(unsigned W) { Width = W; };
 };
 
 void XCOFFDumper::printPrivateHeaders() {
@@ -76,14 +78,12 @@ void XCOFFDumper::printFileHeader() {
   printHex("Magic:", Obj.getMagic());
   printNumber("NumberOfSections:", Obj.getNumberOfSections());
 
-  // Negative timestamp values are reserved for future use.
   int32_t TimeStamp = Obj.getTimeStamp();
+  // Negative timestamp values are reserved for future use.
   if (TimeStamp > 0) {
-    // This handling of the time stamp assumes that the host
-    // system's time_t is
-    //  compatible with AIX time_t. If a platform is not
-    //  compatible, the lit
-    // tests will let us know.
+    // This handling of the time stamp assumes that the host  system's time_t is
+    // compatible with AIX time_t. If a platform is not
+    //  compatible, the lit tests will let us know.
     time_t TimeDate = TimeStamp;
 
     char FormattedTime[80] = {};
@@ -102,7 +102,6 @@ void XCOFFDumper::printFileHeader() {
   // The number of symbol table entries is an unsigned value in
   // 64-bit objects and a signed value (with negative values
   // being 'reserved') in 32-bit objects.
-
   if (Obj.is64Bit()) {
     printHex("SymbolTableOffset:", Obj.getSymbolTableOffset64());
     printNumber("SymbolTableEntries:", Obj.getNumberOfSymbolTableEntries64());
