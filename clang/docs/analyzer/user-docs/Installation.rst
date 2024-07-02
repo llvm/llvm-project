@@ -1,7 +1,7 @@
 Obtaining the Static Analyzer
 =============================
 
-This page describes how to download and install the analyzer. Once the analyzer is installed, follow the asdf :doc:`CommandLineUsage` on using the commandline to get started analyzing your code.
+This page describes how to download and install the analyzer. Once the analyzer is installed, follow the :doc:`CommandLineUsage` on using the commandline to get started analyzing your code.
 
 .. contents::
    :local:
