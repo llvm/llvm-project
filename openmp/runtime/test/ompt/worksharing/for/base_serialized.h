@@ -13,10 +13,11 @@ int main()
   unsigned int i;
   printf("0: Schedule: " SCHED_OUTPUT "\n");
 
-  #pragma omp parallel for num_threads(1) schedule(SCHEDULE)
-  for (i = 0; i < 100; i++) {
+#pragma omp parallel for num_threads(1) schedule(SCHEDULE)
+  for (i = 0; i < 64; i++) {
   }
-  
+
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_begin'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_end'
@@ -32,6 +33,7 @@ int main()
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_loop_[[SCHED]]_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]], codeptr_ra=0x{{[0-f]+}}
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_loop_[[SCHED]]_end: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end: parallel_id={{[PARALLEL_ID,0]}}, task_id=[[IMPLICIT_TASK_ID]]
+  // clang-format on
 
   return 0;
 }

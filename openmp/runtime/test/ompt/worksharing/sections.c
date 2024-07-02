@@ -21,6 +21,7 @@ int main()
     }
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_work'
 
@@ -31,6 +32,7 @@ int main()
 
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_sections_begin: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID:[0-9]+]], codeptr_ra=[[SECT_BEGIN]], count=2
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_sections_end: parallel_id=[[PARALLEL_ID]], task_id={{[0-9]+}}, codeptr_ra=[[SECT_END]]
+  // clang-format on
 
   return 0;
 }

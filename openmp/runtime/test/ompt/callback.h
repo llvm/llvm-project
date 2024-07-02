@@ -47,39 +47,35 @@ static const char* ompt_cancel_flag_t_values[] = {
   "ompt_cancel_discarded_task"
 };
 
-static const char* ompt_work_t_values[] = {
-  "undefined",
-  "ompt_work_loop",
-  "ompt_work_sections",
-  "ompt_work_single_executor",
-  "ompt_work_single_other",
-  "ompt_work_workshare",
-  "ompt_work_distribute",
-  "ompt_work_taskloop",
-  "ompt_work_scope",
-  "ompt_work_workdistribute",
-  "ompt_work_loop_static",
-  "ompt_work_loop_dynamic",
-  "ompt_work_loop_guided",
-  "ompt_work_loop_other"
-};
+static const char *ompt_work_t_values[] = {"undefined",
+                                           "ompt_work_loop",
+                                           "ompt_work_sections",
+                                           "ompt_work_single_executor",
+                                           "ompt_work_single_other",
+                                           "ompt_work_workshare",
+                                           "ompt_work_distribute",
+                                           "ompt_work_taskloop",
+                                           "ompt_work_scope",
+                                           "ompt_work_workdistribute",
+                                           "ompt_work_loop_static",
+                                           "ompt_work_loop_dynamic",
+                                           "ompt_work_loop_guided",
+                                           "ompt_work_loop_other"};
 
-static const char* ompt_work_events_t_values[] = {
-  "undefined",
-  "ompt_event_loop",
-  "ompt_event_sections",
-  "ompt_event_single_in_block",
-  "ompt_event_single_others",
-  "ompt_event_workshare",
-  "ompt_event_distribute",
-  "ompt_event_taskloop",
-  "ompt_event_scope",
-  "ompt_event_workdistribute",
-  "ompt_event_loop_static",
-  "ompt_event_loop_dynamic",
-  "ompt_event_loop_guided",
-  "ompt_event_loop_other"
-};
+static const char *ompt_work_events_t_values[] = {"undefined",
+                                                  "ompt_event_loop",
+                                                  "ompt_event_sections",
+                                                  "ompt_event_single_in_block",
+                                                  "ompt_event_single_others",
+                                                  "ompt_event_workshare",
+                                                  "ompt_event_distribute",
+                                                  "ompt_event_taskloop",
+                                                  "ompt_event_scope",
+                                                  "ompt_event_workdistribute",
+                                                  "ompt_event_loop_static",
+                                                  "ompt_event_loop_dynamic",
+                                                  "ompt_event_loop_guided",
+                                                  "ompt_event_loop_other"};
 
 static const char *ompt_dependence_type_t_values[36] = {
     "ompt_dependence_type_UNDEFINED",
@@ -886,24 +882,21 @@ on_ompt_callback_work(
 {
   switch(endpoint)
   {
-    case ompt_scope_begin:
-          printf("%" PRIu64 ":" _TOOL_PREFIX
-                 " %s_begin: parallel_id=%" PRIu64
-                 ", task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64
-                 "\n",
-                 ompt_get_thread_data()->value, ompt_work_events_t_values[wstype], parallel_data->value,
-                 task_data->value, codeptr_ra, count);
+  case ompt_scope_begin:
+    printf("%" PRIu64 ":" _TOOL_PREFIX " %s_begin: parallel_id=%" PRIu64
+           ", task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64 "\n",
+           ompt_get_thread_data()->value, ompt_work_events_t_values[wstype],
+           parallel_data->value, task_data->value, codeptr_ra, count);
     break;
-    case ompt_scope_end:
-    printf("%" PRIu64 ":" _TOOL_PREFIX
-            " %s_end: parallel_id=%" PRIu64
-            ", task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64 "\n",
-            ompt_get_thread_data()->value, ompt_work_events_t_values[wstype], parallel_data->value,
-            task_data->value, codeptr_ra, count);
+  case ompt_scope_end:
+    printf("%" PRIu64 ":" _TOOL_PREFIX " %s_end: parallel_id=%" PRIu64
+           ", task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64 "\n",
+           ompt_get_thread_data()->value, ompt_work_events_t_values[wstype],
+           parallel_data->value, task_data->value, codeptr_ra, count);
     break;
-    case ompt_scope_beginend:
-      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
-      exit(-1);
+  case ompt_scope_beginend:
+    printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+    exit(-1);
   }
 }
 

@@ -130,8 +130,7 @@ inline const char *ompt_get_runtime_version() {
   return &__kmp_version_lib_ver[KMP_VERSION_MAGIC_LEN];
 }
 
-inline ompt_work_t ompt_get_work_schedule(enum sched_type schedule){
-  printf("Schedule val: %i\n", schedule);
+inline ompt_work_t ompt_get_work_schedule(enum sched_type schedule) {
   switch (SCHEDULE_WITHOUT_MODIFIERS(schedule)) {
   case kmp_sch_static_chunked:
   case kmp_sch_static_balanced: // Chunk is calculated in the switch above
@@ -149,8 +148,6 @@ inline ompt_work_t ompt_get_work_schedule(enum sched_type schedule){
     return ompt_work_loop_other;
   }
 }
-
-
 
 class OmptReturnAddressGuard {
 private:

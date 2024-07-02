@@ -19,17 +19,18 @@ int main()
   unsigned int i;
   printf("0: Schedule: " SCHED_OUTPUT "\n");
 
-  #pragma omp parallel num_threads(4) 
+#pragma omp parallel num_threads(4)
   {
     print_current_address(0);
     #pragma omp for schedule(SCHEDULE) nowait
-    for (i = 0; i < 100; i++) {
+    for (i = 0; i < 64; i++) {
       print_fuzzy_address(1);
     }
     print_fuzzy_address(2);
   }
   print_fuzzy_address(3);
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_begin'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_end'
@@ -70,7 +71,7 @@ int main()
   // CHECK-LOOP: {{^}}{{[0-9]+}}: fuzzy_address={{.*}}[[LOOP_BEGIN_RETURN_ADDRESS]]
   // CHECK-LOOP: {{^}}{{[0-9]+}}: fuzzy_address={{.*}}[[LOOP_BEGIN_RETURN_ADDRESS]]
   // CHECK-LOOP: {{^}}{{[0-9]+}}: fuzzy_address={{.*}}[[LOOP_BEGIN_RETURN_ADDRESS]]
-
+  // clang-format on
 
   return 0;
 }
