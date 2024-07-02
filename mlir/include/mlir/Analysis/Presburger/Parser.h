@@ -11,32 +11,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_UNITTESTS_ANALYSIS_PRESBURGER_PARSER_H
-#define MLIR_UNITTESTS_ANALYSIS_PRESBURGER_PARSER_H
+#ifndef MLIR_ANALYSIS_PRESBURGER_PARSER_H
+#define MLIR_ANALYSIS_PRESBURGER_PARSER_H
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
-#include "mlir/AsmParser/AsmParser.h"
-#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/IntegerSet.h"
 
-namespace mlir {
-namespace presburger {
+namespace mlir::presburger {
+using llvm::StringRef;
 
-/// Parses an IntegerPolyhedron from a StringRef. It is expected that the string
-/// represents a valid IntegerSet.
-inline IntegerPolyhedron parseIntegerPolyhedron(StringRef str) {
-  MLIRContext context(MLIRContext::Threading::DISABLED);
-  return affine::FlatAffineValueConstraints(parseIntegerSet(str, &context));
-}
+/// Parses an IntegerPolyhedron from a StringRef.
+IntegerPolyhedron parseIntegerPolyhedron(StringRef str);
+
+/// Parses a MultiAffineFunction from a StringRef.
+MultiAffineFunction parseMultiAffineFunction(StringRef str);
 
 /// Parse a list of StringRefs to IntegerRelation and combine them into a
-/// PresburgerSet by using the union operation. It is expected that the strings
-/// are all valid IntegerSet representation and that all of them have compatible
-/// spaces.
+/// PresburgerSet by using the union operation. It is expected that the
+/// strings are all valid IntegerSet representation and that all of them have
+/// compatible spaces.
 inline PresburgerSet parsePresburgerSet(ArrayRef<StringRef> strs) {
   assert(!strs.empty() && "strs should not be empty");
 
@@ -47,24 +41,9 @@ inline PresburgerSet parsePresburgerSet(ArrayRef<StringRef> strs) {
   return result;
 }
 
-inline MultiAffineFunction parseMultiAffineFunction(StringRef str) {
-  MLIRContext context(MLIRContext::Threading::DISABLED);
-
-  // TODO: Add default constructor for MultiAffineFunction.
-  MultiAffineFunction multiAff(PresburgerSpace::getRelationSpace(),
-                               IntMatrix(0, 1));
-  if (getMultiAffineFunctionFromMap(parseAffineMap(str, &context), multiAff)
-          .failed())
-    llvm_unreachable(
-        "Failed to parse MultiAffineFunction because of semi-affinity");
-  return multiAff;
-}
-
 inline PWMAFunction
 parsePWMAF(ArrayRef<std::pair<StringRef, StringRef>> pieces) {
   assert(!pieces.empty() && "At least one piece should be present.");
-
-  MLIRContext context(MLIRContext::Threading::DISABLED);
 
   IntegerPolyhedron initDomain = parseIntegerPolyhedron(pieces[0].first);
   MultiAffineFunction initMultiAff = parseMultiAffineFunction(pieces[0].second);
@@ -100,8 +79,6 @@ parsePresburgerRelationFromPresburgerSet(ArrayRef<StringRef> strs,
   result.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain, 0);
   return result;
 }
+} // namespace mlir::presburger
 
-} // namespace presburger
-} // namespace mlir
-
-#endif // MLIR_UNITTESTS_ANALYSIS_PRESBURGER_PARSER_H
+#endif // MLIR_ANALYSIS_PRESBURGER_PARSER_H

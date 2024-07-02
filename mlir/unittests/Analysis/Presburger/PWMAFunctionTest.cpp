@@ -10,11 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Parser.h"
-
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
-#include "mlir/Analysis/Presburger/PresburgerRelation.h"
-#include "mlir/IR/MLIRContext.h"
+#include "mlir/Analysis/Presburger/Parser.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

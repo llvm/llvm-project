@@ -1,3 +1,5 @@
+add_subdirectory(Parser)
+
 add_mlir_library(MLIRPresburger
   Barvinok.cpp
   IntegerRelation.cpp

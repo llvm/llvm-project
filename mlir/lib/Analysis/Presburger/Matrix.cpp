@@ -145,6 +145,14 @@ void Matrix<T>::setRow(unsigned row, ArrayRef<T> elems) {
 }
 
 template <typename T>
+void Matrix<T>::addToRow(unsigned row, ArrayRef<T> elems) {
+  assert(elems.size() == getNumColumns() &&
+         "elems size must match row length!");
+  for (unsigned i = 0, e = getNumColumns(); i < e; ++i)
+    at(row, i) += elems[i];
+}
+
+template <typename T>
 void Matrix<T>::insertColumn(unsigned pos) {
   insertColumns(pos, 1);
 }

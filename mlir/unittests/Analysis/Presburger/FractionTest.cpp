@@ -1,5 +1,4 @@
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "./Utils.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

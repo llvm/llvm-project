@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "./Utils.h"
+#include "Utils.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

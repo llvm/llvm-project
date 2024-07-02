@@ -14,7 +14,6 @@
 #define MLIR_UNITTESTS_ANALYSIS_PRESBURGER_UTILS_H
 
 #include "mlir/Analysis/Presburger/GeneratingFunction.h"
-#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
 

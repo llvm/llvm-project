@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Parser.h"
+#include "mlir/Analysis/Presburger/Parser.h"
 
 #include <gtest/gtest.h>
 
