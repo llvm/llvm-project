@@ -1103,6 +1103,11 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsCXXCondDecl : 1;
+
+    /// Whether this is a __block variable that is captured by a block
+    /// referenced in its own initializer.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CapturedByOwnInit : 1;
   };
 
   union {
@@ -1588,9 +1593,22 @@ public:
   /// escaping block.
   bool isNonEscapingByref() const;
 
-  void setEscapingByref() {
-    NonParmVarDeclBits.EscapingByref = true;
+  void setEscapingByref();
+
+  /// Indicates this is a __block variable that is captured by a block
+  /// referenced in its own initializer.
+  bool isCapturedByOwnInit() const {
+    return !isa<ParmVarDecl>(this) && NonParmVarDeclBits.CapturedByOwnInit;
   }
+
+  void setCapturedByOwnInit() {
+    assert(!isa<ParmVarDecl>(this));
+    NonParmVarDeclBits.CapturedByOwnInit = true;
+  }
+
+  /// Check if this is a __block variable which needs to be initialized
+  /// directly on the heap.
+  bool needsInitOnHeap() const;
 
   bool isCXXCondDecl() const {
     return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.IsCXXCondDecl;
