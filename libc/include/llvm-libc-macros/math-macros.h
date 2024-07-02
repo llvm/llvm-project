@@ -54,6 +54,5 @@
 // TODO: Move generic functional math macros to a separate header file.
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
-#define isnan(x) __builtin_isnan(x)
 
 #endif // LLVM_LIBC_MACROS_MATH_MACROS_H
