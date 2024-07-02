@@ -64,8 +64,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 declare void @llvm.va_start(ptr) #1
 declare void @llvm.va_end(ptr) #1
 
-attributes #0 = { nounwind optsize}
-attributes #1 = { nounwind }
+attributes #0 = { nounwind optsize "sign-return-address"="non-leaf" }
+attributes #1 = { nounwind "sign-return-address"="non-leaf" }
 
 !llvm.module.flags = !{!0, !1, !2}
 

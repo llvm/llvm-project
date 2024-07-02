@@ -18,7 +18,7 @@
 
 @buf = global [20 x i64] zeroinitializer, align 8
 
-define i32 @foo(i32 %x) {
+define i32 @foo(i32 %x)  "branch-target-enforcement" {
 ; BTI-LABEL: foo:
 ; BTI:       bl setjmp
 ; BTI-NEXT:  bti
@@ -45,6 +45,3 @@ declare i32 @setjmp(ptr) #0
 
 attributes #0 = { returns_twice }
 
-!llvm.module.flags = !{!0}
-
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}
