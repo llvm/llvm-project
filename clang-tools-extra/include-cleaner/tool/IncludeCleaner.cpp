@@ -279,7 +279,7 @@ int main(int argc, const char **argv) {
 
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   auto OptionsParser =
-      clang::tooling::CommonOptionsParser::create(argc, argv, IncludeCleaner);
+      clang::tooling::CommonOptionsParser::create(argc, argv, IncludeCleaner, cl::OneOrMore, Overview);
   if (!OptionsParser) {
     llvm::errs() << toString(OptionsParser.takeError());
     return 1;
