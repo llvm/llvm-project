@@ -409,6 +409,11 @@ Non-comprehensive list of changes in this release
 - ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
   errors and certain default-to-error ``-W`` diagnostics to warnings.
 
+- Support importing C++20 modules in clang-repl.
+
+- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
+  textual and JSON dumping for various ``TypeLoc``-related nodes.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -1168,11 +1173,6 @@ Crash and bug fixes
 
 Improvements
 ^^^^^^^^^^^^
-
-- Support importing C++20 modules in clang-repl.
-
-- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
-  textual and JSON dumping for various ``TypeLoc``-related nodes.
 
 Moved checkers
 ^^^^^^^^^^^^^^
