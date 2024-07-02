@@ -1,4 +1,6 @@
 // REQUIRES: lld
+// Is flaky on Windows.
+// UNSUPPORTED: system-windows
 
 // This test will make a type that will be compiled differently into two
 // different .dwo files in a type unit with the same type hash, but with
