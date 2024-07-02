@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(size_t, strftime_l, (char*__restrict arg1, size_t arg2,
                        const char *__restrict arg3,
                        const struct tm *__restrict arg4, locale_t)) {
-  return strftime(arg1, arg2, arg3, arg4);
+  return LIBC_NAMESPACE::strftime(arg1, arg2, arg3, arg4);
 }
 
 } // namespace LIBC_NAMESPACE
