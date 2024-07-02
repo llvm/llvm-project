@@ -154,6 +154,19 @@ private:
   CaseMap OldCaseLabels;
 };
 
+template <class Emitter> class StmtExprScope final {
+public:
+  StmtExprScope(Compiler<Emitter> *Ctx) : Ctx(Ctx), OldFlag(Ctx->InStmtExpr) {
+    Ctx->InStmtExpr = true;
+  }
+
+  ~StmtExprScope() { Ctx->InStmtExpr = OldFlag; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  bool OldFlag;
+};
+
 } // namespace interp
 } // namespace clang
 
@@ -3028,6 +3041,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   BlockScope<Emitter> BS(this);
+  StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
   const Stmt *Result = CS->getStmtExprResult();
@@ -4056,6 +4070,9 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
+  if (this->InStmtExpr)
+    return this->emitUnsupported(RS);
+
   if (const Expr *RE = RS->getRetValue()) {
     ExprScope<Emitter> RetScope(this);
     if (ReturnType) {

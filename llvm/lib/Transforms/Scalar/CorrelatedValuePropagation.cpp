@@ -85,6 +85,7 @@ STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
+STATISTIC(NumCmpIntr, "Number of llvm.[us]cmp intrinsics removed");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumSMinMax,
           "Number of llvm.s{min,max} intrinsics simplified to unsigned");
@@ -548,6 +549,35 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   return false;
 }
 
+static bool processCmpIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
+  bool IsSigned = II->getIntrinsicID() == Intrinsic::scmp;
+  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(1),
+                                                    /*UndefAllowed*/ false);
+
+  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, RHS_CR)) {
+    ++NumCmpIntr;
+    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 1));
+    II->eraseFromParent();
+    return true;
+  }
+  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, RHS_CR)) {
+    ++NumCmpIntr;
+    II->replaceAllUsesWith(ConstantInt::getSigned(II->getType(), -1));
+    II->eraseFromParent();
+    return true;
+  }
+  if (LHS_CR.icmp(ICmpInst::ICMP_EQ, RHS_CR)) {
+    ++NumCmpIntr;
+    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 0));
+    II->eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 // See if this min/max intrinsic always picks it's one specific operand.
 // If not, check whether we can canonicalize signed minmax into unsigned version
 static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
@@ -637,6 +667,11 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
 
   if (CB.getIntrinsicID() == Intrinsic::abs) {
     return processAbsIntrinsic(&cast<IntrinsicInst>(CB), LVI);
+  }
+
+  if (CB.getIntrinsicID() == Intrinsic::scmp ||
+      CB.getIntrinsicID() == Intrinsic::ucmp) {
+    return processCmpIntrinsic(&cast<IntrinsicInst>(CB), LVI);
   }
 
   if (auto *MM = dyn_cast<MinMaxIntrinsic>(&CB)) {
