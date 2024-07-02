@@ -517,6 +517,18 @@ starts a new boolean expression that is separated from the other conditions by
 the operator ``func()``.  When this is encountered, a warning will be generated
 and the boolean expression will not be instrumented.
 
+Similar as branch coverage, MCDC also is not tracked for constant folded conditions.
+Moreover it's even not tracked for conditions that can not effect outcomes of decisions
+due to other constants. These conditions will be shown as ``uncoverable`` or 
+``unreachable``, determined by whether they can be visited. For instance, in 
+``a || true || b``, value of the decision is always ``true`` by reason of the constant
+condition. Thus ``a`` can not lead the decision to ``false`` even though it could branch, 
+while ``b`` is always short-circuited. Hence ``a`` is shown as ``uncoverable``
+and ``b`` is marked as ``unreachable``. Statistics of MCDC does not count constant 
+conditions which do not vary or such conditions which make no difference on value of 
+decisions. If a decision is proved to no branch theoretically, it shows mark ``Folded``
+rather than coverage percent.
+
 Switch statements
 -----------------
 
