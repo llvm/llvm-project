@@ -7,6 +7,7 @@
 ## (3) a second thunk is created when the first one goes out of range
 ## (4) early calls to a dylib stub use a thunk, and later calls the stub
 ##     directly
+## (5) Thunks are created for all sections in the text segment with branches.
 ## Notes:
 ## 0x4000000 = 64 Mi = half the magnitude of the forward-branch range
 
@@ -168,6 +169,10 @@
 
 # CHECK: [[#%x, NAN_PAGE + NAN_OFFSET]] <__stubs>:
 
+# CHECK: Disassembly of section __TEXT,__lcxx_override:
+# CHECK: <_z>:
+# CHECK:  bl 0x[[#%x, A_THUNK_0]] <_a.thunk.0>
+
 .subsections_via_symbols
 .text
 
@@ -299,4 +304,13 @@ _main:
   bl _g
   bl _h
   bl ___nan
+  ret
+
+.section __TEXT,__lcxx_override,regular,pure_instructions
+
+.globl _z
+.no_dead_strip _z
+.p2align 2
+_z:
+  bl _a
   ret
