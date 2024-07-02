@@ -1228,12 +1228,24 @@ checkAssumptionForFusingConsumer(tensor::InsertSliceOp candidateSliceOp) {
 /// failure otherwise.
 static FailureOr<OpOperand *> getConsumerFromUses(Value val,
                                                   Block *containingOpBlock) {
-  // Step 1. Check that the value has exactly one use.
-  if (!llvm::hasSingleElement(val.getUses()))
+  // Step 1. Check that the value has exactly one use except for scf.yield.
+  OpOperand *operand = nullptr;
+  for (auto &use : val.getUses()) {
+    Operation *user = use.getOwner();
+    if (isa<tensor::InsertSliceOp>(user) ||
+        isa<tensor::ParallelInsertSliceOp>(user))
+      continue;
+    else {
+      if (operand)
+        return failure();
+      else
+        operand = &use;
+    }
+  }
+  if (!operand)
     return failure();
   // Step 2. Get uses.
-  OpOperand &operand = (*val.getUses().begin());
-  Operation *consumerOp = operand.getOwner();
+  Operation *consumerOp = operand->getOwner();
   // TODO: We have to init result of consumer before scf.for, use
   //       DestinationStyleOpInterface to get result shape from init for now.
   //       Add support for other op such as op has InferTypeOpInterface.
@@ -1242,7 +1254,22 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
     return failure();
   if (containingOpBlock != consumerOp->getBlock())
     return failure();
-  return &operand;
+  return operand;
+}
+
+/// Return perfectly outer loops of given ForOp(included), sorted from
+/// outer to inner.
+static SmallVector<scf::ForOp> getPerfectlyOuterLoops(scf::ForOp loop) {
+  SmallVector<scf::ForOp> outerLoops = {loop};
+  auto forOp = loop->getParentOfType<scf::ForOp>();
+  while (forOp) {
+    Block &body = forOp.getRegion().front();
+    if (body.begin() != std::prev(body.end(), 2))
+      break;
+    outerLoops.push_back(forOp);
+    forOp = forOp->getParentOfType<scf::ForOp>();
+  }
+  return {outerLoops.rbegin(), outerLoops.rend()};
 }
 
 /// Fetch the untiled consumer of a scf.for's result which is yielded by a
@@ -1262,9 +1289,10 @@ getUntiledConsumerFromSlice(tensor::InsertSliceOp candidateSliceOp) {
   auto forOp = dyn_cast<scf::ForOp>(containingOp);
   if (!forOp)
     return failure();
-  Value resultingValue = forOp->getResult(resultNumber);
+  scf::ForOp topLevelForOp = getPerfectlyOuterLoops(forOp).front();
+  Value resultingValue = topLevelForOp->getResult(resultNumber);
 
-  return getConsumerFromUses(resultingValue, containingOp->getBlock());
+  return getConsumerFromUses(resultingValue, topLevelForOp->getBlock());
 }
 
 /// Fetch the first untiled consumer of a scf.forall's result which is yielded
@@ -1383,8 +1411,8 @@ fixTerminatorSCFInParallel(RewriterBase &rewriter, scf::ForallOp newForallOp,
 /// Implementation of fusing consumer of a single slice by computing the
 /// slice of the consumer in-place for scf loop.
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
-mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
-                                      Operation *candidateSliceOp) {
+mlir::scf::tileAndFuseConsumerOfSliceImpl(RewriterBase &rewriter,
+                                          Operation *candidateSliceOp) {
   if (!isa<tensor::InsertSliceOp, tensor::ParallelInsertSliceOp>(
           candidateSliceOp))
     return failure();
@@ -1418,22 +1446,25 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   if (isInsertSliceOp) {
     auto forOp = candidateSliceOp->getParentOfType<scf::ForOp>();
     oldLoopOp = forOp;
-    llvm::append_range(newOuts, forOp.getInits());
-    oldLoopBody = forOp.getBody();
     initSize = forOp.getInits().size();
   } else {
     auto forallOp = candidateSliceOp->getParentOfType<scf::ForallOp>();
     oldLoopOp = forallOp;
-    llvm::append_range(newOuts, forallOp.getOutputs());
-    oldLoopBody = forallOp.getBody();
     initSize = forallOp.getOutputs().size();
     rank = forallOp.getRank();
   }
 
-  if (failed(checkAssumptionForLoop(oldLoopOp, consumerOp))) {
+  Operation *oldTopLevelLoop = oldLoopOp;
+  SmallVector<scf::ForOp> oldNestedForOps, newNestedForOps;
+  if (isInsertSliceOp) {
+    oldNestedForOps = getPerfectlyOuterLoops(cast<scf::ForOp>(oldLoopOp));
+    oldTopLevelLoop = oldNestedForOps.front();
+  }
+  if (failed(checkAssumptionForLoop(oldTopLevelLoop, consumerOp))) {
     return rewriter.notifyMatchFailure(
-        oldLoopOp, "containing loop op should either yield just one value or "
-                   "have the consumer op as its first user");
+        oldTopLevelLoop,
+        "containing loop op should either yield just one value or "
+        "have the consumer op as its first user");
   }
 
   OpBuilder::InsertionGuard g(rewriter);
@@ -1442,21 +1473,49 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   auto dstOp = cast<DestinationStyleOpInterface>(consumerOp);
   SmallVector<Value> dpsInits =
       llvm::map_to_vector(dstOp.getDpsInits(), [](Value v) { return v; });
-  if (llvm::is_contained(dpsInits, oldLoopOp->getResult(resultNumber))) {
+  if (llvm::is_contained(dpsInits, oldTopLevelLoop->getResult(resultNumber))) {
     return rewriter.notifyMatchFailure(
         consumerOp,
         "consumer op taking the result of scf.for as init is not supported");
   }
-  newOuts.append(dpsInits);
+  SmallVector<Value> newInitAppend = dpsInits;
 
   Location loc = oldLoopOp->getLoc();
 
   // 3. Create new scf loop op.
   rewriter.setInsertionPoint(consumerOp);
+
+  // 3.a Create new outer scf loops if necessary
+  bool isNestedForOps = isInsertSliceOp && oldNestedForOps.size() > 1;
+  if (isNestedForOps) {
+    for (auto &forOp : MutableArrayRef(oldNestedForOps).drop_back()) {
+      SmallVector<Value> newInits;
+      newInits = llvm::to_vector(forOp.getInits());
+      newInits.append(newInitAppend.begin(), newInitAppend.end());
+      auto newLoop = rewriter.create<scf::ForOp>(
+          forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
+          forOp.getStep(), newInits);
+      newInitAppend = llvm::map_to_vector(
+          newLoop.getRegionIterArgs().take_back(newInitAppend.size()),
+          [](BlockArgument bArg) -> Value { return bArg; });
+      rewriter.mergeBlocks(
+          forOp.getBody(), newLoop.getBody(),
+          newLoop.getBody()->getArguments().take_front(initSize + 1));
+      rewriter.replaceOp(
+          forOp, newLoop->getResults().take_front(forOp->getNumResults()));
+      newNestedForOps.push_back(newLoop);
+    }
+    rewriter.setInsertionPoint(oldNestedForOps.back());
+  }
+
+  // 3.b Create new inner most scf loop
   Operation *newLoopOp = nullptr;
   Block *newLoopBody = nullptr;
   if (isInsertSliceOp) {
     auto forOp = cast<scf::ForOp>(oldLoopOp);
+    llvm::append_range(newOuts, forOp.getInits());
+    newOuts.append(newInitAppend);
+    oldLoopBody = forOp.getBody();
     auto newForOp = rewriter.create<scf::ForOp>(loc, forOp.getLowerBound(),
                                                 forOp.getUpperBound(),
                                                 forOp.getStep(), newOuts);
@@ -1464,6 +1523,9 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
     newLoopBody = newForOp.getBody();
   } else {
     auto forallOp = cast<scf::ForallOp>(oldLoopOp);
+    llvm::append_range(newOuts, forallOp.getOutputs());
+    newOuts.append(newInitAppend);
+    oldLoopBody = forallOp.getBody();
     auto newForallOp = rewriter.create<scf::ForallOp>(
         loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
         forallOp.getMixedStep(), newOuts, forallOp.getMapping());
@@ -1577,26 +1639,153 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
         newForallOp.getBody()->getArguments().drop_front(rank + initSize));
   }
 
-  // 12. Replace the result of scf loop and consumer op with new loop's results.
+  // 12.  Restore outer loops from inner to outer
+  if (isNestedForOps) {
+    newNestedForOps.push_back(cast<scf::ForOp>(newLoopOp));
+    for (auto [outerLoop, innerLoop] :
+         llvm::zip_equal(MutableArrayRef(newNestedForOps).drop_back(),
+                         MutableArrayRef(newNestedForOps).drop_front())) {
+      auto forOp = cast<scf::ForOp>(outerLoop);
+      auto outerLoopYield =
+          cast<scf::YieldOp>(forOp.getBody()->getTerminator());
+      SmallVector<Value> newYields =
+          llvm::to_vector(outerLoopYield.getOperands());
+      ValueRange additionalYields =
+          innerLoop->getResults().take_back(newInitAppend.size());
+      newYields.append(additionalYields.begin(), additionalYields.end());
+      rewriter.setInsertionPoint(outerLoopYield);
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(outerLoopYield, newYields);
+    }
+  }
+
+  // 13. Replace the result of scf loop and consumer op with new loop's results.
   for (auto &&[oldResult, newResult] :
        llvm::zip_first(oldLoopOp->getResults(), newLoopOp->getResults())) {
     rewriter.replaceAllUsesWith(oldResult, newResult);
   }
 
+  Operation *newTopLevelLoop =
+      isNestedForOps ? newNestedForOps.front() : newLoopOp;
   for (auto &&[oldResult, newResult] :
        llvm::zip(consumerOp->getResults(),
-                 newLoopOp->getResults().drop_front(initSize))) {
+                 newTopLevelLoop->getResults().drop_front(initSize))) {
     rewriter.replaceAllUsesWith(oldResult, newResult);
   }
 
-  // 13. Need to erase the old scf loop and the cloned consumer op.
+  // 14. Need to erase the old scf loop and the cloned consumer op.
   rewriter.eraseOp(oldLoopOp);
   rewriter.eraseOp(clonedConsumerOp);
+
+  // 15. Need to erase the cloned insertSliceOp and unused extractSliceOp in
+  // avoid of complex domination analysis
+  assert(clonedInsertSliceOp->hasOneUse());
+  auto unUsedExtractOp =
+      cast<tensor::ExtractSliceOp>((*clonedInsertSliceOp->getUsers().begin()));
+  rewriter.eraseOp(unUsedExtractOp);
+  rewriter.eraseOp(clonedInsertSliceOp);
 
   return scf::SCFFuseConsumerOfSliceResult{
       consumerOpOperand,
       &(tileAndFuseResult->tiledOps[0]->getOpOperand(operandNumber)),
       tileAndFuseResult->tiledOps};
+}
+
+/// Get the result of top-level loop which yields the target InsertSliceOp. E.g
+/// ```
+/// %1 = scf.for
+///  %2 = scf.for
+///   %3 = scf.for
+///      ...
+///      %4 = insert
+///      yield %4
+///   %5 = insert %3
+///   yield %5
+///  yield %2
+/// ```
+/// @param targetSliceOp: %4 = insert
+/// @param insertSliceOpChain: chain of all related insert sliceOp
+/// @return resultValue: %1
+static FailureOr<Value> getResultOfTopLevelLoopYieldInsertSliceOp(
+    Operation *targetSliceOp,
+    SmallVectorImpl<OffsetSizeAndStrideOpInterface> &insertSliceOpChain,
+    int curDepth = 0, int maxDepth = 5) {
+  assert(isa<OffsetSizeAndStrideOpInterface>(targetSliceOp));
+  // Control recursive time in avoid of stack overflow
+  if (curDepth > maxDepth)
+    return failure();
+
+  insertSliceOpChain.push_back(
+      cast<OffsetSizeAndStrideOpInterface>(targetSliceOp));
+  Value resultOfLoop;
+  if (auto sliceOp = dyn_cast<tensor::ParallelInsertSliceOp>(targetSliceOp)) {
+    Value destValue = sliceOp.getDest();
+    auto iterArg = cast<BlockArgument>(destValue);
+    auto forallOp = dyn_cast<scf::ForallOp>(iterArg.getOwner()->getParentOp());
+    if (!forallOp)
+      return failure();
+    resultOfLoop = forallOp.getTiedOpResult(forallOp.getTiedOpOperand(iterArg));
+  } else if (auto sliceOp = dyn_cast<tensor::InsertSliceOp>(targetSliceOp)) {
+    Value resultValue = sliceOp.getResult();
+    for (auto &useOperand : resultValue.getUses()) {
+      if (auto yieldOp = dyn_cast<scf::YieldOp>(useOperand.getOwner())) {
+        if (llvm::detail::isPresent(resultOfLoop))
+          return failure();
+        auto forOp = dyn_cast<LoopLikeOpInterface>(yieldOp->getParentOp());
+        if (!forOp)
+          return failure();
+        resultOfLoop = forOp->getResult(useOperand.getOperandNumber());
+      }
+    }
+  }
+
+  if (!llvm::detail::isPresent(resultOfLoop))
+    return failure();
+
+  while (true) {
+    bool walkThroughOuterLoop = false;
+    for (OpOperand &useOperand : resultOfLoop.getUses()) {
+      if (auto sliceOp =
+              dyn_cast<OffsetSizeAndStrideOpInterface>(useOperand.getOwner())) {
+        return getResultOfTopLevelLoopYieldInsertSliceOp(
+            sliceOp, insertSliceOpChain, curDepth + 1);
+      } else if (auto yieldOp = dyn_cast<scf::YieldOp>(useOperand.getOwner())) {
+        // walk through outer loop
+        auto forOp = dyn_cast<LoopLikeOpInterface>(yieldOp->getParentOp());
+        if (!forOp)
+          return failure();
+        resultOfLoop = forOp->getResult(useOperand.getOperandNumber());
+        walkThroughOuterLoop = true;
+        break;
+      }
+    }
+    if (!walkThroughOuterLoop)
+      break;
+  }
+  return resultOfLoop;
+}
+
+/// Fusing real consumer of a single slice even within complex nested loops via
+/// multiple application of `tileAndFuseConsumerOfSliceImpl`.
+FailureOr<scf::SCFFuseConsumerOfSliceResult>
+mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
+                                      Operation *candidateSliceOp) {
+  SmallVector<OffsetSizeAndStrideOpInterface> sliceOpChain;
+  if (failed(getResultOfTopLevelLoopYieldInsertSliceOp(candidateSliceOp,
+                                                       sliceOpChain)))
+    return failure();
+
+  FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResult;
+  // reverse from outer to inner
+  std::reverse(sliceOpChain.begin(), sliceOpChain.end());
+  // multiple application of `tileAndFuseConsumerOfSliceImpl`
+  for (auto &sliceOp : sliceOpChain) {
+    fuseConsumerResult = tileAndFuseConsumerOfSliceImpl(rewriter, sliceOp);
+    if (failed(fuseConsumerResult)) {
+      return rewriter.notifyMatchFailure(sliceOp,
+                                         "could not fuse consumer of sliceOp");
+    }
+  }
+  return fuseConsumerResult;
 }
 
 //===----------------------------------------------------------------------===//
