@@ -11674,14 +11674,16 @@ SDValue RISCVTargetLowering::lowerVPStridedLoad(SDValue Op,
   // TODO: We restrict this to unmasked loads currently in consideration of
   // the complexity of handling all falses masks.
   MVT ScalarVT = ContainerVT.getVectorElementType();
-  if (IsUnmasked && isNullConstant(Stride) && ContainerVT.isInteger()) {
+  if (IsUnmasked && isNullConstant(Stride) && ContainerVT.isInteger() &&
+      !Subtarget.hasOptimizedZeroStrideLoad()) {
     SDValue ScalarLoad =
         DAG.getExtLoad(ISD::EXTLOAD, DL, XLenVT, VPNode->getChain(),
                        VPNode->getBasePtr(), ScalarVT, VPNode->getMemOperand());
     Chain = ScalarLoad.getValue(1);
     Result = lowerScalarSplat(SDValue(), ScalarLoad, VL, ContainerVT, DL, DAG,
                               Subtarget);
-  } else if (IsUnmasked && isNullConstant(Stride) && isTypeLegal(ScalarVT)) {
+  } else if (IsUnmasked && isNullConstant(Stride) && isTypeLegal(ScalarVT) &&
+             !Subtarget.hasOptimizedZeroStrideLoad()) {
     SDValue ScalarLoad =
         DAG.getLoad(ScalarVT, DL, VPNode->getChain(), VPNode->getBasePtr(),
                     VPNode->getMemOperand());
