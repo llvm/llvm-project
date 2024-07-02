@@ -55,6 +55,8 @@ public:
     // PrimitiveTypes
     HalfTyID = 0,  ///< 16-bit floating point type
     BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
+    Float8E5M2TyID,   ///< 8-bit floating type (5 Bit exponent)
+    Float8E4M3FNTyID, ///< 8-bit floating type (4 Bit exponent)
     FloatTyID,     ///< 32-bit floating point type
     DoubleTyID,    ///< 64-bit floating point type
     X86_FP80TyID,  ///< 80-bit floating point type (X87)
@@ -139,6 +141,17 @@ public:
   /// Return true if this is 'void'.
   bool isVoidTy() const { return getTypeID() == VoidTyID; }
 
+  /// Return true if this is 'F8E5M2'.
+  bool isFloat8E5M2Ty() const { return getTypeID() == Float8E5M2TyID; }
+
+  /// Return true if this is 'F8E4M3FN'.
+  bool isFloat8E4M3FNTy() const { return getTypeID() == Float8E4M3FNTyID; }
+
+  /// Return true if this is an 8-bit float type.
+  bool is8BitFPTy() const {
+    return getTypeID() == Float8E5M2TyID || getTypeID() == Float8E4M3FNTyID;
+  }
+
   /// Return true if this is 'half', a 16-bit IEEE fp type.
   bool isHalfTy() const { return getTypeID() == HalfTyID; }
 
@@ -174,6 +187,8 @@ public:
     case FloatTyID:
     case HalfTyID:
     case BFloatTyID:
+    case Float8E5M2TyID:
+    case Float8E4M3FNTyID:
     case FP128TyID:
       return true;
     default:
@@ -445,6 +460,8 @@ public:
   //
   static Type *getVoidTy(LLVMContext &C);
   static Type *getLabelTy(LLVMContext &C);
+  static Type *getFloat8E5M2Ty(LLVMContext &C);
+  static Type *getFloat8E4M3FNTy(LLVMContext &C);
   static Type *getHalfTy(LLVMContext &C);
   static Type *getBFloatTy(LLVMContext &C);
   static Type *getFloatTy(LLVMContext &C);

@@ -550,7 +550,7 @@ static Cursor maybeLexMCSymbol(Cursor C, MIToken &Token,
 }
 
 static bool isValidHexFloatingPointPrefix(char C) {
-  return C == 'H' || C == 'K' || C == 'L' || C == 'M' || C == 'R';
+  return C == 'H' || C == 'K' || C == 'L' || C == 'M' || C == 'R' || C == 'Q' || C == 'S';
 }
 
 static Cursor lexFloatingPointLiteral(Cursor Range, Cursor C, MIToken &Token) {
