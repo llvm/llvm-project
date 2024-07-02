@@ -69,12 +69,12 @@ define void @select_v4i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @select_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    vld $vr2, $a1, 0
-; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    addi.d $a3, $a3, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    vld $vr0, $a3, 0
+; CHECK-NEXT:    vld $vr1, $a1, 0
+; CHECK-NEXT:    vld $vr2, $a2, 0
+; CHECK-NEXT:    vbitsel.v $vr0, $vr2, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a0

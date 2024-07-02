@@ -107,32 +107,28 @@ define i32 @load_store_global_array(i32 %a) nounwind {
 define i64 @ld_b(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: ld_b:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.b $a2, $a0, 1
 ; LA32NOPIC-NEXT:    ld.b $zero, $a0, 0
-; LA32NOPIC-NEXT:    srai.w $a1, $a2, 31
-; LA32NOPIC-NEXT:    move $a0, $a2
+; LA32NOPIC-NEXT:    ld.b $a0, $a0, 1
+; LA32NOPIC-NEXT:    srai.w $a1, $a0, 31
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: ld_b:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.b $a2, $a0, 1
 ; LA32PIC-NEXT:    ld.b $zero, $a0, 0
-; LA32PIC-NEXT:    srai.w $a1, $a2, 31
-; LA32PIC-NEXT:    move $a0, $a2
+; LA32PIC-NEXT:    ld.b $a0, $a0, 1
+; LA32PIC-NEXT:    srai.w $a1, $a0, 31
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: ld_b:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.b $a1, $a0, 1
 ; LA64NOPIC-NEXT:    ld.b $zero, $a0, 0
-; LA64NOPIC-NEXT:    move $a0, $a1
+; LA64NOPIC-NEXT:    ld.b $a0, $a0, 1
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: ld_b:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.b $a1, $a0, 1
 ; LA64PIC-NEXT:    ld.b $zero, $a0, 0
-; LA64PIC-NEXT:    move $a0, $a1
+; LA64PIC-NEXT:    ld.b $a0, $a0, 1
 ; LA64PIC-NEXT:    ret
   %1 = getelementptr i8, ptr %a, i64 1
   %2 = load i8, ptr %1
@@ -144,32 +140,28 @@ define i64 @ld_b(ptr %a) nounwind {
 define i64 @ld_h(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: ld_h:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.h $a2, $a0, 4
 ; LA32NOPIC-NEXT:    ld.h $zero, $a0, 0
-; LA32NOPIC-NEXT:    srai.w $a1, $a2, 31
-; LA32NOPIC-NEXT:    move $a0, $a2
+; LA32NOPIC-NEXT:    ld.h $a0, $a0, 4
+; LA32NOPIC-NEXT:    srai.w $a1, $a0, 31
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: ld_h:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.h $a2, $a0, 4
 ; LA32PIC-NEXT:    ld.h $zero, $a0, 0
-; LA32PIC-NEXT:    srai.w $a1, $a2, 31
-; LA32PIC-NEXT:    move $a0, $a2
+; LA32PIC-NEXT:    ld.h $a0, $a0, 4
+; LA32PIC-NEXT:    srai.w $a1, $a0, 31
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: ld_h:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.h $a1, $a0, 4
 ; LA64NOPIC-NEXT:    ld.h $zero, $a0, 0
-; LA64NOPIC-NEXT:    move $a0, $a1
+; LA64NOPIC-NEXT:    ld.h $a0, $a0, 4
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: ld_h:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.h $a1, $a0, 4
 ; LA64PIC-NEXT:    ld.h $zero, $a0, 0
-; LA64PIC-NEXT:    move $a0, $a1
+; LA64PIC-NEXT:    ld.h $a0, $a0, 4
 ; LA64PIC-NEXT:    ret
   %1 = getelementptr i16, ptr %a, i64 2
   %2 = load i16, ptr %1
@@ -181,32 +173,28 @@ define i64 @ld_h(ptr %a) nounwind {
 define i64 @ld_w(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: ld_w:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.w $a2, $a0, 12
 ; LA32NOPIC-NEXT:    ld.w $zero, $a0, 0
-; LA32NOPIC-NEXT:    srai.w $a1, $a2, 31
-; LA32NOPIC-NEXT:    move $a0, $a2
+; LA32NOPIC-NEXT:    ld.w $a0, $a0, 12
+; LA32NOPIC-NEXT:    srai.w $a1, $a0, 31
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: ld_w:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.w $a2, $a0, 12
 ; LA32PIC-NEXT:    ld.w $zero, $a0, 0
-; LA32PIC-NEXT:    srai.w $a1, $a2, 31
-; LA32PIC-NEXT:    move $a0, $a2
+; LA32PIC-NEXT:    ld.w $a0, $a0, 12
+; LA32PIC-NEXT:    srai.w $a1, $a0, 31
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: ld_w:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.w $a1, $a0, 12
 ; LA64NOPIC-NEXT:    ld.w $zero, $a0, 0
-; LA64NOPIC-NEXT:    move $a0, $a1
+; LA64NOPIC-NEXT:    ld.w $a0, $a0, 12
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: ld_w:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.w $a1, $a0, 12
 ; LA64PIC-NEXT:    ld.w $zero, $a0, 0
-; LA64PIC-NEXT:    move $a0, $a1
+; LA64PIC-NEXT:    ld.w $a0, $a0, 12
 ; LA64PIC-NEXT:    ret
   %1 = getelementptr i32, ptr %a, i64 3
   %2 = load i32, ptr %1
@@ -218,34 +206,30 @@ define i64 @ld_w(ptr %a) nounwind {
 define i64 @ld_d(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: ld_d:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.w $a1, $a0, 28
-; LA32NOPIC-NEXT:    ld.w $a2, $a0, 24
 ; LA32NOPIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32NOPIC-NEXT:    ld.w $zero, $a0, 0
-; LA32NOPIC-NEXT:    move $a0, $a2
+; LA32NOPIC-NEXT:    ld.w $a1, $a0, 28
+; LA32NOPIC-NEXT:    ld.w $a0, $a0, 24
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: ld_d:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.w $a1, $a0, 28
-; LA32PIC-NEXT:    ld.w $a2, $a0, 24
 ; LA32PIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32PIC-NEXT:    ld.w $zero, $a0, 0
-; LA32PIC-NEXT:    move $a0, $a2
+; LA32PIC-NEXT:    ld.w $a1, $a0, 28
+; LA32PIC-NEXT:    ld.w $a0, $a0, 24
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: ld_d:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.d $a1, $a0, 24
 ; LA64NOPIC-NEXT:    ld.d $zero, $a0, 0
-; LA64NOPIC-NEXT:    move $a0, $a1
+; LA64NOPIC-NEXT:    ld.d $a0, $a0, 24
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: ld_d:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.d $a1, $a0, 24
 ; LA64PIC-NEXT:    ld.d $zero, $a0, 0
-; LA64PIC-NEXT:    move $a0, $a1
+; LA64PIC-NEXT:    ld.d $a0, $a0, 24
 ; LA64PIC-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i64 3
   %2 = load i64, ptr %1
@@ -256,32 +240,32 @@ define i64 @ld_d(ptr %a) nounwind {
 define i64 @ld_bu(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: ld_bu:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.bu $a1, $a0, 4
-; LA32NOPIC-NEXT:    ld.bu $a0, $a0, 0
-; LA32NOPIC-NEXT:    add.w $a0, $a1, $a0
-; LA32NOPIC-NEXT:    sltu $a1, $a0, $a1
+; LA32NOPIC-NEXT:    ld.bu $a1, $a0, 0
+; LA32NOPIC-NEXT:    ld.bu $a2, $a0, 4
+; LA32NOPIC-NEXT:    add.w $a0, $a2, $a1
+; LA32NOPIC-NEXT:    sltu $a1, $a0, $a2
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: ld_bu:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.bu $a1, $a0, 4
-; LA32PIC-NEXT:    ld.bu $a0, $a0, 0
-; LA32PIC-NEXT:    add.w $a0, $a1, $a0
-; LA32PIC-NEXT:    sltu $a1, $a0, $a1
+; LA32PIC-NEXT:    ld.bu $a1, $a0, 0
+; LA32PIC-NEXT:    ld.bu $a2, $a0, 4
+; LA32PIC-NEXT:    add.w $a0, $a2, $a1
+; LA32PIC-NEXT:    sltu $a1, $a0, $a2
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: ld_bu:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.bu $a1, $a0, 4
-; LA64NOPIC-NEXT:    ld.bu $a0, $a0, 0
-; LA64NOPIC-NEXT:    add.d $a0, $a1, $a0
+; LA64NOPIC-NEXT:    ld.bu $a1, $a0, 0
+; LA64NOPIC-NEXT:    ld.bu $a0, $a0, 4
+; LA64NOPIC-NEXT:    add.d $a0, $a0, $a1
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: ld_bu:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.bu $a1, $a0, 4
-; LA64PIC-NEXT:    ld.bu $a0, $a0, 0
-; LA64PIC-NEXT:    add.d $a0, $a1, $a0
+; LA64PIC-NEXT:    ld.bu $a1, $a0, 0
+; LA64PIC-NEXT:    ld.bu $a0, $a0, 4
+; LA64PIC-NEXT:    add.d $a0, $a0, $a1
 ; LA64PIC-NEXT:    ret
   %1 = getelementptr i8, ptr %a, i64 4
   %2 = load i8, ptr %1
@@ -295,32 +279,32 @@ define i64 @ld_bu(ptr %a) nounwind {
 define i64 @ld_hu(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: ld_hu:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.hu $a1, $a0, 10
-; LA32NOPIC-NEXT:    ld.hu $a0, $a0, 0
-; LA32NOPIC-NEXT:    add.w $a0, $a1, $a0
-; LA32NOPIC-NEXT:    sltu $a1, $a0, $a1
+; LA32NOPIC-NEXT:    ld.hu $a1, $a0, 0
+; LA32NOPIC-NEXT:    ld.hu $a2, $a0, 10
+; LA32NOPIC-NEXT:    add.w $a0, $a2, $a1
+; LA32NOPIC-NEXT:    sltu $a1, $a0, $a2
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: ld_hu:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.hu $a1, $a0, 10
-; LA32PIC-NEXT:    ld.hu $a0, $a0, 0
-; LA32PIC-NEXT:    add.w $a0, $a1, $a0
-; LA32PIC-NEXT:    sltu $a1, $a0, $a1
+; LA32PIC-NEXT:    ld.hu $a1, $a0, 0
+; LA32PIC-NEXT:    ld.hu $a2, $a0, 10
+; LA32PIC-NEXT:    add.w $a0, $a2, $a1
+; LA32PIC-NEXT:    sltu $a1, $a0, $a2
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: ld_hu:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.hu $a1, $a0, 10
-; LA64NOPIC-NEXT:    ld.hu $a0, $a0, 0
-; LA64NOPIC-NEXT:    add.d $a0, $a1, $a0
+; LA64NOPIC-NEXT:    ld.hu $a1, $a0, 0
+; LA64NOPIC-NEXT:    ld.hu $a0, $a0, 10
+; LA64NOPIC-NEXT:    add.d $a0, $a0, $a1
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: ld_hu:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.hu $a1, $a0, 10
-; LA64PIC-NEXT:    ld.hu $a0, $a0, 0
-; LA64PIC-NEXT:    add.d $a0, $a1, $a0
+; LA64PIC-NEXT:    ld.hu $a1, $a0, 0
+; LA64PIC-NEXT:    ld.hu $a0, $a0, 10
+; LA64PIC-NEXT:    add.d $a0, $a0, $a1
 ; LA64PIC-NEXT:    ret
   %1 = getelementptr i16, ptr %a, i64 5
   %2 = load i16, ptr %1
@@ -334,32 +318,32 @@ define i64 @ld_hu(ptr %a) nounwind {
 define i64 @ld_wu(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: ld_wu:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.w $a1, $a0, 20
-; LA32NOPIC-NEXT:    ld.w $a0, $a0, 0
-; LA32NOPIC-NEXT:    add.w $a0, $a1, $a0
-; LA32NOPIC-NEXT:    sltu $a1, $a0, $a1
+; LA32NOPIC-NEXT:    ld.w $a1, $a0, 0
+; LA32NOPIC-NEXT:    ld.w $a2, $a0, 20
+; LA32NOPIC-NEXT:    add.w $a0, $a2, $a1
+; LA32NOPIC-NEXT:    sltu $a1, $a0, $a2
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: ld_wu:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.w $a1, $a0, 20
-; LA32PIC-NEXT:    ld.w $a0, $a0, 0
-; LA32PIC-NEXT:    add.w $a0, $a1, $a0
-; LA32PIC-NEXT:    sltu $a1, $a0, $a1
+; LA32PIC-NEXT:    ld.w $a1, $a0, 0
+; LA32PIC-NEXT:    ld.w $a2, $a0, 20
+; LA32PIC-NEXT:    add.w $a0, $a2, $a1
+; LA32PIC-NEXT:    sltu $a1, $a0, $a2
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: ld_wu:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.wu $a1, $a0, 20
-; LA64NOPIC-NEXT:    ld.wu $a0, $a0, 0
-; LA64NOPIC-NEXT:    add.d $a0, $a1, $a0
+; LA64NOPIC-NEXT:    ld.wu $a1, $a0, 0
+; LA64NOPIC-NEXT:    ld.wu $a0, $a0, 20
+; LA64NOPIC-NEXT:    add.d $a0, $a0, $a1
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: ld_wu:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.wu $a1, $a0, 20
-; LA64PIC-NEXT:    ld.wu $a0, $a0, 0
-; LA64PIC-NEXT:    add.d $a0, $a1, $a0
+; LA64PIC-NEXT:    ld.wu $a1, $a0, 0
+; LA64PIC-NEXT:    ld.wu $a0, $a0, 20
+; LA64PIC-NEXT:    add.d $a0, $a0, $a1
 ; LA64PIC-NEXT:    ret
   %1 = getelementptr i32, ptr %a, i64 5
   %2 = load i32, ptr %1
@@ -496,8 +480,8 @@ define i64 @ldx_d(ptr %a, i64 %idx) nounwind {
 ; LA32NOPIC:       # %bb.0:
 ; LA32NOPIC-NEXT:    alsl.w $a1, $a1, $a0, 3
 ; LA32NOPIC-NEXT:    ld.w $a2, $a1, 0
-; LA32NOPIC-NEXT:    ld.w $a1, $a1, 4
 ; LA32NOPIC-NEXT:    ld.w $zero, $a0, 0
+; LA32NOPIC-NEXT:    ld.w $a1, $a1, 4
 ; LA32NOPIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32NOPIC-NEXT:    move $a0, $a2
 ; LA32NOPIC-NEXT:    ret
@@ -506,8 +490,8 @@ define i64 @ldx_d(ptr %a, i64 %idx) nounwind {
 ; LA32PIC:       # %bb.0:
 ; LA32PIC-NEXT:    alsl.w $a1, $a1, $a0, 3
 ; LA32PIC-NEXT:    ld.w $a2, $a1, 0
-; LA32PIC-NEXT:    ld.w $a1, $a1, 4
 ; LA32PIC-NEXT:    ld.w $zero, $a0, 0
+; LA32PIC-NEXT:    ld.w $a1, $a1, 4
 ; LA32PIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32PIC-NEXT:    move $a0, $a2
 ; LA32PIC-NEXT:    ret
@@ -665,8 +649,8 @@ define i64 @ldx_wu(ptr %a, i64 %idx) nounwind {
 define void @st_b(ptr %a, i8 %b) nounwind {
 ; ALL-LABEL: st_b:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    st.b $a1, $a0, 0
 ; ALL-NEXT:    st.b $a1, $a0, 6
+; ALL-NEXT:    st.b $a1, $a0, 0
 ; ALL-NEXT:    ret
   store i8 %b, ptr %a
   %1 = getelementptr i8, ptr %a, i64 6
@@ -677,8 +661,8 @@ define void @st_b(ptr %a, i8 %b) nounwind {
 define void @st_h(ptr %a, i16 %b) nounwind {
 ; ALL-LABEL: st_h:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    st.h $a1, $a0, 0
 ; ALL-NEXT:    st.h $a1, $a0, 14
+; ALL-NEXT:    st.h $a1, $a0, 0
 ; ALL-NEXT:    ret
   store i16 %b, ptr %a
   %1 = getelementptr i16, ptr %a, i64 7
@@ -689,8 +673,8 @@ define void @st_h(ptr %a, i16 %b) nounwind {
 define void @st_w(ptr %a, i32 %b) nounwind {
 ; ALL-LABEL: st_w:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    st.w $a1, $a0, 0
 ; ALL-NEXT:    st.w $a1, $a0, 28
+; ALL-NEXT:    st.w $a1, $a0, 0
 ; ALL-NEXT:    ret
   store i32 %b, ptr %a
   %1 = getelementptr i32, ptr %a, i64 7
@@ -701,30 +685,30 @@ define void @st_w(ptr %a, i32 %b) nounwind {
 define void @st_d(ptr %a, i64 %b) nounwind {
 ; LA32NOPIC-LABEL: st_d:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    st.w $a2, $a0, 4
-; LA32NOPIC-NEXT:    st.w $a1, $a0, 0
 ; LA32NOPIC-NEXT:    st.w $a2, $a0, 68
 ; LA32NOPIC-NEXT:    st.w $a1, $a0, 64
+; LA32NOPIC-NEXT:    st.w $a2, $a0, 4
+; LA32NOPIC-NEXT:    st.w $a1, $a0, 0
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: st_d:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    st.w $a2, $a0, 4
-; LA32PIC-NEXT:    st.w $a1, $a0, 0
 ; LA32PIC-NEXT:    st.w $a2, $a0, 68
 ; LA32PIC-NEXT:    st.w $a1, $a0, 64
+; LA32PIC-NEXT:    st.w $a2, $a0, 4
+; LA32PIC-NEXT:    st.w $a1, $a0, 0
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: st_d:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    st.d $a1, $a0, 0
 ; LA64NOPIC-NEXT:    st.d $a1, $a0, 64
+; LA64NOPIC-NEXT:    st.d $a1, $a0, 0
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: st_d:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    st.d $a1, $a0, 0
 ; LA64PIC-NEXT:    st.d $a1, $a0, 64
+; LA64PIC-NEXT:    st.d $a1, $a0, 0
 ; LA64PIC-NEXT:    ret
   store i64 %b, ptr %a
   %1 = getelementptr i64, ptr %a, i64 8
@@ -852,40 +836,38 @@ define void @stx_d(ptr %dst, i64 %idx, i64 %val) nounwind {
 define i64 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: load_sext_zext_anyext_i1:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.bu $a1, $a0, 1
-; LA32NOPIC-NEXT:    ld.bu $a3, $a0, 2
-; LA32NOPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32NOPIC-NEXT:    ld.b $zero, $a0, 0
-; LA32NOPIC-NEXT:    sltu $a0, $a3, $a1
-; LA32NOPIC-NEXT:    sub.w $a1, $zero, $a0
-; LA32NOPIC-NEXT:    move $a0, $a2
+; LA32NOPIC-NEXT:    ld.bu $a1, $a0, 1
+; LA32NOPIC-NEXT:    ld.bu $a2, $a0, 2
+; LA32NOPIC-NEXT:    sub.w $a0, $a2, $a1
+; LA32NOPIC-NEXT:    sltu $a1, $a2, $a1
+; LA32NOPIC-NEXT:    sub.w $a1, $zero, $a1
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: load_sext_zext_anyext_i1:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.bu $a1, $a0, 1
-; LA32PIC-NEXT:    ld.bu $a3, $a0, 2
-; LA32PIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32PIC-NEXT:    ld.b $zero, $a0, 0
-; LA32PIC-NEXT:    sltu $a0, $a3, $a1
-; LA32PIC-NEXT:    sub.w $a1, $zero, $a0
-; LA32PIC-NEXT:    move $a0, $a2
+; LA32PIC-NEXT:    ld.bu $a1, $a0, 1
+; LA32PIC-NEXT:    ld.bu $a2, $a0, 2
+; LA32PIC-NEXT:    sub.w $a0, $a2, $a1
+; LA32PIC-NEXT:    sltu $a1, $a2, $a1
+; LA32PIC-NEXT:    sub.w $a1, $zero, $a1
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: load_sext_zext_anyext_i1:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.bu $a1, $a0, 1
-; LA64NOPIC-NEXT:    ld.bu $a2, $a0, 2
 ; LA64NOPIC-NEXT:    ld.b $zero, $a0, 0
-; LA64NOPIC-NEXT:    sub.d $a0, $a2, $a1
+; LA64NOPIC-NEXT:    ld.bu $a1, $a0, 1
+; LA64NOPIC-NEXT:    ld.bu $a0, $a0, 2
+; LA64NOPIC-NEXT:    sub.d $a0, $a0, $a1
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: load_sext_zext_anyext_i1:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.bu $a1, $a0, 1
-; LA64PIC-NEXT:    ld.bu $a2, $a0, 2
 ; LA64PIC-NEXT:    ld.b $zero, $a0, 0
-; LA64PIC-NEXT:    sub.d $a0, $a2, $a1
+; LA64PIC-NEXT:    ld.bu $a1, $a0, 1
+; LA64PIC-NEXT:    ld.bu $a0, $a0, 2
+; LA64PIC-NEXT:    sub.d $a0, $a0, $a1
 ; LA64PIC-NEXT:    ret
   ;; sextload i1
   %1 = getelementptr i1, ptr %a, i64 1
@@ -904,34 +886,34 @@ define i64 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 define i16 @load_sext_zext_anyext_i1_i16(ptr %a) nounwind {
 ; LA32NOPIC-LABEL: load_sext_zext_anyext_i1_i16:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    ld.bu $a1, $a0, 1
-; LA32NOPIC-NEXT:    ld.bu $a2, $a0, 2
 ; LA32NOPIC-NEXT:    ld.b $zero, $a0, 0
-; LA32NOPIC-NEXT:    sub.w $a0, $a2, $a1
+; LA32NOPIC-NEXT:    ld.bu $a1, $a0, 1
+; LA32NOPIC-NEXT:    ld.bu $a0, $a0, 2
+; LA32NOPIC-NEXT:    sub.w $a0, $a0, $a1
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: load_sext_zext_anyext_i1_i16:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    ld.bu $a1, $a0, 1
-; LA32PIC-NEXT:    ld.bu $a2, $a0, 2
 ; LA32PIC-NEXT:    ld.b $zero, $a0, 0
-; LA32PIC-NEXT:    sub.w $a0, $a2, $a1
+; LA32PIC-NEXT:    ld.bu $a1, $a0, 1
+; LA32PIC-NEXT:    ld.bu $a0, $a0, 2
+; LA32PIC-NEXT:    sub.w $a0, $a0, $a1
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: load_sext_zext_anyext_i1_i16:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    ld.bu $a1, $a0, 1
-; LA64NOPIC-NEXT:    ld.bu $a2, $a0, 2
 ; LA64NOPIC-NEXT:    ld.b $zero, $a0, 0
-; LA64NOPIC-NEXT:    sub.d $a0, $a2, $a1
+; LA64NOPIC-NEXT:    ld.bu $a1, $a0, 1
+; LA64NOPIC-NEXT:    ld.bu $a0, $a0, 2
+; LA64NOPIC-NEXT:    sub.d $a0, $a0, $a1
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: load_sext_zext_anyext_i1_i16:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    ld.bu $a1, $a0, 1
-; LA64PIC-NEXT:    ld.bu $a2, $a0, 2
 ; LA64PIC-NEXT:    ld.b $zero, $a0, 0
-; LA64PIC-NEXT:    sub.d $a0, $a2, $a1
+; LA64PIC-NEXT:    ld.bu $a1, $a0, 1
+; LA64PIC-NEXT:    ld.bu $a0, $a0, 2
+; LA64PIC-NEXT:    sub.d $a0, $a0, $a1
 ; LA64PIC-NEXT:    ret
   ;; sextload i1
   %1 = getelementptr i1, ptr %a, i64 1
@@ -953,10 +935,10 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA32NOPIC-NEXT:    lu12i.w $a3, -136485
 ; LA32NOPIC-NEXT:    ori $a4, $a3, 3823
 ; LA32NOPIC-NEXT:    ld.w $a2, $a4, 0
-; LA32NOPIC-NEXT:    ori $a5, $a3, 3827
-; LA32NOPIC-NEXT:    ld.w $a3, $a5, 0
 ; LA32NOPIC-NEXT:    st.w $a0, $a4, 0
-; LA32NOPIC-NEXT:    st.w $a1, $a5, 0
+; LA32NOPIC-NEXT:    ori $a0, $a3, 3827
+; LA32NOPIC-NEXT:    ld.w $a3, $a0, 0
+; LA32NOPIC-NEXT:    st.w $a1, $a0, 0
 ; LA32NOPIC-NEXT:    move $a0, $a2
 ; LA32NOPIC-NEXT:    move $a1, $a3
 ; LA32NOPIC-NEXT:    ret
@@ -966,10 +948,10 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA32PIC-NEXT:    lu12i.w $a3, -136485
 ; LA32PIC-NEXT:    ori $a4, $a3, 3823
 ; LA32PIC-NEXT:    ld.w $a2, $a4, 0
-; LA32PIC-NEXT:    ori $a5, $a3, 3827
-; LA32PIC-NEXT:    ld.w $a3, $a5, 0
 ; LA32PIC-NEXT:    st.w $a0, $a4, 0
-; LA32PIC-NEXT:    st.w $a1, $a5, 0
+; LA32PIC-NEXT:    ori $a0, $a3, 3827
+; LA32PIC-NEXT:    ld.w $a3, $a0, 0
+; LA32PIC-NEXT:    st.w $a1, $a0, 0
 ; LA32PIC-NEXT:    move $a0, $a2
 ; LA32PIC-NEXT:    move $a1, $a3
 ; LA32PIC-NEXT:    ret

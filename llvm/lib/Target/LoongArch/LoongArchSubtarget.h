@@ -105,6 +105,7 @@ public:
   unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   bool enableMachineScheduler() const override { return true; }
+  bool enableMachineSchedDefaultSched() const override { return false; }
 };
 } // end namespace llvm
 
