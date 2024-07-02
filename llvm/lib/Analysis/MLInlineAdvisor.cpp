@@ -211,6 +211,8 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
   // care about the nature of the Edge (call or ref). `FunctionLevels`-wise, we
   // record them at the same level as the original node (this is a choice, may
   // need revisiting).
+  // - nodes are only deleted at the end of a call graph walk where they are
+  // batch deleted, so we shouldn't see any dead nodes here.
   while (!NodesInLastSCC.empty()) {
     const auto *N = *NodesInLastSCC.begin();
     assert(!N->isDead());
