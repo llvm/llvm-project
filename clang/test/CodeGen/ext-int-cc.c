@@ -131,7 +131,7 @@ void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
 // are negated. This will give an error when a target does support larger
 // _BitInt widths to alert us to enable the test.
 void ParamPassing4(_BitInt(129) a) {}
-// LIN64: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
+// LIN64: define{{.*}} void @ParamPassing4(ptr byval([24 x i8]) align 8 %{{.+}})
 // WIN64: define dso_local void @ParamPassing4(ptr %{{.+}})
 // LIN32: define{{.*}} void @ParamPassing4(ptr %{{.+}})
 // WIN32: define dso_local void @ParamPassing4(ptr %{{.+}})

@@ -585,7 +585,7 @@ private:
                    bool AllowOverwrite = false);
 
   bool AppendBitField(const FieldDecl *Field, uint64_t FieldOffset,
-                      llvm::ConstantInt *InitExpr, bool AllowOverwrite = false);
+                      llvm::Constant *InitExpr, bool AllowOverwrite = false);
 
   bool Build(const InitListExpr *ILE, bool AllowOverwrite);
   bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
@@ -610,8 +610,26 @@ bool ConstStructBuilder::AppendBytes(CharUnits FieldOffsetInChars,
 }
 
 bool ConstStructBuilder::AppendBitField(
-    const FieldDecl *Field, uint64_t FieldOffset, llvm::ConstantInt *CI,
+    const FieldDecl *Field, uint64_t FieldOffset, llvm::Constant *C,
     bool AllowOverwrite) {
+
+  llvm::ConstantInt *CI = nullptr;
+  if (!isa<llvm::ConstantInt>(C)) {
+    // Constants for long _BitInt types are split into individual bytes.
+    // Try to fold these back into an integer constant. If that doesn't work
+    // out, then we are trying to initialize a bitfield with a non-trivial
+    // constant, this must require run-time code.
+    llvm::Type *LoadType =
+        CGM.getTypes().convertTypeForLoadStore(Field->getType(), C->getType());
+    llvm::Constant *FoldedConstant = llvm::ConstantFoldLoadFromConst(
+        C, LoadType, llvm::APInt::getZero(32), CGM.getDataLayout());
+    CI = dyn_cast_if_present<llvm::ConstantInt>(FoldedConstant);
+    if (!CI)
+      return false;
+  } else {
+    CI = cast<llvm::ConstantInt>(C);
+  }
+
   const CGRecordLayout &RL =
       CGM.getTypes().getCGRecordLayout(Field->getParent());
   const CGBitFieldInfo &Info = RL.getBitFieldInfo(Field);
@@ -762,15 +780,9 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
         AllowOverwrite = true;
     } else {
       // Otherwise we have a bitfield.
-      if (auto *CI = dyn_cast<llvm::ConstantInt>(EltInit)) {
-        if (!AppendBitField(Field, Layout.getFieldOffset(FieldNo), CI,
-                            AllowOverwrite))
-          return false;
-      } else {
-        // We are trying to initialize a bitfield with a non-trivial constant,
-        // this must require run-time code.
+      if (!AppendBitField(Field, Layout.getFieldOffset(FieldNo), EltInit,
+                          AllowOverwrite))
         return false;
-      }
     }
   }
 
@@ -871,7 +883,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     } else {
       // Otherwise we have a bitfield.
       if (!AppendBitField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
-                          cast<llvm::ConstantInt>(EltInit), AllowOverwrite))
+                          EltInit, AllowOverwrite))
         return false;
     }
   }
@@ -1884,6 +1896,22 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
         llvm::Instruction::ZExt, C, boolTy, CGM.getDataLayout());
     assert(Res && "Constant folding must succeed");
     return Res;
+  }
+
+  if (destType->isBitIntType()) {
+    if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType, C->getType())) {
+      // Long _BitInt has array of bytes as in-memory type.
+      // So, split constant into individual bytes.
+      ConstantAggregateBuilder Builder(CGM);
+      llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
+      // LLVM type doesn't match AST type only for big enough _BitInts, these
+      // types don't appear in constant expressions involving ptrtoint, so it
+      // is safe to expect a constant int here.
+      auto *CI = cast<llvm::ConstantInt>(C);
+      llvm::APInt Value = CI->getValue();
+      Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
+      return Builder.build(DesiredTy, /*AllowOversized*/ false);
+    }
   }
 
   return C;

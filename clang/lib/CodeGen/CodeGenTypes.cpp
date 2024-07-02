@@ -107,6 +107,12 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
     return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
   }
 
+  if (T->isBitIntType()) {
+    if (typeRequiresSplitIntoByteArray(T, R))
+      return llvm::ArrayType::get(CGM.Int8Ty,
+                                  Context.getTypeSizeInChars(T).getQuantity());
+  }
+
   // If this is a bool type, or a bit-precise integer type in a bitfield
   // representation, map this integer to the target-specified size.
   if ((ForBitField && T->isBitIntType()) ||
@@ -116,6 +122,39 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
 
   // Else, don't map it.
   return R;
+}
+
+bool CodeGenTypes::typeRequiresSplitIntoByteArray(QualType ASTTy,
+                                                  llvm::Type *LLVMTy) {
+  if (!LLVMTy)
+    LLVMTy = ConvertType(ASTTy);
+
+  CharUnits ASTSize = Context.getTypeSizeInChars(ASTTy);
+  CharUnits LLVMSize =
+      CharUnits::fromQuantity(getDataLayout().getTypeAllocSize(LLVMTy));
+  return ASTSize != LLVMSize;
+}
+
+llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
+                                                  llvm::Type *LLVMTy) {
+  if (!LLVMTy)
+    LLVMTy = ConvertType(T);
+
+  if (!T->isBitIntType() && LLVMTy->isIntegerTy(1))
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  (unsigned)Context.getTypeSize(T));
+
+  if (T->isBitIntType()) {
+    if (typeRequiresSplitIntoByteArray(T))
+      return llvm::Type::getIntNTy(
+          getLLVMContext(), Context.getTypeSizeInChars(T).getQuantity() * 8);
+  }
+
+  if (T->isExtVectorBoolType()) {
+    return ConvertTypeForMem(T);
+  }
+
+  return LLVMTy;
 }
 
 /// isRecordLayoutComplete - Return true if the specified type is already

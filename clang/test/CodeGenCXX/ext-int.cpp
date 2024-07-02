@@ -176,8 +176,10 @@ void TakesVarargs(int i, ...) {
   // LIN32: %[[CUR1:.+]] = load ptr, ptr %[[ARGS]]
   // LIN32: %[[NEXT1:.+]] = getelementptr inbounds i8, ptr %[[CUR1]], i32 12
   // LIN32: store ptr %[[NEXT1]], ptr %[[ARGS]]
-  // LIN32: %[[LOADV1:.+]] = load i92, ptr %[[CUR1]]
-  // LIN32: store i92 %[[LOADV1]], ptr
+  // LIN32: %[[LOADV1:.+]] = load i96, ptr %[[CUR1]]
+  // LIN32: %[[TR:.+]] = trunc i96 %[[LOADV1]] to i92
+  // LIN32: %[[SEXT:.+]] = sext i92 %[[TR]] to i96
+  // LIN32: store i96 %[[SEXT]], ptr
 
   // WIN64: %[[CUR1:.+]] = load ptr, ptr %[[ARGS]]
   // WIN64: %[[NEXT1:.+]] = getelementptr inbounds i8, ptr %[[CUR1]], i64 8

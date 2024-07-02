@@ -33,6 +33,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -1968,6 +1969,17 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       // behavior.
       constant = constWithPadding(CGM, IsPattern::No,
                                   replaceUndef(CGM, isPattern, constant));
+    }
+
+    if (D.getType()->isBitIntType() &&
+        CGM.getTypes().typeRequiresSplitIntoByteArray(D.getType())) {
+      // Constants for long _BitInt types are split into individual bytes.
+      // Try to fold these back into an integer constant so it can be stored
+      // properly.
+      llvm::Type *LoadType = CGM.getTypes().convertTypeForLoadStore(
+          D.getType(), constant->getType());
+      constant = llvm::ConstantFoldLoadFromConst(
+          constant, LoadType, llvm::APInt::getZero(32), CGM.getDataLayout());
     }
   }
 

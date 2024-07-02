@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
@@ -178,14 +178,14 @@ float test_builtin_dot_float3_int_splat(float3 p0, int p1) {
 // CHECK: ret double %dx.dot
 double test_dot_double(double p0, double p1) { return dot(p0, p1); }
 
-// CHECK: %conv = zext i1 %tobool to i32
+// CHECK: %conv = zext i1 %loadedv to i32
 // CHECK: %dx.dot = mul i32 %conv, %1
 // CHECK: ret i32 %dx.dot
 int test_dot_bool_scalar_arg0_type_promotion(bool p0, int p1) {
   return dot(p0, p1);
 }
 
-// CHECK: %conv = zext i1 %tobool to i32
+// CHECK: %conv = zext i1 %loadedv to i32
 // CHECK: %dx.dot = mul i32 %0, %conv
 // CHECK: ret i32 %dx.dot
 int test_dot_bool_scalar_arg1_type_promotion(int p0, bool p1) {
