@@ -7664,7 +7664,10 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (SDValue NewSel = foldBinOpIntoSelectIfProfitable(*Op->use_begin(),
                                                            DAG, Subtarget)) {
         DAG.ReplaceAllUsesWith(BinOp, &NewSel);
-        return lowerSELECT(NewSel, DAG);
+        if (NewSel.getOpcode() == ISD::SELECT)
+          return lowerSELECT(NewSel, DAG);
+        else
+          return NewSel;
       }
     }
   }
