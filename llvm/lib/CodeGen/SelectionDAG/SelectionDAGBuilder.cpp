@@ -3541,11 +3541,13 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
     return;
 
   // We may be able to ignore unreachable behind a noreturn call.
-  if (DAG.getTarget().Options.NoTrapAfterNoreturn) {
-    if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode())) {
-      if (Call->doesNotReturn())
-        return;
-    }
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (DAG.getTarget().Options.NoTrapAfterNoreturn)
+      return;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return;
   }
 
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
