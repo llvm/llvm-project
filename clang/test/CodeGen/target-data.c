@@ -235,7 +235,7 @@
 // RUN: FileCheck %s -check-prefix=ZOS
 // RUN: %clang_cc1 -triple s390x-none-zos -target-cpu z13 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=ZOS
-// ZOS: target datalayout = "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+// ZOS: target datalayout = "E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 // RUN: %clang_cc1 -triple msp430-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MSP430
