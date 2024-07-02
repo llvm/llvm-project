@@ -90,7 +90,7 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 }
 
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAsmLayout *Layout,
+                                            const MCAssembler *Asm,
                                             const MCFixup *Fixup) const {
   // Explicitly drop the layout and assembler to prevent any symbolic folding in
   // the expression handling.  This is required to preserve symbolic difference

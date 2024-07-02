@@ -567,7 +567,7 @@ void ELFWriter::writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
 
   if (ESize) {
     int64_t Res;
-    if (!ESize->evaluateKnownAbsolute(Res, *Asm.getLayout()))
+    if (!ESize->evaluateKnownAbsolute(Res, Asm))
       report_fatal_error("Size expression must be absolute.");
     Size = Res;
   }
