@@ -10,7 +10,7 @@
 // RUN: llvm-dwarfdump %t1.dwo -debug-types -debug-info | FileCheck --check-prefix=ONEUNIT %s
 // RUN: llvm-dwarfdump %t2.dwo -debug-types -debug-info | FileCheck --check-prefix=ONEUNIT %s
 // RUN: ld.lld %t1.o %t2.o -o %t
-// RUN: %lldb %t -o "target var a b **b.a" -b | FileCheck %s
+// RUN: %lldb %t -o "target var a b" -o "print **b.a" -b | FileCheck %s
 
 // ONEUNIT-COUNT-1: DW_TAG_type_unit
 
@@ -18,7 +18,7 @@
 // CHECK:      (const B) b = {
 // CHECK-NEXT:   a = 0x{{.*}}
 // CHECK-NEXT: }
-// CHECK:      (const A) **b.a = (a = 42)
+// CHECK:      (const A) (a = 42)
 
 struct A;
 
