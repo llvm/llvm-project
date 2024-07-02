@@ -26,3 +26,14 @@ void g() {
   const int a[] = {a[0]};
   const int b[] = {a[0]};
 }
+
+namespace std {
+// std::basic_string has a hard-coded gsl::owner attr.
+struct basic_string {
+  const char* c_str();
+};
+}  // namespace std
+void test(const char* a) {
+  // verify we're emitting the `-Wdangling-assignment` warning.
+  a = std::basic_string().c_str(); // expected-warning {{object backing the pointer a will be destroyed at the end of the full-expression}}
+}
