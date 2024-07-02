@@ -14,7 +14,7 @@
 # CHECK-NEXT:  [ 0]                   NULL            [[#%x,]]         [[#%x,]] 000000 00      0   0  0
 # CHECK-NEXT:  [ 1] progbits          PROGBITS        [[#%x,]]         [[#%x,]] 000001 00   A  0   0  1
 # CHECK-NEXT:  [ 2] note              NOTE            [[#%x,]]         [[#%x,]] 000002 00   A  0   0  1
-# CHECK-NEXT:  [ 3] nobits            NOBITS          [[#%x,]]         [[#%x,]] 000001 00   A  0   0  1
+# CHECK-NEXT:  [ 3] nobits            NOBITS          [[#%x,]]         [[#%x,]] 000001 00  WA  0   0  1
 # CHECK-NEXT:  [ 4] init_array        INIT_ARRAY      [[#%x,]]         [[#%x,]] 000008 00   A  0   0  1
 # CHECK-NEXT:  [ 5] fini_array        FINI_ARRAY      [[#%x,]]         [[#%x,]] 000008 00   A  0   0  1
 # CHECK-NEXT:  [ 6] preinit_array     PREINIT_ARRAY   [[#%x,]]         [[#%x,]] 000008 00   A  0   0  1
