@@ -74,6 +74,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMINNUM:     R = SoftenFloatRes_FMINNUM(N); break;
     case ISD::STRICT_FMAXNUM:
     case ISD::FMAXNUM:     R = SoftenFloatRes_FMAXNUM(N); break;
+    case ISD::FMINIMUMNUM:    R = SoftenFloatRes_FMINIMUMNUM(N); break;
+    case ISD::FMAXIMUMNUM:    R = SoftenFloatRes_FMAXIMUMNUM(N); break;
     case ISD::STRICT_FADD:
     case ISD::FADD:        R = SoftenFloatRes_FADD(N); break;
     case ISD::FCBRT:       R = SoftenFloatRes_FCBRT(N); break;
@@ -309,6 +311,24 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXNUM(SDNode *N) {
                                                RTLIB::FMAX_F80,
                                                RTLIB::FMAX_F128,
                                                RTLIB::FMAX_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUMNUM(SDNode *N) {
+  if (SDValue SelCC = TLI.createSelectForFMINIMUMNUM_FMAXIMUMNUM(N, DAG))
+    return SoftenFloatRes_SELECT_CC(SelCC.getNode());
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUMNUM_F32,
+                      RTLIB::FMINIMUMNUM_F64, RTLIB::FMINIMUMNUM_F80,
+                      RTLIB::FMINIMUMNUM_F128, RTLIB::FMINIMUMNUM_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXIMUMNUM(SDNode *N) {
+  if (SDValue SelCC = TLI.createSelectForFMINIMUMNUM_FMAXIMUMNUM(N, DAG))
+    return SoftenFloatRes_SELECT_CC(SelCC.getNode());
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUMNUM_F32,
+                      RTLIB::FMAXIMUMNUM_F64, RTLIB::FMAXIMUMNUM_F80,
+                      RTLIB::FMAXIMUMNUM_F128, RTLIB::FMAXIMUMNUM_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FADD(SDNode *N) {
@@ -1356,6 +1376,8 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FMINNUM:    ExpandFloatRes_FMINNUM(N, Lo, Hi); break;
   case ISD::STRICT_FMAXNUM:
   case ISD::FMAXNUM:    ExpandFloatRes_FMAXNUM(N, Lo, Hi); break;
+  case ISD::FMINIMUMNUM: ExpandFloatRes_FMINIMUMNUM(N, Lo, Hi); break;
+  case ISD::FMAXIMUMNUM: ExpandFloatRes_FMAXIMUMNUM(N, Lo, Hi); break;
   case ISD::STRICT_FADD:
   case ISD::FADD:       ExpandFloatRes_FADD(N, Lo, Hi); break;
   case ISD::FCBRT:      ExpandFloatRes_FCBRT(N, Lo, Hi); break;
@@ -1499,6 +1521,26 @@ void DAGTypeLegalizer::ExpandFloatRes_FMAXNUM(SDNode *N, SDValue &Lo,
                                         RTLIB::FMAX_F32, RTLIB::FMAX_F64,
                                         RTLIB::FMAX_F80, RTLIB::FMAX_F128,
                                         RTLIB::FMAX_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FMINIMUMNUM(SDNode *N, SDValue &Lo,
+                                                  SDValue &Hi) {
+  ExpandFloatRes_Binary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUMNUM_F32,
+                   RTLIB::FMINIMUMNUM_F64, RTLIB::FMINIMUMNUM_F80,
+                   RTLIB::FMINIMUMNUM_F128, RTLIB::FMINIMUMNUM_PPCF128),
+      Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FMAXIMUMNUM(SDNode *N, SDValue &Lo,
+                                                  SDValue &Hi) {
+  ExpandFloatRes_Binary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUMNUM_F32,
+                   RTLIB::FMAXIMUMNUM_F64, RTLIB::FMAXIMUMNUM_F80,
+                   RTLIB::FMAXIMUMNUM_F128, RTLIB::FMAXIMUMNUM_PPCF128),
+      Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FADD(SDNode *N, SDValue &Lo,
@@ -2507,6 +2549,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FDIV:
     case ISD::FMAXIMUM:
     case ISD::FMINIMUM:
+    case ISD::FMAXIMUMNUM:
+    case ISD::FMINIMUMNUM:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMAXNUM_IEEE:
@@ -2943,6 +2987,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FDIV:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
   case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::FMUL:

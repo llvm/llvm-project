@@ -8469,6 +8469,93 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   return MinMax;
 }
 
+SDValue TargetLowering::createSelectForFMINIMUMNUM_FMAXIMUMNUM(
+    SDNode *Node, SelectionDAG &DAG) const {
+  unsigned Opcode = Node->getOpcode();
+  assert((Opcode == ISD::FMINIMUMNUM || Opcode == ISD::FMAXIMUMNUM) &&
+         "Wrong opcode");
+
+  if (Node->getFlags().hasNoNaNs()) {
+    ISD::CondCode Pred = Opcode == ISD::FMINIMUMNUM ? ISD::SETLT : ISD::SETGT;
+    SDValue Op1 = Node->getOperand(0);
+    SDValue Op2 = Node->getOperand(1);
+    SDValue SelCC = DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred);
+    // Copy FMF flags, but always set the no-signed-zeros flag
+    // as this is implied by the FMINNUM/FMAXNUM semantics.
+    SDNodeFlags Flags = Node->getFlags();
+    Flags.setNoSignedZeros(true);
+    SelCC->setFlags(Flags);
+    return SelCC;
+  }
+
+  return SDValue();
+}
+
+SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
+                                                      SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  unsigned NewOp = Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINNUM_IEEE
+                                                         : ISD::FMAXNUM_IEEE;
+  EVT VT = Node->getValueType(0);
+
+  if (VT.isScalableVector())
+    report_fatal_error(
+        "Expanding fminimumnum/fmaximumnum for scalable vectors is undefined.");
+
+  if (isOperationLegalOrCustom(NewOp, VT)) {
+    SDValue Quiet0 = Node->getOperand(0);
+    SDValue Quiet1 = Node->getOperand(1);
+
+    if (!Node->getFlags().hasNoNaNs()) {
+      // Insert canonicalizes if it's possible we need to quiet to get correct
+      // sNaN behavior.
+      if (!DAG.isKnownNeverSNaN(Quiet0)) {
+        Quiet0 =
+            DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet0, Node->getFlags());
+      }
+      if (!DAG.isKnownNeverSNaN(Quiet1)) {
+        Quiet1 =
+            DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet1, Node->getFlags());
+      }
+    }
+
+    return DAG.getNode(NewOp, dl, VT, Quiet0, Quiet1, Node->getFlags());
+  }
+
+  // FMINIMUM/FMAXIMUM always return NaN if either operand is NaN.
+  // It has same behavior about +0.0 vs -0.0.
+  if (Node->getFlags().hasNoNaNs() ||
+      (DAG.isKnownNeverNaN(Node->getOperand(0)) &&
+       DAG.isKnownNeverNaN(Node->getOperand(1)))) {
+    unsigned IEEE2019Op =
+        Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
+    if (isOperationLegalOrCustom(IEEE2019Op, VT))
+      return DAG.getNode(IEEE2019Op, dl, VT, Node->getOperand(0),
+                         Node->getOperand(1), Node->getFlags());
+  }
+
+  // FMINNUM/FMAXIMUM returns qNaN if either operand is sNaN, and it may return
+  // either one for +0.0 vs -0.0.
+  // FIXME: maybe we need hasNoSNaNs().
+  if ((Node->getFlags().hasNoNaNs() ||
+       (DAG.isKnownNeverSNaN(Node->getOperand(0)) &&
+        DAG.isKnownNeverSNaN(Node->getOperand(1)))) &&
+      (Node->getFlags().hasNoSignedZeros() ||
+       DAG.isKnownNeverZeroFloat(Node->getOperand(0)) ||
+       DAG.isKnownNeverZeroFloat(Node->getOperand(1)))) {
+    unsigned IEEE2008Op =
+        Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINNUM : ISD::FMAXNUM;
+    if (isOperationLegalOrCustom(IEEE2008Op, VT))
+      return DAG.getNode(IEEE2008Op, dl, VT, Node->getOperand(0),
+                         Node->getOperand(1), Node->getFlags());
+  }
+
+  if (SDValue SelCC = createSelectForFMINIMUMNUM_FMAXIMUMNUM(Node, DAG))
+    return SelCC;
+
+  return SDValue();
+}
+
 /// Returns a true value if if this FPClassTest can be performed with an ordered
 /// fcmp to 0, and a false value if it's an unordered fcmp to 0. Returns
 /// std::nullopt if it cannot be performed as a compare with 0.
