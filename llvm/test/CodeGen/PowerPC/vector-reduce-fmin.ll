@@ -379,51 +379,71 @@ entry:
 define dso_local float @v16f32_fast(<16 x float> %a) local_unnamed_addr #0 {
 ; PWR9LE-LABEL: v16f32_fast:
 ; PWR9LE:       # %bb.0: # %entry
-; PWR9LE-NEXT:    xvminsp vs0, v3, v5
-; PWR9LE-NEXT:    xvminsp vs1, v2, v4
-; PWR9LE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR9LE-NEXT:    xxswapd v2, vs0
-; PWR9LE-NEXT:    xvminsp vs0, vs0, v2
+; PWR9LE-NEXT:    xvcmpgtsp vs0, v5, v3
+; PWR9LE-NEXT:    xvcmpgtsp vs1, v4, v2
+; PWR9LE-NEXT:    xxsel vs1, v4, v2, vs1
+; PWR9LE-NEXT:    xxsel vs0, v5, v3, vs0
+; PWR9LE-NEXT:    xvcmpgtsp vs2, vs0, vs1
+; PWR9LE-NEXT:    xxsel vs0, vs0, vs1, vs2
+; PWR9LE-NEXT:    xxswapd vs1, vs0
+; PWR9LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9LE-NEXT:    xxspltw vs1, vs0, 2
-; PWR9LE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR9LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9LE-NEXT:    xxsldwi vs0, vs0, vs0, 3
 ; PWR9LE-NEXT:    xscvspdpn f1, vs0
 ; PWR9LE-NEXT:    blr
 ;
 ; PWR9BE-LABEL: v16f32_fast:
 ; PWR9BE:       # %bb.0: # %entry
-; PWR9BE-NEXT:    xvminsp vs0, v3, v5
-; PWR9BE-NEXT:    xvminsp vs1, v2, v4
-; PWR9BE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR9BE-NEXT:    xxswapd v2, vs0
-; PWR9BE-NEXT:    xvminsp vs0, vs0, v2
+; PWR9BE-NEXT:    xvcmpgtsp vs0, v5, v3
+; PWR9BE-NEXT:    xvcmpgtsp vs1, v4, v2
+; PWR9BE-NEXT:    xxsel vs1, v4, v2, vs1
+; PWR9BE-NEXT:    xxsel vs0, v5, v3, vs0
+; PWR9BE-NEXT:    xvcmpgtsp vs2, vs0, vs1
+; PWR9BE-NEXT:    xxsel vs0, vs0, vs1, vs2
+; PWR9BE-NEXT:    xxswapd vs1, vs0
+; PWR9BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9BE-NEXT:    xxspltw vs1, vs0, 1
-; PWR9BE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR9BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9BE-NEXT:    xscvspdpn f1, vs0
 ; PWR9BE-NEXT:    blr
 ;
 ; PWR10LE-LABEL: v16f32_fast:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    xvminsp vs0, v3, v5
-; PWR10LE-NEXT:    xvminsp vs1, v2, v4
-; PWR10LE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR10LE-NEXT:    xxswapd v2, vs0
-; PWR10LE-NEXT:    xvminsp vs0, vs0, v2
+; PWR10LE-NEXT:    xvcmpgtsp vs0, v5, v3
+; PWR10LE-NEXT:    xvcmpgtsp vs1, v4, v2
+; PWR10LE-NEXT:    xxsel vs1, v4, v2, vs1
+; PWR10LE-NEXT:    xxsel vs0, v5, v3, vs0
+; PWR10LE-NEXT:    xvcmpgtsp vs2, vs0, vs1
+; PWR10LE-NEXT:    xxsel vs0, vs0, vs1, vs2
+; PWR10LE-NEXT:    xxswapd vs1, vs0
+; PWR10LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10LE-NEXT:    xxspltw vs1, vs0, 2
-; PWR10LE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR10LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10LE-NEXT:    xxsldwi vs0, vs0, vs0, 3
 ; PWR10LE-NEXT:    xscvspdpn f1, vs0
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v16f32_fast:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    xvminsp vs0, v3, v5
-; PWR10BE-NEXT:    xvminsp vs1, v2, v4
-; PWR10BE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR10BE-NEXT:    xxswapd v2, vs0
-; PWR10BE-NEXT:    xvminsp vs0, vs0, v2
+; PWR10BE-NEXT:    xvcmpgtsp vs0, v5, v3
+; PWR10BE-NEXT:    xvcmpgtsp vs1, v4, v2
+; PWR10BE-NEXT:    xxsel vs1, v4, v2, vs1
+; PWR10BE-NEXT:    xxsel vs0, v5, v3, vs0
+; PWR10BE-NEXT:    xvcmpgtsp vs2, vs0, vs1
+; PWR10BE-NEXT:    xxsel vs0, vs0, vs1, vs2
+; PWR10BE-NEXT:    xxswapd vs1, vs0
+; PWR10BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10BE-NEXT:    xxspltw vs1, vs0, 1
-; PWR10BE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR10BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10BE-NEXT:    xscvspdpn f1, vs0
 ; PWR10BE-NEXT:    blr
 entry:
@@ -523,67 +543,103 @@ entry:
 define dso_local float @v32f32_fast(<32 x float> %a) local_unnamed_addr #0 {
 ; PWR9LE-LABEL: v32f32_fast:
 ; PWR9LE:       # %bb.0: # %entry
-; PWR9LE-NEXT:    xvminsp vs0, v4, v8
-; PWR9LE-NEXT:    xvminsp vs1, v2, v6
-; PWR9LE-NEXT:    xvminsp vs2, v5, v9
-; PWR9LE-NEXT:    xvminsp vs3, v3, v7
-; PWR9LE-NEXT:    xvminsp vs2, vs3, vs2
-; PWR9LE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR9LE-NEXT:    xvminsp vs0, vs0, vs2
-; PWR9LE-NEXT:    xxswapd v2, vs0
-; PWR9LE-NEXT:    xvminsp vs0, vs0, v2
+; PWR9LE-NEXT:    xvcmpgtsp vs0, v9, v5
+; PWR9LE-NEXT:    xvcmpgtsp vs1, v7, v3
+; PWR9LE-NEXT:    xvcmpgtsp vs2, v8, v4
+; PWR9LE-NEXT:    xvcmpgtsp vs3, v6, v2
+; PWR9LE-NEXT:    xxsel vs3, v6, v2, vs3
+; PWR9LE-NEXT:    xxsel vs2, v8, v4, vs2
+; PWR9LE-NEXT:    xxsel vs1, v7, v3, vs1
+; PWR9LE-NEXT:    xxsel vs0, v9, v5, vs0
+; PWR9LE-NEXT:    xvcmpgtsp vs4, vs0, vs1
+; PWR9LE-NEXT:    xvcmpgtsp vs5, vs2, vs3
+; PWR9LE-NEXT:    xxsel vs2, vs2, vs3, vs5
+; PWR9LE-NEXT:    xxsel vs0, vs0, vs1, vs4
+; PWR9LE-NEXT:    xvcmpgtsp vs1, vs0, vs2
+; PWR9LE-NEXT:    xxsel vs0, vs0, vs2, vs1
+; PWR9LE-NEXT:    xxswapd vs1, vs0
+; PWR9LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9LE-NEXT:    xxspltw vs1, vs0, 2
-; PWR9LE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR9LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9LE-NEXT:    xxsldwi vs0, vs0, vs0, 3
 ; PWR9LE-NEXT:    xscvspdpn f1, vs0
 ; PWR9LE-NEXT:    blr
 ;
 ; PWR9BE-LABEL: v32f32_fast:
 ; PWR9BE:       # %bb.0: # %entry
-; PWR9BE-NEXT:    xvminsp vs0, v4, v8
-; PWR9BE-NEXT:    xvminsp vs1, v2, v6
-; PWR9BE-NEXT:    xvminsp vs2, v5, v9
-; PWR9BE-NEXT:    xvminsp vs3, v3, v7
-; PWR9BE-NEXT:    xvminsp vs2, vs3, vs2
-; PWR9BE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR9BE-NEXT:    xvminsp vs0, vs0, vs2
-; PWR9BE-NEXT:    xxswapd v2, vs0
-; PWR9BE-NEXT:    xvminsp vs0, vs0, v2
+; PWR9BE-NEXT:    xvcmpgtsp vs0, v9, v5
+; PWR9BE-NEXT:    xvcmpgtsp vs1, v7, v3
+; PWR9BE-NEXT:    xvcmpgtsp vs2, v8, v4
+; PWR9BE-NEXT:    xvcmpgtsp vs3, v6, v2
+; PWR9BE-NEXT:    xxsel vs3, v6, v2, vs3
+; PWR9BE-NEXT:    xxsel vs2, v8, v4, vs2
+; PWR9BE-NEXT:    xxsel vs1, v7, v3, vs1
+; PWR9BE-NEXT:    xxsel vs0, v9, v5, vs0
+; PWR9BE-NEXT:    xvcmpgtsp vs4, vs0, vs1
+; PWR9BE-NEXT:    xvcmpgtsp vs5, vs2, vs3
+; PWR9BE-NEXT:    xxsel vs2, vs2, vs3, vs5
+; PWR9BE-NEXT:    xxsel vs0, vs0, vs1, vs4
+; PWR9BE-NEXT:    xvcmpgtsp vs1, vs0, vs2
+; PWR9BE-NEXT:    xxsel vs0, vs0, vs2, vs1
+; PWR9BE-NEXT:    xxswapd vs1, vs0
+; PWR9BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9BE-NEXT:    xxspltw vs1, vs0, 1
-; PWR9BE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR9BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR9BE-NEXT:    xscvspdpn f1, vs0
 ; PWR9BE-NEXT:    blr
 ;
 ; PWR10LE-LABEL: v32f32_fast:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    xvminsp vs0, v4, v8
-; PWR10LE-NEXT:    xvminsp vs1, v2, v6
-; PWR10LE-NEXT:    xvminsp vs2, v5, v9
-; PWR10LE-NEXT:    xvminsp vs3, v3, v7
-; PWR10LE-NEXT:    xvminsp vs2, vs3, vs2
-; PWR10LE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR10LE-NEXT:    xvminsp vs0, vs0, vs2
-; PWR10LE-NEXT:    xxswapd v2, vs0
-; PWR10LE-NEXT:    xvminsp vs0, vs0, v2
+; PWR10LE-NEXT:    xvcmpgtsp vs0, v9, v5
+; PWR10LE-NEXT:    xvcmpgtsp vs1, v7, v3
+; PWR10LE-NEXT:    xvcmpgtsp vs2, v8, v4
+; PWR10LE-NEXT:    xvcmpgtsp vs3, v6, v2
+; PWR10LE-NEXT:    xxsel vs3, v6, v2, vs3
+; PWR10LE-NEXT:    xxsel vs2, v8, v4, vs2
+; PWR10LE-NEXT:    xxsel vs1, v7, v3, vs1
+; PWR10LE-NEXT:    xxsel vs0, v9, v5, vs0
+; PWR10LE-NEXT:    xvcmpgtsp vs4, vs0, vs1
+; PWR10LE-NEXT:    xvcmpgtsp vs5, vs2, vs3
+; PWR10LE-NEXT:    xxsel vs2, vs2, vs3, vs5
+; PWR10LE-NEXT:    xxsel vs0, vs0, vs1, vs4
+; PWR10LE-NEXT:    xvcmpgtsp vs1, vs0, vs2
+; PWR10LE-NEXT:    xxsel vs0, vs0, vs2, vs1
+; PWR10LE-NEXT:    xxswapd vs1, vs0
+; PWR10LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10LE-NEXT:    xxspltw vs1, vs0, 2
-; PWR10LE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR10LE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10LE-NEXT:    xxsldwi vs0, vs0, vs0, 3
 ; PWR10LE-NEXT:    xscvspdpn f1, vs0
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v32f32_fast:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    xvminsp vs0, v4, v8
-; PWR10BE-NEXT:    xvminsp vs1, v2, v6
-; PWR10BE-NEXT:    xvminsp vs2, v5, v9
-; PWR10BE-NEXT:    xvminsp vs3, v3, v7
-; PWR10BE-NEXT:    xvminsp vs2, vs3, vs2
-; PWR10BE-NEXT:    xvminsp vs0, vs1, vs0
-; PWR10BE-NEXT:    xvminsp vs0, vs0, vs2
-; PWR10BE-NEXT:    xxswapd v2, vs0
-; PWR10BE-NEXT:    xvminsp vs0, vs0, v2
+; PWR10BE-NEXT:    xvcmpgtsp vs0, v9, v5
+; PWR10BE-NEXT:    xvcmpgtsp vs1, v7, v3
+; PWR10BE-NEXT:    xvcmpgtsp vs2, v8, v4
+; PWR10BE-NEXT:    xvcmpgtsp vs3, v6, v2
+; PWR10BE-NEXT:    xxsel vs3, v6, v2, vs3
+; PWR10BE-NEXT:    xxsel vs2, v8, v4, vs2
+; PWR10BE-NEXT:    xxsel vs1, v7, v3, vs1
+; PWR10BE-NEXT:    xxsel vs0, v9, v5, vs0
+; PWR10BE-NEXT:    xvcmpgtsp vs4, vs0, vs1
+; PWR10BE-NEXT:    xvcmpgtsp vs5, vs2, vs3
+; PWR10BE-NEXT:    xxsel vs2, vs2, vs3, vs5
+; PWR10BE-NEXT:    xxsel vs0, vs0, vs1, vs4
+; PWR10BE-NEXT:    xvcmpgtsp vs1, vs0, vs2
+; PWR10BE-NEXT:    xxsel vs0, vs0, vs2, vs1
+; PWR10BE-NEXT:    xxswapd vs1, vs0
+; PWR10BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10BE-NEXT:    xxspltw vs1, vs0, 1
-; PWR10BE-NEXT:    xvminsp vs0, vs0, vs1
+; PWR10BE-NEXT:    xvcmpgtsp vs2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, vs2
 ; PWR10BE-NEXT:    xscvspdpn f1, vs0
 ; PWR10BE-NEXT:    blr
 entry:
@@ -780,43 +836,59 @@ entry:
 define dso_local double @v8f64_fast(<8 x double> %a) local_unnamed_addr #0 {
 ; PWR9LE-LABEL: v8f64_fast:
 ; PWR9LE:       # %bb.0: # %entry
-; PWR9LE-NEXT:    xvmindp vs0, v3, v5
-; PWR9LE-NEXT:    xvmindp vs1, v2, v4
-; PWR9LE-NEXT:    xvmindp vs0, vs1, vs0
+; PWR9LE-NEXT:    xvcmpgtdp v0, v5, v3
+; PWR9LE-NEXT:    xvcmpgtdp v1, v4, v2
+; PWR9LE-NEXT:    xxsel vs0, v4, v2, v1
+; PWR9LE-NEXT:    xxsel vs1, v5, v3, v0
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9LE-NEXT:    xxswapd vs1, vs0
-; PWR9LE-NEXT:    xvmindp vs0, vs0, vs1
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9LE-NEXT:    xxswapd vs1, vs0
 ; PWR9LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR9LE-NEXT:    blr
 ;
 ; PWR9BE-LABEL: v8f64_fast:
 ; PWR9BE:       # %bb.0: # %entry
-; PWR9BE-NEXT:    xvmindp vs0, v3, v5
-; PWR9BE-NEXT:    xvmindp vs1, v2, v4
-; PWR9BE-NEXT:    xvmindp vs0, vs1, vs0
+; PWR9BE-NEXT:    xvcmpgtdp v0, v5, v3
+; PWR9BE-NEXT:    xvcmpgtdp v1, v4, v2
+; PWR9BE-NEXT:    xxsel vs0, v4, v2, v1
+; PWR9BE-NEXT:    xxsel vs1, v5, v3, v0
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9BE-NEXT:    xxswapd vs1, vs0
-; PWR9BE-NEXT:    xvmindp vs1, vs0, vs1
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs1, vs1, vs0, v2
 ; PWR9BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR9BE-NEXT:    blr
 ;
 ; PWR10LE-LABEL: v8f64_fast:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    xvmindp vs0, v3, v5
-; PWR10LE-NEXT:    xvmindp vs1, v2, v4
-; PWR10LE-NEXT:    xvmindp vs0, vs1, vs0
+; PWR10LE-NEXT:    xvcmpgtdp v0, v5, v3
+; PWR10LE-NEXT:    xvcmpgtdp v1, v4, v2
+; PWR10LE-NEXT:    xxsel vs0, v4, v2, v1
+; PWR10LE-NEXT:    xxsel vs1, v5, v3, v0
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10LE-NEXT:    xxswapd vs1, vs0
-; PWR10LE-NEXT:    xvmindp vs0, vs0, vs1
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10LE-NEXT:    xxswapd vs1, vs0
 ; PWR10LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v8f64_fast:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    xvmindp vs0, v3, v5
-; PWR10BE-NEXT:    xvmindp vs1, v2, v4
-; PWR10BE-NEXT:    xvmindp vs0, vs1, vs0
+; PWR10BE-NEXT:    xvcmpgtdp v0, v5, v3
+; PWR10BE-NEXT:    xvcmpgtdp v1, v4, v2
+; PWR10BE-NEXT:    xxsel vs0, v4, v2, v1
+; PWR10BE-NEXT:    xxsel vs1, v5, v3, v0
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10BE-NEXT:    xxswapd vs1, vs0
-; PWR10BE-NEXT:    xvmindp vs1, vs0, vs1
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs1, vs1, vs0, v2
 ; PWR10BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR10BE-NEXT:    blr
 entry:
@@ -884,59 +956,91 @@ entry:
 define dso_local double @v16f64_fast(<16 x double> %a) local_unnamed_addr #0 {
 ; PWR9LE-LABEL: v16f64_fast:
 ; PWR9LE:       # %bb.0: # %entry
-; PWR9LE-NEXT:    xvmindp vs0, v4, v8
-; PWR9LE-NEXT:    xvmindp vs1, v2, v6
-; PWR9LE-NEXT:    xvmindp vs2, v5, v9
-; PWR9LE-NEXT:    xvmindp vs3, v3, v7
-; PWR9LE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR9LE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR9LE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR9LE-NEXT:    xvcmpgtdp v0, v9, v5
+; PWR9LE-NEXT:    xvcmpgtdp v1, v7, v3
+; PWR9LE-NEXT:    xvcmpgtdp v10, v8, v4
+; PWR9LE-NEXT:    xvcmpgtdp v11, v6, v2
+; PWR9LE-NEXT:    xxsel vs0, v6, v2, v11
+; PWR9LE-NEXT:    xxsel vs1, v8, v4, v10
+; PWR9LE-NEXT:    xxsel vs2, v7, v3, v1
+; PWR9LE-NEXT:    xxsel vs3, v9, v5, v0
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR9LE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR9LE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9LE-NEXT:    xxswapd vs1, vs0
-; PWR9LE-NEXT:    xvmindp vs0, vs0, vs1
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9LE-NEXT:    xxswapd vs1, vs0
 ; PWR9LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR9LE-NEXT:    blr
 ;
 ; PWR9BE-LABEL: v16f64_fast:
 ; PWR9BE:       # %bb.0: # %entry
-; PWR9BE-NEXT:    xvmindp vs0, v4, v8
-; PWR9BE-NEXT:    xvmindp vs1, v2, v6
-; PWR9BE-NEXT:    xvmindp vs2, v5, v9
-; PWR9BE-NEXT:    xvmindp vs3, v3, v7
-; PWR9BE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR9BE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR9BE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR9BE-NEXT:    xvcmpgtdp v0, v9, v5
+; PWR9BE-NEXT:    xvcmpgtdp v1, v7, v3
+; PWR9BE-NEXT:    xvcmpgtdp v10, v8, v4
+; PWR9BE-NEXT:    xvcmpgtdp v11, v6, v2
+; PWR9BE-NEXT:    xxsel vs0, v6, v2, v11
+; PWR9BE-NEXT:    xxsel vs1, v8, v4, v10
+; PWR9BE-NEXT:    xxsel vs2, v7, v3, v1
+; PWR9BE-NEXT:    xxsel vs3, v9, v5, v0
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR9BE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR9BE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9BE-NEXT:    xxswapd vs1, vs0
-; PWR9BE-NEXT:    xvmindp vs1, vs0, vs1
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs1, vs1, vs0, v2
 ; PWR9BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR9BE-NEXT:    blr
 ;
 ; PWR10LE-LABEL: v16f64_fast:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    xvmindp vs0, v4, v8
-; PWR10LE-NEXT:    xvmindp vs1, v2, v6
-; PWR10LE-NEXT:    xvmindp vs2, v5, v9
-; PWR10LE-NEXT:    xvmindp vs3, v3, v7
-; PWR10LE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR10LE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR10LE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR10LE-NEXT:    xvcmpgtdp v0, v9, v5
+; PWR10LE-NEXT:    xvcmpgtdp v1, v7, v3
+; PWR10LE-NEXT:    xvcmpgtdp v10, v8, v4
+; PWR10LE-NEXT:    xvcmpgtdp v11, v6, v2
+; PWR10LE-NEXT:    xxsel vs0, v6, v2, v11
+; PWR10LE-NEXT:    xxsel vs1, v8, v4, v10
+; PWR10LE-NEXT:    xxsel vs2, v7, v3, v1
+; PWR10LE-NEXT:    xxsel vs3, v9, v5, v0
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR10LE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR10LE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10LE-NEXT:    xxswapd vs1, vs0
-; PWR10LE-NEXT:    xvmindp vs0, vs0, vs1
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10LE-NEXT:    xxswapd vs1, vs0
 ; PWR10LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v16f64_fast:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    xvmindp vs0, v4, v8
-; PWR10BE-NEXT:    xvmindp vs1, v2, v6
-; PWR10BE-NEXT:    xvmindp vs2, v5, v9
-; PWR10BE-NEXT:    xvmindp vs3, v3, v7
-; PWR10BE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR10BE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR10BE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR10BE-NEXT:    xvcmpgtdp v0, v9, v5
+; PWR10BE-NEXT:    xvcmpgtdp v1, v7, v3
+; PWR10BE-NEXT:    xvcmpgtdp v10, v8, v4
+; PWR10BE-NEXT:    xvcmpgtdp v11, v6, v2
+; PWR10BE-NEXT:    xxsel vs0, v6, v2, v11
+; PWR10BE-NEXT:    xxsel vs1, v8, v4, v10
+; PWR10BE-NEXT:    xxsel vs2, v7, v3, v1
+; PWR10BE-NEXT:    xxsel vs3, v9, v5, v0
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR10BE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR10BE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10BE-NEXT:    xxswapd vs1, vs0
-; PWR10BE-NEXT:    xvmindp vs1, vs0, vs1
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs1, vs1, vs0, v2
 ; PWR10BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR10BE-NEXT:    blr
 entry:
@@ -1052,107 +1156,171 @@ entry:
 define dso_local double @v32f64_fast(<32 x double> %a) local_unnamed_addr #0 {
 ; PWR9LE-LABEL: v32f64_fast:
 ; PWR9LE:       # %bb.0: # %entry
-; PWR9LE-NEXT:    lxv vs0, 256(r1)
-; PWR9LE-NEXT:    lxv vs1, 224(r1)
-; PWR9LE-NEXT:    lxv vs2, 272(r1)
-; PWR9LE-NEXT:    lxv vs3, 240(r1)
-; PWR9LE-NEXT:    xvmindp vs4, v3, v11
-; PWR9LE-NEXT:    xvmindp vs5, v5, v13
-; PWR9LE-NEXT:    xvmindp vs6, v2, v10
-; PWR9LE-NEXT:    xvmindp vs7, v4, v12
-; PWR9LE-NEXT:    xvmindp vs3, v7, vs3
-; PWR9LE-NEXT:    xvmindp vs2, v9, vs2
-; PWR9LE-NEXT:    xvmindp vs1, v6, vs1
-; PWR9LE-NEXT:    xvmindp vs0, v8, vs0
-; PWR9LE-NEXT:    xvmindp vs0, vs7, vs0
-; PWR9LE-NEXT:    xvmindp vs1, vs6, vs1
-; PWR9LE-NEXT:    xvmindp vs2, vs5, vs2
-; PWR9LE-NEXT:    xvmindp vs3, vs4, vs3
-; PWR9LE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR9LE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR9LE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR9LE-NEXT:    lxv vs0, 224(r1)
+; PWR9LE-NEXT:    lxv vs1, 256(r1)
+; PWR9LE-NEXT:    lxv vs2, 240(r1)
+; PWR9LE-NEXT:    lxv vs3, 272(r1)
+; PWR9LE-NEXT:    xvcmpgtdp v1, v13, v5
+; PWR9LE-NEXT:    xvcmpgtdp v15, v11, v3
+; PWR9LE-NEXT:    xvcmpgtdp v17, v12, v4
+; PWR9LE-NEXT:    xvcmpgtdp v19, v10, v2
+; PWR9LE-NEXT:    xxsel vs4, v10, v2, v19
+; PWR9LE-NEXT:    xxsel vs5, v12, v4, v17
+; PWR9LE-NEXT:    xxsel vs6, v11, v3, v15
+; PWR9LE-NEXT:    xxsel vs7, v13, v5, v1
+; PWR9LE-NEXT:    xvcmpgtdp v0, vs3, v9
+; PWR9LE-NEXT:    xvcmpgtdp v14, vs2, v7
+; PWR9LE-NEXT:    xvcmpgtdp v16, vs1, v8
+; PWR9LE-NEXT:    xvcmpgtdp v18, vs0, v6
+; PWR9LE-NEXT:    xxsel vs0, vs0, v6, v18
+; PWR9LE-NEXT:    xxsel vs1, vs1, v8, v16
+; PWR9LE-NEXT:    xxsel vs2, vs2, v7, v14
+; PWR9LE-NEXT:    xxsel vs3, vs3, v9, v0
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs3, vs7
+; PWR9LE-NEXT:    xvcmpgtdp v3, vs2, vs6
+; PWR9LE-NEXT:    xvcmpgtdp v4, vs1, vs5
+; PWR9LE-NEXT:    xvcmpgtdp v5, vs0, vs4
+; PWR9LE-NEXT:    xxsel vs0, vs0, vs4, v5
+; PWR9LE-NEXT:    xxsel vs1, vs1, vs5, v4
+; PWR9LE-NEXT:    xxsel vs2, vs2, vs6, v3
+; PWR9LE-NEXT:    xxsel vs3, vs3, vs7, v2
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR9LE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR9LE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9LE-NEXT:    xxswapd vs1, vs0
-; PWR9LE-NEXT:    xvmindp vs0, vs0, vs1
+; PWR9LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9LE-NEXT:    xxswapd vs1, vs0
 ; PWR9LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR9LE-NEXT:    blr
 ;
 ; PWR9BE-LABEL: v32f64_fast:
 ; PWR9BE:       # %bb.0: # %entry
-; PWR9BE-NEXT:    lxv vs0, 272(r1)
-; PWR9BE-NEXT:    lxv vs1, 240(r1)
-; PWR9BE-NEXT:    lxv vs2, 288(r1)
-; PWR9BE-NEXT:    lxv vs3, 256(r1)
-; PWR9BE-NEXT:    xvmindp vs4, v3, v11
-; PWR9BE-NEXT:    xvmindp vs5, v5, v13
-; PWR9BE-NEXT:    xvmindp vs6, v2, v10
-; PWR9BE-NEXT:    xvmindp vs7, v4, v12
-; PWR9BE-NEXT:    xvmindp vs3, v7, vs3
-; PWR9BE-NEXT:    xvmindp vs2, v9, vs2
-; PWR9BE-NEXT:    xvmindp vs1, v6, vs1
-; PWR9BE-NEXT:    xvmindp vs0, v8, vs0
-; PWR9BE-NEXT:    xvmindp vs0, vs7, vs0
-; PWR9BE-NEXT:    xvmindp vs1, vs6, vs1
-; PWR9BE-NEXT:    xvmindp vs2, vs5, vs2
-; PWR9BE-NEXT:    xvmindp vs3, vs4, vs3
-; PWR9BE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR9BE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR9BE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR9BE-NEXT:    lxv vs0, 240(r1)
+; PWR9BE-NEXT:    lxv vs1, 272(r1)
+; PWR9BE-NEXT:    lxv vs2, 256(r1)
+; PWR9BE-NEXT:    lxv vs3, 288(r1)
+; PWR9BE-NEXT:    xvcmpgtdp v1, v13, v5
+; PWR9BE-NEXT:    xvcmpgtdp v15, v11, v3
+; PWR9BE-NEXT:    xvcmpgtdp v17, v12, v4
+; PWR9BE-NEXT:    xvcmpgtdp v19, v10, v2
+; PWR9BE-NEXT:    xxsel vs4, v10, v2, v19
+; PWR9BE-NEXT:    xxsel vs5, v12, v4, v17
+; PWR9BE-NEXT:    xxsel vs6, v11, v3, v15
+; PWR9BE-NEXT:    xxsel vs7, v13, v5, v1
+; PWR9BE-NEXT:    xvcmpgtdp v0, vs3, v9
+; PWR9BE-NEXT:    xvcmpgtdp v14, vs2, v7
+; PWR9BE-NEXT:    xvcmpgtdp v16, vs1, v8
+; PWR9BE-NEXT:    xvcmpgtdp v18, vs0, v6
+; PWR9BE-NEXT:    xxsel vs0, vs0, v6, v18
+; PWR9BE-NEXT:    xxsel vs1, vs1, v8, v16
+; PWR9BE-NEXT:    xxsel vs2, vs2, v7, v14
+; PWR9BE-NEXT:    xxsel vs3, vs3, v9, v0
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs3, vs7
+; PWR9BE-NEXT:    xvcmpgtdp v3, vs2, vs6
+; PWR9BE-NEXT:    xvcmpgtdp v4, vs1, vs5
+; PWR9BE-NEXT:    xvcmpgtdp v5, vs0, vs4
+; PWR9BE-NEXT:    xxsel vs0, vs0, vs4, v5
+; PWR9BE-NEXT:    xxsel vs1, vs1, vs5, v4
+; PWR9BE-NEXT:    xxsel vs2, vs2, vs6, v3
+; PWR9BE-NEXT:    xxsel vs3, vs3, vs7, v2
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR9BE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR9BE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR9BE-NEXT:    xxswapd vs1, vs0
-; PWR9BE-NEXT:    xvmindp vs1, vs0, vs1
+; PWR9BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR9BE-NEXT:    xxsel vs1, vs1, vs0, v2
 ; PWR9BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR9BE-NEXT:    blr
 ;
 ; PWR10LE-LABEL: v32f64_fast:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    lxv vs0, 256(r1)
-; PWR10LE-NEXT:    lxv vs1, 224(r1)
-; PWR10LE-NEXT:    xvmindp vs4, v3, v11
-; PWR10LE-NEXT:    xvmindp vs5, v5, v13
-; PWR10LE-NEXT:    xvmindp vs6, v2, v10
-; PWR10LE-NEXT:    xvmindp vs7, v4, v12
-; PWR10LE-NEXT:    xvmindp vs1, v6, vs1
-; PWR10LE-NEXT:    lxv vs2, 272(r1)
-; PWR10LE-NEXT:    lxv vs3, 240(r1)
-; PWR10LE-NEXT:    xvmindp vs3, v7, vs3
-; PWR10LE-NEXT:    xvmindp vs2, v9, vs2
-; PWR10LE-NEXT:    xvmindp vs0, v8, vs0
-; PWR10LE-NEXT:    xvmindp vs0, vs7, vs0
-; PWR10LE-NEXT:    xvmindp vs1, vs6, vs1
-; PWR10LE-NEXT:    xvmindp vs2, vs5, vs2
-; PWR10LE-NEXT:    xvmindp vs3, vs4, vs3
-; PWR10LE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR10LE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR10LE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR10LE-NEXT:    lxv vs0, 224(r1)
+; PWR10LE-NEXT:    lxv vs1, 256(r1)
+; PWR10LE-NEXT:    xvcmpgtdp v1, v13, v5
+; PWR10LE-NEXT:    xvcmpgtdp v15, v11, v3
+; PWR10LE-NEXT:    xvcmpgtdp v17, v12, v4
+; PWR10LE-NEXT:    xvcmpgtdp v19, v10, v2
+; PWR10LE-NEXT:    xxsel vs4, v10, v2, v19
+; PWR10LE-NEXT:    lxv vs2, 240(r1)
+; PWR10LE-NEXT:    lxv vs3, 272(r1)
+; PWR10LE-NEXT:    xxsel vs5, v12, v4, v17
+; PWR10LE-NEXT:    xxsel vs6, v11, v3, v15
+; PWR10LE-NEXT:    xxsel vs7, v13, v5, v1
+; PWR10LE-NEXT:    xvcmpgtdp v0, vs3, v9
+; PWR10LE-NEXT:    xvcmpgtdp v14, vs2, v7
+; PWR10LE-NEXT:    xvcmpgtdp v16, vs1, v8
+; PWR10LE-NEXT:    xvcmpgtdp v18, vs0, v6
+; PWR10LE-NEXT:    xxsel vs0, vs0, v6, v18
+; PWR10LE-NEXT:    xxsel vs1, vs1, v8, v16
+; PWR10LE-NEXT:    xxsel vs2, vs2, v7, v14
+; PWR10LE-NEXT:    xxsel vs3, vs3, v9, v0
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs3, vs7
+; PWR10LE-NEXT:    xvcmpgtdp v3, vs2, vs6
+; PWR10LE-NEXT:    xvcmpgtdp v4, vs1, vs5
+; PWR10LE-NEXT:    xvcmpgtdp v5, vs0, vs4
+; PWR10LE-NEXT:    xxsel vs0, vs0, vs4, v5
+; PWR10LE-NEXT:    xxsel vs1, vs1, vs5, v4
+; PWR10LE-NEXT:    xxsel vs2, vs2, vs6, v3
+; PWR10LE-NEXT:    xxsel vs3, vs3, vs7, v2
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR10LE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR10LE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10LE-NEXT:    xxswapd vs1, vs0
-; PWR10LE-NEXT:    xvmindp vs0, vs0, vs1
+; PWR10LE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10LE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10LE-NEXT:    xxswapd vs1, vs0
 ; PWR10LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v32f64_fast:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    lxv vs0, 272(r1)
-; PWR10BE-NEXT:    lxv vs1, 240(r1)
-; PWR10BE-NEXT:    xvmindp vs4, v3, v11
-; PWR10BE-NEXT:    xvmindp vs5, v5, v13
-; PWR10BE-NEXT:    xvmindp vs6, v2, v10
-; PWR10BE-NEXT:    xvmindp vs7, v4, v12
-; PWR10BE-NEXT:    xvmindp vs1, v6, vs1
-; PWR10BE-NEXT:    lxv vs2, 288(r1)
-; PWR10BE-NEXT:    lxv vs3, 256(r1)
-; PWR10BE-NEXT:    xvmindp vs3, v7, vs3
-; PWR10BE-NEXT:    xvmindp vs2, v9, vs2
-; PWR10BE-NEXT:    xvmindp vs0, v8, vs0
-; PWR10BE-NEXT:    xvmindp vs0, vs7, vs0
-; PWR10BE-NEXT:    xvmindp vs1, vs6, vs1
-; PWR10BE-NEXT:    xvmindp vs2, vs5, vs2
-; PWR10BE-NEXT:    xvmindp vs3, vs4, vs3
-; PWR10BE-NEXT:    xvmindp vs2, vs3, vs2
-; PWR10BE-NEXT:    xvmindp vs0, vs1, vs0
-; PWR10BE-NEXT:    xvmindp vs0, vs0, vs2
+; PWR10BE-NEXT:    lxv vs0, 240(r1)
+; PWR10BE-NEXT:    lxv vs1, 272(r1)
+; PWR10BE-NEXT:    xvcmpgtdp v1, v13, v5
+; PWR10BE-NEXT:    xvcmpgtdp v15, v11, v3
+; PWR10BE-NEXT:    xvcmpgtdp v17, v12, v4
+; PWR10BE-NEXT:    xvcmpgtdp v19, v10, v2
+; PWR10BE-NEXT:    xxsel vs4, v10, v2, v19
+; PWR10BE-NEXT:    lxv vs2, 256(r1)
+; PWR10BE-NEXT:    lxv vs3, 288(r1)
+; PWR10BE-NEXT:    xxsel vs5, v12, v4, v17
+; PWR10BE-NEXT:    xxsel vs6, v11, v3, v15
+; PWR10BE-NEXT:    xxsel vs7, v13, v5, v1
+; PWR10BE-NEXT:    xvcmpgtdp v0, vs3, v9
+; PWR10BE-NEXT:    xvcmpgtdp v14, vs2, v7
+; PWR10BE-NEXT:    xvcmpgtdp v16, vs1, v8
+; PWR10BE-NEXT:    xvcmpgtdp v18, vs0, v6
+; PWR10BE-NEXT:    xxsel vs0, vs0, v6, v18
+; PWR10BE-NEXT:    xxsel vs1, vs1, v8, v16
+; PWR10BE-NEXT:    xxsel vs2, vs2, v7, v14
+; PWR10BE-NEXT:    xxsel vs3, vs3, v9, v0
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs3, vs7
+; PWR10BE-NEXT:    xvcmpgtdp v3, vs2, vs6
+; PWR10BE-NEXT:    xvcmpgtdp v4, vs1, vs5
+; PWR10BE-NEXT:    xvcmpgtdp v5, vs0, vs4
+; PWR10BE-NEXT:    xxsel vs0, vs0, vs4, v5
+; PWR10BE-NEXT:    xxsel vs1, vs1, vs5, v4
+; PWR10BE-NEXT:    xxsel vs2, vs2, vs6, v3
+; PWR10BE-NEXT:    xxsel vs3, vs3, vs7, v2
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs3, vs2
+; PWR10BE-NEXT:    xvcmpgtdp v3, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, v3
+; PWR10BE-NEXT:    xxsel vs1, vs3, vs2, v2
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs0, vs1, vs0, v2
 ; PWR10BE-NEXT:    xxswapd vs1, vs0
-; PWR10BE-NEXT:    xvmindp vs1, vs0, vs1
+; PWR10BE-NEXT:    xvcmpgtdp v2, vs1, vs0
+; PWR10BE-NEXT:    xxsel vs1, vs1, vs0, v2
 ; PWR10BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; PWR10BE-NEXT:    blr
 entry:

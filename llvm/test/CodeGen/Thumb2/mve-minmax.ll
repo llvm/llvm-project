@@ -247,15 +247,32 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @maxnm_float32_t(<4 x float> %src1, <4 x float> %src2) {
 ; CHECK-MVE-LABEL: maxnm_float32_t:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vmaxnm.f32 s3, s7, s3
-; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s6, s2
-; CHECK-MVE-NEXT:    vmaxnm.f32 s1, s5, s1
-; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s4, s0
+; CHECK-MVE-NEXT:    vcmp.f32 s5, s1
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    vcmp.f32 s4, s0
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    vcmp.f32 s7, s3
+; CHECK-MVE-NEXT:    cset r1, gt
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    vcmp.f32 s6, s2
+; CHECK-MVE-NEXT:    cset r2, gt
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    cset r3, gt
+; CHECK-MVE-NEXT:    cmp r2, #0
+; CHECK-MVE-NEXT:    vseleq.f32 s3, s3, s7
+; CHECK-MVE-NEXT:    cmp r3, #0
+; CHECK-MVE-NEXT:    vseleq.f32 s2, s2, s6
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f32 s1, s1, s5
+; CHECK-MVE-NEXT:    cmp r1, #0
+; CHECK-MVE-NEXT:    vseleq.f32 s0, s0, s4
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: maxnm_float32_t:
 ; CHECK-MVEFP:       @ %bb.0: @ %entry
-; CHECK-MVEFP-NEXT:    vmaxnm.f32 q0, q1, q0
+; CHECK-MVEFP-NEXT:    vcmp.f32 gt, q1, q0
+; CHECK-MVEFP-NEXT:    vpsel q0, q1, q0
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
   %cmp = fcmp fast ogt <4 x float> %src2, %src1
@@ -268,29 +285,62 @@ define arm_aapcs_vfpcc <8 x half> @minnm_float16_t(<8 x half> %src1, <8 x half> 
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s0
 ; CHECK-MVE-NEXT:    vmovx.f16 s10, s4
-; CHECK-MVE-NEXT:    vminnm.f16 s0, s4, s0
-; CHECK-MVE-NEXT:    vminnm.f16 s8, s10, s8
-; CHECK-MVE-NEXT:    vins.f16 s0, s8
+; CHECK-MVE-NEXT:    vcmp.f16 s10, s8
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    vcmp.f16 s4, s0
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s8, s10, s8
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
+; CHECK-MVE-NEXT:    vins.f16 s0, s8
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s5
-; CHECK-MVE-NEXT:    vminnm.f16 s1, s5, s1
-; CHECK-MVE-NEXT:    vminnm.f16 s4, s8, s4
+; CHECK-MVE-NEXT:    vcmp.f16 s8, s4
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    vcmp.f16 s5, s1
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s6
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s1, s5, s1
 ; CHECK-MVE-NEXT:    vins.f16 s1, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s2
-; CHECK-MVE-NEXT:    vminnm.f16 s2, s6, s2
-; CHECK-MVE-NEXT:    vminnm.f16 s4, s8, s4
+; CHECK-MVE-NEXT:    vcmp.f16 s8, s4
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    vcmp.f16 s6, s2
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s2, s6, s2
+; CHECK-MVE-NEXT:    vmovx.f16 s6, s7
 ; CHECK-MVE-NEXT:    vins.f16 s2, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s3
-; CHECK-MVE-NEXT:    vmovx.f16 s6, s7
-; CHECK-MVE-NEXT:    vminnm.f16 s3, s7, s3
-; CHECK-MVE-NEXT:    vminnm.f16 s4, s6, s4
+; CHECK-MVE-NEXT:    vcmp.f16 s6, s4
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    vcmp.f16 s7, s3
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s4, s6, s4
+; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-MVE-NEXT:    cset r0, gt
+; CHECK-MVE-NEXT:    cmp r0, #0
+; CHECK-MVE-NEXT:    vseleq.f16 s3, s7, s3
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: minnm_float16_t:
 ; CHECK-MVEFP:       @ %bb.0: @ %entry
-; CHECK-MVEFP-NEXT:    vminnm.f16 q0, q1, q0
+; CHECK-MVEFP-NEXT:    vcmp.f16 gt, q1, q0
+; CHECK-MVEFP-NEXT:    vpsel q0, q0, q1
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
   %cmp = fcmp fast ogt <8 x half> %src2, %src1

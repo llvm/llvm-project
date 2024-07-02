@@ -906,9 +906,11 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fcmp_fast_olt_v4f32_x(<4 x float> %x, <4 x float> %y, i32 %n) {
 ; CHECK-LABEL: fcmp_fast_olt_v4f32_x:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcmp.f32 gt, q1, q0
+; CHECK-NEXT:    vpsel q1, q0, q1
 ; CHECK-NEXT:    vctp.32 r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vminnmt.f32 q0, q0, q1
+; CHECK-NEXT:    vmovt q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
@@ -921,9 +923,11 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @fcmp_fast_olt_v8f16_x(<8 x half> %x, <8 x half> %y, i32 %n) {
 ; CHECK-LABEL: fcmp_fast_olt_v8f16_x:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcmp.f16 gt, q1, q0
+; CHECK-NEXT:    vpsel q1, q0, q1
 ; CHECK-NEXT:    vctp.16 r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vminnmt.f16 q0, q0, q1
+; CHECK-NEXT:    vmovt q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
@@ -936,9 +940,11 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fcmp_fast_ogt_v4f32_x(<4 x float> %x, <4 x float> %y, i32 %n) {
 ; CHECK-LABEL: fcmp_fast_ogt_v4f32_x:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcmp.f32 gt, q0, q1
+; CHECK-NEXT:    vpsel q1, q0, q1
 ; CHECK-NEXT:    vctp.32 r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmaxnmt.f32 q0, q0, q1
+; CHECK-NEXT:    vmovt q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
@@ -951,9 +957,11 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @fcmp_fast_ogt_v8f16_x(<8 x half> %x, <8 x half> %y, i32 %n) {
 ; CHECK-LABEL: fcmp_fast_ogt_v8f16_x:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcmp.f16 gt, q0, q1
+; CHECK-NEXT:    vpsel q1, q0, q1
 ; CHECK-NEXT:    vctp.16 r0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmaxnmt.f16 q0, q0, q1
+; CHECK-NEXT:    vmovt q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)

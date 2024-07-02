@@ -1410,9 +1410,9 @@ define void @pr65820(ptr %y, <4 x float> %splat) {
 ; ARMV8-LABEL: pr65820:
 ; ARMV8:       @ %bb.0: @ %entry
 ; ARMV8-NEXT:    vmov d16, r2, r3
-; ARMV8-NEXT:    vmov.i32 q9, #0x0
 ; ARMV8-NEXT:    vdup.32 q8, d16[0]
-; ARMV8-NEXT:    vmaxnm.f32 q8, q8, q9
+; ARMV8-NEXT:    vcgt.f32 q9, q8, #0
+; ARMV8-NEXT:    vand q8, q8, q9
 ; ARMV8-NEXT:    vst1.32 {d16, d17}, [r0]
 ; ARMV8-NEXT:    bx lr
 ;
@@ -1422,7 +1422,8 @@ define void @pr65820(ptr %y, <4 x float> %splat) {
 ; ARMV8M-NEXT:    vmov r1, s0
 ; ARMV8M-NEXT:    vmov.i32 q0, #0x0
 ; ARMV8M-NEXT:    vdup.32 q1, r1
-; ARMV8M-NEXT:    vmaxnm.f32 q0, q1, q0
+; ARMV8M-NEXT:    vcmp.f32 gt, q1, zr
+; ARMV8M-NEXT:    vdupt.32 q0, r1
 ; ARMV8M-NEXT:    vstrw.32 q0, [r0]
 ; ARMV8M-NEXT:    bx lr
 entry:

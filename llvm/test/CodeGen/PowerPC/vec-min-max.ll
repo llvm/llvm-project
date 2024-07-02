@@ -91,12 +91,14 @@ entry:
 define <4 x float> @getsmaxf32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: getsmaxf32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxsp 34, 34, 35
+; CHECK-NEXT:    xvcmpgesp 0, 34, 35
+; CHECK-NEXT:    xxsel 34, 35, 34, 0
 ; CHECK-NEXT:    blr
 ;
 ; NOP8VEC-LABEL: getsmaxf32:
 ; NOP8VEC:       # %bb.0: # %entry
-; NOP8VEC-NEXT:    xvmaxsp 34, 34, 35
+; NOP8VEC-NEXT:    xvcmpgesp 0, 34, 35
+; NOP8VEC-NEXT:    xxsel 34, 35, 34, 0
 ; NOP8VEC-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz oge <4 x float> %a, %b
@@ -107,12 +109,14 @@ entry:
 define <2 x double> @getsmaxf64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: getsmaxf64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxdp 34, 34, 35
+; CHECK-NEXT:    xvcmpgedp 36, 34, 35
+; CHECK-NEXT:    xxsel 34, 35, 34, 36
 ; CHECK-NEXT:    blr
 ;
 ; NOP8VEC-LABEL: getsmaxf64:
 ; NOP8VEC:       # %bb.0: # %entry
-; NOP8VEC-NEXT:    xvmaxdp 34, 34, 35
+; NOP8VEC-NEXT:    xvcmpgedp 0, 34, 35
+; NOP8VEC-NEXT:    xxsel 34, 35, 34, 0
 ; NOP8VEC-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz oge <2 x double> %a, %b
@@ -208,12 +212,14 @@ entry:
 define <4 x float> @getsminf32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: getsminf32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvminsp 34, 34, 35
+; CHECK-NEXT:    xvcmpgesp 0, 35, 34
+; CHECK-NEXT:    xxsel 34, 35, 34, 0
 ; CHECK-NEXT:    blr
 ;
 ; NOP8VEC-LABEL: getsminf32:
 ; NOP8VEC:       # %bb.0: # %entry
-; NOP8VEC-NEXT:    xvminsp 34, 34, 35
+; NOP8VEC-NEXT:    xvcmpgesp 0, 35, 34
+; NOP8VEC-NEXT:    xxsel 34, 35, 34, 0
 ; NOP8VEC-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz ole <4 x float> %a, %b
@@ -224,12 +230,14 @@ entry:
 define <2 x double> @getsminf64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: getsminf64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmindp 34, 34, 35
+; CHECK-NEXT:    xvcmpgedp 36, 35, 34
+; CHECK-NEXT:    xxsel 34, 35, 34, 36
 ; CHECK-NEXT:    blr
 ;
 ; NOP8VEC-LABEL: getsminf64:
 ; NOP8VEC:       # %bb.0: # %entry
-; NOP8VEC-NEXT:    xvmindp 34, 34, 35
+; NOP8VEC-NEXT:    xvcmpgedp 0, 35, 34
+; NOP8VEC-NEXT:    xxsel 34, 35, 34, 0
 ; NOP8VEC-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz ole <2 x double> %a, %b

@@ -741,8 +741,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fcmp_fast_olt_v4f32(<4 x float> %z, <4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: fcmp_fast_olt_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.f32 eq, q0, zr
-; CHECK-NEXT:    vminnmt.f32 q0, q1, q2
+; CHECK-NEXT:    vcmp.f32 gt, q2, q1
+; CHECK-NEXT:    vpsel q1, q1, q2
+; CHECK-NEXT:    vcmp.f32 eq, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp oeq <4 x float> %z, zeroinitializer
@@ -755,8 +757,10 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @fcmp_fast_olt_v8f16(<8 x half> %z, <8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fcmp_fast_olt_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.f16 eq, q0, zr
-; CHECK-NEXT:    vminnmt.f16 q0, q1, q2
+; CHECK-NEXT:    vcmp.f16 gt, q2, q1
+; CHECK-NEXT:    vpsel q1, q1, q2
+; CHECK-NEXT:    vcmp.f16 eq, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp oeq <8 x half> %z, zeroinitializer
@@ -769,8 +773,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fcmp_fast_ogt_v4f32(<4 x float> %z, <4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: fcmp_fast_ogt_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.f32 eq, q0, zr
-; CHECK-NEXT:    vmaxnmt.f32 q0, q1, q2
+; CHECK-NEXT:    vcmp.f32 gt, q1, q2
+; CHECK-NEXT:    vpsel q1, q1, q2
+; CHECK-NEXT:    vcmp.f32 eq, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp oeq <4 x float> %z, zeroinitializer
@@ -783,8 +789,10 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @fcmp_fast_ogt_v8f16(<8 x half> %z, <8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fcmp_fast_ogt_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.f16 eq, q0, zr
-; CHECK-NEXT:    vmaxnmt.f16 q0, q1, q2
+; CHECK-NEXT:    vcmp.f16 gt, q1, q2
+; CHECK-NEXT:    vpsel q1, q1, q2
+; CHECK-NEXT:    vcmp.f16 eq, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp oeq <8 x half> %z, zeroinitializer

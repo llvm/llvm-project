@@ -1016,7 +1016,10 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; VI-SDAG-NEXT:    v_add_f32_e32 v2, 1.0, v3
-; VI-SDAG-NEXT:    v_med3_f32 v2, v2, 2.0, 4.0
+; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v2
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 2.0, v2, vcc
+; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, 4.0, v2
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 4.0, v2, vcc
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; VI-SDAG-NEXT:    s_endpgm
 ;
@@ -1051,7 +1054,10 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
 ; GFX9-SDAG-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    v_add_f32_e32 v1, 1.0, v1
-; GFX9-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; GFX9-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v1
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, 2.0, v1, vcc
+; GFX9-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, 4.0, v1
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, 4.0, v1, vcc
 ; GFX9-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
@@ -1078,8 +1084,11 @@ define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(ptr addrspace(1) %out, 
 ; GFX11-SDAG-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_f32_e32 v1, 1.0, v1
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v1
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e32 v1, 2.0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 4.0, v1
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e32 v1, 4.0, v1, vcc_lo
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

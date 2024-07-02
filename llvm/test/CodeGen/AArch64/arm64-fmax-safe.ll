@@ -23,7 +23,7 @@ define double @test_cross(float %in) {
 }
 
 ; Same as previous, but with ordered comparison;
-; must become fminnm, not fmin.
+; must become fcmp + fcsel, not fmin/fminnm.
 define double @test_cross_fail_nan(float %in) {
 ; CHECK-LABEL: test_cross_fail_nan:
   %cmp = fcmp olt float %in, 0.000000e+00
@@ -31,7 +31,8 @@ define double @test_cross_fail_nan(float %in) {
   %longer = fpext float %val to double
   ret double %longer
 
-; CHECK: fminnm s
+; CHECK: fcmp
+; CHECK: fcsel
 }
 
 ; This isn't a min or a max, but passes the first condition for swapping the

@@ -659,9 +659,10 @@ define <vscale x 4 x float> @fcmp_fast_olt_v4f32(<vscale x 4 x float> %z, <vscal
 ; CHECK-LABEL: fcmp_fast_olt_v4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    mov z0.s, p1/m, z1.s
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 4 x float> %z, zeroinitializer
@@ -675,9 +676,10 @@ define <vscale x 8 x half> @fcmp_fast_olt_v8f16(<vscale x 8 x half> %z, <vscale 
 ; CHECK-LABEL: fcmp_fast_olt_v8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fcmeq p1.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p1/m, z1.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 8 x half> %z, zeroinitializer
@@ -691,9 +693,10 @@ define <vscale x 4 x float> @fcmp_fast_ogt_v4f32(<vscale x 4 x float> %z, <vscal
 ; CHECK-LABEL: fcmp_fast_ogt_v4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    fmaxnm z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    mov z0.s, p1/m, z1.s
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 4 x float> %z, zeroinitializer
@@ -707,9 +710,10 @@ define <vscale x 8 x half> @fcmp_fast_ogt_v8f16(<vscale x 8 x half> %z, <vscale 
 ; CHECK-LABEL: fcmp_fast_ogt_v8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fcmeq p1.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    fmaxnm z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p1/m, z1.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 8 x half> %z, zeroinitializer
