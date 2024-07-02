@@ -1197,10 +1197,10 @@ bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSinkingPass());
+    addPass(createAMDGPULateCodeGenPreparePass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPULateCodeGenPreparePass());
+    addPass(createSinkingPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
