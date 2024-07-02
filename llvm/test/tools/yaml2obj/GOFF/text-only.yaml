@@ -1,0 +1,22 @@
+# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
+
+## Verify that the GOFF text record is correct, with all fields having a
+## value. No other record is written.
+
+# CHECK:      03 10 00 01 00 00 00 2a 00 00 00 00 00 00 00 01
+# CHECK-NEXT: 00 00 02 00 00 01 00 0a a0 b0 c0 d0 e0 f0 10 20
+# CHECK-NEXT: 30 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# CHECK-EMPTY:
+
+--- !GOFF
+- Text:
+    TextStyle: TS_Structured
+    ESDID: 42
+    Offset: 1
+    TrueLength: 512
+    TextEncoding: 1
+    DataLength: 10
+    Data: a0b0c0d0e0f010203040

@@ -1,0 +1,15 @@
+# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
+
+## Verify that the text style can be given as a constant.
+
+# CHECK:      03 10 00 0a 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# CHECK-EMPTY:
+
+--- !GOFF
+- Text:
+    TextStyle: 0xA
