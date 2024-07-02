@@ -185,7 +185,10 @@ Error RuntimeDyldMachO::populateIndirectSymbolPointersSection(
          "Pointer table section not supported in 64-bit MachO.");
 
   MachO::dysymtab_command DySymTabCmd = Obj.getDysymtabLoadCommand();
-  MachO::section Sec32 = Obj.getSection(PTSection.getRawDataRefImpl());
+  auto Sec32OrErr = Obj.getSection(PTSection.getRawDataRefImpl());
+  if (!Sec32OrErr)
+    return Sec32OrErr.takeError();
+  MachO::section Sec32 = Sec32OrErr.get();
   uint32_t PTSectionSize = Sec32.size;
   unsigned FirstIndirectSymbol = Sec32.reserved1;
   const unsigned PTEntrySize = 4;

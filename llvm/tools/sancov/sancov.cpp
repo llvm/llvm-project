@@ -608,7 +608,10 @@ static void findMachOIndirectCovFunctions(const object::MachOObjectFile &O,
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 Seg = O.getSegment64LoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section_64 Sec = O.getSection64(Load, J);
+        auto Sect = O.getSection64(Load, J);
+        if (!Sect)
+          report_fatal_error(Sect.takeError());
+        auto Sec = Sect.get();
 
         uint32_t SectionType = Sec.flags & MachO::SECTION_TYPE;
         if (SectionType == MachO::S_SYMBOL_STUBS) {

@@ -222,7 +222,10 @@ static void printDarwinSectionSizes(MachOObjectFile *MachO) {
       total += Seg.vmsize;
       uint64_t sec_total = 0;
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section_64 Sec = MachO->getSection64(Load, J);
+        auto Sect = MachO->getSection64(Load, J);
+        if (!Sect)
+          report_fatal_error(Sect.takeError());
+        auto Sec = Sect.get();
         if (Filetype == MachO::MH_OBJECT)
           outs() << "\tSection (" << format("%.16s", &Sec.segname) << ", "
                  << format("%.16s", &Sec.sectname) << "): ";
@@ -249,7 +252,10 @@ static void printDarwinSectionSizes(MachOObjectFile *MachO) {
       total += Seg.vmsize;
       uint64_t sec_total = 0;
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section Sec = MachO->getSection(Load, J);
+        auto Sect = MachO->getSection(Load, J);
+        if (!Sect)
+          report_fatal_error(Sect.takeError());
+        auto Sec = Sect.get();
         if (Filetype == MachO::MH_OBJECT)
           outs() << "\tSection (" << format("%.16s", &Sec.segname) << ", "
                  << format("%.16s", &Sec.sectname) << "): ";
@@ -284,7 +290,11 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
       MachO::segment_command_64 Seg = MachO->getSegment64LoadCommand(Load);
       if (MachO->getHeader().filetype == MachO::MH_OBJECT) {
         for (unsigned J = 0; J < Seg.nsects; ++J) {
-          MachO::section_64 Sec = MachO->getSection64(Load, J);
+
+          auto Sect = MachO->getSection64(Load, J);
+          if (!Sect)
+            report_fatal_error(Sect.takeError());
+          auto Sec = Sect.get();
           StringRef SegmentName = StringRef(Sec.segname);
           if (SegmentName == "__TEXT")
             total_text += Sec.size;
@@ -310,7 +320,10 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
       MachO::segment_command Seg = MachO->getSegmentLoadCommand(Load);
       if (MachO->getHeader().filetype == MachO::MH_OBJECT) {
         for (unsigned J = 0; J < Seg.nsects; ++J) {
-          MachO::section Sec = MachO->getSection(Load, J);
+          auto Sect = MachO->getSection(Load, J);
+          if (!Sect)
+            report_fatal_error(Sect.takeError());
+          auto Sec = Sect.get();
           StringRef SegmentName = StringRef(Sec.segname);
           if (SegmentName == "__TEXT")
             total_text += Sec.size;

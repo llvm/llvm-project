@@ -243,14 +243,14 @@ static unsigned transferSymbols(const object::MachOObjectFile &Obj,
   return Syms;
 }
 
-static MachO::section
+static Expected<MachO::section>
 getSection(const object::MachOObjectFile &Obj,
            const MachO::segment_command &Seg,
            const object::MachOObjectFile::LoadCommandInfo &LCI, unsigned Idx) {
   return Obj.getSection(LCI, Idx);
 }
 
-static MachO::section_64
+static Expected<MachO::section_64>
 getSection(const object::MachOObjectFile &Obj,
            const MachO::segment_command_64 &Seg,
            const object::MachOObjectFile::LoadCommandInfo &LCI, unsigned Idx) {
@@ -309,7 +309,10 @@ static void transferSegmentAndSections(
     MachO::swapStruct(Segment);
   Writer.W.OS.write(reinterpret_cast<char *>(&Segment), sizeof(Segment));
   for (unsigned i = 0; i < nsects; ++i) {
-    auto Sect = getSection(Obj, Segment, LCI, i);
+    auto Sec = getSection(Obj, Segment, LCI, i);
+    if (!Sec)
+      report_fatal_error(Sec.takeError());
+    auto Sect = Sec.get();
     if (StringRef("__eh_frame") == Sect.sectname) {
       Sect.offset = EHFrameOffset;
       Sect.reloff = Sect.nreloc = 0;

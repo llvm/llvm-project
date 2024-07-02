@@ -132,8 +132,10 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     auto SecIndex = Obj.getSectionIndex(SecRef.getRawDataRefImpl());
 
     if (Obj.is64Bit()) {
-      const MachO::section_64 &Sec64 =
-          Obj.getSection64(SecRef.getRawDataRefImpl());
+      auto Sec64OrErr = Obj.getSection64(SecRef.getRawDataRefImpl());
+      if (!Sec64OrErr)
+        return Sec64OrErr.takeError();
+      const MachO::section_64 &Sec64 = Sec64OrErr.get();
 
       memcpy(&NSec.SectName, &Sec64.sectname, 16);
       NSec.SectName[16] = '\0';
@@ -146,7 +148,11 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
       NSec.Flags = Sec64.flags;
       DataOffset = Sec64.offset;
     } else {
-      const MachO::section &Sec32 = Obj.getSection(SecRef.getRawDataRefImpl());
+      auto Sec32OrErr = Obj.getSection(SecRef.getRawDataRefImpl());
+
+      if (!Sec32OrErr)
+        return Sec32OrErr.takeError();
+      const MachO::section &Sec32 = Sec32OrErr.get();
 
       memcpy(&NSec.SectName, &Sec32.sectname, 16);
       NSec.SectName[16] = '\0';

@@ -209,10 +209,12 @@ private:
 
   // Populate stubs in __jump_table section.
   Error populateJumpTable(const MachOObjectFile &Obj,
-                          const SectionRef &JTSection,
-                         unsigned JTSectionID) {
+                          const SectionRef &JTSection, unsigned JTSectionID) {
     MachO::dysymtab_command DySymTabCmd = Obj.getDysymtabLoadCommand();
-    MachO::section Sec32 = Obj.getSection(JTSection.getRawDataRefImpl());
+    auto Sec32OrErr = Obj.getSection(JTSection.getRawDataRefImpl());
+    if (!Sec32OrErr)
+      return Sec32OrErr.takeError();
+    MachO::section Sec32 = Sec32OrErr.get();
     uint32_t JTSectionSize = Sec32.size;
     unsigned FirstIndirectSymbol = Sec32.reserved1;
     unsigned JTEntrySize = Sec32.reserved2;
@@ -241,7 +243,6 @@ private:
 
     return Error::success();
   }
-
 };
 }
 
