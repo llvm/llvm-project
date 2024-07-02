@@ -297,7 +297,7 @@ void DefGen::emitBuilders() {
 void DefGen::emitVerifier() {
   defCls.declare<UsingDeclaration>("Base::getChecked");
   defCls.declareStaticMethod(
-      "::mlir::LogicalResult", "verify",
+      "::llvm::LogicalResult", "verify",
       getBuilderParams({{"::llvm::function_ref<::mlir::InFlightDiagnostic()>",
                          "emitError"}}));
 }
@@ -819,7 +819,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
                strfmt("generated{0}Parser", valueType), Method::StaticInline,
                std::move(params));
   // Declare the printer.
-  Method printer("::mlir::LogicalResult",
+  Method printer("::llvm::LogicalResult",
                  strfmt("generated{0}Printer", valueType), Method::StaticInline,
                  {{strfmt("::mlir::{0}", valueType), "def"},
                   {"::mlir::AsmPrinter &", "printer"}});
@@ -839,7 +839,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   // The printer dispatch uses llvm::TypeSwitch to find and call the correct
   // printer.
   printer.body() << "  return ::llvm::TypeSwitch<::mlir::" << valueType
-                 << ", ::mlir::LogicalResult>(def)";
+                 << ", ::llvm::LogicalResult>(def)";
   const char *const printValue = R"(    .Case<{0}>([&](auto t) {{
       printer << {0}::getMnemonic();{1}
       return ::mlir::success();
