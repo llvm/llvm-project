@@ -284,16 +284,6 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
 
-/// Extract the value profile data from \p Inst and returns them if \p Inst is
-/// annotated with value profile data. Returns nullptr otherwise. It's similar
-/// to `getValueProfDataFromInst` above except that an array is allocated only
-/// after a preliminary checking that the value profiles of kind `ValueKind`
-/// exist.
-std::unique_ptr<InstrProfValueData[]>
-getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
-                         uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
-                         uint64_t &TotalC, bool GetNoICPValue = false);
-
 // TODO: Unify metadata name 'PGOFuncName' and 'PGOName', by supporting read
 // of this metadata for backward compatibility and generating 'PGOName' only.
 /// Extract the value profile data from \p Inst and returns them if \p Inst is
