@@ -89,6 +89,7 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
+    libc.include.llvm-libc-types.size_t
 )
 
 add_entrypoint_object(
@@ -102,6 +103,7 @@ add_entrypoint_object(
     .time_utils
     libc.include.time
     libc.include.llvm-libc-types.locale_t
+    libc.include.llvm-libc-types.size_t
 )
 
 add_entrypoint_object(

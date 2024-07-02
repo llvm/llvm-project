@@ -11,6 +11,7 @@
 
 #include <time.h>
 #include "include/llvm-libc-types/locale_t.h"
+#include "include/llvm-libc-types/size_t.h"
 
 namespace LIBC_NAMESPACE {
 

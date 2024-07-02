@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_TIME_STRFTIME_H
 
 #include <time.h>
+#include "include/llvm-libc-types/size_t.h"
 
 namespace LIBC_NAMESPACE {
 
