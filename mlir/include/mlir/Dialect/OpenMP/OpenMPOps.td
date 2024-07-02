@@ -1577,4 +1577,25 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
   let hasRegionVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// [Spec 5.2] 10.5 masked Construct
+//===----------------------------------------------------------------------===//
+def MaskedOp : OpenMP_Op<"masked"> {
+  let summary = "masked construct";
+  let description = [{
+    Masked construct allows to specify a structured block to be executed by a subset of 
+    threads of the current team. Filter clause allows to select the threads expected to
+    execute the region
+  }];
+
+  let arguments = (ins Optional<I32>:$filteredThreadId);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(
+      `filter` `(` $filteredThreadId `:` type($filteredThreadId) `)`
+    ) $region attr-dict
+  }];
+}
+
 #endif // OPENMP_OPS
