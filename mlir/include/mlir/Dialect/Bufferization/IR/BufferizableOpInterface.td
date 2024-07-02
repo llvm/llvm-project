@@ -565,14 +565,19 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           The RaW conflict detection of One-Shot Analysis is more strict inside
           parallel regions: Buffer may have to be privatized.
 
-          By default, regions are assumed to be sequential.
+          By default, an op region is considered parallel if the containing op
+          has trait `HasParallelRegion`. While this default implementation is
+          generally sufficient, a specific op may relax this condition by
+          marking a region as non-parallel when loop range analysis detects it
+          to execute zero or one iterations.
         }],
         /*retType=*/"bool",
         /*methodName=*/"isParallelRegion",
         /*args=*/(ins "unsigned":$index),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return false;
+          return ::mlir::bufferization::detail::defaultIsParallelRegion(
+              ::llvm::cast<BufferizableOpInterface>($_op.getOperation()), index);
         }]
       >,
       InterfaceMethod<

@@ -706,6 +706,12 @@ bool defaultResultBufferizesToMemoryWrite(OpResult opResult,
 bool defaultIsRepetitiveRegion(BufferizableOpInterface bufferizableOp,
                                unsigned index);
 
+/// This is the default implementation of
+/// BufferizableOpInterface::isParallelRegion. Should not be called from other
+/// places.
+bool defaultIsParallelRegion(BufferizableOpInterface bufferizableOp,
+                             unsigned index);
+
 /// This is the default implementation of getAliasingOpOperands in case the
 /// defining op does not implement the BufferizableOpInterface.
 AliasingOpOperandList unknownGetAliasingOpOperands(Value value);
