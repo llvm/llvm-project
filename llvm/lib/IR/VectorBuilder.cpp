@@ -57,7 +57,57 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   auto VPID = VPIntrinsic::getForOpcode(Opcode);
   if (VPID == Intrinsic::not_intrinsic)
     return returnWithError<Value *>("No VPIntrinsic for this opcode");
+  return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
+}
 
+Value *VectorBuilder::createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
+                                                  ArrayRef<Value *> InstOpArray,
+                                                  const Twine &Name) {
+  auto GetForRecurKind = [](RecurKind Kind) {
+    switch (Kind) {
+    case RecurKind::Add:
+      return Intrinsic::vp_reduce_add;
+    case RecurKind::Mul:
+      return Intrinsic::vp_reduce_mul;
+    case RecurKind::And:
+      return Intrinsic::vp_reduce_and;
+    case RecurKind::Or:
+      return Intrinsic::vp_reduce_or;
+    case RecurKind::Xor:
+      return Intrinsic::vp_reduce_xor;
+    case RecurKind::FMulAdd:
+    case RecurKind::FAdd:
+      return Intrinsic::vp_reduce_fadd;
+    case RecurKind::FMul:
+      return Intrinsic::vp_reduce_fmul;
+    case RecurKind::SMax:
+      return Intrinsic::vp_reduce_smax;
+    case RecurKind::SMin:
+      return Intrinsic::vp_reduce_smin;
+    case RecurKind::UMax:
+      return Intrinsic::vp_reduce_umax;
+    case RecurKind::UMin:
+      return Intrinsic::vp_reduce_umin;
+    case RecurKind::FMax:
+      return Intrinsic::vp_reduce_fmax;
+    case RecurKind::FMin:
+      return Intrinsic::vp_reduce_fmin;
+    case RecurKind::FMaximum:
+      return Intrinsic::vp_reduce_fmaximum;
+    case RecurKind::FMinimum:
+      return Intrinsic::vp_reduce_fminimum;
+    default:
+      llvm_unreachable("No VPIntrinsic for this reduction");
+    }
+  };
+  auto VPID = GetForRecurKind(Kind);
+  return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
+}
+
+Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
+                                                  Type *ReturnTy,
+                                                  ArrayRef<Value *> InstOpArray,
+                                                  const Twine &Name) {
   auto MaskPosOpt = VPIntrinsic::getMaskParamPos(VPID);
   auto VLenPosOpt = VPIntrinsic::getVectorLengthParamPos(VPID);
   size_t NumInstParams = InstOpArray.size();
