@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -142,13 +143,14 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(
-    const MCFixup &Fixup, bool Resolved, uint64_t Value,
-    const MCRelaxableFragment *DF, const MCAsmLayout &Layout,
-    const bool WasForced) const {
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                                const MCFixup &Fixup,
+                                                bool Resolved, uint64_t Value,
+                                                const MCRelaxableFragment *DF,
+                                                const bool WasForced) const {
   if (!Resolved)
     return true;
-  return fixupNeedsRelaxation(Fixup, Value, DF, Layout);
+  return fixupNeedsRelaxation(Fixup, Value, DF, *Asm.getLayout());
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {

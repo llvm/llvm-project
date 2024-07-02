@@ -568,10 +568,10 @@ public:
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                    const MCFixup &Fixup, bool Resolved,
                                     uint64_t Value,
                                     const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout,
                                     const bool WasForced) const override {
     MCInst const &MCB = DF->getInst();
     assert(HexagonMCInstrInfo::isBundle(MCB));
@@ -598,7 +598,7 @@ public:
         if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
           ++relaxedCnt;
           *RelaxTarget = &MCI;
-          setExtender(Layout.getAssembler().getContext());
+          setExtender(Asm.getContext());
           return true;
         } else {
           return false;
@@ -636,7 +636,7 @@ public:
       if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
         ++relaxedCnt;
         *RelaxTarget = &MCI;
-        setExtender(Layout.getAssembler().getContext());
+        setExtender(Asm.getContext());
         return true;
       }
     }
