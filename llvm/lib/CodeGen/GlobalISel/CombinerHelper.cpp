@@ -438,11 +438,11 @@ void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
   LLT SrcTy = MRI.getType(Ops[0]);
   Register UndefReg = 0;
 
-  for (unsigned i = 0; i < Ops.size(); i++) {
-    if (Ops[i] == 0) {
+  for (Register &Reg : Ops) {
+    if (Reg == 0) {
       if (UndefReg == 0)
         UndefReg = Builder.buildUndef(SrcTy).getReg(0);
-      Ops[i] = UndefReg;
+      Reg = UndefReg;
     }
   }
 
