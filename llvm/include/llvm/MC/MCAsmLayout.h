@@ -40,11 +40,6 @@ public:
   /// Get the assembler object this is a layout for.
   MCAssembler &getAssembler() const { return Assembler; }
 
-  /// Invalidate the fragments starting with F because it has been
-  /// resized. The fragment's size should have already been updated, but
-  /// its bundle padding will be recomputed.
-  void invalidateFragmentsFrom(MCFragment *F);
-
   void layoutBundle(MCFragment *Prev, MCFragment *F);
 
   /// \name Section Access (in layout order)
