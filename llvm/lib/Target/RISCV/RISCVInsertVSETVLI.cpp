@@ -955,6 +955,12 @@ void RISCVInsertVSETVLI::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
   VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
   if (!DefInstrInfo.hasSameVLMAX(Info))
     return;
+  // If the AVL is a register with multiple definitions, don't forward it. We
+  // might not be able to extend its LiveInterval without clobbering other val
+  // nums.
+  if (DefInstrInfo.hasAVLReg() &&
+      !LIS->getInterval(DefInstrInfo.getAVLReg()).containsOneValue())
+    return;
   Info.setAVL(DefInstrInfo);
 }
 
@@ -1155,15 +1161,22 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
                 .addImm(Info.encodeVTYPE());
   if (LIS) {
     LIS->InsertMachineInstrInMaps(*MI);
-    // Normally the AVL's live range will already extend past the inserted
+    // Normally the AVL's LiveInterval will already extend past the inserted
     // vsetvli because the pseudos below will already use the AVL. But this
     // isn't always the case, e.g. PseudoVMV_X_S doesn't have an AVL operand or
     // we've taken the AVL from the VL output of another vsetvli.
     LiveInterval &LI = LIS->getInterval(AVLReg);
     // Need to get non-const VNInfo
     VNInfo *VNI = LI.getValNumInfo(Info.getAVLVNInfo()->id);
-    LI.addSegment(LiveInterval::Segment(
-        VNI->def, LIS->getInstructionIndex(*MI).getRegSlot(), VNI));
+
+    LiveInterval::Segment Segment(
+        VNI->def, LIS->getInstructionIndex(*MI).getRegSlot(), VNI);
+    // We should never end up extending the interval over a different value.
+    assert(all_of(LI.segments, [&Segment](LiveInterval::Segment S) {
+      return !S.containsInterval(Segment.start, Segment.end) ||
+             S.valno == S.valno;
+    }));
+    LI.addSegment(Segment);
   }
 }
 
