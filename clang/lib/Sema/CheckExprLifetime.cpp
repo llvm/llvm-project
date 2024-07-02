@@ -1023,7 +1023,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         return false;
       }
 
-      if (IsGslPtrInitWithGslTempOwner && DiagLoc.isValid()) {
+      if (InitEntity && IsGslPtrInitWithGslTempOwner && DiagLoc.isValid()) {
         SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
             << DiagRange;
         return false;
