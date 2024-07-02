@@ -353,8 +353,8 @@ class XCOFFObjectWriter : public MCObjectWriter {
 
   void executePostLayoutBinding(MCAssembler &, const MCAsmLayout &) override;
 
-  void recordRelocation(MCAssembler &, const MCAsmLayout &, const MCFragment *,
-                        const MCFixup &, MCValue, uint64_t &) override;
+  void recordRelocation(MCAssembler &, const MCFragment *, const MCFixup &,
+                        MCValue, uint64_t &) override;
 
   uint64_t writeObject(MCAssembler &, const MCAsmLayout &) override;
 
@@ -660,7 +660,6 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 }
 
 void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
-                                         const MCAsmLayout &Layout,
                                          const MCFragment *Fragment,
                                          const MCFixup &Fixup, MCValue Target,
                                          uint64_t &FixedValue) {
@@ -675,11 +674,11 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   };
 
   auto getVirtualAddress =
-      [this, &Layout](const MCSymbol *Sym,
-                      const MCSectionXCOFF *ContainingSect) -> uint64_t {
+      [this, &Asm](const MCSymbol *Sym,
+                   const MCSectionXCOFF *ContainingSect) -> uint64_t {
     // A DWARF section.
     if (ContainingSect->isDwarfSect())
-      return Layout.getSymbolOffset(*Sym);
+      return Asm.getSymbolOffset(*Sym);
 
     // A csect.
     if (!Sym->isDefined())
@@ -687,7 +686,7 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 
     // A label.
     assert(Sym->isDefined() && "not a valid object that has address!");
-    return SectionMap[ContainingSect]->Address + Layout.getSymbolOffset(*Sym);
+    return SectionMap[ContainingSect]->Address + Asm.getSymbolOffset(*Sym);
   };
 
   const MCSymbol *const SymA = &Target.getSymA()->getSymbol();
@@ -706,10 +705,10 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
          "Expected containing csect to exist in map.");
 
   assert((Fixup.getOffset() <=
-          MaxRawDataSize - Layout.getFragmentOffset(Fragment)) &&
+          MaxRawDataSize - Asm.getFragmentOffset(*Fragment)) &&
          "Fragment offset + fixup offset is overflowed.");
   uint32_t FixupOffsetInCsect =
-      Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+      Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
 
   const uint32_t Index = getIndex(SymA, SymASec);
   if (Type == XCOFF::RelocationType::R_POS ||
