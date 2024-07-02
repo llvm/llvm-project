@@ -294,9 +294,9 @@ endmacro()
 
 if(OPENMP_STANDALONE_BUILD OR TARGET omp)
   # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
-  include(LLVMCheckCompilerLinkerFlag)
+  include(CheckCompilerFlag)
   if(NOT APPLE)
-    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+    check_compiler_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   endif()
 endif()
 

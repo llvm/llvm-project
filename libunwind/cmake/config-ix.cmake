@@ -2,14 +2,14 @@ include(CMakePushCheckState)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
-include(LLVMCheckCompilerLinkerFlag)
+include(CheckCompilerFlag)
 include(CheckSymbolExists)
 include(CheckCSourceCompiles)
 
 # The compiler driver may be implicitly trying to link against libunwind, which
 # might not work if libunwind doesn't exist yet. Try to check if
 # --unwindlib=none is supported, and use that if possible.
-llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+check_compiler_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 
 if (HAIKU)
   check_library_exists(root fopen "" LIBUNWIND_HAS_ROOT_LIB)
@@ -35,11 +35,11 @@ endif()
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+check_compiler_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()
-  llvm_check_compiler_linker_flag(C "-nodefaultlibs" C_SUPPORTS_NODEFAULTLIBS_FLAG)
+  check_compiler_flag(C "-nodefaultlibs" C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   endif()

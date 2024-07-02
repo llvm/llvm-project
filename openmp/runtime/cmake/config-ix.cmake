@@ -8,6 +8,7 @@
 #//===----------------------------------------------------------------------===//
 #
 
+include(CheckCompilerFlag)
 include(CheckCCompilerFlag)
 include(CheckCSourceCompiles)
 include(CheckCXXSourceCompiles)
@@ -17,7 +18,6 @@ include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
 include(LibompCheckFortranFlag)
-include(LLVMCheckCompilerLinkerFlag)
 
 # Check for versioned symbols
 function(libomp_check_version_symbols retval)
@@ -128,13 +128,13 @@ check_symbol_exists(_aligned_malloc "malloc.h" LIBOMP_HAVE__ALIGNED_MALLOC)
 
 # Check linker flags
 if(WIN32)
-  llvm_check_compiler_linker_flag(C /SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
+  check_compiler_flag(C /SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
 elseif(NOT APPLE)
-  llvm_check_compiler_linker_flag(C -Wl,-x LIBOMP_HAVE_X_FLAG)
-  llvm_check_compiler_linker_flag(C -Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
-  llvm_check_compiler_linker_flag(C "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  llvm_check_compiler_linker_flag(C -static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
-  llvm_check_compiler_linker_flag(C -Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
+  check_compiler_flag(C -Wl,-x LIBOMP_HAVE_X_FLAG)
+  check_compiler_flag(C -Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
+  check_compiler_flag(C "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  check_compiler_flag(C -static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
+  check_compiler_flag(C -Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
 endif()
 
 # Check Intel(R) C Compiler specific flags
@@ -145,8 +145,8 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_cxx_compiler_flag(-Qoption,cpp,--extended_float_types LIBOMP_HAVE_EXTENDED_FLOAT_TYPES_FLAG)
   check_cxx_compiler_flag(-falign-stack=maintain-16-byte LIBOMP_HAVE_FALIGN_STACK_FLAG)
   check_cxx_compiler_flag("-opt-streaming-stores never" LIBOMP_HAVE_OPT_STREAMING_STORES_FLAG)
-  llvm_check_compiler_linker_flag(C -static-intel LIBOMP_HAVE_STATIC_INTEL_FLAG)
-  llvm_check_compiler_linker_flag(C -no-intel-extensions LIBOMP_HAVE_NO_INTEL_EXTENSIONS_FLAG)
+  check_compiler_flag(C -static-intel LIBOMP_HAVE_STATIC_INTEL_FLAG)
+  check_compiler_flag(C -no-intel-extensions LIBOMP_HAVE_NO_INTEL_EXTENSIONS_FLAG)
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 

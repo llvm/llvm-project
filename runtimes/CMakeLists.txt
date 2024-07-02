@@ -79,7 +79,7 @@ set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 set(LLVM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
 
 include(CheckLibraryExists)
-include(LLVMCheckCompilerLinkerFlag)
+include(CheckCompilerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
@@ -114,7 +114,7 @@ filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} C
 # Currently, we counteract this issue by adding -fno-sanitize=all flag in
 # the project specific code within */cmake/config-ix.cmake files but that's
 # brittle. We should ideally move this to runtimes/CMakeLists.txt.
-llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+check_compiler_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
   set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
@@ -143,7 +143,7 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+check_compiler_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
