@@ -1617,12 +1617,7 @@ operator<=(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp,
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<pair<const _Key, _Tp>>
 operator<=>(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(),
-      __x.end(),
-      __y.begin(),
-      __y.end(),
-      std::__synth_three_way<pair<const _Key, _Tp>, pair<const _Key, _Tp>>);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // #if _LIBCPP_STD_VER <= 17
@@ -2136,12 +2131,7 @@ template <class _Key, class _Tp, class _Compare, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<pair<const _Key, _Tp>>
 operator<=>(const multimap<_Key, _Tp, _Compare, _Allocator>& __x,
             const multimap<_Key, _Tp, _Compare, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(),
-      __x.end(),
-      __y.begin(),
-      __y.end(),
-      std::__synth_three_way<pair<const _Key, _Tp>, pair<const _Key, _Tp>>);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
 }
 
 #endif // #if _LIBCPP_STD_VER <= 17
