@@ -65,11 +65,11 @@ public:
          const Fortran::lower::LoweringOptions &loweringOptions,
          const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
          const Fortran::common::LanguageFeatureControl &languageFeatures,
-         const llvm::TargetMachine &targetMachine) {
+         const llvm::TargetMachine &targetMachine, llvm::StringRef tuneCPU) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
                           loweringOptions, envDefaults, languageFeatures,
-                          targetMachine);
+                          targetMachine, tuneCPU);
   }
 
   //===--------------------------------------------------------------------===//
@@ -148,7 +148,7 @@ private:
       const Fortran::lower::LoweringOptions &loweringOptions,
       const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
       const Fortran::common::LanguageFeatureControl &languageFeatures,
-      const llvm::TargetMachine &targetMachine);
+      const llvm::TargetMachine &targetMachine, const llvm::StringRef tuneCPU);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 

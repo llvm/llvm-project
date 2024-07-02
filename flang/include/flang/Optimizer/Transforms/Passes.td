@@ -411,6 +411,9 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
     Option<"unsafeFPMath", "unsafe-fp-math",
            "bool", /*default=*/"false",
            "Set the unsafe-fp-math attribute on functions in the module.">,
+    Option<"tuneCPU", "tune-cpu",
+           "llvm::StringRef", /*default=*/"llvm::StringRef{}",
+           "Set the tune-cpu attribute on functions in the module.">,
   ];
 }
 
