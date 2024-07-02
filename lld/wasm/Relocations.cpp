@@ -42,14 +42,14 @@ static bool allowUndefined(const Symbol* sym) {
   return config->allowUndefinedSymbols.count(sym->getName()) != 0;
 }
 
-static void reportUndefined(Symbol *sym) {
+static void reportUndefined(ObjFile *file, Symbol *sym) {
   if (!allowUndefined(sym)) {
     switch (config->unresolvedSymbols) {
     case UnresolvedPolicy::ReportError:
-      error(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
+      error(toString(file) + ": undefined symbol: " + toString(*sym));
       break;
     case UnresolvedPolicy::Warn:
-      warn(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
+      warn(toString(file) + ": undefined symbol: " + toString(*sym));
       break;
     case UnresolvedPolicy::Ignore:
       LLVM_DEBUG(dbgs() << "ignoring undefined symbol: " + toString(*sym) +
@@ -171,7 +171,7 @@ void scanRelocations(InputChunk *chunk) {
       }
     } else if (sym->isUndefined() && !config->relocatable && !sym->isWeak()) {
       // Report undefined symbols
-      reportUndefined(sym);
+      reportUndefined(file, sym);
     }
   }
 }
