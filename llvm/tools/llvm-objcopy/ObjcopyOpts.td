@@ -254,6 +254,10 @@ def adjust_start : JoinedOrSeparate<["--"], "adjust-start">,
                    Alias<change_start>,
                    HelpText<"Alias for --change-start">;
 
+defm change_section_lma
+    : Eq<"change-section-lma", "Shift LMA of non-zero-sized sections in the program header by <val>">,
+      MetaVarName<"*{+|-}val">;
+
 defm add_symbol
     : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "
          "global, local, weak, default, hidden, protected, file, section, object, "

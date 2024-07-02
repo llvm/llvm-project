@@ -670,6 +670,33 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
+  if (Config.ChangeSectionLMAValAll != 0) {
+    for (Segment &Seg : Obj.segments()) {
+      if (Seg.FileSize > 0) {
+        if (Config.ChangeSectionLMAValAll > 0 &&
+            Seg.PAddr > std::numeric_limits<uint64_t>::max() -
+                            Config.ChangeSectionLMAValAll) {
+          return createStringError(
+              errc::invalid_argument,
+              "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                  " cannot be increased by 0x" +
+                  Twine::utohexstr(Config.ChangeSectionLMAValAll) +
+                  ". The result would overflow");
+        } else if (Config.ChangeSectionLMAValAll < 0 &&
+                   Seg.PAddr < std::numeric_limits<uint64_t>::min() -
+                                   Config.ChangeSectionLMAValAll) {
+          return createStringError(
+              errc::invalid_argument,
+              "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                  " cannot be decreased by 0x" +
+                  Twine::utohexstr(std::abs(Config.ChangeSectionLMAValAll)) +
+                  ". The result would underflow");
+        }
+        Seg.PAddr += Config.ChangeSectionLMAValAll;
+      }
+    }
+  }
+
   if (Config.OnlyKeepDebug)
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
