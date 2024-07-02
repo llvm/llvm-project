@@ -2461,43 +2461,47 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       // upon the scheduled time for any predecessors/successors.
       int EarlyStart = INT_MIN;
       int LateStart = INT_MAX;
-      Schedule.computeStart(SU, &EarlyStart, &LateStart, II, this);
+      // These values are set when the size of the schedule window is limited
+      // due to chain dependences.
+      int SchedEnd = INT_MAX;
+      int SchedStart = INT_MIN;
+      Schedule.computeStart(SU, &EarlyStart, &LateStart, &SchedEnd, &SchedStart,
+                            II, this);
       LLVM_DEBUG({
         dbgs() << "\n";
         dbgs() << "Inst (" << SU->NodeNum << ") ";
         SU->getInstr()->dump();
         dbgs() << "\n";
       });
-      LLVM_DEBUG(
-          dbgs() << format("\tes: %8x ls: %8x\n", EarlyStart, LateStart));
+      LLVM_DEBUG({
+        dbgs() << format("\tes: %8x ls: %8x me: %8x ms: %8x\n", EarlyStart,
+                         LateStart, SchedEnd, SchedStart);
+      });
 
-      if (EarlyStart > LateStart)
+      if (EarlyStart > LateStart || SchedEnd < EarlyStart ||
+          SchedStart > LateStart)
         scheduleFound = false;
-      else if (EarlyStart != INT_MIN && LateStart == INT_MAX)
-        scheduleFound =
-            Schedule.insert(SU, EarlyStart, EarlyStart + (int)II - 1, II);
-      else if (EarlyStart == INT_MIN && LateStart != INT_MAX)
-        scheduleFound =
-            Schedule.insert(SU, LateStart, LateStart - (int)II + 1, II);
-      else if (EarlyStart != INT_MIN && LateStart != INT_MAX) {
-        LateStart = std::min(LateStart, EarlyStart + (int)II - 1);
-        // When scheduling a Phi it is better to start at the late cycle and
-        // go backwards. The default order may insert the Phi too far away
-        // from its first dependence.
-        // Also, do backward search when all scheduled predecessors are
-        // loop-carried output/order dependencies. Empirically, there are also
-        // cases where scheduling becomes possible with backward search.
-        if (SU->getInstr()->isPHI() ||
-            Schedule.onlyHasLoopCarriedOutputOrOrderPreds(SU, this))
-          scheduleFound = Schedule.insert(SU, LateStart, EarlyStart, II);
+      else if (EarlyStart != INT_MIN && LateStart == INT_MAX) {
+        SchedEnd = std::min(SchedEnd, EarlyStart + (int)II - 1);
+        scheduleFound = Schedule.insert(SU, EarlyStart, SchedEnd, II);
+      } else if (EarlyStart == INT_MIN && LateStart != INT_MAX) {
+        SchedStart = std::max(SchedStart, LateStart - (int)II + 1);
+        scheduleFound = Schedule.insert(SU, LateStart, SchedStart, II);
+      } else if (EarlyStart != INT_MIN && LateStart != INT_MAX) {
+        SchedEnd =
+            std::min(SchedEnd, std::min(LateStart, EarlyStart + (int)II - 1));
+        // When scheduling a Phi it is better to start at the late cycle and go
+        // backwards. The default order may insert the Phi too far away from
+        // its first dependence.
+        if (SU->getInstr()->isPHI())
+          scheduleFound = Schedule.insert(SU, SchedEnd, EarlyStart, II);
         else
-          scheduleFound = Schedule.insert(SU, EarlyStart, LateStart, II);
+          scheduleFound = Schedule.insert(SU, EarlyStart, SchedEnd, II);
       } else {
         int FirstCycle = Schedule.getFirstCycle();
         scheduleFound = Schedule.insert(SU, FirstCycle + getASAP(SU),
                                         FirstCycle + getASAP(SU) + II - 1, II);
       }
-
       // Even if we find a schedule, make sure the schedule doesn't exceed the
       // allowable number of stages. We keep trying if this happens.
       if (scheduleFound)
@@ -2905,7 +2909,8 @@ static SUnit *multipleIterations(SUnit *SU, SwingSchedulerDAG *DAG) {
 /// Compute the scheduling start slot for the instruction.  The start slot
 /// depends on any predecessor or successor nodes scheduled already.
 void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
-                              int II, SwingSchedulerDAG *DAG) {
+                              int *MinEnd, int *MaxStart, int II,
+                              SwingSchedulerDAG *DAG) {
   // Iterate over each instruction that has been scheduled already.  The start
   // slot computation depends on whether the previously scheduled instruction
   // is a predecessor or successor of the specified instruction.
@@ -2924,7 +2929,7 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
             *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
             if (DAG->isLoopCarriedDep(SU, Dep, false)) {
               int End = earliestCycleInChain(Dep) + (II - 1);
-              *MinLateStart = std::min(*MinLateStart, End);
+              *MinEnd = std::min(*MinEnd, End);
             }
           } else {
             int LateStart = cycle - Dep.getLatency() +
@@ -2948,7 +2953,7 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
             *MinLateStart = std::min(*MinLateStart, LateStart);
             if (DAG->isLoopCarriedDep(SU, Dep)) {
               int Start = latestCycleInChain(Dep) + 1 - II;
-              *MaxEarlyStart = std::max(*MaxEarlyStart, Start);
+              *MaxStart = std::max(*MaxStart, Start);
             }
           } else {
             int EarlyStart = cycle + Dep.getLatency() -
@@ -3139,19 +3144,6 @@ bool SMSchedule::isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD,
       return true;
   }
   return false;
-}
-
-/// Return true if all scheduled predecessors are loop-carried output/order
-/// dependencies.
-bool SMSchedule::onlyHasLoopCarriedOutputOrOrderPreds(
-    SUnit *SU, SwingSchedulerDAG *DAG) const {
-  for (const SDep &Pred : SU->Preds)
-    if (InstrToCycle.count(Pred.getSUnit()) && !DAG->isBackedge(SU, Pred))
-      return false;
-  for (const SDep &Succ : SU->Succs)
-    if (InstrToCycle.count(Succ.getSUnit()) && DAG->isBackedge(SU, Succ))
-      return false;
-  return true;
 }
 
 /// Determine transitive dependences of unpipelineable instructions
