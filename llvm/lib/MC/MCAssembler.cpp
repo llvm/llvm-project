@@ -15,7 +15,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -937,7 +936,7 @@ MCAssembler::handleFixup(MCFragment &F, const MCFixup &Fixup,
   return std::make_tuple(Target, FixedValue, IsResolved);
 }
 
-void MCAssembler::layout(MCAsmLayout &Layout) {
+void MCAssembler::layout() {
   assert(getBackendPtr() && "Expected assembler backend");
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - pre-layout\n--\n";
@@ -1074,9 +1073,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 }
 
 void MCAssembler::Finish() {
-  // Create the layout object.
-  MCAsmLayout Layout(*this);
-  layout(Layout);
+  layout();
 
   // Write the object file.
   stats::ObjectBytes += getWriter().writeObject(*this);
