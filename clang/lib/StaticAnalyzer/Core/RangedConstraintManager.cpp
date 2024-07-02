@@ -52,7 +52,8 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
 
       // We convert equality operations for pointers only.
       if (Loc::isLocType(SSE->getLHS()->getType()) &&
-          Loc::isLocType(SSE->getRHS()->getType())) {
+          Loc::isLocType(SSE->getRHS()->getType()) &&
+          BinaryOperator::isEqualityOp(Op)) {
         // Translate "a != b" to "(b - a) != 0".
         // We invert the order of the operands as a heuristic for how loop
         // conditions are usually written ("begin != end") as compared to length
@@ -66,7 +67,6 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
             SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub, SSE->getLHS(), DiffTy);
 
         const llvm::APSInt &Zero = getBasicVals().getValue(0, DiffTy);
-        Op = BinaryOperator::reverseComparisonOp(Op);
         if (!Assumption)
           Op = BinaryOperator::negateComparisonOp(Op);
         return assumeSymRel(State, Subtraction, Op, Zero);
