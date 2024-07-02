@@ -109,6 +109,13 @@ ASM_FUNCTION_AVR_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+ASM_FUNCTION_XTENSA_RE = re.compile(
+    r'^_?(?P<func>[^.:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n# %bb.0:\n'
+    r'(?P<body>.*?)\n'
+    r'^\.Lfunc_end\d+:\n',  # Match the end label
+    flags=(re.M | re.S)
+)
+
 ASM_FUNCTION_PPC_RE = re.compile(
     r"#[ \-\t]*Begin function (?P<func>[^.:]+)\n"
     r".*?"
@@ -579,6 +586,7 @@ def get_run_handler(triple):
         "nvptx": (scrub_asm_nvptx, ASM_FUNCTION_NVPTX_RE),
         "loongarch32": (scrub_asm_loongarch, ASM_FUNCTION_LOONGARCH_RE),
         "loongarch64": (scrub_asm_loongarch, ASM_FUNCTION_LOONGARCH_RE),
+        "xtensa": (scrub_asm_avr, ASM_FUNCTION_XTENSA_RE),
     }
     handler = None
     best_prefix = ""

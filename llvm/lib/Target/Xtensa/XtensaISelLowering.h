@@ -33,7 +33,14 @@ enum {
   // Wraps a TargetGlobalAddress that should be loaded using PC-relative
   // accesses.  Operand 0 is the address.
   PCREL_WRAPPER,
-  RET
+  RET,
+
+  // Selects between operand 0 and operand 1.  Operand 2 is the
+  // mask of condition-code values for which operand 0 should be
+  // chosen over operand 1; it has the same form as BR_CCMASK.
+  // Operand 3 is the flag operand.
+  SELECT,
+  SELECT_CC
 };
 }
 
@@ -43,6 +50,13 @@ class XtensaTargetLowering : public TargetLowering {
 public:
   explicit XtensaTargetLowering(const TargetMachine &TM,
                                 const XtensaSubtarget &STI);
+
+  EVT getSetCCResultType(const DataLayout &, LLVMContext &,
+                         EVT VT) const override {
+    if (!VT.isVector())
+      return MVT::i32;
+    return VT.changeVectorElementTypeToInteger();
+  }
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
@@ -71,6 +85,10 @@ public:
 
   const XtensaSubtarget &getSubtarget() const { return Subtarget; }
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+
 private:
   const XtensaSubtarget &Subtarget;
 
@@ -86,6 +104,10 @@ private:
 
   SDValue LowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
 
+  SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
@@ -95,6 +117,10 @@ private:
   SDValue getAddrPCRel(SDValue Op, SelectionDAG &DAG) const;
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
+
+  // Implement EmitInstrWithCustomInserter for individual operation types.
+  MachineBasicBlock *emitSelectCC(MachineInstr &MI,
+                                  MachineBasicBlock *BB) const;
 };
 
 } // end namespace llvm
