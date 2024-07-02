@@ -364,27 +364,31 @@ __builtin_floor(f);      __builtin_floorf(f);     __builtin_floorl(f); __builtin
 // HAS_ERRNO: declare x86_fp80 @llvm.floor.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare fp128 @llvm.floor.f128(fp128) [[READNONE_INTRINSIC]]
 
-__builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f); __builtin_fmaf128(f,f,f);
+__builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f); __builtin_fmaf128(f,f,f);  __builtin_fmaf16(f,f,f);
 
 // NO__ERRNO: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare fp128 @llvm.fma.f128(fp128, fp128, fp128) [[READNONE_INTRINSIC]]
+// NO__ERRONO: declare half @llvm.fma.f16(half, half, half) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @fma(double noundef, double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @fmaf(float noundef, float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @fmal(x86_fp80 noundef, x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare fp128 @fmaf128(fp128 noundef, fp128 noundef, fp128 noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare half @fmaf16(half noundef, half noundef, half noundef) [[NOT_READNONE]]
 
 // On GNU or Win, fma never sets errno, so we can convert to the intrinsic.
 
 // HAS_ERRNO_GNU: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // HAS_ERRNO_GNU: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO_GNU: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO_GNU: declare half @llvm.fma.f16(half, half, half) [[READNONE_INTRINSIC]]
 
 // HAS_ERRNO_WIN: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // HAS_ERRNO_WIN: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
 // Long double is just double on win, so no f80 use/declaration.
 // HAS_ERRNO_WIN-NOT: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80)
+// HAS_ERRNO_WIN: declare half @llvm.fma.f16(half, half, half) [[READNONE_INTRINSIC]]
 
 __builtin_fmax(f,f);       __builtin_fmaxf(f,f);      __builtin_fmaxl(f,f); __builtin_fmaxf128(f,f);
 

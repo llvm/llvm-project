@@ -203,6 +203,12 @@ def FmaF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T, T, T)";
 }
 
+def Fmaf16 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_fmaf16"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Prototype = "T(T, T, T)";
+}
+
 def FmaxF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_fmax"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
