@@ -352,6 +352,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtold_l
     libc.src.stdlib.strtoull_l
     libc.src.stdlib.strtoll_l
+    libc.src.ctype.isdigit_l
+    libc.src.ctype.isxdigit_l
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

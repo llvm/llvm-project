@@ -146,3 +146,27 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.ctype_utils
 )
+
+add_entrypoint_object(
+  isdigit_l
+  SRCS
+    isdigit_l.cpp
+  HDRS
+    isdigit_l.h
+  DEPENDS
+    libc.src.ctype.isdigit
+    libc.include.llvm-libc-types.locale_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  isxdigit_l
+  SRCS
+    isxdigit_l.cpp
+  HDRS
+    isxdigit_l.h
+  DEPENDS
+    libc.src.ctype.isxdigit
+    libc.include.llvm-libc-types.locale_t
+    libc.src.__support.ctype_utils
+)
