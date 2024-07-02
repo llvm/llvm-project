@@ -21,6 +21,7 @@
 #include "Utils/ELF.h"
 #include "omptarget.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdio>
 #include <string>
 
 #ifdef OMPT_SUPPORT
@@ -2232,9 +2233,7 @@ void GPUSanTy::checkAndReportError() {
       fprintf(stderr, "    no backtrace available\n");
       return;
     }
-    printf("Loc %p : %u\n", LocationsGV.getPtr(), LocationsGV.getSize());
-    printf("Nam %p : %u\n", LocationNamesGV.getPtr(),
-           LocationNamesGV.getSize());
+    fprintf(stderr, "%lu\n", STI->CallId);
     char *LocationNames = LocationNamesGV.getPtrAs<char>();
     LocationEncodingTy *Locations = LocationsGV.getPtrAs<LocationEncodingTy>();
     int32_t FrameIdx = 0;
@@ -2246,6 +2245,7 @@ void GPUSanTy::checkAndReportError() {
       LocationId = LE.ParentIdx;
       FrameIdx++;
     } while (LocationId >= 0);
+    fputc('\n', stderr);
   };
 
   auto DiagnoseAccess = [&](StringRef Name) {

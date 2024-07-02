@@ -14,9 +14,15 @@
 #include "Types.h"
 #include "Utils.h"
 
-extern "C" int ompx_block_id(int Dim);
-extern "C" int ompx_block_dim(int Dim);
-extern "C" int ompx_thread_id(int Dim);
+extern "C" {
+int ompx_block_id(int Dim);
+int ompx_block_dim(int Dim);
+int ompx_thread_id(int Dim);
+[[clang::disable_sanitizer_instrumentation, gnu::noinline]] inline int64_t
+__san_get_location_value() {
+  return -1;
+}
+}
 
 enum class AllocationKind { LOCAL, GLOBAL, LAST = GLOBAL };
 
@@ -176,6 +182,7 @@ struct SanitizerTrapInfoTy {
   uint32_t ThreadId[3];
   uint64_t PC;
   uint64_t LocationId;
+  uint64_t CallId;
   /// }
 
   [[clang::disable_sanitizer_instrumentation]] void
@@ -185,6 +192,7 @@ struct SanitizerTrapInfoTy {
       ThreadId[Dim] = ompx_thread_id(Dim);
     }
     LocationId = SourceId;
+    CallId = __san_get_location_value();
   }
 
   template <enum AllocationKind AK>
