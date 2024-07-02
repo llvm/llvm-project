@@ -111,12 +111,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<
               "isdigit_l",
               RetValSpec<IntType>,
-              [ArgSpec<IntType, LocaleTType>]
+              [ArgSpec<IntType>, ArgSpec<LocaleTType>]
           >,
           FunctionSpec<
               "isxdigit_l",
               RetValSpec<IntType>,
-              [ArgSpec<IntType, LocaleTType>]
+              [ArgSpec<IntType>, ArgSpec<LocaleTType>]
           >,
       ]
   >;
