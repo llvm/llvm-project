@@ -1,7 +1,12 @@
 ! This test checks the lowering of parallel do
 
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
-! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp \
+! RUN:   -mmlir --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
+
+! RUN: bbc -fopenmp -emit-fir -hlfir=false \
+! RUN:   --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
 
 ! The string "EXPECTED" denotes the expected FIR
 

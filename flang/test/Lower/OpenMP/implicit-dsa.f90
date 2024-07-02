@@ -1,4 +1,6 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -mmlir --openmp-enable-delayed-privatization=false -o - %s 2>&1 \
+! RUN: | FileCheck %s
 
 ! Checks lowering of OpenMP variables with implicitly determined DSAs.
 

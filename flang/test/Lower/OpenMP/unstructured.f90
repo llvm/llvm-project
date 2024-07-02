@@ -1,6 +1,7 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-hlfir -o "-" | FileCheck %s
+! RUN: bbc %s -fopenmp -emit-hlfir --openmp-enable-delayed-privatization=false -o "-" \
+! RUN: | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
 ! CHECK:   br ^bb1

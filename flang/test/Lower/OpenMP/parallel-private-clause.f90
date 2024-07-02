@@ -2,7 +2,8 @@
 ! `PRIVATE` clause present.
 
 ! REQUIRES: shell
-! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-hlfir %s -o - | \
+! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-hlfir \
+! RUN:   --openmp-enable-delayed-privatization=false %s -o - | \
 ! RUN:   FileCheck %s --check-prefix=FIRDialect
 
 !FIRDialect: func @_QPprivate_clause(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "arg2"}, %[[ARG3:.*]]: !fir.boxchar<1> {fir.bindc_name = "arg3"}, %[[ARG4:.*]]: !fir.boxchar<1> {fir.bindc_name = "arg4"}) {

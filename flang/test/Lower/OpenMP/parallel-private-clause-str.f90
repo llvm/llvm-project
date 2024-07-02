@@ -2,8 +2,12 @@
 ! `PRIVATE` clause present for strings
 
 ! REQUIRES: shell
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
+
+! RUN: %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -mmlir --openmp-enable-delayed-privatization=false -o - %s 2>&1 \
+! RUN: | FileCheck %s
 
 !CHECK:  func.func @_QPtest_allocatable_string(%{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"}) {
 !CHECK:    %[[C_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = "c", uniq_name = "_QFtest_allocatable_stringEc"}

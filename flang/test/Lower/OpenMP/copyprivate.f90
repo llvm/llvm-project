@@ -1,5 +1,7 @@
 ! Test COPYPRIVATE.
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -mmlir --openmp-enable-delayed-privatization=false -o - %s 2>&1 \
+! RUN: | FileCheck %s
 
 !CHECK-DAG: func private @_copy_i64(%{{.*}}: !fir.ref<i64>, %{{.*}}: !fir.ref<i64>)
 !CHECK-DAG: func private @_copy_f32(%{{.*}}: !fir.ref<f32>, %{{.*}}: !fir.ref<f32>)

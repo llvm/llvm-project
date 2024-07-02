@@ -1,8 +1,13 @@
 ! This test checks lowering of OpenMP parallel directive
 ! with `DEFAULT` clause present.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
-! RUN: bbc -fopenmp -emit-hlfir --force-byref-reduction %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction \
+! RUN:   -mmlir --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
+
+! RUN: bbc -fopenmp -emit-hlfir --force-byref-reduction \
+! RUN:   --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
 
 
 !CHECK: func @_QQmain() attributes {fir.bindc_name = "default_clause_lowering"} {

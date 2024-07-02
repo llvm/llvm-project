@@ -1,6 +1,7 @@
 ! This test checks lowering of OpenMP DO Directive (Worksharing).
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
 
 ! CHECK-LABEL: func @_QPsimple_parallel_do()
 subroutine simple_parallel_do

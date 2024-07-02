@@ -1,8 +1,13 @@
 ! This test checks lowering of sequential loops in OpenMP parallel.
 ! The loop indices of these loops should be privatised.
 
-! RUN: bbc -hlfir -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -flang-experimental-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir \
+! RUN:   --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
+
+! RUN: %flang_fc1 -emit-hlfir -flang-experimental-hlfir -fopenmp \
+! RUN:   -mmlir --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
 
 
 subroutine sb1

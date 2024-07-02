@@ -1,7 +1,8 @@
 ! This test checks lowering of `FIRSTPRIVATE` clause for scalar types.
 
 ! REQUIRES: shell
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefix=CHECK
+! RUN: bbc -fopenmp -emit-hlfir --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s --check-prefix=CHECK
 
 !CHECK-DAG: func @_QPfirstprivate_complex(%[[ARG1:.*]]: !fir.ref<!fir.complex<4>>{{.*}}, %[[ARG2:.*]]: !fir.ref<!fir.complex<8>>{{.*}}) {
 !CHECK:    %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_complexEarg1"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)

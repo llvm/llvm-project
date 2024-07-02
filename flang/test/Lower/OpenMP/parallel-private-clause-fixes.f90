@@ -1,6 +1,9 @@
 ! This test checks a few bug fixes in the PRIVATE clause lowering
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir --openmp-enable-delayed-privatization=false %s -o - \
+! RUN: | FileCheck %s
+
+
 
 ! CHECK-LABEL: multiple_private_fix
 ! CHECK-SAME:  %[[GAMA:.*]]: !fir.ref<i32> {fir.bindc_name = "gama"}
