@@ -106,6 +106,7 @@ public:
     case 'l':
     case 'f':
     case 'd':
+    case 'q':
       Info.setAllowsRegister();
       return true;
     }
