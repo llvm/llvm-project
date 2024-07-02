@@ -14,7 +14,6 @@
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -703,8 +702,7 @@ public:
     return true;
   }
 
-  void finishLayout(MCAssembler const &Asm,
-                    MCAsmLayout &Layout) const override {
+  void finishLayout(MCAssembler const &Asm) const override {
     SmallVector<MCFragment *> Frags;
     for (MCSection &Sec : Asm) {
       Frags.clear();
