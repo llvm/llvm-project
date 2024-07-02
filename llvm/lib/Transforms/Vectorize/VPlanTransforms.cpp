@@ -966,55 +966,53 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
-/// Try to simplify recipe \p R.
-static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+/// Try to simplify recipe \p R. Returns candidates for further simplification.
+static SmallVector<VPRecipeBase *>
+simplifyRecipe(VPRecipeBase *R, VPTypeAnalysis &TypeInfo, LLVMContext &Ctx) {
   using namespace llvm::VPlanPatternMatch;
   // Try to remove redundant blend recipes.
-  if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
+  if (auto *Blend = dyn_cast<VPBlendRecipe>(R)) {
     VPValue *Inc0 = Blend->getIncomingValue(0);
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
       if (Inc0 != Blend->getIncomingValue(I) &&
           !match(Blend->getMask(I), m_False()))
-        return;
+        return {};
     Blend->replaceAllUsesWith(Inc0);
     Blend->eraseFromParent();
-    return;
+    return {};
   }
 
-  VPValue *A;
-  if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
-    VPValue *Trunc = R.getVPSingleValue();
+  VPValue *X, *X1, *Y, *Z;
+  if (match(R, m_Trunc(m_ZExtOrSExt(m_VPValue(X))))) {
+    VPValue *Trunc = R->getVPSingleValue();
     Type *TruncTy = TypeInfo.inferScalarType(Trunc);
-    Type *ATy = TypeInfo.inferScalarType(A);
-    if (TruncTy == ATy) {
-      Trunc->replaceAllUsesWith(A);
+    Type *XTy = TypeInfo.inferScalarType(X);
+    VPWidenCastRecipe *VPC = nullptr;
+    if (TruncTy == XTy) {
+      Trunc->replaceAllUsesWith(X);
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
-      if (isa<VPReplicateRecipe>(&R))
-        return;
-      if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+      if (isa<VPReplicateRecipe>(R))
+        return {};
 
-        unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
-                                 ? Instruction::SExt
-                                 : Instruction::ZExt;
-        auto *VPC =
-            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
-        VPC->insertBefore(&R);
-        Trunc->replaceAllUsesWith(VPC);
-      } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
-        auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
-        VPC->insertBefore(&R);
-        Trunc->replaceAllUsesWith(VPC);
-      }
+      unsigned ExtOpcode = match(R->getOperand(0), m_SExt(m_VPValue()))
+                               ? Instruction::SExt
+                               : Instruction::ZExt;
+      VPC = XTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()
+                ? new VPWidenCastRecipe(Instruction::Trunc, X, TruncTy)
+                : new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), X,
+                                        TruncTy);
+      VPC->insertBefore(R);
+      Trunc->replaceAllUsesWith(VPC);
     }
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still
     // accurate by comparing it to freshly computed types.
     VPTypeAnalysis TypeInfo2(
-        R.getParent()->getPlan()->getCanonicalIV()->getScalarType(),
+        R->getParent()->getPlan()->getCanonicalIV()->getScalarType(),
         TypeInfo.getContext());
-    assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
-    for (VPUser *U : A->users()) {
+    assert(TypeInfo.inferScalarType(X) == TypeInfo2.inferScalarType(X));
+    for (VPUser *U : X->users()) {
       auto *R = dyn_cast<VPRecipeBase>(U);
       if (!R)
         continue;
@@ -1022,23 +1020,79 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
     }
 #endif
+    if (VPC)
+      return {VPC};
+    return {};
   }
 
-  // Simplify (X && Y) || (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
-  // && (Y || Z) and (X || !X) into true. This requires queuing newly created
-  // recipes to be visited during simplification.
-  VPValue *X, *Y, *X1, *Y1;
-  if (match(&R,
-            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
-      X == X1 && Y == Y1) {
-    R.getVPSingleValue()->replaceAllUsesWith(X);
-    return;
+  // (X || !X) -> true.
+  if (match(R, m_c_BinaryOr(m_VPValue(X), m_Not(m_VPValue(X1)))) && X == X1) {
+    auto *VPV = new VPValue(ConstantInt::getTrue(Ctx));
+    R->getVPSingleValue()->replaceAllUsesWith(VPV);
+    R->eraseFromParent();
+    return {};
   }
 
-  if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
-    return R.getVPSingleValue()->replaceAllUsesWith(A);
+  // (X || true) -> true.
+  if (match(R, m_c_BinaryOr(m_VPValue(X), m_True()))) {
+    auto *VPV = new VPValue(ConstantInt::getTrue(Ctx));
+    R->getVPSingleValue()->replaceAllUsesWith(VPV);
+    R->eraseFromParent();
+    return {};
+  }
+
+  // (X || false) -> X.
+  if (match(R, m_c_BinaryOr(m_VPValue(X), m_False()))) {
+    R->getVPSingleValue()->replaceAllUsesWith(X);
+    R->eraseFromParent();
+    return {};
+  }
+
+  // (X && !X) -> false.
+  if (match(R, m_LogicalAnd(m_VPValue(X), m_Not(m_VPValue(X1)))) && X == X1) {
+    auto *VPV = new VPValue(ConstantInt::getFalse(Ctx));
+    R->getVPSingleValue()->replaceAllUsesWith(VPV);
+    R->eraseFromParent();
+    return {};
+  }
+
+  // (X && true) -> X.
+  if (match(R, m_LogicalAnd(m_VPValue(X), m_True()))) {
+    R->getVPSingleValue()->replaceAllUsesWith(X);
+    R->eraseFromParent();
+    return {};
+  }
+
+  // (X && false) -> false.
+  if (match(R, m_LogicalAnd(m_VPValue(X), m_False()))) {
+    auto *VPV = new VPValue(ConstantInt::getFalse(Ctx));
+    R->getVPSingleValue()->replaceAllUsesWith(VPV);
+    R->eraseFromParent();
+    return {};
+  }
+
+  // (X * 1) -> X.
+  if (match(R, m_c_Mul(m_VPValue(X), m_SpecificInt(1)))) {
+    R->getVPSingleValue()->replaceAllUsesWith(X);
+    R->eraseFromParent();
+    return {};
+  }
+
+  // (X && Y) || (X && Z) -> X && (Y || Z).
+  if (match(R, m_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                          m_LogicalAnd(m_VPValue(X1), m_VPValue(Z)))) &&
+      X == X1) {
+    auto *YorZ = new VPInstruction(Instruction::Or, {Y, Z}, R->getDebugLoc());
+    YorZ->insertBefore(R);
+    auto *VPI = new VPInstruction(VPInstruction::LogicalAnd, {X, YorZ},
+                                  R->getDebugLoc());
+    VPI->insertBefore(R);
+    R->getVPSingleValue()->replaceAllUsesWith(VPI);
+    R->eraseFromParent();
+    return {VPI, YorZ};
+  }
+
+  return {};
 }
 
 /// Try to simplify the recipes in \p Plan.
@@ -1047,8 +1101,16 @@ static void simplifyRecipes(VPlan &Plan, LLVMContext &Ctx) {
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(), Ctx);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      simplifyRecipe(R, TypeInfo);
+    // Populate a Worklist, as simplifyRecipe might return a new recipe that we
+    // need to re-process.
+    SmallVector<VPRecipeBase *> Worklist;
+    for (auto &R : VPBB->getRecipeList())
+      Worklist.push_back(&R);
+
+    while (!Worklist.empty()) {
+      VPRecipeBase *R = Worklist.pop_back_val();
+      for (VPRecipeBase *Cand : simplifyRecipe(R, TypeInfo, Ctx))
+        Worklist.push_back(Cand);
     }
   }
 }

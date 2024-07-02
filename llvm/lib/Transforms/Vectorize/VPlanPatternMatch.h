@@ -70,8 +70,9 @@ template <unsigned BitWidth = 0> struct specific_intval {
     if (!CI)
       return false;
 
-    assert((BitWidth == 0 || CI->getBitWidth() == BitWidth) &&
-           "Trying the match constant with unexpected bitwidth.");
+    if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
+      return false;
+
     return APInt::isSameValue(CI->getValue(), Val);
   }
 };
@@ -81,6 +82,8 @@ inline specific_intval<0> m_SpecificInt(uint64_t V) {
 }
 
 inline specific_intval<1> m_False() { return specific_intval<1>(APInt(64, 0)); }
+
+inline specific_intval<1> m_True() { return specific_intval<1>(APInt(64, 1)); }
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
