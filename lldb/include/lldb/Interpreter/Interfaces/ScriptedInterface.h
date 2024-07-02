@@ -68,6 +68,13 @@ public:
     return true;
   }
 
+  static bool
+  CreateInstance(lldb::ScriptLanguage language,
+                 std::vector<llvm::StringRef> command_interpreter_usages,
+                 std::vector<llvm::StringRef> api_usages) {
+    return false;
+  }
+
 protected:
   StructuredData::GenericSP m_object_instance_sp;
 };

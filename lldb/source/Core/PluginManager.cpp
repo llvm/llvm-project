@@ -1479,6 +1479,88 @@ LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
   return all;
 }
 
+#pragma mark ScriptedInterfaces
+
+struct ScriptedInterfaceInstance
+    : public PluginInstance<ScriptedInterfaceCreateInstance> {
+  ScriptedInterfaceInstance(
+      llvm::StringRef name, llvm::StringRef description,
+      ScriptedInterfaceCreateInstance create_callback,
+      lldb::ScriptLanguage language,
+      std::vector<llvm::StringRef> command_interpreter_usages,
+      std::vector<llvm::StringRef> api_usages)
+      : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
+                                                        create_callback),
+        language(language),
+        command_interpreter_usages(command_interpreter_usages),
+        api_usages(api_usages) {}
+
+  lldb::ScriptLanguage language;
+  std::vector<llvm::StringRef> command_interpreter_usages;
+  std::vector<llvm::StringRef> api_usages;
+};
+
+typedef PluginInstances<ScriptedInterfaceInstance> ScriptedInterfaceInstances;
+
+static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
+  static ScriptedInterfaceInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    ScriptedInterfaceCreateInstance create_callback,
+    lldb::ScriptLanguage language,
+    std::vector<llvm::StringRef> command_interpreter_usages,
+    std::vector<llvm::StringRef> api_usages) {
+  return GetScriptedInterfaceInstances().RegisterPlugin(
+      name, description, create_callback, language, command_interpreter_usages,
+      api_usages);
+}
+
+bool PluginManager::UnregisterPlugin(
+    ScriptedInterfaceCreateInstance create_callback) {
+  return GetScriptedInterfaceInstances().UnregisterPlugin(create_callback);
+}
+
+ScriptedInterfaceCreateInstance
+PluginManager::GetScriptedInterfaceCreateCallbackAtIndex(uint32_t idx) {
+  return GetScriptedInterfaceInstances().GetCallbackAtIndex(idx);
+}
+
+llvm::StringRef PluginManager::GetScriptedInterfaceNameAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetNameAtIndex(index);
+}
+
+llvm::StringRef
+PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
+}
+
+lldb::ScriptLanguage
+PluginManager::GetScriptedInterfaceLanguageAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  return idx < instances.size() ? instances[idx].language
+                                : ScriptLanguage::eScriptLanguageNone;
+}
+
+std::vector<llvm::StringRef>
+PluginManager::GetScriptedInterfaceCommandInterpreterUsagesAtIndex(
+    uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  if (idx >= instances.size())
+    return {};
+  return instances[idx].command_interpreter_usages;
+}
+
+std::vector<llvm::StringRef>
+PluginManager::GetScriptedInterfaceAPIUsagesAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  if (idx >= instances.size())
+    return {};
+  return instances[idx].api_usages;
+}
+
 #pragma mark REPL
 
 struct REPLInstance : public PluginInstance<REPLCreateInstance> {
@@ -1539,6 +1621,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
+  GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.

@@ -487,6 +487,31 @@ public:
 
   static LanguageSet GetAllTypeSystemSupportedLanguagesForExpressions();
 
+  // Scripted Interface
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 ScriptedInterfaceCreateInstance create_callback,
+                 lldb::ScriptLanguage language,
+                 std::vector<llvm::StringRef> command_interpreter_usages,
+                 std::vector<llvm::StringRef> api_usages);
+
+  static bool UnregisterPlugin(ScriptedInterfaceCreateInstance create_callback);
+
+  static ScriptedInterfaceCreateInstance
+  GetScriptedInterfaceCreateCallbackAtIndex(uint32_t idx);
+
+  static llvm::StringRef GetScriptedInterfaceNameAtIndex(uint32_t idx);
+
+  static llvm::StringRef GetScriptedInterfaceDescriptionAtIndex(uint32_t idx);
+
+  static lldb::ScriptLanguage GetScriptedInterfaceLanguageAtIndex(uint32_t idx);
+
+  static std::vector<llvm::StringRef>
+  GetScriptedInterfaceCommandInterpreterUsagesAtIndex(uint32_t idx);
+
+  static std::vector<llvm::StringRef>
+  GetScriptedInterfaceAPIUsagesAtIndex(uint32_t idx);
+
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              REPLCreateInstance create_callback,

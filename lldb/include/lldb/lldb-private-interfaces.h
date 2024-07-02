@@ -124,6 +124,10 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            lldb::LanguageType language,
                                            Debugger *debugger, Target *target,
                                            const char *repl_options);
+typedef bool (*ScriptedInterfaceCreateInstance)(
+    lldb::ScriptLanguage language,
+    std::vector<llvm::StringRef> command_interpreter_usages,
+    std::vector<llvm::StringRef> api_usages);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 /// Trace
