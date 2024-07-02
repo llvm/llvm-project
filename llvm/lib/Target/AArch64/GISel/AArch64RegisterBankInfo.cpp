@@ -424,6 +424,25 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     MI.getOperand(2).setReg(Ext.getReg(0));
     return applyDefaultMapping(OpdMapper);
   }
+  case AArch64::G_DUP: {
+    // Extend smaller gpr to 32-bits
+    Builder.setInsertPt(*MI.getParent(), MI.getIterator());
+
+    Register ConstReg;
+    auto ConstMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (ConstMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      auto CstVal = ConstMI->getOperand(1).getCImm()->getValue();
+      ConstReg =
+          Builder.buildConstant(LLT::scalar(32), CstVal.sext(32)).getReg(0);
+      ConstMI->eraseFromParent();
+    } else {
+      ConstReg = Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(1).getReg())
+                     .getReg(0);
+    }
+    MRI.setRegBank(ConstReg, getRegBank(AArch64::GPRRegBankID));
+    MI.getOperand(1).setReg(ConstReg);
+    return applyDefaultMapping(OpdMapper);
+  }
   default:
     llvm_unreachable("Don't know how to handle that operation");
   }
@@ -792,8 +811,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
              (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
               onlyDefinesFP(*ScalarDef, MRI, TRI)))
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
-    else
+    else {
+      if (ScalarTy.getSizeInBits() < 32 &&
+          getRegBank(ScalarReg, MRI, TRI) == &AArch64::GPRRegBank)
+        MappingID = 1;
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
+    }
     break;
   }
   case TargetOpcode::G_TRUNC: {
