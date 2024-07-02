@@ -366,16 +366,6 @@ void FieldEnum::Enumerator::ToXML(Stream &strm) const {
               escaped_name.c_str(), m_value);
 }
 
-void FieldEnum::Enumerator::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "  Name: \"{0}\" Value: {1}", m_name.c_str(), m_value);
-}
-
-void FieldEnum::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "ID: \"{0}\"", m_id.c_str());
-  for (const auto &enumerator : GetEnumerators())
-    enumerator.DumpToLog(log);
-}
-
 void RegisterFlags::ToXML(Stream &strm) const {
   // Example XML:
   // <flags id="cpsr_flags" size="4">
