@@ -27,4 +27,8 @@
 #define LIBC_HAS_FEATURE(f) 0
 #endif
 
+// Declare a LIBC_NAMESPACE with hidden visibility. This can be used on a
+// case-by-case basis where sets of symbols within this declaration are hidden.
+#define LIBC_NAMESPACE_HIDDEN_DECL [[gnu::visibility("hidden")]] LIBC_NAMESPACE
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
