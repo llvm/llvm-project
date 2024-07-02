@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "LangStandard.h"
 #include <cstring>
 
 // VC++ defines 'alloca' as an object-like macro, which interferes with our
@@ -74,6 +75,7 @@ struct Info {
   const char *Features;
   HeaderDesc Header;
   LanguageID Langs;
+  LangStandard UnprefixedOnlyConstexprSince;
 };
 
 /// Holds information about both target-independent and
@@ -159,6 +161,12 @@ public:
   /// a declaration.
   bool isPredefinedLibFunction(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'f') != nullptr;
+  }
+
+  clang::LangStandard::Kind isBuiltinConstant(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'O') != nullptr
+               ? LangStandard::lang_cxx23
+               : LangStandard::lang_cxx20; // Not constexpr
   }
 
   /// Returns true if this builtin requires appropriate header in other
@@ -277,7 +285,8 @@ public:
 
   /// Return true if this function can be constant evaluated by Clang frontend.
   bool isConstantEvaluated(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'E') != nullptr;
+    return (strchr(getRecord(ID).Attributes, 'E') != nullptr ||
+            strchr(getRecord(ID).Attributes, 'O') != nullptr);
   }
 
 private:
