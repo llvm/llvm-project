@@ -121,11 +121,15 @@ static std::string getBlockDescriptorName(const CGBlockInfo &BlockInfo,
     Name += "_";
   }
 
-  std::string TypeAtEncoding =
-      CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
-  /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms as
-  /// a separator between symbol name and symbol version.
-  std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
+  std::string TypeAtEncoding;
+
+  if (!CGM.getCodeGenOpts().DisableBlockSignatureString) {
+    TypeAtEncoding =
+        CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
+    /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms
+    /// as a separator between symbol name and symbol version.
+    std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
+  }
   Name += "e" + llvm::to_string(TypeAtEncoding.size()) + "_" + TypeAtEncoding;
   Name += "l" + CGM.getObjCRuntime().getRCBlockLayoutStr(CGM, BlockInfo);
   return Name;
@@ -201,9 +205,13 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   }
 
   // Signature.  Mandatory ObjC-style method descriptor @encode sequence.
-  std::string typeAtEncoding =
-    CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
-  elements.add(CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer());
+  if (CGM.getCodeGenOpts().DisableBlockSignatureString) {
+    elements.addNullPointer(i8p);
+  } else {
+    std::string typeAtEncoding =
+        CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
+    elements.add(CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer());
+  }
 
   // GC layout.
   if (C.getLangOpts().ObjC) {
