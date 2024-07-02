@@ -3,7 +3,8 @@ def StdC : StandardSpec<"stdc"> {
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
   RestrictedPtrType StructTmRestrictedPtr = RestrictedPtrType<StructTmType>;
-  
+  ConstType ConstStructTmRestrictedPtr = ConstType<StructTmRestrictedPtr>;
+
   PtrType TimeTTypePtr = PtrType<TimeTType>;
   NamedType ClockT = NamedType<"clock_t">;
 
@@ -1513,7 +1514,7 @@ def StdC : StandardSpec<"stdc"> {
                 ArgSpec<CharRestrictedPtr>,
                 ArgSpec<SizeTType>,
                 ArgSpec<ConstCharRestrictedPtr>,
-                ArgSpec<StructTmRestrictedPtr>
+                ArgSpec<ConstStructTmRestrictedPtr>
               ]
           >,
           FunctionSpec<
@@ -1523,7 +1524,7 @@ def StdC : StandardSpec<"stdc"> {
                 ArgSpec<CharRestrictedPtr>,
                 ArgSpec<SizeTType>,
                 ArgSpec<ConstCharRestrictedPtr>,
-                ArgSpec<StructTmRestrictedPtr>,
+                ArgSpec<ConstStructTmRestrictedPtr>,
                 ArgSpec<LocaleTType>
               ]
           >,          
