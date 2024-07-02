@@ -119,21 +119,95 @@ defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
 //===----------------------------------------------------------------------===//
 
 // Atomic load/store are available under both +a and +force-atomics.
-// Fences will be inserted for atomic load/stores according to the logic in
-// RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
-let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<atomic_load_8,  LB>;
-  def : LdPat<atomic_load_16, LH>;
-  def : LdPat<atomic_load_32, LW>;
 
-  def : StPat<atomic_store_8,  SB, GPR, XLenVT>;
-  def : StPat<atomic_store_16, SH, GPR, XLenVT>;
-  def : StPat<atomic_store_32, SW, GPR, XLenVT>;
+// Pseudo atomic load instructions.
+class PseudoAtomicLoad
+    : Pseudo<(outs GPR:$rd), (ins GPRMem:$rs1, simm12:$imm12, ixlenimm:$ordering), []> {
+  let hasSideEffects = 1;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+// Pseudo atomic store instructions.
+class PseudoAtomicStore
+    : Pseudo<(outs), (ins GPR:$rs2, GPRMem:$rs1, simm12:$imm12, ixlenimm:$ordering), []> {
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 1;
+}
+
+let IsAtomic = 1 in {
+class AtomicLoadPatFrag<PatFrags base> : PatFrag<(ops node:$ptr), (base node:$ptr)>;
+class AtomicStorePatFrag<PatFrags base> : PatFrag<(ops node:$val, node:$ptr),
+                                                 (base node:$val, node:$ptr)>;
+}
+
+// An atomic load operation that doesn't actually need to be atomic.
+let IsAtomicOrderingAcquireOrStronger = 0 in
+class relaxed_load<PatFrags base> : AtomicLoadPatFrag<base>;
+
+// An atomic load operation that needs acquire semantics.
+let IsAtomicOrderingAcquire = 1 in
+class acquire_load<PatFrags base> : AtomicLoadPatFrag<base>;
+
+// An atomic load operation that needs sequential consistency semantics.
+let IsAtomicOrderingSequentiallyConsistent = 1 in
+class seq_cst_load<PatFrags base> : AtomicLoadPatFrag<base>;
+
+// An atomic store operation that doesn't actually need to be atomic.
+let IsAtomicOrderingReleaseOrStronger = 0 in
+class relaxed_store<PatFrags base> : AtomicStorePatFrag<base>;
+
+// An atomic store operation that needs release semantics.
+let IsAtomicOrderingRelease = 1 in
+class release_store<PatFrags base> : AtomicStorePatFrag<base>;
+
+// An atomic store operation that needs sequential consistency semantics.
+let IsAtomicOrderingSequentiallyConsistent = 1 in
+class seq_cst_store<PatFrags base> : AtomicStorePatFrag<base>;
+
+multiclass AtomicLdPat<PatFrag LoadOp, RVInst Inst> {
+  def : Pat<(XLenVT (relaxed_load<LoadOp> (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
+            (Inst GPR:$rs1, simm12:$imm12, 2)>;
+  def : Pat<(XLenVT (acquire_load<LoadOp> (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
+            (Inst GPR:$rs1, simm12:$imm12, 4)>;
+  def : Pat<(XLenVT (seq_cst_load<LoadOp> (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
+            (Inst GPR:$rs1, simm12:$imm12, 7)>;
+}
+
+multiclass AtomicStPat<PatFrag StoreOp, RVInst Inst> {
+  def : Pat<(relaxed_store<StoreOp> (XLenVT GPR:$rs2), (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
+            (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12, 2)>;
+  def : Pat<(release_store<StoreOp> (XLenVT GPR:$rs2), (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
+            (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12, 5)>;
+  def : Pat<(seq_cst_store<StoreOp> (XLenVT GPR:$rs2), (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
+            (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12, 7)>;
+}
+
+let Predicates = [HasAtomicLdSt] in {
+  def PseudoAtomicLB : PseudoAtomicLoad, Sched<[WriteLDB, ReadMemBase]>;
+  def PseudoAtomicLH : PseudoAtomicLoad, Sched<[WriteLDH, ReadMemBase]>;
+  def PseudoAtomicLW : PseudoAtomicLoad, Sched<[WriteLDW, ReadMemBase]>;
+
+  def PseudoAtomicSB : PseudoAtomicStore, Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+  def PseudoAtomicSH : PseudoAtomicStore, Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+  def PseudoAtomicSW : PseudoAtomicStore, Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+
+  defm : AtomicLdPat<atomic_load_8,  PseudoAtomicLB>;
+  defm : AtomicLdPat<atomic_load_16, PseudoAtomicLH>;
+  defm : AtomicLdPat<atomic_load_32, PseudoAtomicLW>;
+
+  defm : AtomicStPat<atomic_store_8,  PseudoAtomicSB>;
+  defm : AtomicStPat<atomic_store_16, PseudoAtomicSH>;
+  defm : AtomicStPat<atomic_store_32, PseudoAtomicSW>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_64, LD, i64>;
-  def : StPat<atomic_store_64, SD, GPR, i64>;
+  def PseudoAtomicLD : PseudoAtomicLoad, Sched<[WriteLDD, ReadMemBase]>;
+  def PseudoAtomicSD : PseudoAtomicStore, Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
+
+  defm : AtomicLdPat<atomic_load_64, PseudoAtomicLD>;
+  defm : AtomicStPat<atomic_store_64, PseudoAtomicSD>;
 }
 
 /// AMOs
