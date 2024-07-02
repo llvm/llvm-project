@@ -282,6 +282,9 @@ def SanitizeAddress : EnumAttr<"sanitize_address", [FnAttr]>;
 /// ThreadSanitizer is on.
 def SanitizeThread : EnumAttr<"sanitize_thread", [FnAttr]>;
 
+/// TypeSanitizer is on.
+def SanitizeType : EnumAttr<"sanitize_type", [FnAttr]>;
+
 /// MemorySanitizer is on.
 def SanitizeMemory : EnumAttr<"sanitize_memory", [FnAttr]>;
 
@@ -382,6 +385,7 @@ def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
+def : CompatRule<"isEqual<SanitizeTypeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;
