@@ -71,6 +71,11 @@ static cl::opt<bool>
                      cl::init(true),
                      cl::desc("Use Stack Safety analysis results"));
 
+static cl::opt<bool>
+    ClStackTaggingUAS("stack-tagging-use-after-scope", cl::Hidden,
+                     cl::init(true),
+                     cl::desc("detect use after scope within function"));
+
 static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
                                      cl::init(40), cl::Hidden);
 
@@ -607,7 +612,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    ClMaxLifetimes);
-    if (StandardLifetime) {
+    if (ClStackTaggingUAS && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
