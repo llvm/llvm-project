@@ -527,7 +527,7 @@ int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
 void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
                       int toLine, const std::vector<VarLocResult> &path,
                       const std::string &type, int sourceIndex,
-                      ordered_json &jResults) {
+                      ordered_json &jFinalResults) {
 
     // 根据有缺陷的 source 位置，删除可疑的 source
     auto removeNpeBadSource = [](const std::string &sourceFile,
@@ -558,6 +558,9 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         return VarLocResult(fid, Global.icfg.entryExitOfFunction[fid].second);
     };
 
+    // 用于暂时存放路径生成结果
+    ordered_json results;
+
     if (type == "npe") {
         logger.info("Handle known type: {}", type);
         requireTrue(from.isValid());
@@ -565,9 +568,22 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
 
         logger.info("Generating NPE bug version ...");
         int size = findPathBetween(from, fromLine, to, toLine, path, {},
-                                   "npe-bug", sourceIndex, jResults);
-        if (size == 0)
+                                   "npe-bug", sourceIndex, results);
+        if (size == 0) {
             logger.warn("Unable to find any path for NPE bug version!");
+        } else {
+            // 路径经过的所有 stmt 都认为 NPE bad source
+            for (const auto &path : results) {
+                if (!path.contains("locations"))
+                    continue;
+                for (const auto &loc : path["locations"]) {
+                    if (loc.contains("type") && loc["type"] == "stmt" &&
+                        loc.contains("file") && loc.contains("beginLine")) {
+                        removeNpeBadSource(loc["file"], loc["beginLine"]);
+                    }
+                }
+            }
+        }
 
         // 无缺陷版本：source -> sink 所在函数的出口
         // 尽量符合原始缺陷路径。如果找不到，就一步步减小路径
@@ -576,9 +592,8 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         std::vector<VarLocResult> p = path;
         bool found = false;
         while (true) {
-            int result =
-                findPathBetween(from, fromLine, sinkExit, INT_MAX, p, {to},
-                                "npe-fix", sourceIndex, jResults);
+            int result = findPathBetween(from, fromLine, sinkExit, INT_MAX, p,
+                                         {to}, "npe-fix", sourceIndex, results);
             if (result) {
                 found = true;
                 break;
@@ -607,8 +622,11 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
             toLine = INT_MAX;
         }
         findPathBetween(from, fromLine, to, toLine, path, {}, type, sourceIndex,
-                        jResults);
+                        results);
     }
+
+    // 将生成的路径结果加入到最终结果中
+    jFinalResults.insert(jFinalResults.end(), results.begin(), results.end());
 }
 
 void generatePathFromOneEntry(int sourceIndex, const ordered_json &sourceEntry,
