@@ -829,7 +829,7 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
     return false;
 
   Value *X = nullptr;
-  if (!match(C, m_c_And(m_Value(X), m_One())))
+  if (!match(C, m_And(m_Value(X), m_One())))
     return false;
   // Matched: select (X & 1) == +++ ? ... : ...
   //          select (X & 1) != +++ ? ... : ...
