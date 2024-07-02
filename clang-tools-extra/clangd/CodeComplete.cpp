@@ -342,7 +342,8 @@ std::string removeFirstTemplateArg(llvm::StringRef Signature) {
 // computed from the first candidate, in the constructor.
 // Others vary per candidate, so add() must be called for remaining candidates.
 struct CodeCompletionBuilder {
-  CodeCompletionBuilder(ASTContext *ASTCtx, const CompletionCandidate &C,
+  CodeCompletionBuilder(ASTContext *ASTCtx, DeclContext *SemaDeclCtx,
+                        const CompletionCandidate &C,
                         CodeCompletionString *SemaCCS,
                         llvm::ArrayRef<std::string> AccessibleScopes,
                         const IncludeInserter &Includes,
@@ -405,6 +406,8 @@ struct CodeCompletionBuilder {
             ShortestQualifier = Qualifier;
         }
         Completion.RequiredQualifier = std::string(ShortestQualifier);
+
+        stripNamespaceForEnumConstantIfUsingDecl(*C.IndexResult, SemaDeclCtx);
       }
     }
     if (C.IdentifierResult) {
@@ -460,6 +463,30 @@ struct CodeCompletionBuilder {
                           [](const CodeCompletion::IncludeCandidate &I) {
                             return !I.Insertion.has_value();
                           });
+  }
+
+  // With all-scopes-completion, we can complete enum constants of scoped
+  // enums, in which case the completion might not be visible to Sema.
+  // So, if there's a using declaration for the enum class, manually
+  // drop the qualifiers.
+  void stripNamespaceForEnumConstantIfUsingDecl(const Symbol &IndexResult,
+                                                DeclContext *SemaDeclCtx) {
+    if (IndexResult.SymInfo.Kind != index::SymbolKind::EnumConstant)
+      return;
+    for (auto *Ctx = SemaDeclCtx; Ctx; Ctx = Ctx->getParent())
+      for (auto *D : Ctx->decls()) {
+        const auto *UD = dyn_cast<UsingShadowDecl>(D);
+        if (!UD)
+          continue;
+        const auto *ED = dyn_cast<EnumDecl>(UD->getTargetDecl());
+        if (!ED || !ED->isScoped())
+          continue;
+        auto EnumName = printQualifiedName(*ED) + "::";
+        if (EnumName == IndexResult.Scope) {
+          Completion.RequiredQualifier = ED->getName().str() + "::";
+          return;
+        }
+      }
   }
 
   void add(const CompletionCandidate &C, CodeCompletionString *SemaCCS,
@@ -2097,7 +2124,8 @@ private:
                           : nullptr;
       if (!Builder)
         Builder.emplace(Recorder ? &Recorder->CCSema->getASTContext() : nullptr,
-                        Item, SemaCCS, AccessibleScopes, *Inserter, FileName,
+                        Recorder ? Recorder->CCSema->CurContext : nullptr, Item,
+                        SemaCCS, AccessibleScopes, *Inserter, FileName,
                         CCContextKind, Opts, IsUsingDeclaration, NextTokenKind);
       else
         Builder->add(Item, SemaCCS, CCContextKind);
