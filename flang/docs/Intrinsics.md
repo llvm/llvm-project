@@ -707,6 +707,7 @@ MALLOC
 ```
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
+CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
 ```
 
 ## Intrinsic Procedure Name Resolution
@@ -768,7 +769,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | FDATE, GETLOG |
+| Library subroutines | FDATE, GETLOG, GETENV |
 
 
 ### Intrinsic Function Folding
