@@ -7476,12 +7476,98 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
   LLT SrcTy = MRI.getType(Src);
   const auto &TLI = getTargetLowering();
 
+  const MachineFunction &MF = *MO.getParent()->getMF();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+
   // Convert zext nneg to sext if sext is the preferred form for the target.
   if (isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}}) &&
-      TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy))) {
+      TLI.isSExtCheaperThanZExt(SrcTy, DstTy, DL, Ctx)) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
     return true;
   }
 
   return false;
+}
+
+bool CombinerHelper::matchZextInteger(const MachineInstr &MI,
+                                      APInt &MatchInfo) {
+  const GZext *Zext = cast<GZext>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Zext->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Zext->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  MatchInfo = Input->zext(DstTy.getScalarSizeInBits());
+
+  return true;
+}
+
+bool CombinerHelper::matchSextInteger(const MachineInstr &MI,
+                                      APInt &MatchInfo) {
+  const GSext *Sext = cast<GSext>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Sext->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Sext->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  MatchInfo = Input->sext(DstTy.getScalarSizeInBits());
+
+  return true;
+}
+
+bool CombinerHelper::matchTruncInteger(const MachineInstr &MI,
+                                       APInt &MatchInfo) {
+  const GTrunc *Trunc = cast<GTrunc>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Trunc->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Trunc->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  MatchInfo = Input->trunc(DstTy.getScalarSizeInBits());
+
+  return true;
+}
+
+bool CombinerHelper::matchAnyextInteger(const MachineInstr &MI,
+                                        APInt &MatchInfo) {
+  const GAnyExt *Anyext = cast<GAnyExt>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Anyext->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Anyext->getReg(0));
+  LLT SrcTy = MRI.getType(Anyext->getSrcReg());
+  const auto &TLI = getTargetLowering();
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  const MachineFunction &MF = *MI.getMF();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+
+  // Some targets like RISCV prefer to sign extend some types.
+  if (TLI.isSExtCheaperThanZExt(SrcTy, DstTy, DL, Ctx))
+    MatchInfo = Input->sext(DstTy.getScalarSizeInBits());
+  else
+    MatchInfo = Input->zext(DstTy.getScalarSizeInBits());
+
+  return true;
 }

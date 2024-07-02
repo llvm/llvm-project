@@ -863,6 +863,14 @@ public:
   };
 };
 
+/// Represents an anyext.
+class GAnyExt : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ANYEXT;
+  };
+};
+
 /// Represents a vscale.
 class GVScale : public GenericMachineInstr {
 public:
