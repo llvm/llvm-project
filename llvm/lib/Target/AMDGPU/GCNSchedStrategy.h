@@ -163,6 +163,32 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ScheduleMetrics &Sm) {
   return OS;
 }
 
+class GCNScheduleDAGMILive;
+class RegionPressureMap {
+  GCNScheduleDAGMILive *DAG;
+  // The live in/out pressure as indexed by the first or last MI in the region
+  // before scheduling.
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveRegMap;
+  // The mapping of RegionIDx to key instruction
+  DenseMap<unsigned, MachineInstr *> IdxToInstruction;
+  // Whether we are calculating LiveOuts or LiveIns
+  bool IsLiveOut;
+
+public:
+  RegionPressureMap() {}
+  RegionPressureMap(GCNScheduleDAGMILive *GCNDAG, bool LiveOut)
+      : DAG(GCNDAG), IsLiveOut(LiveOut) {}
+  // Build the Instr->LiveReg and RegionIdx->Instr maps
+  void buildLiveRegMap();
+
+  // Retrieve the LiveReg for a given RegionIdx
+  GCNRPTracker::LiveRegSet &getLiveRegsForRegionIdx(unsigned RegionIdx) {
+    assert(IdxToInstruction.find(RegionIdx) != IdxToInstruction.end());
+    MachineInstr *Key = IdxToInstruction[RegionIdx];
+    return BBLiveRegMap[Key];
+  }
+};
+
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class OccInitialScheduleStage;
@@ -170,6 +196,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
   friend class ILPInitialScheduleStage;
+  friend class RegionPressureMap;
 
   const GCNSubtarget &ST;
 
@@ -211,9 +238,22 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Temporary basic block live-in cache.
   DenseMap<const MachineBasicBlock *, GCNRPTracker::LiveRegSet> MBBLiveIns;
 
+  // The map of the initial first region instruction to region live in registers
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveInMap;
 
-  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
+  // Calculate the map of the initial first region instruction to region live in
+  // registers
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getRegionLiveInMap() const;
+
+  // Calculate the map of the initial last region instruction to region live out
+  // registers
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
+  getRegionLiveOutMap() const;
+
+  // The live out registers per region. These are internally stored as a map of
+  // the initial last region instruction to region live out registers, but can
+  // be retreived with the regionIdx by calls to getLiveRegsForRegionIdx.
+  RegionPressureMap RegionLiveOuts;
 
   // Return current region pressure.
   GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;
