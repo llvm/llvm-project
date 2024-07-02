@@ -143,20 +143,15 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
 
   const Instruction *I = dyn_cast<Instruction>(CurUser);
   if (I) {
-    uint32_t ActualNumValueData = 0;
     uint64_t TotalCount = 0;
     // MaxNumVTableAnnotations is the maximum number of vtables annotated on
     // the instruction.
-    auto ValueDataArray =
-        getValueProfDataFromInst(*I, IPVK_VTableTarget, MaxNumVTableAnnotations,
-                                 ActualNumValueData, TotalCount);
+    auto ValueDataArray = getValueProfDataFromInst(
+        *I, IPVK_VTableTarget, MaxNumVTableAnnotations, TotalCount);
 
-    if (ValueDataArray.get()) {
-      for (uint32_t j = 0; j < ActualNumValueData; j++) {
-        RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
-                                                   ValueDataArray[j].Value));
-      }
-    }
+    for (const auto &V : ValueDataArray)
+      RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
+                                                 V.Value));
   }
   return HasBlockAddress;
 }

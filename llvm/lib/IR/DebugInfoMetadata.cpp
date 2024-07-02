@@ -663,12 +663,12 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, uint64_t SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
-                                  DIFlags Flags, Metadata *Annotations,
-                                  StorageType Storage, bool ShouldCreate) {
+                                  DIFlags Flags, StorageType Storage,
+                                  bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
-                                      Encoding, Flags, Annotations));
-  Metadata *Ops[] = {nullptr, nullptr, Name, Annotations};
+  DEFINE_GETIMPL_LOOKUP(DIBasicType,
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags));
+  Metadata *Ops[] = {nullptr, nullptr, Name};
   DEFINE_GETIMPL_STORE(DIBasicType,
                        (Tag, SizeInBits, AlignInBits, Encoding, Flags), Ops);
 }
@@ -872,11 +872,10 @@ DISubroutineType::DISubroutineType(LLVMContext &C, StorageType Storage,
 
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
                                             uint8_t CC, Metadata *TypeArray,
-                                            Metadata *Annotations,
                                             StorageType Storage,
                                             bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DISubroutineType, (Flags, CC, TypeArray, Annotations));
-  Metadata *Ops[] = {nullptr, nullptr, nullptr, TypeArray, Annotations};
+  DEFINE_GETIMPL_LOOKUP(DISubroutineType, (Flags, CC, TypeArray));
+  Metadata *Ops[] = {nullptr, nullptr, nullptr, TypeArray};
   DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
 

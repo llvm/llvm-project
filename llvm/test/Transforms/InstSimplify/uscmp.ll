@@ -229,6 +229,26 @@ define <4 x i8> @ucmp_with_addition_vec(<4 x i32> %x) {
   ret <4 x i8> %2
 }
 
+define i1 @scmp_eq_4(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @scmp_eq_4(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %2 = icmp eq i8 %1, 4
+  ret i1 %2
+}
+
+define i1 @ucmp_ne_negative_2(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @ucmp_ne_negative_2(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  %2 = icmp ne i8 %1, -2
+  ret i1 %2
+}
+
 ; Negative case: mismatched signedness of predicates
 define i8 @scmp_known_ugt(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_known_ugt(
