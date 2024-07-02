@@ -34,7 +34,6 @@ class ParsedCommandTestCase(TestBase):
             else:
                 (short_opt, type, long_opt) = elem
                 substrs.append(f"-{short_opt} <{type}> ( --{long_opt} <{type}> )")
-        print(f"Opt Vec\n{substrs}")
         self.expect("help " + cmd_name, substrs=substrs)
 
     def run_one_repeat(self, commands, expected_num_errors):
@@ -65,7 +64,6 @@ class ParsedCommandTestCase(TestBase):
         with open(self.stdout_path, "r") as out_fileH:
             results = out_fileH.read()
 
-        print(f"RESULTS:\n{results}\nDONE")
         self.assertEqual(n_errors, expected_num_errors)
 
         return results
@@ -205,9 +203,6 @@ class ParsedCommandTestCase(TestBase):
         descriptions.Clear()
         num_completions = interp.HandleCompletionWithDescriptions(
             cmd_str, len(cmd_str) - 1, 0, 1000, matches, descriptions
-        )
-        print(
-            f"First: {matches.GetStringAtIndex(0)}\nSecond: {matches.GetStringAtIndex(1)}\nThird: {matches.GetStringAtIndex(2)}"
         )
         self.assertEqual(num_completions, 1, "Only one completion for source file")
         self.assertEqual(matches.GetSize(), 2, "The first element is the complete line")

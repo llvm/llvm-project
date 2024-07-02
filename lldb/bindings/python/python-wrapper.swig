@@ -842,9 +842,8 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonGetRepeatCommandForScriptedComma
   if (!pfunc.IsAllocated())
     return std::nullopt;
 
-  PythonObject result;
   PythonString command_str(command);
-  result = pfunc(command_str);
+  PythonObject result = pfunc(command_str);
 
   // A return of None is the equivalent of nullopt - means repeat
   // the command as is:
