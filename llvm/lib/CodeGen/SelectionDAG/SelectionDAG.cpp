@@ -1239,6 +1239,7 @@ SelectionDAG::AddModifiedNodeToCSEMaps(SDNode *N) {
       // If there was already an existing matching node, use ReplaceAllUsesWith
       // to replace the dead one with the existing one.  This can cause
       // recursive merging of other unrelated nodes down the line.
+      Existing->intersectFlagsWith(N->getFlags());
       ReplaceAllUsesWith(N, Existing);
 
       // N is now dead. Inform the listeners and delete it.
