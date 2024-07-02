@@ -549,9 +549,16 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
-  KernelLaunchParamsTy LaunchParams =
-      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
-                  Ptrs, *KernelLaunchEnvOrErr);
+  KernelLaunchParamsTy LaunchParams;
+
+  // Kernel languages don't use indirection.
+  if (KernelArgs.Flags.IsCUDA) {
+    LaunchParams = *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
+  } else {
+    LaunchParams =
+        prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
+                    Args, Ptrs, *KernelLaunchEnvOrErr);
+  }
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
   uint64_t NumBlocks =
@@ -1431,8 +1438,10 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
 
 Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
   assert(AsyncInfoPtr && "Invalid async info");
+  assert(!(*AsyncInfoPtr) && "Already initialized async info");
 
   *AsyncInfoPtr = new __tgt_async_info();
+  (*AsyncInfoPtr)->PersistentQueue = true;
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
 
