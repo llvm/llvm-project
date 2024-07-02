@@ -33,7 +33,7 @@
 // CHECK-V6M-TREE:      "-cc1" "-triple" "thumbv6m-unknown-none-eabi"
 // CHECK-V6M-TREE-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-TREE-SAME: "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}armv6m-unknown-none-eabi{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-V6M-TREE-SAME: "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-V6M-TREE-SAME: {{^}} "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECK-V6M-TREE-SAME: "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}armv6m-unknown-none-eabi"
 // CHECK-V6M-TREE-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-V6M-TREE-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
