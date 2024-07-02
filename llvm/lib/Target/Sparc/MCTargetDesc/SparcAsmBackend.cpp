@@ -135,7 +135,7 @@ namespace {
     bool HasV9;
 
   public:
-    SparcAsmBackend(const Target &T, const MCSubtargetInfo &STI)
+    SparcAsmBackend(const MCSubtargetInfo &STI)
         : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
                            ? llvm::endianness::little
                            : llvm::endianness::big),
@@ -341,9 +341,8 @@ namespace {
   class ELFSparcAsmBackend : public SparcAsmBackend {
     Triple::OSType OSType;
   public:
-    ELFSparcAsmBackend(const Target &T, const MCSubtargetInfo &STI,
-                       Triple::OSType OSType)
-        : SparcAsmBackend(T, STI), OSType(OSType) {}
+    ELFSparcAsmBackend(const MCSubtargetInfo &STI, Triple::OSType OSType)
+        : SparcAsmBackend(STI), OSType(OSType) {}
 
     void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                     const MCValue &Target, MutableArrayRef<char> Data,
@@ -380,5 +379,5 @@ MCAsmBackend *llvm::createSparcAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
-  return new ELFSparcAsmBackend(T, STI, STI.getTargetTriple().getOS());
+  return new ELFSparcAsmBackend(STI, STI.getTargetTriple().getOS());
 }
