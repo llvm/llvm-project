@@ -614,6 +614,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("--push-state");
         CmdArgs.push_back("--as-needed");
         CmdArgs.push_back("-latomic");
+        CmdArgs.push_back("--no-as-needed");
         CmdArgs.push_back("--pop-state");
       }
 
