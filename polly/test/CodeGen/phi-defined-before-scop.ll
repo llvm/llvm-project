@@ -19,7 +19,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb6, %bb
-  %tmp2 = phi ptr [ %tmp7, %bb6 ], [ undef, %bb ]
+  %tmp2 = phi ptr [ %tmp7, %bb6 ], [ poison, %bb ]
   %tmp = load ptr, ptr @global, align 8, !tbaa !1
   br label %bb3
 
