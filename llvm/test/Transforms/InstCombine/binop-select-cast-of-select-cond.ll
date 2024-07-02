@@ -231,12 +231,14 @@ define <2 x i8> @vectorized_add(<2 x i1> %c, <2 x i8> %arg) {
 define i64 @pr64669(i64 %a) {
 ; CHECK-LABEL: define i64 @pr64669
 ; CHECK-SAME: (i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr getelementptr inbounds (i8, ptr @b, i64 100), @c
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[A]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c), i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP_NOT]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
-  %mul = select i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c), i64 %a, i64 0
-  %conv3 = zext i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c) to i64
+  %cmp = icmp ne ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), @c
+  %mul = select i1 %cmp, i64 %a, i64 0
+  %conv3 = zext i1 %cmp to i64
   %add = add nsw i64 %mul, %conv3
   ret i64 %add
 }

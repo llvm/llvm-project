@@ -60,8 +60,8 @@ public:
     // For each code point in the `from` string, convert naively to the `to`
     // string code point. Conversion is done blindly on size only, not value.
     auto getCharBits = [&](mlir::Type t) {
-      auto chrTy = fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t))
-                       .cast<fir::CharacterType>();
+      auto chrTy = mlir::cast<fir::CharacterType>(
+          fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t)));
       return kindMap.getCharacterBitsize(chrTy.getFKind());
     };
     auto fromBits = getCharBits(conv.getFrom().getType());
@@ -102,6 +102,9 @@ public:
 class CharacterConversion
     : public fir::impl::CharacterConversionBase<CharacterConversion> {
 public:
+  using fir::impl::CharacterConversionBase<
+      CharacterConversion>::CharacterConversionBase;
+
   void runOnOperation() override {
     CharacterConversionOptions clOpts{useRuntimeCalls.getValue()};
     if (clOpts.runtimeName.empty()) {
@@ -130,7 +133,3 @@ public:
   }
 };
 } // end anonymous namespace
-
-std::unique_ptr<mlir::Pass> fir::createCharacterConversionPass() {
-  return std::make_unique<CharacterConversion>();
-}

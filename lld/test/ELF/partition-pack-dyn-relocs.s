@@ -29,9 +29,9 @@
 // CHECK-EMPTY:
 
 // CHECK: Relocation section '.relr.dyn'
-// CHECK-NEXT: Offset
-// PART0-NEXT: 000000000000[[DATA_SEGMENT]]378 {{.*}} R_X86_64_RELATIVE
-// PART1-NEXT: 000000000000[[DATA_SEGMENT]]340 {{.*}} R_X86_64_RELATIVE
+// CHECK-NEXT: Address Symbolic Address
+// PART0-NEXT: 000000000000[[DATA_SEGMENT]]378 p0{{$}}
+// PART1-NEXT: 000000000000[[DATA_SEGMENT]]340 p1{{$}}
 // CHECK-EMPTY:
 
 .section .llvm_sympart,"",@llvm_sympart

@@ -1852,6 +1852,20 @@ let Extension = FunctionExtension<"cl_khr_subgroup_rotate"> in {
   def : Builtin<"sub_group_clustered_rotate", [AGenType1, AGenType1, Int, UInt], Attr.Convergent>;
 }
 
+// cl_khr_kernel_clock
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_device"> in {
+  def : Builtin<"clock_read_device", [ULong]>;
+  def : Builtin<"clock_read_hilo_device", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_work_group"> in {
+  def : Builtin<"clock_read_work_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_work_group", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_sub_group"> in {
+  def : Builtin<"clock_read_sub_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_sub_group", [VectorType<UInt, 2>]>;
+}
+
 //--------------------------------------------------------------------
 // Arm extensions.
 let Extension = ArmIntegerDotProductInt8 in {

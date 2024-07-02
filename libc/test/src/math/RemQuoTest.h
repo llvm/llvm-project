@@ -12,6 +12,7 @@
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -19,7 +20,7 @@
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
-class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 

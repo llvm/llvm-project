@@ -74,6 +74,8 @@ CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
     ModeIds.insert(std::pair(R, Modes.size()));
   }
 
+  assert(Modes.size() <= 32 && "number of HwModes exceeds maximum of 32");
+
   for (Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
     auto P = ModeSelects.emplace(std::pair(R, HwModeSelect(R, *this)));
     assert(P.second);

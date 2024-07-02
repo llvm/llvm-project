@@ -33,7 +33,6 @@
   adc	pc, r5, r6, ror #2
   adc	r4, r5, r6, ror #31
   adc	r6, r7, r8, lsl r9
-  adc	pc, r7, r8, lsl r9
   adc	r6, r7, r8, lsr r9
   adc	r6, r7, r8, asr r9
   adc	r6, r7, r8, ror r9

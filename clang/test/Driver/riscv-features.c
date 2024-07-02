@@ -37,9 +37,11 @@
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-UNALIGNED-ACCESS
+// RUN: touch %t.o
+// RUN: %clang --target=riscv32-unknown-elf -### %t.o -mno-strict-align -mstrict-align
 
-// FAST-UNALIGNED-ACCESS: "-target-feature" "+fast-unaligned-access"
-// NO-FAST-UNALIGNED-ACCESS: "-target-feature" "-fast-unaligned-access"
+// FAST-UNALIGNED-ACCESS: "-target-feature" "+unaligned-scalar-mem" "-target-feature" "+unaligned-vector-mem"
+// NO-FAST-UNALIGNED-ACCESS: "-target-feature" "-unaligned-scalar-mem" "-target-feature" "-unaligned-vector-mem"
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
 // RUN: %clang --target=riscv32-unknown-elf -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE

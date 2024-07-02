@@ -7,7 +7,7 @@ extern "C" {
 static int f(void) { return 42; } // cxx-warning{{unused function 'f'}}
 int g(void) __attribute__((alias("f")));
 
-static int foo [] = { 42, 0xDEAD }; // cxx-warning{{variable 'foo' is not needed and will not be emitted}}
+static int foo [] = { 42, 0xDEAD };
 extern typeof(foo) bar __attribute__((unused, alias("foo")));
 
 static int __attribute__((overloadable)) f0(int x) { return x; } // expected-warning{{unused function 'f0'}}

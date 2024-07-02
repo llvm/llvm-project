@@ -21,7 +21,6 @@ static_library("Common") {
     "GlobalISel/CombinerUtils.cpp",
     "GlobalISel/GlobalISelMatchTable.cpp",
     "GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp",
-    "GlobalISel/MatchDataInfo.cpp",
     "GlobalISel/PatternParser.cpp",
     "GlobalISel/Patterns.cpp",
     "InfoByHwMode.cpp",

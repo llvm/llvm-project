@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=A57_SCHED
-; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=generic    -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=GENERIC
+; RUN: llc < %s -mtriple=armv8r-eabi -mattr=+neon,+fp-armv8 -mcpu=generic    -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=GENERIC
 
 ; Check the latency for instructions for both generic and cortex-a57.
 ; SDIV should be scheduled at the block's begin (20 cyc of independent M unit).

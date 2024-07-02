@@ -2,7 +2,7 @@
 ; RUN: llc -mattr=+sve < %s | FileCheck %s
 
 ; Streaming-compatible SVE doesn't include FADDA, so this shouldn't compile!
-; RUN: not --crash llc -mattr=+sve -force-streaming-compatible-sve < %s
+; RUN: not --crash llc -mattr=+sve -force-streaming-compatible < %s
 
 target triple = "aarch64-linux-gnu"
 
@@ -51,10 +51,10 @@ define half @fadda_nxv6f16(<vscale x 6 x half> %v, half %s) {
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
 ; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    st1h { z2.d }, p1, [sp, #3, mul vl]

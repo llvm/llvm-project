@@ -827,7 +827,6 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_call_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_call_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
-; CHECK-NEXT:    .reg .b32 temp_param_reg;
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.b32 [param0+0], %r1;
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];
@@ -856,7 +855,6 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_call_flipped_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_call_flipped_param_0];
 ; CHECK-NEXT:    { // callseq 1, 0
-; CHECK-NEXT:    .reg .b32 temp_param_reg;
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.b32 [param0+0], %r2;
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];
@@ -885,7 +883,6 @@ define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_tailcall_flipped_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_tailcall_flipped_param_0];
 ; CHECK-NEXT:    { // callseq 2, 0
-; CHECK-NEXT:    .reg .b32 temp_param_reg;
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.b32 [param0+0], %r2;
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];

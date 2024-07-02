@@ -3137,11 +3137,11 @@ define <8 x i64> @mul_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX512-LABEL: mul_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm2
-; AVX512-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
-; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm3
-; AVX512-NEXT:    vpmuludq %zmm1, %zmm3, %zmm3
-; AVX512-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm2
+; AVX512-NEXT:    vpmuludq %zmm1, %zmm2, %zmm2
+; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm3
+; AVX512-NEXT:    vpmuludq %zmm3, %zmm0, %zmm3
+; AVX512-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
 ; AVX512-NEXT:    vpsllq $32, %zmm2, %zmm2
 ; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm0 {%k1}

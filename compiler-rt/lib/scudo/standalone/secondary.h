@@ -209,6 +209,9 @@ public:
               static_cast<sptr>(Config::getDefaultMaxEntriesCount()));
     setOption(Option::MaxCacheEntrySize,
               static_cast<sptr>(Config::getDefaultMaxEntrySize()));
+    // The default value in the cache config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -388,10 +391,11 @@ public:
       return true;
     }
     if (O == Option::MaxCacheEntriesCount) {
-      const u32 MaxCount = static_cast<u32>(Value);
-      if (MaxCount > Config::getEntriesArraySize())
+      if (Value < 0)
         return false;
-      atomic_store_relaxed(&MaxEntriesCount, MaxCount);
+      atomic_store_relaxed(
+          &MaxEntriesCount,
+          Min<u32>(static_cast<u32>(Value), Config::getEntriesArraySize()));
       return true;
     }
     if (O == Option::MaxCacheEntrySize) {

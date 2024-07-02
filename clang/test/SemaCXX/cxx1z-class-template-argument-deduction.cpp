@@ -12,14 +12,19 @@ namespace std {
     size_t n;
     initializer_list();
   };
-  // FIXME: This should probably not be necessary.
-  template<typename T> initializer_list(initializer_list<T>) -> initializer_list<T>;
 }
 
 template<typename T> constexpr bool has_type(...) { return false; }
 template<typename T> constexpr bool has_type(T&) { return true; }
 
-std::initializer_list il = {1, 2, 3, 4, 5};
+std::initializer_list il1 = {1, 2, 3, 4, 5};
+auto il2 = std::initializer_list{1, 2, 3, 4};
+auto il3 = std::initializer_list{il1};
+auto il4 = std::initializer_list{il1, il1, il1};
+static_assert(has_type<std::initializer_list<int>>(il1));
+static_assert(has_type<std::initializer_list<int>>(il2));
+static_assert(has_type<std::initializer_list<int>>(il3));
+static_assert(has_type<std::initializer_list<std::initializer_list<int>>>(il4));
 
 template<typename T> struct vector {
   template<typename Iter> vector(Iter, Iter);

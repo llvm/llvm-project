@@ -19,7 +19,7 @@ protected:
   FormatStyle getDefaultStyle() const override {
     return getLLVMStyle(FormatStyle::LK_Verilog);
   }
-  std::string messUp(llvm::StringRef Code) const override {
+  std::string messUp(StringRef Code) const override {
     return test::messUp(Code, /*HandleHash=*/false);
   }
 };
@@ -391,6 +391,15 @@ TEST_F(FormatTestVerilog, Declaration) {
   verifyFormat("wire mynet, mynet1;");
   verifyFormat("wire mynet, //\n"
                "     mynet1;");
+  verifyFormat("wire #0 mynet, mynet1;");
+  verifyFormat("wire logic #0 mynet, mynet1;");
+  verifyFormat("wire #(1, 2, 3) mynet, mynet1;");
+  verifyFormat("wire #0 mynet, //\n"
+               "        mynet1;");
+  verifyFormat("wire logic #0 mynet, //\n"
+               "              mynet1;");
+  verifyFormat("wire #(1, 2, 3) mynet, //\n"
+               "                mynet1;");
   verifyFormat("wire mynet = enable;");
   verifyFormat("wire mynet = enable, mynet1;");
   verifyFormat("wire mynet = enable, //\n"

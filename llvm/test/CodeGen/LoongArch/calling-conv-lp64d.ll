@@ -28,9 +28,9 @@ define i64 @caller_float_in_fpr() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    movgr2fr.w $fa0, $zero
 ; CHECK-NEXT:    movgr2fr.d $fa1, $zero
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    bl %plt(callee_float_in_fpr)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16

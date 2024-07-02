@@ -29,6 +29,7 @@ namespace llvm {
 class AAResults;
 class AssumptionCache;
 class BasicBlock;
+class DataLayout;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -153,10 +154,15 @@ private:
   /// a vectorization chain.
   bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
-  bool vectorizeStoreChain(ArrayRef<Value *> Chain, slpvectorizer::BoUpSLP &R,
-                           unsigned Idx, unsigned MinVF);
+  std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
+                                          slpvectorizer::BoUpSLP &R,
+                                          unsigned Idx, unsigned MinVF,
+                                          unsigned &Size);
 
-  bool vectorizeStores(ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R);
+  bool vectorizeStores(
+      ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
+      DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
+          &Visited);
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;

@@ -400,3 +400,186 @@ define i1 @nonzero_reduce_or_fail(<2 x i8> %xx) {
   %r = icmp eq i8 %v, 0
   ret i1 %r
 }
+
+define i1 @src_x_add_x_eq_0(i8 %x) {
+; CHECK-LABEL: @src_x_add_x_eq_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %y = zext i1 %x_eq_0 to i8
+  %v = add i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_add_x_eq_1_fail(i8 %x) {
+; CHECK-LABEL: @src_x_add_x_eq_1_fail(
+; CHECK-NEXT:    [[X_EQ_1:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = zext i1 [[X_EQ_1]] to i8
+; CHECK-NEXT:    [[V:%.*]] = add i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_eq_1 = icmp eq i8 %x, 1
+  %y = zext i1 %x_eq_1 to i8
+  %v = add i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_or_x_eq_0(i8 %x) {
+; CHECK-LABEL: @src_x_or_x_eq_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %y = sext i1 %x_eq_0 to i8
+  %v = or i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_or_x_sle_0_fail(i8 %x) {
+; CHECK-LABEL: @src_x_or_x_sle_0_fail(
+; CHECK-NEXT:    [[X_EQ_0:%.*]] = icmp sle i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[Y:%.*]] = sext i1 [[X_EQ_0]] to i8
+; CHECK-NEXT:    [[V:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_eq_0 = icmp sle i8 %x, 0
+  %y = sext i1 %x_eq_0 to i8
+  %v = or i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_xor_x_eq_0(i8 %x) {
+; CHECK-LABEL: @src_x_xor_x_eq_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %y = zext i1 %x_eq_0 to i8
+  %v = xor i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_xor_x_ne_0_fail(i8 %x) {
+; CHECK-LABEL: @src_x_xor_x_ne_0_fail(
+; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[Y:%.*]] = zext i1 [[X_NE_0]] to i8
+; CHECK-NEXT:    [[V:%.*]] = xor i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_ne_0 = icmp ne i8 %x, 0
+  %y = zext i1 %x_ne_0 to i8
+  %v = xor i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_sub0_x_eq_0(i8 %x) {
+; CHECK-LABEL: @src_x_sub0_x_eq_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %y = sext i1 %x_eq_0 to i8
+  %v = sub i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_sub0_z_eq_0_fail(i8 %x, i8 %z) {
+; CHECK-LABEL: @src_x_sub0_z_eq_0_fail(
+; CHECK-NEXT:    [[Z_EQ_0:%.*]] = icmp eq i8 [[Z:%.*]], 0
+; CHECK-NEXT:    [[Y:%.*]] = sext i1 [[Z_EQ_0]] to i8
+; CHECK-NEXT:    [[V:%.*]] = sub i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %z_eq_0 = icmp eq i8 %z, 0
+  %y = sext i1 %z_eq_0 to i8
+  %v = sub i8 %x, %y
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_sub1_x_eq_0(i8 %x) {
+; CHECK-LABEL: @src_x_sub1_x_eq_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %y = zext i1 %x_eq_0 to i8
+  %v = sub i8 %y, %x
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_sub1_x_eq_0_or_fail(i8 %x, i1 %c1) {
+; CHECK-LABEL: @src_x_sub1_x_eq_0_or_fail(
+; CHECK-NEXT:    [[X_EQ_0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[X_EQ_0_OR:%.*]] = or i1 [[X_EQ_0]], [[C1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = zext i1 [[X_EQ_0_OR]] to i8
+; CHECK-NEXT:    [[V:%.*]] = sub i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %x_eq_0_or = or i1 %x_eq_0, %c1
+  %y = zext i1 %x_eq_0_or to i8
+  %v = sub i8 %y, %x
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_umax_x_eq_0(i8 %x) {
+; CHECK-LABEL: @src_x_umax_x_eq_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %y = sext i1 %x_eq_0 to i8
+  %v = call i8 @llvm.umax.i8(i8 %y, i8 %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_umax_x_ugt_10_fail(i8 %x) {
+; CHECK-LABEL: @src_x_umax_x_ugt_10_fail(
+; CHECK-NEXT:    [[X_UGT_10:%.*]] = icmp ugt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[Y:%.*]] = sext i1 [[X_UGT_10]] to i8
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_ugt_10 = icmp ugt i8 %x, 10
+  %y = sext i1 %x_ugt_10 to i8
+  %v = call i8 @llvm.umax.i8(i8 %y, i8 %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_uadd.sat_x_eq_0(i8 %x) {
+; CHECK-LABEL: @src_x_uadd.sat_x_eq_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %x_eq_0 = icmp eq i8 %x, 0
+  %y = zext i1 %x_eq_0 to i8
+  %v = call i8 @llvm.uadd.sat.i8(i8 %y, i8 %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @src_x_uadd.sat_c1_fail(i8 %x, i1 %c1) {
+; CHECK-LABEL: @src_x_uadd.sat_c1_fail(
+; CHECK-NEXT:    [[Y:%.*]] = zext i1 [[C1:%.*]] to i8
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Y]], i8 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = zext i1 %c1 to i8
+  %v = call i8 @llvm.uadd.sat.i8(i8 %y, i8 %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+

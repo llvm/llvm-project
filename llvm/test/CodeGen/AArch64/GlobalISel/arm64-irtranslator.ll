@@ -1385,6 +1385,16 @@ define i32 @test_intrinsic_lrint(float %a) {
   ret i32 %res
 }
 
+declare i32 @llvm.llrint.i32.f32(float)
+define i32 @test_intrinsic_llrint(float %a) {
+; CHECK-LABEL: name: test_intrinsic_llrint
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_LLRINT [[A]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.llrint.i32.f32(float %a)
+  ret i32 %res
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1)
 define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 ; CHECK-LABEL: name: test_ctlz_intrinsic_zero_not_undef
@@ -2300,6 +2310,14 @@ define float @test_sin_f32(float %x) {
   ; CHECK-LABEL: name:            test_sin_f32
   ; CHECK: %{{[0-9]+}}:_(s32) = G_FSIN %{{[0-9]+}}
   %y = call float @llvm.sin.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.tan.f32(float)
+define float @test_tan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTAN %{{[0-9]+}}
+  %y = call float @llvm.tan.f32(float %x)
   ret float %y
 }
 

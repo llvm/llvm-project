@@ -31,6 +31,10 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallVector.h"
@@ -165,8 +169,8 @@ Parser::ParseExpressionWithLeadingExtension(SourceLocation ExtLoc) {
 ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteExpression(getCurScope(),
-                                   PreferredType.get(Tok.getLocation()));
+    Actions.CodeCompletion().CodeCompleteExpression(
+        getCurScope(), PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
 
@@ -184,8 +188,8 @@ ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
 ExprResult Parser::ParseConditionalExpression() {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteExpression(getCurScope(),
-                                   PreferredType.get(Tok.getLocation()));
+    Actions.CodeCompletion().CodeCompleteExpression(
+        getCurScope(), PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
 
@@ -1062,6 +1066,21 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   }
 
+  case tok::annot_embed: {
+    // We've met #embed in a context where a single value is expected. Take last
+    // element from #embed data as if it were a comma expression.
+    EmbedAnnotationData *Data =
+        reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+    SourceLocation StartLoc = ConsumeAnnotationToken();
+    ASTContext &Context = Actions.getASTContext();
+    Res = IntegerLiteral::Create(Context,
+                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
+                                 Context.UnsignedCharTy, StartLoc);
+    if (Data->BinaryData.size() > 1)
+      Diag(StartLoc, diag::warn_unused_comma_left_operand);
+    break;
+  }
+
   case tok::kw___super:
   case tok::kw_decltype:
     // Annotate the token and tail recurse.
@@ -1164,7 +1183,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_void);
           REVERTIBLE_TYPE_TRAIT(__is_volatile);
           REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
-          REVERTIBLE_TYPE_TRAIT(__reference_constructs_from_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
 #include "clang/Basic/TransformTypeTraits.def"
@@ -1213,7 +1231,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
       if (Tok.is(tok::code_completion) && &II != Ident_super) {
         cutOffParsing();
-        Actions.CodeCompleteObjCClassPropertyRefExpr(
+        Actions.CodeCompletion().CodeCompleteObjCClassPropertyRefExpr(
             getCurScope(), II, ILoc, ExprStatementTokLoc == ILoc);
         return ExprError();
       }
@@ -1226,8 +1244,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       IdentifierInfo &PropertyName = *Tok.getIdentifierInfo();
       SourceLocation PropertyLoc = ConsumeToken();
 
-      Res = Actions.ActOnClassPropertyRefExpr(II, PropertyName,
-                                              ILoc, PropertyLoc);
+      Res = Actions.ObjC().ActOnClassPropertyRefExpr(II, PropertyName, ILoc,
+                                                     PropertyLoc);
       break;
     }
 
@@ -1809,8 +1827,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   case tok::code_completion: {
     cutOffParsing();
-    Actions.CodeCompleteExpression(getCurScope(),
-                                   PreferredType.get(Tok.getLocation()));
+    Actions.CodeCompletion().CodeCompleteExpression(
+        getCurScope(), PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
@@ -1954,7 +1972,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         return LHS;
 
       cutOffParsing();
-      Actions.CodeCompletePostfixExpression(
+      Actions.CodeCompletion().CodeCompletePostfixExpression(
           getCurScope(), LHS, PreferredType.get(Tok.getLocation()));
       return ExprError();
 
@@ -2037,7 +2055,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         if (Tok.is(tok::colon)) {
           // Consume ':'
           ColonLocFirst = ConsumeToken();
-          Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+          if (Tok.isNot(tok::r_square))
+            Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
         }
       } else if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
         ColonProtectionRAIIObject RAII(*this);
@@ -2069,15 +2088,22 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (!LHS.isInvalid() && !HasError && !Length.isInvalid() &&
           !Stride.isInvalid() && Tok.is(tok::r_square)) {
         if (ColonLocFirst.isValid() || ColonLocSecond.isValid()) {
-          // FIXME: OpenACC hasn't implemented Sema/Array section handling at a
-          // semantic level yet. For now, just reuse the OpenMP implementation
-          // as it gets the parsing/type management mostly right, and we can
-          // replace this call to ActOnOpenACCArraySectionExpr in the future.
-          // Eventually we'll genericize the OPenMPArraySectionExpr type as
-          // well.
-          LHS = Actions.ActOnOMPArraySectionExpr(
-              LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
-              ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);
+          // Like above, AllowOpenACCArraySections is 'more specific' and only
+          // enabled when actively parsing a 'var' in a 'var-list' during
+          // clause/'cache' construct parsing, so it is more specific. So we
+          // should do it first, so that the correct node gets created.
+          if (AllowOpenACCArraySections) {
+            assert(!Stride.isUsable() && !ColonLocSecond.isValid() &&
+                   "Stride/second colon not allowed for OpenACC");
+            LHS = Actions.OpenACC().ActOnArraySectionExpr(
+                LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
+                ColonLocFirst, Length.get(), RLoc);
+          } else {
+            LHS = Actions.OpenMP().ActOnOMPArraySectionExpr(
+                LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
+                ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(),
+                RLoc);
+          }
         } else {
           LHS = Actions.ActOnArraySubscriptExpr(getCurScope(), LHS.get(), Loc,
                                                 ArgExprs, RLoc);
@@ -2144,8 +2170,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       ExprVector ArgExprs;
       auto RunSignatureHelp = [&]() -> QualType {
-        QualType PreferredType = Actions.ProduceCallSignatureHelp(
-            LHS.get(), ArgExprs, PT.getOpenLocation());
+        QualType PreferredType =
+            Actions.CodeCompletion().ProduceCallSignatureHelp(
+                LHS.get(), ArgExprs, PT.getOpenLocation());
         CalledSignatureHelp = true;
         return PreferredType;
       };
@@ -2269,7 +2296,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
         // Code completion for a member access expression.
         cutOffParsing();
-        Actions.CodeCompleteMemberReferenceExpr(
+        Actions.CodeCompletion().CodeCompleteMemberReferenceExpr(
             getCurScope(), Base, CorrectedBase, OpLoc, OpKind == tok::arrow,
             Base && ExprStatementTokLoc == Base->getBeginLoc(),
             PreferredType.get(Tok.getLocation()));
@@ -2991,7 +3018,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteExpression(
+    Actions.CodeCompletion().CodeCompleteExpression(
         getCurScope(), PreferredType.get(Tok.getLocation()),
         /*IsParenthesized=*/ExprType >= CompoundLiteral);
     return ExprError();
@@ -3084,9 +3111,9 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (Ty.isInvalid() || SubExpr.isInvalid())
       return ExprError();
 
-    return Actions.ActOnObjCBridgedCast(getCurScope(), OpenLoc, Kind,
-                                        BridgeKeywordLoc, Ty.get(),
-                                        RParenLoc, SubExpr.get());
+    return Actions.ObjC().ActOnObjCBridgedCast(getCurScope(), OpenLoc, Kind,
+                                               BridgeKeywordLoc, Ty.get(),
+                                               RParenLoc, SubExpr.get());
   } else if (ExprType >= CompoundLiteral &&
              isTypeIdInParens(isAmbiguousTypeId)) {
 
@@ -3277,7 +3304,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (ErrorFound) {
       Result = ExprError();
     } else if (!Result.isInvalid()) {
-      Result = Actions.ActOnOMPArrayShapingExpr(
+      Result = Actions.OpenMP().ActOnOMPArrayShapingExpr(
           Result.get(), OpenLoc, RParenLoc, OMPDimensions, OMPBracketsRanges);
     }
     return Result;
@@ -3551,6 +3578,17 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
                                   T.getCloseLocation());
 }
 
+void Parser::ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs) {
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ASTContext &Context = Actions.getASTContext();
+  for (auto Byte : Data->BinaryData) {
+    Exprs.push_back(IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
+                                           Context.UnsignedCharTy, StartLoc));
+  }
+}
+
 /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
 ///
 /// \verbatim
@@ -3586,8 +3624,17 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
       Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
-    } else
+    } else if (Tok.is(tok::annot_embed)) {
+      ExpandEmbedDirective(Exprs);
+      if (Tok.isNot(tok::comma))
+        break;
+      Token Comma = Tok;
+      ConsumeToken();
+      checkPotentialAngleBracketDelimiter(Comma);
+      continue;
+    } else {
       Expr = ParseAssignmentExpression();
+    }
 
     if (EarlyTypoCorrection)
       Expr = Actions.CorrectDelayedTyposInExpr(Expr);
@@ -3668,7 +3715,8 @@ bool Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs) {
 void Parser::ParseBlockId(SourceLocation CaretLoc) {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Type);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), SemaCodeCompletion::PCC_Type);
     return;
   }
 
@@ -3802,7 +3850,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
 ///         '__objc_no'
 ExprResult Parser::ParseObjCBoolLiteral() {
   tok::TokenKind Kind = Tok.getKind();
-  return Actions.ActOnObjCBoolLiteral(ConsumeToken(), Kind);
+  return Actions.ObjC().ActOnObjCBoolLiteral(ConsumeToken(), Kind);
 }
 
 /// Validate availability spec list, emitting diagnostics if necessary. Returns
@@ -3857,7 +3905,7 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     // Parse the platform name.
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompleteAvailabilityPlatformName();
+      Actions.CodeCompletion().CodeCompleteAvailabilityPlatformName();
       return std::nullopt;
     }
     if (Tok.isNot(tok::identifier)) {
@@ -3923,6 +3971,6 @@ ExprResult Parser::ParseAvailabilityCheckExpr(SourceLocation BeginLoc) {
   if (Parens.consumeClose())
     return ExprError();
 
-  return Actions.ActOnObjCAvailabilityCheckExpr(AvailSpecs, BeginLoc,
-                                                Parens.getCloseLocation());
+  return Actions.ObjC().ActOnObjCAvailabilityCheckExpr(
+      AvailSpecs, BeginLoc, Parens.getCloseLocation());
 }

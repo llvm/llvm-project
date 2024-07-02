@@ -596,7 +596,7 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return true;
 }
 
-bool IsNamelistNameOrSlash(IoStatementState &io) {
+RT_API_ATTRS bool IsNamelistNameOrSlash(IoStatementState &io) {
   if (auto *listInput{
           io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
     if (listInput->inNamelistSequence()) {

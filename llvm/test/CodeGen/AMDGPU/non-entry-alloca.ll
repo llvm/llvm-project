@@ -21,8 +21,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
 ; MUBUF-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x8
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
-; MUBUF-NEXT:    s_movk_i32 s32, 0x400
 ; MUBUF-NEXT:    s_mov_b32 s33, 0
+; MUBUF-NEXT:    s_movk_i32 s32, 0x400
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    s_cmp_lg_u32 s8, 0
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB0_3
@@ -57,8 +57,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x8
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; FLATSCR-NEXT:    s_mov_b32 s32, 16
 ; FLATSCR-NEXT:    s_mov_b32 s33, 0
+; FLATSCR-NEXT:    s_mov_b32 s32, 16
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s4, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB0_3
@@ -125,8 +125,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x8
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
-; MUBUF-NEXT:    s_movk_i32 s32, 0x1000
 ; MUBUF-NEXT:    s_mov_b32 s33, 0
+; MUBUF-NEXT:    s_movk_i32 s32, 0x1000
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    s_cmp_lg_u32 s6, 0
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB1_2
@@ -159,8 +159,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; FLATSCR-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
-; FLATSCR-NEXT:    s_mov_b32 s32, 64
 ; FLATSCR-NEXT:    s_mov_b32 s33, 0
+; FLATSCR-NEXT:    s_mov_b32 s32, 64
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s2, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_2

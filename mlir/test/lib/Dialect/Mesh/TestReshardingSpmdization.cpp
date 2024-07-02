@@ -67,12 +67,11 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
       ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
       ShapedType sourceShardShape =
           shardShapedType(op.getResult().getType(), mesh, op.getShard());
-      TypedValue<ShapedType> sourceShard =
+      TypedValue<ShapedType> sourceShard = cast<TypedValue<ShapedType>>(
           builder
               .create<UnrealizedConversionCastOp>(sourceShardShape,
                                                   op.getOperand())
-              ->getResult(0)
-              .cast<TypedValue<ShapedType>>();
+              ->getResult(0));
       TypedValue<ShapedType> targetShard =
           reshard(builder, mesh, op, targetShardOp, sourceShard);
       Value newTargetUnsharded =

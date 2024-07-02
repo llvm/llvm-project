@@ -149,7 +149,8 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
 
   unsigned ScavSlotsNum = 0;
 
-  // Far branches beyond 27-bit offset require a spill slot for scratch register.
+  // Far branches beyond 27-bit offset require a spill slot for scratch
+  // register.
   bool IsLargeFunction = !isInt<27>(estimateFunctionSizeInBytes(TII, MF));
   if (IsLargeFunction)
     ScavSlotsNum = 1;

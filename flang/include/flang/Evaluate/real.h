@@ -35,20 +35,19 @@ static constexpr std::int64_t ScaledLogBaseTenOfTwo{301029995664};
 // class template must be (or look like) an instance of Integer<>;
 // the second specifies the number of effective bits (binary precision)
 // in the fraction.
-template <typename WORD, int PREC>
-class Real : public common::RealDetails<PREC> {
+template <typename WORD, int PREC> class Real {
 public:
   using Word = WORD;
   static constexpr int binaryPrecision{PREC};
-  using Details = common::RealDetails<PREC>;
-  using Details::exponentBias;
-  using Details::exponentBits;
-  using Details::isImplicitMSB;
-  using Details::maxExponent;
-  using Details::significandBits;
+  static constexpr common::RealCharacteristics realChars{PREC};
+  static constexpr int exponentBias{realChars.exponentBias};
+  static constexpr int exponentBits{realChars.exponentBits};
+  static constexpr int isImplicitMSB{realChars.isImplicitMSB};
+  static constexpr int maxExponent{realChars.maxExponent};
+  static constexpr int significandBits{realChars.significandBits};
 
   static constexpr int bits{Word::bits};
-  static_assert(bits >= Details::bits);
+  static_assert(bits >= realChars.bits);
   using Fraction = Integer<binaryPrecision>; // all bits made explicit
 
   template <typename W, int P> friend class Real;
@@ -205,8 +204,8 @@ public:
   }
 
   static constexpr int DIGITS{binaryPrecision};
-  static constexpr int PRECISION{Details::decimalPrecision};
-  static constexpr int RANGE{Details::decimalRange};
+  static constexpr int PRECISION{realChars.decimalPrecision};
+  static constexpr int RANGE{realChars.decimalRange};
   static constexpr int MAXEXPONENT{maxExponent - exponentBias};
   static constexpr int MINEXPONENT{2 - exponentBias};
   Real RRSPACING() const;
@@ -371,6 +370,10 @@ public:
       return result;
     }
     bool isNegative{x.IsNegative()};
+    if (x.IsInfinite()) {
+      result.value = Infinity(isNegative);
+      return result;
+    }
     A absX{x};
     if (isNegative) {
       absX = x.Negate();
@@ -493,7 +496,7 @@ extern template class Real<Integer<16>, 11>; // IEEE half format
 extern template class Real<Integer<16>, 8>; // the "other" half format
 extern template class Real<Integer<32>, 24>; // IEEE single
 extern template class Real<Integer<64>, 53>; // IEEE double
-extern template class Real<Integer<80>, 64>; // 80387 extended precision
+extern template class Real<X87IntegerContainer, 64>; // 80387 extended precision
 extern template class Real<Integer<128>, 113>; // IEEE quad
 // N.B. No "double-double" support.
 } // namespace Fortran::evaluate::value

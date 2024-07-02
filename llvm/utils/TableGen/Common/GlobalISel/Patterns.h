@@ -205,6 +205,10 @@ public:
   /// Expands raw code, replacing things such as `${foo}` with their
   /// substitution in \p CE.
   ///
+  /// Can only be used on 'match' CXX Patterns. 'apply' CXX pattern emission
+  /// is handled differently as we emit both the 'match' and 'apply' part
+  /// together in a single Custom CXX Action.
+  ///
   /// \param CE     Map of Code Expansions
   /// \param Locs   SMLocs for the Code Expander, in case it needs to emit
   ///               diagnostics.

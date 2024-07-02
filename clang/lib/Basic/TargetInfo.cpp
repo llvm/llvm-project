@@ -406,6 +406,16 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     LongDoubleAlign = 64;
   }
 
+  // HLSL explicitly defines the sizes and formats of some data types, and we
+  // need to conform to those regardless of what architecture you are targeting.
+  if (Opts.HLSL) {
+    LongWidth = LongAlign = 64;
+    if (!Opts.NativeHalfType) {
+      HalfFormat = &llvm::APFloat::IEEEsingle();
+      HalfWidth = HalfAlign = 32;
+    }
+  }
+
   if (Opts.OpenCL) {
     // OpenCL C requires specific widths for types, irrespective of
     // what these normally are for the target.

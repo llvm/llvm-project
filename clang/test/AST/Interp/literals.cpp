@@ -45,6 +45,8 @@ constexpr int Failed2 = Failed1 + 1; // both-error {{must be initialized by a co
 static_assert(Failed2 == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{initializer of 'Failed2' is not a constant expression}}
 
+const int x = *(volatile int*)0x1234;
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");
@@ -66,7 +68,12 @@ namespace ScalarTypes {
     First = 0,
   };
   static_assert(getScalar<E>() == First, "");
-  /// FIXME: Member pointers.
+
+  struct S {
+    int v;
+  };
+  constexpr int S::* MemberPtr = &S::v;
+  static_assert(getScalar<decltype(MemberPtr)>() == nullptr, "");
 
 #if __cplusplus >= 201402L
   constexpr void Void(int n) {
@@ -985,6 +992,8 @@ namespace DiscardExprs {
     __uuidof(GuidType);
     __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
 
+    requires{false;};
+
     return 0;
   }
   static_assert(ignoredExprs() == 0, "");
@@ -1202,11 +1211,35 @@ namespace incdecbool {
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
   extern char arr[]; // ref-note {{declared here}}
    return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
-                  // expected-note {{array-to-pointer decay of array member without known bound is not supported}}
+                  // expected-note {{indexing of array without known bound}}
+}
+
+namespace StmtExprs {
+  constexpr int foo() {
+     ({
+       int i;
+       for (i = 0; i < 76; i++) {}
+       i; // both-warning {{expression result unused}}
+    });
+    return 76;
+  }
+  static_assert(foo() == 76, "");
 }
 #endif
 
 namespace Extern {
   constexpr extern char Oops = 1;
   static_assert(Oops == 1, "");
+
+#if __cplusplus >= 201402L
+  struct NonLiteral {
+    NonLiteral() {}
+  };
+  NonLiteral nl;
+  constexpr NonLiteral &ExternNonLiteralVarDecl() {
+    extern NonLiteral nl;
+    return nl;
+  }
+  static_assert(&ExternNonLiteralVarDecl() == &nl, "");
+#endif
 }

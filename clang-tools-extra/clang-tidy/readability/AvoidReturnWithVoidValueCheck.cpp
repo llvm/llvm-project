@@ -64,8 +64,11 @@ void AvoidReturnWithVoidValueCheck::check(
            << BraceInsertionHints.closingBraceFixIt();
   }
   Diag << FixItHint::CreateRemoval(VoidReturn->getReturnLoc());
-  if (!Result.Nodes.getNodeAs<FunctionDecl>("function_parent") ||
-      SurroundingBlock->body_back() != VoidReturn)
+  const auto *FunctionParent =
+      Result.Nodes.getNodeAs<FunctionDecl>("function_parent");
+  if (!FunctionParent ||
+      (SurroundingBlock && SurroundingBlock->body_back() != VoidReturn))
+    // If this is not the last statement in a function body, we add a `return`.
     Diag << FixItHint::CreateInsertion(SemicolonPos.getLocWithOffset(1),
                                        " return;", true);
 }

@@ -636,7 +636,9 @@ Error LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 Error CleanMCState::runOnFunctions(BinaryContext &BC) {
   MCContext &Ctx = *BC.Ctx;
   for (const auto &SymMapEntry : Ctx.getSymbols()) {
-    const MCSymbol *S = SymMapEntry.second;
+    const MCSymbol *S = SymMapEntry.getValue().Symbol;
+    if (!S)
+      continue;
     if (S->isDefined()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
                         << "\" is already defined\n");
@@ -674,7 +676,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
   MCPlusBuilder *MIB = Function.getBinaryContext().MIB.get();
   for (BinaryBasicBlock &BB : Function) {
     auto checkAndPatch = [&](BinaryBasicBlock *Pred, BinaryBasicBlock *Succ,
-                             const MCSymbol *SuccSym) {
+                             const MCSymbol *SuccSym,
+                             std::optional<uint32_t> Offset) {
       // Ignore infinite loop jumps or fallthrough tail jumps.
       if (Pred == Succ || Succ == &BB)
         return false;
@@ -715,6 +718,11 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
           Pred->removeSuccessor(&BB);
           Pred->eraseInstruction(Pred->findInstruction(Branch));
           Pred->addTailCallInstruction(SuccSym);
+          if (Offset) {
+            MCInst *TailCall = Pred->getLastNonPseudoInstr();
+            assert(TailCall);
+            MIB->setOffset(*TailCall, *Offset);
+          }
         } else {
           return false;
         }
@@ -757,7 +765,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
       if (Pred->getSuccessor() == &BB ||
           (Pred->getConditionalSuccessor(true) == &BB && !IsTailCall) ||
           Pred->getConditionalSuccessor(false) == &BB)
-        if (checkAndPatch(Pred, Succ, SuccSym) && MarkInvalid)
+        if (checkAndPatch(Pred, Succ, SuccSym, MIB->getOffset(*Inst)) &&
+            MarkInvalid)
           BB.markValid(BB.pred_size() != 0 || BB.isLandingPad() ||
                        BB.isEntryPoint());
     }
@@ -910,6 +919,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       auto &CTCAnnotation =
           MIB->getOrCreateAnnotationAs<uint64_t>(*CondBranch, "CTCTakenCount");
       CTCAnnotation = CTCTakenFreq;
+      // Preserve Offset annotation, used in BAT.
+      // Instr is a direct tail call instruction that was created when CTCs are
+      // first expanded, and has the original CTC offset set.
+      if (std::optional<uint32_t> Offset = MIB->getOffset(*Instr))
+        MIB->setOffset(*CondBranch, *Offset);
 
       // Remove the unused successor which may be eliminated later
       // if there are no other users.
@@ -1378,9 +1392,19 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (Function.isPLTFunction())
       continue;
 
+    // Adjustment for BAT mode: the profile for BOLT split fragments is combined
+    // so only count the hot fragment.
+    const uint64_t Address = Function.getAddress();
+    bool IsHotParentOfBOLTSplitFunction = !Function.getFragments().empty() &&
+                                          BAT && BAT->isBATFunction(Address) &&
+                                          !BAT->fetchParentAddress(Address);
+
     ++NumRegularFunctions;
 
-    if (!Function.isSimple()) {
+    // In BOLTed binaries split functions are non-simple (due to non-relocation
+    // mode), but the original function is known to be simple and we have a
+    // valid profile for it.
+    if (!Function.isSimple() && !IsHotParentOfBOLTSplitFunction) {
       if (Function.hasProfile())
         ++NumNonSimpleProfiledFunctions;
       continue;
@@ -1541,23 +1565,28 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     const bool Ascending =
         opts::DynoStatsSortOrderOpt == opts::DynoStatsSortOrder::Ascending;
 
-    if (SortAll) {
-      llvm::stable_sort(Functions,
-                        [Ascending, &Stats](const BinaryFunction *A,
-                                            const BinaryFunction *B) {
-                          return Ascending ? Stats.at(A) < Stats.at(B)
-                                           : Stats.at(B) < Stats.at(A);
-                        });
-    } else {
-      llvm::stable_sort(
-          Functions, [Ascending, &Stats](const BinaryFunction *A,
-                                         const BinaryFunction *B) {
-            const DynoStats &StatsA = Stats.at(A);
-            const DynoStats &StatsB = Stats.at(B);
-            return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
-                             : StatsB.lessThan(StatsA, opts::PrintSortedBy);
-          });
-    }
+    std::function<bool(const DynoStats &, const DynoStats &)>
+        DynoStatsComparator =
+            SortAll ? [](const DynoStats &StatsA,
+                         const DynoStats &StatsB) { return StatsA < StatsB; }
+                    : [](const DynoStats &StatsA, const DynoStats &StatsB) {
+                        return StatsA.lessThan(StatsB, opts::PrintSortedBy);
+                      };
+
+    llvm::stable_sort(Functions,
+                      [Ascending, &Stats, DynoStatsComparator](
+                          const BinaryFunction *A, const BinaryFunction *B) {
+                        auto StatsItr = Stats.find(A);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsA = StatsItr->second;
+
+                        StatsItr = Stats.find(B);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsB = StatsItr->second;
+
+                        return Ascending ? DynoStatsComparator(StatsA, StatsB)
+                                         : DynoStatsComparator(StatsB, StatsA);
+                      });
 
     BC.outs() << "BOLT-INFO: top functions sorted by ";
     if (SortAll) {

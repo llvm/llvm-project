@@ -86,6 +86,8 @@ Value *getFP(IRBuilder<> &IRB);
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
 
+void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
+
 } // namespace memtag
 } // namespace llvm
 

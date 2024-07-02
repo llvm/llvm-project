@@ -81,11 +81,7 @@ class Foo {
   // SETL-NEXT:   },
   // SETL-NEXT:   {
   // SETL-NEXT:     "kind": "text",
-  // SETL-NEXT:     "spelling": ")"
-  // SETL-NEXT:   },
-  // SETL-NEXT:   {
-  // SETL-NEXT:     "kind": "text",
-  // SETL-NEXT:     "spelling": " "
+  // SETL-NEXT:     "spelling": ") "
   // SETL-NEXT:   },
   // SETL-NEXT:   {
   // SETL-NEXT:     "kind": "keyword",

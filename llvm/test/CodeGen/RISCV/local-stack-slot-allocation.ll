@@ -47,48 +47,114 @@ define void @use_frame_base_reg() {
 }
 
 ; Test containing a load with its own local offset. Make sure isFrameOffsetLegal
-; considers it and does not create a virtual base register.
+; considers it and creates a virtual base register.
 define void @load_with_offset() {
 ; RV32I-LABEL: load_with_offset:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 25
-; RV32I-NEXT:    addi a0, a0, -1792
-; RV32I-NEXT:    sub sp, sp, a0
-; RV32I-NEXT:    .cfi_def_cfa_offset 100608
-; RV32I-NEXT:    lui a0, 25
-; RV32I-NEXT:    add a0, sp, a0
-; RV32I-NEXT:    lbu zero, -292(a0)
-; RV32I-NEXT:    lui a0, 24
-; RV32I-NEXT:    add a0, sp, a0
-; RV32I-NEXT:    lbu zero, 1704(a0)
-; RV32I-NEXT:    lui a0, 25
-; RV32I-NEXT:    addi a0, a0, -1792
-; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    addi sp, sp, -2048
+; RV32I-NEXT:    addi sp, sp, -464
+; RV32I-NEXT:    .cfi_def_cfa_offset 2512
+; RV32I-NEXT:    addi a0, sp, 2012
+; RV32I-NEXT:    lbu a1, 0(a0)
+; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    addi sp, sp, 480
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_with_offset:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a0, 25
-; RV64I-NEXT:    addiw a0, a0, -1792
-; RV64I-NEXT:    sub sp, sp, a0
-; RV64I-NEXT:    .cfi_def_cfa_offset 100608
-; RV64I-NEXT:    lui a0, 25
-; RV64I-NEXT:    add a0, sp, a0
-; RV64I-NEXT:    lbu zero, -292(a0)
-; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    add a0, sp, a0
-; RV64I-NEXT:    lbu zero, 1704(a0)
-; RV64I-NEXT:    lui a0, 25
-; RV64I-NEXT:    addiw a0, a0, -1792
-; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    addi sp, sp, -2048
+; RV64I-NEXT:    addi sp, sp, -464
+; RV64I-NEXT:    .cfi_def_cfa_offset 2512
+; RV64I-NEXT:    addi a0, sp, 2012
+; RV64I-NEXT:    lbu a1, 0(a0)
+; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    addi sp, sp, 480
 ; RV64I-NEXT:    ret
 
-  %va = alloca [100 x i8], align 4
-  %va1 = alloca [500 x i8], align 4
-  %large = alloca [100000 x i8]
-  %va_gep = getelementptr [100 x i8], ptr %va, i64 16
-  %va1_gep = getelementptr [100 x i8], ptr %va1, i64 0
+  %va = alloca [2500 x i8], align 4
+  %va_gep = getelementptr [2000 x i8], ptr %va, i64 0, i64 2000
   %load = load volatile i8, ptr %va_gep, align 4
-  %load1 = load volatile i8, ptr %va1_gep, align 4
+  store volatile i8 %load, ptr %va_gep, align 4
+  ret void
+}
+
+; Test containing a load with its own local offset that is smaller than the
+; previous test case. Make sure we don't create a virtual base register.
+define void @load_with_offset2() {
+; RV32I-LABEL: load_with_offset2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -2048
+; RV32I-NEXT:    addi sp, sp, -464
+; RV32I-NEXT:    .cfi_def_cfa_offset 2512
+; RV32I-NEXT:    lbu a0, 1412(sp)
+; RV32I-NEXT:    sb a0, 1412(sp)
+; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    addi sp, sp, 480
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: load_with_offset2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -2048
+; RV64I-NEXT:    addi sp, sp, -464
+; RV64I-NEXT:    .cfi_def_cfa_offset 2512
+; RV64I-NEXT:    lbu a0, 1412(sp)
+; RV64I-NEXT:    sb a0, 1412(sp)
+; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    addi sp, sp, 480
+; RV64I-NEXT:    ret
+
+  %va = alloca [2500 x i8], align 4
+  %va_gep = getelementptr [2000 x i8], ptr %va, i64 0, i64 1400
+  %load = load volatile i8, ptr %va_gep, align 4
+  store volatile i8 %load, ptr %va_gep, align 4
+  ret void
+}
+
+define void @frame_pointer() "frame-pointer"="all" {
+; RV32I-LABEL: frame_pointer:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 2024(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    addi s0, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-NEXT:    addi sp, sp, -480
+; RV32I-NEXT:    lbu a0, -1960(s0)
+; RV32I-NEXT:    sb a0, -1960(s0)
+; RV32I-NEXT:    addi sp, sp, 480
+; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: frame_pointer:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    addi s0, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa s0, 0
+; RV64I-NEXT:    addi sp, sp, -496
+; RV64I-NEXT:    addi a0, s0, -1972
+; RV64I-NEXT:    lbu a1, 0(a0)
+; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    addi sp, sp, 496
+; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    ret
+
+  %va = alloca [2500 x i8], align 4
+  %va_gep = getelementptr [2000 x i8], ptr %va, i64 0, i64 552
+  %load = load volatile i8, ptr %va_gep, align 4
+  store volatile i8 %load, ptr %va_gep, align 4
   ret void
 }

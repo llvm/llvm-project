@@ -118,8 +118,12 @@ LIBC_INLINE uint32_t get_lane_size() { return 32; }
   uint32_t mask = static_cast<uint32_t>(lane_mask);
   return __nvvm_vote_ballot_sync(mask, x);
 }
+
 /// Waits for all the threads in the block to converge and issues a fence.
 [[clang::convergent]] LIBC_INLINE void sync_threads() { __syncthreads(); }
+
+/// Waits for all pending memory operations to complete in program order.
+[[clang::convergent]] LIBC_INLINE void memory_fence() { __nvvm_membar_sys(); }
 
 /// Waits for all threads in the warp to reconverge for independent scheduling.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t mask) {

@@ -8,12 +8,12 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 ; VF/IC combination.
 define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK:      LV: Scalarizing:  %cmp =
-; CHECK-NEXT: VPlan 'Initial VPlan for VF={8},UF>=1' {
+; CHECK:      VPlan 'Initial VPlan for VF={8},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -45,7 +45,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:

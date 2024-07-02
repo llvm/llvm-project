@@ -50,6 +50,72 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
   }
 };
 
+struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::GlobalOp op, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    if (!op.getType().hasStaticShape()) {
+      return rewriter.notifyMatchFailure(
+          op.getLoc(), "cannot transform global with dynamic shape");
+    }
+
+    if (op.getAlignment().value_or(1) > 1) {
+      // TODO: Extend GlobalOp to specify alignment via the `alignas` specifier.
+      return rewriter.notifyMatchFailure(
+          op.getLoc(), "global variable with alignment requirement is "
+                       "currently not supported");
+    }
+    auto resultTy = getTypeConverter()->convertType(op.getType());
+    if (!resultTy) {
+      return rewriter.notifyMatchFailure(op.getLoc(),
+                                         "cannot convert result type");
+    }
+
+    SymbolTable::Visibility visibility = SymbolTable::getSymbolVisibility(op);
+    if (visibility != SymbolTable::Visibility::Public &&
+        visibility != SymbolTable::Visibility::Private) {
+      return rewriter.notifyMatchFailure(
+          op.getLoc(),
+          "only public and private visibility is currently supported");
+    }
+    // We are explicit in specifing the linkage because the default linkage
+    // for constants is different in C and C++.
+    bool staticSpecifier = visibility == SymbolTable::Visibility::Private;
+    bool externSpecifier = !staticSpecifier;
+
+    Attribute initialValue = operands.getInitialValueAttr();
+    if (isa_and_present<UnitAttr>(initialValue))
+      initialValue = {};
+
+    rewriter.replaceOpWithNewOp<emitc::GlobalOp>(
+        op, operands.getSymName(), resultTy, initialValue, externSpecifier,
+        staticSpecifier, operands.getConstant());
+    return success();
+  }
+};
+
+struct ConvertGetGlobal final
+    : public OpConversionPattern<memref::GetGlobalOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::GetGlobalOp op, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto resultTy = getTypeConverter()->convertType(op.getType());
+    if (!resultTy) {
+      return rewriter.notifyMatchFailure(op.getLoc(),
+                                         "cannot convert result type");
+    }
+    rewriter.replaceOpWithNewOp<emitc::GetGlobalOp>(op, resultTy,
+                                                    operands.getNameAttr());
+    return success();
+  }
+};
+
 struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -120,6 +186,6 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
                                                    TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertLoad, ConvertStore>(converter,
-                                                         patterns.getContext());
+  patterns.add<ConvertAlloca, ConvertGlobal, ConvertGetGlobal, ConvertLoad,
+               ConvertStore>(converter, patterns.getContext());
 }

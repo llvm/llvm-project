@@ -17,6 +17,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -64,9 +65,10 @@ public:
   /// to evaluate to poison despite having non-poison inputs.
   bool hasPoisonGeneratingFlags() const;
 
-  /// Return true if this operator has poison-generating flags or metadata.
-  /// The latter is only possible for instructions.
-  bool hasPoisonGeneratingFlagsOrMetadata() const;
+  /// Return true if this operator has poison-generating flags,
+  /// return attributes or metadata. The latter two is only possible for
+  /// instructions.
+  bool hasPoisonGeneratingAnnotations() const;
 };
 
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,
@@ -328,8 +330,6 @@ public:
     unsigned Opcode;
     if (auto *I = dyn_cast<Instruction>(V))
       Opcode = I->getOpcode();
-    else if (auto *CE = dyn_cast<ConstantExpr>(V))
-      Opcode = CE->getOpcode();
     else
       return false;
 
@@ -398,26 +398,24 @@ class LShrOperator
 };
 
 class GEPOperator
-  : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
-  friend class GetElementPtrInst;
-  friend class ConstantExpr;
-
-  enum {
-    IsInBounds = (1 << 0),
-  };
-
-  void setIsInBounds(bool B) {
-    SubclassOptionalData =
-      (SubclassOptionalData & ~IsInBounds) | (B * IsInBounds);
-  }
-
+    : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
 public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
+  GEPNoWrapFlags getNoWrapFlags() const {
+    return GEPNoWrapFlags::fromRaw(SubclassOptionalData);
+  }
+
   /// Test whether this is an inbounds GEP, as defined by LangRef.html.
-  bool isInBounds() const {
-    return SubclassOptionalData & IsInBounds;
+  bool isInBounds() const { return getNoWrapFlags().isInBounds(); }
+
+  bool hasNoUnsignedSignedWrap() const {
+    return getNoWrapFlags().hasNoUnsignedSignedWrap();
+  }
+
+  bool hasNoUnsignedWrap() const {
+    return getNoWrapFlags().hasNoUnsignedWrap();
   }
 
   /// Returns the offset of the index with an inrange attachment, or

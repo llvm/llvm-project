@@ -1,8 +1,8 @@
 ! REQUIRES: openmp_runtime
 
 ! This test checks lowering of atomic and atomic update constructs
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc %openmp_flags -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 program OmpAtomicUpdate
     use omp_lib

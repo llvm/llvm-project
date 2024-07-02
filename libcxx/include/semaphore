@@ -55,7 +55,6 @@ using binary_semaphore = counting_semaphore<1>;
 #include <__atomic/atomic_base.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/memory_order.h>
-#include <__availability>
 #include <__chrono/time_point.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/support.h>
@@ -127,7 +126,7 @@ private:
 };
 
 template <ptrdiff_t __least_max_value = _LIBCPP_SEMAPHORE_MAX>
-class counting_semaphore {
+class _LIBCPP_DEPRECATED_ATOMIC_SYNC counting_semaphore {
   __atomic_semaphore_base __semaphore_;
 
 public:
@@ -172,7 +171,9 @@ public:
   }
 };
 
-using binary_semaphore = counting_semaphore<1>;
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+using binary_semaphore _LIBCPP_DEPRECATED_ATOMIC_SYNC = counting_semaphore<1>;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 _LIBCPP_END_NAMESPACE_STD
 

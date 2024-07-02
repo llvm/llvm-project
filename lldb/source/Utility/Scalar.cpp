@@ -134,9 +134,9 @@ size_t Scalar::GetByteSize() const {
   case e_void:
     break;
   case e_int:
-    return (m_integer.getBitWidth() / 8);
+    return (m_integer.getBitWidth() + 7) / 8;
   case e_float:
-    return m_float.bitcastToAPInt().getBitWidth() / 8;
+    return (m_float.bitcastToAPInt().getBitWidth() + 7) / 8;
   }
   return 0;
 }
@@ -753,9 +753,7 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
       return false;
 
     case Scalar::e_int:
-      if (max_bit_pos == sign_bit_pos)
-        return true;
-      else if (sign_bit_pos < (max_bit_pos - 1)) {
+      if (sign_bit_pos < (max_bit_pos - 1)) {
         llvm::APInt sign_bit = llvm::APInt::getSignMask(sign_bit_pos + 1);
         llvm::APInt bitwize_and = m_integer & sign_bit;
         if (bitwize_and.getBoolValue()) {

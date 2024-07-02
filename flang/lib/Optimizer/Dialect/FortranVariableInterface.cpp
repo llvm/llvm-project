@@ -18,7 +18,7 @@ mlir::LogicalResult
 fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
   const unsigned numExplicitTypeParams = getExplicitTypeParams().size();
   mlir::Type memType = memref.getType();
-  const bool sourceIsBoxValue = memType.isa<fir::BaseBoxType>();
+  const bool sourceIsBoxValue = mlir::isa<fir::BaseBoxType>(memType);
   const bool sourceIsBoxAddress = fir::isBoxAddress(memType);
   const bool sourceIsBox = sourceIsBoxValue || sourceIsBoxAddress;
   if (isCharacter()) {
@@ -29,7 +29,8 @@ fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
       return emitOpError("must be provided exactly one type parameter when its "
                          "base is a character that is not a box");
 
-  } else if (auto recordType = getElementType().dyn_cast<fir::RecordType>()) {
+  } else if (auto recordType =
+                 mlir::dyn_cast<fir::RecordType>(getElementType())) {
     if (numExplicitTypeParams < recordType.getNumLenParams() && !sourceIsBox)
       return emitOpError("must be provided all the derived type length "
                          "parameters when the base is not a box");
@@ -45,16 +46,16 @@ fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
       if (sourceIsBoxAddress)
         return emitOpError("for box address must not have a shape operand");
       unsigned shapeRank = 0;
-      if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
+      if (auto shapeType = mlir::dyn_cast<fir::ShapeType>(shape.getType())) {
         shapeRank = shapeType.getRank();
       } else if (auto shapeShiftType =
-                     shape.getType().dyn_cast<fir::ShapeShiftType>()) {
+                     mlir::dyn_cast<fir::ShapeShiftType>(shape.getType())) {
         shapeRank = shapeShiftType.getRank();
       } else {
         if (!sourceIsBoxValue)
           emitOpError("of array entity with a raw address base must have a "
                       "shape operand that is a shape or shapeshift");
-        shapeRank = shape.getType().cast<fir::ShiftType>().getRank();
+        shapeRank = mlir::cast<fir::ShiftType>(shape.getType()).getRank();
       }
 
       std::optional<unsigned> rank = getRank();

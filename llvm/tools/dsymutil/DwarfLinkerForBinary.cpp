@@ -147,7 +147,7 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
   if (!ObjectEntry) {
     auto Err = ObjectEntry.takeError();
     reportWarning(Twine(Obj.getObjectFilename()) + ": " +
-                      toString(std::move(Err)),
+                      toStringWithoutConsuming(Err),
                   Obj.getObjectFilename());
     return errorToErrorCode(std::move(Err));
   }
@@ -156,7 +156,7 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
   if (!Object) {
     auto Err = Object.takeError();
     reportWarning(Twine(Obj.getObjectFilename()) + ": " +
-                      toString(std::move(Err)),
+                      toStringWithoutConsuming(Err),
                   Obj.getObjectFilename());
     return errorToErrorCode(std::move(Err));
   }
@@ -705,7 +705,7 @@ bool DwarfLinkerForBinary::linkImpl(
     } else {
       // Try and emit more helpful warnings by applying some heuristics.
       StringRef ObjFile = ContainerName;
-      bool IsClangModule = sys::path::extension(Path).equals(".pcm");
+      bool IsClangModule = sys::path::extension(Path) == ".pcm";
       bool IsArchive = ObjFile.ends_with(")");
 
       if (IsClangModule) {

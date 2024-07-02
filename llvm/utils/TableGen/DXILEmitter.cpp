@@ -97,7 +97,7 @@ static ParameterKind getParameterKind(const Record *R) {
     if (R->getValueAsInt("isHalfOrFloat") || R->getValueAsInt("isI16OrI32")) {
       return ParameterKind::Overload;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     llvm_unreachable("Support for specified DXIL Type not yet implemented");
   }
@@ -272,7 +272,7 @@ static std::string getOverloadKindStr(const Record *R) {
         return "OverloadKind::I16 | OverloadKind::I32";
       }
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     llvm_unreachable(
         "Support for specified parameter OverloadKind not yet implemented");

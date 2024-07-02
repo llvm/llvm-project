@@ -12,7 +12,6 @@
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
-// CHECK-NEXT: alpha.unix.Stream:Pedantic = false
 // CHECK-NEXT: apply-fixits = false
 // CHECK-NEXT: assume-controlled-environment = false
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
@@ -131,6 +130,7 @@
 // CHECK-NEXT: unix.Errno:AllowErrnoReadOutsideConditionExpressions = true
 // CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
 // CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = true
+// CHECK-NEXT: unix.Stream:Pedantic = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false

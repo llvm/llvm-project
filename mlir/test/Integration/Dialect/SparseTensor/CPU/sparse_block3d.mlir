@@ -30,6 +30,10 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
+// Test that test-bufferization-analysis-only works. This option is useful
+// for understanding why buffer copies were inserted.
+// RUN: mlir-opt %s --sparsifier="test-bufferization-analysis-only" -o /dev/null
+
 #Sparse1 = #sparse_tensor.encoding<{
   map = (i, j, k) -> (
     j : compressed,
@@ -94,11 +98,11 @@ module {
     // CHECK-NEXT: nse = 8
     // CHECK-NEXT: dim = ( 4, 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 3
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2
-    // CHECK-NEXT: crd[1] : ( 0, 2
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+    // CHECK-NEXT: crd[1] : ( 0, 2 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %a : tensor<4x4x4xi32, #Sparse1>
@@ -112,13 +116,13 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 4, 4, 4 )
     // CHECK-NEXT: lvl = ( 2, 2, 2, 2, 2, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 1
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4
-    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1
-    // CHECK-NEXT: pos[2] : ( 0, 1, 2, 3, 4
-    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1
-    // CHECK-NEXT: values : ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 5, 0, 0, 0, 6, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 7, 0, 0, 0, 8, 0
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 1 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1 )
+    // CHECK-NEXT: pos[2] : ( 0, 1, 2, 3, 4 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 5, 0, 0, 0, 6, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 7, 0, 0, 0, 8, 0 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %b : tensor<4x4x4xi32, #Sparse2>

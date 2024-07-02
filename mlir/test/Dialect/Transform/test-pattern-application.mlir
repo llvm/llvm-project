@@ -26,6 +26,36 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: @limited_updates
+func.func @limited_updates() {
+  "test.container"() ({
+    // Only one is replaced.
+    // CHECK: "test.foo"() {replace_with_new_op = "test.foo"}
+    // CHECK: "test.foo"() : ()
+    %0 = "test.foo"() {replace_with_new_op = "test.foo"} : () -> (i32)
+    %1 = "test.foo"() {replace_with_new_op = "test.foo"} : () -> (i32)
+  }) : () -> ()
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // Pattern application will fail because of the upper limit, wrap in
+    // sequence to suppress the error message.
+    transform.sequence %arg0 : !transform.any_op failures(suppress) {
+    ^bb0(%arg1: !transform.any_op):
+      %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      transform.apply_patterns to %0 {
+        transform.apply_patterns.transform.test_patterns
+      }  {max_num_rewrites = 1} : !transform.any_op
+    }
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @replacement_op_not_found() {
   "test.container"() ({
     // expected-note @below {{[0] replaced op}}

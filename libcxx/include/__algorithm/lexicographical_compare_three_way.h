@@ -90,7 +90,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_slow_pa
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Cmp>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2, _Cmp __comp)
     -> decltype(__comp(*__first1, *__first2)) {
   static_assert(__comparison_category<decltype(__comp(*__first1, *__first2))>,
@@ -110,7 +110,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compa
 }
 
 template <class _InputIterator1, class _InputIterator2>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::lexicographical_compare_three_way(
       std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::compare_three_way());

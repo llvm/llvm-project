@@ -111,7 +111,7 @@
 // RVA22S64: "-target-feature" "+svinval"
 // RVA22S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 -menable-experimental-extensions \
 // RUN:   | FileCheck -check-prefix=RVA23U64 %s
 // RVA23U64: "-target-feature" "+m"
 // RVA23U64: "-target-feature" "+a"
@@ -207,7 +207,7 @@
 // RVA23S64: "-target-feature" "+svnapot"
 // RVA23S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23u64 \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23u64 -menable-experimental-extensions \
 // RUN:   | FileCheck -check-prefix=RVB23U64 %s
 // RVB23U64: "-target-feature" "+m"
 // RVB23U64: "-target-feature" "+a"
@@ -284,7 +284,7 @@
 // RVB23S64: "-target-feature" "+svnapot"
 // RVB23S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 \
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 -menable-experimental-extensions \
 // RUN:   | FileCheck -check-prefix=RVM23U32 %s
 // RVM23U32: "-target-feature" "+m"
 // RVM23U32: "-target-feature" "+zicbop"
@@ -318,7 +318,11 @@
 // PROFILE-WITH-ADDITIONAL: "-target-feature" "+zkt"
 
 // RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva19u64_zfa | FileCheck -check-prefix=INVALID-PROFILE %s
-// INVALID-PROFILE: error: invalid arch name 'rva19u64_zfa', unsupported profile
+// INVALID-PROFILE: error: invalid arch name 'rva19u64_zfa', string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported profile name
 
 // RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva22u64zfa | FileCheck -check-prefix=INVALID-ADDITIONAL %s
 // INVALID-ADDITIONAL: error: invalid arch name 'rva22u64zfa', additional extensions must be after separator '_'
+
+// RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 | FileCheck -check-prefix=EXPERIMENTAL-NOFLAG %s
+// EXPERIMENTAL-NOFLAG: error: invalid arch name 'rva23u64'
+// EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions' for profile 'rva23u64'

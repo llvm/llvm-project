@@ -397,7 +397,7 @@ public:
                  AssumptionCache *AC)
       : Allocas(Allocas.begin(), Allocas.end()), DT(DT),
         DIB(*DT.getRoot()->getParent()->getParent(), /*AllowUnresolved*/ false),
-        AC(AC), SQ(DT.getRoot()->getParent()->getParent()->getDataLayout(),
+        AC(AC), SQ(DT.getRoot()->getDataLayout(),
                    nullptr, &DT, AC) {}
 
   void run();
@@ -453,13 +453,22 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
 static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
                                      const DataLayout &DL, AssumptionCache *AC,
                                      const DominatorTree *DT) {
+  if (isa<UndefValue>(Val) && LI->hasMetadata(LLVMContext::MD_noundef)) {
+    // Insert non-terminator unreachable.
+    LLVMContext &Ctx = LI->getContext();
+    new StoreInst(ConstantInt::getTrue(Ctx),
+                  PoisonValue::get(PointerType::getUnqual(Ctx)),
+                  /*isVolatile=*/false, Align(1), LI);
+    return;
+  }
+
   // If the load was marked as nonnull we don't want to lose that information
   // when we erase this Load. So we preserve it with an assume. As !nonnull
   // returns poison while assume violations are immediate undefined behavior,
   // we can only do this if the value is known non-poison.
   if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
       LI->getMetadata(LLVMContext::MD_noundef) &&
-      !isKnownNonZero(Val, /*Depth=*/0, SimplifyQuery(DL, DT, AC, LI)))
+      !isKnownNonZero(Val, SimplifyQuery(DL, DT, AC, LI)))
     addAssumeNonNull(AC, LI);
 }
 

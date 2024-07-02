@@ -1,6 +1,5 @@
 // REQUIRES: zstd
-// REQUIRES: x86-registered-target
-// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 //
 // Generate the host binary to be bundled.
@@ -22,19 +21,22 @@
 // Check compression/decompression of offload bundle.
 //
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc -compress -verbose 2>&1 | \
-// RUN:   FileCheck -check-prefix=COMPRESS %s
+// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc -compress -verbose >%t.1.txt 2>&1
 // RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle -verbose 2>&1 | \
-// RUN:   FileCheck -check-prefix=DECOMPRESS %s
+// RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle -verbose >%t.2.txt 2>&1
+// RUN: cat %t.1.txt %t.2.txt | FileCheck %s
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 //
-// COMPRESS: Compression method used: zstd
-// COMPRESS: Compression level: 3 
-// DECOMPRESS: Decompression method: zstd
-// DECOMPRESS: Hashes match: Yes
+// CHECK: Compressed bundle format version: 2
+// CHECK: Total file size (including headers): [[SIZE:[0-9]*]] bytes
+// CHECK: Compression method used: zstd
+// CHECK: Compression level: 3
+// CHECK: Compressed bundle format version: 2
+// CHECK: Total file size (from header): [[SIZE]] bytes
+// CHECK: Decompression method: zstd
+// CHECK: Hashes match: Yes
 // NOHOST-NOT: host-
 // NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx900
 // NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906

@@ -16,8 +16,11 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/TextAPI/Symbol.h"
+#include <map>
 
 #if !defined(PATH_MAX)
 #define PATH_MAX 1024
@@ -29,6 +32,8 @@
 namespace llvm::MachO {
 
 using PathSeq = std::vector<std::string>;
+using PathToPlatform = std::pair<std::string, std::optional<PlatformType>>;
+using PathToPlatformSeq = std::vector<PathToPlatform>;
 
 // Defines simple struct for storing symbolic links.
 struct SymLink {
@@ -74,6 +79,22 @@ bool isPrivateLibrary(StringRef Path, bool IsSymLink = false);
 /// \param Glob String that represents glob input.
 /// \return The equivalent regex rule.
 llvm::Expected<llvm::Regex> createRegexFromGlob(llvm::StringRef Glob);
+
+using AliasEntry = std::pair<std::string, EncodeKind>;
+using AliasMap = std::map<AliasEntry, AliasEntry>;
+
+/// Parse input list and capture symbols and their alias.
+///
+/// \param Buffer Data contents of file for the alias list.
+/// \return Lookup table of alias to their base symbol.
+Expected<AliasMap> parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer);
+
+/// Pickup active paths for a given platform.
+///
+/// \param Paths File or search paths to pick up.
+/// \param Platform Platform to collect paths for.
+PathSeq getPathsForPlatform(const PathToPlatformSeq &Paths,
+                            PlatformType Platform);
 
 } // namespace llvm::MachO
 #endif // LLVM_TEXTAPI_UTILS_H

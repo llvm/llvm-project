@@ -646,6 +646,20 @@ llvm::json::Value mlir::lsp::toJSON(const DiagnosticRelatedInformation &info) {
 // Diagnostic
 //===----------------------------------------------------------------------===//
 
+llvm::json::Value mlir::lsp::toJSON(DiagnosticTag tag) {
+  return static_cast<int>(tag);
+}
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
+                         llvm::json::Path path) {
+  if (std::optional<int64_t> i = value.getAsInteger()) {
+    result = (DiagnosticTag)*i;
+    return true;
+  }
+
+  return false;
+}
+
 llvm::json::Value mlir::lsp::toJSON(const Diagnostic &diag) {
   llvm::json::Object result{
       {"range", diag.range},
@@ -658,6 +672,8 @@ llvm::json::Value mlir::lsp::toJSON(const Diagnostic &diag) {
     result["source"] = diag.source;
   if (diag.relatedInformation)
     result["relatedInformation"] = *diag.relatedInformation;
+  if (!diag.tags.empty())
+    result["tags"] = diag.tags;
   return std::move(result);
 }
 
@@ -675,7 +691,8 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value, Diagnostic &result,
          mapOptOrNull(value, "category", result.category, path) &&
          mapOptOrNull(value, "source", result.source, path) &&
          mapOptOrNull(value, "relatedInformation", result.relatedInformation,
-                      path);
+                      path) &&
+         mapOptOrNull(value, "tags", result.tags, path);
 }
 
 //===----------------------------------------------------------------------===//

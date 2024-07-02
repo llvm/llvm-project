@@ -194,10 +194,10 @@ define <2 x i16> @ustest_f64i16(<2 x double> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    smax v0.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
@@ -436,12 +436,8 @@ entry:
 define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: stest_f32i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>
@@ -833,10 +829,10 @@ define <2 x i16> @ustest_f64i16_mm(<2 x double> %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    smax v0.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
@@ -1056,12 +1052,8 @@ entry:
 define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: stest_f32i64_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>

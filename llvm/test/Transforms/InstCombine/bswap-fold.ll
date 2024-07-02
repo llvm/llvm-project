@@ -870,13 +870,13 @@ define <2 x i64> @bs_active_high_different_negative(<2 x i64> %0) {
 }
 
 ; TODO: This should fold to 'and'.
-define <2 x i64> @bs_active_high_undef(<2 x i64> %0) {
-; CHECK-LABEL: @bs_active_high_undef(
+define <2 x i64> @bs_active_high_poison(<2 x i64> %0) {
+; CHECK-LABEL: @bs_active_high_poison(
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[TMP0:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], <i64 56, i64 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], <i64 56, i64 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
-  %2 = shl <2 x i64> %0, <i64 56, i64 undef>
+  %2 = shl <2 x i64> %0, <i64 56, i64 poison>
   %3 = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %2)
   ret <2 x i64> %3
 }

@@ -17,6 +17,7 @@
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/Target/TargetMachine.h"
@@ -55,7 +56,7 @@ void llvm::computeLegalValueVTs(const WebAssemblyTargetLowering &TLI,
 
 void llvm::computeLegalValueVTs(const Function &F, const TargetMachine &TM,
                                 Type *Ty, SmallVectorImpl<MVT> &ValueVTs) {
-  const DataLayout &DL(F.getParent()->getDataLayout());
+  const DataLayout &DL(F.getDataLayout());
   const WebAssemblyTargetLowering &TLI =
       *TM.getSubtarget<WebAssemblySubtarget>(F).getTargetLowering();
   computeLegalValueVTs(TLI, F.getContext(), DL, Ty, ValueVTs);
@@ -70,8 +71,9 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
   computeLegalValueVTs(ContextFunc, TM, Ty->getReturnType(), Results);
 
   MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
-  if (Results.size() > 1 &&
-      !TM.getSubtarget<WebAssemblySubtarget>(ContextFunc).hasMultivalue()) {
+  if (!WebAssembly::canLowerReturn(
+          Results.size(),
+          &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc))) {
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return

@@ -862,6 +862,69 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
   ModifiedDT = true;
 }
 
+static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
+                                           DomTreeUpdater *DTU,
+                                           bool &ModifiedDT) {
+  // If we extend histogram to return a result someday (like the updated vector)
+  // then we'll need to support it here.
+  assert(CI->getType()->isVoidTy() && "Histogram with non-void return.");
+  Value *Ptrs = CI->getArgOperand(0);
+  Value *Inc = CI->getArgOperand(1);
+  Value *Mask = CI->getArgOperand(2);
+
+  auto *AddrType = cast<FixedVectorType>(Ptrs->getType());
+  Type *EltTy = Inc->getType();
+
+  IRBuilder<> Builder(CI->getContext());
+  Instruction *InsertPt = CI;
+  Builder.SetInsertPoint(InsertPt);
+
+  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+
+  // FIXME: Do we need to add an alignment parameter to the intrinsic?
+  unsigned VectorWidth = AddrType->getNumElements();
+
+  // Shorten the way if the mask is a vector of constants.
+  if (isConstantIntVector(Mask)) {
+    for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+        continue;
+      Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
+      LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
+      Value *Add = Builder.CreateAdd(Load, Inc);
+      Builder.CreateStore(Add, Ptr);
+    }
+    CI->eraseFromParent();
+    return;
+  }
+
+  for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
+    Value *Predicate =
+        Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
+
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
+                                  /*BranchWeights=*/nullptr, DTU);
+
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.histogram.update");
+
+    Builder.SetInsertPoint(CondBlock->getTerminator());
+    Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
+    LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
+    Value *Add = Builder.CreateAdd(Load, Inc);
+    Builder.CreateStore(Add, Ptr);
+
+    // Create "else" block, fill it in the next iteration
+    BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
+    NewIfBlock->setName("else");
+    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+  }
+
+  CI->eraseFromParent();
+  ModifiedDT = true;
+}
+
 static bool runImpl(Function &F, const TargetTransformInfo &TTI,
                     DominatorTree *DT) {
   std::optional<DomTreeUpdater> DTU;
@@ -870,7 +933,7 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
 
   bool EverMadeChange = false;
   bool MadeChange = true;
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   while (MadeChange) {
     MadeChange = false;
     for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
@@ -938,6 +1001,12 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::experimental_vector_histogram_add:
+      if (TTI.isLegalMaskedVectorHistogram(CI->getArgOperand(0)->getType(),
+                                           CI->getArgOperand(1)->getType()))
+        return false;
+      scalarizeMaskedVectorHistogram(DL, CI, DTU, ModifiedDT);
+      return true;
     case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
       if (TTI.isLegalMaskedLoad(

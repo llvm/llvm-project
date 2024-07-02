@@ -164,6 +164,14 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   return true;
 }
 
+static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
+  if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
+      (Triple.isAndroid() && Triple.isRISCV64()))
+    return false;
+
+  return true;
+}
+
 static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
   default:
@@ -176,38 +184,91 @@ static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
   }
 }
 
+// True if a target-specific option requires the frame chain to be preserved,
+// even if new frame records are not created.
+static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
+                                        const llvm::Triple &Triple) {
+  if (Triple.isARM() || Triple.isThumb()) {
+    // For 32-bit Arm, the -mframe-chain=aapcs and -mframe-chain=aapcs+leaf
+    // options require the frame pointer register to be reserved (or point to a
+    // new AAPCS-compilant frame record), even with	-fno-omit-frame-pointer.
+    if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+      StringRef V = A->getValue();
+      return V != "none";
+    }
+    return false;
+  }
+  return false;
+}
+
+// True if a target-specific option causes -fno-omit-frame-pointer to also
+// cause frame records to be created in leaf functions.
+static bool framePointerImpliesLeafFramePointer(const llvm::opt::ArgList &Args,
+                                                const llvm::Triple &Triple) {
+  if (Triple.isARM() || Triple.isThumb()) {
+    // For 32-bit Arm, the -mframe-chain=aapcs+leaf option causes the
+    // -fno-omit-frame-pointer optiion to imply -mno-omit-leaf-frame-pointer,
+    // but does not by itself imply either option.
+    if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+      StringRef V = A->getValue();
+      return V == "aapcs+leaf";
+    }
+    return false;
+  }
+  return false;
+}
+
 clang::CodeGenOptions::FramePointerKind
 getFramePointerKind(const llvm::opt::ArgList &Args,
                     const llvm::Triple &Triple) {
-  // We have 4 states:
+  // There are three things to consider here:
+  // * Should a frame record be created for non-leaf functions?
+  // * Should a frame record be created for leaf functions?
+  // * Is the frame pointer register reserved, i.e. must it always point to
+  //   either a new, valid frame record or be un-modified?
   //
-  //  00) leaf retained, non-leaf retained
-  //  01) leaf retained, non-leaf omitted (this is invalid)
-  //  10) leaf omitted, non-leaf retained
-  //      (what -momit-leaf-frame-pointer was designed for)
-  //  11) leaf omitted, non-leaf omitted
+  //  Not all combinations of these are valid:
+  //  * It's not useful to have leaf frame records without non-leaf ones.
+  //  * It's not useful to have frame records without reserving the frame
+  //    pointer.
   //
-  //  "omit" options taking precedence over "no-omit" options is the only way
-  //  to make 3 valid states representable
-  llvm::opt::Arg *A =
-      Args.getLastArg(clang::driver::options::OPT_fomit_frame_pointer,
-                      clang::driver::options::OPT_fno_omit_frame_pointer);
+  // | Non-leaf | Leaf | Reserved |
+  // | N        | N    | N        | FramePointerKind::None
+  // | N        | N    | Y        | FramePointerKind::Reserved
+  // | N        | Y    | N        | Invalid
+  // | N        | Y    | Y        | Invalid
+  // | Y        | N    | N        | Invalid
+  // | Y        | N    | Y        | FramePointerKind::NonLeaf
+  // | Y        | Y    | N        | Invalid
+  // | Y        | Y    | Y        | FramePointerKind::All
+  //
+  // The FramePointerKind::Reserved case is currently only reachable for Arm,
+  // which has the -mframe-chain= option which can (in combination with
+  // -fno-omit-frame-pointer) specify that the frame chain must be valid,
+  // without requiring new frame records to be created.
 
-  bool OmitFP = A && A->getOption().matches(
-                         clang::driver::options::OPT_fomit_frame_pointer);
-  bool NoOmitFP = A && A->getOption().matches(
-                           clang::driver::options::OPT_fno_omit_frame_pointer);
-  bool OmitLeafFP =
-      Args.hasFlag(clang::driver::options::OPT_momit_leaf_frame_pointer,
-                   clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
-                   Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-                       (Triple.isAndroid() && Triple.isRISCV64()));
-  if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
-      (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
-    if (OmitLeafFP)
-      return clang::CodeGenOptions::FramePointerKind::NonLeaf;
-    return clang::CodeGenOptions::FramePointerKind::All;
+  bool DefaultFP = useFramePointerForTargetByDefault(Args, Triple);
+  bool EnableFP =
+      mustUseNonLeafFramePointerForTarget(Triple) ||
+      Args.hasFlag(clang::driver::options::OPT_fno_omit_frame_pointer,
+                   clang::driver::options::OPT_fomit_frame_pointer, DefaultFP);
+
+  bool DefaultLeafFP =
+      useLeafFramePointerForTargetByDefault(Triple) ||
+      (EnableFP && framePointerImpliesLeafFramePointer(Args, Triple));
+  bool EnableLeafFP = Args.hasFlag(
+      clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
+      clang::driver::options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
+
+  bool FPRegReserved = EnableFP || mustMaintainValidFrameChain(Args, Triple);
+
+  if (EnableFP) {
+    if (EnableLeafFP)
+      return clang::CodeGenOptions::FramePointerKind::All;
+    return clang::CodeGenOptions::FramePointerKind::NonLeaf;
   }
+  if (FPRegReserved)
+    return clang::CodeGenOptions::FramePointerKind::Reserved;
   return clang::CodeGenOptions::FramePointerKind::None;
 }
 
@@ -346,7 +407,7 @@ void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
     return; // Nothing to do.
 
   StringRef Name(ArgName);
-  if (Name.equals("-I") || Name.equals("-L") || Name.empty())
+  if (Name == "-I" || Name == "-L" || Name.empty())
     CombinedArg = true;
 
   StringRef Dirs(DirList);
@@ -737,7 +798,7 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
   StringRef V = A->getValue();
   bool SupportedArgument = false, EnableTLSDESC = false;
   bool Unsupported = !Triple.isOSBinFormatELF();
-  if (Triple.isRISCV()) {
+  if (Triple.isLoongArch() || Triple.isRISCV()) {
     SupportedArgument = V == "desc" || V == "trad";
     EnableTLSDESC = V == "desc";
   } else if (Triple.isX86()) {
@@ -1191,118 +1252,10 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   return true;
 }
 
-/// Determines if --whole-archive is active in the list of arguments.
-static bool isWholeArchivePresent(const ArgList &Args) {
-  bool WholeArchiveActive = false;
-  for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA)) {
-    if (Arg) {
-      for (StringRef ArgValue : Arg->getValues()) {
-        if (ArgValue == "--whole-archive")
-          WholeArchiveActive = true;
-        if (ArgValue == "--no-whole-archive")
-          WholeArchiveActive = false;
-      }
-    }
-  }
-
-  return WholeArchiveActive;
-}
-
-/// Determine if driver is invoked to create a shared object library (-static)
-static bool isSharedLinkage(const ArgList &Args) {
-  return Args.hasArg(options::OPT_shared);
-}
-
-/// Determine if driver is invoked to create a static object library (-shared)
-static bool isStaticLinkage(const ArgList &Args) {
-  return Args.hasArg(options::OPT_static);
-}
-
-/// Add Fortran runtime libs for MSVC
-static void addFortranRuntimeLibsMSVC(const ArgList &Args,
-                                      llvm::opt::ArgStringList &CmdArgs) {
-  unsigned RTOptionID = options::OPT__SLASH_MT;
-  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
-    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
-                     .Case("static", options::OPT__SLASH_MT)
-                     .Case("static_dbg", options::OPT__SLASH_MTd)
-                     .Case("dll", options::OPT__SLASH_MD)
-                     .Case("dll_dbg", options::OPT__SLASH_MDd)
-                     .Default(options::OPT__SLASH_MT);
-  }
-  switch (RTOptionID) {
-  case options::OPT__SLASH_MT:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
-    break;
-  case options::OPT__SLASH_MTd:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
-    break;
-  case options::OPT__SLASH_MD:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
-    break;
-  case options::OPT__SLASH_MDd:
-    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
-    break;
-  }
-}
-
-// Add FortranMain runtime lib
-static void addFortranMain(const ToolChain &TC, const ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs) {
-  // 0. Shared-library linkage
-  // If we are attempting to link a library, we should not add
-  // -lFortran_main.a to the link line, as the `main` symbol is not
-  // required for a library and should also be provided by one of
-  // the translation units of the code that this shared library
-  // will be linked against eventually.
-  if (isSharedLinkage(Args) || isStaticLinkage(Args)) {
-    return;
-  }
-
-  // 1. MSVC
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    addFortranRuntimeLibsMSVC(Args, CmdArgs);
-    return;
-  }
-
-  // 2. GNU and similar
-  const Driver &D = TC.getDriver();
-  const char *FortranMainLinkFlag = "-lFortran_main";
-
-  // Warn if the user added `-lFortran_main` - this library is an implementation
-  // detail of Flang and should be handled automaticaly by the driver.
-  for (const char *arg : CmdArgs) {
-    if (strncmp(arg, FortranMainLinkFlag, strlen(FortranMainLinkFlag)) == 0)
-      D.Diag(diag::warn_drv_deprecated_custom)
-          << FortranMainLinkFlag
-          << "see the Flang driver documentation for correct usage";
-  }
-
-  // The --whole-archive option needs to be part of the link line to make
-  // sure that the main() function from Fortran_main.a is pulled in by the
-  // linker. However, it shouldn't be used if it's already active.
-  // TODO: Find an equivalent of `--whole-archive` for Darwin and AIX.
-  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
-      !TC.getTriple().isOSAIX()) {
-    CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back(FortranMainLinkFlag);
-    CmdArgs.push_back("--no-whole-archive");
-    return;
-  }
-
-  CmdArgs.push_back(FortranMainLinkFlag);
-}
-
 /// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // 1. Link FortranMain
-  // FortranMain depends on FortranRuntime, so needs to be listed first. If
-  // -fno-fortran-main has been passed, skip linking Fortran_main.a
-  if (!Args.hasArg(options::OPT_no_fortran_main))
-    addFortranMain(TC, Args, CmdArgs);
-
-  // 2. Link FortranRuntime and FortranDecimal
+  // Link FortranRuntime and FortranDecimal
   // These are handled earlier on Windows by telling the frontend driver to
   // add the correct libraries to link against as dependents in the object
   // file.
@@ -2116,8 +2069,12 @@ unsigned tools::getDwarfVersion(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args) {
   unsigned DwarfVersion = ParseDebugDefaultVersion(TC, Args);
   if (const Arg *GDwarfN = getDwarfNArg(Args))
-    if (int N = DwarfVersionNum(GDwarfN->getSpelling()))
+    if (int N = DwarfVersionNum(GDwarfN->getSpelling())) {
       DwarfVersion = N;
+      if (DwarfVersion == 5 && TC.getTriple().isOSAIX())
+        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << GDwarfN->getSpelling() << TC.getTriple().str();
+    }
   if (DwarfVersion == 0) {
     DwarfVersion = TC.GetDefaultDwarfVersion();
     assert(DwarfVersion && "toolchain default DWARF version must be nonzero");

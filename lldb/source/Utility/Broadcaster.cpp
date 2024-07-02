@@ -202,7 +202,7 @@ bool Broadcaster::BroadcasterImpl::RemoveListener(
     if (!curr_listener_sp) {
       // The weak pointer for this listener didn't resolve, lets' prune it
       // as we go.
-      m_listeners.erase(it);
+      it = m_listeners.erase(it);
       continue;
     }
 
@@ -213,8 +213,8 @@ bool Broadcaster::BroadcasterImpl::RemoveListener(
       if (!it->second)
         m_listeners.erase(it);
       return true;
-    } else
-      it++;
+    }
+    it++;
   }
   return false;
 }
@@ -373,8 +373,8 @@ void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
     m_hijacking_masks.pop_back();
 }
 
-ConstString &Broadcaster::GetBroadcasterClass() const {
-  static ConstString class_name("lldb.anonymous");
+llvm::StringRef Broadcaster::GetBroadcasterClass() const {
+  static constexpr llvm::StringLiteral class_name("lldb.anonymous");
   return class_name;
 }
 

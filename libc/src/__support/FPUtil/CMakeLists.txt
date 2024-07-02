@@ -3,7 +3,7 @@ add_header_library(
   HDRS
     FEnvImpl.h
   DEPENDS
-    libc.include.fenv
+    libc.hdr.types.fenv_t
     libc.hdr.fenv_macros
     libc.hdr.math_macros
     libc.src.__support.macros.attributes
@@ -154,7 +154,6 @@ add_header_library(
   HDRS
     multiply_add.h
   DEPENDS
-    .fma
     libc.src.__support.common
 )
 
@@ -199,10 +198,11 @@ add_header_library(
   HDRS
     dyadic_float.h
   DEPENDS
+    .fenv_impl
     .fp_bits
     .multiply_add
+    libc.src.__support.CPP.type_traits
     libc.src.__support.big_int
-    libc.src.__support.common
     libc.src.__support.macros.optimization
 )
 

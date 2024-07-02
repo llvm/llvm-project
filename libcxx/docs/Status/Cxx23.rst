@@ -43,7 +43,6 @@ Paper Status
    .. [#note-P0533R9] P0533R9: ``isfinite``, ``isinf``, ``isnan`` and ``isnormal`` are implemented.
    .. [#note-P1413R3] P1413R3: ``std::aligned_storage_t`` and ``std::aligned_union_t`` are marked deprecated, but
       clang doesn't issue a diagnostic for deprecated using template declarations.
-   .. [#note-P2387R3] P2387R3: ``bind_back`` only
    .. [#note-P2520R0] P2520R0: Libc++ implemented this paper as a DR in C++20 as well.
    .. [#note-P2711R1] P2711R1: ``join_with_view`` hasn't been done yet since this type isn't implemented yet.
    .. [#note-P2770R0] P2770R0: ``join_with_view`` hasn't been done yet since this type isn't implemented yet.

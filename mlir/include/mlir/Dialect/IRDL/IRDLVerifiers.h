@@ -30,7 +30,10 @@ class DynamicTypeDefinition;
 namespace mlir {
 namespace irdl {
 
+class AttributeOp;
 class Constraint;
+class OperationOp;
+class TypeOp;
 
 /// Provides context to the verification of constraints.
 /// It contains the assignment of variables to attributes, and the assignment
@@ -246,6 +249,14 @@ private:
   std::optional<SmallVector<unsigned>> argumentConstraints;
   std::optional<size_t> blockCount;
 };
+
+/// Generate an op verifier function from the given IRDL operation definition.
+llvm::unique_function<LogicalResult(Operation *) const> createVerifier(
+    OperationOp operation,
+    const DenseMap<irdl::TypeOp, std::unique_ptr<DynamicTypeDefinition>>
+        &typeDefs,
+    const DenseMap<irdl::AttributeOp, std::unique_ptr<DynamicAttrDefinition>>
+        &attrDefs);
 } // namespace irdl
 } // namespace mlir
 

@@ -27,8 +27,8 @@ using namespace ento;
 
 namespace {
 class MmapWriteExecChecker : public Checker<check::PreCall> {
-  CallDescription MmapFn;
-  CallDescription MprotectFn;
+  CallDescription MmapFn{CDM::CLibrary, {"mmap"}, 6};
+  CallDescription MprotectFn{CDM::CLibrary, {"mprotect"}, 3};
   static int ProtWrite;
   static int ProtExec;
   static int ProtRead;
@@ -36,7 +36,6 @@ class MmapWriteExecChecker : public Checker<check::PreCall> {
                    "Security"};
 
 public:
-  MmapWriteExecChecker() : MmapFn({"mmap"}, 6), MprotectFn({"mprotect"}, 3) {}
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   int ProtExecOv;
   int ProtReadOv;

@@ -1,3 +1,10 @@
+// RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix INTERFERENCE %s
+//
+// We purposefully do not test the values produced, only that the macros are
+// predefined to some value.
+// INTERFERENCE:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// INTERFERENCE:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
+
 // RUN: %clang_cc1 -E -dM -x assembler-with-cpp < /dev/null | FileCheck -match-full-lines -check-prefix ASM %s
 //
 // ASM:#define __ASSEMBLER__ 1
@@ -1697,6 +1704,8 @@
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// WEBASSEMBLY-NEXT:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// WEBASSEMBLY-NEXT:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
@@ -1806,11 +1815,11 @@
 // WEBASSEMBLY64-NEXT:#define __LONG_MAX__ 9223372036854775807L
 // WEBASSEMBLY64-NEXT:#define __LONG_WIDTH__ 64
 // WEBASSEMBLY64-NEXT:#define __LP64__ 1
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3 
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3
 // WEBASSEMBLY-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY-NEXT:#define __NO_MATH_ERRNO__ 1
 // WEBASSEMBLY-NEXT:#define __OBJC_BOOL_IS_BOOL 0
@@ -1866,6 +1875,9 @@
 // WEBASSEMBLY-NEXT:#define __SIZE_TYPE__ long unsigned int
 // WEBASSEMBLY32-NEXT:#define __SIZE_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __SIZE_WIDTH__ 64
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_EMPTY__ 2
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_FOUND__ 1
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_NOT_FOUND__ 0
 // WEBASSEMBLY-NEXT:#define __STDC_HOSTED__ 0
 // WEBASSEMBLY-NOT:#define __STDC_MB_MIGHT_NEQ_WC__
 // WEBASSEMBLY-NOT:#define __STDC_NO_ATOMICS__
@@ -2126,11 +2138,11 @@
 // AVR:#define __LDBL_MIN__ 1.17549435e-38L
 // AVR:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // AVR:#define __LONG_MAX__ 2147483647L
-// AVR:#define __MEMORY_SCOPE_DEVICE 1 
-// AVR:#define __MEMORY_SCOPE_SINGLE 4 
-// AVR:#define __MEMORY_SCOPE_SYSTEM 0 
-// AVR:#define __MEMORY_SCOPE_WRKGRP 2 
-// AVR:#define __MEMORY_SCOPE_WVFRNT 3 
+// AVR:#define __MEMORY_SCOPE_DEVICE 1
+// AVR:#define __MEMORY_SCOPE_SINGLE 4
+// AVR:#define __MEMORY_SCOPE_SYSTEM 0
+// AVR:#define __MEMORY_SCOPE_WRKGRP 2
+// AVR:#define __MEMORY_SCOPE_WVFRNT 3
 // AVR:#define __NO_INLINE__ 1
 // AVR:#define __ORDER_BIG_ENDIAN__ 4321
 // AVR:#define __ORDER_LITTLE_ENDIAN__ 1234
@@ -2422,11 +2434,11 @@
 // RISCV32: #define __LITTLE_ENDIAN__ 1
 // RISCV32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV32: #define __LONG_MAX__ 2147483647L
-// RISCV32: #define __MEMORY_SCOPE_DEVICE 1 
-// RISCV32: #define __MEMORY_SCOPE_SINGLE 4 
-// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0 
-// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2 
-// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3 
+// RISCV32: #define __MEMORY_SCOPE_DEVICE 1
+// RISCV32: #define __MEMORY_SCOPE_SINGLE 4
+// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0
+// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2
+// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3
 // RISCV32: #define __NO_INLINE__ 1
 // RISCV32: #define __POINTER_WIDTH__ 32
 // RISCV32: #define __PRAGMA_REDEFINE_EXTNAME 1
@@ -2518,6 +2530,8 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV64 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-linux < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64,RISCV64-LINUX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-fuchsia < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64 %s
 // RISCV64: #define _LP64 1
 // RISCV64: #define __ATOMIC_ACQUIRE 2
 // RISCV64: #define __ATOMIC_ACQ_REL 4
@@ -2634,11 +2648,11 @@
 // RISCV64: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV64: #define __LONG_MAX__ 9223372036854775807L
 // RISCV64: #define __LP64__ 1
-// RISCV64: #define __MEMORY_SCOPE_DEVICE 1 
-// RISCV64: #define __MEMORY_SCOPE_SINGLE 4 
-// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0 
-// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2 
-// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3 
+// RISCV64: #define __MEMORY_SCOPE_DEVICE 1
+// RISCV64: #define __MEMORY_SCOPE_SINGLE 4
+// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0
+// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2
+// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3
 // RISCV64: #define __NO_INLINE__ 1
 // RISCV64: #define __POINTER_WIDTH__ 64
 // RISCV64: #define __PRAGMA_REDEFINE_EXTNAME 1

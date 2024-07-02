@@ -26,6 +26,7 @@ def UidT : NamedType<"uid_t">;
 def GidT : NamedType<"gid_t">;
 def DevT : NamedType<"dev_t">;
 def ClockIdT : NamedType<"clockid_t">;
+def RestrictedClockIdTPtr : RestrictedPtrType<ClockIdT>;
 def BlkSizeT : NamedType<"blksize_t">;
 def BlkCntT : NamedType<"blkcnt_t">;
 def NLinkT : NamedType<"nlink_t">;
@@ -105,6 +106,16 @@ def POSIX : StandardSpec<"POSIX"> {
   ConstType ConstPThreadAttrTPtr = ConstType<PThreadAttrTPtr>;
   ConstType ConstRestrictedPThreadAttrTPtr = ConstType<RestrictedPThreadAttrTPtr>;
 
+  NamedType PThreadCondAttrTType = NamedType<"pthread_condattr_t">;
+  PtrType PThreadCondAttrTPtr = PtrType<PThreadCondAttrTType>;
+  ConstType ConstRestrictedPThreadCondAttrTPtr = ConstType<RestrictedPtrType<PThreadCondAttrTType>>;
+
+  NamedType PThreadRWLockAttrTType = NamedType<"pthread_rwlockattr_t">;
+  PtrType PThreadRWLockAttrTPtr = PtrType<PThreadRWLockAttrTType>;
+  ConstType ConstPThreadRWLockAttrTPtr = ConstType<PThreadRWLockAttrTPtr>;
+  RestrictedPtrType RestrictedPThreadRWLockAttrTPtr = RestrictedPtrType<PThreadRWLockAttrTType>;
+  ConstType ConstRestrictedPThreadRWLockAttrTPtr = ConstType<RestrictedPThreadRWLockAttrTPtr>;
+
   NamedType PThreadMutexAttrTType = NamedType<"pthread_mutexattr_t">;
   PtrType PThreadMutexAttrTPtr = PtrType<PThreadMutexAttrTType>;
   RestrictedPtrType RestrictedPThreadMutexAttrTPtr = RestrictedPtrType<PThreadMutexAttrTType>;
@@ -116,6 +127,10 @@ def POSIX : StandardSpec<"POSIX"> {
   RestrictedPtrType RestrictedPThreadMutexTPtr = RestrictedPtrType<PThreadMutexTType>;
   ConstType ConstPThreadMutexTPtr = ConstType<PThreadMutexTPtr>;
   ConstType ConstRestrictedPThreadMutexTPtr = ConstType<RestrictedPThreadMutexTPtr>;
+
+  NamedType PThreadRWLockTType = NamedType<"pthread_rwlock_t">;
+  PtrType PThreadRWLockTPtr = PtrType<PThreadRWLockTType>;
+  RestrictedPtrType RestrictedPThreadRWLockTPtr = RestrictedPtrType<PThreadRWLockTType>;
 
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
@@ -220,6 +235,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "creat",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
+      >,
+      FunctionSpec<
+          "fcntl",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<VarArgType>]
       >,
       FunctionSpec<
           "open",
@@ -980,12 +1000,16 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Macros
     [
         AtForkCallbackT,
+        ClockIdT,
         PThreadAttrTType,
+        PThreadCondAttrTType,
         PThreadKeyT,
         PThreadMutexAttrTType,
         PThreadMutexTType,
         PThreadOnceCallback,
         PThreadOnceT,
+        PThreadRWLockAttrTType,
+        PThreadRWLockTType,
         PThreadStartT,
         PThreadTSSDtorT,
         PThreadTType,
@@ -1046,6 +1070,36 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_attr_setstack",
           RetValSpec<IntType>,
           [ArgSpec<PThreadAttrTPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+      >,
+      FunctionSpec<
+          "pthread_condattr_destroy",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_condattr_getclock",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadCondAttrTPtr>, ArgSpec<RestrictedClockIdTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_condattr_getpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedPThreadCondAttrTPtr>, ArgSpec<RestrictedIntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_condattr_init",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_condattr_setclock",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondAttrTPtr>, ArgSpec<ClockIdT>]
+      >,
+      FunctionSpec<
+          "pthread_condattr_setpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondAttrTPtr>, ArgSpec<IntType>]
       >,
       FunctionSpec<
           "pthread_create",
@@ -1182,6 +1236,81 @@ def POSIX : StandardSpec<"POSIX"> {
           RetValSpec<IntType>,
           [ArgSpec<PThreadOnceTPtr>, ArgSpec<PThreadOnceCallback>]
       >,
+      FunctionSpec<
+          "pthread_rwlockattr_destroy",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_getkind_np",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>, ArgSpec<IntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_getpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstPThreadRWLockAttrTPtr>, ArgSpec<IntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_init",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_setkind_np",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_setpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_init",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>, ArgSpec<ConstRestrictedPThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_tryrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_trywrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_timedrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_timedwrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_rdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_wrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_unlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_destroy",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
     ]
   >;
 
@@ -1215,6 +1344,11 @@ def POSIX : StandardSpec<"POSIX"> {
             "fileno",
             RetValSpec<IntType>,
             [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+            "fdopen",
+            RetValSpec<FILEPtr>,
+            [ArgSpec<IntType>, ArgSpec<ConstCharPtr>]
           >,
       ]
   >;
@@ -1522,9 +1656,32 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysTypes = HeaderSpec<
     "sys/types.h",
     [], // Macros
-    [BlkCntT, BlkSizeT, ClockIdT, DevT, GidT, InoT, ModeTType, NLinkT, OffTType, PidT,
-     PThreadAttrTType, PThreadKeyT, PThreadMutexTType, PThreadMutexAttrTType, PThreadOnceT, PThreadTType,
-     SizeTType, SSizeTType, SuSecondsT, TimeTType, UidT],
+    [
+      BlkCntT,
+      BlkSizeT,
+      ClockIdT,
+      DevT,
+      GidT,
+      InoT,
+      ModeTType,
+      NLinkT,
+      OffTType,
+      PThreadAttrTType,
+      PThreadCondAttrTType,
+      PThreadKeyT,
+      PThreadMutexAttrTType,
+      PThreadMutexTType,
+      PThreadOnceT,
+      PThreadRWLockAttrTType,
+      PThreadRWLockTType,
+      PThreadTType,
+      PidT,
+      SSizeTType,
+      SizeTType,
+      SuSecondsT,
+      TimeTType,
+      UidT
+    ], // Types
     [], // Enumerations
     []  // Functions
   >;

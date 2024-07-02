@@ -61,12 +61,13 @@ struct ForOpInterface
     // An EQ constraint can be added if the yielded value (dimension size)
     // equals the corresponding block argument (dimension size).
     if (cstr.populateAndCompare(
-            yieldedValue, dim, ValueBoundsConstraintSet::ComparisonOperator::EQ,
-            iterArg, dim)) {
+            /*lhs=*/{yieldedValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::EQ,
+            /*rhs=*/{iterArg, dim})) {
       if (dim.has_value()) {
         cstr.bound(value)[*dim] == cstr.getExpr(initArg, dim);
       } else {
-        cstr.bound(value) == initArg;
+        cstr.bound(value) == cstr.getExpr(initArg);
       }
     }
   }
@@ -113,8 +114,9 @@ struct IfOpInterface
     // * result <= elseValue
     // * result >= thenValue
     if (cstr.populateAndCompare(
-            thenValue, dim, ValueBoundsConstraintSet::ComparisonOperator::LE,
-            elseValue, dim)) {
+            /*lhs=*/{thenValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::LE,
+            /*rhs=*/{elseValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(thenValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(elseValue, dim);
@@ -127,8 +129,9 @@ struct IfOpInterface
     // * result <= thenValue
     // * result >= elseValue
     if (cstr.populateAndCompare(
-            elseValue, dim, ValueBoundsConstraintSet::ComparisonOperator::LE,
-            thenValue, dim)) {
+            /*lhs=*/{elseValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::LE,
+            /*rhs=*/{thenValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(elseValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(thenValue, dim);

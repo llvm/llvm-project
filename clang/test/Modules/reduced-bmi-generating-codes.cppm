@@ -8,7 +8,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.cppm \
 // RUN:     -emit-reduced-module-interface -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.cpp \
-// RUN:     -fmodule-file=a=%t/a.pcm -S -emit-llvm -o - \
+// RUN:     -fmodule-file=a=%t/a.pcm -emit-llvm -o - \
 // RUN:     | FileCheck %t/b.cpp
 
 //--- a.cppm

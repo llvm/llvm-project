@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Test 15.7 (C1583-C1590, C1592-C1599) constraints and restrictions
 ! for pure procedures.
 ! (C1591 is tested in call11.f90; C1594 in call12.f90.)
@@ -53,14 +53,14 @@ module m
     real, value :: a ! ok
   end function
   pure real function f03(a) ! C1583
-    !ERROR: non-POINTER dummy argument of pure function must be INTENT(IN) or VALUE
+    !WARNING: non-POINTER dummy argument of pure function must have INTENT() or VALUE attribute
     real :: a
   end function
   pure real function f03a(a)
     real, pointer :: a ! ok
   end function
   pure real function f04(a) ! C1583
-    !ERROR: non-POINTER dummy argument of pure function must be INTENT(IN) or VALUE
+    !WARNING: non-POINTER dummy argument of pure function should be INTENT(IN) or VALUE
     real, intent(out) :: a
   end function
   pure real function f04a(a)
@@ -83,7 +83,7 @@ module m
   end function
 
   pure subroutine s01(a) ! C1586
-    !ERROR: non-POINTER dummy argument of pure subroutine must have INTENT() or VALUE attribute
+    !WARNING: non-POINTER dummy argument of pure subroutine must have INTENT() or VALUE attribute
     real :: a
   end subroutine
   pure subroutine s01a(a)

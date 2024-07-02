@@ -11,6 +11,7 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -22,7 +23,7 @@ static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename T>
-class RIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class RIntTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef T (*RIntFunc)(T);
 

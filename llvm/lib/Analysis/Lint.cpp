@@ -350,10 +350,7 @@ void Lint::visitCallBase(CallBase &I) {
     }
 
     case Intrinsic::vastart:
-      Check(I.getParent()->getParent()->isVarArg(),
-            "Undefined behavior: va_start called in a non-varargs function",
-            &I);
-
+      // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
@@ -566,22 +563,22 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 }
 
 void Lint::visitSDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitUDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitSRem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitURem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
@@ -650,7 +647,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
                            SmallPtrSetImpl<Value *> &Visited) const {
   // Detect self-referential values.
   if (!Visited.insert(V).second)
-    return UndefValue::get(V->getType());
+    return PoisonValue::get(V->getType());
 
   // TODO: Look through sext or zext cast, when the result is known to
   // be interpreted as signed or unsigned, respectively.
@@ -712,7 +709,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
 PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
+  auto *DL = &F.getDataLayout();
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);

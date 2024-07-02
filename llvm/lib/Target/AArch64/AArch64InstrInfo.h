@@ -572,6 +572,9 @@ private:
   bool optimizePTestInstr(MachineInstr *PTest, unsigned MaskReg,
                           unsigned PredReg,
                           const MachineRegisterInfo *MRI) const;
+  std::optional<unsigned>
+  canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
+                      MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
 };
 
 struct UsedNZCV {
@@ -725,6 +728,7 @@ static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
   case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 /// Return PAC opcode to be used for a ptrauth sign using the given key, or its
@@ -737,6 +741,7 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
   case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 // struct TSFlags {

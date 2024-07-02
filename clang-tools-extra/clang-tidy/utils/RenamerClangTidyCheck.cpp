@@ -61,6 +61,7 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
 namespace clang::tidy {
 
 namespace {
+
 class NameLookup {
   llvm::PointerIntPair<const NamedDecl *, 1, bool> Data;
 
@@ -78,17 +79,59 @@ public:
   operator bool() const { return !hasMultipleResolutions(); }
   const NamedDecl *operator*() const { return getDecl(); }
 };
+
 } // namespace
 
 static const NamedDecl *findDecl(const RecordDecl &RecDecl,
                                  StringRef DeclName) {
   for (const Decl *D : RecDecl.decls()) {
     if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-      if (ND->getDeclName().isIdentifier() && ND->getName().equals(DeclName))
+      if (ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
         return ND;
     }
   }
   return nullptr;
+}
+
+/// Returns the function that \p Method is overridding. If There are none or
+/// multiple overrides it returns nullptr. If the overridden function itself is
+/// overridding then it will recurse up to find the first decl of the function.
+static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
+  if (Method->size_overridden_methods() != 1)
+    return nullptr;
+
+  while (true) {
+    Method = *Method->begin_overridden_methods();
+    assert(Method && "Overridden method shouldn't be null");
+    unsigned NumOverrides = Method->size_overridden_methods();
+    if (NumOverrides == 0)
+      return Method;
+    if (NumOverrides > 1)
+      return nullptr;
+  }
+}
+
+static bool hasNoName(const NamedDecl *Decl) {
+  return !Decl->getIdentifier() || Decl->getName().empty();
+}
+
+static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
+  const auto *Canonical = cast<NamedDecl>(ND->getCanonicalDecl());
+  if (Canonical != ND)
+    return Canonical;
+
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(ND)) {
+    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
+      Canonical = cast<NamedDecl>(Overridden->getCanonicalDecl());
+    else if (const FunctionTemplateDecl *Primary = Method->getPrimaryTemplate())
+      if (const FunctionDecl *TemplatedDecl = Primary->getTemplatedDecl())
+        Canonical = cast<NamedDecl>(TemplatedDecl->getCanonicalDecl());
+
+    if (Canonical != ND)
+      return Canonical;
+  }
+
+  return ND;
 }
 
 /// Returns a decl matching the \p DeclName in \p Parent or one of its base
@@ -132,24 +175,6 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
   return NameLookup(Found); // If nullptr, decl wasn't found.
 }
 
-/// Returns the function that \p Method is overridding. If There are none or
-/// multiple overrides it returns nullptr. If the overridden function itself is
-/// overridding then it will recurse up to find the first decl of the function.
-static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
-  if (Method->size_overridden_methods() != 1)
-    return nullptr;
-
-  while (true) {
-    Method = *Method->begin_overridden_methods();
-    assert(Method && "Overridden method shouldn't be null");
-    unsigned NumOverrides = Method->size_overridden_methods();
-    if (NumOverrides == 0)
-      return Method;
-    if (NumOverrides > 1)
-      return nullptr;
-  }
-}
-
 namespace {
 
 /// Callback supplies macros to RenamerClangTidyCheck::checkMacro
@@ -191,10 +216,6 @@ public:
                           bool AggressiveDependentMemberLookup)
       : Check(Check), SM(SM),
         AggressiveDependentMemberLookup(AggressiveDependentMemberLookup) {}
-
-  static bool hasNoName(const NamedDecl *Decl) {
-    return !Decl->getIdentifier() || Decl->getName().empty();
-  }
 
   bool shouldVisitTemplateInstantiations() const { return true; }
 
@@ -246,29 +267,10 @@ public:
   }
 
   bool VisitNamedDecl(NamedDecl *Decl) {
-    if (hasNoName(Decl))
-      return true;
-
-    const auto *Canonical = cast<NamedDecl>(Decl->getCanonicalDecl());
-    if (Canonical != Decl) {
-      Check->addUsage(Canonical, Decl->getLocation(), SM);
-      return true;
-    }
-
-    // Fix overridden methods
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
-      if (const CXXMethodDecl *Overridden = getOverrideMethod(Method)) {
-        Check->addUsage(Overridden, Method->getLocation(), SM);
-        return true; // Don't try to add the actual decl as a Failure.
-      }
-    }
-
-    // Ignore ClassTemplateSpecializationDecl which are creating duplicate
-    // replacements with CXXRecordDecl.
-    if (isa<ClassTemplateSpecializationDecl>(Decl))
-      return true;
-
-    Check->checkNamedDecl(Decl, SM);
+    SourceRange UsageRange =
+        DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
+            .getSourceRange();
+    Check->addUsage(Decl, UsageRange, SM);
     return true;
   }
 
@@ -413,82 +415,97 @@ void RenamerClangTidyCheck::registerPPCallbacks(
       std::make_unique<RenamerClangTidyCheckPPCallbacks>(SM, this));
 }
 
-void RenamerClangTidyCheck::addUsage(
-    const RenamerClangTidyCheck::NamingCheckId &Decl, SourceRange Range,
-    const SourceManager &SourceMgr) {
+std::pair<RenamerClangTidyCheck::NamingCheckFailureMap::iterator, bool>
+RenamerClangTidyCheck::addUsage(
+    const RenamerClangTidyCheck::NamingCheckId &FailureId,
+    SourceRange UsageRange, const SourceManager &SourceMgr) {
   // Do nothing if the provided range is invalid.
-  if (Range.isInvalid())
-    return;
+  if (UsageRange.isInvalid())
+    return {NamingCheckFailures.end(), false};
 
-  // If we have a source manager, use it to convert to the spelling location for
-  // performing the fix. This is necessary because macros can map the same
-  // spelling location to different source locations, and we only want to fix
-  // the token once, before it is expanded by the macro.
-  SourceLocation FixLocation = Range.getBegin();
+  // Get the spelling location for performing the fix. This is necessary because
+  // macros can map the same spelling location to different source locations,
+  // and we only want to fix the token once, before it is expanded by the macro.
+  SourceLocation FixLocation = UsageRange.getBegin();
   FixLocation = SourceMgr.getSpellingLoc(FixLocation);
   if (FixLocation.isInvalid())
-    return;
+    return {NamingCheckFailures.end(), false};
+
+  auto EmplaceResult = NamingCheckFailures.try_emplace(FailureId);
+  NamingCheckFailure &Failure = EmplaceResult.first->second;
 
   // Try to insert the identifier location in the Usages map, and bail out if it
   // is already in there
-  RenamerClangTidyCheck::NamingCheckFailure &Failure =
-      NamingCheckFailures[Decl];
   if (!Failure.RawUsageLocs.insert(FixLocation).second)
-    return;
+    return EmplaceResult;
 
-  if (!Failure.shouldFix())
-    return;
+  if (Failure.FixStatus != RenamerClangTidyCheck::ShouldFixStatus::ShouldFix)
+    return EmplaceResult;
 
   if (SourceMgr.isWrittenInScratchSpace(FixLocation))
     Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
 
-  if (!utils::rangeCanBeFixed(Range, &SourceMgr))
+  if (!utils::rangeCanBeFixed(UsageRange, &SourceMgr))
     Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
+
+  return EmplaceResult;
 }
 
-void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
+void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
+                                     SourceRange UsageRange,
                                      const SourceManager &SourceMgr) {
-  // Don't keep track for non-identifier names.
-  auto *II = Decl->getIdentifier();
-  if (!II)
+  if (hasNoName(Decl))
     return;
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
-    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
-      Decl = Overridden;
-  }
-  Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
-  return addUsage(
-      RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(), II->getName()),
-      Range, SourceMgr);
-}
 
-void RenamerClangTidyCheck::checkNamedDecl(const NamedDecl *Decl,
-                                           const SourceManager &SourceMgr) {
-  std::optional<FailureInfo> MaybeFailure = getDeclFailureInfo(Decl, SourceMgr);
+  // Ignore ClassTemplateSpecializationDecl which are creating duplicate
+  // replacements with CXXRecordDecl.
+  if (isa<ClassTemplateSpecializationDecl>(Decl))
+    return;
+
+  // We don't want to create a failure for every NamedDecl we find. Ideally
+  // there is just one NamedDecl in every group of "related" NamedDecls that
+  // becomes the failure. This NamedDecl and all of its related NamedDecls
+  // become usages. E.g. Since NamedDecls are Redeclarable, only the canonical
+  // NamedDecl becomes the failure and all redeclarations become usages.
+  const NamedDecl *FailureDecl = getFailureForNamedDecl(Decl);
+
+  std::optional<FailureInfo> MaybeFailure =
+      getDeclFailureInfo(FailureDecl, SourceMgr);
   if (!MaybeFailure)
     return;
 
-  FailureInfo &Info = *MaybeFailure;
-  NamingCheckFailure &Failure =
-      NamingCheckFailures[NamingCheckId(Decl->getLocation(), Decl->getName())];
-  SourceRange Range =
-      DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
-          .getSourceRange();
+  NamingCheckId FailureId(FailureDecl->getLocation(), FailureDecl->getName());
 
-  const IdentifierTable &Idents = Decl->getASTContext().Idents;
-  auto CheckNewIdentifier = Idents.find(Info.Fixup);
+  auto [FailureIter, NewFailure] = addUsage(FailureId, UsageRange, SourceMgr);
+
+  if (FailureIter == NamingCheckFailures.end()) {
+    // Nothing to do if the usage wasn't accepted.
+    return;
+  }
+  if (!NewFailure) {
+    // FailureInfo has already been provided.
+    return;
+  }
+
+  // Update the stored failure with info regarding the FailureDecl.
+  NamingCheckFailure &Failure = FailureIter->second;
+  Failure.Info = std::move(*MaybeFailure);
+
+  // Don't overwritte the failure status if it was already set.
+  if (!Failure.shouldFix()) {
+    return;
+  }
+  const IdentifierTable &Idents = FailureDecl->getASTContext().Idents;
+  auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
   if (CheckNewIdentifier != Idents.end()) {
     const IdentifierInfo *Ident = CheckNewIdentifier->second;
     if (Ident->isKeyword(getLangOpts()))
       Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
     else if (Ident->hasMacroDefinition())
       Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
-  } else if (!isValidAsciiIdentifier(Info.Fixup)) {
+  } else if (!isValidAsciiIdentifier(Failure.Info.Fixup)) {
     Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
   }
-
-  Failure.Info = std::move(Info);
-  addUsage(Decl, Range, SourceMgr);
 }
 
 void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {

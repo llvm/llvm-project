@@ -48,6 +48,7 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
   if (ValVerMD.isEmpty())
     ValVerMD.update(VersionTuple(1, 0));
   dxil::createShaderModelMD(M);
+  dxil::createDXILVersionMD(M);
 
   const dxil::Resources &Res =
       getAnalysis<DXILResourceWrapper>().getDXILResource();

@@ -29,6 +29,7 @@ const RegisterBankInfo::PartialMapping PartMappings[] = {
     // clang-format off
     {0, 32, GPRBRegBank},
     {0, 64, GPRBRegBank},
+    {0, 16, FPRBRegBank},
     {0, 32, FPRBRegBank},
     {0, 64, FPRBRegBank},
     {0, 64, VRBRegBank},
@@ -41,12 +42,13 @@ const RegisterBankInfo::PartialMapping PartMappings[] = {
 enum PartialMappingIdx {
   PMI_GPRB32 = 0,
   PMI_GPRB64 = 1,
-  PMI_FPRB32 = 2,
-  PMI_FPRB64 = 3,
-  PMI_VRB64 = 4,
-  PMI_VRB128 = 5,
-  PMI_VRB256 = 6,
-  PMI_VRB512 = 7,
+  PMI_FPRB16 = 2,
+  PMI_FPRB32 = 3,
+  PMI_FPRB64 = 4,
+  PMI_VRB64 = 5,
+  PMI_VRB128 = 6,
+  PMI_VRB256 = 7,
+  PMI_VRB512 = 8,
 };
 
 const RegisterBankInfo::ValueMapping ValueMappings[] = {
@@ -60,6 +62,10 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&PartMappings[PMI_GPRB64], 1},
     {&PartMappings[PMI_GPRB64], 1},
     {&PartMappings[PMI_GPRB64], 1},
+    // Maximum 3 FPR operands; 16 bit.
+    {&PartMappings[PMI_FPRB16], 1},
+    {&PartMappings[PMI_FPRB16], 1},
+    {&PartMappings[PMI_FPRB16], 1},
     // Maximum 3 FPR operands; 32 bit.
     {&PartMappings[PMI_FPRB32], 1},
     {&PartMappings[PMI_FPRB32], 1},
@@ -90,12 +96,13 @@ enum ValueMappingIdx {
   InvalidIdx = 0,
   GPRB32Idx = 1,
   GPRB64Idx = 4,
-  FPRB32Idx = 7,
-  FPRB64Idx = 10,
-  VRB64Idx = 13,
-  VRB128Idx = 16,
-  VRB256Idx = 19,
-  VRB512Idx = 22,
+  FPRB16Idx = 7,
+  FPRB32Idx = 10,
+  FPRB64Idx = 13,
+  VRB64Idx = 16,
+  VRB128Idx = 19,
+  VRB256Idx = 22,
+  VRB512Idx = 25,
 };
 } // namespace RISCV
 } // namespace llvm
@@ -117,7 +124,9 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::GPRNoX0RegClassID:
   case RISCV::GPRNoX0X2RegClassID:
   case RISCV::GPRJALRRegClassID:
+  case RISCV::GPRJALRNonX7RegClassID:
   case RISCV::GPRTCRegClassID:
+  case RISCV::GPRTCNonX7RegClassID:
   case RISCV::GPRC_and_GPRTCRegClassID:
   case RISCV::GPRCRegClassID:
   case RISCV::GPRC_and_SR07RegClassID:
@@ -149,49 +158,21 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
 }
 
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
-  assert(Size == 32 || Size == 64);
-  unsigned Idx = Size == 64 ? RISCV::FPRB64Idx : RISCV::FPRB32Idx;
-  return &RISCV::ValueMappings[Idx];
-}
-
-/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
-/// having only floating-point operands.
-/// FIXME: this is copied from target AArch64. Needs some code refactor here to
-/// put this function in GlobalISel/Utils.cpp.
-static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_FCEIL:
-  case TargetOpcode::G_FFLOOR:
-  case TargetOpcode::G_FNEARBYINT:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FCOPYSIGN:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FLOG10:
-  case TargetOpcode::G_FLOG:
-  case TargetOpcode::G_FLOG2:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FEXP:
-  case TargetOpcode::G_FRINT:
-  case TargetOpcode::G_INTRINSIC_TRUNC:
-  case TargetOpcode::G_INTRINSIC_ROUND:
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXIMUM:
-  case TargetOpcode::G_FMINIMUM:
-    return true;
+  unsigned Idx;
+  switch (Size) {
+  default:
+    llvm_unreachable("Unexpected size");
+  case 16:
+    Idx = RISCV::FPRB16Idx;
+    break;
+  case 32:
+    Idx = RISCV::FPRB32Idx;
+    break;
+  case 64:
+    Idx = RISCV::FPRB64Idx;
+    break;
   }
-  return false;
+  return &RISCV::ValueMappings[Idx];
 }
 
 // TODO: Make this more like AArch64?
@@ -497,7 +478,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(2).getReg());
 
     unsigned Size = Ty.getSizeInBits();
-    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);

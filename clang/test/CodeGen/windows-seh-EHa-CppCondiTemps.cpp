@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: define dso_local noundef i32 @"?bar@@YAHHVB1@@VB2@@@Z"
 // CHECK: %coerce.dive1 = getelementptr inbounds %class.B2

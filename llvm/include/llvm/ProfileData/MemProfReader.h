@@ -51,6 +51,12 @@ public:
     return IdToFrame;
   }
 
+  // Return a const reference to the internal Id to call stacks.
+  const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
+  getCallStacks() const {
+    return CSIdToCallStack;
+  }
+
   // Return a const reference to the internal function profile data.
   const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
   getProfileData() const {
@@ -70,8 +76,16 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
+    CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(CSIdToCallStack,
+                                                             Callback);
+
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
-    GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, Callback)};
+    GuidRecord = {
+        Iter->first,
+        IndexedRecord.toMemProfRecord(CSIdConv),
+    };
+    if (CSIdConv.LastUnmappedId)
+      return make_error<InstrProfError>(instrprof_error::hash_mismatch);
     Iter++;
     return Error::success();
   }
@@ -84,8 +98,15 @@ public:
   // Initialize the MemProfReader with the frame mappings and profile contents.
   MemProfReader(
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
+      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
+
+  // Initialize the MemProfReader with the frame mappings, call stack mappings,
+  // and profile contents.
+  MemProfReader(
+      llvm::DenseMap<FrameId, Frame> FrameIdMap,
+      llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap,
       llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-      : IdToFrame(std::move(FrameIdMap)),
+      : IdToFrame(std::move(FrameIdMap)), CSIdToCallStack(std::move(CSIdMap)),
         FunctionProfileData(std::move(ProfData)) {}
 
 protected:
@@ -97,6 +118,8 @@ protected:
   }
   // A mapping from FrameId (a hash of the contents) to the frame.
   llvm::DenseMap<FrameId, Frame> IdToFrame;
+  // A mapping from CallStackId to the call stack.
+  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdToCallStack;
   // A mapping from function GUID, hash of the canonical function symbol to the
   // memprof profile data for that function, i.e allocation and callsite info.
   llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
@@ -114,7 +137,7 @@ class RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
-  virtual ~RawMemProfReader() override = default;
+  virtual ~RawMemProfReader() override;
 
   // Prints the contents of the profile in YAML format.
   void printYAML(raw_ostream &OS);
@@ -138,7 +161,7 @@ public:
   // Returns a list of build ids recorded in the segment information.
   static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
 
-  virtual Error
+  Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback) override;
 
@@ -182,8 +205,14 @@ private:
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
 
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+  readMemInfoBlocks(const char *Ptr);
+
   // The profiled binary.
   object::OwningBinary<object::Binary> Binary;
+  // Version of raw memprof binary currently being read. Defaults to most up
+  // to date version.
+  uint64_t MemprofRawVersion = MEMPROF_RAW_VERSION;
   // The preferred load address of the executable segment.
   uint64_t PreferredTextSegmentAddress = 0;
   // The base address of the text segment in the process during profiling.

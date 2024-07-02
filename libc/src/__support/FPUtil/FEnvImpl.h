@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
 
+#include "hdr/fenv_macros.h"
 #include "hdr/math_macros.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
-#include <fenv.h>
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #if defined(__APPLE__)

@@ -144,6 +144,13 @@ static constexpr uint32_t F64FltRoundOffset = 2;
 // values.
 extern const uint64_t FltRoundConversionTable;
 
+// Bit indexed table to convert from FLT_ROUNDS values to hardware rounding mode
+// values
+extern const uint64_t FltRoundToHWConversionTable;
+
+/// Read the hardware rounding mode equivalent of a AMDGPUFltRounds value.
+uint32_t decodeFltRoundToHWConversionTable(uint32_t FltRounds);
+
 } // end namespace AMDGPU
 
 } // end namespace llvm

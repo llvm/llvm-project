@@ -170,7 +170,8 @@ protected:
     assert(valobj_sp.get() && "Must have a valid ValueObject to print");
     ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(),
                                options);
-    printer.PrintValueObject();
+    if (llvm::Error error = printer.PrintValueObject())
+      result.AppendError(toString(std::move(error)));
   }
 
   CommandOptions m_options;
@@ -555,7 +556,9 @@ protected:
                                                 show_module))
                       s.PutCString(": ");
                   }
-                  valobj_sp->Dump(result.GetOutputStream(), options);
+                  auto &strm = result.GetOutputStream();
+                  if (llvm::Error error = valobj_sp->Dump(strm, options))
+                    result.AppendError(toString(std::move(error)));
                 }
               }
             } else {
@@ -597,7 +600,8 @@ protected:
               Stream &output_stream = result.GetOutputStream();
               options.SetRootValueObjectName(
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
-              valobj_sp->Dump(output_stream, options);
+              if (llvm::Error error = valobj_sp->Dump(output_stream, options))
+                result.AppendError(toString(std::move(error)));
             } else {
               if (auto error_cstr = error.AsCString(nullptr))
                 result.AppendError(error_cstr);
@@ -648,7 +652,9 @@ protected:
                     valobj_sp->GetPreferredDisplayLanguage());
                 options.SetRootValueObjectName(
                     var_sp ? var_sp->GetName().AsCString() : nullptr);
-                valobj_sp->Dump(result.GetOutputStream(), options);
+                if (llvm::Error error =
+                        valobj_sp->Dump(result.GetOutputStream(), options))
+                  result.AppendError(toString(std::move(error)));
               }
             }
           }
@@ -669,7 +675,9 @@ protected:
             options.SetVariableFormatDisplayLanguage(
                 rec_value_sp->GetPreferredDisplayLanguage());
             options.SetRootValueObjectName(rec_value_sp->GetName().AsCString());
-            rec_value_sp->Dump(result.GetOutputStream(), options);
+            if (llvm::Error error =
+                    rec_value_sp->Dump(result.GetOutputStream(), options))
+              result.AppendError(toString(std::move(error)));
           }
         }
       }

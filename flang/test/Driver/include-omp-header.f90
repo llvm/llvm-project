@@ -9,11 +9,11 @@
 
 ! This should just work
 ! RUN: not rm omp_lib.h
-! RUN: %flang -cpp -fsyntax-only -fopenmp %s  2>&1
+! RUN: %flang -cpp -fsyntax-only %openmp_flags %s  2>&1
 
 ! Create an empty omp_lib.h header that _does not_ define omp_default_mem_alloc - this should lead to semantic errors
 ! RUN: touch omp_lib.h
-! RUN: not %flang -cpp -fsyntax-only -fopenmp %s  2>&1 | FileCheck %s
+! RUN: not %flang -cpp -fsyntax-only %openmp_flags %s  2>&1 | FileCheck %s
 ! RUN: rm omp_lib.h
 
 ! CHECK: error: Must have INTEGER type, but is REAL(4)

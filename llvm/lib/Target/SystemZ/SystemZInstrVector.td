@@ -139,7 +139,7 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1 in {
+  let mayLoad = 1, canFoldAsLoad = 1 in {
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
   }
@@ -1692,6 +1692,7 @@ let Predicates = [FeatureVector] in
 // Conversions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [FeatureVector] in {
 def : Pat<(v16i8 (bitconvert (v8i16 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v4i32 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v2i64 VR128:$src))), (v16i8 VR128:$src)>;
@@ -1755,6 +1756,7 @@ def : Pat<(i128  (bitconvert (v2i64 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v4f32 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v2f64 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (f128  VR128:$src))), (i128  VR128:$src)>;
+} // End Predicates = [FeatureVector]
 
 //===----------------------------------------------------------------------===//
 // Replicating scalars
