@@ -4862,11 +4862,7 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
                                             ArrayRef<OMPClause *> Clauses) {
   handleDeclareVariantConstructTrait(DSAStack, DSAStack->getCurrentDirective(),
                                      /* ScopeEntry */ false);
-  if (DSAStack->getCurrentDirective() == OMPD_atomic ||
-      DSAStack->getCurrentDirective() == OMPD_critical ||
-      DSAStack->getCurrentDirective() == OMPD_section ||
-      DSAStack->getCurrentDirective() == OMPD_master ||
-      DSAStack->getCurrentDirective() == OMPD_masked)
+  if (!isOpenMPCapturingDirective(DSAStack->getCurrentDirective()))
     return S;
 
   bool ErrorFound = false;
@@ -4909,10 +4905,6 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
         }
       }
       DSAStack->setForceVarCapturing(/*V=*/false);
-    } else if (isOpenMPLoopTransformationDirective(
-                   DSAStack->getCurrentDirective())) {
-      assert(CaptureRegions.empty() &&
-             "No captured regions in loop transformation directives.");
     } else if (CaptureRegions.size() > 1 ||
                CaptureRegions.back() != OMPD_unknown) {
       if (auto *C = OMPClauseWithPreInit::get(Clause))
@@ -6396,9 +6388,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     ClausesWithImplicit.append(Clauses.begin(), Clauses.end());
   }
   if (AStmt && !SemaRef.CurContext->isDependentContext() &&
-      Kind != OMPD_atomic && Kind != OMPD_critical && Kind != OMPD_section &&
-      Kind != OMPD_master && Kind != OMPD_masked &&
-      !isOpenMPLoopTransformationDirective(Kind)) {
+      isOpenMPCapturingDirective(Kind)) {
     assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
 
     // Check default data sharing attributes for referenced variables.

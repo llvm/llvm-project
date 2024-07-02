@@ -310,9 +310,7 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   // SCC.
   if (CalleeWasDeleted) {
     --NodeCount;
-    LazyCallGraph::Node *CalleeN = CG.lookup(*Callee);
-    NodesInLastSCC.erase(CalleeN);
-    AllNodes.erase(CalleeN);
+    DeadFunctions.insert(Callee);
   } else {
     NewCallerAndCalleeEdges +=
         getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
@@ -494,7 +492,10 @@ void MLInlineAdvisor::print(raw_ostream &OS) const {
   OS << "\n";
   OS << "[MLInlineAdvisor] FuncLevels:\n";
   for (auto I : FunctionLevels)
-    OS << I.first->getFunction().getName() << " : " << I.second << "\n";
+    OS << (DeadFunctions.contains(&I.first->getFunction())
+               ? "<deleted>"
+               : I.first->getFunction().getName())
+       << " : " << I.second << "\n";
 
   OS << "\n";
 }
