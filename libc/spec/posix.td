@@ -1487,7 +1487,13 @@ def POSIX : StandardSpec<"POSIX"> {
     ],  // Macros
     [], // Types
     [], // Enumerations
-    []  // Functions
+    [
+      FunctionSpec<
+        "ioctl",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<VarArgType>]
+      >
+    ]  // Functions
   >;
 
   HeaderSpec Spawn = HeaderSpec<
