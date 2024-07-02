@@ -7,7 +7,7 @@
 // RUN:                  *(.text.02) } \
 // RUN:                  .foo : { *(.foo_sec) } } " > %t.script
 // RUN: ld.lld -pie --fix-cortex-a53-843419 --script=%t.script %t.o -o %t2
-// RUN: llvm-objdump --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2
+// RUN: llvm-objdump --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
 
 /// %t2 is > 128 Megabytes, so delete it early.
