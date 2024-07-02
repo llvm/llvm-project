@@ -2887,6 +2887,10 @@ def fxray_selected_function_group :
   HelpText<"When using -fxray-function-groups, select which group of functions to instrument. Valid range is 0 to fxray-function-groups - 1">,
   MarshallingInfoInt<CodeGenOpts<"XRaySelectedFunctionGroup">, "0">;
 
+def fxray_enable_shared : Flag<["-"], "fxray-enable-shared">, Group<f_Group>,  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable shared library instrumentation.">;
+def fno_xray_enable_shared : Flag<["-"], "fno-xray-enable-shared">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>;
 
 defm fine_grained_bitfield_accesses : BoolOption<"f", "fine-grained-bitfield-accesses",
   CodeGenOpts<"FineGrainedBitfieldAccesses">, DefaultFalse,

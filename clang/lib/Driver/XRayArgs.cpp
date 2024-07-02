@@ -63,6 +63,10 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         << XRayInstrument->getSpelling() << Triple.str();
   }
 
+  if (Args.hasFlag(options::OPT_fxray_enable_shared,
+                   options::OPT_fno_xray_enable_shared, false))
+    XRayEnableShared = true;
+
   // Both XRay and -fpatchable-function-entry use
   // TargetOpcode::PATCHABLE_FUNCTION_ENTER.
   if (Arg *A = Args.getLastArg(options::OPT_fpatchable_function_entry_EQ))
@@ -176,6 +180,9 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_xray_ignore_loops);
   Args.addOptOutFlag(CmdArgs, options::OPT_fxray_function_index,
                      options::OPT_fno_xray_function_index);
+
+  if (XRayEnableShared)
+    CmdArgs.push_back("-fxray-enable-shared");
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fxray_instruction_threshold_EQ)) {
