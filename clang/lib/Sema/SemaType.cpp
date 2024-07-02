@@ -1423,7 +1423,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = Context.getVectorType(Result, 128/typeSize, VecKind);
   }
 
-  // FIXME: Imaginary.
+  // _Imaginary was a feature of C99 through C23 but was never supported in
+  // Clang. The feature was removed in C2y, but we retain the unsupported
+  // diagnostic for an improved user experience.
   if (DS.getTypeSpecComplex() == DeclSpec::TSC_imaginary)
     S.Diag(DS.getTypeSpecComplexLoc(), diag::err_imaginary_not_supported);
 

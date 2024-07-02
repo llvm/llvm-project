@@ -7696,7 +7696,6 @@ def err_qualified_objc_access : Error<
 def ext_freestanding_complex : Extension<
   "complex numbers are an extension in a freestanding C99 implementation">;
 
-// FIXME: Remove when we support imaginary.
 def err_imaginary_not_supported : Error<"imaginary types are not supported">;
 
 // Obj-c expressions

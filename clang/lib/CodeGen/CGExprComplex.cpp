@@ -817,8 +817,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
     //
     // But we can fold away components which would be zero due to a real
     // operand according to C11 Annex G.5.1p2.
-    // FIXME: C11 also provides for imaginary types which would allow folding
-    // still more of this within the type system.
 
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     if (Op.LHS.second && Op.RHS.second) {
@@ -1049,9 +1047,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       // delegate to a libcall to handle all of the complexities and minimize
       // underflow/overflow cases. When FastMath is allowed we construct the
       // divide inline using the same algorithm as for integer operands.
-      //
-      // FIXME: We would be able to avoid the libcall in many places if we
-      // supported imaginary types in addition to complex types.
       BinOpInfo LibCallOp = Op;
       // If LHS was a real, supply a null imaginary part.
       if (!LHSi)
