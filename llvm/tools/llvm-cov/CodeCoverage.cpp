@@ -150,7 +150,11 @@ private:
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
-  CoverageFilters IgnoreFilenameFilters;
+  // CoverageFilters IgnoreFilenameFilters;
+  CoverageFilters FilenameFilters;
+
+  enum FileNameFilterKind { Ignore, Include, NotPresent };
+  FileNameFilterKind FileNameFilter = FileNameFilterKind::NotPresent; // Default
 
   /// True if InputSourceFiles are provided.
   bool HadSourceFiles = false;
@@ -225,8 +229,15 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
     return;
   }
   sys::path::remove_dots(EffectivePath, /*remove_dot_dot=*/true);
-  if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
-    SourceFiles.emplace_back(EffectivePath.str());
+  if (FileNameFilterKind == FileNameFilterKind::Ignore) {
+    if (!FilenameFilters.matchesFilename(EffectivePath))
+      SourceFiles.emplace_back(EffectivePath.str());
+  } else if (FileNameFilterKind == FileNameFilterKind::Include) {
+    if (FilenameFilters.matchesFilename(EffectivePath))
+      SourceFiles.emplace_back(EffectivePath.str());
+  } else if (FileNameFilterKind == FileNameFilterKind::NotPresent) {
+    break;
+  }
   HadSourceFiles = !SourceFiles.empty();
 }
 
@@ -748,6 +759,13 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                "regular expression"),
       cl::cat(FilteringCategory));
 
+  cl::list<std::string> IncludeFilenameRegexFilters(
+      "include-filename-regex", cl::Optional,
+      cl::desc("Include only source code files with file paths that match the "
+               "given. Mutually exclusive with -ignore-filename-regex "
+               "regular expression"),
+      cl::cat(FilteringCategory));
+
   cl::opt<double> RegionCoverageLtFilter(
       "region-coverage-lt", cl::Optional,
       cl::desc("Show code coverage only for functions with region coverage "
@@ -934,10 +952,25 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       Filters.push_back(std::move(StatFilterer));
     }
 
-    // Create the ignore filename filters.
-    for (const auto &RE : IgnoreFilenameRegexFilters)
-      IgnoreFilenameFilters.push_back(
-          std::make_unique<NameRegexCoverageFilter>(RE));
+    // Keep include-filename-regex and ignore-filename-regex mutually exclusive.
+    if (!IncludeFilenameRegexFilters.empty() &&
+        !IgnoreFilenameRegexFilters.empty()) {
+      error("include-filename-regex and ignore-filename-regex are mutually "
+            "exclusive");
+      return 1;
+    } else if (!IncludeFilenameRegexFilters.empty()) {
+      FileNameFilterKind = FileNameFilterKind::Include;
+      // Create the include filename filters.
+      for (const auto &RE : IncludeFilenameRegexFilters)
+        FilenameFilters.push_back(
+            std::make_unique<NameRegexCoverageFilter>(RE));
+    } else if (!IgnoreFilenameRegexFilters.empty()) {
+      FileNameFilterKind = FileNameFilterKind::Ignore;
+      // Create the ignore filename filters.
+      for (const auto &RE : IgnoreFilenameRegexFilters)
+        FilenameFilters.push_back(
+            std::make_unique<NameRegexCoverageFilter>(RE));
+    }
 
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
@@ -1148,8 +1181,12 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (SourceFiles.empty() && !HadSourceFiles)
     // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles()) {
-      if (!IgnoreFilenameFilters.matchesFilename(Filename))
+      if ((FileNameFilterKind == FileNameFilterKind::Ignore &&
+           !FilenameFilters.matchesFilename(Filename)) ||
+          (FileNameFilterKind == FileNameFilterKind::Include &&
+           FilenameFilters.matchesFilename(Filename))) {
         SourceFiles.push_back(std::string(Filename));
+      }
     }
 
   // Create an index out of the source files.
@@ -1258,7 +1295,8 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
-      Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
+      // Works for both -ignore-filename-regex and -include-filename-regex
+      Report.renderFileReports(llvm::outs(), FilenameFilters);
     else
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
@@ -1287,8 +1325,8 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                               cl::cat(ExportCategory));
 
   cl::opt<bool> SkipBranches("skip-branches", cl::Optional,
-                              cl::desc("Don't export branch data (LCOV)"),
-                              cl::cat(ExportCategory));
+                             cl::desc("Don't export branch data (LCOV)"),
+                             cl::cat(ExportCategory));
 
   auto Err = commandLineParser(argc, argv);
   if (Err)
@@ -1335,7 +1373,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   }
 
   if (SourceFiles.empty())
-    Exporter->renderRoot(IgnoreFilenameFilters);
+    Exporter->renderRoot(FilenameFilters);
   else
     Exporter->renderRoot(SourceFiles);
 
