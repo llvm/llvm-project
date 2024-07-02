@@ -19,6 +19,7 @@ class NVPTXTargetStreamer : public MCTargetStreamer {
 private:
   SmallVector<std::string, 4> DwarfFiles;
   bool HasSections = false;
+  bool HasDWARFSections = false;
 
 public:
   NVPTXTargetStreamer(MCStreamer &S);
