@@ -71,8 +71,6 @@ struct DataRegionData {
 };
 
 class MCAssembler {
-  friend class MCAsmLayout;
-
 public:
   using SectionListType = std::vector<MCSection *>;
   using SymbolDataListType = std::vector<const MCSymbol *>;
