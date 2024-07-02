@@ -30,9 +30,7 @@ inline std::error_code make_error_code(cxxdump_error e) {
 
 } // namespace llvm
 
-namespace std {
 template <>
-struct is_error_code_enum<llvm::cxxdump_error> : std::true_type {};
-}
+struct std::is_error_code_enum<llvm::cxxdump_error> : std::true_type {};
 
 #endif

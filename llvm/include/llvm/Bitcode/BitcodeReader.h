@@ -313,10 +313,7 @@ struct ParserCallbacks {
 
 } // end namespace llvm
 
-namespace std {
-
-template <> struct is_error_code_enum<llvm::BitcodeError> : std::true_type {};
-
-} // end namespace std
+template <>
+struct std::is_error_code_enum<llvm::BitcodeError> : std::true_type {};
 
 #endif // LLVM_BITCODE_BITCODEREADER_H

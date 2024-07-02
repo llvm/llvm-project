@@ -84,7 +84,6 @@ inline std::error_code make_error_code(errc E) {
 }
 }
 
-namespace std {
-template <> struct is_error_code_enum<llvm::errc> : std::true_type {};
-}
+template <> struct std::is_error_code_enum<llvm::errc> : std::true_type {};
+
 #endif
