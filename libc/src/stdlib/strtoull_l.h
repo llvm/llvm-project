@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_STRTOULL_H
-#define LLVM_LIBC_SRC_STDLIB_STRTOULL_H
+#ifndef LLVM_LIBC_SRC_STDLIB_STRTOULL_L_H
+#define LLVM_LIBC_SRC_STDLIB_STRTOULL_L_H
 
 #include "include/llvm-libc-types/locale_t.h"
 
@@ -18,4 +18,4 @@ unsigned long long strtoull_l(const char *__restrict str,
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_STRTOULL_H
+#endif // LLVM_LIBC_SRC_STDLIB_STRTOULL_L_H
