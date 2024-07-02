@@ -16,6 +16,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1247,10 +1248,10 @@ LogicalResult FlatLinearValueConstraints::unionBoundingBox(
   if (!areVarsAligned(*this, otherCst)) {
     FlatLinearValueConstraints otherCopy(otherCst);
     mergeAndAlignVars(/*offset=*/getNumDimVars(), this, &otherCopy);
-    return IntegerPolyhedron::unionBoundingBox(otherCopy);
+    return success(IntegerPolyhedron::unionBoundingBox(otherCopy));
   }
 
-  return IntegerPolyhedron::unionBoundingBox(otherCst);
+  return success(IntegerPolyhedron::unionBoundingBox(otherCst));
 }
 
 //===----------------------------------------------------------------------===//
