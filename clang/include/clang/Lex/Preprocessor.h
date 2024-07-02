@@ -2123,8 +2123,9 @@ public:
   char
   getSpellingOfSingleCharacterNumericConstant(const Token &Tok,
                                               bool *Invalid = nullptr) const {
-    assert(Tok.is(tok::numeric_constant) &&
-           Tok.getLength() == 1 && "Called on unsupported token");
+    assert((Tok.is(tok::numeric_constant) || Tok.is(tok::binary_data)) &&
+                                                Tok.getLength() == 1 &&
+                                                "Called on unsupported token");
     assert(!Tok.needsCleaning() && "Token can't need cleaning with length 1");
 
     // If the token is carrying a literal data pointer, just use it.
