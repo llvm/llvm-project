@@ -146,3 +146,11 @@ let Features = "zihintntl", Attributes = [CustomTypeChecking] in {
 def ntl_load : RISCVBuiltin<"void(...)">;
 def ntl_store : RISCVBuiltin<"void(...)">;
 } // Features = "zihintntl", Attributes = [CustomTypeChecking]
+
+//===----------------------------------------------------------------------===//
+// Zawrs extension.
+//===----------------------------------------------------------------------===//
+let Features = "zawrs" in {
+def wrs_nto : RISCVBuiltin<"void()">;
+def wrs_sto : RISCVBuiltin<"void()">;
+} // Features = "zawrs"
