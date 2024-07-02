@@ -2380,7 +2380,9 @@ void deque<_Tp, _Allocator>::__move_construct_backward_and_check(
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_iterator __f) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-      __f != end(), "deque::erase(iterator) called with a non-dereferenceable iterator");
+      __f >= begin(), "deque::erase(iterator) called with an iterator outside of the container's control");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __f < end(), "deque::erase(iterator) called with an iterator outside of the container's control");
   size_type __old_sz    = size();
   size_type __old_start = __start_;
   iterator __b          = begin();
@@ -2406,7 +2408,12 @@ typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_it
 
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_iterator __f, const_iterator __l) {
-  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__f <= __l, "deque::erase(first, last) called with an invalid range");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+    __f >= begin(), "deque::erase(first, last) called with an iterator range starting before 'begin()'");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+    __l <= end(), "deque::erase(first, last) called with an iterator range finishing after 'end()'");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+    __f <= __l, "deque::erase(first, last) called with an invalid range");
   size_type __old_sz    = size();
   size_type __old_start = __start_;
   difference_type __n   = __l - __f;
