@@ -1,0 +1,54 @@
+// RUN: %clang_cc1 -std=c++23 -verify %s
+
+using size_t = decltype(sizeof(0));
+
+namespace std {
+struct type_info {
+  const char* name() const noexcept(true);
+};
+}
+
+template <typename T, size_t N>
+constexpr size_t array_size(T (&)[N]) {
+  return N;
+}
+
+void use_array(int const (&gold_medal_mel)[2]) {
+  constexpr auto gold = array_size(gold_medal_mel); // ok
+}
+
+constexpr auto olympic_mile() {
+  const int ledecky = 1500;
+  return []{ return ledecky; };
+}
+static_assert(olympic_mile()() == 1500); // ok
+
+struct Swim {
+  constexpr int phelps() { return 28; }
+  virtual constexpr int lochte() { return 12; }
+  int coughlin = 12;
+};
+
+constexpr int how_many(Swim& swam) {
+  Swim* p = &swam;
+  return (p + 1 - 1)->phelps();
+}
+
+void splash(Swim& swam) {
+  static_assert(swam.phelps() == 28);     // ok
+  static_assert((&swam)->phelps() == 28); // ok
+  Swim* pswam = &swam;                    // expected-note {{declared here}}
+  static_assert(pswam->phelps() == 28);   // expected-error {{static assertion expression is not an integral constant expression}}
+                                          // expected-note@-1 {{read of non-constexpr variable 'pswam' is not allowed in a constant expression}}
+  static_assert(how_many(swam) == 28);    // ok
+  static_assert(Swim().lochte() == 12);   // ok
+  static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert(swam.coughlin == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
+}
+
+extern Swim dc;
+extern Swim& trident; // expected-note {{declared here}}
+
+constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
+constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}}
+                                                // expected-note@-1 {{initializer of 'trident' is not a constant expression}}
