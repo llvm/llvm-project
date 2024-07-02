@@ -1,0 +1,15 @@
+// Tests that statically linked AArch64 binaries do not crash at binary loading
+// time.
+//
+// Functions like `_init` do not appear in the `.text` section of the original
+// binary. For those cases, the BOLT'ed binary creates an alias (ie, `.init`),
+// which  matches the address of the relevant function in the original binary.
+// If such function appears in the GOT and is patched, it leads to a runtime
+// crash.
+
+REQUIRES: system-linux
+
+RUN: %clang %p/../Inputs/main.c -o %t -Wl,-q -static
+RUN: llvm-bolt %t -o %t.bolt > /dev/null 2>&1
+RUN: not --crash %t.bolt 2>&1 | FileCheck %s
+CHECK: Unexpected reloc type in static binary.
