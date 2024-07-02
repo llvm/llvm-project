@@ -1,5 +1,5 @@
-Command Line Usage: CodeChecker and scan-build
-===============================================
+Command Line Usage: scan-build and CodeChecker
+==============================================
 
 This document provides guidelines for running Clang Static Analyzer from the command line on whole projects.
 CodeChecker and scan-build are two CLI tools for using CSA on multiple files (tranlation units).
@@ -16,61 +16,18 @@ It is possible, however, to invoke the Static Analyzer from the command line in 
 The following tools are used commonly to run the analyzer from the command line.
 Both tools are wrapper scripts to drive the analysis and the underlying invocations of the Clang compiler:
 
-1. CodeChecker_ is a driver and web server that runs the Static Analyzer on your projects on demand and maintains a database of issues.
+1. scan-build_ is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser.
+    - Useful for individual developers who simply want to view static analysis results at their desk, or in a very simple collaborative environment.
+    - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
+    - Does not include support for cross-translation-unit analysis.
+
+2. CodeChecker_ is a driver and web server that runs the Static Analyzer on your projects on demand and maintains a database of issues.
     - Perfect for managing large amounts of Static Analyzer warnings in a collaborative environment.
     - Generally much more feature-rich than scan-build.
     - Supports incremental analysis: Results can be stored in a database, subsequent analysis runs can be compared to list the newly added defects.
     - :doc:`CrossTranslationUnit` is supported fully on Linux via CodeChecker.
     - Can run clang-tidy checkers too.
     - Open source, but out-of-tree, i.e. not part of the LLVM project.
-
-2. scan-build_ is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser.
-    - Useful for individual developers who simply want to view static analysis results at their desk, or in a very simple collaborative environment.
-    - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
-    - Does not include support for cross-translation-unit analysis.
-
-CodeChecker
------------
-
-Basic Usage
-~~~~~~~~~~~
-
-Install CodeChecker as described here: `CodeChecker Install Guide <https://github.com/Ericsson/codechecker/#Install-guide>`_.
-
-Create a compilation database. If you use cmake then pass the ``-DCMAKE_EXPORT_COMPILE_COMMANDS=1`` parameter to cmake. Cmake will create a ``compile_commands.json`` file.
-If you have a Makefile based or similar build system then you can log the build commands with the help of CodeChecker::
-
-    make clean
-    CodeChecker log -b "make" -o compile_commands.json
-
-Analyze your project::
-
-    CodeChecker analyze compile_commands.json -o ./reports
-
-View the analysis results.
-Print the detailed results in the command line::
-
-    CodeChecker parse --print-steps ./reports
-
-Or view the detailed results in a browser::
-
-    CodeChecker parse ./reports -e html -o ./reports_html
-    firefox ./reports_html/index.html
-
-Optional: store the analysis results in a DB::
-
-    mkdir ./ws
-    CodeChecker server -w ./ws -v 8555 &
-    CodeChecker store ./reports --name my-project --url http://localhost:8555/Default
-
-Optional: manage (categorize, suppress) the results in your web browser::
-
-    firefox http://localhost:8555/Default
-
-Detailed Usage
-~~~~~~~~~~~~~~
-
-For extended documentation please refer to the `official site of CodeChecker <https://github.com/Ericsson/codechecker/blob/master/docs/usage.md>`_!
 
 scan-build
 ----------
@@ -236,3 +193,47 @@ When compiling your application to run on the simulator, it is important that **
 **scan-build** provides the ``--use-cc`` and ``--use-c++`` options to hardwire which compiler scan-build should use for building your code. Note that although you are chiefly interested in analyzing your project, keep in mind that running the analyzer is intimately tied to the build, and not being able to compile your code means it won't get fully analyzed (if at all).
 
 If you aren't certain which compiler Xcode uses to build your project, try just running ``xcodebuild`` (without **scan-build**). You should see the full path to the compiler that Xcode is using, and use that as an argument to ``--use-cc``.
+
+CodeChecker
+-----------
+
+Basic Usage
+~~~~~~~~~~~
+
+Install CodeChecker as described here: `CodeChecker Install Guide <https://github.com/Ericsson/codechecker/#Install-guide>`_.
+
+Create a compilation database. If you use cmake then pass the ``-DCMAKE_EXPORT_COMPILE_COMMANDS=1`` parameter to cmake. Cmake will create a ``compile_commands.json`` file.
+If you have a Makefile based or similar build system then you can log the build commands with the help of CodeChecker::
+
+    make clean
+    CodeChecker log -b "make" -o compile_commands.json
+
+Analyze your project::
+
+    CodeChecker analyze compile_commands.json -o ./reports
+
+View the analysis results.
+Print the detailed results in the command line::
+
+    CodeChecker parse --print-steps ./reports
+
+Or view the detailed results in a browser::
+
+    CodeChecker parse ./reports -e html -o ./reports_html
+    firefox ./reports_html/index.html
+
+Optional: store the analysis results in a DB::
+
+    mkdir ./ws
+    CodeChecker server -w ./ws -v 8555 &
+    CodeChecker store ./reports --name my-project --url http://localhost:8555/Default
+
+Optional: manage (categorize, suppress) the results in your web browser::
+
+    firefox http://localhost:8555/Default
+
+Detailed Usage
+~~~~~~~~~~~~~~
+
+For extended documentation please refer to the `official site of CodeChecker <https://github.com/Ericsson/codechecker/blob/master/docs/usage.md>`_!
+
