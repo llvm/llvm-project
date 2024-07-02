@@ -1,4 +1,4 @@
-## Tests matching blocks by called function names.
+## Tests blocks matching by called function names in inferStaleProfile.
 
 # REQUIRES: system-linux
 # RUN: split-file %s %t

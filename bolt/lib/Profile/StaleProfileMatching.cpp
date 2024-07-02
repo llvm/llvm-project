@@ -222,6 +222,7 @@ private:
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
   std::unordered_map<uint64_t, std::vector<HashBlockPairType>> CallHashToBlocks;
 
+  // Uses OpcodeHash to find the most similar block for a given hash.
   const FlowBlock *matchWithOpcodes(BlendedBlockHash &BlendedHash) const {
     auto BlockIt = OpHashToBlocks.find(BlendedHash.OpcodeHash);
     if (BlockIt == OpHashToBlocks.end())
@@ -238,6 +239,7 @@ private:
     return BestBlock;
   }
 
+  // Uses CallHash to find the most similar block for a given hash.
   const FlowBlock *matchWithCalls(BlendedBlockHash &BlendedHash,
                                   uint64_t CallHash) const {
     if (!CallHash)
@@ -436,7 +438,6 @@ void matchWeightsByHashes(
   std::vector<uint64_t> CallHashes;
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
-
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     const BinaryBasicBlock *BB = BlockOrder[I];
     assert(BB->getHash() != 0 && "empty hash of BinaryBasicBlock");
@@ -458,7 +459,6 @@ void matchWeightsByHashes(
     LLVM_DEBUG(dbgs() << "BB with index " << I << " has hash = "
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
-
   StaleMatcher Matcher;
   Matcher.init(Blocks, BlendedHashes, CallHashes);
 
