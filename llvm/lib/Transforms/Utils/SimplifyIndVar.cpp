@@ -554,7 +554,7 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   };
   // Replace all comparisons against trunc with comparisons against IV.
   for (auto *ICI : ICmpUsers) {
-    bool IsSwapped = L->isLoopInvariant(ICI->getOperand(0));
+    bool IsSwapped = ICI->getOperand(0) != TI;
     auto *Op1 = IsSwapped ? ICI->getOperand(0) : ICI->getOperand(1);
     IRBuilder<> Builder(ICI);
     Value *Ext = nullptr;
