@@ -373,6 +373,8 @@ public:
   /// Perform Bitcast legalize action on G_INSERT_VECTOR_ELT.
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
+  LegalizeResult bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
+                                     LLT CastTy);
 
   LegalizeResult lowerConstant(MachineInstr &MI);
   LegalizeResult lowerFConstant(MachineInstr &MI);
