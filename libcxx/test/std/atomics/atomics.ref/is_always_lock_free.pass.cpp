@@ -18,9 +18,25 @@
 #include <concepts>
 
 #include "test_macros.h"
+#include "atomic_helpers.h"
 
 template <typename T>
-void check_always_lock_free(std::atomic_ref<T> const a) {
+void check_always_lock_free(std::atomic_ref<T> const& a) {
+  using InfoT = LockFreeStatusInfo<T>;
+
+  if (InfoT::status_known) {
+    constexpr LockFreeStatus known_status = InfoT::value;
+
+    static_assert(std::atomic_ref<T>::is_always_lock_free == (known_status == LockFreeStatus::always),
+                  "is_always_lock_free is inconsistent with known lock-free status");
+    if (known_status == LockFreeStatus::always) {
+      assert(a.is_lock_free() && "is_lock_free() is inconsistent with known lock-free status");
+    } else if (known_status == LockFreeStatus::never) {
+      assert(!a.is_lock_free() && "is_lock_free() is inconsistent with known lock-free status");
+    } else {
+      assert(a.is_lock_free() || !a.is_lock_free()); // This is kinda dumb, but we might as well call the function once.
+    }
+  }
   std::same_as<const bool> decltype(auto) is_always_lock_free = std::atomic_ref<T>::is_always_lock_free;
   if (is_always_lock_free) {
     std::same_as<bool> decltype(auto) is_lock_free = a.is_lock_free();
@@ -36,7 +52,17 @@ void check_always_lock_free(std::atomic_ref<T> const a) {
     check_always_lock_free(std::atomic_ref<type>(obj));                                                                \
   } while (0)
 
+void check_always_lock_free_types() {
+  static_assert(std::atomic_ref<int>::is_always_lock_free);
+  static_assert(std::atomic_ref<char>::is_always_lock_free);
+}
+
 void test() {
+  // While it's hard to portably test the value of is_always_lock_free, since different platforms have different support
+  // for atomic operations, it's still very important to do so. Specifically, it's important to have at least
+  // a few tests that have expected values.
+  check_always_lock_free_types();
+
   int i = 0;
   check_always_lock_free(std::atomic_ref<int>(i));
 
