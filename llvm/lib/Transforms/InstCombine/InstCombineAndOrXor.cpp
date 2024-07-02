@@ -2584,7 +2584,10 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
     // (A ^ B) & ((B ^ C) ^ A) -> (A ^ B) & ~C
     if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
-        match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A)))) {
+        match(Op1, m_CombineOr(m_c_Xor(m_c_Xor(m_Specific(A), m_Value(C)),
+                                       m_Specific(B)),
+                               m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)),
+                                       m_Specific(A))))) {
       Value *NotC = Op1->hasOneUse()
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
@@ -2593,13 +2596,16 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
 
     // ((A ^ C) ^ B) & (B ^ A) -> (B ^ A) & ~C
-    if (match(Op0, m_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))) &&
-        match(Op1, m_Xor(m_Specific(B), m_Specific(A)))) {
+    if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&
+        match(Op0, m_CombineOr(m_c_Xor(m_c_Xor(m_Specific(A), m_Value(C)),
+                                       m_Specific(B)),
+                               m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)),
+                                       m_Specific(A))))) {
       Value *NotC = Op0->hasOneUse()
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
       if (NotC != nullptr)
-        return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(C));
+        return BinaryOperator::CreateAnd(Op1, NotC);
     }
 
     // (A | B) & (~A ^ B) -> A & B
