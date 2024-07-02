@@ -1020,6 +1020,9 @@ PHIExpression *NewGVN::createPHIExpression(ArrayRef<ValPair> PHIOperands,
   E->setType(PHIOperands.begin()->first->getType());
   E->setOpcode(Instruction::PHI);
 
+  auto *IClass = ValueToClass.lookup(I);
+  bool realPhi = isa<PHINode>(I);
+
   // Filter out unreachable phi operands.
   auto Filtered = make_filter_range(PHIOperands, [&](const ValPair &P) {
     auto *BB = P.second;
@@ -1033,8 +1036,23 @@ PHIExpression *NewGVN::createPHIExpression(ArrayRef<ValPair> PHIOperands,
       return false;
     OriginalOpsConstant = OriginalOpsConstant && isa<Constant>(P.first);
     HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
-    return lookupOperandLeader(P.first) != I;
+
+    // Ignore phi arguments that are known to be equivalent to the phi. Only
+    // done for real PHIs (PHIOfOps may not converge).
+    bool selfLookup = realPhi && isa<PHINode>(P.first) &&
+                      ValueToClass.lookup(P.first) == IClass;
+
+    return !selfLookup;
   });
+
+  // Empty means that all operands are either unreachable or equivalent to the
+  // phi. Return the previous leader. Don't return a dead expression; it makes
+  // mutually dependent phis never converge.
+  if (Filtered.empty()) {
+    E->op_push_back(IClass->getLeader());
+    return E;
+  }
+
   std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
                  [&](const ValPair &P) -> Value * {
                    return lookupOperandLeader(P.first);
