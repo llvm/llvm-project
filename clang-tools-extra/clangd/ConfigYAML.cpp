@@ -14,7 +14,6 @@
 #include "llvm/Support/YAMLParser.h"
 #include <optional>
 #include <string>
-#include <system_error>
 
 namespace clang {
 namespace clangd {
@@ -263,6 +262,14 @@ private:
     Dict.handle("BlockEnd", [&](Node &N) {
       if (auto Value = boolValue(N, "BlockEnd"))
         F.BlockEnd = *Value;
+    });
+    Dict.handle("LambdaCaptures", [&](Node &N) {
+      if (auto Value = boolValue(N, "LambdaCaptures"))
+        F.LambdaCaptures = *Value;
+    });
+    Dict.handle("DefaultArguments", [&](Node &N) {
+      if (auto Value = boolValue(N, "DefaultArguments"))
+        F.DefaultArguments = *Value;
     });
     Dict.handle("TypeNameLimit", [&](Node &N) {
       if (auto Value = uint32Value(N, "TypeNameLimit"))

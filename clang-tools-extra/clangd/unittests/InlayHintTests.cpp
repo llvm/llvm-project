@@ -15,9 +15,12 @@
 #include "support/Context.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -81,6 +84,8 @@ Config noHintsConfig() {
   C.InlayHints.DeducedTypes = false;
   C.InlayHints.Designators = false;
   C.InlayHints.BlockEnd = false;
+  C.InlayHints.LambdaCaptures = false;
+  C.InlayHints.DefaultArguments = false;
   return C;
 }
 
@@ -1463,6 +1468,58 @@ TEST(TypeHints, DefaultTemplateArgs) {
   )cpp",
                   ExpectedHint{": A<float>", "var"},
                   ExpectedHint{": A<float>", "binding"});
+}
+
+TEST(LambdaCaptures, Smoke) {
+  Config Cfg;
+  Cfg.InlayHints.Parameters = false;
+  Cfg.InlayHints.DeducedTypes = false;
+  Cfg.InlayHints.Designators = false;
+  Cfg.InlayHints.BlockEnd = false;
+  Cfg.InlayHints.DefaultArguments = false;
+
+  Cfg.InlayHints.LambdaCaptures = true;
+  Cfg.InlayHints.TypeNameLimit = 10;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  assertHints(InlayHintKind::LambdaCapture, R"cpp(
+    void foo() {
+      int A = 1;
+      int ReallyLongName = 1;
+      auto B = [$byvalue[[=]]] { return A; };
+      auto C = [$byref[[&]]] { return A; };
+      auto D = [$trunc[[=]], &A] {  B(); (void)ReallyLongName; return A; };
+    }
+  )cpp",
+              ExpectedHint{": A", "byvalue", Right},
+              ExpectedHint{": A", "byref", Right},
+              ExpectedHint{": B, ...", "trunc", Right});
+}
+
+TEST(DefaultArguments, Smoke) {
+  Config Cfg;
+  Cfg.InlayHints.Parameters =
+      true; // To test interplay of parameters and default parameters
+  Cfg.InlayHints.DeducedTypes = false;
+  Cfg.InlayHints.Designators = false;
+  Cfg.InlayHints.BlockEnd = false;
+  Cfg.InlayHints.LambdaCaptures = false;
+
+  Cfg.InlayHints.DefaultArguments = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  const auto *Code = R"cpp(
+    int foo(int A = 4) { return A; }
+    int bar(int A, int B = 1, bool C = foo($default1[[)]]) { return A; }
+    int A = bar($explicit[[2]]$default2[[)]];
+  )cpp";
+
+  assertHints(InlayHintKind::DefaultArgument, Code,
+              ExpectedHint{"A = 4", "default1", Left},
+              ExpectedHint{", B = 1, C = foo()", "default2", Left});
+
+  assertHints(InlayHintKind::Parameter, Code,
+              ExpectedHint{"A: ", "explicit", Left});
 }
 
 TEST(TypeHints, Deduplication) {
