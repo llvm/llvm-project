@@ -43,6 +43,10 @@
 #define MAP_NORESERVE 0
 #endif
 
+#  if SANITIZER_LINUX
+#    include "sanitizer_getauxval.h"
+#  endif
+
 typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 
 namespace __sanitizer {
@@ -516,6 +520,15 @@ int WaitForProcess(pid_t pid) {
 
 bool IsStateDetached(int state) {
   return state == PTHREAD_CREATE_DETACHED;
+}
+
+bool ShouldTreatRuntimeSecurely() {
+#  if SANITIZER_LINUX
+  // So we can use weak reference from sanitizer_getauxval.h
+  if (&getauxval)
+    return getauxval(/* AT_SECURE */ 23) != 0;
+#  endif
+  return getuid() != geteuid() || getgid() != getegid();
 }
 
 } // namespace __sanitizer

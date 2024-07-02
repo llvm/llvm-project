@@ -104,6 +104,16 @@ void ReportFile::SetReportPath(const char *path) {
     }
   }
 
+  if (path && ShouldTreatRuntimeSecurely() &&
+      internal_strcmp(path, "stderr") != 0 &&
+      internal_strcmp(path, "stdout") != 0) {
+    Report(
+        "ERROR: log_path must be 'stderr' or 'stdout' for AT_SECURE and/or "
+        "setuid binaries, is '%s'\n",
+        path);
+    Die();
+  }
+
   SpinMutexLock l(mu);
   if (fd != kStdoutFd && fd != kStderrFd && fd != kInvalidFd)
     CloseFile(fd);
