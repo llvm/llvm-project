@@ -162,9 +162,6 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
 
-  if (ST.hasScalarSubwordLoads())
-    return false;
-
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
@@ -179,9 +176,11 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
 
   bool Changed = false;
 
+  bool HasScalarSubwordLoads = ST.hasScalarSubwordLoads();
+
   for (auto &BB : reverse(F))
     for (Instruction &I : make_early_inc_range(reverse(BB))) {
-      Changed |= visit(I);
+      Changed |= !HasScalarSubwordLoads && visit(I);
       Changed |= LRO.optimizeLiveType(&I, DeadInsts);
     }
 
