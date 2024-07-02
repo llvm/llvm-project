@@ -863,9 +863,9 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
         if (LdRegex.match(Name)) {
           Type *ScalarTy =
-              dyn_cast<VectorType>(F->getReturnType())->getElementType();
-          ElementCount EC = dyn_cast<VectorType>(F->arg_begin()->getType())
-                                ->getElementCount();
+              cast<VectorType>(F->getReturnType())->getElementType();
+          ElementCount EC =
+              cast<VectorType>(F->arg_begin()->getType())->getElementCount();
           Type *Ty = VectorType::get(ScalarTy, EC);
           static const Intrinsic::ID LoadIDs[] = {
               Intrinsic::aarch64_sve_ld2_sret,
@@ -1031,6 +1031,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           return true;
         }
         break; // No other 'amdgcn.atomic.*'
+      }
+
+      if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
+          Name.starts_with("ds.fmax")) {
+        // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
+        // declaration.
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -2331,40 +2339,82 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
 }
 
+// These are expected to have the arguments:
+// atomic.intrin (ptr, rmw_value, ordering, scope, isVolatile)
+//
+// Except for int_amdgcn_ds_fadd_v2bf16 which only has (ptr, rmw_value).
+//
 static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
                                          Function *F, IRBuilder<> &Builder) {
-  const bool IsInc = Name.starts_with("atomic.inc.");
-  if (IsInc || Name.starts_with("atomic.dec.")) {
-    if (CI->getNumOperands() != 6) // Malformed bitcode.
-      return nullptr;
+  AtomicRMWInst::BinOp RMWOp =
+      StringSwitch<AtomicRMWInst::BinOp>(Name)
+          .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("ds.fmin", AtomicRMWInst::FMin)
+          .StartsWith("ds.fmax", AtomicRMWInst::FMax)
+          .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
+          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap);
 
-    AtomicRMWInst::BinOp RMWOp =
-        IsInc ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+  unsigned NumOperands = CI->getNumOperands();
+  if (NumOperands < 3) // Malformed bitcode.
+    return nullptr;
 
-    Value *Ptr = CI->getArgOperand(0);
-    Value *Val = CI->getArgOperand(1);
-    ConstantInt *OrderArg = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  Value *Ptr = CI->getArgOperand(0);
+  PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
+  if (!PtrTy) // Malformed.
+    return nullptr;
+
+  Value *Val = CI->getArgOperand(1);
+  if (Val->getType() != CI->getType()) // Malformed.
+    return nullptr;
+
+  ConstantInt *OrderArg = nullptr;
+  bool IsVolatile = false;
+
+  // These should have 5 arguments (plus the callee). A separate version of the
+  // ds_fadd intrinsic was defined for bf16 which was missing arguments.
+  if (NumOperands > 3)
+    OrderArg = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+
+  // Ignore scope argument at 3
+
+  if (NumOperands > 5) {
     ConstantInt *VolatileArg = dyn_cast<ConstantInt>(CI->getArgOperand(4));
-
-    AtomicOrdering Order = AtomicOrdering::SequentiallyConsistent;
-    if (OrderArg && isValidAtomicOrdering(OrderArg->getZExtValue()))
-      Order = static_cast<AtomicOrdering>(OrderArg->getZExtValue());
-    if (Order == AtomicOrdering::NotAtomic ||
-        Order == AtomicOrdering::Unordered)
-      Order = AtomicOrdering::SequentiallyConsistent;
-
-    // The scope argument never really worked correctly. Use agent as the most
-    // conservative option which should still always produce the instruction.
-    SyncScope::ID SSID = F->getContext().getOrInsertSyncScopeID("agent");
-    AtomicRMWInst *RMW =
-        Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
-
-    if (!VolatileArg || !VolatileArg->isZero())
-      RMW->setVolatile(true);
-    return RMW;
+    IsVolatile = !VolatileArg || !VolatileArg->isZero();
   }
 
-  llvm_unreachable("Unknown function for AMDGPU intrinsic upgrade.");
+  AtomicOrdering Order = AtomicOrdering::SequentiallyConsistent;
+  if (OrderArg && isValidAtomicOrdering(OrderArg->getZExtValue()))
+    Order = static_cast<AtomicOrdering>(OrderArg->getZExtValue());
+  if (Order == AtomicOrdering::NotAtomic || Order == AtomicOrdering::Unordered)
+    Order = AtomicOrdering::SequentiallyConsistent;
+
+  LLVMContext &Ctx = F->getContext();
+
+  // Handle the v2bf16 intrinsic which used <2 x i16> instead of <2 x bfloat>
+  Type *RetTy = CI->getType();
+  if (VectorType *VT = dyn_cast<VectorType>(RetTy)) {
+    if (VT->getElementType()->isIntegerTy(16)) {
+      VectorType *AsBF16 =
+          VectorType::get(Type::getBFloatTy(Ctx), VT->getElementCount());
+      Val = Builder.CreateBitCast(Val, AsBF16);
+    }
+  }
+
+  // The scope argument never really worked correctly. Use agent as the most
+  // conservative option which should still always produce the instruction.
+  SyncScope::ID SSID = Ctx.getOrInsertSyncScopeID("agent");
+  AtomicRMWInst *RMW =
+      Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
+
+  if (PtrTy->getAddressSpace() != 3) {
+    RMW->setMetadata("amdgpu.no.fine.grained.memory",
+                     MDNode::get(F->getContext(), {}));
+  }
+
+  if (IsVolatile)
+    RMW->setVolatile(true);
+
+  return Builder.CreateBitCast(RMW, RetTy);
 }
 
 /// Helper to unwrap intrinsic call MetadataAsValue operands.
@@ -4385,8 +4435,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                      .StartsWith("aarch64.sve.ld3", 3)
                      .StartsWith("aarch64.sve.ld4", 4)
                      .Default(0);
-    ScalableVectorType *RetTy =
-        dyn_cast<ScalableVectorType>(F->getReturnType());
+    auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements() / N;
     SmallVector<Value *, 2> Args(CI->args());
     Value *NewLdCall = Builder.CreateCall(NewFn, Args);
@@ -4414,8 +4463,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       DefaultCase();
       return;
     }
-    ScalableVectorType *RetTy =
-        dyn_cast<ScalableVectorType>(F->getReturnType());
+    auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements();
     unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     Value *NewIdx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
@@ -4431,9 +4479,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     if (Name.starts_with("aarch64.sve.tuple.set")) {
-      unsigned I = dyn_cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      ScalableVectorType *Ty =
-          dyn_cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
+      unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+      auto *Ty = cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
       Value *NewIdx =
           ConstantInt::get(Type::getInt64Ty(C), I * Ty->getMinNumElements());
       NewCall = Builder.CreateCall(
@@ -4447,8 +4494,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                        .StartsWith("aarch64.sve.tuple.create4", 4)
                        .Default(0);
       assert(N > 1 && "Create is expected to be between 2-4");
-      ScalableVectorType *RetTy =
-          dyn_cast<ScalableVectorType>(F->getReturnType());
+      auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
       Value *Ret = llvm::PoisonValue::get(RetTy);
       unsigned MinElts = RetTy->getMinNumElements() / N;
       for (unsigned I = 0; I < N; I++) {

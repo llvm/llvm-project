@@ -17,12 +17,10 @@
 
 ; DEFAULT: Greedy Register Allocator
 ; DEFAULT-NEXT: Virtual Register Rewriter
-; DEFAULT-NEXT: Stack Slot Coloring
 ; DEFAULT-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
 ; DEFAULT-NEXT: SI Pre-allocate WWM Registers
-; DEFAULT-NEXT: Live Stack Slot Analysis
 ; DEFAULT-NEXT: Greedy Register Allocator
 ; DEFAULT-NEXT: SI Lower WWM Copies
 ; DEFAULT-NEXT: GCN NSA Reassign
@@ -52,12 +50,10 @@
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Basic Register Allocator
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
-; BASIC-DEFAULT-NEXT: Stack Slot Coloring
 ; BASIC-DEFAULT-NEXT: SI lower SGPR spill instructions
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: SI Pre-allocate WWM Registers
-; BASIC-DEFAULT-NEXT: Live Stack Slot Analysis
 ; BASIC-DEFAULT-NEXT: Bundle Machine CFG Edges
 ; BASIC-DEFAULT-NEXT: Spill Code Placement Analysis
 ; BASIC-DEFAULT-NEXT: Lazy Machine Block Frequency Analysis
@@ -73,12 +69,10 @@
 
 ; DEFAULT-BASIC: Greedy Register Allocator
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
-; DEFAULT-BASIC-NEXT: Stack Slot Coloring
 ; DEFAULT-BASIC-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-BASIC-NEXT: Virtual Register Map
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
 ; DEFAULT-BASIC-NEXT: SI Pre-allocate WWM Registers
-; DEFAULT-BASIC-NEXT: Live Stack Slot Analysis
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
 ; DEFAULT-BASIC-NEXT: SI Lower WWM Copies
 ; DEFAULT-BASIC-NEXT: GCN NSA Reassign
@@ -96,12 +90,10 @@
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
-; BASIC-BASIC-NEXT: Stack Slot Coloring
 ; BASIC-BASIC-NEXT: SI lower SGPR spill instructions
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: SI Pre-allocate WWM Registers
-; BASIC-BASIC-NEXT: Live Stack Slot Analysis
 ; BASIC-BASIC-NEXT: Basic Register Allocator
 ; BASIC-BASIC-NEXT: SI Lower WWM Copies
 ; BASIC-BASIC-NEXT: GCN NSA Reassign

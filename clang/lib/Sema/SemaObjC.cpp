@@ -2255,4 +2255,154 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<ObjCExternallyRetainedAttr>(*this, D, AL);
 }
 
+bool SemaObjC::GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx) {
+  Sema::FormatStringInfo FSI;
+  if ((SemaRef.GetFormatStringType(Format) == Sema::FST_NSString) &&
+      SemaRef.getFormatStringInfo(Format, false, true, &FSI)) {
+    Idx = FSI.FormatIdx;
+    return true;
+  }
+  return false;
+}
+
+/// Diagnose use of %s directive in an NSString which is being passed
+/// as formatting string to formatting method.
+void SemaObjC::DiagnoseCStringFormatDirectiveInCFAPI(const NamedDecl *FDecl,
+                                                     Expr **Args,
+                                                     unsigned NumArgs) {
+  unsigned Idx = 0;
+  bool Format = false;
+  ObjCStringFormatFamily SFFamily = FDecl->getObjCFStringFormattingFamily();
+  if (SFFamily == ObjCStringFormatFamily::SFF_CFString) {
+    Idx = 2;
+    Format = true;
+  } else
+    for (const auto *I : FDecl->specific_attrs<FormatAttr>()) {
+      if (GetFormatNSStringIdx(I, Idx)) {
+        Format = true;
+        break;
+      }
+    }
+  if (!Format || NumArgs <= Idx)
+    return;
+  const Expr *FormatExpr = Args[Idx];
+  if (const CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(FormatExpr))
+    FormatExpr = CSCE->getSubExpr();
+  const StringLiteral *FormatString;
+  if (const ObjCStringLiteral *OSL =
+          dyn_cast<ObjCStringLiteral>(FormatExpr->IgnoreParenImpCasts()))
+    FormatString = OSL->getString();
+  else
+    FormatString = dyn_cast<StringLiteral>(FormatExpr->IgnoreParenImpCasts());
+  if (!FormatString)
+    return;
+  if (SemaRef.FormatStringHasSArg(FormatString)) {
+    Diag(FormatExpr->getExprLoc(), diag::warn_objc_cdirective_format_string)
+        << "%s" << 1 << 1;
+    Diag(FDecl->getLocation(), diag::note_entity_declared_at)
+        << FDecl->getDeclName();
+  }
+}
+
+bool SemaObjC::isSignedCharBool(QualType Ty) {
+  return Ty->isSpecificBuiltinType(BuiltinType::SChar) && getLangOpts().ObjC &&
+         NSAPIObj->isObjCBOOLType(Ty);
+}
+
+void SemaObjC::adornBoolConversionDiagWithTernaryFixit(
+    Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
+  Expr *Ignored = SourceExpr->IgnoreImplicit();
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Ignored))
+    Ignored = OVE->getSourceExpr();
+  bool NeedsParens = isa<AbstractConditionalOperator>(Ignored) ||
+                     isa<BinaryOperator>(Ignored) ||
+                     isa<CXXOperatorCallExpr>(Ignored);
+  SourceLocation EndLoc = SemaRef.getLocForEndOfToken(SourceExpr->getEndLoc());
+  if (NeedsParens)
+    Builder << FixItHint::CreateInsertion(SourceExpr->getBeginLoc(), "(")
+            << FixItHint::CreateInsertion(EndLoc, ")");
+  Builder << FixItHint::CreateInsertion(EndLoc, " ? YES : NO");
+}
+
+/// Check a single element within a collection literal against the
+/// target element type.
+static void checkCollectionLiteralElement(Sema &S, QualType TargetElementType,
+                                          Expr *Element, unsigned ElementKind) {
+  // Skip a bitcast to 'id' or qualified 'id'.
+  if (auto ICE = dyn_cast<ImplicitCastExpr>(Element)) {
+    if (ICE->getCastKind() == CK_BitCast &&
+        ICE->getSubExpr()->getType()->getAs<ObjCObjectPointerType>())
+      Element = ICE->getSubExpr();
+  }
+
+  QualType ElementType = Element->getType();
+  ExprResult ElementResult(Element);
+  if (ElementType->getAs<ObjCObjectPointerType>() &&
+      S.CheckSingleAssignmentConstraints(TargetElementType, ElementResult,
+                                         false, false) != Sema::Compatible) {
+    S.Diag(Element->getBeginLoc(), diag::warn_objc_collection_literal_element)
+        << ElementType << ElementKind << TargetElementType
+        << Element->getSourceRange();
+  }
+
+  if (auto ArrayLiteral = dyn_cast<ObjCArrayLiteral>(Element))
+    S.ObjC().checkArrayLiteral(TargetElementType, ArrayLiteral);
+  else if (auto DictionaryLiteral = dyn_cast<ObjCDictionaryLiteral>(Element))
+    S.ObjC().checkDictionaryLiteral(TargetElementType, DictionaryLiteral);
+}
+
+/// Check an Objective-C array literal being converted to the given
+/// target type.
+void SemaObjC::checkArrayLiteral(QualType TargetType,
+                                 ObjCArrayLiteral *ArrayLiteral) {
+  if (!NSArrayDecl)
+    return;
+
+  const auto *TargetObjCPtr = TargetType->getAs<ObjCObjectPointerType>();
+  if (!TargetObjCPtr)
+    return;
+
+  if (TargetObjCPtr->isUnspecialized() ||
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          NSArrayDecl->getCanonicalDecl())
+    return;
+
+  auto TypeArgs = TargetObjCPtr->getTypeArgs();
+  if (TypeArgs.size() != 1)
+    return;
+
+  QualType TargetElementType = TypeArgs[0];
+  for (unsigned I = 0, N = ArrayLiteral->getNumElements(); I != N; ++I) {
+    checkCollectionLiteralElement(SemaRef, TargetElementType,
+                                  ArrayLiteral->getElement(I), 0);
+  }
+}
+
+void SemaObjC::checkDictionaryLiteral(
+    QualType TargetType, ObjCDictionaryLiteral *DictionaryLiteral) {
+  if (!NSDictionaryDecl)
+    return;
+
+  const auto *TargetObjCPtr = TargetType->getAs<ObjCObjectPointerType>();
+  if (!TargetObjCPtr)
+    return;
+
+  if (TargetObjCPtr->isUnspecialized() ||
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          NSDictionaryDecl->getCanonicalDecl())
+    return;
+
+  auto TypeArgs = TargetObjCPtr->getTypeArgs();
+  if (TypeArgs.size() != 2)
+    return;
+
+  QualType TargetKeyType = TypeArgs[0];
+  QualType TargetObjectType = TypeArgs[1];
+  for (unsigned I = 0, N = DictionaryLiteral->getNumElements(); I != N; ++I) {
+    auto Element = DictionaryLiteral->getKeyValueElement(I);
+    checkCollectionLiteralElement(SemaRef, TargetKeyType, Element.Key, 1);
+    checkCollectionLiteralElement(SemaRef, TargetObjectType, Element.Value, 2);
+  }
+}
+
 } // namespace clang

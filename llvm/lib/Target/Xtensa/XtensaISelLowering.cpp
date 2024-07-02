@@ -77,6 +77,18 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   }
 
   setOperationAction(ISD::ConstantPool, PtrVT, Custom);
+  setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
+  setOperationAction(ISD::BlockAddress, PtrVT, Custom);
+  setOperationAction(ISD::JumpTable, PtrVT, Custom);
+
+  // Expand jump table branches as address arithmetic followed by an
+  // indirect jump.
+  setOperationAction(ISD::BR_JT, MVT::Other, Custom);
+
+  setOperationPromotedToType(ISD::BR_CC, MVT::i1, MVT::i32);
+  setOperationAction(ISD::BR_CC, MVT::i32, Legal);
+  setOperationAction(ISD::BR_CC, MVT::i64, Expand);
+  setOperationAction(ISD::BR_CC, MVT::f32, Expand);
 
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
@@ -86,6 +98,12 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
+}
+
+bool XtensaTargetLowering::isOffsetFoldingLegal(
+    const GlobalAddressSDNode *GA) const {
+  // The Xtensa target isn't yet aware of offsets.
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -519,6 +537,72 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
   return Op;
 }
 
+SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
+  SDLoc DL(Op);
+  auto PtrVT = Op.getValueType();
+  const GlobalValue *GV = G->getGlobal();
+
+  SDValue CPAddr = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
+  SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
+
+  return CPWrap;
+}
+
+SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  BlockAddressSDNode *Node = cast<BlockAddressSDNode>(Op);
+  const BlockAddress *BA = Node->getBlockAddress();
+  EVT PtrVT = Op.getValueType();
+
+  XtensaConstantPoolValue *CPV =
+      XtensaConstantPoolConstant::Create(BA, 0, XtensaCP::CPBlockAddress);
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
+  SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
+
+  return CPWrap;
+}
+
+SDValue XtensaTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Table = Op.getOperand(1);
+  SDValue Index = Op.getOperand(2);
+  SDLoc DL(Op);
+  JumpTableSDNode *JT = cast<JumpTableSDNode>(Table);
+  MachineFunction &MF = DAG.getMachineFunction();
+  const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+  SDValue TargetJT = DAG.getTargetJumpTable(JT->getIndex(), MVT::i32);
+  const DataLayout &TD = DAG.getDataLayout();
+  EVT PtrVT = Table.getValueType();
+  unsigned EntrySize = MJTI->getEntrySize(TD);
+
+  Index = DAG.getNode(ISD::MUL, DL, Index.getValueType(), Index,
+                      DAG.getConstant(EntrySize, DL, Index.getValueType()));
+  SDValue Addr = DAG.getNode(ISD::ADD, DL, Index.getValueType(), Index, Table);
+  SDValue LD =
+      DAG.getLoad(PtrVT, DL, Chain, Addr,
+                  MachinePointerInfo::getJumpTable(DAG.getMachineFunction()));
+
+  return DAG.getNode(XtensaISD::BR_JT, DL, MVT::Other, LD.getValue(1), LD,
+                     TargetJT);
+}
+
+SDValue XtensaTargetLowering::LowerJumpTable(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
+  EVT PtrVT = Op.getValueType();
+
+  // Create a constant pool entry for the callee address
+  XtensaConstantPoolValue *CPV =
+      XtensaConstantPoolJumpTable::Create(*DAG.getContext(), JT->getIndex());
+
+  // Get the address of the callee into a register
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
+
+  return getAddrPCRel(CPAddr, DAG);
+}
+
 SDValue XtensaTargetLowering::getAddrPCRel(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -580,8 +664,16 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::BR_JT:
+    return LowerBR_JT(Op, DAG);
   case ISD::Constant:
     return LowerImmediate(Op, DAG);
+  case ISD::GlobalAddress:
+    return LowerGlobalAddress(Op, DAG);
+  case ISD::BlockAddress:
+    return LowerBlockAddress(Op, DAG);
+  case ISD::JumpTable:
+    return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
   case ISD::STACKSAVE:
@@ -597,6 +689,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
 
 const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
+  case XtensaISD::BR_JT:
+    return "XtensaISD::BR_JT";
   case XtensaISD::CALL:
     return "XtensaISD::CALL";
   case XtensaISD::PCREL_WRAPPER:

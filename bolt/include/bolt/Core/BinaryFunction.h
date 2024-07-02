@@ -930,6 +930,10 @@ public:
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
 
+  /// When the function is in disassembled state, return an instruction that
+  /// contains the \p Offset.
+  MCInst *getInstructionContainingOffset(uint64_t Offset);
+
   std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
 
   /// Return offset for the first instruction. If there is data at the

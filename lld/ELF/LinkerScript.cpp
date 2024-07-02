@@ -177,11 +177,10 @@ void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
   // report it if this is the last assignAddresses iteration. dot may be smaller
   // if there is another assignAddresses iteration.
   if (val < dot && inSec) {
-    backwardDotErr =
-        (loc + ": unable to move location counter (0x" + Twine::utohexstr(dot) +
-         ") backward to 0x" + Twine::utohexstr(val) + " for section '" +
-         state->outSec->name + "'")
-            .str();
+    recordError(loc + ": unable to move location counter (0x" +
+                Twine::utohexstr(dot) + ") backward to 0x" +
+                Twine::utohexstr(val) + " for section '" + state->outSec->name +
+                "'");
   }
 
   // Update to location counter means update to section size.
@@ -1411,7 +1410,7 @@ LinkerScript::assignAddresses() {
   state = &st;
   errorOnMissingSection = true;
   st.outSec = aether;
-  backwardDotErr.clear();
+  recordedErrors.clear();
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
   for (SectionCommand *cmd : sectionCommands) {
@@ -1661,6 +1660,11 @@ void LinkerScript::printMemoryUsage(raw_ostream& os) {
   }
 }
 
+void LinkerScript::recordError(const Twine &msg) {
+  auto &str = recordedErrors.emplace_back();
+  msg.toVector(str);
+}
+
 static void checkMemoryRegion(const MemoryRegion *region,
                               const OutputSection *osec, uint64_t addr) {
   uint64_t osecEnd = addr + osec->size;
@@ -1673,8 +1677,8 @@ static void checkMemoryRegion(const MemoryRegion *region,
 }
 
 void LinkerScript::checkFinalScriptConditions() const {
-  if (backwardDotErr.size())
-    errorOrWarn(backwardDotErr);
+  for (StringRef err : recordedErrors)
+    errorOrWarn(err);
   for (const OutputSection *sec : outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
       checkMemoryRegion(memoryRegion, sec, sec->addr);

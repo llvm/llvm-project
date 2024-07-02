@@ -379,7 +379,10 @@ const char *SBValue::GetObjectDescription() {
   if (!value_sp)
     return nullptr;
 
-  return ConstString(value_sp->GetObjectDescription()).GetCString();
+  llvm::Expected<std::string> str = value_sp->GetObjectDescription();
+  if (!str)
+    return ConstString("error: " + toString(str.takeError())).AsCString();
+  return ConstString(*str).AsCString();
 }
 
 SBType SBValue::GetType() {
@@ -1233,7 +1236,10 @@ bool SBValue::GetDescription(SBStream &description) {
     DumpValueObjectOptions options;
     options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
     options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
-    value_sp->Dump(strm, options);
+    if (llvm::Error error = value_sp->Dump(strm, options)) {
+      strm << "error: " << toString(std::move(error));
+      return false;
+    }
   } else {
     strm.PutCString("No value");
   }
