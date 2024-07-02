@@ -538,14 +538,14 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1210``                 ``amdgcn``   APU   - wavefrontsize64 - Architected                   *TBA*
+     ``gfx1210``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1211``                 ``amdgcn``   APU   - wavefrontsize64 - Architected                   *TBA*
+     ``gfx1211``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
