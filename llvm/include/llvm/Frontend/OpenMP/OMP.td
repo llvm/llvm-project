@@ -510,6 +510,10 @@ def OMP_EndAssumes : Directive<"end assumes"> {
   let association = AS_Delimited;
   let category = OMP_Assumes.category;
 }
+def OMP_Assume : Directive<"assume"> {
+  let association = AS_Block;
+  let category = CA_Informational;
+}
 def OMP_Atomic : Directive<"atomic"> {
   let allowedClauses = [
     VersionedClause<OMPC_Capture>,

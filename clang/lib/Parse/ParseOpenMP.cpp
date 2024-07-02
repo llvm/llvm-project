@@ -2371,6 +2371,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     ParseOMPEndDeclareTargetDirective(DTCI.Kind, DKind, DTCI.Loc);
     return nullptr;
   }
+  case OMPD_assume: {
+    Diag(Tok, diag::err_omp_unexpected_directive)
+        << 1 << getOpenMPDirectiveName(DKind);
+    break;
+  }
   case OMPD_unknown:
     Diag(Tok, diag::err_omp_unknown_directive);
     break;
@@ -2918,6 +2923,26 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         << 1 << getOpenMPDirectiveName(DKind);
     SkipUntil(tok::annot_pragma_openmp_end);
     break;
+  case OMPD_assume: {
+    ParseScope OMPDirectiveScope(this, Scope::FnScope | Scope::DeclScope |
+                                 Scope::CompoundStmtScope);
+    ParseOpenMPAssumesDirective(DKind, ConsumeToken());
+
+    SkipUntil(tok::annot_pragma_openmp_end);
+
+    ParsingOpenMPDirectiveRAII NormalScope(*this);
+    StmtResult AssociatedStmt;
+    {
+      Sema::CompoundScopeRAII Scope(Actions);
+      AssociatedStmt = ParseStatement();
+      Directive = Actions.ActOnCompoundStmt(Loc, Tok.getLocation(),
+                                            AssociatedStmt.get(),
+                                            /*isStmtExpr=*/false);
+    }
+    ParseOpenMPEndAssumesDirective(Loc);
+    OMPDirectiveScope.Exit();
+    break;
+  }
   case OMPD_unknown:
   default:
     Diag(Tok, diag::err_omp_unknown_directive);

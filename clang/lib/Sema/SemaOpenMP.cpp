@@ -3536,7 +3536,8 @@ void SemaOpenMP::ActOnOpenMPAssumesDirective(SourceLocation Loc,
 
   auto *AA =
       OMPAssumeAttr::Create(getASTContext(), llvm::join(Assumptions, ","), Loc);
-  if (DKind == llvm::omp::Directive::OMPD_begin_assumes) {
+  if (DKind == llvm::omp::Directive::OMPD_begin_assumes ||
+      DKind == llvm::omp::Directive::OMPD_assume) {
     OMPAssumeScoped.push_back(AA);
     return;
   }
