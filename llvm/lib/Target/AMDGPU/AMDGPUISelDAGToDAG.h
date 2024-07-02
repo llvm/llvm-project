@@ -132,6 +132,8 @@ private:
   bool isFlatScratchBaseLegal(SDValue Addr) const;
   bool isFlatScratchBaseLegalSV(SDValue Addr) const;
   bool isFlatScratchBaseLegalSVImm(SDValue Addr) const;
+  bool isSOffsetLegalWithImmOffset(SDValue *SOffset, bool Imm32Only,
+                                   bool IsBuffer, int64_t ImmOffset = 0) const;
 
   bool SelectDS1Addr1Offset(SDValue Ptr, SDValue &Base, SDValue &Offset) const;
   bool SelectDS64Bit4ByteAligned(SDValue Ptr, SDValue &Base, SDValue &Offset0,
@@ -268,10 +270,10 @@ private:
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
 #if LLPC_BUILD_GFX12
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
+  void SelectPOPSExitingWaveID(SDNode *N);
 #else /* LLPC_BUILD_GFX12 */
   void SelectDSBvhStackIntrinsic(SDNode *N);
 #endif /* LLPC_BUILD_GFX12 */
-  void SelectPOPSExitingWaveID(SDNode *N);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
 #if LLPC_BUILD_GFX12

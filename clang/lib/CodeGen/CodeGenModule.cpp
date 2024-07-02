@@ -907,7 +907,8 @@ void CodeGenModule::Release() {
   if (Context.getTargetInfo().getTriple().isWasm())
     EmitMainVoidAlias();
 
-  if (getTriple().isAMDGPU()) {
+  if (getTriple().isAMDGPU() ||
+      (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD)) {
     // Emit amdhsa_code_object_version module flag, which is code object version
     // times 100.
     if (getTarget().getTargetOpts().CodeObjectVersion !=
@@ -4259,8 +4260,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
-      if (FD->isTargetClonesMultiVersion() ||
-          FD->isTargetVersionMultiVersion()) {
+      if (FD->isTargetClonesMultiVersion() &&
+          !getTarget().getTriple().isAArch64()) {
         std::string MangledName = getMangledNameImpl(
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         if (!GetGlobalValue(MangledName + ".ifunc")) {

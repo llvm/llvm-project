@@ -632,7 +632,7 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
   let assemblyFormat = "attr-dict";
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -655,7 +655,7 @@ class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
   let arguments = (ins Variadic<AnyType>:$args);
   let results = (outs Variadic<AnyType>:$outs);
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -702,7 +702,7 @@ def FormatInferTypeRegionsOp
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "$region attr-dict";
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -723,7 +723,7 @@ def FormatInferTypeVariadicOperandsOp
   let results = (outs Variadic<AnyType>:$outs);
   let assemblyFormat = "`(` $a `:` type($a) `)` `(` $b `:` type($b) `)` attr-dict";
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {

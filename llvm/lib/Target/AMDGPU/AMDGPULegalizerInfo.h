@@ -175,9 +175,6 @@ public:
   bool legalizeRsqClampIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                  MachineIRBuilder &B) const;
 
-  bool legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
-                                   MachineInstr &MI, Intrinsic::ID IID) const;
-
   bool getImplicitArgPtr(Register DstReg, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 
@@ -216,9 +213,12 @@ public:
 
   bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
                                                   MachineIRBuilder &B) const;
-#else /* LLPC_BUILD_GFX12 */
-  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+
 #endif /* LLPC_BUILD_GFX12 */
+  bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
+                      Intrinsic::ID IID) const;
+
+  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;

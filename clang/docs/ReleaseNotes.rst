@@ -95,17 +95,22 @@ ABI Changes in This Version
 - Fixed Microsoft calling convention when returning classes that have a deleted
   copy assignment operator. Such a class should be returned indirectly.
 
+- Removed the global alias that was pointing to AArch64 Function Multiversioning
+  ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
+  suffix got removed from the name mangling. The alias interacts badly with
+  GlobalOpt (see the issue #96197).
+  
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
   earlier versions of Clang unless such code is built with the compiler option
   `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
 
-
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
 - The text ast-dumper has improved printing of TemplateArguments.
+- The text decl-dumper prints template parameters' trailing requires expressions now.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -141,6 +146,22 @@ Clang Frontend Potentially Breaking Changes
 
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
+
+- The comment parser now matches comments to declarations even if there is a
+  preprocessor macro in between the comment and declaration. This change is
+  intended to improve Clang's support for parsing documentation comments and
+  to better conform to Doxygen's behavior.
+
+  This has the potential to cause ``-Wdocumentation`` warnings, especially in
+  cases where a function-like macro has a documentation comment and is followed
+  immediately by a normal function. The function-like macro's documentation
+  comments will be attributed to the subsequent function and may cause
+  ``-Wdocumentation`` warnings such as mismatched parameter names, or invalid
+  return documentation comments.
+
+  In cases where the ``-Wdocumentation`` warnings are thrown, the suggested fix
+  is to document the declaration following the macro so that the warnings are
+  fixed.
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
@@ -299,6 +320,12 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+C2y Feature Support
+^^^^^^^^^^^^^^^^^^^
+- Clang now enables C2y mode with ``-std=c2y``. This sets ``__STDC_VERSION__``
+  to ``202400L`` so that it's greater than the value for C23. The value of this
+  macro is subject to change in the future.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - No longer diagnose use of binary literals as an extension in C23 mode. Fixes
@@ -381,6 +408,11 @@ Non-comprehensive list of changes in this release
 
 - ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
   errors and certain default-to-error ``-W`` diagnostics to warnings.
+
+- Support importing C++20 modules in clang-repl.
+
+- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
+  textual and JSON dumping for various ``TypeLoc``-related nodes.
 
 New Compiler Flags
 ------------------
@@ -511,6 +543,11 @@ Attribute Changes in Clang
      };
 
 
+- Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
+  ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
+  The attributes declare constraints about a function's behavior pertaining to blocking and
+  heap memory allocation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -608,9 +645,18 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
+- Clang now has an improved error message for captures that refer to a class member.
+  Fixes #GH94764.
+
 - Clang now diagnoses unsupported class declarations for ``std::initializer_list<E>`` when they are
   used rather than when they are needed for constant evaluation or when code is generated for them.
   The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
+
+- Clang now diagnoses dangling cases where a pointer is assigned to a temporary
+  that will be destroyed at the end of the full expression.
+  Fixes #GH54492.
+
+- Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -724,6 +770,9 @@ Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
+
+- Clang now allows pointee types of atomic builtin arguments to be complete template types
+  that was not instantiated elsewhere.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -915,6 +964,7 @@ Bug Fixes to C++ Support
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
+- Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1091,6 +1141,11 @@ clang-format
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
+- Adds ``KeepEmptyLines`` option to deprecate ``KeepEmptyLinesAtEOF``
+  and ``KeepEmptyLinesAtTheStartOfBlocks``.
+- Add ``ExceptDoubleParentheses`` sub-option for ``SpacesInParensOptions``
+  to override addition of spaces between multiple, non-redundant parentheses
+  similar to the rules used for ``RemoveParentheses``.
 
 libclang
 --------
@@ -1118,11 +1173,6 @@ Crash and bug fixes
 
 Improvements
 ^^^^^^^^^^^^
-
-- Support importing C++20 modules in clang-repl.
-
-- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
-  textual and JSON dumping for various ``TypeLoc``-related nodes.
 
 Moved checkers
 ^^^^^^^^^^^^^^

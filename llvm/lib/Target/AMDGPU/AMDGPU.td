@@ -768,6 +768,12 @@ def FeatureAtomicGlobalPkAddBF16Inst : SubtargetFeature<"atomic-global-pk-add-bf
  [FeatureFlatGlobalInsts]
 >;
 
+def FeatureAtomicBufferPkAddBF16Inst : SubtargetFeature<"atomic-buffer-pk-add-bf16-inst",
+ "HasAtomicBufferPkAddBF16Inst",
+ "true",
+ "Has buffer_atomic_pk_add_bf16 instruction"
+>;
+
 def FeatureAtomicCSubNoRtnInsts : SubtargetFeature<"atomic-csub-no-rtn-insts",
   "HasAtomicCSubNoRtnInsts",
   "true",
@@ -1079,18 +1085,18 @@ def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "RequiresCOV6",
   "true",
   "Target Requires Code Object V6"
+#ifdef LLPC_BUILD_GFX12
 >;
 
-#ifdef LLPC_BUILD_GFX12
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
 // restoring the callee-saved registers.
 def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
   "UseBlockVGPROpsForCSR",
   "true",
   "Use block load/store for VGPR callee saved registers"
+#endif /* LLPC_BUILD_GFX12 */
 >;
 
-#endif /* LLPC_BUILD_GFX12 */
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1622,6 +1628,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureAtomicFlatPkAdd16Insts,
    FeatureAtomicBufferGlobalPkAddF16Insts,
    FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeatureExtendedImageInsts,
@@ -1634,12 +1641,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
-#ifdef LLPC_BUILD_GFX12
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs]>;
-#else /* LLPC_BUILD_GFX12 */
-   FeatureMaxHardClauseLength32]>;
-#endif /* LLPC_BUILD_GFX12 */
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2033,6 +2036,7 @@ def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
 def NotHasMed3_16 : Predicate<"!Subtarget->hasMed3_16()">;
+def HasMed3_16 : Predicate<"Subtarget->hasMed3_16()">;
 
 def HasMinMaxDenormModes : Predicate<"Subtarget->supportsMinMaxDenormModes()">;
 def NotHasMinMaxDenormModes : Predicate<"!Subtarget->supportsMinMaxDenormModes()">;
@@ -2204,7 +2208,10 @@ def HasAtomicBufferGlobalPkAddF16Insts
   AssemblerPredicate<(all_of FeatureAtomicBufferGlobalPkAddF16Insts)>;
 def HasAtomicGlobalPkAddBF16Inst
   : Predicate<"Subtarget->hasAtomicGlobalPkAddBF16Inst()">,
-  AssemblerPredicate<(all_of FeatureAtomicGlobalPkAddBF16Inst)>;
+    AssemblerPredicate<(all_of FeatureAtomicGlobalPkAddBF16Inst)>;
+def HasAtomicBufferPkAddBF16Inst
+  : Predicate<"Subtarget->hasAtomicBufferPkAddBF16Inst()">,
+    AssemblerPredicate<(all_of FeatureAtomicBufferPkAddBF16Inst)>;
 def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;

@@ -171,6 +171,7 @@ protected:
   bool HasAtomicBufferGlobalPkAddF16Insts = false;
   bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
+  bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
@@ -873,6 +874,10 @@ public:
     return HasAtomicGlobalPkAddBF16Inst;
   }
 
+  bool hasAtomicBufferPkAddBF16Inst() const {
+    return HasAtomicBufferPkAddBF16Inst;
+  }
+
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
@@ -1369,10 +1374,6 @@ public:
   // of sign-extending.
   bool hasGetPCZeroExtension() const { return GFX12Insts; }
 
-  // \returns true if the target supports signed immediate offset for SMRD
-  // instructions.
-  bool hasSignedSMRDImmOffset() const { return getGeneration() >= GFX9; }
-
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);
@@ -1603,6 +1604,8 @@ public:
 
   bool hasFlatScratchInit() const { return FlatScratchInit; }
 
+  bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
+
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
 
   unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
@@ -1666,6 +1669,8 @@ private:
   bool DispatchID = false;
 
   bool FlatScratchInit = false;
+
+  bool PrivateSegmentSize = false;
 
   unsigned NumKernargPreloadSGPRs = 0;
 

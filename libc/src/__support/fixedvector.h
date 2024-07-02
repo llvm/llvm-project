@@ -90,6 +90,11 @@ public:
 
   LIBC_INLINE constexpr iterator begin() { return store.begin(); }
   LIBC_INLINE constexpr iterator end() { return iterator{&store[item_count]}; }
+
+  LIBC_INLINE constexpr const_iterator begin() const { return store.begin(); }
+  LIBC_INLINE constexpr const_iterator end() const {
+    return const_iterator{&store[item_count]};
+  }
 };
 
 } // namespace LIBC_NAMESPACE

@@ -2896,7 +2896,7 @@ std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
   // For unbuffered smem loads, it is illegal for the Immediate Offset to be
   // negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
   // Handle case where SOffset is not present.
-  if (!IsBuffer && hasSMRDSignedImmOffset(ST) && !HasSOffset && ByteOffset < 0)
+  if (!IsBuffer && !HasSOffset && ByteOffset < 0 && hasSMRDSignedImmOffset(ST))
     return std::nullopt;
 
   if (isGFX12Plus(ST)) // 24 bit signed offsets

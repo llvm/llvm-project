@@ -462,7 +462,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
-    static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
+    static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
           mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
@@ -1368,7 +1368,7 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
+    ::llvm::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
         SmallVectorImpl<OpFoldResult> &results) {
       return success();
     }
@@ -2408,7 +2408,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -3037,7 +3037,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::PropertiesWithCustomPrint &prop);
     static void writeToMlirBytecode(
@@ -3045,7 +3045,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
         const test::PropertiesWithCustomPrint &prop);
   }];
   let extraClassDefinition = [{
-    ::mlir::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
+    ::llvm::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &reader,
         test::PropertiesWithCustomPrint &prop) {
       StringRef label;
@@ -3101,7 +3101,7 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::VersionedProperties &prop);
     static void writeToMlirBytecode(
