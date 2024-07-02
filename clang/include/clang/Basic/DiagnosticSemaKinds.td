@@ -2419,6 +2419,7 @@ def err_selected_explicit_constructor : Error<
   "chosen constructor is explicit in copy-initialization">;
 def note_explicit_ctor_deduction_guide_here : Note<
   "explicit %select{constructor|deduction guide}0 declared here">;
+def note_implicit_deduction_guide : Note<"implicit deduction guide declared as '%0'">;
 
 // C++11 auto
 def warn_cxx98_compat_auto_type_specifier : Warning<
