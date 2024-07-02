@@ -12,7 +12,7 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(unsigned long long, strtoull,
+LLVM_LIBC_FUNCTION(unsigned long long, strtoull_l,
                    (const char *__restrict str, char **__restrict str_end,
                     int base, locale_t)) {
 
