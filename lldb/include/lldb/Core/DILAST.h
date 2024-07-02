@@ -72,16 +72,11 @@ enum class DILNodeKind {
   kDILErrorNode,
   kLiteralNode,
   kIdentifierNode,
-  kSizeOfNode,
   kBuiltinFunctionCallNode,
   kCStyleCastNode,
-  kCxxStaticCastNode,
-  kCxxReinterpretCastNode,
   kMemberOfNode,
   kArraySubscriptNode,
-  kBinaryOpNode,
   kUnaryOpNode,
-  kTernaryOpNode,
   kSmartPtrToPtrDecay
 };
 
@@ -94,72 +89,12 @@ enum class CStyleCastKind {
   kReference,
 };
 
-/// The Cxx static casts allowed by DIL.
-enum class CxxStaticCastKind {
-  kNoOp,
-  kArithmetic,
-  kEnumeration,
-  kPointer,
-  kNullptr,
-  kBaseToDerived,
-  kDerivedToBase,
-};
-
-/// The binary operators recognized by DIL.
-enum class BinaryOpKind {
-  Mul,       // "*"
-  Div,       // "/"
-  Rem,       // "%"
-  Add,       // "+"
-  Sub,       // "-"
-  Shl,       // "<<"
-  Shr,       // ">>"
-  LT,        // "<"
-  GT,        // ">"
-  LE,        // "<="
-  GE,        // ">="
-  EQ,        // "=="
-  NE,        // "!="
-  And,       // "&"
-  Xor,       // "^"
-  Or,        // "|"
-  LAnd,      // "&&"
-  LOr,       // "||"
-  Assign,    // "="
-  MulAssign, // "*="
-  DivAssign, // "/="
-  RemAssign, // "%="
-  AddAssign, // "+="
-  SubAssign, // "-="
-  ShlAssign, // "<<="
-  ShrAssign, // ">>="
-  AndAssign, // "&="
-  XorAssign, // "^="
-  OrAssign,  // "|="
-};
-
 /// The Unary operators recognized by DIL.
 enum class UnaryOpKind {
-  PostInc, // "++"
-  PostDec, // "--"
-  PreInc,  // "++"
-  PreDec,  // "--"
   AddrOf,  // "&"
   Deref,   // "*"
-  Plus,    // "+"
   Minus,   // "-"
-  Not,     // "~"
-  LNot,    // "!"
 };
-
-/// Helper functions for DIL AST node parsing.
-
-/// Translates clang tokens to BinaryOpKind.
-BinaryOpKind
-clang_token_kind_to_binary_op_kind(clang::tok::TokenKind token_kind);
-
-/// Returns bool indicating whether or not the input kind is an assignment.
-bool binary_op_kind_is_comp_assign(BinaryOpKind kind);
 
 /// Given a string representing a type, returns the CompilerType corresponding
 /// to the named type, if it exists.
@@ -357,48 +292,6 @@ private:
   std::unique_ptr<IdentifierInfo> m_identifier;
 };
 
-class SizeOfNode : public DILASTNode {
-public:
-  SizeOfNode(clang::SourceLocation location, CompilerType type,
-             CompilerType operand)
-      : DILASTNode(location), m_type(type), m_operand(operand) {}
-
-  void Accept(DILVisitor *v) const override;
-  bool is_rvalue() const override { return true; }
-  CompilerType result_type() const override { return m_type; }
-  DILNodeKind what_am_i() const override { return DILNodeKind::kSizeOfNode; }
-
-  CompilerType operand() const { return m_operand; }
-
-private:
-  CompilerType m_type;
-  CompilerType m_operand;
-};
-
-class BuiltinFunctionCallNode : public DILASTNode {
-public:
-  BuiltinFunctionCallNode(clang::SourceLocation location,
-                          CompilerType result_type, std::string name,
-                          std::vector<ParseResult> arguments)
-      : DILASTNode(location), m_result_type(result_type),
-        m_name(std::move(name)), m_arguments(std::move(arguments)) {}
-
-  void Accept(DILVisitor *v) const override;
-  bool is_rvalue() const override { return true; }
-  CompilerType result_type() const override { return m_result_type; }
-  DILNodeKind what_am_i() const override {
-    return DILNodeKind::kBuiltinFunctionCallNode;
-  }
-
-  std::string name() const { return m_name; }
-  const std::vector<ParseResult> &arguments() const { return m_arguments; };
-
-private:
-  CompilerType m_result_type;
-  std::string m_name;
-  std::vector<ParseResult> m_arguments;
-};
-
 class CStyleCastNode : public DILASTNode {
 public:
   CStyleCastNode(clang::SourceLocation location, CompilerType type,
@@ -423,74 +316,6 @@ private:
   CompilerType m_type;
   ParseResult m_rhs;
   CStyleCastKind m_kind;
-};
-
-class CxxStaticCastNode : public DILASTNode {
-public:
-  CxxStaticCastNode(clang::SourceLocation location, CompilerType type,
-                    ParseResult rhs, CxxStaticCastKind kind, bool is_rvalue)
-      : DILASTNode(location), m_type(type), m_rhs(std::move(rhs)), m_kind(kind),
-        m_is_rvalue(is_rvalue) {
-    assert(kind != CxxStaticCastKind::kBaseToDerived &&
-           kind != CxxStaticCastKind::kDerivedToBase &&
-           "invalid constructor for base-to-derived and derived-to-base casts");
-  }
-
-  CxxStaticCastNode(clang::SourceLocation location, CompilerType type,
-                    ParseResult rhs, std::vector<uint32_t> idx, bool is_rvalue)
-      : DILASTNode(location), m_type(type), m_rhs(std::move(rhs)),
-        m_idx(std::move(idx)), m_kind(CxxStaticCastKind::kDerivedToBase),
-        m_is_rvalue(is_rvalue) {}
-
-  CxxStaticCastNode(clang::SourceLocation location, CompilerType type,
-                    ParseResult rhs, uint64_t offset, bool is_rvalue)
-      : DILASTNode(location), m_type(type), m_rhs(std::move(rhs)),
-        m_offset(offset), m_kind(CxxStaticCastKind::kBaseToDerived),
-        m_is_rvalue(is_rvalue) {}
-
-  void Accept(DILVisitor *v) const override;
-  bool is_rvalue() const override { return m_is_rvalue; }
-  CompilerType result_type() const override { return m_type; }
-  DILNodeKind what_am_i() const override {
-    return DILNodeKind::kCxxStaticCastNode;
-  }
-
-  CompilerType type() const { return m_type; }
-  DILASTNode *rhs() const { return m_rhs.get(); }
-  const std::vector<uint32_t> &idx() const { return m_idx; }
-  uint64_t offset() const { return m_offset; }
-  CxxStaticCastKind kind() const { return m_kind; }
-
-private:
-  CompilerType m_type;
-  ParseResult m_rhs;
-  std::vector<uint32_t> m_idx;
-  uint64_t m_offset = 0;
-  CxxStaticCastKind m_kind;
-  bool m_is_rvalue;
-};
-
-class CxxReinterpretCastNode : public DILASTNode {
-public:
-  CxxReinterpretCastNode(clang::SourceLocation location, CompilerType type,
-                         ParseResult rhs, bool is_rvalue)
-      : DILASTNode(location), m_type(type), m_rhs(std::move(rhs)),
-        m_is_rvalue(is_rvalue) {}
-
-  void Accept(DILVisitor *v) const override;
-  bool is_rvalue() const override { return m_is_rvalue; }
-  CompilerType result_type() const override { return m_type; }
-  DILNodeKind what_am_i() const override {
-    return DILNodeKind::kCxxReinterpretCastNode;
-  }
-
-  CompilerType type() const { return m_type; }
-  DILASTNode *rhs() const { return m_rhs.get(); }
-
-private:
-  CompilerType m_type;
-  ParseResult m_rhs;
-  bool m_is_rvalue;
 };
 
 class MemberOfNode : public DILASTNode {
@@ -557,41 +382,6 @@ private:
   ParseResult m_index;
 };
 
-class BinaryOpNode : public DILASTNode {
-public:
-  BinaryOpNode(clang::SourceLocation location, CompilerType result_type,
-               BinaryOpKind kind, ParseResult lhs, ParseResult rhs,
-               CompilerType comp_assign_type,
-               ValueObject *val_obj_ptr = nullptr)
-      : DILASTNode(location), m_result_type(result_type), m_kind(kind),
-        m_lhs(std::move(lhs)), m_rhs(std::move(rhs)),
-        m_comp_assign_type(comp_assign_type) {
-    if (val_obj_ptr)
-      m_val_obj_sp = val_obj_ptr->GetSP();
-  }
-
-  void Accept(DILVisitor *v) const override;
-  bool is_rvalue() const override {
-    return !binary_op_kind_is_comp_assign(m_kind);
-  }
-  CompilerType result_type() const override { return m_result_type; }
-  DILNodeKind what_am_i() const override { return DILNodeKind::kBinaryOpNode; }
-
-  BinaryOpKind kind() const { return m_kind; }
-  DILASTNode *lhs() const { return m_lhs.get(); }
-  DILASTNode *rhs() const { return m_rhs.get(); }
-  CompilerType comp_assign_type() const { return m_comp_assign_type; }
-  lldb::ValueObjectSP get_valobj_sp() const { return m_val_obj_sp; }
-
-private:
-  CompilerType m_result_type;
-  BinaryOpKind m_kind;
-  ParseResult m_lhs;
-  ParseResult m_rhs;
-  CompilerType m_comp_assign_type;
-  lldb::ValueObjectSP m_val_obj_sp;
-};
-
 class UnaryOpNode : public DILASTNode {
 public:
   UnaryOpNode(clang::SourceLocation location, CompilerType result_type,
@@ -610,34 +400,6 @@ public:
 private:
   CompilerType m_result_type;
   UnaryOpKind m_kind;
-  ParseResult m_rhs;
-};
-
-class TernaryOpNode : public DILASTNode {
-public:
-  TernaryOpNode(clang::SourceLocation location, CompilerType result_type,
-                ParseResult cond, ParseResult lhs, ParseResult rhs)
-      : DILASTNode(location), m_result_type(result_type),
-        m_cond(std::move(cond)), m_lhs(std::move(lhs)), m_rhs(std::move(rhs)) {}
-
-  void Accept(DILVisitor *v) const override;
-  bool is_rvalue() const override {
-    return m_lhs->is_rvalue() || m_rhs->is_rvalue();
-  }
-  bool is_bitfield() const override {
-    return m_lhs->is_bitfield() || m_rhs->is_bitfield();
-  }
-  CompilerType result_type() const override { return m_result_type; }
-  DILNodeKind what_am_i() const override { return DILNodeKind::kTernaryOpNode; }
-
-  DILASTNode *cond() const { return m_cond.get(); }
-  DILASTNode *lhs() const { return m_lhs.get(); }
-  DILASTNode *rhs() const { return m_rhs.get(); }
-
-private:
-  CompilerType m_result_type;
-  ParseResult m_cond;
-  ParseResult m_lhs;
   ParseResult m_rhs;
 };
 
@@ -672,16 +434,10 @@ public:
   virtual void Visit(const DILErrorNode *node) = 0;
   virtual void Visit(const LiteralNode *node) = 0;
   virtual void Visit(const IdentifierNode *node) = 0;
-  virtual void Visit(const SizeOfNode *node) = 0;
-  virtual void Visit(const BuiltinFunctionCallNode *node) = 0;
   virtual void Visit(const CStyleCastNode *node) = 0;
-  virtual void Visit(const CxxStaticCastNode *node) = 0;
-  virtual void Visit(const CxxReinterpretCastNode *node) = 0;
   virtual void Visit(const MemberOfNode *node) = 0;
   virtual void Visit(const ArraySubscriptNode *node) = 0;
-  virtual void Visit(const BinaryOpNode *node) = 0;
   virtual void Visit(const UnaryOpNode *node) = 0;
-  virtual void Visit(const TernaryOpNode *node) = 0;
   virtual void Visit(const SmartPtrToPtrDecay *node) = 0;
 };
 

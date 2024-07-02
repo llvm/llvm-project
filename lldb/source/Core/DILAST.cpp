@@ -71,94 +71,6 @@ lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
   return value_sp;
 }
 
-BinaryOpKind
-clang_token_kind_to_binary_op_kind(clang::tok::TokenKind token_kind) {
-  switch (token_kind) {
-  case clang::tok::star:
-    return BinaryOpKind::Mul;
-  case clang::tok::slash:
-    return BinaryOpKind::Div;
-  case clang::tok::percent:
-    return BinaryOpKind::Rem;
-  case clang::tok::plus:
-    return BinaryOpKind::Add;
-  case clang::tok::minus:
-    return BinaryOpKind::Sub;
-  case clang::tok::lessless:
-    return BinaryOpKind::Shl;
-  case clang::tok::greatergreater:
-    return BinaryOpKind::Shr;
-  case clang::tok::less:
-    return BinaryOpKind::LT;
-  case clang::tok::greater:
-    return BinaryOpKind::GT;
-  case clang::tok::lessequal:
-    return BinaryOpKind::LE;
-  case clang::tok::greaterequal:
-    return BinaryOpKind::GE;
-  case clang::tok::equalequal:
-    return BinaryOpKind::EQ;
-  case clang::tok::exclaimequal:
-    return BinaryOpKind::NE;
-  case clang::tok::amp:
-    return BinaryOpKind::And;
-  case clang::tok::caret:
-    return BinaryOpKind::Xor;
-  case clang::tok::pipe:
-    return BinaryOpKind::Or;
-  case clang::tok::ampamp:
-    return BinaryOpKind::LAnd;
-  case clang::tok::pipepipe:
-    return BinaryOpKind::LOr;
-  case clang::tok::equal:
-    return BinaryOpKind::Assign;
-  case clang::tok::starequal:
-    return BinaryOpKind::MulAssign;
-  case clang::tok::slashequal:
-    return BinaryOpKind::DivAssign;
-  case clang::tok::percentequal:
-    return BinaryOpKind::RemAssign;
-  case clang::tok::plusequal:
-    return BinaryOpKind::AddAssign;
-  case clang::tok::minusequal:
-    return BinaryOpKind::SubAssign;
-  case clang::tok::lesslessequal:
-    return BinaryOpKind::ShlAssign;
-  case clang::tok::greatergreaterequal:
-    return BinaryOpKind::ShrAssign;
-  case clang::tok::ampequal:
-    return BinaryOpKind::AndAssign;
-  case clang::tok::caretequal:
-    return BinaryOpKind::XorAssign;
-  case clang::tok::pipeequal:
-    return BinaryOpKind::OrAssign;
-
-  default:
-    break;
-  }
-  llvm_unreachable("did you add an element to BinaryOpKind?");
-}
-
-bool binary_op_kind_is_comp_assign(BinaryOpKind kind) {
-  switch (kind) {
-  case BinaryOpKind::Assign:
-  case BinaryOpKind::MulAssign:
-  case BinaryOpKind::DivAssign:
-  case BinaryOpKind::RemAssign:
-  case BinaryOpKind::AddAssign:
-  case BinaryOpKind::SubAssign:
-  case BinaryOpKind::ShlAssign:
-  case BinaryOpKind::ShrAssign:
-  case BinaryOpKind::AndAssign:
-  case BinaryOpKind::XorAssign:
-  case BinaryOpKind::OrAssign:
-    return true;
-
-  default:
-    return false;
-  }
-}
-
 CompilerType DILASTNode::result_type_deref() const {
   auto type = result_type();
   return type.IsReferenceType() ? type.GetNonReferenceType() : type;
@@ -543,25 +455,13 @@ void LiteralNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
 void IdentifierNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void SizeOfNode::Accept(DILVisitor *v) const { v->Visit(this); }
-
-void BuiltinFunctionCallNode::Accept(DILVisitor *v) const { v->Visit(this); }
-
 void CStyleCastNode::Accept(DILVisitor *v) const { v->Visit(this); }
-
-void CxxStaticCastNode::Accept(DILVisitor *v) const { return v->Visit(this); }
-
-void CxxReinterpretCastNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
 void MemberOfNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
 void ArraySubscriptNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void BinaryOpNode::Accept(DILVisitor *v) const { v->Visit(this); }
-
 void UnaryOpNode::Accept(DILVisitor *v) const { v->Visit(this); }
-
-void TernaryOpNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
 void SmartPtrToPtrDecay::Accept(DILVisitor *v) const { v->Visit(this); }
 
