@@ -120,7 +120,9 @@ InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 
   // Otherwise, we check how many instructions it will take to materialise.
   const DataLayout &DL = getDataLayout();
-  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *getST());
+  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *getST(),
+                                    /*CompressionCost=*/false,
+                                    /*FreeZeroes=*/true);
 }
 
 // Look for patterns of shift followed by AND that can be turned into a pair of
@@ -172,11 +174,22 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // split up large offsets in GEP into better parts than ConstantHoisting
     // can.
     return TTI::TCC_Free;
-  case Instruction::Store:
-    // If the address is a constant, use the materialization cost.
-    if (Idx == 1)
+  case Instruction::Store: {
+    // Use the materialization cost regardless of if it's the address or the
+    // value that is constant, except for if the store is misaligned and
+    // misaligned accesses are not legal (experience shows constant hoisting
+    // can sometimes be harmful in such cases).
+    if (Idx == 1 || !Inst)
       return getIntImmCost(Imm, Ty, CostKind);
-    return TTI::TCC_Free;
+
+    StoreInst *ST = cast<StoreInst>(Inst);
+    if (!getTLI()->allowsMemoryAccessForAlignment(
+            Ty->getContext(), DL, getTLI()->getValueType(DL, Ty),
+            ST->getPointerAddressSpace(), ST->getAlign()))
+      return TTI::TCC_Free;
+
+    return getIntImmCost(Imm, Ty, CostKind);
+  }
   case Instruction::Load:
     // If the address is a constant, use the materialization cost.
     return getIntImmCost(Imm, Ty, CostKind);
