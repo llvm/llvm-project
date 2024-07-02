@@ -14,7 +14,7 @@ enddo
 print *,r
 end program
 
-! CHECK-LABEL   omp.declare_reduction @add_reduction_byref_box_2xi32 : !fir.ref<!fir.box<!fir.array<2xi32>>> init {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_2xi32 : !fir.ref<!fir.box<!fir.array<2xi32>>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<2xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
@@ -32,7 +32,7 @@ end program
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
 ! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<2xi32>>>)
 
-! CHECK-LABEL   } combiner {
+! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<2xi32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<2xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
@@ -63,7 +63,7 @@ end program
 ! CHECK:           omp.yield
 ! CHECK:         }
 
-! CHECK-LABEL   func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFEi) : !fir.ref<i32>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QFEr) : !fir.ref<!fir.array<2xi32>>

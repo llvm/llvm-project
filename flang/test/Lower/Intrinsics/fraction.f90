@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
  
 ! FRACTION
-! CHECK-LABE: fraction_test
+! CHECK-LABEL: fraction_test
 subroutine fraction_test
 
     real(kind=4) :: x1 = 178.1387e-4
