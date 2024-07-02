@@ -10,7 +10,7 @@ typedef half  __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
 
 // CHECK-LABEL: test_flat_add_f32
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, float %{{.+}} syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
 
 // GFX940-LABEL:  test_flat_add_f32
 // GFX940: flat_atomic_add_f32
@@ -19,7 +19,7 @@ half2 test_flat_add_f32(__generic float *addr, float x) {
 }
 
 // CHECK-LABEL: test_flat_add_2f16
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, <2 x half> %{{.+}} syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX940-LABEL:  test_flat_add_2f16
 // GFX940: flat_atomic_pk_add_f16
@@ -28,7 +28,10 @@ half2 test_flat_add_2f16(__generic half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: test_flat_add_2bf16
-// CHECK: call <2 x i16> @llvm.amdgcn.flat.atomic.fadd.v2bf16.p0(ptr %{{.*}}, <2 x i16> %{{.*}})
+// CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, <2 x bfloat> [[BC0]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
+
 // GFX940-LABEL:  test_flat_add_2bf16
 // GFX940: flat_atomic_pk_add_bf16
 short2 test_flat_add_2bf16(__generic short2 *addr, short2 x) {
@@ -36,7 +39,10 @@ short2 test_flat_add_2bf16(__generic short2 *addr, short2 x) {
 }
 
 // CHECK-LABEL: test_global_add_2bf16
-// CHECK: call <2 x i16> @llvm.amdgcn.global.atomic.fadd.v2bf16.p1(ptr addrspace(1) %{{.*}}, <2 x i16> %{{.*}})
+// CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(1) %{{.+}}, <2 x bfloat> [[BC0]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
+
 // GFX940-LABEL:  test_global_add_2bf16
 // GFX940: global_atomic_pk_add_bf16
 short2 test_global_add_2bf16(__global short2 *addr, short2 x) {
