@@ -359,16 +359,15 @@ private:
   // functions. Return true if there are IR transformations and false
   // otherwise.
   bool tryToPromoteWithVTableCmp(
-      CallBase &CB, Instruction *VPtr,
-      const std::vector<PromotionCandidate> &Candidates,
+      CallBase &CB, Instruction *VPtr, ArrayRef<PromotionCandidate> Candidates,
       uint64_t TotalFuncCount, uint32_t NumCandidates,
       MutableArrayRef<InstrProfValueData> ICallProfDataRef,
       VTableGUIDCountsMap &VTableGUIDCounts);
 
   // Return true if it's profitable to compare vtables for the callsite.
-  bool isProfitableToCompareVTables(
-      const CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
-      uint64_t TotalCount);
+  bool isProfitableToCompareVTables(const CallBase &CB,
+                                    ArrayRef<PromotionCandidate> Candidates,
+                                    uint64_t TotalCount);
 
   // Given an indirect callsite and the list of function candidates, compute
   // the following vtable information in output parameters and return vtable
@@ -712,9 +711,8 @@ void IndirectCallPromoter::updateVPtrValueProfiles(
 }
 
 bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
-    CallBase &CB, Instruction *VPtr,
-    const std::vector<PromotionCandidate> &Candidates, uint64_t TotalFuncCount,
-    uint32_t NumCandidates,
+    CallBase &CB, Instruction *VPtr, ArrayRef<PromotionCandidate> Candidates,
+    uint64_t TotalFuncCount, uint32_t NumCandidates,
     MutableArrayRef<InstrProfValueData> ICallProfDataRef,
     VTableGUIDCountsMap &VTableGUIDCounts) {
   SmallVector<uint64_t, 4> PromotedFuncCount;
@@ -839,7 +837,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
 // TODO: Return false if the function addressing and vtable load instructions
 // cannot sink to indirect fallback.
 bool IndirectCallPromoter::isProfitableToCompareVTables(
-    const CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
+    const CallBase &CB, ArrayRef<PromotionCandidate> Candidates,
     uint64_t TotalCount) {
   if (!EnableVTableProfileUse || Candidates.empty())
     return false;

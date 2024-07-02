@@ -19,6 +19,7 @@
 #include "State.h"
 #include "Synchronization.h"
 #include "Types.h"
+#include "Workshare.h"
 
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
@@ -37,6 +38,7 @@ inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
 
   state::init(IsSPMD, KernelEnvironment, KernelLaunchEnvironment);
   allocator::init(IsSPMD, KernelEnvironment);
+  workshare::init(IsSPMD);
 }
 
 /// Simple generic state machine for worker threads.

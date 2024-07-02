@@ -3282,23 +3282,11 @@ def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
-  "%0 attribute requires parameter %1 to be %select{"
-  "int or bool"
-  "|an integer constant"
-  "|a string"
-  "|an identifier"
-  "|a constant expression"
-  "|a builtin function"
-  "|nullptr or a bool, int, or enum literal}2">;
+  "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
+  "constant|a string|an identifier|a constant expression|a builtin function}2">;
 def err_attribute_argument_type : Error<
-  "%0 attribute requires %select{"
-  "int or bool"
-  "|an integer constant"
-  "|a string"
-  "|an identifier"
-  "|a constant expression"
-  "|a builtin function"
-  "|a pointer or a bool, int, or enum literal}1">;
+  "%0 attribute requires %select{int or bool|an integer "
+  "constant|a string|an identifier}1">;
 def err_attribute_argument_out_of_range : Error<
   "%0 attribute requires integer constant between %1 and %2 inclusive">;
 def err_init_priority_object_attr : Error<
@@ -3750,8 +3738,7 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions"
-  "|functions that return bool, integer, or a pointer type}2">,
+  "|non-K&R-style functions}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
@@ -8207,6 +8194,8 @@ let CategoryName = "Lambda Issue" in {
     "'&' must precede a capture when the capture default is '='">;
   def err_capture_does_not_name_variable : Error<
     "%0 in capture list does not name a variable">;
+  def err_capture_class_member_does_not_name_variable : Error<
+    "class member %0 cannot appear in capture list as it is not a variable">;
   def err_capture_non_automatic_variable : Error<
     "%0 cannot be captured because it does not have automatic storage "
     "duration">;
@@ -10120,6 +10109,11 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
+def warn_dangling_pointer_assignment : Warning<
+   "object backing the pointer %0 "
+   "will be destroyed at the end of the full-expression">,
+   InGroup<DanglingAssignment>;
+
 def warn_unsupported_lifetime_extension : Warning<
   "lifetime extension of "
   "%select{temporary|backing array of initializer list}0 created "
@@ -12327,6 +12321,9 @@ def warn_hlsl_availability : Warning<
 def warn_hlsl_availability_unavailable :
   Warning<err_unavailable.Summary>,
   InGroup<HLSLAvailability>, DefaultError;
+
+def err_hlsl_export_not_on_function : Error<
+  "export declaration can only be used on functions">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

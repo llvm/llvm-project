@@ -269,6 +269,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
 
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  with a new option `AllowInternalLinkage` to disable the warning for variables
+  with internal linkage.
+
 - Improved :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
   hash preprocessing token.

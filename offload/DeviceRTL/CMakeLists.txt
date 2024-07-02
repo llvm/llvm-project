@@ -91,6 +91,7 @@ set(include_files
   ${include_directory}/Utils.h
   ${include_directory}/Xteamr.h
   ${include_directory}/Xteams.h
+  ${include_directory}/Workshare.h
 )
 
 set(src_files

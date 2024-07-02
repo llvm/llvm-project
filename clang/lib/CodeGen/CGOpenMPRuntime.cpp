@@ -2574,6 +2574,15 @@ void CGOpenMPRuntime::emitForDispatchInit(
                       Args);
 }
 
+void CGOpenMPRuntime::emitForDispatchDeinit(CodeGenFunction &CGF,
+                                            SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
+  // Call __kmpc_dispatch_deinit(ident_t *loc, kmp_int32 tid);
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
+  CGF.EmitRuntimeCall(OMPBuilder.createDispatchDeinitFunction(), Args);
+}
+
 static void emitForStaticInitCall(
     CodeGenFunction &CGF, llvm::Value *UpdateLocation, llvm::Value *ThreadId,
     llvm::FunctionCallee ForStaticInitFunction, OpenMPSchedType Schedule,
@@ -12236,6 +12245,11 @@ void CGOpenMPSIMDRuntime::emitForDispatchInit(
     CodeGenFunction &CGF, SourceLocation Loc,
     const OpenMPScheduleTy &ScheduleKind, unsigned IVSize, bool IVSigned,
     bool Ordered, const DispatchRTInput &DispatchValues) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitForDispatchDeinit(CodeGenFunction &CGF,
+                                                SourceLocation Loc) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
