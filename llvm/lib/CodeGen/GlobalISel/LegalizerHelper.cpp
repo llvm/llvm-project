@@ -5719,6 +5719,7 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
                                         ArrayRef<Register> Src1Regs,
                                         ArrayRef<Register> Src2Regs,
                                         LLT NarrowTy) {
+  const LLT S1 = LLT::scalar(1);
   MachineIRBuilder &B = MIRBuilder;
   unsigned SrcParts = Src1Regs.size();
   unsigned DstParts = DstRegs.size();
@@ -5730,6 +5731,8 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
 
   unsigned CarrySumPrevDstIdx;
   SmallVector<Register, 4> Factors;
+
+  const Register Zero = B.buildConstant(NarrowTy, 0).getReg(0);
 
   for (DstIdx = 1; DstIdx < DstParts; DstIdx++) {
     // Collect low parts of muls for DstIdx.
@@ -5755,15 +5758,15 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
     // Add all factors and accumulate all carries into CarrySum.
     if (DstIdx != DstParts - 1) {
       MachineInstrBuilder Uaddo =
-          B.buildUAddo(NarrowTy, LLT::scalar(1), Factors[0], Factors[1]);
+          B.buildUAddo(NarrowTy, S1, Factors[0], Factors[1]);
       FactorSum = Uaddo.getReg(0);
-      CarrySum = B.buildZExt(NarrowTy, Uaddo.getReg(1)).getReg(0);
+      CarrySum = Zero;
       for (unsigned i = 2; i < Factors.size(); ++i) {
-        MachineInstrBuilder Uaddo =
-            B.buildUAddo(NarrowTy, LLT::scalar(1), FactorSum, Factors[i]);
-        FactorSum = Uaddo.getReg(0);
-        MachineInstrBuilder Carry = B.buildZExt(NarrowTy, Uaddo.getReg(1));
-        CarrySum = B.buildAdd(NarrowTy, CarrySum, Carry).getReg(0);
+        auto Uadde =
+            B.buildUAdde(NarrowTy, S1, FactorSum, Factors[i], Uaddo.getReg(1));
+        FactorSum = Uadde.getReg(0);
+        CarrySum = B.buildUAdde(NarrowTy, S1, CarrySum, Zero, Uadde.getReg(1))
+                       .getReg(0);
       }
     } else {
       // Since value for the next index is not calculated, neither is CarrySum.
