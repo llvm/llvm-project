@@ -5721,6 +5721,62 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  // !!! This pass may be invoked at several points in the compilation
+  // pipeline, but we only want to emit these remarks once.  The outermost
+  // condition below is a somewhat crude attempt at ensuring that.
+  // Note that if -save-temps is used, duplicate remarks may be shown.
+  if (isOpenMPDevice(M)) {
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      DominatorTree DT(F);
+      LoopInfo LI(DT);
+      for (const auto &L : LI) {
+        SmallVector<const Instruction *, 4> ImperfectMemInsns;
+        SmallVector<const Instruction *, 4> OtherMemInsns;
+        if (L->getName().starts_with("omp")) {
+          const auto &BBs = L->getBlocksVector();
+          for (const auto &BB : BBs) {
+            for (const auto &I : *BB) {
+              if (I.mayReadOrWriteMemory()) {
+                if (I.hasMetadata("llvm.omp.loop.imperfection")) {
+                  ImperfectMemInsns.push_back(&I);
+                } else {
+                  OtherMemInsns.push_back(&I);
+                }
+              }
+            }
+          }
+        }
+        if (!ImperfectMemInsns.empty()) {
+          AliasAnalysis &AA = FAM.getResult<AAManager>(F);
+          const Instruction *BadInsn = nullptr;
+          for (auto &O : OtherMemInsns) {
+            MemoryLocation OML = MemoryLocation::get(O);
+            for (auto &I : ImperfectMemInsns) {
+              MemoryLocation IML = MemoryLocation::get(I);
+              if (!AA.isNoAlias(OML, IML)) {
+                BadInsn = I;
+                break;
+              }
+            }
+            if (BadInsn)
+              break;
+          }
+          if (BadInsn) {
+            auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+            OptimizationRemarkAnalysis ORA(DEBUG_TYPE, "OMP190", BadInsn);
+            ORE.emit([&ORA]() {
+              return ORA << "Collapsing imperfectly-nested loop may "
+                            "introduce unexpected data dependencies";
+            });
+          }
+        }
+      }
+    }
+  }
+
   KernelSet Kernels = getDeviceKernels(M);
 
   if (PrintModuleBeforeOptimizations)
