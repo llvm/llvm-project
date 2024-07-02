@@ -10,12 +10,9 @@
 
 
 class Enumeration:
-    def __init__(self, name, value=None):
+    def __init__(self, name, value):
         self.name = name
         self.value = value
 
     def __str__(self):
-        if self.value != None:
-            return f"{self.name} = {self.value}"
-        else:
-            return f"{self.name}"
+        return f"{self.name} = {self.value}"

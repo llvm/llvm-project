@@ -19,9 +19,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.output_dir = Path(
             args.output_dir
             if args.output_dir
-            else output_dir_env 
-            if output_dir_env 
-            else "libc/newhdrgen/tests/output"
+            else output_dir_env if output_dir_env else "libc/newhdrgen/tests/output"
         )
 
         self.maxDiff = None
@@ -50,7 +48,11 @@ class TestHeaderGenIntegration(unittest.TestCase):
         with expected_file.open("r") as exp_file:
             exp_content = exp_file.read()
 
-        self.assertEqual(gen_content, exp_content)
+        self.assertEqual(
+            gen_content,
+            exp_content,
+            f"Generated file {generated_file} does not match expected file {expected_file}",
+        )
 
     def test_generate_header(self):
         yaml_file = Path("libc/newhdrgen/tests/input/test_small.yaml")
@@ -63,7 +65,10 @@ class TestHeaderGenIntegration(unittest.TestCase):
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True)
 
-        self.run_script(yaml_file, h_def_file, self.output_dir)
+        try:
+            self.run_script(yaml_file, h_def_file, self.output_dir)
+        except subprocess.CalledProcessError as e:
+            self.fail(f"Subprocess failed with return code {e.returncode}")
 
         self.compare_files(output_file, expected_output_file)
 
