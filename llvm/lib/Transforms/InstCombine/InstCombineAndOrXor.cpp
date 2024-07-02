@@ -1225,23 +1225,46 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
   ICmpInst::Predicate Pred1, Pred2;
   Value *V1, *V2;
   const APInt *C1, *C2;
-  if (!match(ICmp1, m_ICmp(Pred1, m_Value(V1), m_APInt(C1))) ||
-      !match(ICmp2, m_ICmp(Pred2, m_Value(V2), m_APInt(C2))))
-    return nullptr;
-
-  // Look through add of a constant offset on V1, V2, or both operands. This
-  // allows us to interpret the V + C' < C'' range idiom into a proper range.
   const APInt *Offset1 = nullptr, *Offset2 = nullptr;
-  if (V1 != V2) {
-    Value *X;
-    if (match(V1, m_Add(m_Value(X), m_APInt(Offset1))))
-      V1 = X;
-    if (match(V2, m_Add(m_Value(X), m_APInt(Offset2))))
-      V2 = X;
+  bool Matched = false;
+
+  if (match(ICmp1, m_ICmp(Pred1, m_Value(V1), m_APInt(C1))) &&
+      match(ICmp2, m_ICmp(Pred2, m_Value(V2), m_APInt(C2)))) {
+    // Look through add of a constant offset on V1, V2, or both operands. This
+    // allows us to interpret the V + C' < C'' range idiom into a proper range.
+    if (V1 != V2) {
+      Value *X;
+      if (match(V1, m_Add(m_Value(X), m_APInt(Offset1))))
+        V1 = X;
+      if (match(V2, m_Add(m_Value(X), m_APInt(Offset2))))
+        V2 = X;
+    }
+
+    Matched = V1 == V2;
   }
 
-  if (V1 != V2)
+  if (!Matched) {
+    Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr, *E = nullptr;
+    // Match (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E)
+    auto MaskPair =
+        getMaskedTypeForICmpPair(A, B, C, D, E, ICmp1, ICmp2, Pred1, Pred2);
+    // Match (icmp(A & B) ==/!= C1) &/| (icmp(A & B) ==/!= C2)
+    if (MaskPair && B == D && match(C, m_APIntAllowUndef(C1)) &&
+        match(E, m_APIntAllowUndef(C2)) &&
+        (match(ICmp1->getOperand(0),
+               m_CombineAnd(m_Value(V1),
+                            m_c_And(m_Specific(A), m_Specific(B)))) ||
+         match(ICmp2->getOperand(0),
+               m_CombineAnd(m_Value(V1),
+                            m_c_And(m_Specific(A), m_Specific(D)))))) {
+      V2 = V1;
+      Matched = true;
+    }
+  }
+
+  if (!Matched)
     return nullptr;
+  assert(V1 == V2);
 
   ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
       IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, *C1);
@@ -3345,6 +3368,9 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                               Constant::getAllOnesValue(LHS0->getType()));
   }
 
+  if (Value *V = foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd))
+    return V;
+
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   if (!LHSC || !RHSC)
     return nullptr;
@@ -3418,7 +3444,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
+  return nullptr;
 }
 
 static Value *foldOrOfInversions(BinaryOperator &I,
