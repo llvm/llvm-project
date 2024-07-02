@@ -971,12 +971,12 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v1, s98, 3
 ; CHECK-NEXT:    v_writelane_b32 v0, s92, 61
 ; CHECK-NEXT:    v_writelane_b32 v1, s99, 4
+; CHECK-NEXT:    s_mov_b32 s49, s12
 ; CHECK-NEXT:    v_writelane_b32 v0, s93, 62
 ; CHECK-NEXT:    v_writelane_b32 v1, s100, 5
-; CHECK-NEXT:    s_mov_b32 s49, s12
+; CHECK-NEXT:    s_cmp_eq_u32 s49, 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s94, 63
 ; CHECK-NEXT:    v_writelane_b32 v1, s101, 6
-; CHECK-NEXT:    s_cmp_eq_u32 s49, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    ;;#ASMEND

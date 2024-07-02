@@ -20,6 +20,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/InitializePasses.h"
@@ -32,12 +33,18 @@ using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
 namespace {
 
+static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
+    "amdgpu-num-vgprs-for-wwm-alloc",
+    cl::desc("Max num VGPRs for whole-wave register allocation."),
+    cl::ReallyHidden, cl::init(10));
+
 class SILowerSGPRSpills : public MachineFunctionPass {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
   SlotIndexes *Indexes = nullptr;
+  MachineDominatorTree *MDT = nullptr;
 
   // Save and Restore blocks of the current function. Typically there is a
   // single save block, unless Windows EH funclets are involved.
@@ -52,11 +59,15 @@ public:
   void calculateSaveRestoreBlocks(MachineFunction &MF);
   bool spillCalleeSavedRegs(MachineFunction &MF,
                             SmallVectorImpl<int> &CalleeSavedFIs);
-  void extendWWMVirtRegLiveness(MachineFunction &MF, LiveIntervals *LIS);
+  void updateLaneVGPRDomInstr(
+      int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
+      DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr);
 
+  void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -77,6 +88,7 @@ INITIALIZE_PASS_BEGIN(SILowerSGPRSpills, DEBUG_TYPE,
                       "SI lower SGPR spill instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SILowerSGPRSpills, DEBUG_TYPE,
                     "SI lower SGPR spill instructions", false, false)
 
@@ -259,50 +271,89 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
   return false;
 }
 
-void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
-                                                 LiveIntervals *LIS) {
-  // TODO: This is a workaround to avoid the unmodelled liveness computed with
-  // whole-wave virtual registers when allocated together with the regular VGPR
-  // virtual registers. Presently, the liveness computed during the regalloc is
-  // only uniform (or single lane aware) and it doesn't take account of the
-  // divergent control flow that exists for our GPUs. Since the WWM registers
-  // can modify inactive lanes, the wave-aware liveness should be computed for
-  // the virtual registers to accurately plot their interferences. Without
-  // having the divergent CFG for the function, it is difficult to implement the
-  // wave-aware liveness info. Until then, we conservatively extend the liveness
-  // of the wwm registers into the entire function so that they won't be reused
-  // without first spilling/splitting their liveranges.
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+void SILowerSGPRSpills::updateLaneVGPRDomInstr(
+    int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
+    DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr) {
+  // For the Def of a virtual LaneVPGR to dominate all its uses, we should
+  // insert an IMPLICIT_DEF before the dominating spill. Switching to a
+  // depth first order doesn't really help since the machine function can be in
+  // the unstructured control flow post-SSA. For each virtual register, hence
+  // finding the common dominator to get either the dominating spill or a block
+  // dominating all spills.
+  SIMachineFunctionInfo *FuncInfo =
+      MBB->getParent()->getInfo<SIMachineFunctionInfo>();
+  ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills =
+      FuncInfo->getSGPRSpillToVirtualVGPRLanes(FI);
+  Register PrevLaneVGPR;
+  for (auto &Spill : VGPRSpills) {
+    if (PrevLaneVGPR == Spill.VGPR)
+      continue;
 
-  // Insert the IMPLICIT_DEF for the wwm-registers in the entry blocks.
-  for (auto Reg : MFI->getSGPRSpillVGPRs()) {
-    for (MachineBasicBlock *SaveBlock : SaveBlocks) {
-      MachineBasicBlock::iterator InsertBefore = SaveBlock->begin();
-      DebugLoc DL = SaveBlock->findDebugLoc(InsertBefore);
-      auto MIB = BuildMI(*SaveBlock, InsertBefore, DL,
-                         TII->get(AMDGPU::IMPLICIT_DEF), Reg);
-      MFI->setFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG);
-      // Set SGPR_SPILL asm printer flag
-      MIB->setAsmPrinterFlag(AMDGPU::SGPR_SPILL);
-      if (LIS) {
-        LIS->InsertMachineInstrInMaps(*MIB);
+    PrevLaneVGPR = Spill.VGPR;
+    auto I = LaneVGPRDomInstr.find(Spill.VGPR);
+    if (Spill.Lane == 0 && I == LaneVGPRDomInstr.end()) {
+      // Initially add the spill instruction itself for Insertion point.
+      LaneVGPRDomInstr[Spill.VGPR] = InsertPt;
+    } else {
+      assert(I != LaneVGPRDomInstr.end());
+      auto PrevInsertPt = I->second;
+      MachineBasicBlock *DomMBB = PrevInsertPt->getParent();
+      if (DomMBB == MBB) {
+        // The insertion point earlier selected in a predecessor block whose
+        // spills are currently being lowered. The earlier InsertPt would be
+        // the one just before the block terminator and it should be changed
+        // if we insert any new spill in it.
+        if (MDT->dominates(&*InsertPt, &*PrevInsertPt))
+          I->second = InsertPt;
+
+        continue;
       }
+
+      // Find the common dominator block between PrevInsertPt and the
+      // current spill.
+      DomMBB = MDT->findNearestCommonDominator(DomMBB, MBB);
+      if (DomMBB == MBB)
+        I->second = InsertPt;
+      else if (DomMBB != PrevInsertPt->getParent())
+        I->second = &(*DomMBB->getFirstTerminator());
+    }
+  }
+}
+
+void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
+                                                      BitVector &RegMask) {
+  // Determine an optimal number of VGPRs for WWM allocation. The complement
+  // list will be available for allocating other VGPR virtual registers.
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  BitVector ReservedRegs = TRI->getReservedRegs(MF);
+  BitVector NonWwmAllocMask(TRI->getNumRegs());
+
+  // FIXME: MaxNumVGPRsForWwmAllocation might need to be adjusted in the future
+  // to have a balanced allocation between WWM values and per-thread vector
+  // register operands.
+  unsigned NumRegs = MaxNumVGPRsForWwmAllocation;
+  NumRegs =
+      std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
+
+  auto [MaxNumVGPRs, MaxNumAGPRs] = TRI->getMaxNumVectorRegs(MF);
+  // Try to use the highest available registers for now. Later after
+  // vgpr-regalloc, they can be shifted to the lowest range.
+  unsigned I = 0;
+  for (unsigned Reg = AMDGPU::VGPR0 + MaxNumVGPRs - 1;
+       (I < NumRegs) && (Reg >= AMDGPU::VGPR0); --Reg) {
+    if (!ReservedRegs.test(Reg) &&
+        !MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true)) {
+      TRI->markSuperRegs(RegMask, Reg);
+      ++I;
     }
   }
 
-  // Insert the KILL in the return blocks to extend their liveness untill the
-  // end of function. Insert a separate KILL for each VGPR.
-  for (MachineBasicBlock *RestoreBlock : RestoreBlocks) {
-    MachineBasicBlock::iterator InsertBefore =
-        RestoreBlock->getFirstTerminator();
-    DebugLoc DL = RestoreBlock->findDebugLoc(InsertBefore);
-    for (auto Reg : MFI->getSGPRSpillVGPRs()) {
-      auto MIB = BuildMI(*RestoreBlock, InsertBefore, DL,
-                         TII->get(TargetOpcode::KILL));
-      MIB.addReg(Reg);
-      if (LIS)
-        LIS->InsertMachineInstrInMaps(*MIB);
-    }
+  if (I != NumRegs) {
+    // Reserve an arbitrary register and report the error.
+    TRI->markSuperRegs(RegMask, AMDGPU::VGPR0);
+    MF.getFunction().getContext().emitError(
+        "can't find enough VGPRs for wwm-regalloc");
   }
 }
 
@@ -313,6 +364,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
   LIS = getAnalysisIfAvailable<LiveIntervals>();
   Indexes = getAnalysisIfAvailable<SlotIndexes>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   assert(SaveBlocks.empty() && RestoreBlocks.empty());
 
@@ -349,6 +401,9 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
     // To track the spill frame indices handled in this pass.
     BitVector SpillFIs(MFI.getObjectIndexEnd(), false);
 
+    // To track the IMPLICIT_DEF insertion point for the lane vgprs.
+    DenseMap<Register, MachineBasicBlock::iterator> LaneVGPRDomInstr;
+
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
         if (!TII->isSGPRSpill(MI))
@@ -378,6 +433,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
                   "failed to spill SGPR to physical VGPR lane when allocated");
           }
         } else {
+          MachineInstrSpan MIS(&MI, &MBB);
           if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI)) {
             bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
                 MI, FI, nullptr, Indexes, LIS);
@@ -385,19 +441,45 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
               llvm_unreachable(
                   "failed to spill SGPR to virtual VGPR lane when allocated");
             SpillFIs.set(FI);
+            updateLaneVGPRDomInstr(FI, &MBB, MIS.begin(), LaneVGPRDomInstr);
             SpilledToVirtVGPRLanes = true;
           }
         }
       }
     }
 
-    if (SpilledToVirtVGPRLanes) {
-      extendWWMVirtRegLiveness(MF, LIS);
+    for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
+      auto InsertPt = LaneVGPRDomInstr[Reg];
+      // Insert the IMPLICIT_DEF at the identified points.
+      MachineBasicBlock &Block = *InsertPt->getParent();
+      DebugLoc DL = Block.findDebugLoc(InsertPt);
+      auto MIB =
+          BuildMI(Block, *InsertPt, DL, TII->get(AMDGPU::IMPLICIT_DEF), Reg);
+
+      // Add WWM flag to the virtual register.
+      FuncInfo->setFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG);
+
+      // Set SGPR_SPILL asm printer flag
+      MIB->setAsmPrinterFlag(AMDGPU::SGPR_SPILL);
       if (LIS) {
-        // Compute the LiveInterval for the newly created virtual registers.
-        for (auto Reg : FuncInfo->getSGPRSpillVGPRs())
-          LIS->createAndComputeVirtRegInterval(Reg);
+        LIS->InsertMachineInstrInMaps(*MIB);
+        LIS->createAndComputeVirtRegInterval(Reg);
       }
+    }
+
+    // Determine the registers for WWM allocation and also compute the register
+    // mask for non-wwm VGPR allocation.
+    if (FuncInfo->getSGPRSpillVGPRs().size()) {
+      BitVector WwmRegMask(TRI->getNumRegs());
+
+      determineRegsForWWMAllocation(MF, WwmRegMask);
+
+      BitVector NonWwmRegMask(WwmRegMask);
+      NonWwmRegMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
+
+      // The complement set will be the registers for non-wwm (per-thread) vgpr
+      // allocation.
+      FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
     }
 
     for (MachineBasicBlock &MBB : MF) {

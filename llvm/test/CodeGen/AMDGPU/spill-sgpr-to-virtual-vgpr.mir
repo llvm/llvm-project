@@ -21,8 +21,8 @@ body:             |
     ; GCN-LABEL: name: sgpr32_spill
     ; GCN: liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
     ; GCN-NEXT: $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; GCN-NEXT: S_SETPC_B64 $sgpr30_sgpr31
@@ -55,7 +55,6 @@ body:             |
     ; GCN-LABEL: name: sgpr_spill_lane_crossover
     ; GCN: liveins: $sgpr10, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $vgpr63, $sgpr30_sgpr31, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr64, 0, $vgpr63
     ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr65, 1, $vgpr63
     ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr66, 2, $vgpr63
@@ -89,6 +88,7 @@ body:             |
     ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr94, 30, $vgpr63
     ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr95, 31, $vgpr63
     ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr64, 1, [[DEF]], implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr65, 2, [[DEF]]
@@ -187,9 +187,9 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT:   S_CMP_EQ_U32 $sgpr11, 0, implicit-def $scc
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
@@ -256,7 +256,6 @@ body:             |
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -264,7 +263,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
+  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR %0, 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 15, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -272,7 +271,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
+  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR %0, 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 20, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -281,6 +280,7 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 10
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
   ; GCN-NEXT:   S_CMP_EQ_U32 $sgpr11, 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
