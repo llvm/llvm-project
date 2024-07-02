@@ -59,6 +59,10 @@ module std_coroutine [system] {
   header "coroutine"
   export *
 }
+module std_debugging [system] {
+  header "debugging"
+  export *
+}
 module std_deque [system] {
   header "deque"
   export *
