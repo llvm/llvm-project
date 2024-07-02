@@ -703,8 +703,7 @@ public:
     return true;
   }
 
-  void finishLayout(MCAssembler const &Asm,
-                    MCAsmLayout &Layout) const override {
+  void finishLayout(MCAssembler const &Asm) const override {
     SmallVector<MCFragment *> Frags;
     for (MCSection &Sec : Asm) {
       Frags.clear();
