@@ -9,12 +9,13 @@
 // GNU-NEXT:   GNU                   0x00000010	NT_GNU_PROPERTY_TYPE_0 (property note)
 // GNU-NEXT:     Properties:    aarch64 feature: BTI, PAC, GCS
 
-// LLVM:      Notes [
+// LLVM:      NoteSections [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.gnu.property
 // LLVM-NEXT:     Offset: 0x40
 // LLVM-NEXT:     Size: 0x20
-// LLVM-NEXT:     Note {
+// LLVM-NEXT:     Notes [
+// LLVM-NEXT:     {
 // LLVM-NEXT:       Owner: GNU
 // LLVM-NEXT:       Data size: 0x10
 // LLVM-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
@@ -22,6 +23,7 @@
 // LLVM-NEXT:         aarch64 feature: BTI, PAC, GCS
 // LLVM-NEXT:       ]
 // LLVM-NEXT:     }
+// LLVM-NEXT:	 ]
 // LLVM-NEXT:   }
 // LLVM-NEXT: ]
 
