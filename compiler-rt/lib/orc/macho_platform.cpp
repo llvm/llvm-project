@@ -331,7 +331,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
-  void *dlupdate(std::string_view Name, int Mode);
+  void *dlupdate(void *DSOHandle, int Mode);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, const char *Symbol);
 
@@ -381,7 +381,7 @@ private:
   Error dlopenInitialize(std::unique_lock<std::mutex> &JDStatesLock,
                          JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
 
-  Expected<void *> dlupdateImpl(std::string_view Path, int Mode);
+  Expected<void *> dlupdateImpl(void *DSOHandle, int Mode);
   Error dlupdateFull(std::unique_lock<std::mutex> &JDStatesLock,
                    JITDylibState &JDS);
   Error dlupdateInitialize(std::unique_lock<std::mutex> &JDStatesLock,
@@ -796,13 +796,13 @@ void *MachOPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   }
 }
 
-void *MachOPlatformRuntimeState::dlupdate(std::string_view Path, int Mode) {
+void *MachOPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
   ORC_RT_DEBUG({
-    std::string S(Path.data(), Path.size());
-    printdbg("MachOPlatform::dlupdate(\"%s\")\n", S.c_str());
+    std::string S;
+    printdbg("MachOPlatform::dlupdate(%p) (%s)\n", DSOHandle, S.c_str());
   });
   std::lock_guard<std::recursive_mutex> Lock(DyldAPIMutex);
-  if (auto H = dlupdateImpl(Path, Mode))
+  if (auto H = dlupdateImpl(DSOHandle, Mode))
     return *H;
   else {
     // FIXME: Make dlerror thread safe.
@@ -1266,21 +1266,23 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
-Expected<void *> MachOPlatformRuntimeState::dlupdateImpl(std::string_view Path,
+Expected<void *> MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
                                                        int Mode) {
   std::unique_lock<std::mutex> Lock(JDStatesMutex);
 
-  // Try to find JITDylib state by name.
-  auto *JDS = getJITDylibStateByName(Path);
+  // Try to find JITDylib state by DSOHandle.
+  auto *JDS = getJITDylibStateByHeader(DSOHandle);
 
-  if (!JDS)
-    return make_error<StringError>("No registered JTIDylib for path " +
-                                   std::string(Path.data(), Path.size()));
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "No registered JITDylib for " << DSOHandle;
+    return make_error<StringError>(ErrStream.str());
+  }
 
-  // If this JITDylib is unsealed, or this is the first dlopen then run
-  // full dlopen path (update deps, push and run initializers, update ref
-  // counts on all JITDylibs in the dep tree).
-  if (!JDS->referenced() || !JDS->Sealed) {
+  if (!JDS->referenced())
+    return make_error<StringError>("dlupdate failed, JITDylib must be open.");
+
+  if (!JDS->Sealed) {
     if (auto Err = dlupdateFull(Lock, *JDS))
       return std::move(Err);
   }
@@ -1307,18 +1309,6 @@ Error MachOPlatformRuntimeState::dlupdateFull(
   if (auto Err = dlupdateInitialize(JDStatesLock, JDS, *DepInfo))
     return Err;
 
-  if (!DepInfo->empty()) {
-    ORC_RT_DEBUG({
-      printdbg("Unrecognized dep-info key headers in dlupdate of %s\n",
-               JDS.Name.c_str());
-    });
-    std::ostringstream ErrStream;
-    ErrStream << "Encountered unrecognized dep-info key headers "
-                 "while processing dlupdate of "
-              << JDS.Name;
-    return make_error<StringError>(ErrStream.str());
-  }
-
   return Error::success();
 }
 
@@ -1330,64 +1320,11 @@ Error MachOPlatformRuntimeState::dlupdateInitialize(
              JDS.Name.c_str());
   });
 
-  // If the header is not present in the dep map then assume that we
-  // already processed it earlier in the dlopenInitialize traversal and
-  // return.
-  // TODO: Keep a visited set instead so that we can error out on missing
-  //       entries?
-  auto I = DepInfo.find(ExecutorAddr::fromPtr(JDS.Header));
-  if (I == DepInfo.end())
-    return Error::success();
-
-  auto DI = std::move(I->second);
-  DepInfo.erase(I);
-
-  // We don't need to re-initialize sealed JITDylibs that have already been
-  // initialized. Just check that their dep-map entry is empty as expected.
-  if (JDS.Sealed) {
-    if (!DI.DepHeaders.empty()) {
-      std::ostringstream ErrStream;
-      ErrStream << "Sealed JITDylib " << JDS.Header
-                << " already has registered dependencies";
-      return make_error<StringError>(ErrStream.str());
-    }
-    if (JDS.referenced())
-      return Error::success();
-  } else
-    JDS.Sealed = DI.Sealed;
-
-  // This is an unsealed or newly sealed JITDylib. Run initializers.
-  std::vector<JITDylibState *> OldDeps;
-  std::swap(JDS.Deps, OldDeps);
-  JDS.Deps.reserve(DI.DepHeaders.size());
-  for (auto DepHeaderAddr : DI.DepHeaders) {
-    auto *DepJDS = getJITDylibStateByHeader(DepHeaderAddr.toPtr<void *>());
-    if (!DepJDS) {
-      std::ostringstream ErrStream;
-      ErrStream << "Encountered unrecognized dep header "
-                << DepHeaderAddr.toPtr<void *>() << " while initializing "
-                << JDS.Name;
-      return make_error<StringError>(ErrStream.str());
-    }
-
-    if (auto Err = dlupdateInitialize(JDStatesLock, *DepJDS, DepInfo))
-      return Err;
-  }
-
   // Initialize this JITDylib.
   if (auto Err = registerObjCRegistrationObjects(JDS))
     return Err;
   if (auto Err = runModInits(JDStatesLock, JDS))
     return Err;
-
-  // Decrement old deps.
-  // FIXME: We should probably continue and just report deinitialize errors
-  // here.
-  for (auto *DepJDS : OldDeps) {
-    if (!DepJDS->referenced())
-      if (auto Err = dlcloseDeinitialize(JDStatesLock, *DepJDS))
-        return Err;
-  }
 
   return Error::success();
 }
@@ -1665,8 +1602,8 @@ void *__orc_rt_macho_jit_dlopen(const char *path, int mode) {
   return MachOPlatformRuntimeState::get().dlopen(path, mode);
 }
 
-void *__orc_rt_macho_jit_dlupdate(const char *path, int mode) {
-  return MachOPlatformRuntimeState::get().dlupdate(path, mode);
+void *__orc_rt_macho_jit_dlupdate(void *dso_handle, int mode) {
+  return MachOPlatformRuntimeState::get().dlupdate(dso_handle, mode);
 }
 
 int __orc_rt_macho_jit_dlclose(void *dso_handle) {

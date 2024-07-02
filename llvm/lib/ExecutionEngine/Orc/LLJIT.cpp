@@ -602,6 +602,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
+  using SPSDLUpdateSig = SPSExecutorAddr(SPSExecutorAddr, int32_t);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -613,15 +614,21 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
+  bool dlupdate = false;
   if (ES.getTargetTriple().isOSBinFormatMachO()) {
-    if (InitializedDylib.contains(&JD))
+    if (InitializedDylib.contains(&JD)) {
       WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-    else
+      dlupdate = true;
+    } else
       InitializedDylib.insert(&JD);
   }
 
   if (auto WrapperAddr = ES.lookup(
           MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
+    if (dlupdate)
+      return ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
+                                               DSOHandles[&JD], DSOHandles[&JD],
+                                               int32_t(ORC_RT_RTLD_LAZY));
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),
                                            int32_t(ORC_RT_RTLD_LAZY));
