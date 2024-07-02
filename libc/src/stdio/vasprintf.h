@@ -1,4 +1,4 @@
-//===-- Implementation header of vaprintf -----------------------*- C++ -*-===//
+//===-- Implementation header of vasprintf ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_VAPRINTF_H
-#define LLVM_LIBC_SRC_STDIO_VAPRINTF_H
+#ifndef LLVM_LIBC_SRC_STDIO_VASPRINTF_H
+#define LLVM_LIBC_SRC_STDIO_VASPRINTF_H
 
 #include <stdarg.h>
 #include <stdio.h>
 
 namespace LIBC_NAMESPACE {
 
-int vaprintf(char * s, const char * format,
+int vasprintf(char **__restrict s, const char * format,
              va_list vlist);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDIO_VAPRINTF_H
+#endif // LLVM_LIBC_SRC_STDIO_VASPRINTF_H

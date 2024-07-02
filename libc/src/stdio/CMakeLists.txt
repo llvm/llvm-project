@@ -204,11 +204,11 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  vaprintf
+  vasprintf
   SRCS
-    vaprintf.cpp
+    vasprintf.cpp
   HDRS
-    vaprintf.h
+    vasprintf.h
   DEPENDS
     libc.src.__support.arg_list
 )
