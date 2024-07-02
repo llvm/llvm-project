@@ -15,7 +15,6 @@
 
 namespace llvm {
 
-class MCAsmLayout;
 class MCAssembler;
 class MCFixup;
 class MCFragment;

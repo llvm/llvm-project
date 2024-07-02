@@ -13,7 +13,6 @@
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -386,7 +385,6 @@ bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
   SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
   size_t OldSize = Data.size();
 
-  auto &Layout = *Asm.getLayout();
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
@@ -398,10 +396,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
   Fixups.clear();
   raw_svector_ostream OS(Data);
 
-  assert(
-      Layout.getAssembler().getContext().getAsmInfo()->getMinInstAlignment() ==
-          1 &&
-      "expected 1-byte alignment");
+  assert(Asm.getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+         "expected 1-byte alignment");
   if (Value == 0) {
     WasRelaxed = OldSize != Data.size();
     return true;
