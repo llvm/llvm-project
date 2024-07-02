@@ -7,6 +7,7 @@
 ;; Regression test for D112297: bitcode writer used to crash when
 ;; --plugin-opt=emit-llvmis enabled and the output is /dev/null.
 ; RUN: ld.lld --plugin-opt=emit-llvm -mllvm -bitcode-flush-threshold=0 -o /dev/null %t.o
+; RUN: ld.lld --lto-emit-llvm -mllvm -bitcode-flush-threshold=0 -o /dev/null %t.o
 
 ; CHECK: define internal void @main()
 
