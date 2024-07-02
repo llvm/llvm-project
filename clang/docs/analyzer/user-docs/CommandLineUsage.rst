@@ -1,4 +1,4 @@
-Command-Line Usage: CodeChecker and scan-build
+Command Line Usage: CodeChecker and scan-build
 ===============================================
 
 This document provides guidelines for running Clang Static Analyzer from the command line on whole projects.
@@ -13,7 +13,7 @@ Comparison of CodeChecker and scan-build
 Static Analyzer is by design a GUI tool originally intended to be consumed by the XCode IDE.
 Its purpose is to find buggy execution paths in the program, and such paths are very hard to comprehend by looking at a non-interactive standard output.
 It is possible, however, to invoke the Static Analyzer from the command line in order to obtain analysis results, and then later view them interactively in a graphical interface.
-The following tools are used commonly to run the analyzer from the commandline.
+The following tools are used commonly to run the analyzer from the command line.
 Both tools are wrapper scripts to drive the analysis and the underlying invocations of the Clang compiler:
 
 1. CodeChecker_ is a driver and web server that runs the Static Analyzer on your projects on demand and maintains a database of issues.
@@ -24,7 +24,7 @@ Both tools are wrapper scripts to drive the analysis and the underlying invocati
     - Can run clang-tidy checkers too.
     - Open source, but out-of-tree, i.e. not part of the LLVM project.
 
-2. scan-build_ is an old and simple command-line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser.
+2. scan-build_ is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser.
     - Useful for individual developers who simply want to view static analysis results at their desk, or in a very simple collaborative environment.
     - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
     - Does not include support for cross-translation-unit analysis.
