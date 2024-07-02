@@ -120,7 +120,7 @@ namespace {
 /// Maintains the set of instructions of the loop for a partition before
 /// cloning.  After cloning, it hosts the new loop.
 class InstPartition {
-  using InstructionSet = SetVector<Instruction *>;
+  using InstructionSet = SmallSetVector<Instruction *, 8>;
 
 public:
   InstPartition(Instruction *I, Loop *L, bool DepCycle = false)

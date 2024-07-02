@@ -1,3 +1,5 @@
+# REQUIRES: asserts
+
 ## Basic test checking that update_analyze_test_checks.py works correctly
 # RUN: cp -f %S/Inputs/loop-distribute.ll %t.ll && %update_analyze_test_checks %t.ll
 # RUN: diff -u %t.ll %S/Inputs/loop-distribute.ll.expected
