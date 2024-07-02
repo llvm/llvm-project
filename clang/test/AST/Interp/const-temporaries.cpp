@@ -90,3 +90,12 @@ struct R { mutable long x; };
 struct Z2 { const R &x, y; };
 Z2 z2 = { R{1}, z2.x.x = 10 };
 
+// CHECK: __cxa_atexit({{.*}} @_ZN1BD1Ev, {{.*}} @b
+
+// CHECK: define
+// CHECK-NOT: @_ZGRN21ModifyStaticTemporary1cE_
+// CHECK: store {{.*}} @_ZGRN21ModifyStaticTemporary1cE_, {{.*}} @_ZN21ModifyStaticTemporary1cE
+// CHECK: add
+// CHECK: store
+// CHECK: load {{.*}} @_ZN21ModifyStaticTemporary1bE
+// CHECK: store {{.*}} @_ZN21ModifyStaticTemporary1cE
