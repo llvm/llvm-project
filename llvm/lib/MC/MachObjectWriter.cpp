@@ -125,7 +125,7 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
 uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
                                           const MCSection *Sec) const {
   uint64_t EndAddr = getSectionAddress(Sec) + Asm.getSectionAddressSize(*Sec);
-  unsigned Next = Sec->getLayoutOrder() + 1;
+  unsigned Next = cast<MCSectionMachO>(Sec)->getLayoutOrder() + 1;
   if (Next >= SectionOrder.size())
     return 0;
 
@@ -676,13 +676,13 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
   for (MCSection &Sec : Asm) {
     if (!Sec.isVirtualSection()) {
       SectionOrder.push_back(&Sec);
-      Sec.setLayoutOrder(i++);
+      cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
   }
   for (MCSection &Sec : Asm) {
     if (Sec.isVirtualSection()) {
       SectionOrder.push_back(&Sec);
-      Sec.setLayoutOrder(i++);
+      cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
   }
 
