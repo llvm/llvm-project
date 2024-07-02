@@ -7664,12 +7664,8 @@ def ext_gnu_ptr_func_arith : Extension<
   InGroup<GNUPointerArith>;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
-def ext_c2y_increment_complex : Extension<
-  "'%select{--|++}0' on an object of complex type is a C2y extension">,
-  InGroup<C2y>;
-def warn_c2y_compat_increment_complex : Warning<
-  "'%select{--|++}0' on an object of complex type is incompatible with C "
-  "standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
+def ext_increment_complex : Extension<
+  "'%select{--|++}0' on an object of complex type is a Clang extension">;
 def ext_integer_complement_complex : Extension<
   "ISO C does not support '~' for complex conjugation of %0">;
 def err_nosetter_property_assignment : Error<
