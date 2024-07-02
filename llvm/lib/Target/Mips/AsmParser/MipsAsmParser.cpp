@@ -6410,7 +6410,7 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic);
+  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic, true);
   if (Res.isSuccess())
     return false;
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
