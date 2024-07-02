@@ -7027,6 +7027,9 @@ def massembler_no_warn : Flag<["-"], "massembler-no-warn">,
 def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
   HelpText<"Make assembler warnings fatal">,
   MarshallingInfoFlag<CodeGenOpts<"FatalWarnings">>;
+def crel : Flag<["--"], "crel">,
+  HelpText<"Enable CREL relocation format (ELF only)">,
+  MarshallingInfoFlag<CodeGenOpts<"Crel">>;
 def mrelax_relocations_no : Flag<["-"], "mrelax-relocations=no">,
     HelpText<"Disable x86 relax relocations">,
     MarshallingInfoNegativeFlag<CodeGenOpts<"RelaxELFRelocations">>;
