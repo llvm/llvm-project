@@ -780,3 +780,27 @@ define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vsc
 declare <vscale x 17 x double> @llvm.experimental.vp.strided.load.nxv17f64.p0.i64(ptr, i64, <vscale x 17 x i1>, i32)
 declare <vscale x 1 x double> @llvm.experimental.vector.extract.nxv1f64(<vscale x 17 x double> %vec, i64 %idx)
 declare <vscale x 16 x double> @llvm.experimental.vector.extract.nxv16f64(<vscale x 17 x double> %vec, i64 %idx)
+
+; Test unmasked integer zero strided
+define <vscale x 1 x i8> @zero_strided_unmasked_vpload_nxv1i8_i8(ptr %ptr) {
+; CHECK-LABEL: zero_strided_unmasked_vpload_nxv1i8_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a0, 0(a0)
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+  %load = call <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i8(ptr %ptr, i8 0, <vscale x 1 x i1> splat (i1 true), i32 4)
+  ret <vscale x 1 x i8> %load
+}
+
+; Test unmasked float zero strided
+define <vscale x 1 x half> @zero_strided_unmasked_vpload_nxv1f16(ptr %ptr) {
+; CHECK-LABEL: zero_strided_unmasked_vpload_nxv1f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    flh fa5, 0(a0)
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa5
+; CHECK-NEXT:    ret
+  %load = call <vscale x 1 x half> @llvm.experimental.vp.strided.load.nxv1f16.p0.i32(ptr %ptr, i32 0, <vscale x 1 x i1> splat (i1 true), i32 4)
+  ret <vscale x 1 x half> %load
+}

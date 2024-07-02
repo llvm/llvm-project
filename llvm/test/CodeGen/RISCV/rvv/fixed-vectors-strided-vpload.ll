@@ -626,3 +626,29 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
 }
 
 declare <33 x double> @llvm.experimental.vp.strided.load.v33f64.p0.i64(ptr, i64, <33 x i1>, i32)
+
+; TODO: Use accurate evl.
+; Test unmasked integer zero strided
+define <4 x i8> @zero_strided_unmasked_vpload_4i8_i8(ptr %ptr) {
+; CHECK-LABEL: zero_strided_unmasked_vpload_4i8_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a0, 0(a0)
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+  %load = call <4 x i8> @llvm.experimental.vp.strided.load.4i8.p0.i8(ptr %ptr, i8 0, <4 x i1> splat (i1 true), i32 3)
+  ret <4 x i8> %load
+}
+
+; TODO: Use accurate evl.
+; Test unmasked float zero strided
+define <4 x half> @zero_strided_unmasked_vpload_4f16(ptr %ptr) {
+; CHECK-LABEL: zero_strided_unmasked_vpload_4f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    flh fa5, 0(a0)
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa5
+; CHECK-NEXT:    ret
+  %load = call <4 x half> @llvm.experimental.vp.strided.load.4f16.p0.i32(ptr %ptr, i32 0, <4 x i1> splat (i1 true), i32 3)
+  ret <4 x half> %load
+}
