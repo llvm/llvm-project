@@ -50,7 +50,9 @@ public:
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
   std::string convertConstraint(const char *&Constraint) const override;
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &info) const override;
+                             TargetInfo::ConstraintInfo &Info,
+                             llvm::StringMap<bool> *FeatureMap,
+                             diag::kind &Diag) const override;
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   std::string_view getClobbers() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;

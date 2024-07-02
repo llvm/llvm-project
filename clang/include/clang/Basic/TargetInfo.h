@@ -17,6 +17,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Specifiers.h"
@@ -1196,10 +1197,12 @@ public:
 
   // validateOutputConstraint, validateInputConstraint - Checks that
   // a constraint is valid and provides information about it.
-  // FIXME: These should return a real error instead of just true/false.
-  bool validateOutputConstraint(ConstraintInfo &Info) const;
-  bool validateInputConstraint(MutableArrayRef<ConstraintInfo> OutputConstraints,
-                               ConstraintInfo &info) const;
+  bool validateOutputConstraint(ConstraintInfo &Info,
+                                llvm::StringMap<bool> *FeatureMap,
+                                diag::kind &Diag) const;
+  bool validateInputConstraint(
+      MutableArrayRef<ConstraintInfo> OutputConstraints, ConstraintInfo &Info,
+      llvm::StringMap<bool> *FeatureMap, diag::kind &Diag) const;
 
   virtual bool validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
                                   StringRef /*Constraint*/,
@@ -1219,13 +1222,14 @@ public:
                              std::string &/*SuggestedModifier*/) const {
     return true;
   }
-  virtual bool
-  validateAsmConstraint(const char *&Name,
-                        TargetInfo::ConstraintInfo &info) const = 0;
+  virtual bool validateAsmConstraint(const char *&Name,
+                                     TargetInfo::ConstraintInfo &Info,
+                                     llvm::StringMap<bool> *FeatureMap,
+                                     diag::kind &Diag) const = 0;
 
   bool resolveSymbolicName(const char *&Name,
                            ArrayRef<ConstraintInfo> OutputConstraints,
-                           unsigned &Index) const;
+                           unsigned &Index, diag::kind &Diag) const;
 
   // Constraint parm will be left pointing at the last character of
   // the constraint.  In practice, it won't be changed unless the

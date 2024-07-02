@@ -722,11 +722,15 @@ StringRef TargetInfo::getNormalizedGCCRegisterName(StringRef Name,
   return Name;
 }
 
-bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info) const {
+bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info,
+                                          llvm::StringMap<bool> *FeatureMap,
+                                          diag::kind &Diag) const {
   const char *Name = Info.getConstraintStr().c_str();
   // An output constraint must start with '=' or '+'
-  if (*Name != '=' && *Name != '+')
+  if (*Name != '=' && *Name != '+') {
+    Diag = diag::err_asm_invalid_constraint_start;
     return false;
+  }
 
   if (*Name == '+')
     Info.setIsReadWrite();
@@ -735,7 +739,7 @@ bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info) const {
   while (*Name) {
     switch (*Name) {
     default:
-      if (!validateAsmConstraint(Name, Info)) {
+      if (!validateAsmConstraint(Name, Info, FeatureMap, Diag)) {
         // FIXME: We temporarily return false
         // so we can add more constraints as we hit it.
         // Eventually, an unknown constraint should just be treated as 'g'.
@@ -788,17 +792,23 @@ bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info) const {
 
   // Early clobber with a read-write constraint which doesn't permit registers
   // is invalid.
-  if (Info.earlyClobber() && Info.isReadWrite() && !Info.allowsRegister())
+  if (Info.earlyClobber() && Info.isReadWrite() && !Info.allowsRegister()) {
+    Diag = diag::err_asm_invalid_constraint_rw_clobber;
     return false;
+  }
 
   // If a constraint allows neither memory nor register operands it contains
   // only modifiers. Reject it.
-  return Info.allowsMemory() || Info.allowsRegister();
+  if (!Info.allowsMemory() && !Info.allowsRegister()) {
+    Diag = diag::err_asm_invalid_constraint_mem_or_reg;
+    return false;
+  }
+  return true;
 }
 
 bool TargetInfo::resolveSymbolicName(const char *&Name,
                                      ArrayRef<ConstraintInfo> OutputConstraints,
-                                     unsigned &Index) const {
+                                     unsigned &Index, diag::kind &Diag) const {
   assert(*Name == '[' && "Symbolic name did not start with '['");
   Name++;
   const char *Start = Name;
@@ -807,6 +817,7 @@ bool TargetInfo::resolveSymbolicName(const char *&Name,
 
   if (!*Name) {
     // Missing ']'
+    Diag = diag::err_asm_invalid_constraint_missing_bracket;
     return false;
   }
 
@@ -816,16 +827,19 @@ bool TargetInfo::resolveSymbolicName(const char *&Name,
     if (SymbolicName == OutputConstraints[Index].getName())
       return true;
 
+  Diag = diag::err_asm_invalid_constraint_wrong_symbol;
   return false;
 }
 
 bool TargetInfo::validateInputConstraint(
-                              MutableArrayRef<ConstraintInfo> OutputConstraints,
-                              ConstraintInfo &Info) const {
+    MutableArrayRef<ConstraintInfo> OutputConstraints, ConstraintInfo &Info,
+    llvm::StringMap<bool> *FeatureMap, diag::kind &Diag) const {
   const char *Name = Info.ConstraintStr.c_str();
 
-  if (!*Name)
+  if (!*Name) {
+    Diag = diag::err_asm_invalid_constraint_empty;
     return false;
+  }
 
   while (*Name) {
     switch (*Name) {
@@ -838,25 +852,34 @@ bool TargetInfo::validateInputConstraint(
         const char *DigitEnd = Name;
         unsigned i;
         if (StringRef(DigitStart, DigitEnd - DigitStart + 1)
-                .getAsInteger(10, i))
+                .getAsInteger(10, i)) {
+          Diag = diag::err_asm_invalid_constraint_oob;
           return false;
+        }
 
         // Check if matching constraint is out of bounds.
-        if (i >= OutputConstraints.size()) return false;
+        if (i >= OutputConstraints.size()) {
+          Diag = diag::err_asm_invalid_constraint_missing;
+          return false;
+        }
 
         // A number must refer to an output only operand.
-        if (OutputConstraints[i].isReadWrite())
+        if (OutputConstraints[i].isReadWrite()) {
+          Diag = diag::err_asm_invalid_constraint_output_only;
           return false;
+        }
 
         // If the constraint is already tied, it must be tied to the
         // same operand referenced to by the number.
-        if (Info.hasTiedOperand() && Info.getTiedOperand() != i)
+        if (Info.hasTiedOperand() && Info.getTiedOperand() != i) {
+          Diag = diag::err_asm_invalid_constraint_wrongly_tied;
           return false;
+        }
 
         // The constraint should have the same info as the respective
         // output constraint.
         Info.setTiedOperand(i, OutputConstraints[i]);
-      } else if (!validateAsmConstraint(Name, Info)) {
+      } else if (!validateAsmConstraint(Name, Info, FeatureMap, Diag)) {
         // FIXME: This error return is in place temporarily so we can
         // add more constraints as we hit it.  Eventually, an unknown
         // constraint should just be treated as 'g'.
@@ -865,17 +888,21 @@ bool TargetInfo::validateInputConstraint(
       break;
     case '[': {
       unsigned Index = 0;
-      if (!resolveSymbolicName(Name, OutputConstraints, Index))
+      if (!resolveSymbolicName(Name, OutputConstraints, Index, Diag))
         return false;
 
       // If the constraint is already tied, it must be tied to the
       // same operand referenced to by the number.
-      if (Info.hasTiedOperand() && Info.getTiedOperand() != Index)
+      if (Info.hasTiedOperand() && Info.getTiedOperand() != Index) {
+        Diag = diag::err_asm_invalid_constraint_wrongly_tied;
         return false;
+      }
 
       // A number must refer to an output only operand.
-      if (OutputConstraints[Index].isReadWrite())
+      if (OutputConstraints[Index].isReadWrite()) {
+        Diag = diag::err_asm_invalid_constraint_output_only;
         return false;
+      }
 
       Info.setTiedOperand(Index, OutputConstraints[Index]);
       break;
@@ -896,7 +923,7 @@ bool TargetInfo::validateInputConstraint(
     case 'N':
     case 'O':
     case 'P':
-      if (!validateAsmConstraint(Name, Info))
+      if (!validateAsmConstraint(Name, Info, FeatureMap, Diag))
         return false;
       break;
     case 'r': // general register.

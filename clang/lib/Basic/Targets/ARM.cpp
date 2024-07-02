@@ -1136,8 +1136,10 @@ ArrayRef<TargetInfo::GCCRegAlias> ARMTargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
-bool ARMTargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+bool ARMTargetInfo::validateAsmConstraint(const char *&Name,
+                                          TargetInfo::ConstraintInfo &Info,
+                                          llvm::StringMap<bool> *FeatureMap,
+                                          diag::kind &Diag) const {
   switch (*Name) {
   default:
     break;
