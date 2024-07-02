@@ -706,7 +706,18 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
         continue;
       }
       // exported library function
-      if (FD->isInExportDeclContext()) {
+      // FIXME: replace this loop with external linkage check once issue #92071
+      // is resolved
+      bool isExport = FD->isInExportDeclContext();
+      if (!isExport) {
+        for (const auto *Redecl : FD->redecls()) {
+          if (Redecl->isInExportDeclContext()) {
+            isExport = true;
+            break;
+          }
+        }
+      }
+      if (isExport) {
         SetUnknownShaderStageContext();
         RunOnFunction(FD);
         continue;
