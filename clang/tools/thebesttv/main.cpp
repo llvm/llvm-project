@@ -611,11 +611,12 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
     }
 }
 
-void generatePathFromOneEntry(int sourceIndex, const ordered_json &result,
-                              FunctionLocator &locator, ordered_json &output) {
-    std::string type = result["type"].template get<std::string>();
+void generatePathFromOneEntry(int sourceIndex, const ordered_json &sourceEntry,
+                              FunctionLocator &locator,
+                              ordered_json &jResults) {
+    std::string type = sourceEntry["type"].template get<std::string>();
 
-    const ordered_json &locations = result["locations"];
+    const ordered_json &locations = sourceEntry["locations"];
     VarLocResult from, to;
     int fromLine, toLine;
     std::vector<VarLocResult> path;
@@ -681,7 +682,7 @@ void generatePathFromOneEntry(int sourceIndex, const ordered_json &result,
     }
 
     handleInputEntry(from, fromLine, to, toLine, path, type, sourceIndex,
-                     output["results"]);
+                     jResults);
 }
 
 void generateFromInput(const ordered_json &input, fs::path outputDir) {
@@ -705,7 +706,7 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
         std::string type = result["type"].template get<std::string>();
         logger.info("[{}/{}] type: {}", index + 1, total, type);
         try {
-            generatePathFromOneEntry(index, result, locator, output);
+            generatePathFromOneEntry(index, result, locator, output["results"]);
         } catch (const std::exception &e) {
             logger.error("Exception encountered: {}", e.what());
         }
