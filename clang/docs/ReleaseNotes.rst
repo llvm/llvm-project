@@ -442,6 +442,9 @@ New Compiler Flags
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
 
+- For the ARM target, added ``-Warm-interrupt-vfp-clobber`` that will emit a
+  diagnostic when an interrupt handler is declared and VFP is enabled.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -479,6 +482,13 @@ Modified Compiler Flags
 - Trivial infinite loops (i.e loops with a constant controlling expresion
   evaluating to ``true`` and an empty body such as ``while(1);``)
   are considered infinite, even when the ``-ffinite-loop`` flag is set.
+
+- Removed the "arm interrupt calling convention" warning that was included in
+  ``-Wextra`` without its own flag. This warning suggested adding
+  ``__attribute__((interrupt))`` to functions that are called from interrupt
+  handlers to prevent clobbering VFP registers. Following this suggestion leads
+  to unpredictable behavior by causing multiple exception returns from one
+  exception. Fixes #GH34876.
 
 Removed Compiler Flags
 -------------------------
@@ -657,6 +667,8 @@ Improvements to Clang's diagnostics
   Fixes #GH54492.
 
 - Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
+
+- For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
 
 Improvements to Clang's time-trace
 ----------------------------------
