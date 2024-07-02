@@ -254,7 +254,7 @@ static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
 void llvm::SplitModule(
     Module &M, unsigned N,
     function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback,
-    bool PreserveLocals) {
+    bool PreserveLocals, bool TryToAvoidEmptyModules) {
   if (!PreserveLocals) {
     for (Function &F : M)
       externalize(&F);
@@ -270,6 +270,38 @@ void llvm::SplitModule(
   // always be possible.
   ClusterIDMapType ClusterIDMap;
   findPartitions(M, ClusterIDMap, N);
+
+  // Find empty modules and functions not mapped to modules in ClusterIDMap.
+  // Map these functions to the empty modules so that they skip being
+  // distributed by isInPartition() based on function name hashes below.
+  // This provides better uniformity of distribution of functions to modules
+  // in some cases - for example when the number of functions equals to N.
+  if (TryToAvoidEmptyModules) {
+    DenseSet<unsigned> NonEmptyModules;
+    SmallVector<const GlobalValue *> UnmappedFunctions;
+    for (const auto &F : M.functions()) {
+      if (F.isDeclaration() ||
+          F.getLinkage() != GlobalValue::LinkageTypes::ExternalLinkage)
+        continue;
+      auto It = ClusterIDMap.find(&F);
+      if (It == ClusterIDMap.end())
+        UnmappedFunctions.push_back(&F);
+      else
+        NonEmptyModules.insert(It->second);
+    }
+    SmallVector<unsigned> EmptyModules;
+    for (unsigned I = 0; I < N; ++I) {
+      if (!NonEmptyModules.contains(I))
+        EmptyModules.push_back(I);
+    }
+    auto NextEmptyModuleIt = EmptyModules.begin();
+    for (const auto F : UnmappedFunctions) {
+      if (NextEmptyModuleIt == EmptyModules.end())
+        break;
+      ClusterIDMap.insert({F, *NextEmptyModuleIt});
+      ++NextEmptyModuleIt;
+    }
+  }
 
   // FIXME: We should be able to reuse M as the last partition instead of
   // cloning it. Note that the callers at the moment expect the module to
