@@ -560,7 +560,7 @@ add_entrypoint_object(
   HDRS
     strtoull_l.h
   DEPENDS
-    libc.src.stdlib.strtoull_l
+    libc.src.stdlib.strtoull
     libc.src.errno.errno
     libc.include.llvm-libc-types.locale_t
 )
