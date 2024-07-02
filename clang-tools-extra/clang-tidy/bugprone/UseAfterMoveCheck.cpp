@@ -215,26 +215,6 @@ void UseAfterMoveFinder::getUsesAndReinits(
   });
 }
 
-bool isStandardSmartPointer(const ValueDecl *VD) {
-  const Type *TheType = VD->getType().getNonReferenceType().getTypePtrOrNull();
-  if (!TheType)
-    return false;
-
-  const CXXRecordDecl *RecordDecl = TheType->getAsCXXRecordDecl();
-  if (!RecordDecl)
-    return false;
-
-  const IdentifierInfo *ID = RecordDecl->getIdentifier();
-  if (!ID)
-    return false;
-
-  StringRef Name = ID->getName();
-  if (Name != "unique_ptr" && Name != "shared_ptr" && Name != "weak_ptr")
-    return false;
-
-  return RecordDecl->getDeclContext()->isStdNamespace();
-}
-
 void UseAfterMoveFinder::getDeclRefs(
     const CFGBlock *Block, const Decl *MovedVariable,
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
@@ -248,13 +228,8 @@ void UseAfterMoveFinder::getDeclRefs(
                         DeclRefs](const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
-        const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
-          // Ignore uses of a standard smart pointer that don't dereference the
-          // pointer.
-          if (Operator || !isStandardSmartPointer(DeclRef->getDecl())) {
-            DeclRefs->insert(DeclRef);
-          }
+          DeclRefs->insert(DeclRef);
         }
       }
     };
@@ -265,11 +240,6 @@ void UseAfterMoveFinder::getDeclRefs(
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
                       *Context));
-    AddDeclRefs(match(findAll(cxxOperatorCallExpr(
-                                  hasAnyOverloadedOperatorName("*", "->", "[]"),
-                                  hasArgument(0, DeclRefMatcher))
-                                  .bind("operator")),
-                      *S->getStmt(), *Context));
   }
 }
 
@@ -411,10 +381,9 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto TryEmplaceMatcher =
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("try_emplace"))));
   auto CallMoveMatcher =
-      callExpr(argumentCountIs(1),
+      callExpr(argumentCountIs(1), hasArgument(0, declRefExpr().bind("arg")),
                callee(functionDecl(hasAnyName("::std::move", "::std::forward"))
                           .bind("move-decl")),
-               hasArgument(0, declRefExpr().bind("arg")),
                unless(inDecltypeOrTemplateArg()),
                unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
                anyOf(hasAncestor(compoundStmt(
@@ -496,7 +465,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     UseAfterMoveFinder Finder(Result.Context);
     UseAfterMove Use;
     if (Finder.find(CodeBlock, MovingCall, Arg->getDecl(), &Use))
-      emitDiagnostic(MovingCall, Arg, Use, this, Result.Context,
+      emitDiagnostic(CallMove, Arg, Use, this, Result.Context,
                      determineMoveType(MoveDecl));
   }
 }

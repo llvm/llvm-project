@@ -8,6 +8,7 @@ typedef unsigned size_t;
 template <typename T>
 struct unique_ptr {
   unique_ptr();
+  unique_ptr(T* ptr);
   T *get() const;
   explicit operator bool() const;
   void reset(T *ptr);
@@ -123,6 +124,10 @@ forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
   return static_cast<_Tp&&>(__t);
 }
 
+template <typename T, typename... Args> auto make_unique(Args &&...args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
 } // namespace std
 
 class A {
@@ -220,10 +225,8 @@ void standardSmartPtr() {
     std::unique_ptr<A> ptr;
     std::move(ptr);
     ptr.get();
-    static_cast<bool>(ptr);
-    *ptr;
-    // CHECK-NOTES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
-    // CHECK-NOTES: [[@LINE-5]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     std::unique_ptr<A> ptr;
@@ -243,10 +246,8 @@ void standardSmartPtr() {
     std::shared_ptr<A> ptr;
     std::move(ptr);
     ptr.get();
-    static_cast<bool>(ptr);
-    *ptr;
-    // CHECK-NOTES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
-    // CHECK-NOTES: [[@LINE-5]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     std::shared_ptr<A> ptr;
@@ -261,6 +262,8 @@ void standardSmartPtr() {
     std::weak_ptr<A> ptr;
     std::move(ptr);
     ptr.expired();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // Make sure we recognize std::unique_ptr<> or std::shared_ptr<> if they're
   // wrapped in a typedef.
@@ -269,12 +272,16 @@ void standardSmartPtr() {
     PtrToA ptr;
     std::move(ptr);
     ptr.get();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     typedef std::shared_ptr<A> PtrToA;
     PtrToA ptr;
     std::move(ptr);
     ptr.get();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // And we don't get confused if the template argument is a little more
   // involved.
@@ -285,6 +292,8 @@ void standardSmartPtr() {
     std::unique_ptr<B::AnotherNameForA> ptr;
     std::move(ptr);
     ptr.get();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // Make sure we treat references to smart pointers correctly.
   {
@@ -292,12 +301,16 @@ void standardSmartPtr() {
     std::unique_ptr<A>& ref_to_ptr = ptr;
     std::move(ref_to_ptr);
     ref_to_ptr.get();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ref_to_ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     std::unique_ptr<A> ptr;
     std::unique_ptr<A>&& rvalue_ref_to_ptr = std::move(ptr);
     std::move(rvalue_ref_to_ptr);
     rvalue_ref_to_ptr.get();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'rvalue_ref_to_ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // We don't give any special treatment to types that are called "unique_ptr"
   // or "shared_ptr" but are not in the "::std" namespace.
@@ -329,7 +342,7 @@ void moveInDeclaration() {
   A another_a(std::move(a));
   a.foo();
   // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
+  // CHECK-NOTES: [[@LINE-3]]:15: note: move occurred here
 }
 
 // We see the std::move if it's inside an initializer list. Initializer lists
@@ -1068,10 +1081,10 @@ void sequencingOfMoveAndUse() {
     A a;
     g(g(a, std::move(a)), g(a, std::move(a)));
     // CHECK-NOTES: [[@LINE-1]]:9: warning: 'a' used after it was moved
-    // CHECK-NOTES: [[@LINE-2]]:27: note: move occurred here
+    // CHECK-NOTES: [[@LINE-2]]:32: note: move occurred here
     // CHECK-NOTES: [[@LINE-3]]:9: note: the use and move are unsequenced
     // CHECK-NOTES: [[@LINE-4]]:29: warning: 'a' used after it was moved
-    // CHECK-NOTES: [[@LINE-5]]:7: note: move occurred here
+    // CHECK-NOTES: [[@LINE-5]]:12: note: move occurred here
     // CHECK-NOTES: [[@LINE-6]]:29: note: the use and move are unsequenced
   }
   // This case is fine because the actual move only happens inside the call to
@@ -1088,7 +1101,7 @@ void sequencingOfMoveAndUse() {
     int v[3];
     v[a.getInt()] = intFromA(std::move(a));
     // CHECK-NOTES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-    // CHECK-NOTES: [[@LINE-2]]:21: note: move occurred here
+    // CHECK-NOTES: [[@LINE-2]]:30: note: move occurred here
     // CHECK-NOTES: [[@LINE-3]]:7: note: the use and move are unsequenced
   }
   {
@@ -1096,7 +1109,7 @@ void sequencingOfMoveAndUse() {
     int v[3];
     v[intFromA(std::move(a))] = intFromInt(a.i);
     // CHECK-NOTES: [[@LINE-1]]:44: warning: 'a' used after it was moved
-    // CHECK-NOTES: [[@LINE-2]]:7: note: move occurred here
+    // CHECK-NOTES: [[@LINE-2]]:16: note: move occurred here
     // CHECK-NOTES: [[@LINE-3]]:44: note: the use and move are unsequenced
   }
 }
@@ -1168,7 +1181,7 @@ void commaOperatorSequences() {
     (a = A()), A(std::move(a));
     a.foo();
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
-    // CHECK-NOTES: [[@LINE-3]]:16: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:18: note: move occurred here
   }
 }
 
@@ -1210,7 +1223,7 @@ void initializerListSequences() {
     A a;
     S2 s2{.a = std::move(a), .i = a.getInt()};
     // CHECK-NOTES: [[@LINE-1]]:35: warning: 'a' used after it was moved
-    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+    // CHECK-NOTES: [[@LINE-2]]:16: note: move occurred here
   }
   {
     // Check the case where the constructed type has a constructor and the
@@ -1264,7 +1277,7 @@ void logicalOperatorsSequence() {
     A a;
     if (A(std::move(a)).getInt() > 0 && a.getInt() > 0) {
       // CHECK-NOTES: [[@LINE-1]]:41: warning: 'a' used after it was moved
-      // CHECK-NOTES: [[@LINE-2]]:9: note: move occurred here
+      // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
       A().foo();
     }
   }
@@ -1278,7 +1291,7 @@ void logicalOperatorsSequence() {
     A a;
     if (A(std::move(a)).getInt() > 0 || a.getInt() > 0) {
       // CHECK-NOTES: [[@LINE-1]]:41: warning: 'a' used after it was moved
-      // CHECK-NOTES: [[@LINE-2]]:9: note: move occurred here
+      // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
       A().foo();
     }
   }
@@ -1324,7 +1337,7 @@ void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   for (int i = 0; i < 10; ++i) {
     if (A a1; A(std::move(a1)).getInt() > a1.getInt()) {}
     // CHECK-NOTES: [[@LINE-1]]:43: warning: 'a1' used after it was moved
-    // CHECK-NOTES: [[@LINE-2]]:15: note: move occurred here
+    // CHECK-NOTES: [[@LINE-2]]:17: note: move occurred here
     // CHECK-NOTES: [[@LINE-3]]:43: note: the use and move are unsequenced
   }
   for (int i = 0; i < 10; ++i) {
@@ -1419,7 +1432,7 @@ public:
         s{std::move(val)},
         b{val.empty()}
   // CHECK-NOTES: [[@LINE-1]]:11: warning: 'val' used after it was moved
-  // CHECK-NOTES: [[@LINE-3]]:9: note: move occurred here
+  // CHECK-NOTES: [[@LINE-3]]:11: note: move occurred here
   {}
 
 private:
@@ -1435,7 +1448,7 @@ public:
         s{std::move(val)},
         b{[&] { return val.empty(); }()},
         // CHECK-NOTES: [[@LINE-1]]:12: warning: 'val' used after it was moved
-        // CHECK-NOTES: [[@LINE-3]]:9: note: move occurred here
+        // CHECK-NOTES: [[@LINE-3]]:11: note: move occurred here
         c{[] {
           std::string str{};
           std::move(str);
@@ -1445,7 +1458,7 @@ public:
         }()} {
     std::move(val);
     // CHECK-NOTES: [[@LINE-1]]:15: warning: 'val' used after it was moved
-    // CHECK-NOTES: [[@LINE-13]]:9: note: move occurred here
+    // CHECK-NOTES: [[@LINE-13]]:11: note: move occurred here
     std::string val2{};
     std::move(val2);
     val2.empty();
@@ -1468,7 +1481,7 @@ public:
         b{val.empty()},
         // CHECK-NOTES: [[@LINE-1]]:11: warning: 'val' used after it was moved
         s{std::move(val)} {} // wrong order
-  // CHECK-NOTES: [[@LINE-1]]:9: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:11: note: move occurred here
   // CHECK-NOTES: [[@LINE-4]]:11: note: the use happens in a later loop iteration than the move
 
 private:
@@ -1531,7 +1544,7 @@ public:
   PR38187(std::string val) : val_(std::move(val)) {
     val.empty();
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'val' used after it was moved
-    // CHECK-NOTES: [[@LINE-3]]:30: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:35: note: move occurred here
   }
 
 private:
@@ -1562,3 +1575,58 @@ void create() {
 }
 
 } // namespace issue82023
+
+namespace PR90174 {
+
+struct A {};
+
+struct SinkA {
+  SinkA(std::unique_ptr<A>);
+};
+
+class ClassB {
+  ClassB(std::unique_ptr<A> aaa) : aa(std::move(aaa)) {
+    a = std::make_unique<SinkA>(std::move(aaa));
+    // CHECK-NOTES: [[@LINE-1]]:43: warning: 'aaa' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:39: note: move occurred here
+  }
+  std::unique_ptr<A> aa;
+  std::unique_ptr<SinkA> a;
+};
+
+void s(const std::unique_ptr<A> &);
+
+template <typename T, typename... Args> auto my_make_unique(Args &&...args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+void natively(std::unique_ptr<A> x) {
+  std::unique_ptr<A> tmp = std::move(x);
+  std::unique_ptr<SinkA> y2{new SinkA(std::move(x))};
+  // CHECK-NOTES: [[@LINE-1]]:49: warning: 'x' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:28: note: move occurred here
+}
+
+void viaStdMakeUnique(std::unique_ptr<A> x) {
+  std::unique_ptr<A> tmp = std::move(x);
+  std::unique_ptr<SinkA> y2 =
+      std::make_unique<SinkA>(std::move(x));
+  // CHECK-NOTES: [[@LINE-1]]:41: warning: 'x' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:28: note: move occurred here
+}
+
+void viaMyMakeUnique(std::unique_ptr<A> x) {
+  std::unique_ptr<A> tmp = std::move(x);
+  std::unique_ptr<SinkA> y2 = my_make_unique<SinkA>(std::move(x));
+  // CHECK-NOTES: [[@LINE-1]]:63: warning: 'x' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:28: note: move occurred here
+}
+
+void viaMyMakeUnique2(std::unique_ptr<A> x) {
+  std::unique_ptr<A> tmp = std::move(x);
+  s(x);
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: 'x' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:28: note: move occurred here
+}
+
+}

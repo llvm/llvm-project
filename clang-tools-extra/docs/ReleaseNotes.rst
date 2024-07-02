@@ -267,7 +267,8 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
-  calls to ``std::forward``.
+  calls to ``std::forward``. Smart pointers are now handled like any other
+  objects allowing to detect more cases.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
