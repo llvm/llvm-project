@@ -932,6 +932,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::DisableSanitizerInstrumentation:
       case Attribute::FnRetThunkExtern:
       case Attribute::Hot:
+      case Attribute::HybridPatchable:
       case Attribute::NoRecurse:
       case Attribute::InlineHint:
       case Attribute::MinSize:
