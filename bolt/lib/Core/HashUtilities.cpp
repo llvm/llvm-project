@@ -201,7 +201,6 @@ hashBlockCalls(const DenseMap<uint32_t, std::string *> &IdsToProfiledFunctions,
 
   return HashString;
 }
-//
 
 } // namespace bolt
 } // namespace llvm

@@ -447,12 +447,12 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-size_t matchWeightsByHashes(
-    BinaryContext &BC,
-    const DenseMap<uint32_t, std::string *> &IdToFunctionName,
-    const BinaryFunction::BasicBlockOrderType &BlockOrder,
-    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
-    HashFunction HashFunction) {
+size_t
+matchWeightsByHashes(BinaryContext &BC,
+                     const DenseMap<uint32_t, std::string *> &IdToFunctionName,
+                     const BinaryFunction::BasicBlockOrderType &BlockOrder,
+                     const yaml::bolt::BinaryFunctionProfile &YamlBF,
+                     FlowFunction &Func, HashFunction HashFunction) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
@@ -584,7 +584,7 @@ size_t matchWeightsByHashes(
     Block.HasUnknownWeight = false;
     Block.Weight = std::max(OutWeight[Block.Index], InWeight[Block.Index]);
   }
-  
+
   return MatchedBlocks.size();
 }
 
@@ -827,8 +827,9 @@ bool YAMLProfileReader::inferStaleProfile(
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  size_t MatchedBlocks = matchWeightsByHashes(BF.getBinaryContext(), IdToFunctionName, BlockOrder,
-                       YamlBF, Func, YamlBP.Header.HashFunction);
+  size_t MatchedBlocks =
+      matchWeightsByHashes(BF.getBinaryContext(), IdToFunctionName, BlockOrder,
+                           YamlBF, Func, YamlBP.Header.HashFunction);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.
