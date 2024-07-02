@@ -305,16 +305,6 @@ namespace {
       }
     }
 
-    /// fixupNeedsRelaxation - Target specific predicate for whether a given
-    /// fixup requires the associated instruction to be relaxed.
-    bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                              uint64_t Value,
-                              const MCRelaxableFragment *DF,
-                              const MCAsmLayout &Layout) const override {
-      // FIXME.
-      llvm_unreachable("fixupNeedsRelaxation() unimplemented");
-      return false;
-    }
     void relaxInstruction(MCInst &Inst,
                           const MCSubtargetInfo &STI) const override {
       // FIXME.

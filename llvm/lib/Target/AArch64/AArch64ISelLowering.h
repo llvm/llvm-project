@@ -655,8 +655,7 @@ public:
                                   MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
-                                 MachineInstr &MI, MachineBasicBlock *BB,
-                                 bool HasTile) const;
+                                 MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
@@ -1128,6 +1127,12 @@ private:
   SDValue LowerELFTLSDescCallSeq(SDValue SymAddr, const SDLoc &DL,
                                  SelectionDAG &DAG) const;
   SDValue LowerWindowsGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddressStatically(SDValue TGA, SDLoc DL, EVT VT,
+                                              AArch64PACKey::ID Key,
+                                              SDValue Discriminator,
+                                              SDValue AddrDiscriminator,
+                                              SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;

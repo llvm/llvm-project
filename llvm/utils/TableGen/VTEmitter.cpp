@@ -29,6 +29,53 @@ public:
 
 } // End anonymous namespace.
 
+static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
+  bool IsVector = VT->getValueAsBit("isVector");
+  if (IsVector)
+    OS << (VT->getValueAsBit("isScalable") ? "Scalable" : "Fixed")
+       << "VectorType::get(";
+
+  auto OutputVT = IsVector ? VT->getValueAsDef("ElementType") : VT;
+  int64_t OutputVTSize = OutputVT->getValueAsInt("Size");
+
+  if (OutputVT->getValueAsBit("isFP")) {
+    StringRef FloatTy;
+    auto OutputVTName = OutputVT->getValueAsString("LLVMName");
+    switch (OutputVTSize) {
+    default:
+      llvm_unreachable("Unhandled case");
+    case 16:
+      FloatTy = (OutputVTName == "bf16") ? "BFloatTy" : "HalfTy";
+      break;
+    case 32:
+      FloatTy = "FloatTy";
+      break;
+    case 64:
+      FloatTy = "DoubleTy";
+      break;
+    case 80:
+      FloatTy = "X86_FP80Ty";
+      break;
+    case 128:
+      FloatTy = (OutputVTName == "ppcf128") ? "PPC_FP128Ty" : "FP128Ty";
+      break;
+    }
+    OS << "Type::get" << FloatTy << "(Context)";
+  } else if (OutputVT->getValueAsBit("isInteger")) {
+    // We only have Type::getInt1Ty, Int8, Int16, Int32, Int64, and Int128
+    if ((isPowerOf2_64(OutputVTSize) && OutputVTSize >= 8 &&
+         OutputVTSize <= 128) ||
+        OutputVTSize == 1)
+      OS << "Type::getInt" << OutputVTSize << "Ty(Context)";
+    else
+      OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
+  } else
+    llvm_unreachable("Unhandled case");
+
+  if (IsVector)
+    OS << ", " << VT->getValueAsInt("nElem") << ")";
+}
+
 void VTEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
 
@@ -128,6 +175,23 @@ void VTEmitter::run(raw_ostream &OS) {
        << VT->getValueAsInt("nElem") << ", "
        << ElTy->getName() << ")\n";
     // clang-format on
+  }
+  OS << "#endif\n\n";
+
+  OS << "#ifdef GET_VT_EVT\n";
+  for (const auto *VT : VTsByNumber) {
+    if (!VT)
+      continue;
+    bool IsInteger = VT->getValueAsBit("isInteger");
+    bool IsVector = VT->getValueAsBit("isVector");
+    bool IsFP = VT->getValueAsBit("isFP");
+
+    if (!IsInteger && !IsVector && !IsFP)
+      continue;
+
+    OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", ";
+    VTtoGetLLVMTyString(OS, VT);
+    OS << ")\n";
   }
   OS << "#endif\n\n";
 }
