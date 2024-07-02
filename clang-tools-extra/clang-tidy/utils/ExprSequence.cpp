@@ -55,12 +55,18 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
                          ASTContext *Context) {
   if (Descendant == Ancestor)
     return true;
-  for (const Stmt *Parent : getParentStmts(Descendant, Context)) {
-    if (isDescendantOrEqual(Parent, Ancestor, Context))
-      return true;
-  }
+  return llvm::any_of(getParentStmts(Descendant, Context),
+                      [Ancestor, Context](const Stmt *Parent) {
+                        return isDescendantOrEqual(Parent, Ancestor, Context);
+                      });
+}
 
-  return false;
+bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
+                        ASTContext *Context) {
+  return llvm::any_of(Call->arguments(),
+                      [Descendant, Context](const Expr *Arg) {
+                        return isDescendantOrEqual(Descendant, Arg, Context);
+                      });
 }
 
 llvm::SmallVector<const InitListExpr *>
@@ -95,9 +101,59 @@ bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {
       return true;
   }
 
+  SmallVector<const Stmt *, 1> BeforeParents = getParentStmts(Before, Context);
+
+  // Since C++17, the callee of a call expression is guaranteed to be sequenced
+  // before all of the arguments.
+  // We handle this as a special case rather than using the general
+  // `getSequenceSuccessor` logic above because the callee expression doesn't
+  // have an unambiguous successor; the order in which arguments are evaluated
+  // is indeterminate.
+  for (const Stmt *Parent : BeforeParents) {
+    // Special case: If the callee is a `MemberExpr` with a `DeclRefExpr` as its
+    // base, we consider it to be sequenced _after_ the arguments. This is
+    // because the variable referenced in the base will only actually be
+    // accessed when the call happens, i.e. once all of the arguments have been
+    // evaluated. This has no basis in the C++ standard, but it reflects actual
+    // behavior that is relevant to a use-after-move scenario:
+    //
+    // ```
+    // a.bar(consumeA(std::move(a));
+    // ```
+    //
+    // In this example, we end up accessing `a` after it has been moved from,
+    // even though nominally the callee `a.bar` is evaluated before the argument
+    // `consumeA(std::move(a))`. Note that this is not specific to C++17, so
+    // we implement this logic unconditionally.
+    if (const auto *Call = dyn_cast<CXXMemberCallExpr>(Parent)) {
+      if (is_contained(Call->arguments(), Before) &&
+          isa<DeclRefExpr>(
+              Call->getImplicitObjectArgument()->IgnoreParenImpCasts()) &&
+          isDescendantOrEqual(After, Call->getImplicitObjectArgument(),
+                              Context))
+        return true;
+
+      // We need this additional early exit so that we don't fall through to the
+      // more general logic below.
+      if (const auto *Member = dyn_cast<MemberExpr>(Before);
+          Member && Call->getCallee() == Member &&
+          isa<DeclRefExpr>(Member->getBase()->IgnoreParenImpCasts()) &&
+          isDescendantOfArgs(After, Call, Context))
+        return false;
+    }
+
+    if (!Context->getLangOpts().CPlusPlus17)
+      continue;
+
+    if (const auto *Call = dyn_cast<CallExpr>(Parent);
+        Call && Call->getCallee() == Before &&
+        isDescendantOfArgs(After, Call, Context))
+      return true;
+  }
+
   // If 'After' is a parent of 'Before' or is sequenced after one of these
   // parents, we know that it is sequenced after 'Before'.
-  for (const Stmt *Parent : getParentStmts(Before, Context)) {
+  for (const Stmt *Parent : BeforeParents) {
     if (Parent == After || inSequence(Parent, After))
       return true;
   }
