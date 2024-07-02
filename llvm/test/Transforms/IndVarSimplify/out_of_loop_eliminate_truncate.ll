@@ -24,8 +24,7 @@ define dso_local noundef zeroext i1 @matchSimpleRecurrence(
 ; CHECK-NEXT:    [[CMP_NOT17_LCSSA:%.*]] = phi i1 [ [[CMP_NOT17]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_016_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[TMP0]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 poison to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[I_016_LCSSA_WIDE]], [[ZEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[I_016_LCSSA_WIDE]], 0
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = zext i1 [[TMP1]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds ptr, ptr [[P]], i64 [[IDXPROM1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX2]], align 8
@@ -99,7 +98,7 @@ define i1 @check_size_str(ptr %str, i32 %str.size, i32 %n) {
 ; CHECK-NEXT:    br i1 [[OR]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i64 [ [[I]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 poison to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[I_LCSSA]], [[ZEXT]]
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
