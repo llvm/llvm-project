@@ -850,10 +850,11 @@ private:
   }
 
   template <class _Up>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline pointer __push_back_slow_path(_Up&& __x);
+  _LIBCPP_NOINLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline pointer __push_back_slow_path(_Up&& __x);
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline pointer __emplace_back_slow_path(_Args&&... __args);
+  _LIBCPP_NOINLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline pointer
+  __emplace_back_slow_path(_Args&&... __args);
 
   // The following functions are no-ops outside of AddressSanitizer mode.
   // We call annotations for every allocator, unless explicitly disabled.
