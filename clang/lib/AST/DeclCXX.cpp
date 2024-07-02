@@ -96,7 +96,8 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       DefaultedDestructorIsDeleted(false), HasTrivialSpecialMembers(SMF_All),
       HasTrivialSpecialMembersForCall(SMF_All),
       DeclaredNonTrivialSpecialMembers(0),
-      DeclaredNonTrivialSpecialMembersForCall(0), HasIrrelevantDestructor(true),
+      DeclaredNonTrivialSpecialMembersForCall(0),
+      IsNaturallyTriviallyRelocatable(true), HasIrrelevantDestructor(true),
       HasConstexprNonCopyMoveConstructor(false),
       HasDefaultedDefaultConstructor(false),
       DefaultedDefaultConstructorIsConstexpr(true),
@@ -280,6 +281,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
       //   An aggregate is a class with [...] no virtual functions.
       data().Aggregate = false;
+
+      // A trivially relocatable class is a class:
+      // -- which has no virtual member functions or virtual base classes
+      data().IsNaturallyTriviallyRelocatable = false;
     }
 
     // C++0x [class]p7:
@@ -293,6 +298,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     // Record if this base is the first non-literal field or base.
     if (!hasNonLiteralTypeFieldsOrBases() && !BaseType->isLiteralType(C))
       data().HasNonLiteralTypeFieldsOrBases = true;
+
+    if (Base->isVirtual() || !BaseClassDecl->isTriviallyRelocatable())
+      data().IsNaturallyTriviallyRelocatable = false;
 
     // Now go through all virtual bases of this base and add them.
     for (const auto &VBase : BaseClassDecl->vbases()) {
@@ -573,6 +581,10 @@ bool CXXRecordDecl::hasAnyDependentBases() const {
   return !forallBases([](const CXXRecordDecl *) { return true; });
 }
 
+bool CXXRecordDecl::isTriviallyRelocatable() const {
+  return (data().IsNaturallyTriviallyRelocatable || hasAttr<TrivialABIAttr>());
+}
+
 bool CXXRecordDecl::isTriviallyCopyable() const {
   // C++0x [class]p5:
   //   A trivially copyable class is a class that:
@@ -761,6 +773,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //    -- has no virtual functions
       data().IsStandardLayout = false;
       data().IsCXX11StandardLayout = false;
+
+      // A trivially relocatable class is a class:
+      // -- which has no virtual member functions or virtual base classes
+      data().IsNaturallyTriviallyRelocatable = false;
     }
   }
 
@@ -1068,6 +1084,12 @@ void CXXRecordDecl::addedMember(Decl *D) {
       }
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;
+
+    // A trivially relocatable class is a class:
+    // -- all of whose members are either of reference type or of trivially
+    // relocatable type
+    if (!T->isReferenceType() && !T.isTriviallyRelocatableType(Context))
+      data().IsNaturallyTriviallyRelocatable = false;
 
     if (T->isReferenceType()) {
       if (!Field->hasInClassInitializer())
@@ -1424,8 +1446,9 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
   // See https://github.com/llvm/llvm-project/issues/59206
 
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-    if (DD->isUserProvided())
+    if (DD->isUserProvided()) {
       data().HasIrrelevantDestructor = false;
+    }
     // If the destructor is explicitly defaulted and not trivial or not public
     // or if the destructor is deleted, we clear HasIrrelevantDestructor in
     // finishedDefaultedOrDeletedMember.
@@ -1439,6 +1462,17 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
 
     if (DD->isNoReturn())
       data().IsAnyDestructorNoReturn = true;
+  }
+
+  // A trivially relocatable class is a class:
+  // -- where no eligible copy constructor, move constructor, copy
+  // assignment operator, move assignment operator, or destructor is
+  // user-provided,
+  if (MD->isUserProvided() &&
+      (SMKind & (SMF_CopyConstructor | SMF_MoveConstructor |
+                 SMF_CopyAssignment | SMF_MoveAssignment | SMF_Destructor)) !=
+          0u) {
+    data().IsNaturallyTriviallyRelocatable = false;
   }
 
   if (!MD->isImplicit() && !MD->isUserProvided()) {
