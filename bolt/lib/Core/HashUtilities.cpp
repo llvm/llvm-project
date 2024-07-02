@@ -182,12 +182,11 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
 std::string
 hashBlockCalls(const DenseMap<uint32_t, std::string *> &IdsToProfiledFunctions,
                const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-
   std::multiset<std::string> FunctionNames;
   for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
     auto It = IdsToProfiledFunctions.find(CallSiteInfo.DestId);
-    assert(It != IdsToProfiledFunctions.end() &&
-           "All profiled functions should have ids");
+    if (It == IdsToProfiledFunctions.end())
+      continue;
     StringRef Name = *It->second;
     const size_t Pos = Name.find("(*");
     if (Pos != StringRef::npos)
