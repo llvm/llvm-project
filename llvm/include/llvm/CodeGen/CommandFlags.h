@@ -71,6 +71,7 @@ bool getEnableNoTrappingFPMath();
 
 DenormalMode::DenormalModeKind getDenormalFPMath();
 DenormalMode::DenormalModeKind getDenormalFP32Math();
+DenormalMode::DenormalModeKind getDenormalBF16Math();
 
 bool getEnableHonorSignDependentRoundingFPMath();
 
