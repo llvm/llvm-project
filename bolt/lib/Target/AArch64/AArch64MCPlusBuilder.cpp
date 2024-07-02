@@ -141,10 +141,6 @@ public:
                                  *AArch64ExprB.getSubExpr(), Comp);
   }
 
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    return false;
-  }
-
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
     return false;
   }
