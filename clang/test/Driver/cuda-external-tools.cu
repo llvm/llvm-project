@@ -25,6 +25,17 @@
 // RUN:   --no-offload-new-driver --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,RDC %s
 
+// Compiling -O{1,2,3,4,fast,s,z} with -g does not pass -g debug info to ptxas.
+// NOTE: This is because ptxas does not support optimized debugging.
+// RUN: %clang -### --target=x86_64-linux-gnu -O3 -g -c %s 2>&1 \
+// RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT3-DBG %s
+
+// Compiling -O0 with -g passes -g debug info to ptxas.
+// RUN: %clang -### --target=x86_64-linux-gnu -O0 -g -c %s 2>&1 \
+// RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT0-DBG %s
+
 // With debugging enabled, ptxas should be run with with no ptxas optimizations.
 // RUN: %clang -### --target=x86_64-linux-gnu --cuda-noopt-device-debug -O2 -g -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
@@ -137,6 +148,10 @@
 // OPT2-NOT: "-g"
 // OPT3-SAME: "-O3"
 // OPT3-NOT: "-g"
+// OPT3-DBG-SAME: "-O3" "-lineinfo"
+// OPT3-DBG-NOT: "-g"
+// OPT0-DBG-SAME: "-g" "--dont-merge-basicblocks" "--return-at-end"
+// OPT0-DBG-NOT: "-O0"
 // DBG-SAME: "-g" "--dont-merge-basicblocks" "--return-at-end"
 // SM35-SAME: "--gpu-name" "sm_35"
 // SM35-SAME: "--output-file" "[[CUBINFILE:[^"]*]]"
