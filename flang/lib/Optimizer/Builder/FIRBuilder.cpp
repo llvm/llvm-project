@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -362,6 +363,22 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   if (symbolTable)
     symbolTable->insert(glob);
   return glob;
+}
+
+std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+fir::FirOpBuilder::createTypeInfoOp(mlir::Location loc,
+                                    fir::RecordType recordType,
+                                    fir::RecordType parentType) {
+  mlir::ModuleOp module = getModule();
+  if (fir::TypeInfoOp typeInfo =
+          fir::lookupTypeInfoOp(recordType.getName(), module, symbolTable))
+    return {typeInfo, InsertPoint{}};
+  InsertPoint insertPoint = saveInsertionPoint();
+  setInsertionPoint(module.getBody(), module.getBody()->end());
+  auto typeInfo = create<fir::TypeInfoOp>(loc, recordType, parentType);
+  if (symbolTable)
+    symbolTable->insert(typeInfo);
+  return {typeInfo, insertPoint};
 }
 
 mlir::Value fir::FirOpBuilder::convertWithSemantics(

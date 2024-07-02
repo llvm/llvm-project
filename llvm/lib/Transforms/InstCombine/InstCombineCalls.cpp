@@ -2641,6 +2641,31 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
+    // ldexp(x, c ? exp : 0) -> c ? ldexp(x, exp) : x
+    // ldexp(x, c ? 0 : exp) -> c ? x : ldexp(x, exp)
+    ///
+    // TODO: If we cared, should insert a canonicalize for x
+    Value *SelectCond, *SelectLHS, *SelectRHS;
+    if (match(II->getArgOperand(1),
+              m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
+                                m_Value(SelectRHS))))) {
+      Value *NewLdexp = nullptr;
+      Value *Select = nullptr;
+      if (match(SelectRHS, m_ZeroInt())) {
+        NewLdexp = Builder.CreateLdexp(Src, SelectLHS);
+        Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
+      } else if (match(SelectLHS, m_ZeroInt())) {
+        NewLdexp = Builder.CreateLdexp(Src, SelectRHS);
+        Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
+      }
+
+      if (NewLdexp) {
+        Select->takeName(II);
+        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
+        return replaceInstUsesWith(*II, Select);
+      }
+    }
+
     break;
   }
   case Intrinsic::ptrauth_auth:
