@@ -1764,8 +1764,8 @@ ReoptimizeBlock:
       // possible and not remove the "!FallThrough()->isEHPad" condition below.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
-      if (FallThrough != MF.end() &&
-          !FallThrough->isEHPad() &&
+      if (FallThrough != MF.end() && !FallThrough->isEHPad() &&
+          !FallThrough->isInlineAsmBrIndirectTarget() &&
           !TII->analyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
           PrevBB.isSuccessor(&*FallThrough)) {
         MBB->moveAfter(&MF.back());
