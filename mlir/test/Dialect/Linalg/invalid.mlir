@@ -780,3 +780,20 @@ func.func @mixed_semantics(%a: tensor<?x?xf32>, %b: tensor<?x?xf32>, %c: memref<
   return
 }
 
+// -----
+
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+module {
+  func.func @incorrect_output_dimension(%arg0: tensor<1x?x?x1xf32>, %arg1: index) -> tensor<?x1x61x1xf32> {
+    %cst = arith.constant dense<1.000000e+00> : tensor<1x1x1x1xf32>
+    %0 = tensor.empty(%arg1) : tensor<?x1x61x1xf32>
+    // expected-error @+1 {{inferred operand #2 has shape's dimension #0 to be 1}}
+    %1 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg0, %cst : tensor<1x?x?x1xf32>, tensor<1x1x1x1xf32>) outs(%0 : tensor<?x1x61x1xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %2 = arith.mulf %in, %in_0 : f32
+      %3 = arith.addf %out, %2 : f32
+      linalg.yield %3 : f32
+    } -> tensor<?x1x61x1xf32>
+    return %1 : tensor<?x1x61x1xf32>
+  }
+}
