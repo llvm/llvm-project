@@ -420,8 +420,10 @@ BreakableComment::getSplit(unsigned LineIndex, unsigned TailOffset,
                            unsigned ColumnLimit, unsigned ContentStartColumn,
                            const llvm::Regex &CommentPragmasRegex) const {
   // Don't break lines matching the comment pragmas regex.
-  if (CommentPragmasRegex.match(Content[LineIndex]))
+  if (Style.ReflowComments != FormatStyle::RCS_Always ||
+      CommentPragmasRegex.match(Content[LineIndex])) {
     return Split(StringRef::npos, 0);
+  }
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
                          Encoding, Style);
@@ -608,8 +610,10 @@ BreakableToken::Split BreakableBlockComment::getSplit(
     unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
     unsigned ContentStartColumn, const llvm::Regex &CommentPragmasRegex) const {
   // Don't break lines matching the comment pragmas regex.
-  if (CommentPragmasRegex.match(Content[LineIndex]))
+  if (Style.ReflowComments != FormatStyle::RCS_Always ||
+      CommentPragmasRegex.match(Content[LineIndex])) {
     return Split(StringRef::npos, 0);
+  }
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
                          Encoding, Style, Decoration.ends_with("*"));
@@ -855,7 +859,8 @@ bool BreakableBlockComment::mayReflow(
   StringRef IndentContent = Content[LineIndex];
   if (Lines[LineIndex].ltrim(Blanks).starts_with("*"))
     IndentContent = Lines[LineIndex].ltrim(Blanks).substr(1);
-  return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
+  return LineIndex > 0 && Style.ReflowComments == FormatStyle::RCS_Always &&
+         !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex));
 }
@@ -1160,7 +1165,8 @@ bool BreakableLineCommentSection::mayReflow(
   // // text that protrudes
   // //    into text with different indent
   // We do reflow in that case in block comments.
-  return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
+  return LineIndex > 0 && Style.ReflowComments == FormatStyle::RCS_Always &&
+         !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex)) &&
          OriginalPrefix[LineIndex] == OriginalPrefix[LineIndex - 1];
