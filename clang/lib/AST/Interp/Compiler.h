@@ -39,6 +39,7 @@ template <class Emitter> class SourceLocScope;
 template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
+template <class Emitter> class StmtExprScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -183,6 +184,7 @@ public:
   bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
+  bool VisitStmtExpr(const StmtExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -259,7 +261,7 @@ protected:
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD);
+  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);
@@ -333,6 +335,7 @@ private:
   friend class LoopScope<Emitter>;
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
+  friend class StmtExprScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -396,6 +399,8 @@ protected:
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
+
+  bool InStmtExpr = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().

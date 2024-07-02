@@ -10,7 +10,7 @@
 #define MLIR_TRANSFORMS_SROA_H
 
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Statistic.h"
 
 namespace mlir {
