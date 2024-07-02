@@ -24960,7 +24960,7 @@ Examples:
 Masked Vector Load and Store Intrinsics
 ---------------------------------------
 
-LLVM provides intrinsics for predicated vector load and store operations. The predicate is specified by a mask operand, which holds one bit per vector element, switching the associated vector lane on or off. The memory addresses corresponding to the "off" lanes are not accessed. When all bits of the mask are on, the intrinsic is identical to a regular vector load or store. When all bits are off, no memory is accessed.
+LLVM provides intrinsics for predicated vector load and store operations. The predicate is specified by a mask argument, which holds one bit per vector element, switching the associated vector lane on or off. The memory addresses corresponding to the "off" lanes are not accessed. When all bits of the mask are on, the intrinsic is identical to a regular vector load or store. When all bits are off, no memory is accessed.
 
 .. _int_mload:
 
@@ -24981,13 +24981,13 @@ This is an overloaded intrinsic. The loaded data is a vector of any integer, flo
 Overview:
 """""""""
 
-Reads a vector from memory according to the provided mask. The mask holds a bit for each vector lane, and is used to prevent memory accesses to the masked-off lanes. The masked-off lanes in the result vector are taken from the corresponding lanes of the '``passthru``' operand.
+Reads a vector from memory according to the provided mask. The mask holds a bit for each vector lane, and is used to prevent memory accesses to the masked-off lanes. The masked-off lanes in the result vector are taken from the corresponding lanes of the '``passthru``' argument.
 
 
 Arguments:
 """"""""""
 
-The first operand is the base pointer for the load. The second operand is the alignment of the source location. It must be a power of two constant integer value. The third operand, mask, is a vector of boolean values with the same number of elements as the return type. The fourth is a pass-through value that is used to fill the masked-off lanes of the result. The return type, underlying type of the base pointer and the type of the '``passthru``' operand are the same vector types.
+The first argument is the base pointer for the load. The second argument is the alignment of the source location. It must be a power of two constant integer value. The third argument, mask, is a vector of boolean values with the same number of elements as the return type. The fourth is a pass-through value that is used to fill the masked-off lanes of the result. The return type, underlying type of the base pointer and the type of the '``passthru``' argument are the same vector types.
 
 Semantics:
 """"""""""
@@ -25028,7 +25028,7 @@ Writes a vector to memory according to the provided mask. The mask holds a bit f
 Arguments:
 """"""""""
 
-The first operand is the vector value to be written to memory. The second operand is the base pointer for the store, it has the same underlying type as the value operand. The third operand is the alignment of the destination location. It must be a power of two constant integer value. The fourth operand, mask, is a vector of boolean values. The types of the mask and the value operand must have the same number of vector elements.
+The first argument is the vector value to be written to memory. The second argument is the base pointer for the store, it has the same underlying type as the value argument. The third argument is the alignment of the destination location. It must be a power of two constant integer value. The fourth argument, mask, is a vector of boolean values. The types of the mask and the value argument must have the same number of vector elements.
 
 
 Semantics:
@@ -25050,7 +25050,7 @@ The result of this operation is equivalent to a load-modify-store sequence. Howe
 Masked Vector Gather and Scatter Intrinsics
 -------------------------------------------
 
-LLVM provides intrinsics for vector gather and scatter operations. They are similar to :ref:`Masked Vector Load and Store <int_mload_mstore>`, except they are designed for arbitrary memory accesses, rather than sequential memory accesses. Gather and scatter also employ a mask operand, which holds one bit per vector element, switching the associated vector lane on or off. The memory addresses corresponding to the "off" lanes are not accessed. When all bits are off, no memory is accessed.
+LLVM provides intrinsics for vector gather and scatter operations. They are similar to :ref:`Masked Vector Load and Store <int_mload_mstore>`, except they are designed for arbitrary memory accesses, rather than sequential memory accesses. Gather and scatter also employ a mask argument, which holds one bit per vector element, switching the associated vector lane on or off. The memory addresses corresponding to the "off" lanes are not accessed. When all bits are off, no memory is accessed.
 
 .. _int_mgather:
 
@@ -25070,13 +25070,13 @@ This is an overloaded intrinsic. The loaded data are multiple scalar values of a
 Overview:
 """""""""
 
-Reads scalar values from arbitrary memory locations and gathers them into one vector. The memory locations are provided in the vector of pointers '``ptrs``'. The memory is accessed according to the provided mask. The mask holds a bit for each vector lane, and is used to prevent memory accesses to the masked-off lanes. The masked-off lanes in the result vector are taken from the corresponding lanes of the '``passthru``' operand.
+Reads scalar values from arbitrary memory locations and gathers them into one vector. The memory locations are provided in the vector of pointers '``ptrs``'. The memory is accessed according to the provided mask. The mask holds a bit for each vector lane, and is used to prevent memory accesses to the masked-off lanes. The masked-off lanes in the result vector are taken from the corresponding lanes of the '``passthru``' argument.
 
 
 Arguments:
 """"""""""
 
-The first operand is a vector of pointers which holds all memory addresses to read. The second operand is an alignment of the source addresses. It must be 0 or a power of two constant integer value. The third operand, mask, is a vector of boolean values with the same number of elements as the return type. The fourth is a pass-through value that is used to fill the masked-off lanes of the result. The return type, underlying type of the vector of pointers and the type of the '``passthru``' operand are the same vector types.
+The first argument is a vector of pointers which holds all memory addresses to read. The second argument is an alignment of the source addresses. It must be 0 or a power of two constant integer value. The third argument, mask, is a vector of boolean values with the same number of elements as the return type. The fourth is a pass-through value that is used to fill the masked-off lanes of the result. The return type, underlying type of the vector of pointers and the type of the '``passthru``' argument are the same vector types.
 
 Semantics:
 """"""""""
@@ -25128,7 +25128,7 @@ Writes each element from the value vector to the corresponding memory address. T
 Arguments:
 """"""""""
 
-The first operand is a vector value to be written to memory. The second operand is a vector of pointers, pointing to where the value elements should be stored. It has the same underlying type as the value operand. The third operand is an alignment of the destination addresses. It must be 0 or a power of two constant integer value. The fourth operand, mask, is a vector of boolean values. The types of the mask and the value operand must have the same number of vector elements.
+The first argument is a vector value to be written to memory. The second argument is a vector of pointers, pointing to where the value elements should be stored. It has the same underlying type as the value argument. The third argument is an alignment of the destination addresses. It must be 0 or a power of two constant integer value. The fourth argument, mask, is a vector of boolean values. The types of the mask and the value argument must have the same number of vector elements.
 
 Semantics:
 """"""""""
@@ -25178,16 +25178,16 @@ This is an overloaded intrinsic. Several values of integer, floating point or po
 Overview:
 """""""""
 
-Reads a number of scalar values sequentially from memory location provided in '``ptr``' and spreads them in a vector. The '``mask``' holds a bit for each vector lane. The number of elements read from memory is equal to the number of '1' bits in the mask. The loaded elements are positioned in the destination vector according to the sequence of '1' and '0' bits in the mask. E.g., if the mask vector is '10010001', "expandload" reads 3 values from memory addresses ptr, ptr+1, ptr+2 and places them in lanes 0, 3 and 7 accordingly. The masked-off lanes are filled by elements from the corresponding lanes of the '``passthru``' operand.
+Reads a number of scalar values sequentially from memory location provided in '``ptr``' and spreads them in a vector. The '``mask``' holds a bit for each vector lane. The number of elements read from memory is equal to the number of '1' bits in the mask. The loaded elements are positioned in the destination vector according to the sequence of '1' and '0' bits in the mask. E.g., if the mask vector is '10010001', "expandload" reads 3 values from memory addresses ptr, ptr+1, ptr+2 and places them in lanes 0, 3 and 7 accordingly. The masked-off lanes are filled by elements from the corresponding lanes of the '``passthru``' argument.
 
 
 Arguments:
 """"""""""
 
-The first operand is the base pointer for the load. It has the same underlying type as the element of the returned vector. The second operand, mask, is a vector of boolean values with the same number of elements as the return type. The third is a pass-through value that is used to fill the masked-off lanes of the result. The return type and the type of the '``passthru``' operand have the same vector type.
+The first argument is the base pointer for the load. It has the same underlying type as the element of the returned vector. The second argument, mask, is a vector of boolean values with the same number of elements as the return type. The third is a pass-through value that is used to fill the masked-off lanes of the result. The return type and the type of the '``passthru``' argument have the same vector type.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the first
-operand. The pointer alignment defaults to 1.
+argument. The pointer alignment defaults to 1.
 
 Semantics:
 """"""""""
@@ -25244,10 +25244,10 @@ Selects elements from input vector '``value``' according to the '``mask``'. All 
 Arguments:
 """"""""""
 
-The first operand is the input vector, from which elements are collected and written to memory. The second operand is the base pointer for the store, it has the same underlying type as the element of the input vector operand. The third operand is the mask, a vector of boolean values. The mask and the input vector must have the same number of vector elements.
+The first argument is the input vector, from which elements are collected and written to memory. The second argument is the base pointer for the store, it has the same underlying type as the element of the input vector argument. The third argument is the mask, a vector of boolean values. The mask and the input vector must have the same number of vector elements.
 
 The :ref:`align <attr_align>` parameter attribute can be provided for the second
-operand. The pointer alignment defaults to 1.
+argument. The pointer alignment defaults to 1.
 
 Semantics:
 """"""""""
