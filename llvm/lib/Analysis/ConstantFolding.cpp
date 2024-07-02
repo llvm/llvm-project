@@ -1784,8 +1784,8 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
 }
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
-Constant *ConstantFoldFP128(long double (*NativeFP)(long double),
-                            const APFloat &V, Type *Ty) {
+Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
+                            Type *Ty) {
   llvm_fenv_clearexcept();
   float128 Result = NativeFP(V.convertToQuad());
   if (llvm_fenv_testexcept()) {
