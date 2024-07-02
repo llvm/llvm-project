@@ -465,6 +465,12 @@ template <class... _IndexTypes>
 explicit extents(_IndexTypes...) -> extents<size_t, size_t(((void)sizeof(_IndexTypes), dynamic_extent))...>;
 #  endif
 
+#  if _LIBCPP_STD_VER >= 26
+// [mdspan.extents.dims], alias template `dims`
+template <size_t _Rank, class _IndexType = size_t>
+using dims = dextents<_IndexType, _Rank>;
+#  endif
+
 namespace __mdspan_detail {
 
 // Helper type traits for identifying a class as extents.

@@ -20,6 +20,10 @@ namespace std {
   template<class IndexType, size_t Rank>
     using dextents = see below;
 
+  // [mdspan.extents.dims], alias template dims
+  template<size_t Rank, class IndexType = size_t>
+    using dims = see below; // since C++26
+
   // [mdspan.layout], layout mapping
   struct layout_left;
   struct layout_right;

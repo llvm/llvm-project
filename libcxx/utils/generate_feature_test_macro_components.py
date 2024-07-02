@@ -848,7 +848,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_mdspan",
-            "values": {"c++23": 202207},
+            "values": {"c++23": 202207, "c++26": 202406},
             "headers": ["mdspan"],
         },
         {
