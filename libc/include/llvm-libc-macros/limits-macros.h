@@ -225,4 +225,16 @@
 #define ULLONG_MIN 0ULL
 #endif // ULLONG_MIN
 
+#ifndef _POSIX_MAX_CANON
+#define _POSIX_MAX_CANON 255
+#endif
+
+#ifndef _POSIX_MAX_INPUT
+#define _POSIX_MAX_INPUT 255
+#endif
+
+#ifndef _POSIX_NAME_MAX
+#define _POSIX_PATH_MAX 256
+#endif
+
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

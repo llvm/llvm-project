@@ -8,6 +8,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.optional
     libc.include.sys_syscall
+    libc.include.llvm-libc-types.struct_statvfs
 )
 
 add_entrypoint_object(
