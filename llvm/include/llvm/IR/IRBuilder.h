@@ -1024,10 +1024,11 @@ public:
   }
 
   /// Create call to the ldexp intrinsic.
-  Value *CreateLdexp(Value *Src, Value *Exp, const Twine &Name = "") {
+  Value *CreateLdexp(Value *Src, Value *Exp, Instruction *FMFSource = nullptr,
+                     const Twine &Name = "") {
     assert(!IsFPConstrained && "TODO: Support strictfp");
     return CreateIntrinsic(Intrinsic::ldexp, {Src->getType(), Exp->getType()},
-                           {Src, Exp}, nullptr, Name);
+                           {Src, Exp}, FMFSource, Name);
   }
 
   /// Create a call to the arithmetic_fence intrinsic.
