@@ -384,6 +384,30 @@ template <bool IS_ALLOCATING> struct MatmulTranspose {
         x, y, terminator, yCatKind->first, yCatKind->second);
   }
 };
+
+template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
+    int YKIND>
+struct MatmulTransposeHelper {
+  using ResultDescriptor =
+      std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
+  RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
+      const Descriptor &y, const char *sourceFile, int line) const {
+    Terminator terminator{sourceFile, line};
+    auto xCatKind{x.type().GetCategoryAndKind()};
+    auto yCatKind{y.type().GetCategoryAndKind()};
+    RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
+    RUNTIME_CHECK(terminator, xCatKind->first == XCAT);
+    RUNTIME_CHECK(terminator, yCatKind->first == YCAT);
+    if constexpr (constexpr auto resultType{
+                      GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
+      return DoMatmulTranspose<IS_ALLOCATING, resultType->first,
+          resultType->second, CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(
+          result, x, y, terminator);
+    }
+    terminator.Crash("MATMUL-TRANSPOSE: bad operand types (%d(%d), %d(%d))",
+        static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
+  }
+};
 } // namespace
 
 namespace Fortran::runtime {
@@ -398,6 +422,24 @@ void RTDEF(MatmulTransposeDirect)(const Descriptor &result, const Descriptor &x,
     const Descriptor &y, const char *sourceFile, int line) {
   MatmulTranspose<false>{}(result, x, y, sourceFile, line);
 }
+
+#define MATMUL_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
+  void RTDEF(MatmulTranspose##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
+      const Descriptor &x, const Descriptor &y, const char *sourceFile, \
+      int line) { \
+    MatmulTransposeHelper<true, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
+        YKIND>{}(result, x, y, sourceFile, line); \
+  }
+
+#define MATMUL_DIRECT_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
+  void RTDEF(MatmulTransposeDirect##XCAT##XKIND##YCAT##YKIND)( \
+      Descriptor & result, const Descriptor &x, const Descriptor &y, \
+      const char *sourceFile, int line) { \
+    MatmulTransposeHelper<false, TypeCategory::XCAT, XKIND, \
+        TypeCategory::YCAT, YKIND>{}(result, x, y, sourceFile, line); \
+  }
+
+#include "flang/Runtime/matmul-instances.inc"
 
 RT_EXT_API_GROUP_END
 } // extern "C"
