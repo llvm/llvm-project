@@ -148,6 +148,7 @@ def StructRUsagePtr : PtrType<StructRUsage>;
 
 def StructTimevalType : NamedType<"struct timeval">;
 def StructTimevalPtr : PtrType<StructTimevalType>;
+def ConstStructTimevalPtr : ConstType<StructTimevalPtr>;
 def RestrictedStructTimevalPtr : RestrictedPtrType<StructTimevalType>;
 
 def SuSecondsT : NamedType<"suseconds_t">;

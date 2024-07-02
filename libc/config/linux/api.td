@@ -235,7 +235,7 @@ def SysSocketAPI : PublicAPI<"sys/socket.h"> {
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
-  let Types = ["rlim_t", "struct rlimit"];
+  let Types = ["rlim_t", "struct rlimit", "struct rusage"];
 }
 
 def SysStatAPI : PublicAPI<"sys/stat.h"> {
@@ -307,4 +307,17 @@ def SearchAPI : PublicAPI<"search.h"> {
 
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
   let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
+}
+
+def LinkAPI : PublicAPI<"link.h"> {
+  let Types = [
+    "struct dl_phdr_info",
+    "__dl_iterate_phdr_callback_t"
+  ];
+}
+
+def DlfcnAPI : PublicAPI<"dlfcn.h"> {
+  let Types = [
+    "Dl_info"
+  ];
 }

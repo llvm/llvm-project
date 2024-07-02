@@ -11,6 +11,8 @@ add_subdirectory(stdio)
 add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(wchar)
+add_subdirectory(dlfcn)
+add_subdirectory(link)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(dirent)

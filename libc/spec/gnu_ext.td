@@ -237,7 +237,11 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       [], // Types
       [], // Enumerations
       [
-        //TODO: Add getauxval here
+          FunctionSpec<
+              "getauxval",
+              RetValSpec<UnsignedLongType>,
+              [ArgSpec<UnsignedLongType>]
+          >,
       ]  // Functions
   >;
 

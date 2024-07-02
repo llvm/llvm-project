@@ -12,6 +12,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getrusage
+  SRCS
+    getrusage.cpp
+  HDRS
+    ../getrusage.h
+  DEPENDS
+    libc.include.sys_resource
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   setrlimit
   SRCS
     setrlimit.cpp

@@ -330,6 +330,17 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.wctob
+
+    # XXX
+    libc.src.sys.time.utimes
+    libc.src.sys.ioctl.ioctl
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dladdr
+    libc.src.link.dl_iterate_phdr
+    libc.src.sys.resource.getrusage
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

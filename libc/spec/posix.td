@@ -21,6 +21,9 @@ def PThreadOnceT : NamedType<"pthread_once_t">;
 def PThreadOnceTPtr : PtrType<PThreadOnceT>;
 def PThreadOnceCallback : NamedType<"__pthread_once_func_t">;
 
+def DlInfo : NamedType<"Dl_info">;
+def DlInfoPtr : PtrType<DlInfo>;
+
 def InoT : NamedType<"ino_t">;
 def UidT : NamedType<"uid_t">;
 def GidT : NamedType<"gid_t">;
@@ -135,6 +138,9 @@ def POSIX : StandardSpec<"POSIX"> {
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 
+  NamedType FsFilCntTType = NamedType<"fsfilcnt_t">;
+  NamedType FsBlkCntTType = NamedType<"fsblkcnt_t">;
+
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
       [
@@ -220,6 +226,45 @@ def POSIX : StandardSpec<"POSIX"> {
       [], // Types
       [], // Enumerations
       []  // Functions
+  >;
+
+  HeaderSpec DlFcn = HeaderSpec<
+    "dlfcn.h",
+    [
+      Macro<"RTLD_LAZY">,
+      Macro<"RTLD_NOW">,
+      Macro<"RTLD_GLOBAL">,
+      Macro<"RTLD_LOCAL">,
+    ],
+    [DlInfo],  // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+          "dladdr",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstVoidPtr>, ArgSpec<DlInfoPtr>]
+      >,
+      FunctionSpec<
+          "dlclose",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>]
+      >,
+      FunctionSpec<
+          "dlerror",
+          RetValSpec<CharPtr>,
+          []
+      >,
+      FunctionSpec<
+          "dlopen",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "dlsym",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<VoidRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]
+      >,
+    ]
   >;
 
   HeaderSpec FCntl = HeaderSpec<
@@ -844,16 +889,23 @@ def POSIX : StandardSpec<"POSIX"> {
   NamedType StructRLimitType = NamedType<"struct rlimit">;
   PtrType StructRLimitPtr = PtrType<StructRLimitType>;
   ConstType ConstStructRLimitPtr = ConstType<StructRLimitType>;
+  NamedType StructRUsageType = NamedType<"struct rusage">;
+  PtrType StructRUsagePtr = PtrType<StructRUsageType>;
   HeaderSpec SysResource = HeaderSpec<
     "sys/resource.h",
     [], // Macros
-    [RLimTType, StructRLimitType], // Types
+    [RLimTType, StructRLimitType, StructRUsageType], // Types
     [], // Enumerations
     [
         FunctionSpec<
           "getrlimit",
           RetValSpec<IntType>,
           [ArgSpec<StructRLimitPtr>]
+        >,
+        FunctionSpec<
+          "getrusage",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<StructRUsagePtr>]
         >,
         FunctionSpec<
           "setrlimit",
@@ -928,7 +980,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysStatvfs = HeaderSpec<
       "sys/statvfs.h",
       [], // Macros
-      [StructStatvfs], // Types
+      [StructStatvfs, FsFilCntTType, FsBlkCntTType], // Types
       [], // Enumerations
       [
         FunctionSpec<
@@ -1442,7 +1494,13 @@ def POSIX : StandardSpec<"POSIX"> {
     ],  // Macros
     [], // Types
     [], // Enumerations
-    []  // Functions
+    [
+      FunctionSpec<
+        "ioctl",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<VarArgType>]
+      >
+    ]  // Functions
   >;
 
   HeaderSpec Spawn = HeaderSpec<
@@ -1690,6 +1748,7 @@ def POSIX : StandardSpec<"POSIX"> {
     ArpaInet,
     CType,
     Dirent,
+    DlFcn,
     Errno,
     FCntl,
     PThread,
