@@ -58,6 +58,8 @@ public:
   bool GetStepOutAvoidsNoDebug() const;
 
   uint64_t GetMaxBacktraceDepth() const;
+
+  uint64_t GetSingleThreadPlanTimeout() const;
 };
 
 class Thread : public std::enable_shared_from_this<Thread>,
