@@ -2025,6 +2025,7 @@ define i8 @simplifydemanded_context(i8 %x, i8 %y) {
   ret i8 %and2
 }
 
+; FIXME: This is a miscompile.
 define i16 @pr97330(i1 %c, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @pr97330(
 ; CHECK-NEXT:  entry:
@@ -2032,9 +2033,7 @@ define i16 @pr97330(i1 %c, ptr %p1, ptr %p2) {
 ; CHECK:       if:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P1:%.*]], align 8
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[V]] to i16
-; CHECK-NEXT:    ret i16 [[CONV]]
+; CHECK-NEXT:    ret i16 1
 ;
 entry:
   %v = load i64, ptr %p1, align 8
