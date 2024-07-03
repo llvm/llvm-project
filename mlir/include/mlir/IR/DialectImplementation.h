@@ -14,8 +14,8 @@
 #ifndef MLIR_IR_DIALECTIMPLEMENTATION_H
 #define MLIR_IR_DIALECTIMPLEMENTATION_H
 
-#include <type_traits>
 #include "mlir/IR/OpImplementation.h"
+#include <type_traits>
 
 namespace {
 
@@ -26,7 +26,8 @@ struct HasStaticDialectName : std::false_type {};
 template <typename T>
 struct HasStaticDialectName<
     T, typename std::enable_if<
-           std::is_same<::llvm::StringLiteral, std::decay_t<decltype(T::dialectName)>>::value,
+           std::is_same<::llvm::StringLiteral,
+                        std::decay_t<decltype(T::dialectName)>>::value,
            void>::type> : std::true_type {};
 
 } // namespace
