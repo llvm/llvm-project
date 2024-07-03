@@ -99,6 +99,31 @@ add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
 
+add_math_entrypoint_object(f16add)
+add_math_entrypoint_object(f16addf)
+add_math_entrypoint_object(f16addl)
+add_math_entrypoint_object(f16addf128)
+
+add_math_entrypoint_object(f16div)
+add_math_entrypoint_object(f16divf)
+add_math_entrypoint_object(f16divl)
+add_math_entrypoint_object(f16divf128)
+
+add_math_entrypoint_object(f16fma)
+add_math_entrypoint_object(f16fmaf)
+add_math_entrypoint_object(f16fmal)
+add_math_entrypoint_object(f16fmaf128)
+
+add_math_entrypoint_object(f16sqrt)
+add_math_entrypoint_object(f16sqrtf)
+add_math_entrypoint_object(f16sqrtl)
+add_math_entrypoint_object(f16sqrtf128)
+
+add_math_entrypoint_object(f16sub)
+add_math_entrypoint_object(f16subf)
+add_math_entrypoint_object(f16subl)
+add_math_entrypoint_object(f16subf128)
+
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
@@ -191,6 +216,7 @@ add_math_entrypoint_object(fmodf128)
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
 add_math_entrypoint_object(frexpl)
+add_math_entrypoint_object(frexpf16)
 add_math_entrypoint_object(frexpf128)
 
 add_math_entrypoint_object(fromfp)
@@ -205,22 +231,27 @@ add_math_entrypoint_object(fromfpxl)
 add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
+add_math_entrypoint_object(getpayloadf16)
+
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
 
 add_math_entrypoint_object(ilogb)
 add_math_entrypoint_object(ilogbf)
 add_math_entrypoint_object(ilogbl)
+add_math_entrypoint_object(ilogbf16)
 add_math_entrypoint_object(ilogbf128)
 
 add_math_entrypoint_object(llogb)
 add_math_entrypoint_object(llogbf)
 add_math_entrypoint_object(llogbl)
+add_math_entrypoint_object(llogbf16)
 add_math_entrypoint_object(llogbf128)
 
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+add_math_entrypoint_object(ldexpf16)
 add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
@@ -238,6 +269,7 @@ add_math_entrypoint_object(logf)
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)
 add_math_entrypoint_object(logbl)
+add_math_entrypoint_object(logbf16)
 add_math_entrypoint_object(logbf128)
 
 add_math_entrypoint_object(llrint)
@@ -267,11 +299,13 @@ add_math_entrypoint_object(lroundf128)
 add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
 add_math_entrypoint_object(modfl)
+add_math_entrypoint_object(modff16)
 add_math_entrypoint_object(modff128)
 
 add_math_entrypoint_object(nan)
 add_math_entrypoint_object(nanf)
 add_math_entrypoint_object(nanl)
+add_math_entrypoint_object(nanf16)
 add_math_entrypoint_object(nanf128)
 
 add_math_entrypoint_object(nearbyint)
@@ -309,11 +343,13 @@ add_math_entrypoint_object(powf)
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)
 add_math_entrypoint_object(remainderl)
+add_math_entrypoint_object(remainderf16)
 
 add_math_entrypoint_object(remquo)
 add_math_entrypoint_object(remquof)
 add_math_entrypoint_object(remquof128)
 add_math_entrypoint_object(remquol)
+add_math_entrypoint_object(remquof16)
 
 add_math_entrypoint_object(rint)
 add_math_entrypoint_object(rintf)
@@ -333,16 +369,24 @@ add_math_entrypoint_object(roundevenl)
 add_math_entrypoint_object(roundevenf16)
 add_math_entrypoint_object(roundevenf128)
 
+add_math_entrypoint_object(scalblnf16)
+
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
+add_math_entrypoint_object(scalbnf16)
 add_math_entrypoint_object(scalbnf128)
+
+add_math_entrypoint_object(setpayloadf16)
+
+add_math_entrypoint_object(setpayloadsigf16)
 
 add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
+add_math_entrypoint_object(sinpif)
 
 add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)
@@ -360,6 +404,10 @@ add_math_entrypoint_object(tanhf)
 
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)
+
+add_math_entrypoint_object(totalorderf16)
+
+add_math_entrypoint_object(totalordermagf16)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

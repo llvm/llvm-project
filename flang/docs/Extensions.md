@@ -374,6 +374,9 @@ end
   required, with warnings, even if it lacks the BIND(C) attribute.
 * A "mult-operand" in an expression can be preceded by a unary
   `+` or `-` operator.
+* `BIND(C, NAME="...", CDEFINED)` signifies that the storage for an
+  interoperable variable will be allocated outside of Fortran,
+  probably by a C or C++ external definition.
 
 ### Extensions supported when enabled by options
 

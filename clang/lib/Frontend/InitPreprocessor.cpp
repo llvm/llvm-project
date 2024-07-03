@@ -448,7 +448,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      value is, are implementation-defined.
   // (Removed in C++20.)
   if (!LangOpts.CPlusPlus) {
-    if (LangOpts.C23)
+    if (LangOpts.C2y)
+      Builder.defineMacro("__STDC_VERSION__", "202400L");
+    else if (LangOpts.C23)
       Builder.defineMacro("__STDC_VERSION__", "202311L");
     else if (LangOpts.C17)
       Builder.defineMacro("__STDC_VERSION__", "201710L");
@@ -507,6 +509,14 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // and 32-bit character literals.
   Builder.defineMacro("__STDC_UTF_16__", "1");
   Builder.defineMacro("__STDC_UTF_32__", "1");
+
+  // __has_embed definitions
+  Builder.defineMacro("__STDC_EMBED_NOT_FOUND__",
+                      llvm::itostr(static_cast<int>(EmbedResult::NotFound)));
+  Builder.defineMacro("__STDC_EMBED_FOUND__",
+                      llvm::itostr(static_cast<int>(EmbedResult::Found)));
+  Builder.defineMacro("__STDC_EMBED_EMPTY__",
+                      llvm::itostr(static_cast<int>(EmbedResult::Empty)));
 
   if (LangOpts.ObjC)
     Builder.defineMacro("__OBJC__");
@@ -925,6 +935,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   if (LangOpts.GNUCVersion && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
+
+  if (TI.getTriple().isWindowsGNUEnvironment()) {
+    // Set ABI defining macros for libstdc++ for MinGW, where the
+    // default in libstdc++ differs from the defaults for this target.
+    Builder.defineMacro("__GXX_TYPEINFO_EQUALITY_INLINE", "0");
+  }
 
   if (LangOpts.ObjC) {
     if (LangOpts.ObjCRuntime.isNonFragile()) {

@@ -97,15 +97,18 @@ void registerTestDynamicPipelinePass();
 void registerTestEmulateNarrowTypePass();
 void registerTestExpandMathPass();
 void registerTestFooAnalysisPass();
+void registerTestComposeSubView();
+void registerTestMultiBuffering();
+void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
 void registerTestInterfaces();
-void registerTestIntRangeInference();
 void registerTestIRVisitorsPass();
 void registerTestLastModifiedPass();
 void registerTestLinalgDecomposeOps();
 void registerTestLinalgDropUnitDims();
 void registerTestLinalgElementwiseFusion();
 void registerTestLinalgGreedyFusion();
+void registerTestLinalgRankReduceContractionOps();
 void registerTestLinalgTransforms();
 void registerTestLivenessAnalysisPass();
 void registerTestLivenessPass();
@@ -226,15 +229,18 @@ void registerTestPasses() {
   mlir::test::registerTestEmulateNarrowTypePass();
   mlir::test::registerTestExpandMathPass();
   mlir::test::registerTestFooAnalysisPass();
+  mlir::test::registerTestComposeSubView();
+  mlir::test::registerTestMultiBuffering();
+  mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();
-  mlir::test::registerTestIntRangeInference();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestLastModifiedPass();
   mlir::test::registerTestLinalgDecomposeOps();
   mlir::test::registerTestLinalgDropUnitDims();
   mlir::test::registerTestLinalgElementwiseFusion();
   mlir::test::registerTestLinalgGreedyFusion();
+  mlir::test::registerTestLinalgRankReduceContractionOps();
   mlir::test::registerTestLinalgTransforms();
   mlir::test::registerTestLivenessAnalysisPass();
   mlir::test::registerTestLivenessPass();
@@ -284,10 +290,6 @@ void registerTestPasses() {
 
 int main(int argc, char **argv) {
   registerAllPasses();
-#if MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE
-  registerGpuSerializeToCubinPass();
-  registerGpuSerializeToHsacoPass();
-#endif
 #ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();
 #endif

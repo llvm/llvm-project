@@ -670,6 +670,9 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether this declaration comes from the same module unit being compiled.
+  bool isInCurrentModuleUnit() const;
+
   /// Whether the definition of the declaration should be emitted in external
   /// sources.
   bool shouldEmitInExternalSource() const;
@@ -832,10 +835,7 @@ public:
 
   /// Get the module that owns this declaration for linkage purposes.
   /// There only ever is such a standard C++ module.
-  ///
-  /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
-  /// all declarations in a global module fragment are unowned.
-  Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
+  Module *getOwningModuleForLinkage() const;
 
   /// Determine whether this declaration is definitely visible to name lookup,
   /// independent of whether the owning module is visible.

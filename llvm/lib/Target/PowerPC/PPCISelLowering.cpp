@@ -3467,7 +3467,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
           IsTLSLocalExecModel) {
         Type *GVType = GV->getValueType();
         if (GVType->isSized() && !GVType->isEmptyTy() &&
-            GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+            GV->getDataLayout().getTypeAllocSize(GVType) <=
                 AIXSmallTlsPolicySizeLimit)
           return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA, TLSReg);
       }
@@ -3530,7 +3530,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     if (HasAIXSmallLocalDynamicTLS) {
       Type *GVType = GV->getValueType();
       if (GVType->isSized() && !GVType->isEmptyTy() &&
-          GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+          GV->getDataLayout().getTypeAllocSize(GVType) <=
               AIXSmallTlsPolicySizeLimit)
         return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA,
                            ModuleHandle);
@@ -5608,7 +5608,7 @@ static void prepareIndirectCall(SelectionDAG &DAG, SDValue &Callee,
                                 const SDLoc &dl) {
   SDValue MTCTROps[] = {Chain, Callee, Glue};
   EVT ReturnTypes[] = {MVT::Other, MVT::Glue};
-  Chain = DAG.getNode(PPCISD::MTCTR, dl, ArrayRef(ReturnTypes, 2),
+  Chain = DAG.getNode(PPCISD::MTCTR, dl, ReturnTypes,
                       ArrayRef(MTCTROps, Glue.getNode() ? 3 : 2));
   // The glue is the second value produced.
   Glue = Chain.getValue(1);
@@ -5873,7 +5873,7 @@ bool PPCTargetLowering::supportsTailCallFor(const CallBase *CB) const {
 
   GetReturnInfo(CalleeCC, CalleeFunc->getReturnType(),
                 CalleeFunc->getAttributes(), Outs, *this,
-                CalleeFunc->getParent()->getDataLayout());
+                CalleeFunc->getDataLayout());
 
   return isEligibleForTCO(CalleeGV, CalleeCC, CallerCC, CB,
                           CalleeFunc->isVarArg(), Outs, Ins, CallerFunc,
@@ -10937,10 +10937,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::ppc_mma_disassemble_acc: {
     if (Subtarget.isISAFuture()) {
       EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
-      SDValue WideVec = SDValue(DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl,
-                                                   ArrayRef(ReturnTypes, 2),
-                                                   Op.getOperand(1)),
-                                0);
+      SDValue WideVec =
+          SDValue(DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes,
+                                     Op.getOperand(1)),
+                  0);
       SmallVector<SDValue, 4> RetOps;
       SDValue Value = SDValue(WideVec.getNode(), 0);
       SDValue Value2 = SDValue(WideVec.getNode(), 1);
@@ -11609,7 +11609,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
     if (Subtarget.isISAFuture()) {
       EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
       MachineSDNode *ExtNode = DAG.getMachineNode(
-          PPC::DMXXEXTFDMR512, dl, ArrayRef(ReturnTypes, 2), Op.getOperand(1));
+          PPC::DMXXEXTFDMR512, dl, ReturnTypes, Op.getOperand(1));
 
       Value = SDValue(ExtNode, 0);
       Value2 = SDValue(ExtNode, 1);
@@ -17543,7 +17543,7 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
 
     const TargetOptions &Options = getTargetMachine().Options;
     const Function *F = I->getFunction();
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     Type *Ty = User->getOperand(0)->getType();
 
     return !(

@@ -98,6 +98,9 @@ template <typename T> bool IsAssumedRank(const Expr<T> &expr) {
 template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
   return x && IsAssumedRank(*x);
 }
+template <typename A> bool IsAssumedRank(const A *x) {
+  return x && IsAssumedRank(*x);
+}
 
 // Predicate: true when an expression is a coarray (corank > 0)
 bool IsCoarray(const ActualArgument &);
@@ -450,12 +453,12 @@ struct ExtractSubstringHelper {
 
   template <typename T>
   static std::optional<Substring> visit(const Designator<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
   template <typename T>
   static std::optional<Substring> visit(const Expr<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 };
 
@@ -1231,12 +1234,13 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::string &argName);
 
 // Get the number of distinct symbols with CUDA attribute in the expression.
-template <typename A> inline int GetNbOfCUDASymbols(const A &expr) {
+template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   semantics::UnorderedSymbolSet symbols;
   for (const Symbol &sym : CollectSymbols(expr)) {
     if (const auto *details =
             sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-      if (details->cudaDataAttr()) {
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
         symbols.insert(sym);
       }
     }
@@ -1246,8 +1250,8 @@ template <typename A> inline int GetNbOfCUDASymbols(const A &expr) {
 
 // Check if any of the symbols part of the expression has a CUDA data
 // attribute.
-template <typename A> inline bool HasCUDAAttrs(const A &expr) {
-  return GetNbOfCUDASymbols(expr) > 0;
+template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
+  return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
 /// Check if the expression is a mix of host and device variables that require
@@ -1258,7 +1262,8 @@ inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   for (const Symbol &sym : CollectSymbols(expr)) {
     if (const auto *details =
             sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-      if (details->cudaDataAttr()) {
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
         ++deviceSymbols;
       } else {
         if (sym.owner().IsDerivedType()) {
@@ -1267,7 +1272,8 @@ inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
                       .GetSymbol()
                       ->GetUltimate()
                       .detailsIf<semantics::ObjectEntityDetails>()) {
-            if (details->cudaDataAttr()) {
+            if (details->cudaDataAttr() &&
+                *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
               ++deviceSymbols;
             }
           }
@@ -1320,6 +1326,10 @@ bool IsBuiltinCPtr(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
 bool IsLockType(const DerivedTypeSpec *);
 bool IsNotifyType(const DerivedTypeSpec *);
+// Is this derived type IEEE_FLAG_TYPE from module ISO_IEEE_EXCEPTIONS?
+bool IsIeeeFlagType(const DerivedTypeSpec *);
+// Is this derived type IEEE_ROUND_TYPE from module ISO_IEEE_ARITHMETIC?
+bool IsIeeeRoundType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE from module ISO_FORTRAN_ENV?
 bool IsTeamType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE, C_PTR, or C_FUNPTR?

@@ -442,7 +442,7 @@ define i32 @switch_range(i32 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = urem i32 [[COND:%.*]], 3
 ; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i32 [[S]], 1
-; CHECK-NEXT:    switch i32 [[S1]], label [[UNREACHABLE:%.*]] [
+; CHECK-NEXT:    switch i32 [[S1]], label [[DEFAULT_UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[EXIT1:%.*]]
 ; CHECK-NEXT:      i32 2, label [[EXIT2:%.*]]
 ; CHECK-NEXT:      i32 3, label [[EXIT1]]
@@ -451,6 +451,8 @@ define i32 @switch_range(i32 %cond) {
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i32 2
+; CHECK:       default.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -513,10 +515,9 @@ define i8 @switch_defaultdest_multipleuse(i8 %t0) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[O:%.*]] = or i8 [[T0:%.*]], 1
 ; CHECK-NEXT:    [[R:%.*]] = srem i8 1, [[O]]
-; CHECK-NEXT:    switch i8 [[R]], label [[EXIT:%.*]] [
-; CHECK-NEXT:      i8 0, label [[EXIT]]
-; CHECK-NEXT:      i8 1, label [[EXIT]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       default.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
 ;
