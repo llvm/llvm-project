@@ -181,16 +181,6 @@ Loops tilePerfectlyNested(scf::ForOp rootForOp, ArrayRef<Value> sizes);
 void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
                              scf::ForOp root);
 
-//===----------------------------------------------------------------------===//
-// Fusion related helpers
-//===----------------------------------------------------------------------===//
-
-/// Check structural compatibility between two loops such as iteration space
-/// and dominance.
-bool checkFusionStructuralLegality(LoopLikeOpInterface target,
-                                   LoopLikeOpInterface source,
-                                   Diagnostic &diag);
-
 /// Given two scf.forall loops, `target` and `source`, fuses `target` into
 /// `source`. Assumes that the given loops are siblings and are independent of
 /// each other.
@@ -212,16 +202,6 @@ scf::ForallOp fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp fuseIndependentSiblingForLoops(scf::ForOp target, scf::ForOp source,
                                           RewriterBase &rewriter);
 
-/// Given two scf.parallel loops, `target` and `source`, fuses `target` into
-/// `source`. Assumes that the given loops are siblings and are independent of
-/// each other.
-///
-/// This function does not perform any legality checks and simply fuses the
-/// loops. The caller is responsible for ensuring that the loops are legal to
-/// fuse.
-scf::ParallelOp fuseIndependentSiblingParallelLoops(scf::ParallelOp target,
-                                                    scf::ParallelOp source,
-                                                    RewriterBase &rewriter);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_SCF_UTILS_UTILS_H_
