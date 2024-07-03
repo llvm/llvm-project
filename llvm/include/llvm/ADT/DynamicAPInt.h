@@ -35,21 +35,20 @@ namespace llvm {
 /// We always_inline all operations; removing these results in a 1.5x
 /// performance slowdown.
 ///
-/// When HoldsLarge is true, a SlowMPInt is held in the union. If it is false,
-/// the int64_t is held. Using std::variant instead would lead to significantly
-/// worse performance.
+/// When isLarge returns true, a SlowMPInt is held in the union. If isSmall
+/// returns true, the int64_t is held. Using std::variant instead would lead to
+/// significantly worse performance.
 class DynamicAPInt {
   union {
     int64_t ValSmall;
     detail::SlowDynamicAPInt ValLarge;
   };
-  unsigned HoldsLarge;
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE void initSmall(int64_t O) {
     if (LLVM_UNLIKELY(isLarge()))
       ValLarge.detail::SlowDynamicAPInt::~SlowDynamicAPInt();
     ValSmall = O;
-    HoldsLarge = false;
+    ValLarge.Val.BitWidth = 0;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE void
   initLarge(const detail::SlowDynamicAPInt &O) {
@@ -66,14 +65,13 @@ class DynamicAPInt {
       // and leak it.
       ValLarge = O;
     }
-    HoldsLarge = true;
   }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE explicit DynamicAPInt(
       const detail::SlowDynamicAPInt &Val)
-      : ValLarge(Val), HoldsLarge(true) {}
-  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isSmall() const { return !HoldsLarge; }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE bool isLarge() const { return HoldsLarge; }
+      : ValLarge(Val) {}
+  constexpr bool isSmall() const { return ValLarge.Val.BitWidth == 0; }
+  constexpr bool isLarge() const { return !isSmall(); }
   /// Get the stored value. For getSmall/Large,
   /// the stored value should be small/large.
   LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t getSmall() const {
@@ -105,14 +103,17 @@ class DynamicAPInt {
 
 public:
   LLVM_ATTRIBUTE_ALWAYS_INLINE explicit DynamicAPInt(int64_t Val)
-      : ValSmall(Val), HoldsLarge(false) {}
+      : ValSmall(Val) {
+    ValLarge.Val.BitWidth = 0;
+  }
   LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt() : DynamicAPInt(0) {}
   LLVM_ATTRIBUTE_ALWAYS_INLINE ~DynamicAPInt() {
     if (LLVM_UNLIKELY(isLarge()))
       ValLarge.detail::SlowDynamicAPInt::~SlowDynamicAPInt();
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE DynamicAPInt(const DynamicAPInt &O)
-      : ValSmall(O.ValSmall), HoldsLarge(false) {
+      : ValSmall(O.ValSmall) {
+    ValLarge.Val.BitWidth = 0;
     if (LLVM_UNLIKELY(O.isLarge()))
       initLarge(O.ValLarge);
   }
