@@ -549,8 +549,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     // MCAssembler::evaluateFixup will emit an error for this case when it sees
     // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
     const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
-    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, Asm.getLayout(),
-                                          AUIPCFixup))
+    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm, AUIPCFixup))
       return true;
     break;
   }

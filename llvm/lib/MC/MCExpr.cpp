@@ -788,11 +788,9 @@ static bool evaluateSymbolicAdd(const MCAssembler *Asm,
   return true;
 }
 
-bool MCExpr::evaluateAsRelocatable(MCValue &Res,
-                                   const MCAsmLayout *Layout,
+bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
                                    const MCFixup *Fixup) const {
-  MCAssembler *Assembler = Layout ? &Layout->getAssembler() : nullptr;
-  return evaluateAsRelocatableImpl(Res, Assembler, Fixup, nullptr, false);
+  return evaluateAsRelocatableImpl(Res, Asm, Fixup, nullptr, false);
 }
 
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
@@ -823,8 +821,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
   MCAsmLayout *Layout = Asm ? Asm->getLayout() : nullptr;
   switch (getKind()) {
   case Target:
-    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Layout,
-                                                               Fixup);
+    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Asm, Fixup);
 
   case Constant:
     Res = MCValue::get(cast<MCConstantExpr>(this)->getValue());
