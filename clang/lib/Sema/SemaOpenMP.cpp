@@ -6270,16 +6270,21 @@ bool SemaOpenMP::mapLoopConstruct(
     if (BindKind == OMPC_BIND_unknown) {
       // Setting the enclosing teams or parallel construct for the loop
       // directive without bind clause.
+      // [5.0:129:25-28] If the bind clause is not present on the construct and
+      // the loop construct is closely nested inside a teams or parallel
+      // construct, the binding region is the corresponding teams or parallel
+      // region. If none of those conditions hold, the binding region is not
+      // defined.
       BindKind = OMPC_BIND_thread; // Default bind(thread) if binding is unknown
+      ArrayRef<OpenMPDirectiveKind> ParentLeafs =
+          getLeafConstructsOrSelf(ParentDirective);
 
       if (ParentDirective == OMPD_unknown) {
         Diag(DSAStack->getDefaultDSALocation(),
              diag::err_omp_bind_required_on_loop);
-      } else if (ParentDirective == OMPD_parallel ||
-                 ParentDirective == OMPD_target_parallel) {
+      } else if (ParentLeafs.back() == OMPD_parallel) {
         BindKind = OMPC_BIND_parallel;
-      } else if (ParentDirective == OMPD_teams ||
-                 ParentDirective == OMPD_target_teams) {
+      } else if (ParentLeafs.back() == OMPD_teams) {
         BindKind = OMPC_BIND_teams;
       }
     } else {
