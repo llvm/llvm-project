@@ -8027,7 +8027,8 @@ private:
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
       bool HasMapBasePtr = false;
       bool HasMapArraySec = false;
-      for (const auto &M : Data.second) {
+      if (VD && VD->getType()->isAnyPointerType()) {
+        for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           const Expr *E = L.VarRef;
           if (VD && VD->getType()->isAnyPointerType() &&
