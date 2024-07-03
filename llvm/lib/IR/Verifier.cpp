@@ -6135,12 +6135,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
 
-    auto VecWidth = VecTy->getElementCount().getKnownMinValue();
-    auto AccWidth = AccTy->getElementCount().getKnownMinValue();
+    unsigned VecWidth = VecTy->getElementCount().getKnownMinValue();
+    unsigned AccWidth = AccTy->getElementCount().getKnownMinValue();
 
     Check((VecWidth % AccWidth) == 0, "Invalid vector widths for partial "
                                       "reduction. The width of the input vector "
-                                      "must be a postive integer multiple of "
+                                      "must be a positive integer multiple of "
                                       "the width of the accumulator vector.");
     break;
   }

@@ -7916,10 +7916,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-    auto DL = getCurSDLoc();
-    auto ReducedTy = EVT::getEVT(I.getType());
-    auto OpNode = getValue(I.getOperand(1));
-    auto FullTy = OpNode.getValueType();
+    SDValue OpNode = getValue(I.getOperand(1));
+    EVT ReducedTy = EVT::getEVT(I.getType());
+    EVT FullTy = OpNode.getValueType();
 
     unsigned Stride = ReducedTy.getVectorMinNumElements();
     unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
@@ -7928,13 +7927,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     std::deque<SDValue> Subvectors;
     Subvectors.push_back(getValue(I.getOperand(0)));
     for(unsigned i = 0; i < ScaleFactor; i++) {
-      auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, DL);
-      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {OpNode, SourceIndex}));
+      auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, sdl);
+      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy, {OpNode, SourceIndex}));
     }
 
     // Flatten the subvector tree
     while(Subvectors.size() > 1) {
-      Subvectors.push_back(DAG.getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
+      Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy, {Subvectors[0], Subvectors[1]}));
       Subvectors.pop_front();
       Subvectors.pop_front();
     }
