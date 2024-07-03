@@ -376,6 +376,7 @@ add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
+add_math_entrypoint_object(sinpif)
 
 add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)
