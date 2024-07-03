@@ -224,7 +224,14 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
     return;
   }
 
-  const bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
+  bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
+
+  if ((Op == AtomicRMWInst::FAdd || Op == AtomicRMWInst::FSub) &&
+      !I.use_empty()) {
+    // Disable the uniform return value calculation using fmul because it
+    // mishandles infinities, NaNs and signed zeros. FIXME.
+    ValDivergent = true;
+  }
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -988,6 +995,12 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
         break;
       case AtomicRMWInst::FAdd:
       case AtomicRMWInst::FSub: {
+        // FIXME: This path is currently disabled in visitAtomicRMWInst because
+        // of problems calculating the first active lane of the result (where
+        // Mbcnt is 0):
+        // - If V is infinity or NaN we will return NaN instead of BroadcastI.
+        // - If BroadcastI is -0.0 and V is positive we will return +0.0 instead
+        //   of -0.0.
         LaneOffset = B.CreateFMul(V, Mbcnt);
         break;
       }
