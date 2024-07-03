@@ -150,7 +150,7 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
                                                 const bool WasForced) const {
   if (!Resolved)
     return true;
-  return fixupNeedsRelaxation(Fixup, Value, DF, *Asm.getLayout());
+  return fixupNeedsRelaxation(Fixup, Value);
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
