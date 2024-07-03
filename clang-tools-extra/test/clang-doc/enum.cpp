@@ -1,4 +1,4 @@
-// RUN: rm -rf %t && mkdir -p %t/docs %t/build
+// RUN: mkdir -p %t/docs %t/build
 // RUN: clang-doc --format=html --doxygen --output=%t/docs --executor=standalone %s
 // RUN: clang-doc --format=md --doxygen --output=%t/docs --executor=standalone %s
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.html -check-prefix=HTML-INDEX
@@ -17,9 +17,9 @@ enum Color {
 // HTML-INDEX: <!DOCTYPE html>
 // HTML-INDEX-NEXT: <meta charset="utf-8"/>
 // HTML-INDEX-NEXT: <title>Global Namespace</title>
-// HTML-INDEX-NEXT: <link rel="stylesheet" href="../clang-doc-default-stylesheet.css"/>
-// HTML-INDEX-NEXT: <script src="../index_json.js"></script>
-// HTML-INDEX-NEXT: <script src="../index.js"></script>
+// HTML-INDEX-NEXT: <link rel="stylesheet" href="..{{[\/]}}clang-doc-default-stylesheet.css"/>
+// HTML-INDEX-NEXT: <script src="..{{[\/]}}index_json.js"></script>
+// HTML-INDEX-NEXT: <script src="..{{[\/]}}index.js"></script>
 // HTML-INDEX-NEXT: <header id="project-title"></header>
 // HTML-INDEX-NEXT: <main>
 // HTML-INDEX-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
@@ -33,7 +33,7 @@ enum Color {
 // HTML-INDEX-NEXT:         <li>Green</li>
 // HTML-INDEX-NEXT:         <li>Blue</li>
 // HTML-INDEX-NEXT:       </ul>
-// HTML-INDEX-NEXT:       <p>Defined at line 9 of file clang-tools-extra\test\clang-doc\enum.cpp</p>
+// HTML-INDEX-NEXT:       <p>Defined at line 11 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX-NEXT:       <div>
 // HTML-INDEX-NEXT:         <div></div>
 // HTML-INDEX-NEXT:       </div>
@@ -64,5 +64,5 @@ enum Color {
 // MD-INDEX: | Red |
 // MD-INDEX: | Green |
 // MD-INDEX: | Blue |
-// MD-INDEX: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#11*
+// MD-INDEX: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#11*
 // MD-INDEX: **brief** For specifying RGB colors

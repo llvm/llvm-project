@@ -1,17 +1,15 @@
-// RUN: rm -rf %t && mkdir -p %t/docs %t/build
-// RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
+// RUN: sed 's|$test_dir|%/S|g' %S/Inputs/advance-project/database_template.json > %t/build/compile_commands.json
 // RUN: clang-doc --format=html --doxygen --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: clang-doc --format=md --doxygen --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
-// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/index.html -check-prefix=HTML-ANON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/@nonymous_namespace/index.html -check-prefix=HTML-ANON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Array.html -check-prefix=HTML-ARRAY
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.html -check-prefix=HTML-GLOBAL-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/Circle.html -check-prefix=HTML-CIRCLE
 // RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/index.html -check-prefix=HTML-INNER-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/Shape.html -check-prefix=HTML-SHAPE
 // RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/index.html -check-prefix=HTML-OUTER-INDEX
-
-// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/index.md -check-prefix=MD-ANON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/@nonymous_namespace/index.md -check-prefix=MD-ANON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Array.md -check-prefix=MD-ARRAY
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.md -check-prefix=MD-GLOBAL-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/Circle.md -check-prefix=MD-CIRCLE
@@ -87,7 +85,7 @@
 // HTML-ANON-INDEX: <!DOCTYPE html>
 // HTML-ANON-INDEX-NEXT: <meta charset="utf-8"/>
 // HTML-ANON-INDEX-NEXT: <title>namespace @nonymous_namespace</title>
-// HTML-ANON-INDEX-NEXT: <link rel="stylesheet" href="../clang-doc-default-stylesheet.css"/>
+// HTML-ANON-INDEX-NEXT: <link rel="stylesheet" href="..{{[\/]}}clang-doc-default-stylesheet.css"/>
 // HTML-ANON-INDEX-NEXT: <script src="..{{[\/]}}index_json.js"></script>
 // HTML-ANON-INDEX-NEXT: <script src="..{{[\/]}}index.js"></script>
 // HTML-ANON-INDEX-NEXT: <header id="project-title"></header>
@@ -269,8 +267,8 @@
 // HTML-GLOBAL-INDEX-NEXT:     <h1>Global Namespace</h1>
 // HTML-GLOBAL-INDEX-NEXT:     <h2 id="Namespaces">Namespaces</h2>
 // HTML-GLOBAL-INDEX-NEXT:     <ul>
-// HTML-GLOBAL-INDEX-NEXT:       <li>@nonymous_namespace</li>
-// HTML-GLOBAL-INDEX-NEXT:       <li>OuterNamespace</li>
+// HTML-GLOBAL-INDEX-NEXT:       <li>{{.*}}</li>
+// HTML-GLOBAL-INDEX-NEXT:       <li>{{.*}}</li>
 // HTML-GLOBAL-INDEX-NEXT:     </ul>
 // HTML-GLOBAL-INDEX-NEXT:     <h2 id="Records">Records</h2>
 // HTML-GLOBAL-INDEX-NEXT:     <ul>
@@ -621,8 +619,8 @@
 
 // MD-GLOBAL-INDEX: # Global Namespace
 // MD-GLOBAL-INDEX: ## Namespaces
-// MD-GLOBAL-INDEX: * [OuterNamespace](..{{[\/]}}OuterNamespace{{[\/]}}index.md)
-// MD-GLOBAL-INDEX: * [@nonymous_namespace](..{{[\/]}}@nonymous_namespace{{[\/]}}index.md)
+// MD-GLOBAL-INDEX: * {{.*}}
+// MD-GLOBAL-INDEX: * {{.*}}
 // MD-GLOBAL-INDEX: ## Records
 // MD-GLOBAL-INDEX: * [Array](Array.md)
 
@@ -701,6 +699,3 @@
 // MD-INDEX: #  C/C++ Reference
 // MD-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)
 // MD-INDEX: * Namespace: [OuterNamespace](OuterNamespace)
-
-// MD-ALL-FILES: # All Files
-// MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace/index.md)

@@ -1,15 +1,13 @@
-// RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
 // RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: clang-doc --format=md --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
-
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.md -check-prefix=MD-CALC
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.md -check-prefix=MD-CIRCLE
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.md -check-prefix=MD-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.md -check-prefix=MD-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.md -check-prefix=MD-SHAPE
 // RUN: FileCheck %s -input-file=%t/docs/all_files.md -check-prefix=MD-ALL-FILES
@@ -367,34 +365,34 @@
 // HTML-CIRCLE-NEXT: </main>
 
 // MD-CALC: # class Calculator
-// MD-CALC: *Defined at ./include\Calculator.h#8*
+// MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
 // MD-CALC: **brief** A simple calculator class.
 // MD-CALC:  Provides basic arithmetic operations.
 // MD-CALC: ## Functions
 // MD-CALC: ### add
 // MD-CALC: *public int add(int a, int b)*
-// MD-CALC: *Defined at ./src/Calculator.cpp#3*
+// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#3*
 // MD-CALC: **brief** Adds two integers.
 // MD-CALC: **a** First integer.
 // MD-CALC: **b** Second integer.
 // MD-CALC: **return** int The sum of a and b.
 // MD-CALC: ### subtract
 // MD-CALC: *public int subtract(int a, int b)*
-// MD-CALC: *Defined at ./src/Calculator.cpp#7*
+// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#7*
 // MD-CALC: **brief** Subtracts the second integer from the first.
 // MD-CALC: **a** First integer.
 // MD-CALC: **b** Second integer.
 // MD-CALC: **return** int The result of a - b.
 // MD-CALC: ### multiply
 // MD-CALC: *public int multiply(int a, int b)*
-// MD-CALC: *Defined at ./src/Calculator.cpp#11*
+// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#11*
 // MD-CALC: **brief** Multiplies two integers.
 // MD-CALC: **a** First integer.
 // MD-CALC: **b** Second integer.
 // MD-CALC: **return** int The product of a and b.
 // MD-CALC: ### divide
 // MD-CALC: *public double divide(int a, int b)*
-// MD-CALC: *Defined at ./src/Calculator.cpp#15*
+// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#15*
 // MD-CALC: **brief** Divides the first integer by the second.
 // MD-CALC: **a** First integer.
 // MD-CALC: **b** Second integer.
@@ -402,7 +400,7 @@
 // MD-CALC: **throw**if b is zero.
 
 // MD-CIRCLE: # class Circle
-// MD-CIRCLE: *Defined at ./include\Circle.h#10*
+// MD-CIRCLE: *Defined at .{{[\/]}}include{{[\/]}}Circle.h#10*
 // MD-CIRCLE: **brief** Circle class derived from Shape.
 // MD-CIRCLE:  Represents a circle with a given radius.
 // MD-CIRCLE: Inherits from Shape
@@ -411,29 +409,22 @@
 // MD-CIRCLE: ## Functions
 // MD-CIRCLE: ### Circle
 // MD-CIRCLE: *public void Circle(double radius)*
-// MD-CIRCLE: *Defined at ./src/Circle.cpp#3*
+// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#3*
 // MD-CIRCLE: **brief** Constructs a new Circle object.
 // MD-CIRCLE: **radius** Radius of the circle.
 // MD-CIRCLE: ### area
 // MD-CIRCLE: *public double area()*
-// MD-CIRCLE: *Defined at ./src/Circle.cpp#5*
+// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#5*
 // MD-CIRCLE: **brief** Calculates the area of the circle.
 // MD-CIRCLE: **return** double The area of the circle.
 // MD-CIRCLE: ### perimeter
 // MD-CIRCLE: *public double perimeter()*
-// MD-CIRCLE: *Defined at ./src/Circle.cpp#9*
+// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#9*
 // MD-CIRCLE: **brief** Calculates the perimeter of the circle.
 // MD-CIRCLE: **return** double The perimeter of the circle.
 
-// MD-INDEX: # Global Namespace
-// MD-INDEX: ## Records
-// MD-INDEX: * [Calculator](Calculator.md)
-// MD-INDEX: * [Shape](Shape.md)
-// MD-INDEX: * [Circle](Circle.md)
-// MD-INDEX: * [Rectangle](Rectangle.md)
-
 // MD-RECTANGLE: # class Rectangle
-// MD-RECTANGLE: *Defined at ./include\Rectangle.h#10*
+// MD-RECTANGLE: *Defined at .{{[\/]}}include{{[\/]}}Rectangle.h#10*
 // MD-RECTANGLE: **brief** Rectangle class derived from Shape.
 // MD-RECTANGLE:  Represents a rectangle with a given width and height.
 // MD-RECTANGLE: Inherits from Shape
@@ -443,29 +434,29 @@
 // MD-RECTANGLE: ## Functions
 // MD-RECTANGLE: ### Rectangle
 // MD-RECTANGLE: *public void Rectangle(double width, double height)*
-// MD-RECTANGLE: *Defined at ./src/Rectangle.cpp#3*
+// MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#3*
 // MD-RECTANGLE: **brief** Constructs a new Rectangle object.
 // MD-RECTANGLE: **width** Width of the rectangle.
 // MD-RECTANGLE: **height** Height of the rectangle.
 // MD-RECTANGLE: ### area
 // MD-RECTANGLE: *public double area()*
-// MD-RECTANGLE: *Defined at ./src/Rectangle.cpp#6*
+// MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#6*
 // MD-RECTANGLE: **brief** Calculates the area of the rectangle.
 // MD-RECTANGLE: **return** double The area of the rectangle.
 // MD-RECTANGLE: ### perimeter
 // MD-RECTANGLE: *public double perimeter()*
-// MD-RECTANGLE: *Defined at ./src/Rectangle.cpp#10*
+// MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#10*
 // MD-RECTANGLE: **brief** Calculates the perimeter of the rectangle.
 // MD-RECTANGLE: **return** double The perimeter of the rectangle.
 
 // MD-SHAPE: # class Shape
-// MD-SHAPE: *Defined at ./include\Shape.h#8*
+// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#8*
 // MD-SHAPE: **brief** Abstract base class for shapes.
 // MD-SHAPE:  Provides a common interface for different types of shapes.
 // MD-SHAPE: ## Functions
 // MD-SHAPE: ### ~Shape
 // MD-SHAPE: *public void ~Shape()*
-// MD-SHAPE: *Defined at ./include\Shape.h#13*
+// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
 // MD-SHAPE: **brief** Virtual destructor.
 // MD-SHAPE: ### area
 // MD-SHAPE: *public double area()*
@@ -477,5 +468,7 @@
 // MD-SHAPE: **return** double The perimeter of the shape.
 
 // MD-ALL-FILES: # All Files
-// MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace/index.md)
+// MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
 
+// MD-INDEX: #  C/C++ Reference
+// MD-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)

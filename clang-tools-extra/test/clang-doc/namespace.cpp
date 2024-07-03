@@ -1,9 +1,8 @@
-// RUN: rm -rf %t && mkdir -p %t/docs %t/build
-// RUN: clang-doc --format=html --doxygen --output=%t/docs --executor=standalone %s
-// RUN: clang-doc --format=md --doxygen --output=%t/docs --executor=standalone %s
+// RUN: clang-doc --format=html --output=%t/docs --executor=standalone %s
+// RUN: clang-doc --format=md --output=%t/docs --executor=standalone %s
 // RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
-// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/AnonClass.html -check-prefix=HTML-ANON-CLASS
-// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/index.html -check-prefix=HTML-ANON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/@nonymous_namespace/AnonClass.html -check-prefix=HTML-ANON-CLASS
+// RUN: FileCheck %s -input-file=%t/docs/@nonymous_namespace/index.html -check-prefix=HTML-ANON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/AnotherNamespace/ClassInAnotherNamespace.html -check-prefix=HTML-ANOTHER-CLASS
 // RUN: FileCheck %s -input-file=%t/docs/AnotherNamespace/index.html -check-prefix=HTML-ANOTHER-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.html -check-prefix=HTML-GLOBAL-INDEX
@@ -11,8 +10,8 @@
 // RUN: FileCheck %s -input-file=%t/docs/PrimaryNamespace/NestedNamespace/index.html -check-prefix=HTML-NESTED-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/PrimaryNamespace/index.html -check-prefix=HTML-PRIMARY-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/PrimaryNamespace/ClassInPrimaryNamespace.html -check-prefix=HTML-PRIMARY-CLASS
-// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/AnonClass.md -check-prefix=MD-ANON-CLASS
-// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/index.md -check-prefix=MD-ANON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/@nonymous_namespace/AnonClass.md -check-prefix=MD-ANON-CLASS
+// RUN: FileCheck %s -input-file=%t/docs/@nonymous_namespace/index.md -check-prefix=MD-ANON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/AnotherNamespace/ClassInAnotherNamespace.md -check-prefix=MD-ANOTHER-CLASS
 // RUN: FileCheck %s -input-file=%t/docs/AnotherNamespace/index.md -check-prefix=MD-ANOTHER-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.md -check-prefix=MD-GLOBAL-INDEX
@@ -22,7 +21,6 @@
 // RUN: FileCheck %s -input-file=%t/docs/PrimaryNamespace/ClassInPrimaryNamespace.md -check-prefix=MD-PRIMARY-CLASS
 // RUN: FileCheck %s -input-file=%t/docs/all_files.md -check-prefix=MD-ALL-FILES
 // RUN: FileCheck %s -input-file=%t/docs/index.md -check-prefix=MD-INDEX
-// RUN: rm -rf %t
 
 // Anonymous Namespace
 namespace
@@ -145,7 +143,7 @@ namespace AnotherNamespace {
 // HTML-ANON-CLASS-NEXT:   <div id="sidebar-left" path="@nonymous_namespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
 // HTML-ANON-CLASS-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
 // HTML-ANON-CLASS-NEXT:     <h1>class AnonClass</h1>
-// HTML-ANON-CLASS-NEXT:     <p>Defined at line 13 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANON-CLASS-NEXT:     <p>Defined at line 31 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-ANON-CLASS-NEXT:   </div>
 // HTML-ANON-CLASS-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right"></div>
 // HTML-ANON-CLASS-NEXT: </main>
@@ -176,7 +174,7 @@ namespace AnotherNamespace {
 // HTML-ANON-INDEX-NEXT:     <div>
 // HTML-ANON-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">anonFunction</h3>
 // HTML-ANON-INDEX-NEXT:       <p>void anonFunction()</p>
-// HTML-ANON-INDEX-NEXT:       <p>Defined at line 12 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANON-INDEX-NEXT:       <p>Defined at line 30 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-ANON-INDEX-NEXT:     </div>
 // HTML-ANON-INDEX-NEXT:   </div>
 // HTML-ANON-INDEX-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
@@ -213,7 +211,7 @@ namespace AnotherNamespace {
 // HTML-ANOTHER-CLASS-NEXT:   <div id="sidebar-left" path="AnotherNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
 // HTML-ANOTHER-CLASS-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
 // HTML-ANOTHER-CLASS-NEXT:     <h1>class ClassInAnotherNamespace</h1>
-// HTML-ANOTHER-CLASS-NEXT:     <p>Defined at line 36 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANOTHER-CLASS-NEXT:     <p>Defined at line 56 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-ANOTHER-CLASS-NEXT:     <div>
 // HTML-ANOTHER-CLASS-NEXT:       <div>
 // HTML-ANOTHER-CLASS-NEXT:         <p> Class in AnotherNamespace</p>
@@ -249,7 +247,7 @@ namespace AnotherNamespace {
 // HTML-ANOTHER-INDEX-NEXT:     <div>
 // HTML-ANOTHER-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">functionInAnotherNamespace</h3>
 // HTML-ANOTHER-INDEX-NEXT:       <p>void functionInAnotherNamespace()</p>
-// HTML-ANOTHER-INDEX-NEXT:       <p>Defined at line 34 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANOTHER-INDEX-NEXT:       <p>Defined at line 54 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-ANOTHER-INDEX-NEXT:       <div>
 // HTML-ANOTHER-INDEX-NEXT:         <div>
 // HTML-ANOTHER-INDEX-NEXT:           <p> Function in AnotherNamespace</p>
@@ -320,7 +318,7 @@ namespace AnotherNamespace {
 // HTML-NESTED-CLASS-NEXT:   <div id="sidebar-left" path="PrimaryNamespace\NestedNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
 // HTML-NESTED-CLASS-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
 // HTML-NESTED-CLASS-NEXT:     <h1>class ClassInNestedNamespace</h1>
-// HTML-NESTED-CLASS-NEXT:     <p>Defined at line 28 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-NESTED-CLASS-NEXT:     <p>Defined at line 47 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-NESTED-CLASS-NEXT:     <div>
 // HTML-NESTED-CLASS-NEXT:       <div>
 // HTML-NESTED-CLASS-NEXT:         <p> Class in NestedNamespace</p>
@@ -356,7 +354,7 @@ namespace AnotherNamespace {
 // HTML-NESTED-INDEX-NEXT:     <div>
 // HTML-NESTED-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">functionInNestedNamespace</h3>
 // HTML-NESTED-INDEX-NEXT:       <p>void functionInNestedNamespace()</p>
-// HTML-NESTED-INDEX-NEXT:       <p>Defined at line 26 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-NESTED-INDEX-NEXT:       <p>Defined at line 45 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-NESTED-INDEX-NEXT:       <div>
 // HTML-NESTED-INDEX-NEXT:         <div>
 // HTML-NESTED-INDEX-NEXT:           <p> Function in NestedNamespace</p>
@@ -398,7 +396,7 @@ namespace AnotherNamespace {
 // HTML-PRIMARY-CLASS-NEXT:   <div id="sidebar-left" path="PrimaryNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
 // HTML-PRIMARY-CLASS-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
 // HTML-PRIMARY-CLASS-NEXT:     <h1>class ClassInPrimaryNamespace</h1>
-// HTML-PRIMARY-CLASS-NEXT:     <p>Defined at line 21 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-PRIMARY-CLASS-NEXT:     <p>Defined at line 40 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-PRIMARY-CLASS-NEXT:     <div>
 // HTML-PRIMARY-CLASS-NEXT:       <div>
 // HTML-PRIMARY-CLASS-NEXT:         <p> Class in PrimaryNamespace</p>
@@ -419,6 +417,11 @@ namespace AnotherNamespace {
 // HTML-PRIMARY-INDEX-NEXT:   <div id="sidebar-left" path="PrimaryNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
 // HTML-PRIMARY-INDEX-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
 // HTML-PRIMARY-INDEX-NEXT:     <h1>namespace PrimaryNamespace</h1>
+// HTML-PRIMARY-INDEX-NEXT:     <div>
+// HTML-PRIMARY-INDEX-NEXT:       <div>
+// HTML-PRIMARY-INDEX-NEXT:         <p> Primary Namespace</p>
+// HTML-PRIMARY-INDEX-NEXT:       </div>
+// HTML-PRIMARY-INDEX-NEXT:     </div>
 // HTML-PRIMARY-INDEX-NEXT:     <h2 id="Namespaces">Namespaces</h2>
 // HTML-PRIMARY-INDEX-NEXT:     <ul>
 // HTML-PRIMARY-INDEX-NEXT:       <li>
@@ -435,7 +438,7 @@ namespace AnotherNamespace {
 // HTML-PRIMARY-INDEX-NEXT:     <div>
 // HTML-PRIMARY-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">functionInPrimaryNamespace</h3>
 // HTML-PRIMARY-INDEX-NEXT:       <p>void functionInPrimaryNamespace()</p>
-// HTML-PRIMARY-INDEX-NEXT:       <p>Defined at line 18 of file clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-PRIMARY-INDEX-NEXT:       <p>Defined at line 37 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-PRIMARY-INDEX-NEXT:       <div>
 // HTML-PRIMARY-INDEX-NEXT:         <div>
 // HTML-PRIMARY-INDEX-NEXT:           <p> Function in PrimaryNamespace</p>
@@ -472,7 +475,7 @@ namespace AnotherNamespace {
 // HTML-PRIMARY-INDEX-NEXT: </main>
 
 // MD-ANON-CLASS: # class AnonClass
-// MD-ANON-CLASS: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#18*
+// MD-ANON-CLASS: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#31*
 
 // MD-ANON-INDEX: # namespace @nonymous_namespace
 // MD-ANON-INDEX:  Anonymous Namespace
@@ -481,10 +484,10 @@ namespace AnotherNamespace {
 // MD-ANON-INDEX: ## Functions
 // MD-ANON-INDEX: ### anonFunction
 // MD-ANON-INDEX: *void anonFunction()*
-// MD-ANON-INDEX: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#28*
+// MD-ANON-INDEX: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#30*
 
 // MD-ANOTHER-CLASS: # class ClassInAnotherNamespace
-// MD-ANOTHER-CLASS: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#54*
+// MD-ANOTHER-CLASS: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#56*
 // MD-ANOTHER-CLASS:  Class in AnotherNamespace
 
 // MD-ANOTHER-INDEX: # namespace AnotherNamespace
@@ -494,7 +497,7 @@ namespace AnotherNamespace {
 // MD-ANOTHER-INDEX: ## Functions
 // MD-ANOTHER-INDEX: ### functionInAnotherNamespace
 // MD-ANOTHER-INDEX: *void functionInAnotherNamespace()*
-// MD-ANOTHER-INDEX: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#52*
+// MD-ANOTHER-INDEX: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#54*
 // MD-ANOTHER-INDEX: Function in AnotherNamespace
 
 // MD-GLOBAL-INDEX: # Global Namespace
@@ -504,7 +507,7 @@ namespace AnotherNamespace {
 // MD-GLOBAL-INDEX: * [AnotherNamespace](..{{[\/]}}AnotherNamespace{{[\/]}}index.md)
 
 // MD-NESTED-CLASS: # class ClassInNestedNamespace
-// MD-NESTED-CLASS: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#45*
+// MD-NESTED-CLASS: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#47*
 // MD-NESTED-CLASS: Class in NestedNamespace
 
 // MD-NESTED-INDEX: # namespace NestedNamespace
@@ -514,11 +517,11 @@ namespace AnotherNamespace {
 // MD-NESTED-INDEX: ## Functions
 // MD-NESTED-INDEX: ### functionInNestedNamespace
 // MD-NESTED-INDEX: *void functionInNestedNamespace()*
-// MD-NESTED-INDEX: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#43*
+// MD-NESTED-INDEX: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#45*
 // MD-NESTED-INDEX: Function in NestedNamespace
 
 // MD-PRIMARY-CLASS: # class ClassInPrimaryNamespace
-// MD-PRIMARY-CLASS: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#38*
+// MD-PRIMARY-CLASS: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#40*
 // MD-PRIMARY-CLASS: Class in PrimaryNamespace
 
 // MD-PRIMARY-INDEX: # namespace PrimaryNamespace
@@ -530,7 +533,7 @@ namespace AnotherNamespace {
 // MD-PRIMARY-INDEX: ## Functions
 // MD-PRIMARY-INDEX: ### functionInPrimaryNamespace
 // MD-PRIMARY-INDEX: *void functionInPrimaryNamespace()*
-// MD-PRIMARY-INDEX: *Defined at clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#35*
+// MD-PRIMARY-INDEX: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#37*
 // MD-PRIMARY-INDEX:  Function in PrimaryNamespace
 
 // MD-ALL-FILES: # All Files
