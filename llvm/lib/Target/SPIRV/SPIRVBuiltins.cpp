@@ -1469,6 +1469,9 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicFlagClear:
     return buildAtomicFlagInst(Call, Opcode, MIRBuilder, GR);
   default:
+    if (Call->isSpirvOp())
+      return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                                GR->getSPIRVTypeID(Call->ReturnType));
     return false;
   }
 }
@@ -2233,6 +2236,14 @@ static bool generateConvertInst(const StringRef DemangledCall,
   // Lookup the conversion builtin in the TableGen records.
   const SPIRV::ConvertBuiltin *Builtin =
       SPIRV::lookupConvertBuiltin(Call->Builtin->Name, Call->Builtin->Set);
+
+  if (!Builtin && Call->isSpirvOp()) {
+    const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+    unsigned Opcode =
+        SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+  }
 
   if (Builtin->IsSaturated)
     buildOpDecorate(Call->ReturnRegister, MIRBuilder,

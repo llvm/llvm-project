@@ -617,6 +617,10 @@ defm : DemangledNativeBuiltin<"atomic_flag_test_and_set_explicit", OpenCL_std, A
 defm : DemangledNativeBuiltin<"atomic_flag_clear", OpenCL_std, Atomic, 1, 1, OpAtomicFlagClear>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicFlagClear", OpenCL_std, Atomic, 3, 3, OpAtomicFlagClear>;
 defm : DemangledNativeBuiltin<"atomic_flag_clear_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagClear>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicSMin", OpenCL_std, Atomic, 4, 4, OpAtomicSMin>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicSMax", OpenCL_std, Atomic, 4, 4, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicUMin", OpenCL_std, Atomic, 4, 4, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicUMax", OpenCL_std, Atomic, 4, 4, OpAtomicUMax>;
 
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
@@ -1409,6 +1413,20 @@ defm : DemangledConvertBuiltin<"convert_uint", OpenCL_std>;
 defm : DemangledConvertBuiltin<"convert_long", OpenCL_std>;
 defm : DemangledConvertBuiltin<"convert_ulong", OpenCL_std>;
 defm : DemangledConvertBuiltin<"convert_float", OpenCL_std>;
+
+defm : DemangledNativeBuiltin<"__spirv_ConvertFToU", OpenCL_std, Convert, 1, 1, OpConvertFToU>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertFToS", OpenCL_std, Convert, 1, 1, OpConvertFToS>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertSToF", OpenCL_std, Convert, 1, 1, OpConvertSToF>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertUToF", OpenCL_std, Convert, 1, 1, OpConvertUToF>;
+defm : DemangledNativeBuiltin<"__spirv_UConvert", OpenCL_std, Convert, 1, 1, OpUConvert>;
+defm : DemangledNativeBuiltin<"__spirv_SConvert", OpenCL_std, Convert, 1, 1, OpSConvert>;
+defm : DemangledNativeBuiltin<"__spirv_FConvert", OpenCL_std, Convert, 1, 1, OpFConvert>;
+defm : DemangledNativeBuiltin<"__spirv_QuantizeToF16", OpenCL_std, Convert, 1, 1, OpQuantizeToF16>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertPtrToU", OpenCL_std, Convert, 1, 1, OpConvertPtrToU>;
+defm : DemangledNativeBuiltin<"__spirv_SatConvertSToU", OpenCL_std, Convert, 1, 1, OpSatConvertSToU>;
+defm : DemangledNativeBuiltin<"__spirv_SatConvertUToS", OpenCL_std, Convert, 1, 1, OpSatConvertUToS>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertUToPtr", OpenCL_std, Convert, 1, 1, OpConvertUToPtr>;
+
 
 // cl_intel_bfloat16_conversions / SPV_INTEL_bfloat16_conversion
 // Multiclass used to define at the same time both a demangled builtin records
