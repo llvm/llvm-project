@@ -5051,8 +5051,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                              Ld->getMemOperand()->getFlags());
         DAG.makeEquivalentMemoryOrdering(Ld, V);
 
-        unsigned Opc =
-            SplatVT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
+        unsigned Opc = SplatVT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
+                                                 : RISCVISD::VMV_V_X_VL;
         SDValue Splat =
             DAG.getNode(Opc, DL, SplatVT, DAG.getUNDEF(ContainerVT), V, VL);
         Splat = DAG.getBitcast(ContainerVT, Splat);
