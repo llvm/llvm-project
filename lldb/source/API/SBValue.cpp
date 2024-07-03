@@ -772,6 +772,9 @@ lldb::SBValue SBValue::GetSyntheticValue() {
     ValueImplSP proxy_sp(new ValueImpl(m_opaque_sp->GetRootSP(),
                                        m_opaque_sp->GetUseDynamic(), true));
     value_sb.SetSP(proxy_sp);
+    if (!value_sb.IsSynthetic()) {
+      return {};
+    }
   }
   return value_sb;
 }

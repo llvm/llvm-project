@@ -35,13 +35,20 @@ def ccc_summary(sbvalue, internal_dict):
 
 def ccc_synthetic(sbvalue, internal_dict):
     sbvalue = sbvalue.GetSyntheticValue()
-    # This tests that the SBValue.GetNonSyntheticValue() actually returns a
+    # This tests that the SBValue.GetSyntheticValue() actually returns a
     # synthetic value. If it does, then sbvalue.GetChildMemberWithName("a")
     # in the following statement will call the 'get_child_index' method of the
     # synthetic child provider CCCSynthProvider below (which return the "b" field").
     return "CCC object with leading synthetic value " + str(
         sbvalue.GetChildMemberWithName("a")
     )
+
+
+def bar_int_synthetic(sbvalue, internal_dict):
+    sbvalue = sbvalue.GetSyntheticValue()
+    # This tests that the SBValue.GetSyntheticValue() actually returns no
+    # value when the value has no synthetic representation.
+    return "bar_int synthetic: " + str(sbvalue)
 
 
 class CCCSynthProvider(object):
@@ -143,5 +150,12 @@ def __lldb_init_module(debugger, dict):
         lldb.SBTypeNameSpecifier("CCC"),
         lldb.SBTypeSummary.CreateWithFunctionName(
             "synth.ccc_synthetic", lldb.eTypeOptionCascade
+        ),
+    )
+    cat3 = debugger.CreateCategory("BarIntSynth")
+    cat3.AddTypeSummary(
+        lldb.SBTypeNameSpecifier("int"),
+        lldb.SBTypeSummary.CreateWithFunctionName(
+            "synth.bar_int_synthetic", lldb.eTypeOptionCascade
         ),
     )
