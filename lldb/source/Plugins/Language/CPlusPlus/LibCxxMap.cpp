@@ -284,7 +284,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
   uint64_t bit_offset;
   if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) !=
       UINT32_MAX) {
-    // Old layout (pre 089a7cc5dea)
+    // Old layout (pre d05b10ab4fc65)
     m_skip_size = bit_offset / 8u;
   } else {
     auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
