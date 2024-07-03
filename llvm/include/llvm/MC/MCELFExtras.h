@@ -18,6 +18,8 @@
 #include <type_traits>
 
 namespace llvm::ELF {
+// Encode relocations as CREL to OS. ToCrel is responsible for converting a
+// const &RelocsTy to a Elf_Crel
 template <bool Is64, class RelocsTy, class F>
 void encodeCrel(raw_ostream &OS, RelocsTy Relocs, F ToCrel) {
   using uint = std::conditional_t<Is64, uint64_t, uint32_t>;

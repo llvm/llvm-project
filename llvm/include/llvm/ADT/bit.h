@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_BIT_H
 #define LLVM_ADT_BIT_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <limits>

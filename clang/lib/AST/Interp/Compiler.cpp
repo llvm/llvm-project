@@ -1285,7 +1285,13 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
-  if (E->getType()->isVoidType())
+
+  QualType QT = E->getType();
+
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
+  if (QT->isVoidType())
     return this->emitInvalid(E);
 
   // Handle discarding first.
@@ -1298,17 +1304,16 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   // Primitive values.
-  if (std::optional<PrimType> T = classify(E->getType())) {
+  if (std::optional<PrimType> T = classify(QT)) {
     assert(!DiscardResult);
     if (Inits.size() == 0)
-      return this->visitZeroInitializer(*T, E->getType(), E);
+      return this->visitZeroInitializer(*T, QT, E);
     assert(Inits.size() == 1);
     return this->delegate(Inits[0]);
   }
 
-  QualType T = E->getType();
-  if (T->isRecordType()) {
-    const Record *R = getRecord(E->getType());
+  if (QT->isRecordType()) {
+    const Record *R = getRecord(QT);
 
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->delegate(Inits[0]);
@@ -1405,8 +1410,8 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->emitFinishInit(E);
   }
 
-  if (T->isArrayType()) {
-    if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
+  if (QT->isArrayType()) {
+    if (Inits.size() == 1 && QT == Inits[0]->getType())
       return this->delegate(Inits[0]);
 
     unsigned ElementIndex = 0;
@@ -1438,7 +1443,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     // FIXME: This should go away.
     if (ArrayFiller) {
       const ConstantArrayType *CAT =
-          Ctx.getASTContext().getAsConstantArrayType(E->getType());
+          Ctx.getASTContext().getAsConstantArrayType(QT);
       uint64_t NumElems = CAT->getZExtSize();
 
       for (; ElementIndex != NumElems; ++ElementIndex) {
@@ -1450,7 +1455,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->emitFinishInit(E);
   }
 
-  if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
+  if (const auto *ComplexTy = QT->getAs<ComplexType>()) {
     unsigned NumInits = Inits.size();
 
     if (NumInits == 1)
@@ -1480,7 +1485,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return true;
   }
 
-  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
+  if (const auto *VecT = QT->getAs<VectorType>()) {
     unsigned NumVecElements = VecT->getNumElements();
     assert(NumVecElements >= Inits.size());
 

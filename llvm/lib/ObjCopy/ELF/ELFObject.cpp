@@ -1887,12 +1887,12 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
       const typename ELFFile<ELFT>::Elf_Shdr *Shdr =
           Sections->begin() + RelSec->Index;
       if (RelSec->Type == SHT_CREL) {
-        auto Rels = ElfFile.crels(*Shdr);
-        if (!Rels)
-          return Rels.takeError();
-        if (Error Err = initRelocations(RelSec, Rels->first))
+        auto RelsOrRelas = ElfFile.crels(*Shdr);
+        if (!RelsOrRelas)
+          return RelsOrRelas.takeError();
+        if (Error Err = initRelocations(RelSec, RelsOrRelas->first))
           return Err;
-        if (Error Err = initRelocations(RelSec, Rels->second))
+        if (Error Err = initRelocations(RelSec, RelsOrRelas->second))
           return Err;
       } else if (RelSec->Type == SHT_REL) {
         Expected<typename ELFFile<ELFT>::Elf_Rel_Range> Rels =

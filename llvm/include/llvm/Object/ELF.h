@@ -209,10 +209,14 @@ bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
          checkSectionVMA<ELFT>(Phdr, Sec);
 }
 
+// HdrHandler is called once with the number of relocations and whether the
+// relocations have addends. EntryHandler is called once per decoded relocation.
 template <bool Is64>
-Error decodeCrel(ArrayRef<uint8_t> Content,
-                 function_ref<void(uint64_t, bool)> HdrHandler,
-                 function_ref<void(Elf_Crel_Impl<Is64>)> EntryHandler) {
+Error decodeCrel(
+    ArrayRef<uint8_t> Content,
+    function_ref<void(uint64_t /*relocation count*/, bool /*explicit addends*/)>
+        HdrHandler,
+    function_ref<void(Elf_Crel_Impl<Is64>)> EntryHandler) {
   DataExtractor Data(Content, true, 8); // endian and address size are unused
   DataExtractor::Cursor Cur(0);
   const uint64_t Hdr = Data.getULEB128(Cur);
