@@ -53,6 +53,11 @@ CHECK-NEXT:   warn_fe_backend_unsupported
 CHECK-NEXT:   warn_fe_cc_log_diagnostics_failure
 CHECK-NEXT:   warn_fe_cc_print_header_failure
 CHECK-NEXT:   warn_fe_macro_contains_embedded_newline
+CHECK-NEXT:   warn_hlsl_UDT_missing_basic_type
+CHECK-NEXT:   warn_hlsl_UDT_missing_resource_type_member
+CHECK-NEXT:   warn_hlsl_deprecated_register_type_b
+CHECK-NEXT:   warn_hlsl_deprecated_register_type_i
+CHECK-NEXT:   warn_hlsl_register_type_c_not_in_global_scope
 CHECK-NEXT:   warn_ignoring_ftabstop_value
 CHECK-NEXT:   warn_implements_nscopying
 CHECK-NEXT:   warn_incompatible_qualified_id

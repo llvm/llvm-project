@@ -546,6 +546,8 @@ getHLSLResourceAttrFromEitherDecl(VarDecl *SamplerUAVOrSRV,
   if (SamplerUAVOrSRV) {
     const CXXRecordDecl *TheRecordDecl =
         getRecordDeclFromVarDecl(SamplerUAVOrSRV);
+    if (!TheRecordDecl)
+      return nullptr;
     const auto *Attr = TheRecordDecl->getAttr<HLSLResourceAttr>();
     return Attr;
   } else if (CBufferOrTBuffer) {
