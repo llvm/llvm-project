@@ -154,6 +154,19 @@ private:
   CaseMap OldCaseLabels;
 };
 
+template <class Emitter> class StmtExprScope final {
+public:
+  StmtExprScope(Compiler<Emitter> *Ctx) : Ctx(Ctx), OldFlag(Ctx->InStmtExpr) {
+    Ctx->InStmtExpr = true;
+  }
+
+  ~StmtExprScope() { Ctx->InStmtExpr = OldFlag; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  bool OldFlag;
+};
+
 } // namespace interp
 } // namespace clang
 
@@ -3028,6 +3041,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   BlockScope<Emitter> BS(this);
+  StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
   const Stmt *Result = CS->getStmtExprResult();
@@ -3460,7 +3474,7 @@ bool Compiler<Emitter>::visitDecl(const VarDecl *VD, bool ConstantContext) {
   }
 
   // Create and initialize the variable.
-  if (!this->visitVarDecl(VD))
+  if (!this->visitVarDecl(VD, /*Toplevel=*/true))
     return false;
 
   // Get a pointer to the variable
@@ -3507,7 +3521,7 @@ bool Compiler<Emitter>::visitDecl(const VarDecl *VD, bool ConstantContext) {
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
+VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Toplevel) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -3520,6 +3534,11 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
+  auto checkDecl = [&]() -> bool {
+    bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
+    return !NeedsOp || this->emitCheckDecl(VD, VD);
+  };
+
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
@@ -3527,20 +3546,22 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
 
       if (VarT) {
         if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*VarT, GlobalIndex, VD);
+          return checkDecl() && false;
+
+        return checkDecl() && this->emitInitGlobal(*VarT, GlobalIndex, VD);
       }
-      return this->visitGlobalInitializer(Init, GlobalIndex);
+
+      return checkDecl() && this->visitGlobalInitializer(Init, GlobalIndex);
     };
 
     // We've already seen and initialized this global.
     if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
       if (P.getPtrGlobal(*GlobalIndex).isInitialized())
-        return true;
+        return checkDecl();
 
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.
-      return Init && initGlobal(*GlobalIndex);
+      return Init && checkDecl() && initGlobal(*GlobalIndex);
     }
 
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
@@ -3548,9 +3569,10 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
     if (!GlobalIndex)
       return false;
 
-    return !Init || initGlobal(*GlobalIndex);
+    return !Init || (checkDecl() && initGlobal(*GlobalIndex));
   } else {
     VariableScope<Emitter> LocalScope(this, VD);
+
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
           VD, *VarT, VD->getType().isConstQualified());
@@ -4011,7 +4033,7 @@ template <class Emitter> bool Compiler<Emitter>::visitLoopBody(const Stmt *S) {
     return true;
 
   if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
-    for (auto *InnerStmt : CS->body())
+    for (const auto *InnerStmt : CS->body())
       if (!visitStmt(InnerStmt))
         return false;
     return true;
@@ -4023,7 +4045,7 @@ template <class Emitter> bool Compiler<Emitter>::visitLoopBody(const Stmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
   BlockScope<Emitter> Scope(this);
-  for (auto *InnerStmt : S->body())
+  for (const auto *InnerStmt : S->body())
     if (!visitStmt(InnerStmt))
       return false;
   return true;
@@ -4031,7 +4053,7 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
-  for (auto *D : DS->decls()) {
+  for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl,
             FunctionDecl>(D))
       continue;
@@ -4048,6 +4070,9 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
+  if (this->InStmtExpr)
+    return this->emitUnsupported(RS);
+
   if (const Expr *RE = RS->getRetValue()) {
     ExprScope<Emitter> RetScope(this);
     if (ReturnType) {
@@ -4131,6 +4156,7 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   LabelTy EndLabel = this->getLabel();  // Label after the loop.
   LoopScope<Emitter> LS(this, EndLabel, CondLabel);
 
+  this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
   if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
@@ -4166,12 +4192,14 @@ template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
   LoopScope<Emitter> LS(this, EndLabel, CondLabel);
   LocalScope<Emitter> Scope(this);
 
+  this->fallthrough(StartLabel);
   this->emitLabel(StartLabel);
   {
     DestructorScope<Emitter> DS(Scope);
 
     if (!this->visitLoopBody(Body))
       return false;
+    this->fallthrough(CondLabel);
     this->emitLabel(CondLabel);
     if (!this->visitBool(Cond))
       return false;
@@ -4179,6 +4207,7 @@ template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
   if (!this->jumpTrue(StartLabel))
     return false;
 
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
   return true;
 }
@@ -4199,6 +4228,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
 
   if (Init && !this->visitStmt(Init))
     return false;
+  this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
   if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
@@ -4217,6 +4247,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
 
     if (Body && !this->visitLoopBody(Body))
       return false;
+    this->fallthrough(IncLabel);
     this->emitLabel(IncLabel);
     if (Inc && !this->discard(Inc))
       return false;
@@ -4224,6 +4255,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
 
   if (!this->jump(CondLabel))
     return false;
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
   return true;
 }
@@ -4255,6 +4287,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
     return false;
 
   // Now the condition as well as the loop variable assignment.
+  this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
   if (!this->visitBool(Cond))
     return false;
@@ -4271,13 +4304,16 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 
     if (!this->visitLoopBody(Body))
       return false;
+  this->fallthrough(IncLabel);
     this->emitLabel(IncLabel);
     if (!this->discard(Inc))
       return false;
   }
+
   if (!this->jump(CondLabel))
     return false;
 
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
   return true;
 }
@@ -4983,7 +5019,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
              VD->isStaticDataMember()) &&
             typeShouldBeVisited(VD->getType())) {
-          auto VarState = this->visitVarDecl(VD);
+          auto VarState = this->visitVarDecl(VD, true);
           if (VarState.notCreated())
             return true;
           if (!VarState)
@@ -4996,7 +5032,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       if (const auto *VD = dyn_cast<VarDecl>(D);
           VD && VD->getAnyInitializer() &&
           VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
-        auto VarState = this->visitVarDecl(VD);
+        auto VarState = this->visitVarDecl(VD, true);
         if (VarState.notCreated())
           return true;
         if (!VarState)

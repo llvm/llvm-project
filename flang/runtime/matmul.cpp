@@ -28,7 +28,8 @@
 #include "flang/Runtime/descriptor.h"
 #include <cstring>
 
-namespace Fortran::runtime {
+namespace {
+using namespace Fortran::runtime;
 
 // Suppress the warnings about calling __host__-only std::complex operators,
 // defined in C++ STD header files, from __device__ code.
@@ -455,7 +456,8 @@ template <bool IS_ALLOCATING> struct Matmul {
           Terminator &terminator) const {
         if constexpr (constexpr auto resultType{
                           GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
-          if constexpr (common::IsNumericTypeCategory(resultType->first) ||
+          if constexpr (Fortran::common::IsNumericTypeCategory(
+                            resultType->first) ||
               resultType->first == TypeCategory::Logical) {
             return DoMatmul<IS_ALLOCATING, resultType->first,
                 resultType->second, CppTypeFor<XCAT, XKIND>,
@@ -483,6 +485,32 @@ template <bool IS_ALLOCATING> struct Matmul {
   }
 };
 
+template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
+    int YKIND>
+struct MatmulHelper {
+  using ResultDescriptor =
+      std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
+  RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
+      const Descriptor &y, const char *sourceFile, int line) const {
+    Terminator terminator{sourceFile, line};
+    auto xCatKind{x.type().GetCategoryAndKind()};
+    auto yCatKind{y.type().GetCategoryAndKind()};
+    RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
+    RUNTIME_CHECK(terminator, xCatKind->first == XCAT);
+    RUNTIME_CHECK(terminator, yCatKind->first == YCAT);
+    if constexpr (constexpr auto resultType{
+                      GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
+      return DoMatmul<IS_ALLOCATING, resultType->first, resultType->second,
+          CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(
+          result, x, y, terminator);
+    }
+    terminator.Crash("MATMUL: bad operand types (%d(%d), %d(%d))",
+        static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
+  }
+};
+} // namespace
+
+namespace Fortran::runtime {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
@@ -494,6 +522,24 @@ void RTDEF(MatmulDirect)(const Descriptor &result, const Descriptor &x,
     const Descriptor &y, const char *sourceFile, int line) {
   Matmul<false>{}(result, x, y, sourceFile, line);
 }
+
+#define MATMUL_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
+  void RTDEF(Matmul##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
+      const Descriptor &x, const Descriptor &y, const char *sourceFile, \
+      int line) { \
+    MatmulHelper<true, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
+        YKIND>{}(result, x, y, sourceFile, line); \
+  }
+
+#define MATMUL_DIRECT_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
+  void RTDEF(MatmulDirect##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
+      const Descriptor &x, const Descriptor &y, const char *sourceFile, \
+      int line) { \
+    MatmulHelper<false, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
+        YKIND>{}(result, x, y, sourceFile, line); \
+  }
+
+#include "flang/Runtime/matmul-instances.inc"
 
 RT_EXT_API_GROUP_END
 } // extern "C"

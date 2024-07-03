@@ -3458,9 +3458,9 @@ Differences between various standard modes
 
 clang supports the -std option, which changes what language mode clang uses.
 The supported modes for C are c89, gnu89, c94, c99, gnu99, c11, gnu11, c17,
-gnu17, c23, gnu23, and various aliases for those modes. If no -std option is
-specified, clang defaults to gnu17 mode. Many C99 and C11 features are
-supported in earlier modes as a conforming extension, with a warning. Use
+gnu17, c23, gnu23, c2y, gnu2y, and various aliases for those modes. If no -std
+option is specified, clang defaults to gnu17 mode. Many C99 and C11 features
+are supported in earlier modes as a conforming extension, with a warning. Use
 ``-pedantic-errors`` to request an error if a feature from a later standard
 revision is used in an earlier mode.
 
@@ -3522,6 +3522,10 @@ Differences between ``*17`` and ``*23`` modes:
   mode, and as an extension in ``*17`` and earlier modes.
 - ``[[]]`` attributes are supported by default in ``*23`` mode, and as an
   extension in ``*17`` and earlier modes.
+
+Differences between ``*23`` and ``*2y`` modes:
+
+- ``__STDC_VERSION__`` is defined to ``202400L`` rather than ``202311L``.
 
 GCC extensions not implemented yet
 ----------------------------------
