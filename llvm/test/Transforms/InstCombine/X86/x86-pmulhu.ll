@@ -111,8 +111,7 @@ define <32 x i16> @zero_pmulhu_512_commute(<32 x i16> %a0) {
 
 define <8 x i16> @one_pmulhu_128(<8 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulhu_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> [[A0:%.*]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %a0, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
   ret <8 x i16> %1
@@ -120,8 +119,7 @@ define <8 x i16> @one_pmulhu_128(<8 x i16> %a0) {
 
 define <8 x i16> @one_pmulhu_128_commute(<8 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulhu_128_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> %a0)
   ret <8 x i16> %1
@@ -129,8 +127,7 @@ define <8 x i16> @one_pmulhu_128_commute(<8 x i16> %a0) {
 
 define <16 x i16> @one_pmulhu_256(<16 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulhu_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> [[A0:%.*]], <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> %a0, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
   ret <16 x i16> %1
@@ -138,8 +135,7 @@ define <16 x i16> @one_pmulhu_256(<16 x i16> %a0) {
 
 define <16 x i16> @one_pmulhu_256_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulhu_256_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <16 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <16 x i16> %a0)
   ret <16 x i16> %1
@@ -147,8 +143,7 @@ define <16 x i16> @one_pmulhu_256_commute(<16 x i16> %a0) {
 
 define <32 x i16> @one_pmulhu_512(<32 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulhu_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmulhu.w.512(<32 x i16> [[A0:%.*]], <32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmulhu.w.512(<32 x i16> %a0, <32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
   ret <32 x i16> %1
@@ -156,8 +151,7 @@ define <32 x i16> @one_pmulhu_512(<32 x i16> %a0) {
 
 define <32 x i16> @one_pmulhu_512_commute(<32 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulhu_512_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmulhu.w.512(<32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <32 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmulhu.w.512(<32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <32 x i16> %a0)
   ret <32 x i16> %1
