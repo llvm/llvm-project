@@ -18,6 +18,10 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Valgrind.h"
 
+#ifdef __linux__
+#include "MemoryLinux.h"
+#endif
+
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif
@@ -177,6 +181,55 @@ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
       alignAddr((const uint8_t *)M.Address + M.AllocatedSize, PageSize);
 
   bool InvalidateCache = (Flags & MF_EXEC);
+  bool SkipMprotect = false;
+
+#if defined(__linux__)
+  // Check for cases where the EXEC protection flag changes and a possible
+  // strict W^X policy cannot be bypassed via mprotect() alone, e.g. under
+  // PaX's MPROTECT or SELinux's deny_execmem.
+  //
+  // To support such systems, we need to create a fresh mapping with the
+  // target protection flags.
+  if ((M.Flags ^ Flags) & MF_EXEC && execProtChangeNeedsNewMapping()) {
+    class FDWrapper {
+    public:
+      FDWrapper(int fd) : fd(fd) {}
+      ~FDWrapper() { ::close(fd); }
+      operator int() const { return fd; }
+    private:
+      int fd;
+    } fd(memfd_create("llvm", MFD_CLOEXEC));
+
+    if (fd < 0)
+      return errnoAsErrorCode();
+
+    const char *data = reinterpret_cast<char *>(Start);
+    uintptr_t len = End - Start;
+    uintptr_t left = len;
+
+    while (left) {
+      ssize_t cnt = ::write(fd, data, left);
+      if (cnt < 0) {
+        if (errno == EINTR)
+          continue;
+
+        return errnoAsErrorCode();
+      }
+      left -= cnt;
+      data += cnt;
+    }
+
+    void *addr = ::mmap(reinterpret_cast<void *>(Start), len, Protect,
+                        MAP_PRIVATE | MAP_FIXED, fd, 0);
+    if (addr == MAP_FAILED)
+      return errnoAsErrorCode();
+
+    // We created a new mapping with the final protection bits, therefore
+    // don't need to call mprotect() with the very same flags again -- unless
+    // we have to toggle PROT_READ for ARM.
+    SkipMprotect = true;
+  }
+#endif
 
 #if defined(__arm__) || defined(__aarch64__)
   // Certain ARM implementations treat icache clear instruction as a memory
@@ -190,13 +243,16 @@ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
 
     Memory::InvalidateInstructionCache(M.Address, M.AllocatedSize);
     InvalidateCache = false;
+    SkipMprotect = false;
   }
 #endif
 
-  int Result = ::mprotect((void *)Start, End - Start, Protect);
+  if (!SkipMprotect) {
+    int Result = ::mprotect((void *)Start, End - Start, Protect);
 
-  if (Result != 0)
-    return errnoAsErrorCode();
+    if (Result != 0)
+      return errnoAsErrorCode();
+  }
 
   if (InvalidateCache)
     Memory::InvalidateInstructionCache(M.Address, M.AllocatedSize);
