@@ -806,8 +806,16 @@ func.func @winograd_filter_transform(%arg0: tensor<2x1x1x5xf32>, %arg1: tensor<6
 
 // -----
 
+func.func @winograd_filter_dyn(%arg0: tensor<?x3x3x?xf32>, %arg1: tensor<6x5x?x?xf32>) -> tensor<6x5x?x?xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_filter_transform m(4) r(3) ins(%arg0 : tensor<?x3x3x?xf32>) outs(%arg1 : tensor<6x5x?x?xf32>) -> tensor<6x5x?x?xf32>
+  return %0 : tensor<6x5x?x?xf32>
+}
+
+// -----
+
 func.func @winograd_input_transform_height(%arg0: tensor<2x13x14x5xf32>, %arg1: tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32> {
-  // expected-error @+1 {{input height cannot be tiled in full tile size}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x13x14x5xf32>) outs(%arg1 : tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32>
   return %0 : tensor<6x6x3x3x2x5xf32>
 }
@@ -815,7 +823,7 @@ func.func @winograd_input_transform_height(%arg0: tensor<2x13x14x5xf32>, %arg1: 
 // -----
 
 func.func @winograd_input_transform_width(%arg0: tensor<2x14x13x5xf32>, %arg1: tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32> {
-  // expected-error @+1 {{input width cannot be tiled in full tile size}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x13x5xf32>) outs(%arg1 : tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32>
   return %0 : tensor<6x6x3x3x2x5xf32>
 }
@@ -823,7 +831,7 @@ func.func @winograd_input_transform_width(%arg0: tensor<2x14x13x5xf32>, %arg1: t
 // -----
 
 func.func @winograd_input_transform_output_tileH(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<6x6x2x3x2x5xf32>) -> tensor<6x6x2x3x2x5xf32> {
-  // expected-error @+1 {{number of output height tiles is not correct}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<6x6x2x3x2x5xf32>) -> tensor<6x6x2x3x2x5xf32>
   return %0 : tensor<6x6x2x3x2x5xf32>
 }
@@ -831,7 +839,7 @@ func.func @winograd_input_transform_output_tileH(%arg0: tensor<2x14x14x5xf32>, %
 // -----
 
 func.func @winograd_input_transform_output_tileW(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<6x6x3x2x2x5xf32>) -> tensor<6x6x3x2x2x5xf32> {
-  // expected-error @+1 {{number of output width tiles is not correct}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<6x6x3x2x2x5xf32>) -> tensor<6x6x3x2x2x5xf32>
   return %0 : tensor<6x6x3x2x2x5xf32>
 }
@@ -839,7 +847,7 @@ func.func @winograd_input_transform_output_tileW(%arg0: tensor<2x14x14x5xf32>, %
 // -----
 
 func.func @winograd_input_transform_output_height(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<5x6x3x3x2x5xf32>) -> tensor<5x6x3x3x2x5xf32> {
-  // expected-error @+1 {{expect output height equals to tile size}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<5x6x3x3x2x5xf32>) -> tensor<5x6x3x3x2x5xf32>
   return %0 : tensor<5x6x3x3x2x5xf32>
 }
@@ -847,9 +855,17 @@ func.func @winograd_input_transform_output_height(%arg0: tensor<2x14x14x5xf32>, 
 // -----
 
 func.func @winograd_input_transform_output_width(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<6x5x3x3x2x5xf32>) -> tensor<6x5x3x3x2x5xf32> {
-  // expected-error @+1 {{expect output width equals to tile size}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<6x5x3x3x2x5xf32>) -> tensor<6x5x3x3x2x5xf32>
   return %0 : tensor<6x5x3x3x2x5xf32>
+}
+
+// -----
+
+func.func @winograd_input_dyn(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<6x5x?x?x?x?xf32>) -> tensor<6x5x?x?x?x?xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<?x?x?x?xf32>) outs(%arg1 : tensor<6x5x?x?x?x?xf32>) -> tensor<6x5x?x?x?x?xf32>
+  return %0 : tensor<6x5x?x?x?x?xf32>
 }
 
 // -----
@@ -871,7 +887,7 @@ func.func @winograd_output_transform_input_width(%arg0: tensor<6x5x3x3x2x2xf32>,
 // -----
 
 func.func @winograd_output_transform_output_height(%arg0: tensor<6x6x3x3x2x2xf32>, %arg1: tensor<2x11x12x2xf32>) -> tensor<2x11x12x2xf32> {
-  // expected-error @+1 {{expect output height aligned to output tile size}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_output_transform m(4) r(3) ins(%arg0 : tensor<6x6x3x3x2x2xf32>) outs(%arg1 : tensor<2x11x12x2xf32>) -> tensor<2x11x12x2xf32>
   return %0 : tensor<2x11x12x2xf32>
 }
@@ -879,7 +895,7 @@ func.func @winograd_output_transform_output_height(%arg0: tensor<6x6x3x3x2x2xf32
 // -----
 
 func.func @winograd_output_transform_output_width(%arg0: tensor<6x6x3x3x2x2xf32>, %arg1: tensor<2x12x11x2xf32>) -> tensor<2x12x11x2xf32> {
-  // expected-error @+1 {{expect output width aligned to output tile size}}
+  // expected-error @+1 {{the output shape is not expected}}
   %0 = linalg.winograd_output_transform m(4) r(3) ins(%arg0 : tensor<6x6x3x3x2x2xf32>) outs(%arg1 : tensor<2x12x11x2xf32>) -> tensor<2x12x11x2xf32>
   return %0 : tensor<2x12x11x2xf32>
 }

@@ -2744,6 +2744,7 @@ LogicalResult WinogradFilterTransformOp::verify() {
   int64_t filterH = filterShape[1];
   int64_t filterW = filterShape[2];
   int64_t r = getR();
+  int64_t m = getM();
 
   if (filterH != r && filterH != 1)
     return emitOpError("expect filter height either equals to r or 1");
@@ -2752,6 +2753,17 @@ LogicalResult WinogradFilterTransformOp::verify() {
   if (filterH == 1 && filterW == 1)
     return emitOpError("expect either filter height or width equals to r");
 
+  SmallVector<int64_t> expectedOutputShape;
+  expectedOutputShape.push_back(filterH == r ? m + r - 1 : 1);
+  expectedOutputShape.push_back(filterW == r ? m + r - 1 : 1);
+  expectedOutputShape.push_back(filterShape[3]);
+  expectedOutputShape.push_back(filterShape[0]);
+
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
+    return emitOpError("the output shape is not expected");
+  }
   return success();
 }
 
@@ -2764,40 +2776,35 @@ LogicalResult WinogradInputTransformOp::verify() {
   ArrayRef<int64_t> inputShape = inputType.getShape();
   int64_t inputH = inputShape[1];
   int64_t inputW = inputShape[2];
-  auto outputType = cast<ShapedType>(getOutput().getType());
-  ArrayRef<int64_t> outputShape = outputType.getShape();
-  int64_t outputH = outputShape[0];
-  int64_t outputW = outputShape[1];
-  int64_t outputTileH = outputShape[2];
-  int64_t outputTileW = outputShape[3];
   int m = getM();
   int r = getR();
+  int64_t tileSize = m + r - 1;
   bool leftTransform = inputH != 1;
   bool rightTransform = inputW != 1;
 
-  if (!leftTransform && !rightTransform)
-    return failure();
-
-  if (leftTransform) {
-    int64_t tileH = (inputH - (r - 1)) / m;
-    if (inputH != tileH * m + (r - 1))
-      return emitOpError("input height cannot be tiled in full tile size");
-    if (tileH != outputTileH)
-      return emitOpError("number of output height tiles is not correct");
-    if (outputH != m + r - 1)
-      return emitOpError("expect output height equals to tile size");
+  SmallVector<int64_t> expectedOutputShape(6, inputH);
+  if (ShapedType::isDynamic(inputH)) {
+    expectedOutputShape[0] = tileSize;
+    expectedOutputShape[2] = -1;
+  } else {
+    expectedOutputShape[0] = leftTransform ? tileSize : 1;
+    expectedOutputShape[2] = leftTransform ? (inputH - (r - 1)) / m : 1;
   }
-
-  if (rightTransform) {
-    int64_t tileW = (inputW - (r - 1)) / m;
-    if (inputW != tileW * m + (r - 1))
-      return emitOpError("input width cannot be tiled in full tile size");
-    if (tileW != outputTileW)
-      return emitOpError("number of output width tiles is not correct");
-    if (outputW != m + r - 1)
-      return emitOpError("expect output width equals to tile size");
+  if (ShapedType::isDynamic(inputW)) {
+    expectedOutputShape[1] = tileSize;
+    expectedOutputShape[3] = -1;
+  } else {
+    expectedOutputShape[1] = rightTransform ? tileSize : 1;
+    expectedOutputShape[3] = rightTransform ? (inputW - (r - 1)) / m : 1;
   }
+  expectedOutputShape[4] = inputShape[0];
+  expectedOutputShape[5] = inputShape[3];
 
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
+    return emitOpError("the output shape is not expected");
+  }
   return success();
 }
 
@@ -2812,32 +2819,34 @@ LogicalResult WinogradOutputTransformOp::verify() {
   int64_t valueW = valueShape[1];
   int64_t valueTileH = valueShape[2];
   int64_t valueTileW = valueShape[3];
-  auto outputType = cast<ShapedType>(getOutput().getType());
-  ArrayRef<int64_t> outputShape = outputType.getShape();
-  int64_t outputH = outputShape[1];
-  int64_t outputW = outputShape[2];
   int m = getM();
   int r = getR();
   bool leftTransform = valueH != 1;
   bool rightTransform = valueW != 1;
 
-  if (!leftTransform && !rightTransform)
-    return failure();
-
-  if (leftTransform) {
-    if (valueH != m + r - 1)
+  SmallVector<int64_t> expectedOutputShape(4, valueH);
+  if (ShapedType::isDynamic(valueH) || ShapedType::isDynamic(valueTileH)) {
+    expectedOutputShape[1] = -1;
+  } else {
+    if (valueH != (leftTransform ? m + r - 1 : 1))
       return emitOpError("expect input height equals to input tile size");
-    if (outputH != m * valueTileH)
-      return emitOpError("expect output height aligned to output tile size");
+    expectedOutputShape[1] = (leftTransform ? m : 1) * valueTileH;
   }
-
-  if (rightTransform) {
-    if (valueW != m + r - 1)
+  if (ShapedType::isDynamic(valueW) || ShapedType::isDynamic(valueTileW)) {
+    expectedOutputShape[2] = -1;
+  } else {
+    if (valueW != (rightTransform ? m + r - 1 : 1))
       return emitOpError("expect input width equals to input tile size");
-    if (outputW != m * valueTileW)
-      return emitOpError("expect output width aligned to output tile size");
+    expectedOutputShape[2] = (rightTransform ? m : 1) * valueTileW;
   }
+  expectedOutputShape[0] = valueShape[4];
+  expectedOutputShape[3] = valueShape[5];
 
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
+    return emitOpError("the output shape is not expected");
+  }
   return success();
 }
 
