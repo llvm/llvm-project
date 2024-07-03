@@ -12,7 +12,6 @@
 #include "LinkUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -381,8 +380,7 @@ bool generateDsymCompanion(
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
 
   // Layout but don't emit.
-  MCAsmLayout Layout(MCAsm);
-  MCAsm.layout(Layout);
+  MCAsm.layout();
 
   BinaryHolder InputBinaryHolder(VFS, false);
 
