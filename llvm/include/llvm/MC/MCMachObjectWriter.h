@@ -116,6 +116,10 @@ private:
 
   SectionAddrMap SectionAddress;
 
+  // List of sections in layout order. Virtual sections are after non-virtual
+  // sections.
+  SmallVector<MCSection *, 0> SectionOrder;
+
   /// @}
   /// \name Symbol Table Data
   /// @{
@@ -164,6 +168,9 @@ public:
 
   bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
+  const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
+    return SectionOrder;
+  }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
