@@ -7319,7 +7319,7 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
 
     if (ExpectedTy && ExpectedTy != Arg.V->getType())
       return error(Arg.Loc, "argument is not of expected type '" +
-                              getTypeString(ExpectedTy) + "'");
+                                getTypeString(ExpectedTy) + "'");
     Args.push_back(Arg.V);
     ArgAttrs.push_back(Arg.Attrs);
   }
@@ -7632,7 +7632,7 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
 
     if (ExpectedTy && ExpectedTy != Arg.V->getType())
       return error(Arg.Loc, "argument is not of expected type '" +
-                              getTypeString(ExpectedTy) + "'");
+                                getTypeString(ExpectedTy) + "'");
     Args.push_back(Arg.V);
     ArgAttrs.push_back(Arg.Attrs);
   }
@@ -8027,7 +8027,7 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
 
     if (ExpectedTy && ExpectedTy != Arg.V->getType())
       return error(Arg.Loc, "argument is not of expected type '" +
-                              getTypeString(ExpectedTy) + "'");
+                                getTypeString(ExpectedTy) + "'");
     Args.push_back(Arg.V);
     Attrs.push_back(Arg.Attrs);
   }
