@@ -871,7 +871,7 @@ class SMRDAlignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr),
   if (!Subtarget->isXNACKEnabled())
     return true;
 
-  // Returns true if it is a naturally aligned multi-dword load.
+  // Returns true if it is a single dword load or naturally aligned multi-dword load.
   LoadSDNode *Ld = cast<LoadSDNode>(N);
   unsigned Size = Ld->getMemoryVT().getStoreSize();
   return Size <= 4 || Ld->getAlign().value() >= Size;
@@ -894,7 +894,7 @@ class SMRDUnalignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr
   // Returns true if it is an under aligned multi-dword load.
   LoadSDNode *Ld = cast<LoadSDNode>(N);
   unsigned Size = Ld->getMemoryVT().getStoreSize();
-  return Size > 4 && (Ld->getAlign().value() < Size);
+  return Size > 4 && Ld->getAlign().value() < Size;
 }]> {
   let GISelPredicateCode = [{
   if (!Subtarget->isXNACKEnabled())
@@ -902,7 +902,7 @@ class SMRDUnalignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr
 
   auto &Ld = cast<GLoad>(MI);
   TypeSize Size = Ld.getMMO().getSize().getValue();
-  return Size > 4 && (Ld.getMMO().getAlign().value() < Size);
+  return Size > 4 && Ld.getMMO().getAlign().value() < Size;
   }];
 }
 
