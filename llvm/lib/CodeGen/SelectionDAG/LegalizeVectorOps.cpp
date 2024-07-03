@@ -2017,7 +2017,7 @@ SDValue VectorLegalizer::UnrollVSETCC(SDNode *Node) {
                                                 *DAG.getContext(), TmpEltVT),
                          LHSElem, RHSElem, CC);
     Ops[i] = DAG.getSelect(dl, EltVT, Ops[i],
-                           DAG.getBoolConstant(true, dl, EltVT, EltVT),
+                           DAG.getBoolConstant(true, dl, EltVT, VT),
                            DAG.getConstant(0, dl, EltVT));
   }
   return DAG.getBuildVector(VT, dl, Ops);
