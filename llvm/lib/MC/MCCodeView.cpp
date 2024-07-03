@@ -474,7 +474,8 @@ static unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, EndRef, BeginRef, Ctx);
   int64_t Result;
-  bool Success = AddrDelta->evaluateKnownAbsolute(Result, Layout);
+  bool Success =
+      AddrDelta->evaluateKnownAbsolute(Result, Layout.getAssembler());
   assert(Success && "failed to evaluate label difference as absolute");
   (void)Success;
   assert(Result >= 0 && "negative label difference requested");

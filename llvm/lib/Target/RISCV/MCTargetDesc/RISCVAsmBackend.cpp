@@ -215,7 +215,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
 
   int64_t Value;
   [[maybe_unused]] bool IsAbsolute =
-      AddrDelta.evaluateKnownAbsolute(Value, *Asm.getLayout());
+      AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
   Data.clear();
@@ -271,7 +271,6 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
 bool RISCVAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
                                     MCDwarfCallFrameFragment &DF,
                                     bool &WasRelaxed) const {
-  auto &Layout = *Asm.getLayout();
   const MCExpr &AddrDelta = DF.getAddrDelta();
   SmallVectorImpl<char> &Data = DF.getContents();
   SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
@@ -281,7 +280,7 @@ bool RISCVAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
   if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
   [[maybe_unused]] bool IsAbsolute =
-      AddrDelta.evaluateKnownAbsolute(Value, Layout);
+      AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
   Data.clear();
@@ -341,8 +340,7 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(const MCAssembler &Asm,
     LF.getFixups().push_back(
         MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   }
-  return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm.getLayout()),
-                        false);
+  return std::make_pair(Expr.evaluateKnownAbsolute(Value, Asm), false);
 }
 
 // Given a compressed control flow instruction this function returns
