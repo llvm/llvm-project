@@ -8,7 +8,7 @@ void t() {
   (void)v.end();
 }
 
-// CHECK: ![[array:.*]] = !cir.struct<struct "std::array<unsigned char, 9>"
+// CHECK: ![[array:.*]] = !cir.struct<struct "std::array<unsigned char, 9U>"
 
 // CHECK: {{.*}} = cir.get_member
 // CHECK: {{.*}} = cir.cast(array_to_ptrdecay

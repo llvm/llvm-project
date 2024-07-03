@@ -3,7 +3,7 @@
 
 #include "std-cxx.h"
 
-// CHECK: ![[array:.*]] = !cir.struct<struct "std::array<unsigned char, 9>"
+// CHECK: ![[array:.*]] = !cir.struct<struct "std::array<unsigned char, 9U>"
 
 int test_find(unsigned char n = 3)
 {

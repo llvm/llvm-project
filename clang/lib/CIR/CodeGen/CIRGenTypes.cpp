@@ -70,16 +70,8 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
       outStream << '<';
       const auto args = templateSpecialization->getTemplateArgs().asArray();
       const auto printer = [&policy, &outStream](const TemplateArgument &arg) {
-        switch (arg.getKind()) {
-        case TemplateArgument::Integral:
-          outStream << arg.getAsIntegral();
-          break;
-        case TemplateArgument::Type:
-          arg.getAsType().print(outStream, policy);
-          break;
-        default:
-          llvm_unreachable("NYI");
-        }
+        /// Print this template argument to the given output stream.
+        arg.print(policy, outStream, /*IncludeType=*/true);
       };
       llvm::interleaveComma(args, outStream, printer);
       outStream << '>';
