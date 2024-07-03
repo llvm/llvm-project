@@ -168,7 +168,8 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   llvm::SmallString<128> AssetsPath;
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
   llvm::sys::path::append(AssetsPath, "..");
-  llvm::SmallString<128> tempCopyDbg = AssetsPath;
+  llvm::SmallString<128> tempCopyDbg;
+  llvm::sys::path::native(AssetsPath, tempCopyDbg);
   llvm::sys::path::append(tempCopyDbg, "Debug");
   // The executable that ran clangDoc may be in the Debug directory.
   if (!llvm::sys::fs::is_directory(tempCopyDbg))
