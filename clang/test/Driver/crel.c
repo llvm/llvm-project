@@ -1,6 +1,6 @@
 // RUN: not %clang -### -c --target=x86_64 -Wa,--crel %s 2>&1 | FileCheck %s --check-prefix=NOEXP
 
-// NOEXP: error: -Wa,--allow-experimental-crel must be specified to use -Wa,--crel. CREL is experimental and takes a non-standard section type code
+// NOEXP: error: -Wa,--allow-experimental-crel must be specified to use -Wa,--crel. CREL is experimental and uses a non-standard section type code
 
 // RUN: %clang -### -c --target=x86_64 -Wa,--crel,--allow-experimental-crel %s -Werror 2>&1 | FileCheck %s
 // RUN: %clang -### -c --target=x86_64 -Wa,--crel,--no-crel,--allow-experimental-crel %s -Werror 2>&1 | FileCheck %s --check-prefix=NO
@@ -17,7 +17,12 @@
 // ASM:   "-cc1as" {{.*}}"--crel"
 // ERR: error: unsupported option '-Wa,--crel' for target '{{.*}}'
 
-/// Don't bother with --allow-experimental-crel for LTO.
+/// The --allow-experimental-crel error check is exempted for -fno-integrated-as.
+// RUN: %clang -### -c --target=aarch64 -fno-integrated-as -Wa,--crel %s -Werror 2>&1 | FileCheck %s --check-prefix=GAS
+
+// GAS: "--crel"
+
+/// The --allow-experimental-crel error check doesn't apply to LTO.
 // RUN: %clang -### --target=x86_64-linux -Werror -flto -Wa,--crel %s 2>&1 | FileCheck %s --check-prefix=LTO
 // LTO:       "-plugin-opt=-crel"
 

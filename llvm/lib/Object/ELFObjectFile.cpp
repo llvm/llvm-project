@@ -1014,13 +1014,13 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
                            TextSectionIndex, PGOAnalyses);
 }
 
-StringRef ELFObjectFileBase::getCrelError(SectionRef Sec) const {
+StringRef ELFObjectFileBase::getCrelDecodeProblem(SectionRef Sec) const {
   auto Data = Sec.getRawDataRefImpl();
   if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
-    return Obj->getCrelError(Data);
+    return Obj->getCrelDecodeProblem(Data);
   if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
-    return Obj->getCrelError(Data);
+    return Obj->getCrelDecodeProblem(Data);
   if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
-    return Obj->getCrelError(Data);
-  return cast<ELF64BEObjectFile>(this)->getCrelError(Data);
+    return Obj->getCrelDecodeProblem(Data);
+  return cast<ELF64BEObjectFile>(this)->getCrelDecodeProblem(Data);
 }

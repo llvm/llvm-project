@@ -124,7 +124,7 @@ public:
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt,
                 std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
 
-  StringRef getCrelError(SectionRef Sec) const;
+  StringRef getCrelDecodeProblem(SectionRef Sec) const;
 };
 
 class ELFSectionRef : public SectionRef {
@@ -297,8 +297,7 @@ protected:
 
   // Hold CREL relocations for SectionRef::relocations().
   mutable SmallVector<SmallVector<Elf_Crel, 0>, 0> Crels;
-  // Hold CREL decoding errors.
-  mutable SmallVector<std::string, 0> CrelErrs;
+  mutable SmallVector<std::string, 0> CrelDecodeProblems;
 
   Error initContent() override;
 
@@ -509,7 +508,7 @@ public:
 
   void createFakeSections() { EF.createFakeSections(); }
 
-  StringRef getCrelError(DataRefImpl Sec) const;
+  StringRef getCrelDecodeProblem(DataRefImpl Sec) const;
 };
 
 using ELF32LEObjectFile = ELFObjectFile<ELF32LE>;
@@ -1034,43 +1033,20 @@ ELFObjectFile<ELFT>::section_rel_begin(DataRefImpl Sec) const {
   RelData.d.a = (Sec.p - SHT) / EF.getHeader().e_shentsize;
   RelData.d.b = 0;
   if (reinterpret_cast<const Elf_Shdr *>(Sec.p)->sh_type == ELF::SHT_CREL) {
-    if (RelData.d.a + 1 > Crels.size()) {
+    if (RelData.d.a + 1 > Crels.size())
       Crels.resize(RelData.d.a + 1);
-      CrelErrs.resize(RelData.d.a + 1);
-    }
-    if (Crels[RelData.d.a].empty()) {
-      // Decode SHT_CREL. See ELFFile<ELFT>::decodeCrel.
+    auto &Crel = Crels[RelData.d.a];
+    if (Crel.empty()) {
       ArrayRef<uint8_t> Content = cantFail(getSectionContents(Sec));
-      DataExtractor Data(Content, ELFT::Endianness == endianness::little,
-                         sizeof(typename ELFT::Addr));
-      DataExtractor::Cursor Cur(0);
-      const uint64_t Hdr = Data.getULEB128(Cur);
-      const size_t Count = Hdr / 8;
-      const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
-      const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
-      uintX_t Offset = 0, Addend = 0;
-      uint32_t Symidx = 0, Type = 0;
-      for (size_t i = 0; i != Count; ++i) {
-        const uint8_t B = Data.getU8(Cur);
-        Offset += B >> FlagBits;
-        if (B >= 0x80)
-          Offset +=
-              (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
-        if (B & 1)
-          Symidx += Data.getSLEB128(Cur);
-        if (B & 2)
-          Type += Data.getSLEB128(Cur);
-        if (B & 4 && FlagBits == 3)
-          Addend += Data.getSLEB128(Cur);
-        if (!Cur)
-          break;
-        Crels[RelData.d.a].push_back(
-            Elf_Crel{Offset << Shift, uint32_t(Symidx), Type,
-                     std::make_signed_t<typename ELFT::uint>(Addend)});
-      }
-      if (!Cur) {
-        Crels[RelData.d.a].assign(1, Elf_Crel{0, 0, 0, 0});
-        CrelErrs[RelData.d.a] = toString(Cur.takeError());
+      size_t I = 0;
+      Error Err = decodeCrel<ELFT::Is64Bits>(
+          Content, [&](uint64_t Count, bool) { Crel.resize(Count); },
+          [&](Elf_Crel Crel) { Crels[RelData.d.a][I++] = Crel; });
+      if (Err) {
+        Crel.assign(1, Elf_Crel{0, 0, 0, 0});
+        if (RelData.d.a + 1 > CrelDecodeProblems.size())
+          CrelDecodeProblems.resize(RelData.d.a + 1);
+        CrelDecodeProblems[RelData.d.a] = toString(std::move(Err));
       }
     }
   }
@@ -1526,11 +1502,11 @@ template <class ELFT> bool ELFObjectFile<ELFT>::isRelocatableObject() const {
 }
 
 template <class ELFT>
-StringRef ELFObjectFile<ELFT>::getCrelError(DataRefImpl Sec) const {
+StringRef ELFObjectFile<ELFT>::getCrelDecodeProblem(DataRefImpl Sec) const {
   uintptr_t SHT = reinterpret_cast<uintptr_t>(cantFail(EF.sections()).begin());
   auto I = (Sec.p - SHT) / EF.getHeader().e_shentsize;
-  if (I < CrelErrs.size())
-    return CrelErrs[I];
+  if (I < CrelDecodeProblems.size())
+    return CrelDecodeProblems[I];
   return "";
 }
 

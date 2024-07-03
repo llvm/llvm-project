@@ -2687,10 +2687,11 @@ void Dumper::printRelocations() {
            << "VALUE\n";
 
     for (SectionRef Section : P.second) {
-      // CREL requires decoding and has its specific errors.
+      // CREL sections require decoding, each section may have its own specific
+      // decode problems.
       if (O.isELF() && ELFSectionRef(Section).getType() == ELF::SHT_CREL) {
-        const ELFObjectFileBase *ELF = cast<const ELFObjectFileBase>(&O);
-        StringRef Err = ELF->getCrelError(Section);
+        StringRef Err =
+            cast<const ELFObjectFileBase>(O).getCrelDecodeProblem(Section);
         if (!Err.empty()) {
           reportUniqueWarning(Err);
           continue;
