@@ -1163,6 +1163,12 @@ public:
     return VectorizableTree.front()->Scalars;
   }
 
+  /// Checks if the root graph node can be emitted with narrower bitwidth at
+  /// codegen and returns it signedness, if so.
+  bool isSignedMinBitwidthRootNode() const {
+    return MinBWs.at(VectorizableTree.front().get()).second;
+  }
+
   /// Builds external uses of the vectorized scalars, i.e. the list of
   /// vectorized scalars to be extracted, their lanes and their scalar users. \p
   /// ExternallyUsedValues contains additional list of external uses to handle
@@ -2428,6 +2434,21 @@ public:
   /// is delayed until BoUpSLP is destructed.
   void eraseInstruction(Instruction *I) {
     DeletedInstructions.insert(I);
+  }
+
+  /// Clear the operands of \p I, marking for deletion trivially dead operands.
+  void clearOperands(Instruction *I, const TreeEntry *Entry = nullptr) {
+    for (unsigned Idx : seq<unsigned>(I->getNumOperands())) {
+      // Ignore pointer operand of stores to keep correct DIAssignID.
+      if (isa<StoreInst>(I) && Idx == 1)
+        continue;
+      Value *Op = I->getOperand(Idx);
+      I->setOperand(Idx, PoisonValue::get(Op->getType()));
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        if (!isDeleted(OpI) && isInstructionTriviallyDead(OpI, TLI) &&
+            (!Entry || Entry->VectorizedValue != OpI))
+          eraseInstruction(OpI);
+    }
   }
 
   /// Checks if the instruction was already analyzed for being possible
@@ -3795,7 +3816,7 @@ private:
 
   /// Performs the "real" scheduling. Done before vectorization is actually
   /// performed in a basic block.
-  void scheduleBlock(BlockScheduling *BS);
+  void scheduleBlock(BlockScheduling *BS, BoUpSLP &R);
 
   /// List of users to ignore during scheduling and that don't need extracting.
   const SmallDenseSet<Value *> *UserIgnoreList = nullptr;
@@ -13524,7 +13545,7 @@ Value *BoUpSLP::vectorizeTree(
     Instruction *ReductionRoot) {
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules) {
-    scheduleBlock(BSIter.second.get());
+    scheduleBlock(BSIter.second.get(), *this);
   }
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
@@ -14064,11 +14085,14 @@ Value *BoUpSLP::vectorizeTree(
       }
 #endif
       LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *Scalar << ".\n");
-      eraseInstruction(cast<Instruction>(Scalar));
+      auto *I = cast<Instruction>(Scalar);
+      // Clear the operands, marking for deletion trivially dead operands.
+      clearOperands(I, Entry);
+      eraseInstruction(I);
       // Retain to-be-deleted instructions for some debug-info
       // bookkeeping. NOTE: eraseInstruction only marks the instruction for
       // deletion - instructions are not deleted until later.
-      RemovedInsts.push_back(cast<Instruction>(Scalar));
+      RemovedInsts.push_back(I);
     }
   }
 
@@ -14681,6 +14705,8 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
 
       for (; DepDest; DepDest = DepDest->NextLoadStore) {
         assert(isInSchedulingRegion(DepDest));
+        if (SLP->isDeleted(DepDest->Inst))
+          continue;
 
         // We have two limits to reduce the complexity:
         // 1) AliasedCheckLimit: It's a small limit to reduce calls to
@@ -14750,7 +14776,7 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
   ReadyInsts.clear();
 }
 
-void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
+void BoUpSLP::scheduleBlock(BlockScheduling *BS, BoUpSLP &R) {
   if (!BS->ScheduleStart)
     return;
 
@@ -14807,6 +14833,8 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     for (ScheduleData *BundleMember = Picked; BundleMember;
          BundleMember = BundleMember->NextInBundle) {
       Instruction *PickedInst = BundleMember->Inst;
+      if (R.isDeleted(PickedInst))
+        continue;
       if (PickedInst->getNextNonDebugInstruction() != LastScheduledInst)
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
@@ -17344,14 +17372,11 @@ public:
         Value *ReducedSubTree =
             emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
         if (ReducedSubTree->getType() != VL.front()->getType()) {
-          ReducedSubTree = Builder.CreateIntCast(
-              ReducedSubTree, VL.front()->getType(), any_of(VL, [&](Value *R) {
-                KnownBits Known = computeKnownBits(
-                    R, cast<Instruction>(ReductionOps.front().front())
-                           ->getModule()
-                           ->getDataLayout());
-                return !Known.isNonNegative();
-              }));
+          assert(ReducedSubTree->getType() != VL.front()->getType() &&
+                 "Expected different reduction type.");
+          ReducedSubTree =
+              Builder.CreateIntCast(ReducedSubTree, VL.front()->getType(),
+                                    V.isSignedMinBitwidthRootNode());
         }
 
         // Improved analysis for add/fadd/xor reductions with same scale factor
@@ -17513,10 +17538,13 @@ public:
           }
 #endif
           if (!Ignore->use_empty()) {
-            Value *Undef = UndefValue::get(Ignore->getType());
-            Ignore->replaceAllUsesWith(Undef);
+            Value *P = PoisonValue::get(Ignore->getType());
+            Ignore->replaceAllUsesWith(P);
           }
-          V.eraseInstruction(cast<Instruction>(Ignore));
+          auto *I = cast<Instruction>(Ignore);
+          // Clear the operands, marking for deletion trivially dead operands.
+          V.clearOperands(I);
+          V.eraseInstruction(I);
         }
       }
     } else if (!CheckForReusedReductionOps) {
