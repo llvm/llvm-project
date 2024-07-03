@@ -20,8 +20,6 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1554,22 +1552,22 @@ static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
   return -1;
 }
 
-LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
+bool IntegerRelation::constantFoldVar(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   int rowIdx;
   if ((rowIdx = findEqualityToConstant(*this, pos)) == -1)
-    return failure();
+    return false;
 
   // atEq(rowIdx, pos) is either -1 or 1.
   assert(atEq(rowIdx, pos) * atEq(rowIdx, pos) == 1);
   DynamicAPInt constVal = -atEq(rowIdx, getNumCols() - 1) / atEq(rowIdx, pos);
   setAndEliminate(pos, constVal);
-  return success();
+  return true;
 }
 
 void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
   for (unsigned s = pos, t = pos, e = pos + num; s < e; s++) {
-    if (failed(constantFoldVar(t)))
+    if (!constantFoldVar(t))
       t++;
   }
 }
@@ -1946,9 +1944,9 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
     if (atEq(r, pos) != 0) {
       // Use Gaussian elimination here (since we have an equality).
-      LogicalResult ret = gaussianEliminateVar(pos);
+      bool ret = gaussianEliminateVar(pos);
       (void)ret;
-      assert(succeeded(ret) && "Gaussian elimination guaranteed to succeed");
+      assert(ret && "Gaussian elimination guaranteed to succeed");
       LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
       LLVM_DEBUG(dump());
       return;
@@ -2175,8 +2173,7 @@ static void getCommonConstraints(const IntegerRelation &a,
 
 // Computes the bounding box with respect to 'other' by finding the min of the
 // lower bounds and the max of the upper bounds along each of the dimensions.
-LogicalResult
-IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
+bool IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   assert(space.isEqual(otherCst.getSpace()) && "Spaces should match.");
   assert(getNumLocalVars() == 0 && "local ids not supported yet here");
 
@@ -2204,13 +2201,13 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     if (!extent.has_value())
       // TODO: symbolic extents when necessary.
       // TODO: handle union if a dimension is unbounded.
-      return failure();
+      return false;
 
     auto otherExtent = otherCst.getConstantBoundOnDimSize(
         d, &otherLb, &otherLbFloorDivisor, &otherUb);
     if (!otherExtent.has_value() || lbFloorDivisor != otherLbFloorDivisor)
       // TODO: symbolic extents when necessary.
-      return failure();
+      return false;
 
     assert(lbFloorDivisor > 0 && "divisor always expected to be positive");
 
@@ -2230,7 +2227,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constLb = getConstantBound(BoundType::LB, d);
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
       if (!constLb.has_value() || !constOtherLb.has_value())
-        return failure();
+        return false;
       std::fill(minLb.begin(), minLb.end(), 0);
       minLb.back() = std::min(*constLb, *constOtherLb);
     }
@@ -2246,7 +2243,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constUb = getConstantBound(BoundType::UB, d);
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
       if (!constUb.has_value() || !constOtherUb.has_value())
-        return failure();
+        return false;
       std::fill(maxUb.begin(), maxUb.end(), 0);
       maxUb.back() = std::max(*constUb, *constOtherUb);
     }
@@ -2284,7 +2281,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   // union (since the above are just the union along dimensions); we shouldn't
   // be discarding any other constraints on the symbols.
 
-  return success();
+  return true;
 }
 
 bool IntegerRelation::isColZero(unsigned pos) const {

@@ -28,6 +28,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinpif_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinpif
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   sincosf_test
   SUITE
     libc-math-smoke-tests
@@ -3631,6 +3644,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16div_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.f16div
+)
+
+add_fp_unittest(
   f16divf_test
   SUITE
     libc-math-smoke-tests
@@ -3642,6 +3669,34 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16divf
+)
+
+add_fp_unittest(
+  f16divl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16divl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.f16divl
+)
+
+add_fp_unittest(
+  f16divf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16divf128_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.math.f16divf128
 )
 
 add_fp_unittest(
@@ -3693,6 +3748,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16sqrt_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrt_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrt
+)
+
+add_fp_unittest(
   f16sqrtf_test
   SUITE
     libc-math-smoke-tests
@@ -3702,6 +3769,30 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.f16sqrtf
+)
+
+add_fp_unittest(
+  f16sqrtl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtl
+)
+
+add_fp_unittest(
+  f16sqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtf128
 )
 
 add_fp_unittest(

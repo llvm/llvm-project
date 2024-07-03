@@ -15,10 +15,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/properties/types.h"
-#include "test/UnitTest/FPMatcher.h"
 
-#include "hdr/math_macros.h"
-#include <memory>
 #include <stdint.h>
 
 #include "mpfr_inc.h"
@@ -437,6 +434,23 @@ public:
     return result;
   }
 
+  MPFRNumber sinpi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+
+    mpfr_sinpi(result.value, value, mpfr_rounding);
+#else
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_sin(result.value, value_pi.value, mpfr_rounding);
+#endif
+
+    return result;
+  }
+
   MPFRNumber sinh() const {
     MPFRNumber result(*this);
     mpfr_sinh(result.value, value, mpfr_rounding);
@@ -470,6 +484,12 @@ public:
   MPFRNumber fma(const MPFRNumber &b, const MPFRNumber &c) {
     MPFRNumber result(*this);
     mpfr_fma(result.value, value, b.value, c.value, mpfr_rounding);
+    return result;
+  }
+
+  MPFRNumber fmul(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_mul(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
@@ -677,6 +697,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.roundeven();
   case Operation::Sin:
     return mpfrInput.sin();
+  case Operation::Sinpi:
+    return mpfrInput.sinpi();
   case Operation::Sinh:
     return mpfrInput.sinh();
   case Operation::Sqrt:
@@ -722,6 +744,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
     return inputX.hypot(inputY);
   case Operation::Pow:
     return inputX.pow(inputY);
+  case Operation::Fmul:
+    return inputX.fmul(inputY);
   default:
     __builtin_unreachable();
   }
@@ -810,6 +834,12 @@ template void explain_unary_operation_single_output_error(Operation op, float16,
 template void explain_unary_operation_single_output_error(Operation op, float,
                                                           float16, double,
                                                           RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, double,
+                                                          float16, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          long double, float16,
+                                                          double, RoundingMode);
 #endif
 
 template <typename T>
@@ -929,12 +959,19 @@ template void
 explain_binary_operation_one_output_error(Operation,
                                           const BinaryInput<long double> &,
                                           long double, double, RoundingMode);
+
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<double> &, float, double, RoundingMode);
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<float16> &, float16, double, RoundingMode);
 template void
 explain_binary_operation_one_output_error(Operation, const BinaryInput<float> &,
                                           float16, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<double> &, float16, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<long double> &, float16, double, RoundingMode);
 #endif
 
 template <typename InputType, typename OutputType>
@@ -1011,6 +1048,11 @@ template bool compare_unary_operation_single_output(Operation, float16, float16,
                                                     double, RoundingMode);
 template bool compare_unary_operation_single_output(Operation, float, float16,
                                                     double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, double, float16,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, long double,
+                                                    float16, double,
+                                                    RoundingMode);
 #endif
 
 template <typename T>
@@ -1095,6 +1137,10 @@ template bool compare_binary_operation_one_output(Operation,
 template bool
 compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
                                     long double, double, RoundingMode);
+
+template bool compare_binary_operation_one_output(Operation,
+                                                  const BinaryInput<double> &,
+                                                  float, double, RoundingMode);
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template bool compare_binary_operation_one_output(Operation,
                                                   const BinaryInput<float16> &,
@@ -1104,6 +1150,13 @@ template bool compare_binary_operation_one_output(Operation,
                                                   const BinaryInput<float> &,
                                                   float16, double,
                                                   RoundingMode);
+template bool compare_binary_operation_one_output(Operation,
+                                                  const BinaryInput<double> &,
+                                                  float16, double,
+                                                  RoundingMode);
+template bool
+compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
+                                    float16, double, RoundingMode);
 #endif
 
 template <typename InputType, typename OutputType>

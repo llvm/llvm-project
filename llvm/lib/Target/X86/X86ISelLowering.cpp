@@ -41333,6 +41333,32 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
     return SDValue();
   }
+  case X86ISD::VPERMV3: {
+    // Combine VPERMV3 to widened VPERMV if the two source operands are split
+    // from the same vector.
+    SDValue V1 = peekThroughBitcasts(N.getOperand(0));
+    SDValue V2 = peekThroughBitcasts(N.getOperand(2));
+    MVT SVT = V1.getSimpleValueType();
+    MVT NVT = VT.getDoubleNumVectorElementsVT();
+    if ((NVT.is256BitVector() ||
+         (NVT.is512BitVector() && Subtarget.hasEVEX512())) &&
+        V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        V1.getConstantOperandVal(1) == 0 &&
+        V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        V2.getConstantOperandVal(1) == SVT.getVectorNumElements() &&
+        V1.getOperand(0) == V2.getOperand(0)) {
+      SDValue Mask =
+          DAG.getNode(ISD::INSERT_SUBVECTOR, DL, NVT, DAG.getUNDEF(NVT),
+                      N.getOperand(1), DAG.getIntPtrConstant(0, DL));
+      return DAG.getNode(
+          ISD::EXTRACT_SUBVECTOR, DL, VT,
+          DAG.getNode(X86ISD::VPERMV, DL, NVT, Mask,
+                      DAG.getBitcast(NVT, V1.getOperand(0))),
+          DAG.getIntPtrConstant(0, DL));
+    }
+
+    return SDValue();
+  }
   default:
     return SDValue();
   }

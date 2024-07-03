@@ -372,6 +372,15 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* Register field information is now provided on AArch64 FreeBSD for live
+  processes and core files (previously only provided on AArch64 Linux).
+
+Changes to BOLT
+---------------------------------
+* Now supports ``--match-profile-with-function-hash`` to match profiled and
+  binary functions with exact hash, allowing for the matching of renamed but
+  identical functions.
+
 Changes to Sanitizers
 ---------------------
 
