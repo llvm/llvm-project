@@ -1070,7 +1070,7 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   TrackConstants = false;
   const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
-      TLI->getLoadMemOperandFlags(I, F->getParent()->getDataLayout());
+      TLI->getLoadMemOperandFlags(I, F->getDataLayout());
   auto *NewI =
       B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
                         {I.getPointerOperand(), B.getInt16(Flags),
@@ -1087,7 +1087,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
   TrackConstants = false;
   const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
-      TLI->getStoreMemOperandFlags(I, F->getParent()->getDataLayout());
+      TLI->getStoreMemOperandFlags(I, F->getDataLayout());
   auto *PtrOp = I.getPointerOperand();
   auto *NewI = B.CreateIntrinsic(
       Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},

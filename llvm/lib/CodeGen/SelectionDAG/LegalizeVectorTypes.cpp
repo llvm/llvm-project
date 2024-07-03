@@ -5231,7 +5231,13 @@ SDValue DAGTypeLegalizer::WidenVecRes_ExpOp(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue InOp = GetWidenedVector(N->getOperand(0));
   SDValue RHS = N->getOperand(1);
-  SDValue ExpOp = RHS.getValueType().isVector() ? GetWidenedVector(RHS) : RHS;
+  EVT ExpVT = RHS.getValueType();
+  SDValue ExpOp = RHS;
+  if (ExpVT.isVector()) {
+    EVT WideExpVT =
+        WidenVT.changeVectorElementType(ExpVT.getVectorElementType());
+    ExpOp = ModifyToType(RHS, WideExpVT);
+  }
 
   return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, ExpOp);
 }

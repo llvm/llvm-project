@@ -18,7 +18,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -1435,7 +1434,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   };
 
   llvm::Value *ifCond = nullptr;
-  if (auto ifExprVar = opInst.getIfExprVar())
+  if (auto ifExprVar = opInst.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifExprVar);
   llvm::Value *numThreads = nullptr;
   if (auto numThreadsVar = opInst.getNumThreadsVar())
@@ -1458,6 +1457,18 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     privatizerClone.erase();
 
   return bodyGenStatus;
+}
+
+/// Convert Order attribute to llvm::omp::OrderKind.
+static llvm::omp::OrderKind
+convertOrderKind(std::optional<omp::ClauseOrderKind> o) {
+  if (!o)
+    return llvm::omp::OrderKind::OMP_ORDER_unknown;
+  switch (*o) {
+  case omp::ClauseOrderKind::Concurrent:
+    return llvm::omp::OrderKind::OMP_ORDER_concurrent;
+  }
+  llvm_unreachable("Unknown ClauseOrderKind kind");
 }
 
 /// Converts an OpenMP simd loop into LLVM IR using OpenMPIRBuilder.
@@ -1539,11 +1550,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     safelen = builder.getInt64(safelenVar.value());
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
-  ompBuilder->applySimd(
-      loopInfo, alignedVars,
-      simdOp.getIfExpr() ? moduleTranslation.lookupValue(simdOp.getIfExpr())
-                         : nullptr,
-      llvm::omp::OrderKind::OMP_ORDER_unknown, simdlen, safelen);
+  llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrderVal());
+  ompBuilder->applySimd(loopInfo, alignedVars,
+                        simdOp.getIfExpr()
+                            ? moduleTranslation.lookupValue(simdOp.getIfExpr())
+                            : nullptr,
+                        order, simdlen, safelen);
 
   builder.restoreIP(afterIP);
   return success();
