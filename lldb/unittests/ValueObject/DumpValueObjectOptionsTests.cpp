@@ -71,12 +71,13 @@ public:
   }
 
   CompilerType
-  MakeEnumType(const std::vector<std::pair<const char *, int>> enumerators) {
-    CompilerType uint_type = m_type_system->GetBuiltinTypeForEncodingAndBitSize(
-        lldb::eEncodingUint, 32);
+  MakeEnumType(const std::vector<std::pair<const char *, int>> enumerators,
+               bool is_signed) {
+    CompilerType int_type = m_type_system->GetBuiltinTypeForEncodingAndBitSize(
+        is_signed ? lldb::eEncodingSint : lldb::eEncodingUint, 32);
     CompilerType enum_type = m_type_system->CreateEnumerationType(
         "TestEnum", m_type_system->GetTranslationUnitDecl(),
-        OptionalClangModuleID(), Declaration(), uint_type, false);
+        OptionalClangModuleID(), Declaration(), int_type, false);
 
     m_type_system->StartTagDeclarationDefinition(enum_type);
     Declaration decl;
@@ -123,12 +124,27 @@ private:
   lldb::ProcessSP m_process_sp;
 };
 
+TEST_F(ValueObjectMockProcessTest, EmptyEnum) {
+  // All values of an empty enum should be shown as plain numbers.
+  TestDumpValueObject(MakeEnumType({}, false),
+                      {{0, {}, "(TestEnum) test_var = 0\n"},
+                       {1, {}, "(TestEnum) test_var = 1\n"},
+                       {2, {}, "(TestEnum) test_var = 2\n"}});
+
+  TestDumpValueObject(MakeEnumType({}, true),
+                      {{-2, {}, "(TestEnum) test_var = -2\n"},
+                       {-1, {}, "(TestEnum) test_var = -1\n"},
+                       {0, {}, "(TestEnum) test_var = 0\n"},
+                       {1, {}, "(TestEnum) test_var = 1\n"},
+                       {2, {}, "(TestEnum) test_var = 2\n"}});
+}
+
 TEST_F(ValueObjectMockProcessTest, Enum) {
   // This is not a bitfield-like enum, so values are printed as decimal by
   // default. Also we only show the enumerator name if the value is an
   // exact match.
   TestDumpValueObject(
-      MakeEnumType({{"test_2", 2}, {"test_3", 3}}),
+      MakeEnumType({{"test_2", 2}, {"test_3", 3}}, false),
       {{0, {}, "(TestEnum) test_var = 0\n"},
        {1, {}, "(TestEnum) test_var = 1\n"},
        {2, {}, "(TestEnum) test_var = test_2\n"},
@@ -152,7 +168,7 @@ TEST_F(ValueObjectMockProcessTest, BitFieldLikeEnum) {
   // as hex, a value of 0 shows nothing, and values with no exact enumerator are
   // shown as combinations of the other values.
   TestDumpValueObject(
-      MakeEnumType({{"test_2", 2}, {"test_4", 4}}),
+      MakeEnumType({{"test_2", 2}, {"test_4", 4}}, false),
       {
           {0, {}, "(TestEnum) test_var =\n"},
           {1, {}, "(TestEnum) test_var = 0x1\n"},
