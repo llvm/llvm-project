@@ -87,27 +87,13 @@ contact: RonL
 needs previous SEMA patches
 584e431a4b25 [Clang][Sema] Treat explicit specializations of static data member templates declared without '
 ---
-reverts: breaks hipBlender*
-4eecf3c6 [SLP]Reorder buildvector/reduction vectorization and fuse
-3742c2a83cd6 [SLP]Use stored signedness after minbitwidth analysis.
----
 Revert: breaking MIOpen test 2
 f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
 812f9e81d2f7 [MCParser] .altmacro: ignore & after a token
 ---
-Reverts: breaks hipBlender* tests in compilation step
-385118644cca [SLP]Remove operands upon marking instruction for deletion.
----
 Revert: more Sema:
 9e1f1cfa59c4 [Clang][Sema] Handle class member access expressions with valid nested-name-specifiers that become invalid after lookup (#98167)
 RonL
----
-Reverts: depends upon older SLP reverts
-beccecaacde4 [SLP]Fix PR98838: do no replace condition of select-based logical op by poison.
-f6e01b9ec [SLP]Do not trunc bv nodes, if the user is vectorized an requires wider type.
----
-Reverts: Failing test llvm/test/Transforms/SLPVectorizer/X86/minbitwidth-transformed-operand.ll
-c5c1bd164 [SLP]Improve minbitwidth analysis for trun'ed gather nodes
 ---
 problematic cmake in npsdb:
 [LLVM] Silence compiler-rt warning in runtimes build (#99525)  

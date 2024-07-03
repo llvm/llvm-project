@@ -1318,6 +1318,12 @@ public:
     return VectorizableTree.front()->Scalars;
   }
 
+  /// Checks if the root graph node can be emitted with narrower bitwidth at
+  /// codegen and returns it signedness, if so.
+  bool isSignedMinBitwidthRootNode() const {
+    return MinBWs.at(VectorizableTree.front().get()).second;
+  }
+
   /// Builds external uses of the vectorized scalars, i.e. the list of
   /// vectorized scalars to be extracted, their lanes and their scalar users. \p
   /// ExternallyUsedValues contains additional list of external uses to handle
@@ -14763,11 +14769,8 @@ Value *BoUpSLP::vectorizeTree(
       }
 #endif
       LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *Scalar << ".\n");
-      eraseInstruction(cast<Instruction>(Scalar));
-      // Retain to-be-deleted instructions for some debug-info
-      // bookkeeping. NOTE: eraseInstruction only marks the instruction for
-      // deletion - instructions are not deleted until later.
-      RemovedInsts.push_back(cast<Instruction>(Scalar));
+      auto *I = cast<Instruction>(Scalar);
+      RemovedInsts.push_back(I);
     }
   }
 
@@ -14775,6 +14778,43 @@ Value *BoUpSLP::vectorizeTree(
   // new vector instruction.
   if (auto *V = dyn_cast<Instruction>(VectorizableTree[0]->VectorizedValue))
     V->mergeDIAssignID(RemovedInsts);
+
+  // Clear up reduction references, if any.
+  if (UserIgnoreList) {
+    for (Instruction *I : RemovedInsts) {
+      const TreeEntry *IE = getTreeEntry(I);
+      if (IE->Idx != 0 &&
+          !(VectorizableTree.front()->isGather() && isa<LoadInst>(I) &&
+            !IE->UserTreeIndices.empty() &&
+            any_of(IE->UserTreeIndices, [&](const EdgeInfo &EI) {
+              return EI.UserTE == VectorizableTree.front().get() &&
+                     EI.EdgeIdx == UINT_MAX;
+            })))
+        continue;
+      SmallVector<SelectInst *> LogicalOpSelects;
+      I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
+        // Do not replace condition of the logical op in form select <cond>.
+        bool IsPoisoningLogicalOp = isa<SelectInst>(U.getUser()) &&
+                                    (match(U.getUser(), m_LogicalAnd()) ||
+                                     match(U.getUser(), m_LogicalOr())) &&
+                                    U.getOperandNo() == 0;
+        if (IsPoisoningLogicalOp) {
+          LogicalOpSelects.push_back(cast<SelectInst>(U.getUser()));
+          return false;
+        }
+        return UserIgnoreList->contains(U.getUser());
+      });
+      // Replace conditions of the poisoning logical ops with the non-poison
+      // constant value.
+      for (SelectInst *SI : LogicalOpSelects)
+        SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
+    }
+  }
+  // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
+  // cache correctness.
+  // NOTE: removeInstructionAndOperands only marks the instruction for deletion
+  // - instructions are not deleted until later.
+  removeInstructionsAndOperands(ArrayRef(RemovedInsts));
 
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
@@ -15990,9 +16030,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   auto ComputeMaxBitWidth = [&](const TreeEntry &E, bool IsTopRoot,
                                 bool IsProfitableToDemoteRoot, unsigned Opcode,
                                 unsigned Limit, bool IsTruncRoot,
-                                bool IsSignedCmp) {
+                                bool IsSignedCmp) -> unsigned {
     ToDemote.clear();
-#if 0//<<<<<<< HEAD
     // Check if the root is trunc and the next node is gather/buildvector, then
     // keep trunc in scalars, which is free in most cases.
     if (E.isGather() && IsTruncRoot && E.UserTreeIndices.size() == 1 &&
@@ -16031,7 +16070,6 @@ void BoUpSLP::computeMinimumValueSizes() {
       return MaxBitWidth;
     }
 
-#endif//>>>>>>> eec1fac9b51d06c8afafe9952a20ba7cd4c3ce1c
     unsigned VF = E.getVectorFactor();
     Type *ScalarTy = E.Scalars.front()->getType();
     unsigned ScalarTyNumElements = getNumElements(ScalarTy);
@@ -16838,15 +16876,18 @@ bool SLPVectorizerPass::vectorizeStores(
     Res.first = Idx;
     Res.second.emplace(Idx, 0);
   };
-  StoreInst *PrevStore = Stores.front();
+  Type *PrevValTy = nullptr;
   for (auto [I, SI] : enumerate(Stores)) {
+    if (R.isDeleted(SI))
+      continue;
+    if (!PrevValTy)
+      PrevValTy = SI->getValueOperand()->getType();
     // Check that we do not try to vectorize stores of different types.
-    if (PrevStore->getValueOperand()->getType() !=
-        SI->getValueOperand()->getType()) {
+    if (PrevValTy != SI->getValueOperand()->getType()) {
       for (auto &Set : SortedStores)
         TryToVectorize(Set.second);
       SortedStores.clear();
-      PrevStore = SI;
+      PrevValTy = SI->getValueOperand()->getType();
     }
     FillStoresSet(I, SI);
   }
@@ -17688,9 +17729,12 @@ public:
     Value *VectorizedTree = nullptr;
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
+    SmallVector<InstructionsState> States;
+    for (ArrayRef<Value *> RV : ReducedVals)
+      States.push_back(getSameOpcode(RV, TLI));
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
-      InstructionsState S = getSameOpcode(OrigReducedVals, TLI);
+      InstructionsState S = States[I];
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       DenseMap<Value *, Value *> TrackedToOrig(2 * OrigReducedVals.size());
@@ -17991,9 +18035,8 @@ public:
 
         // Emit code to correctly handle reused reduced values, if required.
         if (OptReusedScalars && !SameScaleFactor) {
-          VectorizedRoot =
-              emitReusedOps(VectorizedRoot, Builder, V.getRootNodeScalars(),
-                            SameValuesCounter, TrackedToOrig);
+          VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
+                                         SameValuesCounter, TrackedToOrig);
         }
 
         Value *ReducedSubTree;
@@ -18026,14 +18069,11 @@ public:
           ReducedSubTree = emitReduction(VectorizedRoot, Builder, TTI);
         }
         if (ReducedSubTree->getType() != VL.front()->getType()) {
-          ReducedSubTree = Builder.CreateIntCast(
-              ReducedSubTree, VL.front()->getType(), any_of(VL, [&](Value *R) {
-                KnownBits Known = computeKnownBits(
-                    R, cast<Instruction>(ReductionOps.front().front())
-                           ->getModule()
-                           ->getDataLayout());
-                return !Known.isNonNegative();
-              }));
+          assert(ReducedSubTree->getType() != VL.front()->getType() &&
+                 "Expected different reduction type.");
+          ReducedSubTree =
+              Builder.CreateIntCast(ReducedSubTree, VL.front()->getType(),
+                                    V.isSignedMinBitwidthRootNode());
         }
 
         // Improved analysis for add/fadd/xor reductions with same scale factor
@@ -18189,11 +18229,11 @@ public:
           }
 #endif
           if (!Ignore->use_empty()) {
-            Value *Undef = UndefValue::get(Ignore->getType());
-            Ignore->replaceAllUsesWith(Undef);
+            Value *P = PoisonValue::get(Ignore->getType());
+            Ignore->replaceAllUsesWith(P);
           }
-          V.eraseInstruction(cast<Instruction>(Ignore));
         }
+        V.removeInstructionsAndOperands(RdxOps);
       }
     } else if (!CheckForReusedReductionOps) {
       for (ReductionOpsType &RdxOps : ReductionOps)
@@ -18373,24 +18413,19 @@ private:
   /// Emits actual operation for the scalar identity values, found during
   /// horizontal reduction analysis.
   Value *emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder,
-                       ArrayRef<Value *> VL,
+                       BoUpSLP &R,
                        const MapVector<Value *, unsigned> &SameValuesCounter,
                        const DenseMap<Value *, Value *> &TrackedToOrig) {
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
+    ArrayRef<Value *> VL = R.getRootNodeScalars();
     auto *VTy = cast<FixedVectorType>(VectorizedValue->getType());
     if (VTy->getElementType() != VL.front()->getType()) {
       VectorizedValue = Builder.CreateIntCast(
           VectorizedValue,
           getWidenedType(VL.front()->getType(), VTy->getNumElements()),
-          any_of(VL, [&](Value *R) {
-            KnownBits Known = computeKnownBits(
-                R, cast<Instruction>(ReductionOps.front().front())
-                       ->getModule()
-                       ->getDataLayout());
-            return !Known.isNonNegative();
-          }));
+          R.isSignedMinBitwidthRootNode());
     }
     switch (RdxKind) {
     case RecurKind::Add: {
@@ -18757,6 +18792,8 @@ bool SLPVectorizerPass::vectorizeHorReduction(
         Stack.emplace(I, Level);
         continue;
       }
+      if (R.isDeleted(Inst))
+        continue;
     } else {
       // We could not vectorize `Inst` so try to use it as a future seed.
       if (!TryAppendToPostponedInsts(Inst)) {
@@ -18800,7 +18837,8 @@ bool SLPVectorizerPass::tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
 }
 
 bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
-                                                 BasicBlock *BB, BoUpSLP &R) {
+                                                 BasicBlock *BB, BoUpSLP &R,
+                                                 bool MaxVFOnly) {
   if (!R.canMapToVector(IVI->getType()))
     return false;
 
@@ -18809,13 +18847,22 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
   if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts))
     return false;
 
+  if (MaxVFOnly && BuildVectorOpds.size() == 2) {
+    R.getORE()->emit([&]() {
+      return OptimizationRemarkMissed(SV_NAME, "NotPossible", IVI)
+             << "Cannot SLP vectorize list: only 2 elements of buildvalue, "
+                "trying reduction first.";
+    });
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
-  return tryToVectorizeList(BuildVectorOpds, R);
+  return tryToVectorizeList(BuildVectorOpds, R, MaxVFOnly);
 }
 
 bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
-                                                   BasicBlock *BB, BoUpSLP &R) {
+                                                   BasicBlock *BB, BoUpSLP &R,
+                                                   bool MaxVFOnly) {
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
@@ -18824,8 +18871,16 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
        isFixedVectorShuffle(BuildVectorOpds, Mask)))
     return false;
 
+  if (MaxVFOnly && BuildVectorInsts.size() == 2) {
+    R.getORE()->emit([&]() {
+      return OptimizationRemarkMissed(SV_NAME, "NotPossible", IEI)
+             << "Cannot SLP vectorize list: only 2 elements of buildvector, "
+                "trying reduction first.";
+    });
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
-  return tryToVectorizeList(BuildVectorInsts, R);
+  return tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly);
 }
 
 template <typename T>
@@ -18840,15 +18895,28 @@ static bool tryToVectorizeSequence(
 
   // Try to vectorize elements base on their type.
   SmallVector<T *> Candidates;
-  for (auto *IncIt = Incoming.begin(), *E = Incoming.end(); IncIt != E;) {
+  SmallVector<T *> VL;
+  for (auto *IncIt = Incoming.begin(), *E = Incoming.end(); IncIt != E;
+       VL.clear()) {
     // Look for the next elements with the same type, parent and operand
     // kinds.
+    auto *I = dyn_cast<Instruction>(*IncIt);
+    if (!I || R.isDeleted(I)) {
+      ++IncIt;
+      continue;
+    }
     auto *SameTypeIt = IncIt;
-    while (SameTypeIt != E && AreCompatible(*SameTypeIt, *IncIt))
+    while (SameTypeIt != E && (!isa<Instruction>(*SameTypeIt) ||
+                               R.isDeleted(cast<Instruction>(*SameTypeIt)) ||
+                               AreCompatible(*SameTypeIt, *IncIt))) {
+      auto *I = dyn_cast<Instruction>(*SameTypeIt);
       ++SameTypeIt;
+      if (I && !R.isDeleted(I))
+        VL.push_back(cast<T>(I));
+    }
 
     // Try to vectorize them.
-    unsigned NumElts = (SameTypeIt - IncIt);
+    unsigned NumElts = VL.size();
     LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize starting at nodes ("
                       << NumElts << ")\n");
     // The vectorization is a 3-state attempt:
@@ -18860,10 +18928,15 @@ static bool tryToVectorizeSequence(
     // 3. Final attempt to try to vectorize all instructions with the
     // same/alternate ops only, this may result in some extra final
     // vectorization.
-    if (NumElts > 1 &&
-        TryToVectorizeHelper(ArrayRef(IncIt, NumElts), MaxVFOnly)) {
+    if (NumElts > 1 && TryToVectorizeHelper(ArrayRef(VL), MaxVFOnly)) {
       // Success start over because instructions might have been changed.
       Changed = true;
+      VL.swap(Candidates);
+      Candidates.clear();
+      for (T *V : VL) {
+        if (auto *I = dyn_cast<Instruction>(V); I && !R.isDeleted(I))
+          Candidates.push_back(V);
+      }
     } else {
       /// \Returns the minimum number of elements that we will attempt to
       /// vectorize.
@@ -18874,7 +18947,10 @@ static bool tryToVectorizeSequence(
       if (NumElts < GetMinNumElements(*IncIt) &&
           (Candidates.empty() ||
            Candidates.front()->getType() == (*IncIt)->getType())) {
-        Candidates.append(IncIt, std::next(IncIt, NumElts));
+        for (T *V : VL) {
+          if (auto *I = dyn_cast<Instruction>(V); I && !R.isDeleted(I))
+            Candidates.push_back(V);
+        }
       }
     }
     // Final attempt to vectorize instructions with the same types.
@@ -18885,13 +18961,26 @@ static bool tryToVectorizeSequence(
         Changed = true;
       } else if (MaxVFOnly) {
         // Try to vectorize using small vectors.
-        for (auto *It = Candidates.begin(), *End = Candidates.end();
-             It != End;) {
+        SmallVector<T *> VL;
+        for (auto *It = Candidates.begin(), *End = Candidates.end(); It != End;
+             VL.clear()) {
+          auto *I = dyn_cast<Instruction>(*It);
+          if (!I || R.isDeleted(I)) {
+            ++It;
+            continue;
+          }
           auto *SameTypeIt = It;
-          while (SameTypeIt != End && AreCompatible(*SameTypeIt, *It))
+          while (SameTypeIt != End &&
+                 (!isa<Instruction>(*SameTypeIt) ||
+                  R.isDeleted(cast<Instruction>(*SameTypeIt)) ||
+                  AreCompatible(*SameTypeIt, *It))) {
+            auto *I = dyn_cast<Instruction>(*SameTypeIt);
             ++SameTypeIt;
-          unsigned NumElts = (SameTypeIt - It);
-          if (NumElts > 1 && TryToVectorizeHelper(ArrayRef(It, NumElts),
+            if (I && !R.isDeleted(I))
+              VL.push_back(cast<T>(I));
+          }
+          unsigned NumElts = VL.size();
+          if (NumElts > 1 && TryToVectorizeHelper(ArrayRef(VL),
                                                   /*MaxVFOnly=*/false))
             Changed = true;
           It = SameTypeIt;
@@ -19051,20 +19140,30 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
          "This function only accepts Insert instructions");
   bool OpsChanged = false;
   SmallVector<WeakTrackingVH> PostponedInsts;
-  // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
-    if (R.isDeleted(I))
-      continue;
-    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
-  }
-  // pass2 - try to match and vectorize a buildvector sequence.
-  for (auto *I : reverse(Instructions)) {
+    // pass1 - try to match and vectorize a buildvector sequence for MaxVF only.
     if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
-      OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/true);
     } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
-      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
+      OpsChanged |=
+          vectorizeInsertElementInst(LastInsertElem, BB, R, /*MaxVFOnly=*/true);
+    }
+    // pass2 - try to vectorize reductions only
+    if (R.isDeleted(I))
+      continue;
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+    if (R.isDeleted(I) || isa<CmpInst>(I))
+      continue;
+    // pass3 - try to match and vectorize a buildvector sequence.
+    if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/false);
+    } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
+      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R,
+                                               /*MaxVFOnly=*/false);
     }
   }
   // Now try to vectorize postponed instructions.
@@ -19166,7 +19265,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
     return false;
   };
-  auto AreCompatiblePHIs = [&PHIToOpcodes, this](Value *V1, Value *V2) {
+  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](Value *V1, Value *V2) {
     if (V1 == V2)
       return true;
     if (V1->getType() != V2->getType())
@@ -19181,6 +19280,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         continue;
       if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
         if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
+          if (R.isDeleted(I1) || R.isDeleted(I2))
+            return false;
           if (I1->getParent() != I2->getParent())
             return false;
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
@@ -19413,8 +19514,13 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
     // are trying to vectorize the index computations, so the maximum number of
     // elements is based on the size of the index expression, rather than the
     // size of the GEP itself (the target's pointer size).
+    auto *It = find_if(Entry.second, [&](GetElementPtrInst *GEP) {
+      return !R.isDeleted(GEP);
+    });
+    if (It == Entry.second.end())
+      continue;
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
-    unsigned EltSize = R.getVectorElementSize(*Entry.second[0]->idx_begin());
+    unsigned EltSize = R.getVectorElementSize(*(*It)->idx_begin());
     if (MaxVecRegSize < EltSize)
       continue;
 

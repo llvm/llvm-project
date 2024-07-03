@@ -5,30 +5,15 @@ define i8 @test() {
 ; CHECK-LABEL: define i8 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = add i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 0 to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = add i8 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = add i8 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = add i8 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = add i8 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i8 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> zeroinitializer)
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i8 [[TMP4]], [[TMP0]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i8 [[OP_RDX]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i8 [[OP_RDX1]], [[TMP1]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i8 [[OP_RDX2]], [[TMP12]]
-; CHECK-NEXT:    [[OP_RDX11:%.*]] = or i8 [[OP_RDX3]], [[TMP8]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = or i8 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = or i8 [[TMP6]], [[TMP11]]
-; CHECK-NEXT:    [[OP_RDX7:%.*]] = or i8 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[OP_RDX8:%.*]] = or i8 [[OP_RDX11]], [[OP_RDX5]]
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = or i8 [[OP_RDX6]], [[OP_RDX7]]
-; CHECK-NEXT:    [[OP_RDX10:%.*]] = or i8 [[OP_RDX8]], [[OP_RDX9]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = or i8 [[OP_RDX10]], [[TMP7]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i8 [[OP_RDX1]], [[TMP0]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i8 [[OP_RDX2]], [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = or i8 [[OP_RDX3]], [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[OP_RDX4]]
 ;
 entry:
