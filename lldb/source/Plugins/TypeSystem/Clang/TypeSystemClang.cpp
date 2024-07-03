@@ -8693,6 +8693,13 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
     return true;
   }
 
+  if (!enum_uvalue) {
+    // This is a bitfield enum, but the value is 0 so we know it won't match
+    // with any of the enumerators.
+    s.Printf("0x%" PRIx64, enum_uvalue);
+    return true;
+  }
+
   uint64_t remaining_value = enum_uvalue;
   std::vector<std::pair<uint64_t, llvm::StringRef>> values;
   values.reserve(num_enumerators);
@@ -8717,7 +8724,8 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
       s.PutCString(" | ");
   }
 
-  // If there is a remainder that is not covered by the value, print it as hex.
+  // If there is a remainder that is not covered by the value, print it as
+  // hex.
   if (remaining_value)
     s.Printf("0x%" PRIx64, remaining_value);
 
