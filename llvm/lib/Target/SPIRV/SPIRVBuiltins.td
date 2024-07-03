@@ -99,6 +99,7 @@ def lookupBuiltin : SearchIndex {
 
 // Dot builtin record:
 def : DemangledBuiltin<"dot", OpenCL_std, Dot, 2, 2>;
+def : DemangledBuiltin<"__spirv_Dot", OpenCL_std, Dot, 2, 2>;
 
 // Image builtin records:
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
