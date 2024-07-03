@@ -165,7 +165,7 @@ public:
   void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue);
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout);
+  uint64_t writeObject(MCAssembler &Asm);
 
 private:
   COFFSymbol *createSymbol(StringRef Name);
@@ -232,7 +232,7 @@ public:
   void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override;
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
 };
 
 } // end anonymous namespace
@@ -600,7 +600,7 @@ void WinCOFFWriter::WriteRelocation(const COFF::relocation &R) {
 }
 
 // Write MCSec's contents. What this function does is essentially
-// "Asm.writeSectionData(&MCSec, Layout)", but it's a bit complicated
+// "Asm.writeSectionData(&MCSec)", but it's a bit complicated
 // because it needs to compute a CRC.
 uint32_t WinCOFFWriter::writeSectionContents(MCAssembler &Asm,
                                              const MCAsmLayout &Layout,
@@ -609,7 +609,7 @@ uint32_t WinCOFFWriter::writeSectionContents(MCAssembler &Asm,
   // to CRC the data before we dump it into the object file.
   SmallVector<char, 128> Buf;
   raw_svector_ostream VecOS(Buf);
-  Asm.writeSectionData(VecOS, &MCSec, Layout);
+  Asm.writeSectionData(VecOS, &MCSec);
 
   // Write the section contents to the object file.
   W.OS << Buf;
@@ -1010,8 +1010,7 @@ static std::time_t getTime() {
   return Now;
 }
 
-uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
-                                    const MCAsmLayout &Layout) {
+uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = W.OS.tell();
 
   if (Sections.size() > INT32_MAX)
@@ -1131,7 +1130,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
     }
   }
 
-  assignFileOffsets(Asm, Layout);
+  assignFileOffsets(Asm, *Asm.getLayout());
 
   // MS LINK expects to be able to use this timestamp to implement their
   // /INCREMENTAL feature.
@@ -1161,7 +1160,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
 
   // Write section contents.
   for (std::unique_ptr<COFFSection> &Sec : Sections)
-    writeSection(Asm, Layout, *Sec);
+    writeSection(Asm, *Asm.getLayout(), *Sec);
 
   assert(W.OS.tell() == Header.PointerToSymbolTable &&
          "Header::PointerToSymbolTable is insane!");
@@ -1221,11 +1220,10 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   ObjWriter->recordRelocation(Asm, Fragment, Fixup, Target, FixedValue);
 }
 
-uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
-                                          const MCAsmLayout &Layout) {
-  uint64_t TotalSize = ObjWriter->writeObject(Asm, Layout);
+uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm) {
+  uint64_t TotalSize = ObjWriter->writeObject(Asm);
   if (DwoWriter)
-    TotalSize += DwoWriter->writeObject(Asm, Layout);
+    TotalSize += DwoWriter->writeObject(Asm);
   return TotalSize;
 }
 

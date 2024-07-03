@@ -671,7 +671,7 @@ void MCAssembler::writeFragmentPadding(raw_ostream &OS,
 
 /// Write the fragment \p F to the output file.
 static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
-                          const MCAsmLayout &Layout, const MCFragment &F) {
+                          const MCFragment &F) {
   // FIXME: Embed in fragments instead?
   uint64_t FragmentSize = Asm.computeFragmentSize(F);
 
@@ -888,13 +888,13 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
          "The stream should advance by fragment size");
 }
 
-void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
-                                   const MCAsmLayout &Layout) const {
+void MCAssembler::writeSectionData(raw_ostream &OS,
+                                   const MCSection *Sec) const {
   assert(getBackendPtr() && "Expected assembler backend");
 
   // Ignore virtual sections.
   if (Sec->isVirtualSection()) {
-    assert(Layout.getSectionFileSize(Sec) == 0 && "Invalid size for section!");
+    assert(getSectionFileSize(*Sec) == 0 && "Invalid size for section!");
 
     // Check that contents are only things legal inside a virtual section.
     for (const MCFragment &F : *Sec) {
@@ -942,10 +942,10 @@ void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
   (void)Start;
 
   for (const MCFragment &F : *Sec)
-    writeFragment(OS, *this, Layout, F);
+    writeFragment(OS, *this, F);
 
   assert(getContext().hadError() ||
-         OS.tell() - Start == Layout.getSectionAddressSize(Sec));
+         OS.tell() - Start == getSectionAddressSize(*Sec));
 }
 
 std::tuple<MCValue, uint64_t, bool>
@@ -1113,7 +1113,7 @@ void MCAssembler::Finish() {
   layout(Layout);
 
   // Write the object file.
-  stats::ObjectBytes += getWriter().writeObject(*this, Layout);
+  stats::ObjectBytes += getWriter().writeObject(*this);
 
   this->Layout = nullptr;
 }

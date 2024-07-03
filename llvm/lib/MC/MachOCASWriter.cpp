@@ -62,8 +62,8 @@ MachOCASWriter::MachOCASWriter(
   assert(TT.isLittleEndian() == IsLittleEndian && "Endianess should match");
 }
 
-uint64_t MachOCASWriter::writeObject(MCAssembler &Asm,
-                                     const MCAsmLayout &Layout) {
+uint64_t MachOCASWriter::writeObject(MCAssembler &Asm) {
+  auto &Layout = *Asm.getLayout();
   uint64_t StartOffset = OS.tell();
   auto CASObj = CreateFromMcAssembler(*this, Asm, Layout, CAS, nullptr);
 
