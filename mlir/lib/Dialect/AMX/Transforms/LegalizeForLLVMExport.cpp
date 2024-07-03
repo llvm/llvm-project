@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AMX/Analysis/AMXBindingAnalysis.h"
 #include "mlir/Dialect/AMX/Transforms.h"
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -212,7 +211,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (enablingAnalysis && enablingAnalysis->isValid()) {
       // Routine for lowering tile Ops with binding info.
-      auto lhsRegIndex = op.getSrcRegIndex();
+      auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
       auto accRegIndex = op.getAccRegIndex();
 
@@ -259,7 +258,7 @@ public:
 
     if (enablingAnalysis && enablingAnalysis->isValid()) {
       // Routine for lowering tile Ops with binding info.
-      auto lhsRegIndex = op.getSrcRegIndex();
+      auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
       auto accRegIndex = op.getAccRegIndex();
 

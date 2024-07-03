@@ -22,6 +22,7 @@
 #include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/AMX/Analysis/AMXBindingAnalysis.h"
 #include "mlir/Dialect/AMX/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Support/LogicalResult.h"
@@ -142,38 +143,15 @@ static inline void uint8ArrayToHex(std::string &out, uint8_t array[],
                                    int size) {
   llvm::raw_string_ostream os(out);
   for (int index = 0; index < size; index++) {
-    os << format_hex_no_prefix(array[index], 2, true);
+    os << llvm::format_hex_no_prefix(array[index], 2, true);
   }
 }
 
 struct EnableAMXTileBindingPass
     : public impl::EnableAMXTileBindingBase<EnableAMXTileBindingPass> {
 private:
-  bool isViableTileOps() {
-    Operation *root = getOperation();
-    auto func = dyn_cast<func::FuncOp>(root);
-    if (!func)
-      return false;
-
-    bool isViable = true;
-    func->walk<WalkOrder::PreOrder>([this](Operation *op) {
-      if (!isViable)
-        return;
-      if (!isTileOp(op))
-        return;
-      auto probe = op->getParentOp();
-      while (probe != root) {
-        if (!isConcernedControlFlowOp(probe)) {
-          isViable = false;
-          break;
-        }
-        probe = probe->getParentOp();
-      }
-    });
-    return isViable;
-  }
-
-  LLVM::GlobalOp getOrCreateGlobalPalette(const PaletteInfo &pi) {
+  LLVM::GlobalOp
+  getOrCreateGlobalPalette(const TileScopeAnalysis::PaletteInfo &pi) {
     assert(!pi.overflow && "Expecting valid palette");
 // Pack struct so it can fit into a single 64-byte cache line.
 #pragma pack(push, 1)
@@ -187,7 +165,7 @@ private:
 #pragma pack(pop)
 
     size_t paletteArraySize = 64;
-    uint8_t *paletteAsArray = &paletteConfig;
+    auto paletteAsArray = reinterpret_cast<uint8_t *>(&paletteConfig);
     memset(paletteAsArray, 0x0, paletteArraySize);
     // Intel AMX: The only legal non-INIT value for palette_id is 1.
     // TODO(haixin): fetch from CPUID ?
@@ -199,14 +177,15 @@ private:
     }
 
     std::string paletteSymName = "g_intel_amx_palette_";
-    uintArrayToHex(paletteSymName, paletteAsArray, paletteArraySize);
+    uint8ArrayToHex(paletteSymName, paletteAsArray, paletteArraySize);
 
+    ModuleOp module = getOperation()->template getParentOfType<ModuleOp>();
     if ((global = module.lookupSymbol<LLVM::GlobalOp>(paletteSymName)))
       return global;
     // Create a global symbol containing palette config.
-    ModuleOp moduleOp = getOperation()->template getParentOfType<ModuleOp>();
-    OpBuilder builder(moduleOp);
-    builder.setInsertionPointToStart(moduleOp.getBody());
+    auto ctx = module->getContext();
+    OpBuilder builder(module);
+    builder.setInsertionPointToStart(module.getBody());
 
     SmallVector<uint8_t> elementVals;
     for (size_t index = 0; index < paletteArraySize; index++)
@@ -218,18 +197,13 @@ private:
     auto arrayTy =
         LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), elementVals.size());
     auto global = builder.create<LLVM::GlobalOp>(
-        moduleOp.getLoc(), arrayType, /*isConstant*/ true,
-        LLVM::Linkage::Private, paletteSymName, dataAttr, /*alignment=*/64);
+        module.getLoc(), arrayType, /*isConstant*/ true, LLVM::Linkage::Private,
+        paletteSymName, dataAttr, /*alignment=*/64);
     return global;
   }
 
 public:
   void runOnOperation() override {
-    // Ensure that tile Ops are not wrapped by out-of-scope Ops, else cannot do
-    // enabling.
-    if (!isViableTileOps())
-      return;
-
     // 0. Get AnalyseInfo for each concerned Value (Does not allow mixed used of
     // tmul & normal vector operations).
     TileBindingAnalysis &bindingAna = getAnalysis<TileBindingAnalysis>();

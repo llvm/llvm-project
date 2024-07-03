@@ -9,6 +9,10 @@
 #ifndef MLIR_DIALECT_AMX_TRANSFORMS_H
 #define MLIR_DIALECT_AMX_TRANSFORMS_H
 
+#include <optional>
+
+#include "mlir/Dialect/AMX/Analysis/AMXBindingAnalysis.h"
+
 namespace mlir {
 
 class LLVMConversionTarget;
@@ -17,8 +21,10 @@ class RewritePatternSet;
 
 /// Collect a set of patterns to lower AMX ops to ops that map to LLVM
 /// intrinsics.
-void populateAMXLegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
-                                              RewritePatternSet &patterns);
+void populateAMXLegalizeForLLVMExportPatterns(
+    LLVMTypeConverter &converter,
+    std::optional<amx::TileScopeAnalysis> &analysis,
+    RewritePatternSet &patterns);
 
 /// Configure the target to support lowering AMX ops to ops that map to LLVM
 /// intrinsics.

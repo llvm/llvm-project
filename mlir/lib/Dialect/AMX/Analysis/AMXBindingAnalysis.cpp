@@ -21,10 +21,21 @@
 
 #define DEBUG_TYPE "amx-binding-analysis"
 
+namespace mlir {
+namespace amx {
+
 static bool isTileOp(Operation *op) {
   return llvm::isa<TileZeroOp>(op) || llvm::isa<TileLoadOp>(op) ||
          llvm::isa<TileMulFOp>(op) || llvm::isa<TileMulIOp>(op) ||
          llvm::isa<TileStoreOp>(op);
+}
+
+// Currently we only operate on scf Ops.
+static bool isConcernedControlFlowOp(Operation *op) {
+  return llvm::isa<scf::ExecuteRegionOp>(op) || llvm::isa<scf::ForOp>(op) ||
+         llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::IfOp>(op) ||
+         llvm::isa<scf::IndexSwitchOp>(op) || llvm::isa<scf::ParallelOp>(op) ||
+         llvm::isa<scf::WhileOp>(op);
 }
 
 template <typename Op>
@@ -83,10 +94,37 @@ static bool TileMulPropagate(TileBindingAnalysis *analysis, Operation *op) {
   return true;
 }
 
+bool TileBindingAnalysis::isViableTileOps(Operation *root) {
+  auto func = dyn_cast<func::FuncOp>(root);
+  if (!func)
+    return false;
+
+  bool isViable = true;
+  func->walk<WalkOrder::PreOrder>([&](Operation *op) {
+    if (!isViable)
+      return;
+    if (!isTileOp(op))
+      return;
+    auto probe = op->getParentOp();
+    while (probe != root) {
+      if (!isConcernedControlFlowOp(probe)) {
+        isViable = false;
+        break;
+      }
+      probe = probe->getParentOp();
+    }
+  });
+  return isViable;
+}
+
 TileBindingAnalysis::TileBindingAnalysis(Operation *root) {
   isValidAnalysis = false;
   func::FuncOp func = dyn_cast_or_null<func::FuncOp>(root);
   if (!func)
+    return;
+  // Ensure that tile operations are not wrapped by out-of-scope Ops, else
+  // cannot do enabling.
+  if (!isViableTileOps(root))
     return;
 
   isValidAnalysis = true;
@@ -148,7 +186,7 @@ void TileScopeAnalysis::PaletteInfo::merge(const PaletteInfo &rhs) {
   }
 }
 
-bool TileScopeAnalysis::PaletteInfo::isConflict(const PaletteInfo &rhs) {
+bool TileScopeAnalysis::PaletteInfo::isConflict(const PaletteInfo &rhs) const {
   if (overflow || rhs.overflow) {
     return true;
   }
@@ -160,20 +198,7 @@ bool TileScopeAnalysis::PaletteInfo::isConflict(const PaletteInfo &rhs) {
       }
     }
   }
-}
-
-// Currently we only operate on scf Ops.
-static bool isConcernedControlFlowOp(Operation *op) {
-  return llvm::isa<scf::ExecuteRegionOp>(op) || llvm::isa<scf::ForOp>(op) ||
-         llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::IfOp>(op) ||
-         llvm::isa<scf::IndexSwitchOp>(op) || llvm::isa<scf::ParallelOp>(op) ||
-         llvm::isa<scf::WhileOp>(op);
-}
-
-static bool isTileOp(Operation *op) {
-  return llvm::isa<TileZeroOp>(op) || llvm::isa<TileLoadOp>(op) ||
-         llvm::isa<TileMulFOp>(op) || llvm::isa<TileMulIOp>(op) ||
-         llvm::isa<TileStoreOp>(op);
+  return false;
 }
 
 TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
@@ -184,7 +209,7 @@ TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
 
   isValidAnalysis = true;
   // 0. First walk to mark parallel Ops.
-  func->walk<WalkOrder::PostOrder>([this](Operation *op) {
+  func->walk<WalkOrder::PostOrder>([=](Operation *op) {
     if (!isParallelOp(op))
       return;
 
@@ -197,10 +222,10 @@ TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
   });
 
   // 1. Second walk to collect needed palette for each concerned Op.
-  collectNeededPalette(root);
+  collectPalette(root);
 
   // 2. Third walk to analyse usage scope for each tile Op.
-  func->walk<WalkOrder::PreOrder>([this](Operation *op) {
+  func->walk<WalkOrder::PreOrder>([=](Operation *op) {
     if (!isValidAnalysis)
       return;
     if (!isTileOp(op))
@@ -219,22 +244,28 @@ TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
     return;
 
   // 3. Tile scoping for each segmented region in a recursive manner.
-  doTileScope(func.getRegion(0).front());
+  doTileScope(root->getRegion(0).front());
 }
 
-PaletteInfo TileScopeAnalysis::collectRegionPalette(Block &block) {
+TileScopeAnalysis::PaletteInfo
+TileScopeAnalysis::collectBlockPalette(Block &block) {
   PaletteInfo pi;
-  for (auto op : block.getOps())
-    pi.merge(collectPalette(op));
+  auto beginIter = block.begin();
+  auto endIter = block.end();
+  for (auto iter = beginIter; iter != endIter; iter++) {
+    auto &opRef = *iter;
+    pi.merge(collectPalette(&opRef));
+  }
   return pi;
 }
 
-PaletteInfo TileScopeAnalysis::collectPalette(Operation *op) {
+TileScopeAnalysis::PaletteInfo
+TileScopeAnalysis::collectPalette(Operation *op) {
   if (!isValidAnalysis)
     return PaletteInfo();
-  if (auto func = dyn_cast_or_null<func::FuncOp>(root))
+  if (auto func = dyn_cast_or_null<func::FuncOp>(op))
     // No need to store PaletteInfo for func.
-    return collectRegionPalette(func.getRegion(0).front());
+    return collectBlockPalette(op->getRegion(0).front());
 
   auto iter = neededPalette.find(op);
   if (iter != neededPalette.end())
@@ -248,27 +279,28 @@ PaletteInfo TileScopeAnalysis::collectPalette(Operation *op) {
   return PaletteInfo();
 }
 
-PaletteInfo TileScopeAnalysis::collectPaletteForScf(Operation *op) {
-  if (!isConcerendScfOp(op))
+TileScopeAnalysis::PaletteInfo
+TileScopeAnalysis::collectPaletteForScf(Operation *op) {
+  if (!isConcernedControlFlowOp(op))
     return PaletteInfo();
 
   PaletteInfo pi;
   if (llvm::isa<scf::ExecuteRegionOp>(op) || llvm::isa<scf::ForOp>(op) ||
       llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op)) {
-    pi = collectNeededPalette(op->getRegion(0).front());
+    pi = collectBlockPalette(op->getRegion(0).front());
   } else if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
-    auto thenPalette = collectRegionPalette(ifOp.getThenRegion().front());
-    auto elsePalette = collectRegionPalette(ifOp.getElseRegion().front());
+    auto thenPalette = collectBlockPalette(ifOp.getThenRegion().front());
+    auto elsePalette = collectBlockPalette(ifOp.getElseRegion().front());
     pi.merge(thenPalette);
     pi.merge(elsePalette);
   } else if (auto indexOp = dyn_cast<scf::IndexSwitchOp>(op)) {
-    pi = collectRegionPalette(indexOp.getDefaultRegion().front());
+    pi = collectBlockPalette(indexOp.getDefaultRegion().front());
     for (auto &caseRegion : indexOp.getCaseRegions()) {
-      pi.merge(collectRegionPalette(caseRegion.front()));
+      pi.merge(collectBlockPalette(caseRegion.front()));
     }
   } else if (auto whileOp = dyn_cast<scf::WhileOp>(op)) {
-    auto beforePalette = collectRegionPalette(whileOp.getRegion(0).front());
-    auto afterPalette = collectRegionPalette(whileOp.getRegion(1).front());
+    auto beforePalette = collectBlockPalette(whileOp.getRegion(0).front());
+    auto afterPalette = collectBlockPalette(whileOp.getRegion(1).front());
     pi.merge(beforePalette);
     pi.merge(afterPalette);
   }
@@ -276,7 +308,7 @@ PaletteInfo TileScopeAnalysis::collectPaletteForScf(Operation *op) {
   return pi;
 }
 
-static inline pair<int, int> getPaletteShape(VectorType type) {
+static inline std::pair<int, int> getPaletteShape(VectorType type) {
   ArrayRef<int64_t> shape = type.getShape();
   auto elementType = type.getElementType();
   int typeSize;
@@ -293,7 +325,8 @@ static inline pair<int, int> getPaletteShape(VectorType type) {
   return {shape[0], shape[1] * typeSize};
 }
 
-PaletteInfo TileScopeAnalysis::collectPaletteForTile(Operation *op) {
+TileScopeAnalysis::PaletteInfo
+TileScopeAnalysis::collectPaletteForTile(Operation *op) {
   if (!isTileOp(op))
     return PaletteInfo();
 
@@ -315,7 +348,7 @@ PaletteInfo TileScopeAnalysis::collectPaletteForTile(Operation *op) {
   }                                                                            \
   pi.set(*lhsIndex, getPaletteShape(op.getLhsVectorType()));                   \
   pi.set(*rhsIndex, getPaletteShape(op.getRhsVectorType()));                   \
-  pi.set(*accIndex, getPaletteShape(op.getAccVectorType()));
+  pi.set(*accIndex, getPaletteShape(op.getVectorType()));
 
   PaletteInfo pi;
   if (auto tileLoadOp = dyn_cast<TileLoadOp>(op)) {
@@ -333,26 +366,27 @@ PaletteInfo TileScopeAnalysis::collectPaletteForTile(Operation *op) {
   return pi;
 }
 
-std::optional<PaletteInfo> TileScopeAnalysis::getPalette(Operation *op) {
+std::optional<TileScopeAnalysis::PaletteInfo>
+TileScopeAnalysis::getPalette(Operation *op) {
   auto iter = neededPalette.find(op);
   if (iter == neededPalette.end()) {
-    return std::null_opt;
+    return std::nullopt;
   }
   return iter->second;
 }
 
-std::optional<PaletteInfo> TileScopeAnalysis::getPalette(BlockSeg seg) {
+std::optional<TileScopeAnalysis::PaletteInfo>
+TileScopeAnalysis::getPalette(BlockSeg seg) {
   bool hasPaletteInfo = false;
   PaletteInfo pi;
   for (Operation &opIns : seg) {
-    auto *op = &opIns;
     auto tmpPi = getPalette(&opIns);
     if (tmpPi) {
       hasPaletteInfo = true;
       pi.merge(*tmpPi);
     }
   }
-  return hasPaletteInfo ? pi : std::null_opt;
+  return hasPaletteInfo ? std::optional<PaletteInfo>{pi} : std::nullopt;
 }
 
 void TileScopeAnalysis::doTileScope(Block &block) {
@@ -369,14 +403,14 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
   auto currBegin = seg.begin();
   for (auto probe = seg.begin(); probe != seg.end(); probe++) {
     Operation *op = &(*probe);
-    if (isParallelOp(op) {
+    if (isParallelOp(op)) {
       blockSegs.push_back(BlockSeg(currBegin, probe));
       paraOps.push_back(op);
       currBegin = probe;
       currBegin++;
     }
   }
-  if (breakers.size()) {
+  if (paraOps.size()) {
     assert(blockSegs.size() == paraOps.size());
     for (int idx = 0; idx < paraOps.size(); idx++) {
       doTileScope(blockSegs[idx]);
@@ -397,7 +431,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
       currSegStart = currIter;
 
     Block::iterator nextIterIfMerge;
-    std::optional<PaletteInfo> pi = std::null_opt;
+    std::optional<PaletteInfo> pi = std::nullopt;
     if (isConcernedControlFlowOp(currOp)) {
       pi = getPalette(currOp);
       nextIterIfMerge = currIter;
@@ -430,7 +464,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
     currScope.seg = BlockSeg(*currSegStart, prevIter);                         \
     tileScopes.push_back(currScope);                                           \
     currScope.clear();                                                         \
-    currSegStart = std::null_opt;                                              \
+    currSegStart = std::nullopt;                                               \
   }
 
     if (pi->overflow) {
@@ -467,8 +501,8 @@ void TileScopeAnalysis::doTileScope(Operation *op) {
     auto &block = op->getRegion(0).front();
     doTileScope(BlockSeg(block.begin(), block.end()));
   } else if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
-    auto &ifBlock = op->getThenRegion().front();
-    auto &elseBlock = op->getElseRegion().front();
+    auto &ifBlock = ifOp.getThenRegion().front();
+    auto &elseBlock = ifOp.getElseRegion().front();
     doTileScope(BlockSeg(ifBlock.begin(), ifBlock.end()));
     doTileScope(BlockSeg(elseBlock.begin(), elseBlock.end()));
   } else if (auto indexOp = dyn_cast<scf::IndexSwitchOp>(op)) {
@@ -485,3 +519,6 @@ void TileScopeAnalysis::doTileScope(Operation *op) {
     doTileScope(BlockSeg(afterBlock.begin(), afterBlock.end()));
   }
 }
+
+} // namespace amx
+} // namespace mlir

@@ -35,6 +35,9 @@ private:
   bool isValidAnalysis;
   DenseMap<Value, int> bindings;
 
+  // Ensure that tile operations are not wrapped by out-of-scope operations.
+  bool isViableTileOps(Operation *root);
+
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TileBindingAnalysis)
   explicit TileBindingAnalysis(Operation *);
@@ -56,24 +59,24 @@ private:
   // the length should always be 8.
   struct PaletteInfo {
     bool overflow;
-    SmallVector<pair<int, int>, 8> palette;
+    SmallVector<std::pair<int, int>, 8> palette;
     PaletteInfo() {
       palette.resize(8, {0, 0});
       clear();
     }
     void clear();
-    bool isEmpty(int idx) {
+    bool isEmpty(int idx) const {
       return palette[idx].first == 0 && palette[idx].second == 0;
     }
-    void set(int idx, pair<int, int> shape) { palette[idx] = shape; }
+    void set(int idx, std::pair<int, int> shape) { palette[idx] = shape; }
     void merge(const PaletteInfo &rhs);
-    bool isConflict(const PaletteInfo &rhs);
+    bool isConflict(const PaletteInfo &rhs) const;
   };
   struct TileScope {
     // The BlockSeg here is inclusive (containing `end` Op).
     BlockSeg seg;
     PaletteInfo pi;
-    TileScope() { clear(); }
+    TileScope() : seg(Block::iterator(), Block::iterator()) { clear(); }
     void clear() { pi.clear(); }
   };
 
@@ -93,11 +96,13 @@ private:
     return parallelOps.find(op) == parallelOps.end();
   }
 
-  void setTileUsage(Operation *op, BlockSeg seg) { tileUsage[op] = seg; }
+  void setTileUsage(Operation *op, BlockSeg seg) {
+    tileUsage[op] = std::move(seg);
+  }
 
-  PaletteInfo collectRegionPalette(Region &region);
+  PaletteInfo collectBlockPalette(Block &block);
   PaletteInfo collectPalette(Operation *op);
-  // Below two functions are the leaf functinos of recursive collection, will
+  // Below two functions are the leaf functions of recursive collection, will
   // actually insert PaletteInfo into map storage.
   PaletteInfo collectPaletteForScf(Operation *op);
   PaletteInfo collectPaletteForTile(Operation *op);
