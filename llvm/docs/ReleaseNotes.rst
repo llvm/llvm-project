@@ -379,6 +379,17 @@ Changes to LLDB
 * Register field information is now provided on AArch64 FreeBSD for live
   processes and core files (previously only provided on AArch64 Linux).
 
+* Register field information can now include enums to represent field
+  values. Enums have been added for ``fpcr.RMode`` and ``mte_ctrl.TCF``
+  for AArch64 targets::
+
+    (lldb) register read fpcr
+        fpcr = 0x00000000
+             = (AHP = 0, DN = 0, FZ = 0, RMode = RN, <...>)
+
+  If you need to know the values of the enum, these can be found in
+  the output of ``register info`` for the same register.
+
 Changes to BOLT
 ---------------------------------
 * Now supports ``--match-profile-with-function-hash`` to match profiled and
