@@ -12805,15 +12805,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           // sequence.
           InsertElementInst *Ins = cast<InsertElementInst>(VL0);
           do {
-          std::optional<unsigned> InsertIdx = getElementIndex(Ins);
-          if (!InsertIdx)
-            break;
-          if (InsertMask[*InsertIdx] == PoisonMaskElem)
-            InsertMask[*InsertIdx] = *InsertIdx;
-          if (!Ins->hasOneUse())
-            break;
-          Ins = dyn_cast_or_null<InsertElementInst>(
-              Ins->getUniqueUndroppableUser());
+            std::optional<unsigned> InsertIdx = getElementIndex(Ins);
+            if (!InsertIdx)
+              break;
+            if (InsertMask[*InsertIdx] == PoisonMaskElem)
+              InsertMask[*InsertIdx] = *InsertIdx;
+            if (!Ins->hasOneUse())
+              break;
+            Ins = dyn_cast_or_null<InsertElementInst>(
+                Ins->getUniqueUndroppableUser());
           } while (Ins);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
