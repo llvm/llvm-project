@@ -42,17 +42,17 @@ class _LIBCPP_TEMPLATE_VIS __thread_id {
 
   static _LIBCPP_HIDE_FROM_ABI bool
   __lt_impl(__thread_id __x, __thread_id __y) _NOEXCEPT { // id==0 is always less than any other thread_id
-    if (__x.__id_ == 0)
-      return __y.__id_ != 0;
-    if (__y.__id_ == 0)
+    if (__x.__id_ == nullptr)
+      return __y.__id_ != nullptr;
+    if (__y.__id_ == nullptr)
       return false;
     return __libcpp_thread_id_less(__x.__id_, __y.__id_);
   }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __thread_id() _NOEXCEPT : __id_(0) {}
+  _LIBCPP_HIDE_FROM_ABI __thread_id() _NOEXCEPT : __id_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = 0; }
+  _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = nullptr; }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
 #  if _LIBCPP_STD_VER <= 17
@@ -77,9 +77,9 @@ private:
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT {
   // Don't pass id==0 to underlying routines
-  if (__x.__id_ == 0)
-    return __y.__id_ == 0;
-  if (__y.__id_ == 0)
+  if (__x.__id_ == nullptr)
+    return __y.__id_ == nullptr;
+  if (__y.__id_ == nullptr)
     return false;
   return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
 }
