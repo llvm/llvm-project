@@ -1665,6 +1665,10 @@ public:
   std::unique_ptr<ScheduleDAGMutation>
   createFillMFMAShadowMutation(const TargetInstrInfo *TII) const;
 
+  bool supportsWave32() const { return getGeneration() >= GFX10; }
+
+  bool supportsWave64() const { return !hasGFX1210Insts() || GFX13Insts; }
+
   bool isWave32() const {
     return getWavefrontSize() == 32;
   }

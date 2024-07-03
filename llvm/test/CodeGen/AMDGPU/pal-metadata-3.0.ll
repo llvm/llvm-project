@@ -1,7 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11,LDS64K,WGP
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefixes=CHECK,LDS64K,WGP
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR,LDS64K,WGP
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1210 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR,LDS320K,CU
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; NumSgprs: 4
@@ -115,15 +114,13 @@
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    gs_shader
 ; GFX11-NEXT:        .ieee_mode:      false
-; LDS64K-NEXT:       .lds_size:       0x200
-; LDS320K-NEXT:      .lds_size:       0x400
+; CHECK-NEXT:        .lds_size:       0x200
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
 ; CHECK-NEXT:        .sgpr_count:     0x1
 ; CHECK-NEXT:        .vgpr_count:     0x1
-; WGP-NEXT:          .wgp_mode:       true
-; CU-NEXT:           .wgp_mode:       false
+; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK-NEXT:      .hs:
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    hs_shader
@@ -134,8 +131,7 @@
 ; CHECK-NEXT:        .scratch_memory_size: 0
 ; CHECK-NEXT:        .sgpr_count:     0x1
 ; CHECK-NEXT:        .vgpr_count:     0x1
-; WGP-NEXT:          .wgp_mode:       true
-; CU-NEXT:           .wgp_mode:       false
+; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    ps_shader
@@ -146,8 +142,7 @@
 ; CHECK-NEXT:        .scratch_memory_size: 0
 ; CHECK-NEXT:        .sgpr_count:     0x1
 ; CHECK-NEXT:        .vgpr_count:     0x1
-; WGP-NEXT:          .wgp_mode:       true
-; CU-NEXT:           .wgp_mode:       false
+; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK:    .registers:      {}
 ; CHECK:amdpal.version:
 ; CHECK-NEXT:  - 0x3
