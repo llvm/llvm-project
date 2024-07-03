@@ -985,6 +985,16 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Erase unary operation where predicate has all inactive lanes
+static std::optional<Instruction *>
+instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
+                                 int PredPos) {
+  if (match(II.getOperand(PredPos), m_ZeroInt())) {
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
 // Simplify unary operation where predicate has all inactive lanes by replacing
 // instruction with zeroed object
 static std::optional<Instruction *>
@@ -1787,7 +1797,7 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
@@ -1817,7 +1827,7 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
@@ -2007,6 +2017,32 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   default:
     break;
 
+  case Intrinsic::aarch64_sve_st1_scatter:
+  case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
+  case Intrinsic::aarch64_sve_st1dq:
+  case Intrinsic::aarch64_sve_st1q_scatter_index:
+  case Intrinsic::aarch64_sve_st1q_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1q_scatter_vector_offset:
+  case Intrinsic::aarch64_sve_st1wq:
+  case Intrinsic::aarch64_sve_stnt1:
+  case Intrinsic::aarch64_sve_stnt1_scatter:
+  case Intrinsic::aarch64_sve_stnt1_scatter_index:
+  case Intrinsic::aarch64_sve_stnt1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_stnt1_scatter_uxtw:
+    return instCombineSVENoActiveUnaryErase(IC, II, 1);
+  case Intrinsic::aarch64_sve_st2:
+  case Intrinsic::aarch64_sve_st2q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 2);
+  case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 3);
+  case Intrinsic::aarch64_sve_st4:
+  case Intrinsic::aarch64_sve_st4q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 4);
   case Intrinsic::aarch64_sve_ld1_gather:
   case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ld1_gather_sxtw:

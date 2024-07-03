@@ -31,7 +31,7 @@ Options
 
 .. option:: FixMode
 
-  Selects what kind of a fix the check should provide.
+  Selects what kind of a fix the check should provide. The default is `UseStatic`.
 
   ``None``
     Don't fix automatically.

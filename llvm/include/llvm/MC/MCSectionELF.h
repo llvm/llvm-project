@@ -54,8 +54,9 @@ private:
                unsigned entrySize, const MCSymbolELF *group, bool IsComdat,
                unsigned UniqueID, MCSymbol *Begin,
                const MCSymbolELF *LinkedToSym)
-      : MCSection(SV_ELF, Name, flags & ELF::SHF_EXECINSTR, Begin), Type(type),
-        Flags(flags), UniqueID(UniqueID), EntrySize(entrySize),
+      : MCSection(SV_ELF, Name, flags & ELF::SHF_EXECINSTR,
+                  type == ELF::SHT_NOBITS, Begin),
+        Type(type), Flags(flags), UniqueID(UniqueID), EntrySize(entrySize),
         Group(group, IsComdat), LinkedToSym(LinkedToSym) {
     if (Group.getPointer())
       Group.getPointer()->setIsSignature();
@@ -81,7 +82,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
   StringRef getVirtualSectionKind() const override;
 
   bool isUnique() const { return UniqueID != NonUniqueID; }

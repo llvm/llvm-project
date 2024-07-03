@@ -4172,11 +4172,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
   if (!mask)
     return failure();
 
-  auto constantMask = mask.template getDefiningOp<vector::ConstantMaskOp>();
-  if (!constantMask)
-    return failure();
-
-  if (!constantMask.isAllOnesMask())
+  if (getMaskFormat(mask) != MaskFormat::AllTrue)
     return failure();
 
   op.getMaskMutable().clear();

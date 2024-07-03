@@ -1637,6 +1637,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
+  // TODO: v2bf16 operations, and fat buffer pointer support.
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAddF32()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
@@ -1650,9 +1651,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
-  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
-    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
-
   if (ST.hasGFX90AInsts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
@@ -1664,12 +1662,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       });
   }
 
-  if (ST.hasAtomicBufferGlobalPkAddF16Insts())
-    Atomic.legalFor({{V2F16, GlobalPtr}});
+  if (ST.hasAtomicBufferGlobalPkAddF16NoRtnInsts() ||
+      ST.hasAtomicBufferGlobalPkAddF16Insts())
+    Atomic.legalFor({{V2F16, GlobalPtr}, {V2F16, BufferFatPtr}});
   if (ST.hasAtomicGlobalPkAddBF16Inst())
     Atomic.legalFor({{V2BF16, GlobalPtr}});
   if (ST.hasAtomicFlatPkAdd16Insts())
     Atomic.legalFor({{V2F16, FlatPtr}, {V2BF16, FlatPtr}});
+
+  // FIXME: Handle flat, global and buffer cases.
+  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
@@ -5401,35 +5404,6 @@ bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
   return true;
 }
 
-static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::amdgcn_ds_fmin:
-    return AMDGPU::G_ATOMICRMW_FMIN;
-  case Intrinsic::amdgcn_ds_fmax:
-    return AMDGPU::G_ATOMICRMW_FMAX;
-  default:
-    llvm_unreachable("not a DS FP intrinsic");
-  }
-}
-
-bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
-                                                      MachineInstr &MI,
-                                                      Intrinsic::ID IID) const {
-  GISelChangeObserver &Observer = Helper.Observer;
-  Observer.changingInstr(MI);
-
-  MI.setDesc(ST.getInstrInfo()->get(getDSFPAtomicOpcode(IID)));
-
-  // The remaining operands were used to set fields in the MemOperand on
-  // construction.
-  for (int I = 6; I > 3; --I)
-    MI.removeOperand(I);
-
-  MI.removeOperand(1); // Remove the intrinsic ID.
-  Observer.changedInstr(MI);
-  return true;
-}
-
 // TODO: Fix pointer type handling
 bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
                                          MachineInstr &MI,
@@ -7451,9 +7425,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
-    return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntrinsic(MI, B);
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:

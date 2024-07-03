@@ -930,6 +930,12 @@ def ProcessorFeatures {
   list<SubtargetFeature> Generic = [FeatureFPARMv8, FeatureNEON, FeatureETE];
 }
 
+// Define an alternative name for a given Processor.
+class ProcessorAlias<string n, string alias> {
+  string Name = n;
+  string Alias = alias;
+}
+
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
 // optimizations.
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
@@ -1005,6 +1011,7 @@ def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
                      ProcessorFeatures.NeoverseN1, [TuneNeoverseN1]>;
 def : ProcessorModel<"neoverse-n2", NeoverseN2Model,
                      ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
+def : ProcessorAlias<"cobalt-100", "neoverse-n2">;
 def : ProcessorModel<"neoverse-n3", NeoverseN2Model,
                      ProcessorFeatures.NeoverseN3, [TuneNeoverseN3]>;
 def : ProcessorModel<"neoverse-512tvb", NeoverseV1Model,
@@ -1013,6 +1020,7 @@ def : ProcessorModel<"neoverse-v1", NeoverseV1Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
 def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
+def : ProcessorAlias<"grace", "neoverse-v2">;
 def : ProcessorModel<"neoverse-v3", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV2Model,
@@ -1050,15 +1058,12 @@ def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
 
 // Apple CPUs
 
-// Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
-def : ProcessorModel<"cyclone", CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7]>;
 def : ProcessorModel<"apple-a7", CycloneModel, ProcessorFeatures.AppleA7,
                      [TuneAppleA7]>;
-def : ProcessorModel<"apple-a8", CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7]>;
-def : ProcessorModel<"apple-a9", CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7]>;
+// Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
+def : ProcessorAlias<"cyclone", "apple-a7">;
+def : ProcessorAlias<"apple-a8", "apple-a7">;
+def : ProcessorAlias<"apple-a9", "apple-a7">;
 
 def : ProcessorModel<"apple-a10", CycloneModel, ProcessorFeatures.AppleA10,
                      [TuneAppleA10]>;
@@ -1068,28 +1073,23 @@ def : ProcessorModel<"apple-a11", CycloneModel, ProcessorFeatures.AppleA11,
 
 def : ProcessorModel<"apple-a12", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
-def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,
-                     [TuneAppleA12]>;
-def : ProcessorModel<"apple-s5", CycloneModel, ProcessorFeatures.AppleA12,
-                     [TuneAppleA12]>;
+def : ProcessorAlias<"apple-s4", "apple-a12">;
+def : ProcessorAlias<"apple-s5", "apple-a12">;
 
 def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
                      [TuneAppleA13]>;
 
 def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
-def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
-                     [TuneAppleA14]>;
+def : ProcessorAlias<"apple-m1", "apple-a14">;
 
 def : ProcessorModel<"apple-a15", CycloneModel, ProcessorFeatures.AppleA15,
                      [TuneAppleA15]>;
-def : ProcessorModel<"apple-m2", CycloneModel, ProcessorFeatures.AppleA15,
-                     [TuneAppleA15]>;
+def : ProcessorAlias<"apple-m2", "apple-a15">;
 
 def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
-def : ProcessorModel<"apple-m3", CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16]>;
+def : ProcessorAlias<"apple-m3", "apple-a16">;
 
 def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
                      [TuneAppleA17]>;
@@ -1098,8 +1098,7 @@ def : ProcessorModel<"apple-m4", CycloneModel, ProcessorFeatures.AppleM4,
                      [TuneAppleM4]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleM4,
-                     [TuneAppleM4]>;
+def : ProcessorAlias<"apple-latest", "apple-m4">;
 
 
 // Fujitsu A64FX

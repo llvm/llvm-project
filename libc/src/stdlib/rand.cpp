@@ -13,10 +13,6 @@
 
 namespace LIBC_NAMESPACE {
 
-// Silence warnings on targets with slow atomics.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Watomic-alignment"
-
 // An implementation of the xorshift64star pseudo random number generator. This
 // is a good general purpose generator for most non-cryptographics applications.
 LLVM_LIBC_FUNCTION(int, rand, (void)) {
@@ -32,7 +28,5 @@ LLVM_LIBC_FUNCTION(int, rand, (void)) {
     sleep_briefly();
   }
 }
-
-#pragma GCC diagnostic pop
 
 } // namespace LIBC_NAMESPACE

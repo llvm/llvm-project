@@ -67,6 +67,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = ~0U;
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = ~0U;
 
+  // Enable ganging up loads and stores in the memcpy DAG lowering.
+  MaxGluedStoresPerMemcpy = 16;
+
   // Lower floating point store/load to integer store/load to reduce the number
   // of patterns in tablegen.
   setOperationAction(ISD::LOAD, MVT::f32, Promote);
@@ -1158,7 +1161,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
   Align MaxAlign = Align(1);
   uint64_t ExplicitArgOffset = 0;
-  const DataLayout &DL = Fn.getParent()->getDataLayout();
+  const DataLayout &DL = Fn.getDataLayout();
 
   unsigned InIndex = 0;
 
@@ -6015,7 +6018,7 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
     if (ValSize == 32 || ValSize == 64)
       return AtomicExpansionKind::None;

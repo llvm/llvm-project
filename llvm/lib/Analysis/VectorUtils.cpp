@@ -1095,7 +1095,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
     const DenseMap<Value*, const SCEV*> &Strides) {
-  auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
+  auto &DL = TheLoop->getHeader()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
   // "program order" for the interleaved access analysis, we have to visit the
