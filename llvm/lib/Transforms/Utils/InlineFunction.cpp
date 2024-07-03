@@ -2631,8 +2631,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
       !IFI.StaticAllocas.empty()) {
     IRBuilder<> builder(&*FirstNewBlock, FirstNewBlock->begin());
-    for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
-      AllocaInst *AI = IFI.StaticAllocas[ai];
+    for (AllocaInst *AI : IFI.StaticAllocas) {
       // Don't mark swifterror allocas. They can't have bitcast uses.
       if (AI->isSwiftError())
         continue;
@@ -2969,8 +2968,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // Loop over all of the return instructions adding entries to the PHI node
     // as appropriate.
     if (PHI) {
-      for (unsigned i = 0, e = Returns.size(); i != e; ++i) {
-        ReturnInst *RI = Returns[i];
+      for (ReturnInst *RI : Returns) {
         assert(RI->getReturnValue()->getType() == PHI->getType() &&
                "Ret value not consistent in function!");
         PHI->addIncoming(RI->getReturnValue(), RI->getParent());
@@ -2979,9 +2977,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add a branch to the merge points and remove return instructions.
     DebugLoc Loc;
-    for (unsigned i = 0, e = Returns.size(); i != e; ++i) {
-      ReturnInst *RI = Returns[i];
-      BranchInst* BI = BranchInst::Create(AfterCallBB, RI->getIterator());
+    for (ReturnInst *RI : Returns) {
+      BranchInst *BI = BranchInst::Create(AfterCallBB, RI->getIterator());
       Loc = RI->getDebugLoc();
       BI->setDebugLoc(Loc);
       RI->eraseFromParent();

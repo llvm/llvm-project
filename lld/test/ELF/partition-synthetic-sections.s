@@ -74,10 +74,10 @@
 
 // CHECK: Dynamic section
 // CHECK-NEXT: Tag
-// CHECK-NEXT: 0x0000000000000001 (NEEDED)             Shared library: verneed1.so.0
-// PART0-NEXT: 0x000000000000000e (SONAME)             Library soname: main.so
-// PART1-NEXT: 0x0000000000000001 (NEEDED)             Shared library: main.so
-// PART1-NEXT: 0x000000000000000e (SONAME)             Library soname: part1
+// CHECK-NEXT: 0x0000000000000001 (NEEDED)             Shared library: [verneed1.so.0]
+// PART0-NEXT: 0x000000000000000e (SONAME)             Library soname: [main.so]
+// PART1-NEXT: 0x0000000000000001 (NEEDED)             Shared library: [main.so]
+// PART1-NEXT: 0x000000000000000e (SONAME)             Library soname: [part1]
 // CHECK-NEXT: 0x0000000000000007 (RELA)               0x[[RELA_DYN_ADDR]]
 // CHECK-NEXT: 0x0000000000000008 (RELASZ)
 // CHECK-NEXT: 0x0000000000000009 (RELAENT)            24 (bytes)

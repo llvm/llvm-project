@@ -1243,3 +1243,36 @@ namespace Extern {
   static_assert(&ExternNonLiteralVarDecl() == &nl, "");
 #endif
 }
+
+#if __cplusplus >= 201402L
+constexpr int StmtExprEval() {
+  if (({
+    while (0);
+    true;
+  })) {
+    return 2;
+  }
+  return 1;
+}
+static_assert(StmtExprEval() == 2, "");
+
+constexpr int ReturnInStmtExpr() { // both-error {{never produces a constant expression}}
+  return ({
+      return 1; // both-note 2{{this use of statement expressions is not supported in a constant expression}}
+      2;
+      });
+}
+static_assert(ReturnInStmtExpr() == 1, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{in call to}}
+
+#endif
+
+namespace ComparisonAgainstOnePastEnd {
+  int a, b;
+  static_assert(&a + 1 == &b, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
+  static_assert(&a == &b + 1, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&b + 1' that points past the end of a complete object has unspecified value}}
+
+  static_assert(&a + 1 == &b + 1, ""); // both-error {{static assertion failed}}
+};
