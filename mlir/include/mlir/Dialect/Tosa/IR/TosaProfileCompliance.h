@@ -29,11 +29,11 @@ typedef struct {
 } TypeInfo;
 
 enum CheckCondition {
+  invalid,
   // Valid when any of the profile (extension) requirement is meet.
   anyOf,
   // Valid when all of the profile (extension) requirement are meet.
-  allOf,
-  invalid
+  allOf
 };
 
 template <typename T>
@@ -87,7 +87,7 @@ private:
   template <typename T>
   void populateProfileInfoConv(T op);
 
-  // For pad, reshape, slice, tile, and transpose.
+  // For reshape, slice, tile, and transpose.
   template <typename T>
   void populateProfileInfoDataLayout(T op);
 
