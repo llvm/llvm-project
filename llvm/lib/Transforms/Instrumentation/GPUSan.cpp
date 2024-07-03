@@ -799,7 +799,7 @@ bool GPUSanImpl::instrument() {
   }
 
   uint64_t AmbiguousCallsBitWidth =
-      llvm::PowerOf2Ceil(AmbiguousCalls.size() + 1);
+      llvm::Log2_64_Ceil(AmbiguousCalls.size() + 1);
 
   new GlobalVariable(M, Int64Ty, /*isConstant=*/true,
                      GlobalValue::ExternalLinkage,
