@@ -11,6 +11,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
@@ -99,6 +100,16 @@ public:
         // the offset of the stackmap entry will record the instruction after
         // the call, which is where we want to continue after deoptimisation.
         Bldr.SetInsertPoint(I->getNextNode());
+        CallInst &CI = cast<CallInst>(*I);
+        if (!CI.isIndirectCall() &&
+            CI.getCalledFunction()->getName() == YK_NEW_CONTROL_POINT) {
+          assert(isa<IntrinsicInst>(Args.back()) &&
+                 cast<IntrinsicInst>(Args.back())->getIntrinsicID() ==
+                     Intrinsic::frameaddress);
+          // Remove the last live argument which is the frameaddr which we have
+          // no use for and is difficult to remove during tracing.
+          Args.pop_back();
+        }
       }
       Bldr.CreateCall(SMFunc->getFunctionType(), SMFunc,
                       ArrayRef<Value *>(Args));
