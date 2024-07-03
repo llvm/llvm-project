@@ -90,6 +90,7 @@ enum CastKind {
   CastKindTrunc = 2,
   CastKindSIToFP = 3,
   CastKindFPExt = 4,
+  CastKindFPToSI = 5,
 };
 
 // A predicate used in an integer comparison.
@@ -1129,6 +1130,8 @@ private:
       return CastKindFPExt;
     case Instruction::Trunc:
       return CastKindTrunc;
+    case Instruction::FPToSI:
+      return CastKindFPToSI;
     default:
       return nullopt;
     }
