@@ -1538,13 +1538,17 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
     def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
-  let CCValues = 0xE, CompareZeroCCMask = 0xE in
+  let CCValues = 0xE, CompareZeroCCMask = 0xE in {
     def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    def RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
+  }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
-let Predicates = [FeatureMiscellaneousExtensions] in
+let Predicates = [FeatureMiscellaneousExtensions] in {
   def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  def RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
+}
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
