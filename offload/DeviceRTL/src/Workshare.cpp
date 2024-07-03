@@ -519,8 +519,6 @@ void workshare::init(bool IsSPMD) {
 }
 
 extern "C" {
-static volatile int64_t SHARED(ThreadDSTPtrPtr);
-void __init_ThreadDSTPtrPtr() { ThreadDSTPtrPtr = 0; }
 
 // init
 void __kmpc_dispatch_init_4(IdentTy *loc, int32_t tid, int32_t schedule,
