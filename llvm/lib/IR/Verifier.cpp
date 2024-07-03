@@ -6138,10 +6138,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     unsigned VecWidth = VecTy->getElementCount().getKnownMinValue();
     unsigned AccWidth = AccTy->getElementCount().getKnownMinValue();
 
-    Check((VecWidth % AccWidth) == 0, "Invalid vector widths for partial "
-                                      "reduction. The width of the input vector "
-                                      "must be a positive integer multiple of "
-                                      "the width of the accumulator vector.");
+    Check((VecWidth % AccWidth) == 0,
+          "Invalid vector widths for partial "
+          "reduction. The width of the input vector "
+          "must be a positive integer multiple of "
+          "the width of the accumulator vector.");
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {

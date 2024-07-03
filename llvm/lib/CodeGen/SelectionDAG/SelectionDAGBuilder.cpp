@@ -104,11 +104,11 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <optional>
 #include <tuple>
-#include <deque>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -7926,19 +7926,22 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Collect all of the subvectors
     std::deque<SDValue> Subvectors;
     Subvectors.push_back(getValue(I.getOperand(0)));
-    for(unsigned i = 0; i < ScaleFactor; i++) {
+    for (unsigned i = 0; i < ScaleFactor; i++) {
       auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, sdl);
-      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy, {OpNode, SourceIndex}));
+      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy,
+        {OpNode, SourceIndex}));
     }
 
     // Flatten the subvector tree
     while(Subvectors.size() > 1) {
-      Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy, {Subvectors[0], Subvectors[1]}));
+      Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy,
+                                       {Subvectors[0], Subvectors[1]}));
       Subvectors.pop_front();
       Subvectors.pop_front();
     }
     
-    assert(Subvectors.size() == 1 && "There should only be one subvector after tree flattening");
+    assert(Subvectors.size() == 1 &&
+           "There should only be one subvector after tree flattening");
 
     setValue(&I, Subvectors[0]);
     return;
