@@ -2995,6 +2995,11 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
     MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm()); // Input Za Tile
     StartIdx++;
   } else {
+    // Avoids all instructions with mnemonic za.<sz>[Reg, Imm,
+    if (MI.getOperand(0).isReg() && !MI.getOperand(1).isImm()) {
+      MIB.add(MI.getOperand(StartIdx)); // Output ZPR
+      ++StartIdx;
+    }
     MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
   }
   for (unsigned I = StartIdx; I < MI.getNumOperands(); ++I)
