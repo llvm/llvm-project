@@ -178,11 +178,15 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 #endif // _WIN32
 }
 
-// If a file descriptor being monitored by poll is closed by another thread, the
-// result is unspecified. In the case poll does not unblock and return when
-// ActiveFD is closed you can provide another file descriptor via CancelFD that
-// when written to will cause poll to return. Typically CancelFD is the read end
-// of a unidirectional pipe.
+// If a file descriptor being monitored by ::poll is closed by another thread,
+// the result is unspecified. In the case ::poll does not unblock and return,
+// when ActiveFD is closed, you can provide another file descriptor via CancelFD
+// that when written to will cause poll to return. Typically CancelFD is the
+// read end of a unidirectional pipe.
+//
+// Timeout should be -1 to block indefinitly
+//
+// getActiveFD is a callback to handle ActiveFD's of std::atomic<int> and int
 static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
                                  std::function<int()> getActiveFD,
                                  std::optional<int> CancelFD = std::nullopt) {
@@ -203,48 +207,48 @@ static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
 
   // Keep track of how much time has passed in case ::poll or WSAPoll are
   // interupted by a signal and need to be recalled
-  int RemainingTime = Timeout.count();
-  std::chrono::milliseconds ElapsedTime = std::chrono::milliseconds(0);
-  int PollStatus = -1;
-
-  while (PollStatus == -1 && (Timeout.count() == -1 || ElapsedTime < Timeout)) {
-    if (Timeout.count() != -1)
-      RemainingTime -= ElapsedTime.count();
-    auto Start = std::chrono::steady_clock::now();
-
-#ifdef _WIN32
-    PollStatus = WSAPoll(FD, FDCount, RemainingTime);
-#else
-    PollStatus = ::poll(FD, FDCount, RemainingTime);
-#endif
-
-    // If ActiveFD equals -1 or CancelFD has data to be read then the operation
-    // has been canceled by another thread
-    if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
-      return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::operation_canceled));
-#if _WIN32
-    if (PollStatus == SOCKET_ERROR) {
-#else
-    if (PollStatus == -1) {
-#endif
-      std::error_code PollErrCode = getLastSocketErrorCode();
-      // Ignore EINTR (signal occured before any request event) and retry
-      if (PollErrCode != std::errc::interrupted)
-        return llvm::make_error<StringError>(PollErrCode, "poll failed");
+  auto Start = std::chrono::steady_clock::now();
+  auto RemainingTimeout = Timeout;
+  int PollStatus = 0;
+  do {
+    if (PollStatus != 0) {
+      auto TotalElapsedTime =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now() - Start);
+      RemainingTimeout = Timeout - TotalElapsedTime;
     }
-    if (PollStatus == 0)
-      return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::timed_out));
+#ifdef _WIN32
+    PollStatus = WSAPoll(FD, FDCount, RemainingTimeout.count());
+  } while (PollStatus == SOCKET_ERROR &&
+           getLastSocketErrorCode() == std::errc::interrupted);
+#else
+    PollStatus = ::poll(FD, FDCount, RemainingTimeout.count());
+  } while (PollStatus == -1 &&
+           getLastSocketErrorCode() == std::errc::interrupted);
+#endif
 
-    if (FD[0].revents & POLLNVAL)
-      return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::bad_file_descriptor));
+  // If ActiveFD equals -1 or CancelFD has data to be read then the operation
+  // has been canceled by another thread
+  if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
+    return llvm::make_error<StringError>(
+        std::make_error_code(std::errc::operation_canceled));
 
-    auto Stop = std::chrono::steady_clock::now();
-    ElapsedTime +=
-        std::chrono::duration_cast<std::chrono::milliseconds>(Stop - Start);
-  }
+#if _WIN32
+  if (PollStatus == SOCKET_ERROR)
+#else
+  if (PollStatus == -1)
+#endif
+    return llvm::make_error<StringError>(getLastSocketErrorCode(),
+                                         "poll failed");
+
+  if (PollStatus == 0)
+    return llvm::make_error<StringError>(
+        std::make_error_code(std::errc::timed_out));
+
+  if (FD[0].revents & POLLNVAL)
+    return llvm::make_error<StringError>(
+        std::make_error_code(std::errc::bad_file_descriptor));
+
   return llvm::Error::success();
 }
 
