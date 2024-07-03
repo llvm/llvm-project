@@ -19,25 +19,11 @@ function(add_benchmark benchmark_name)
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
+    LOADER_ARGS
+      "--print-resource-usage"
     ${BENCHMARK_UNPARSED_ARGUMENTS}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)
-  set(fq_build_target_name ${fq_target_name}.__build__)
-
-  set(grep_res_usage_cmd grep -A 3 "${benchmark_name}")
-  set(res_usage_cmd cuobjdump -res-usage $<TARGET_FILE:${fq_build_target_name}> | ${grep_res_usage_cmd})
-  add_custom_command(
-    OUTPUT ${fq_target_name}-cmd APPEND
-    COMMAND ${res_usage_cmd}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Reading resource usage for ${benchmark_name}"
-    ${LIBC_HERMETIC_TEST_JOB_POOL}
-  )
-  # add_dependencies(${fq_target_name} ${fq_target_name}_resources)
-  # set_source_files_properties(${fq_target_name}_resources
-  #   PROPERTIES
-  #     SYMBOLIC "TRUE"
-  # )
 
   add_dependencies(gpu-benchmark ${fq_target_name})
 endfunction(add_benchmark)

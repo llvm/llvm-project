@@ -20,7 +20,8 @@
 
 int main(int argc, char **argv, char **envp) {
   if (argc < 2) {
-    printf("USAGE: ./loader [--threads <n>, --blocks <n>] <device_image> "
+    printf("USAGE: ./loader [--threads <n>, --blocks <n>, "
+           "--print-resource-usage] <device_image> "
            "<args>, ...\n");
     return EXIT_SUCCESS;
   }
@@ -61,6 +62,9 @@ int main(int argc, char **argv, char **envp) {
       params.num_blocks_z =
           offset + 1 < argc ? strtoul(argv[offset + 1], &ptr, 10) : 1;
       offset++;
+      continue;
+    } else if (argv[offset] == std::string("--print-resource-usage")) {
+      params.print_resource_usage = true;
       continue;
     } else {
       file = fopen(argv[offset], "r");

@@ -28,6 +28,7 @@ struct LaunchParameters {
   uint32_t num_blocks_x;
   uint32_t num_blocks_y;
   uint32_t num_blocks_z;
+  bool print_resource_usage;
 };
 
 /// The arguments to the '_begin' kernel.
