@@ -25,7 +25,11 @@ set(assets
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")
-set(resource_dir "${CMAKE_BINARY_DIR}/share/clang-doc")
+if(MSVC)
+  set(resource_dir "${CMAKE_BINARY_DIR}/$<CONFIG>/share/clang-doc")
+else()
+  set(resource_dir "${CMAKE_BINARY_DIR}/share/clang-doc")
+endif()
 set(out_files)
 
 function(copy_files_to_dst src_dir dst_dir file)
