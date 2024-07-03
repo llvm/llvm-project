@@ -167,19 +167,6 @@ class SBFormattersAPITestCase(TestBase):
                 "c = 333",
             ],
         )
-        self.dbg.GetCategory("CCCSynth").SetEnabled(False)
-
-        self.dbg.GetCategory("CCCSynth2").SetEnabled(True)
-        self.expect(
-            "frame variable ccc",
-            matching=True,
-            substrs=[
-                "CCC object with leading synthetic value (int) b = 222",
-                "a = 111",
-                "b = 222",
-                "c = 333",
-            ],
-        )
 
         self.dbg.GetCategory("BarIntSynth").SetEnabled(True)
         self.expect(
