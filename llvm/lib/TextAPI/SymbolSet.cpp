@@ -30,19 +30,27 @@ Symbol *SymbolSet::addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
 
 const Symbol *SymbolSet::findSymbol(EncodeKind Kind, StringRef Name,
                                     ObjCIFSymbolKind ObjCIF) const {
-  if (auto result = Symbols.lookup({Kind, Name}))
-    return result;
+  auto Iter = Symbols.find({Kind, Name});
+  if (Iter != Symbols.end())
+    return Iter->second;
   if ((ObjCIF == ObjCIFSymbolKind::None) || (ObjCIF > ObjCIFSymbolKind::EHType))
     return nullptr;
   assert(ObjCIF <= ObjCIFSymbolKind::EHType &&
          "expected single ObjCIFSymbolKind enum value");
   // Non-complete ObjC Interfaces are represented as global symbols.
-  if (ObjCIF == ObjCIFSymbolKind::Class)
-    return Symbols.lookup(
+  if (ObjCIF == ObjCIFSymbolKind::Class) {
+    auto Iter = Symbols.find(
         {EncodeKind::GlobalSymbol, (ObjC2ClassNamePrefix + Name).str()});
-  if (ObjCIF == ObjCIFSymbolKind::MetaClass)
-    return Symbols.lookup(
+    return Iter != Symbols.end() ? Iter->second : nullptr;
+  }
+
+  if (ObjCIF == ObjCIFSymbolKind::MetaClass) {
+    auto Iter = Symbols.find(
         {EncodeKind::GlobalSymbol, (ObjC2MetaClassNamePrefix + Name).str()});
-  return Symbols.lookup(
+    return Iter != Symbols.end() ? Iter->second : nullptr;
+  }
+
+  Iter = Symbols.find(
       {EncodeKind::GlobalSymbol, (ObjC2EHTypePrefix + Name).str()});
+  return Iter != Symbols.end() ? Iter->second : nullptr;
 }

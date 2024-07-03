@@ -1896,8 +1896,6 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                                        symbol.isThreadLocalValue()));
   };
 
-  std::vector<const llvm::MachO::Symbol *> normalSymbols;
-  normalSymbols.reserve(interface.symbolsCount());
   for (const auto *symbol : interface.symbols()) {
     if (!isArchABICompatible(symbol->getArchitectures(), config->arch()))
       continue;
@@ -1909,15 +1907,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     case EncodeKind::ObjectiveCClass:
     case EncodeKind::ObjectiveCClassEHType:
     case EncodeKind::ObjectiveCInstanceVariable:
-      normalSymbols.push_back(symbol);
+      break;
+    default:
+      continue;
     }
-  }
-  // interface.symbols() order is non-deterministic.
-  llvm::sort(normalSymbols,
-             [](auto *l, auto *r) { return l->getName() < r->getName(); });
 
-  // TODO(compnerd) filter out symbols based on the target platform
-  for (const auto *symbol : normalSymbols) {
     switch (symbol->getKind()) {
     case EncodeKind::GlobalSymbol:
       addSymbol(*symbol, symbol->getName());

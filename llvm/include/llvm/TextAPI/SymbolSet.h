@@ -18,6 +18,7 @@
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/Symbol.h"
+#include <map>
 #include <stddef.h>
 
 namespace llvm {
@@ -28,6 +29,18 @@ struct SymbolsMapKey {
 
   SymbolsMapKey(MachO::EncodeKind Kind, StringRef Name)
       : Kind(Kind), Name(Name) {}
+
+  bool operator==(const SymbolsMapKey &Other) const {
+    return Kind == Other.Kind && Name == Other.Name;
+  }
+
+  bool operator!=(const SymbolsMapKey &Other) const {
+    return operator==(Other);
+  }
+
+  bool operator<(const SymbolsMapKey &Other) const {
+    return Kind < Other.Kind || Name < Other.Name;
+  }
 };
 template <> struct DenseMapInfo<SymbolsMapKey> {
   static inline SymbolsMapKey getEmptyKey() {
@@ -84,7 +97,7 @@ private:
     return StringRef(reinterpret_cast<const char *>(Ptr), String.size());
   }
 
-  using SymbolsMapType = llvm::DenseMap<SymbolsMapKey, Symbol *>;
+  using SymbolsMapType = std::map<SymbolsMapKey, Symbol *>;
   SymbolsMapType Symbols;
 
   Symbol *addGlobalImpl(EncodeKind, StringRef Name, SymbolFlags Flags);
