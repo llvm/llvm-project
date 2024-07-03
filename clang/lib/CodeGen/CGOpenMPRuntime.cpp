@@ -8033,8 +8033,8 @@ private:
           if (VD && E && VD->getType()->isAnyPointerType() &&
               isa<DeclRefExpr>(E))
             HasMapBasePtr = true;
-          if (VD && E && VD->getType()->isAnyPointerType() &&
-              (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
+          if (VD && VD->getType()->isAnyPointerType() &&
+              isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(E))
             HasMapArraySec = true;
         }
       }
