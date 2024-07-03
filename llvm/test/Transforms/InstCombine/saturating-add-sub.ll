@@ -1064,8 +1064,7 @@ define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat1(<2 x i8> %a) {
 
 define <3 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat1_poison(<3 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat1_poison(
-; CHECK-NEXT:    [[B:%.*]] = add nuw <3 x i8> [[A:%.*]], <i8 10, i8 10, i8 10>
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.usub.sat.v3i8(<3 x i8> [[B]], <3 x i8> <i8 10, i8 9, i8 poison>)
+; CHECK-NEXT:    [[R:%.*]] = add <3 x i8> [[A:%.*]], <i8 0, i8 1, i8 poison>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
   %b = add nuw <3 x i8> %a, <i8 10, i8 10, i8 10>
