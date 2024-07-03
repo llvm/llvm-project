@@ -1768,7 +1768,8 @@ StmtResult Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
       ConsumeAnyToken();
 
     DeclarationNameInfo DirName;
-    Actions.OpenMP().StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(), Loc);
+    Actions.OpenMP().StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(),
+                                         Loc);
   }
 
   Actions.OpenMP().ActOnOpenMPAssumesDirective(Loc, DKind, Assumptions,
@@ -1777,8 +1778,8 @@ StmtResult Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
   if (DKind == llvm::omp::Directive::OMPD_assume) {
 
     AssociatedStmt = ParseStatement();
-    AssociatedStmt =
-        Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(AssociatedStmt.get());
+    AssociatedStmt = Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(
+        AssociatedStmt.get());
 
     // End the scope for assume.
     ParseOpenMPEndAssumesDirective(Loc);
