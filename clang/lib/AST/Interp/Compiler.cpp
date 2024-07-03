@@ -4039,7 +4039,7 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
-  for (auto *D : DS->decls()) {
+  for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl,
             FunctionDecl>(D))
       continue;
