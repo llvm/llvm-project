@@ -8639,8 +8639,13 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   const clang::EnumDecl *enum_decl = enutype->getDecl();
   assert(enum_decl);
   lldb::offset_t offset = byte_offset;
-  const uint64_t enum_svalue = data.GetMaxS64Bitfield(
-      &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+  bool qual_type_is_signed = qual_type->isSignedIntegerOrEnumerationType();
+  const uint64_t enum_svalue =
+      qual_type_is_signed
+          ? data.GetMaxS64Bitfield(&offset, byte_size, bitfield_bit_size,
+                                   bitfield_bit_offset)
+          : data.GetMaxU64Bitfield(&offset, byte_size, bitfield_bit_size,
+                                   bitfield_bit_offset);
   bool can_be_bitfield = true;
   uint64_t covered_bits = 0;
   int num_enumerators = 0;
@@ -8652,8 +8657,11 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   // enumerators. Also 0 doesn't make sense when the enumerators are used as
   // flags.
   for (auto *enumerator : enum_decl->enumerators()) {
-    uint64_t val = enumerator->getInitVal().getSExtValue();
-    val = llvm::SignExtend64(val, 8*byte_size);
+    llvm::APSInt init_val = enumerator->getInitVal();
+    uint64_t val =
+        qual_type_is_signed ? init_val.getSExtValue() : init_val.getZExtValue();
+    if (qual_type_is_signed)
+      val = llvm::SignExtend64(val, 8 * byte_size);
     if (llvm::popcount(val) != 1 && (val & ~covered_bits) != 0)
       can_be_bitfield = false;
     covered_bits |= val;
@@ -8673,7 +8681,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   // No exact match, but we don't think this is a bitfield. Print the value as
   // decimal.
   if (!can_be_bitfield) {
-    if (qual_type->isSignedIntegerOrEnumerationType())
+    if (qual_type_is_signed)
       s.Printf("%" PRIi64, enum_svalue);
     else
       s.Printf("%" PRIu64, enum_uvalue);
