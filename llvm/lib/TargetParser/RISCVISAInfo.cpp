@@ -561,7 +561,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
   char Baseline = Arch.front();
   // Skip the baseline.
-  StringRef Exts = Arch.drop_front();
+  Arch = Arch.drop_front();
 
   unsigned Major, Minor, ConsumeLength;
 
@@ -574,7 +574,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   case 'i':
     // Baseline is `i` or `e`
     if (auto E = getExtensionVersion(
-            StringRef(&Baseline, 1), Exts, Major, Minor, ConsumeLength,
+            StringRef(&Baseline, 1), Arch, Major, Minor, ConsumeLength,
             EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
       return std::move(E);
 
@@ -582,7 +582,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     break;
   case 'g':
     // g expands to extensions in RISCVGImplications.
-    if (Arch.size() > 1 && isDigit(Arch[1]))
+    if (!Arch.empty() && isDigit(Arch.front()))
       return getError("version not supported for 'g'");
 
     // Versions for g are disallowed, and this was checked for previously.
@@ -602,18 +602,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   // Consume the base ISA version number and any '_' between rvxxx and the
   // first extension
-  Exts = Exts.drop_front(ConsumeLength);
+  Arch = Arch.drop_front(ConsumeLength);
 
-  while (!Exts.empty()) {
-    if (Exts.front() == '_') {
-      if (Exts.size() == 1 || Exts[1] == '_')
+  while (!Arch.empty()) {
+    if (Arch.front() == '_') {
+      if (Arch.size() == 1 || Arch[1] == '_')
         return getError("extension name missing after separator '_'");
-      Exts = Exts.drop_front();
+      Arch = Arch.drop_front();
     }
 
-    size_t Idx = Exts.find('_');
-    StringRef Ext = Exts.slice(0, Idx);
-    Exts = Exts.slice(Idx, StringRef::npos);
+    size_t Idx = Arch.find('_');
+    StringRef Ext = Arch.slice(0, Idx);
+    Arch = Arch.slice(Idx, StringRef::npos);
 
     do {
       StringRef Name, Vers, Desc;
