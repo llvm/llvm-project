@@ -469,6 +469,8 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def LLILF : UnaryRIL<"llilf", 0xC0F, bitconvert, GR64, imm64lf32>;
   def LLIHF : UnaryRIL<"llihf", 0xC0E, bitconvert, GR64, imm64hf32>;
 }
+def LLGFI : InstAlias<"llgfi\t$R1, $RI1",(LLILF GR64:$R1, imm64lf32:$RI1)>;
+def LLGHI : InstAlias<"llghi\t$R1, $RI1",(LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
@@ -978,6 +980,7 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def IILF : UnaryRIL<"iilf", 0xC09, bitconvert, GR32, uimm32>;
   def IIHF : UnaryRIL<"iihf", 0xC08, bitconvert, GRH32, uimm32>;
 }
+def LFI : InstAlias<"lfi\t$R1, $RI1",(IILF GR32:$R1, uimm32:$RI1)>;
 def IILF64 : BinaryAliasRIL<insertlf, GR64, imm64lf32>;
 def IIHF64 : BinaryAliasRIL<inserthf, GR64, imm64hf32>;
 
@@ -2335,6 +2338,8 @@ defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
 
 def JCT   : MnemonicAlias<"jct", "brct">;
 def JCTG  : MnemonicAlias<"jctg", "brctg">;
+def JC    : MnemonicAlias<"jc", "brc">;
+def JCTH  : MnemonicAlias<"jcth", "brcth">;
 def JAS   : MnemonicAlias<"jas", "bras">;
 def JASL  : MnemonicAlias<"jasl", "brasl">;
 def JXH   : MnemonicAlias<"jxh", "brxh">;

@@ -1443,6 +1443,8 @@
 
 #CHECK: brc	2, foo                  # encoding: [0xa7,0x24,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: brc	2, foo                  # encoding: [0xa7,0x24,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jh	foo                     # encoding: [0xa7,0x24,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jp	foo                     # encoding: [0xa7,0x24,A,A]
@@ -1452,6 +1454,7 @@
 #CHECK: jp	foo                     # encoding: [0xa7,0x24,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	2, foo
+	jc	2, foo
 	jh	foo
 	jp	foo
 	brh	foo
@@ -8695,10 +8698,12 @@
 #CHECK: iilf	%r0, 0                  # encoding: [0xc0,0x09,0x00,0x00,0x00,0x00]
 #CHECK: iilf	%r0, 4294967295         # encoding: [0xc0,0x09,0xff,0xff,0xff,0xff]
 #CHECK: iilf	%r15, 0                 # encoding: [0xc0,0xf9,0x00,0x00,0x00,0x00]
+#CHECK: iilf	%r15, 0                 # encoding: [0xc0,0xf9,0x00,0x00,0x00,0x00]
 
 	iilf	%r0, 0
 	iilf	%r0, 0xffffffff
 	iilf	%r15, 0
+	lfi	%r15, 0
 
 #CHECK: iilh	%r0, 0                  # encoding: [0xa5,0x02,0x00,0x00]
 #CHECK: iilh	%r0, 32768              # encoding: [0xa5,0x02,0x80,0x00]
@@ -10308,10 +10313,12 @@
 #CHECK: llihf	%r0, 0                  # encoding: [0xc0,0x0e,0x00,0x00,0x00,0x00]
 #CHECK: llihf	%r0, 4294967295         # encoding: [0xc0,0x0e,0xff,0xff,0xff,0xff]
 #CHECK: llihf	%r15, 0                 # encoding: [0xc0,0xfe,0x00,0x00,0x00,0x00]
+#CHECK: llihf	%r15, 0                 # encoding: [0xc0,0xfe,0x00,0x00,0x00,0x00]
 
 	llihf	%r0, 0
 	llihf	%r0, 0xffffffff
 	llihf	%r15, 0
+	llghi	%r15, 0
 
 #CHECK: llihh	%r0, 0                  # encoding: [0xa5,0x0c,0x00,0x00]
 #CHECK: llihh	%r0, 32768              # encoding: [0xa5,0x0c,0x80,0x00]
@@ -10336,10 +10343,12 @@
 #CHECK: llilf	%r0, 0                  # encoding: [0xc0,0x0f,0x00,0x00,0x00,0x00]
 #CHECK: llilf	%r0, 4294967295         # encoding: [0xc0,0x0f,0xff,0xff,0xff,0xff]
 #CHECK: llilf	%r15, 0                 # encoding: [0xc0,0xff,0x00,0x00,0x00,0x00]
+#CHECK: llilf	%r15, 0                 # encoding: [0xc0,0xff,0x00,0x00,0x00,0x00]
 
 	llilf	%r0, 0
 	llilf	%r0, 0xffffffff
 	llilf	%r15, 0
+	llgfi	%r15, 0
 
 #CHECK: llilh	%r0, 0                  # encoding: [0xa5,0x0e,0x00,0x00]
 #CHECK: llilh	%r0, 32768              # encoding: [0xa5,0x0e,0x80,0x00]
