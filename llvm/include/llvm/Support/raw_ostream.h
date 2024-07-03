@@ -763,6 +763,56 @@ public:
   static bool classof(const raw_ostream *OS);
 };
 
+/// A raw_ostream that writes efficiently to a SmallVector or SmallString.
+/// This class is a similar to raw_svector_ostream, except that the underlying
+/// size of the underlying buffer is *not* correct. Instead, the entire
+/// capacity of the SmallVector will be used as buffer, so that the fastp path
+/// of raw_ostream::write is hit most of the time. The size of the SmallVector
+/// will be corrected on destruction.
+class buffered_svector_ostream : public raw_pwrite_stream {
+  SmallVectorImpl<char> &OS;
+  size_t FlushedSize;
+
+  /// See raw_ostream::write_impl.
+  void write_impl(const char *Ptr, size_t Size) override final;
+
+  void pwrite_impl(const char *Ptr, size_t Size,
+                   uint64_t Offset) override final;
+
+  /// Return the current position within the stream.
+  uint64_t current_pos() const override final { return FlushedSize; }
+
+  void updateBuffer() {
+    assert(FlushedSize < OS.size() && "must have non-empty buffer space");
+    SetBuffer(OS.data() + FlushedSize, OS.size() - FlushedSize);
+  }
+
+public:
+  /// Construct a new raw_svector_ostream.
+  ///
+  /// \param O The vector to write to; this should generally have at least 128
+  /// bytes free to avoid any extraneous memory overhead.
+  explicit buffered_svector_ostream(SmallVectorImpl<char> &O)
+      : OS(O), FlushedSize(OS.size()) {
+    if (OS.size() == OS.capacity())
+      OS.reserve(OS.size() < 128 ? 128 : OS.size() + 1);
+    OS.resize_for_overwrite(OS.capacity());
+    updateBuffer();
+  }
+
+  ~buffered_svector_ostream() override { OS.truncate(tell()); }
+
+  /// Return a StringRef for the vector contents.
+  StringRef str() const { return StringRef(OS.data(), tell()); }
+
+  void truncate(size_t Size) {
+    flush();
+    assert(Size <= FlushedSize && "truncate larger than vector size");
+    FlushedSize = Size;
+    updateBuffer();
+  }
+};
+
 /// A raw_ostream that discards all output.
 class raw_null_ostream : public raw_pwrite_stream {
   /// See raw_ostream::write_impl.

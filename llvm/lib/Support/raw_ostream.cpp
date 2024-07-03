@@ -77,8 +77,9 @@ constexpr raw_ostream::Colors raw_ostream::RESET;
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
   // in their destructors.
-  assert(OutBufCur == OutBufStart &&
-         "raw_ostream destructor called with non-empty buffer!");
+  assert(
+      (BufferMode == BufferKind::ExternalBuffer || OutBufCur == OutBufStart) &&
+      "raw_ostream destructor called with non-empty buffer!");
 
   if (BufferMode == BufferKind::InternalBuffer)
     delete [] OutBufStart;
@@ -952,6 +953,36 @@ void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
 
 bool raw_svector_ostream::classof(const raw_ostream *OS) {
   return OS->get_kind() == OStreamKind::OK_SVecStream;
+}
+
+//===----------------------------------------------------------------------===//
+//  buffered_svector_ostream
+//===----------------------------------------------------------------------===//
+
+void buffered_svector_ostream::write_impl(const char *Ptr, size_t Size) {
+  // write_impl is either calls with the start of the buffer, or a user buffer.
+  // In the first case, we just extend the size of the flushed part, resize
+  // the vector, and update the buffer pointers. Otherwise, use SmallVector's
+  // append() to copy the user data.
+  if (Ptr != OS.data() + FlushedSize) {
+    OS.truncate(FlushedSize);
+    OS.append(Ptr, Ptr + Size);
+  } else {
+    assert(FlushedSize + Size <= OS.size() && "buffer overrun");
+  }
+  FlushedSize += Size;
+  // We must always have spare space in the buffer.
+  if (FlushedSize == OS.size()) {
+    OS.reserve(OS.size() + 1); // SmallVector grows exponentially
+    OS.resize_for_overwrite(OS.capacity());
+  }
+  updateBuffer();
+}
+
+void buffered_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
+                                           uint64_t Offset) {
+  flush();
+  memcpy(OS.data() + Offset, Ptr, Size);
 }
 
 //===----------------------------------------------------------------------===//
