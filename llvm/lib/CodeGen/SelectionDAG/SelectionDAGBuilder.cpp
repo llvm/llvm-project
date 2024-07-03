@@ -7929,17 +7929,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     for (unsigned i = 0; i < ScaleFactor; i++) {
       auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, sdl);
       Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy,
-        {OpNode, SourceIndex}));
+                                       {OpNode, SourceIndex}));
     }
 
     // Flatten the subvector tree
-    while(Subvectors.size() > 1) {
+    while (Subvectors.size() > 1) {
       Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy,
                                        {Subvectors[0], Subvectors[1]}));
       Subvectors.pop_front();
       Subvectors.pop_front();
     }
-    
+
     assert(Subvectors.size() == 1 &&
            "There should only be one subvector after tree flattening");
 
