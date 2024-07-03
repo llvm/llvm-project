@@ -20,7 +20,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __ignore_type {
-  _LIBCPP_HIDE_FROM_ABI constexpr const __ignore_type& operator=(const auto&) const noexcept { return *this; }
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI constexpr const __ignore_type& operator=(const _Tp&) const noexcept { return *this; }
 };
 
 inline constexpr __ignore_type ignore;
