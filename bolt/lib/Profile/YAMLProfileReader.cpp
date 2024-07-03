@@ -85,7 +85,6 @@ bool YAMLProfileReader::hasLocalsWithFileName() const {
 }
 
 bool YAMLProfileReader::parseFunctionProfile(
-    const DenseMap<uint32_t, std::string *> &IdToFunctionName,
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
   BinaryContext &BC = BF.getBinaryContext();
 
@@ -277,8 +276,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (YamlBF.NumBasicBlocks != BF.size())
       ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
 
-    if (opts::InferStaleProfile &&
-        inferStaleProfile(IdToFunctionName, BF, YamlBF))
+    if (opts::InferStaleProfile && inferStaleProfile(BF, YamlBF))
       ProfileMatched = true;
   }
   if (ProfileMatched)
@@ -482,7 +480,6 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   NormalizeByCalls = usesEvent("branches");
 
   // Map profiled function ids to names.
-  DenseMap<uint32_t, std::string *> IdToFunctionName;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     IdToFunctionName[YamlBF.Id] = &YamlBF.Name;
 
@@ -494,7 +491,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       continue;
     }
     if (BinaryFunction *BF = YamlProfileToFunction[YamlBF.Id])
-      parseFunctionProfile(IdToFunctionName, *BF, YamlBF);
+      parseFunctionProfile(*BF, YamlBF);
     else
       ++NumUnused;
   }

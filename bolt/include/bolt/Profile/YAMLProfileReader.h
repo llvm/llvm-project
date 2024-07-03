@@ -56,6 +56,10 @@ private:
   /// is attributed.
   FunctionSet ProfiledFunctions;
 
+  /// Maps profiled function id to name, for function matching with calls as
+  /// anchors.
+  DenseMap<uint32_t, std::string *> IdToFunctionName;
+
   /// For LTO symbol resolution.
   /// Map a common LTO prefix to a list of YAML profiles matching the prefix.
   StringMap<std::vector<yaml::bolt::BinaryFunctionProfile *>> LTOCommonNameMap;
@@ -70,16 +74,12 @@ private:
   std::vector<BinaryFunction *> ProfileBFs;
 
   /// Populate \p Function profile with the one supplied in YAML format.
-  bool parseFunctionProfile(
-      const DenseMap<uint32_t, std::string *> &IdToFunctionName,
-      BinaryFunction &Function,
-      const yaml::bolt::BinaryFunctionProfile &YamlBF);
+  bool parseFunctionProfile(BinaryFunction &Function,
+                            const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
   /// Infer function profile from stale data (collected on older binaries).
-  bool
-  inferStaleProfile(const DenseMap<uint32_t, std::string *> &IdToFunctionName,
-                    BinaryFunction &Function,
-                    const yaml::bolt::BinaryFunctionProfile &YamlBF);
+  bool inferStaleProfile(BinaryFunction &Function,
+                         const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
   /// Initialize maps for profile matching.
   void buildNameMaps(BinaryContext &BC);

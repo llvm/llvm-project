@@ -803,7 +803,6 @@ void assignProfile(BinaryFunction &BF,
 }
 
 bool YAMLProfileReader::inferStaleProfile(
-    const DenseMap<uint32_t, std::string *> &IdToFunctionName,
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
 
   NamedRegionTimer T("inferStaleProfile", "stale profile inference", "rewrite",

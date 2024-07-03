@@ -9,7 +9,6 @@
 #include "AttrOrTypeFormatGen.h"
 #include "FormatGen.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"

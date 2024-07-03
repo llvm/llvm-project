@@ -80,6 +80,7 @@ add_llvm_target(RISCVCodeGen
   Target
   TargetParser
   TransformUtils
+  Vectorize
 
   ADD_TO_COMPONENT
   RISCV
