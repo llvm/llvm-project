@@ -8029,15 +8029,10 @@ private:
       bool HasMapArraySec = false;
       if (VD && VD->getType()->isAnyPointerType()) {
         for (const auto &M : Data.second) {
-        for (const MapInfo &L : M) {
-          const Expr *E = L.VarRef;
-          if (VD && VD->getType()->isAnyPointerType() &&
-              isa_and_present<DeclRefExpr>(E))
-            HasMapBasePtr = true;
-          if (VD && VD->getType()->isAnyPointerType() &&
-              isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(E))
-            HasMapArraySec = true;
-        }
+  HasMapBasePtr = any_of(M, [](const MapInfo &L) { return isa_and_present<DeclRefExpr>(L.VarRef); });
+    HasMapArraySec = any_of(M, [](const MapInfo &L) { return isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(L.VarRef); });
+  if (HasMapBasePtr && HasMapArraySec)
+    break;
       }
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
