@@ -1066,15 +1066,17 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     Register ScopeReg = Call->Arguments[0];
     if (!MRI->getRegClassOrNull(ScopeReg))
       MRI->setRegClass(ScopeReg, &SPIRV::IDRegClass);
-    Register ValueReg = Call->Arguments[2];
-    if (!MRI->getRegClassOrNull(ValueReg))
-      MRI->setRegClass(ValueReg, &SPIRV::IDRegClass);
-    MIRBuilder.buildInstr(GroupBuiltin->Opcode)
-        .addDef(Call->ReturnRegister)
-        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
-        .addUse(ScopeReg)
-        .addImm(GrpOp)
-        .addUse(ValueReg);
+    auto MIB = MIRBuilder.buildInstr(GroupBuiltin->Opcode)
+                   .addDef(Call->ReturnRegister)
+                   .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+                   .addUse(ScopeReg)
+                   .addImm(GrpOp);
+    for (unsigned i = 2; i < Call->Arguments.size(); ++i) {
+      Register ArgReg = Call->Arguments[i];
+      if (!MRI->getRegClassOrNull(ArgReg))
+        MRI->setRegClass(ArgReg, &SPIRV::IDRegClass);
+      MIB.addUse(ArgReg);
+    }
     return true;
   }
 
