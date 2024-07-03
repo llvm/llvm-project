@@ -5,8 +5,8 @@
 .. contents::
    :local:
 
-The RISC-V target readily supports the 1.0 version of the `RISC-V Vector Extension (RVV) <https://github.com/riscv/riscv-v-spec/blob/v1.0/v-spec.adoc>`_, but requires some tricks to handle its unique design.
-This guide gives an overview of how RVV is modelled in LLVM IR and how the backend generates code for it.
+The RISC-V target supports the 1.0 version of the `RISC-V Vector Extension (RVV) <https://github.com/riscv/riscv-v-spec/blob/v1.0/v-spec.adoc>`_.
+This guide gives an overview of how it's modelled in LLVM IR and how the backend generates code for it.
 
 Mapping to LLVM IR types
 ========================
@@ -272,7 +272,7 @@ Register allocation is split between vector and scalar registers, with vector al
 
 .. note::
 
-   Register allocation is split between vectors and scalars so that :ref:`RISCVInsertVSETVLI` can run after vector register allocation, but before scalar register allocation. It needs to be run before scalar register allocation as it may need to create a new virtual register to set the AVL to VLMAX.
+   Register allocation is split so that :ref:`RISCVInsertVSETVLI` can run after vector register allocation, but before scalar register allocation. It needs to be run before scalar register allocation as it may need to create a new virtual register to set the AVL to VLMAX.
 
    Performing ``RISCVInsertVSETVLI`` after vector register allocation imposes fewer constraints on the machine scheduler since it cannot schedule instructions past ``vsetvli``\s, and it allows us to emit further vector pseudos during spilling or constant rematerialization.
 
@@ -300,7 +300,7 @@ After vector registers are allocated, the ``RISCVInsertVSETVLI`` pass will inser
   $v8m2 = PseudoVADD_VV_M2 $v8m2(tied-def 0), $v8m2, $v10m2, $noreg, 5, implicit $vl, implicit $vtype
 
 The physical ``$vl`` and ``$vtype`` registers are implicitly defined by the ``PseudoVSETVLI``, and are implicitly used by the ``PseudoVADD``.
-The VTYPE operand (``209`` in this example) is encoded as per the specification via ``RISCVVType::encodeVTYPE``.
+The ``vtype`` operand (``209`` in this example) is encoded as per the specification via ``RISCVVType::encodeVTYPE``.
 
 ``RISCVInsertVSETVLI`` performs dataflow analysis to emit as few ``vsetvli``\s as possible. It will also try to minimize the number of ``vsetvli``\s that set VL, i.e., it will emit ``vsetvli x0, x0`` if only ``vtype`` needs changed but ``vl`` doesn't.
 
