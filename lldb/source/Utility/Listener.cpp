@@ -30,7 +30,7 @@ Listener::Listener(const char *name)
 Listener::~Listener() {
   Log *log = GetLog(LLDBLog::Object);
 
-  Clear();
+  // Don't call Clear() from here as that can cause races. See #96750.
 
   LLDB_LOGF(log, "%p Listener::%s('%s')", static_cast<void *>(this),
             __FUNCTION__, m_name.c_str());

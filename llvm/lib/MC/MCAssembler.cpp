@@ -15,7 +15,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -187,7 +186,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   MCContext &Ctx = getContext();
   Value = 0;
   WasForced = false;
-  if (!Expr->evaluateAsRelocatable(Target, Layout, &Fixup)) {
+  if (!Expr->evaluateAsRelocatable(Target, this, &Fixup)) {
     Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
   }
@@ -288,7 +287,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
-    if (!FF.getNumValues().evaluateKnownAbsolute(NumValues, *Layout)) {
+    if (!FF.getNumValues().evaluateKnownAbsolute(NumValues, *this)) {
       getContext().reportError(FF.getLoc(),
                                "expected assembly-time absolute expression");
       return 0;
@@ -380,8 +379,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
 
   llvm_unreachable("invalid fragment kind");
 }
-
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {}
 
 // Compute the amount of padding required before the fragment \p F to
 // obey bundling restrictions, where \p FOffset is the fragment's offset in
@@ -547,7 +544,7 @@ uint64_t MCAssembler::getSymbolOffset(const MCSymbol &S) const {
 }
 
 const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
-  assert(Layout);
+  assert(HasLayout);
   if (!Symbol.isVariable())
     return &Symbol;
 
@@ -584,6 +581,7 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 }
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
+  assert(HasLayout);
   // The size is the last fragment's end offset.
   const MCFragment &F = *Sec.curFragList()->Tail;
   return getFragmentOffset(F) + computeFragmentSize(F);
@@ -937,7 +935,7 @@ MCAssembler::handleFixup(MCFragment &F, const MCFixup &Fixup,
   return std::make_tuple(Target, FixedValue, IsResolved);
 }
 
-void MCAssembler::layout(MCAsmLayout &Layout) {
+void MCAssembler::layout() {
   assert(getBackendPtr() && "Expected assembler backend");
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - pre-layout\n--\n";
@@ -968,7 +966,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   }
 
   // Layout until everything fits.
-  this->Layout = &Layout;
+  this->HasLayout = true;
   while (layoutOnce()) {
     if (getContext().hadError())
       return;
@@ -984,7 +982,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       dump(); });
 
   // Finalize the layout, including fragment lowering.
-  finishLayout(Layout);
+  getBackend().finishLayout(*this);
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - final-layout\n--\n";
@@ -1074,14 +1072,12 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 }
 
 void MCAssembler::Finish() {
-  // Create the layout object.
-  MCAsmLayout Layout(*this);
-  layout(Layout);
+  layout();
 
   // Write the object file.
   stats::ObjectBytes += getWriter().writeObject(*this);
 
-  this->Layout = nullptr;
+  HasLayout = false;
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -1150,7 +1146,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   // requires that .uleb128 A-B is foldable where A and B reside in different
   // fragments. This is used by __gcc_except_table.
   bool Abs = getSubsectionsViaSymbols()
-                 ? LF.getValue().evaluateKnownAbsolute(Value, *Layout)
+                 ? LF.getValue().evaluateKnownAbsolute(Value, *this)
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
     bool Relaxed, UseZeroPad;
@@ -1248,7 +1244,7 @@ bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
   MCContext &Context = getContext();
   uint64_t OldSize = DF.getContents().size();
   int64_t AddrDelta;
-  bool Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *Layout);
+  bool Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
   assert(Abs && "We created a line delta with an invalid expression");
   (void)Abs;
   int64_t LineDelta;
@@ -1288,20 +1284,20 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
 
 bool MCAssembler::relaxCVInlineLineTable(MCCVInlineLineTableFragment &F) {
   unsigned OldSize = F.getContents().size();
-  getContext().getCVContext().encodeInlineLineTable(*Layout, F);
+  getContext().getCVContext().encodeInlineLineTable(*this, F);
   return OldSize != F.getContents().size();
 }
 
 bool MCAssembler::relaxCVDefRange(MCCVDefRangeFragment &F) {
   unsigned OldSize = F.getContents().size();
-  getContext().getCVContext().encodeDefRange(*Layout, F);
+  getContext().getCVContext().encodeDefRange(*this, F);
   return OldSize != F.getContents().size();
 }
 
 bool MCAssembler::relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &PF) {
   uint64_t OldSize = PF.getContents().size();
   int64_t AddrDelta;
-  bool Abs = PF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *Layout);
+  bool Abs = PF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
   assert(Abs && "We created a pseudo probe with an invalid expression");
   (void)Abs;
   SmallVectorImpl<char> &Data = PF.getContents();
@@ -1348,11 +1344,6 @@ bool MCAssembler::layoutOnce() {
       if (relaxFragment(Frag))
         Changed = true;
   return Changed;
-}
-
-void MCAssembler::finishLayout(MCAsmLayout &Layout) {
-  assert(getBackendPtr() && "Expected assembler backend");
-  getBackend().finishLayout(*this, Layout);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

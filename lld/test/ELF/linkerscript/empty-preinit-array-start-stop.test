@@ -3,7 +3,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/t.s -o %t.o
 
 ## PR52534: https://bugs.llvm.org/show_bug.cgi?id=52534
-## Check case where .preinit_array is discarded.
+## Check case where .preinit_array would be discarded in the absence of the
+## start/stop symbols.
 ## Link should succeed without causing an out of range relocation error.
 # RUN: ld.lld -T %t/discarded.script %t.o -o %t1 --image-base=0x80000000
 # RUN: llvm-readelf -s %t1 | FileCheck --check-prefixes=CHECK,DISCARDED %s
@@ -15,7 +16,7 @@
 # CHECK:          [[#%x,ADDR:]] 0 NOTYPE  LOCAL  HIDDEN      [[#]] __preinit_array_start
 # CHECK-NEXT:     [[#ADDR]]     0 NOTYPE  LOCAL  HIDDEN      [[#]] __preinit_array_end
 
-# DISCARDED-NEXT: [[#ADDR]]     0 NOTYPE  GLOBAL DEFAULT     [[#]] _start
+# DISCARDED-NEXT: {{0*}}[[#ADDR-14]] 0 NOTYPE  GLOBAL DEFAULT     [[#]] _start
 
 # EMPTY-NOT:      [[#ADDR]]     0 NOTYPE  GLOBAL DEFAULT     [[#]] _start
 # EMPTY:          [[#ADDR]]     0 NOTYPE  GLOBAL DEFAULT     [[#]] ADDR
@@ -26,8 +27,12 @@ _start:
  movq __preinit_array_start@GOTPCREL(%rip),%rax
  movq __preinit_array_end@GOTPCREL(%rip),%rax
 
+.section .rodata,"a"
+.byte 0
+
 #--- discarded.script
 SECTIONS {
+  .rodata : { *(.rodata); }
   .text : { *(.text); }
   .preinit_array : { *(.preinit_array); }
 }

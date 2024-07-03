@@ -52,18 +52,19 @@ enum LangFeatures {
   C11 = (1 << 2),
   C17 = (1 << 3),
   C23 = (1 << 4),
-  CPlusPlus = (1 << 5),
-  CPlusPlus11 = (1 << 6),
-  CPlusPlus14 = (1 << 7),
-  CPlusPlus17 = (1 << 8),
-  CPlusPlus20 = (1 << 9),
-  CPlusPlus23 = (1 << 10),
-  CPlusPlus26 = (1 << 11),
-  Digraphs = (1 << 12),
-  GNUMode = (1 << 13),
-  HexFloat = (1 << 14),
-  OpenCL = (1 << 15),
-  HLSL = (1 << 16)
+  C2y = (1 << 5),
+  CPlusPlus = (1 << 6),
+  CPlusPlus11 = (1 << 7),
+  CPlusPlus14 = (1 << 8),
+  CPlusPlus17 = (1 << 9),
+  CPlusPlus20 = (1 << 10),
+  CPlusPlus23 = (1 << 11),
+  CPlusPlus26 = (1 << 12),
+  Digraphs = (1 << 13),
+  GNUMode = (1 << 14),
+  HexFloat = (1 << 15),
+  OpenCL = (1 << 16),
+  HLSL = (1 << 17)
 };
 
 /// LangStandard - Information about the properties of a particular language
@@ -105,6 +106,9 @@ public:
 
   /// isC23 - Language is a superset of C23.
   bool isC23() const { return Flags & C23; }
+
+  /// isC2y - Language is a superset of C2y.
+  bool isC2y() const { return Flags & C2y; }
 
   /// isCPlusPlus - Language is a C++ variant.
   bool isCPlusPlus() const { return Flags & CPlusPlus; }
