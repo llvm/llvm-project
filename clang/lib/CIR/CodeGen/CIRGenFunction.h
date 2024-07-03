@@ -580,6 +580,22 @@ public:
 
   void buildAggExpr(const clang::Expr *E, AggValueSlot Slot);
 
+  /// Emit the computation of the specified expression of complex type,
+  /// returning the result.
+  mlir::Value buildComplexExpr(const Expr *E);
+
+  void buildComplexExprIntoLValue(const Expr *E, LValue dest, bool isInit);
+
+  void buildStoreOfComplex(mlir::Location Loc, mlir::Value V, LValue dest,
+                           bool isInit);
+
+  Address buildAddrOfRealComponent(mlir::Location loc, Address complex,
+                                   QualType complexType);
+  Address buildAddrOfImagComponent(mlir::Location loc, Address complex,
+                                   QualType complexType);
+
+  LValue buildComplexAssignmentLValue(const BinaryOperator *E);
+
   /// Emits a reference binding to the passed in expression.
   RValue buildReferenceBindingToExpr(const Expr *E);
 

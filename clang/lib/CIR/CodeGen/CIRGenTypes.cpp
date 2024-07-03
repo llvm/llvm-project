@@ -597,7 +597,9 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   case Type::DeducedTemplateSpecialization:
     llvm_unreachable("Unexpected undeduced type!");
   case Type::Complex: {
-    assert(0 && "not implemented");
+    const ComplexType *CT = cast<ComplexType>(Ty);
+    auto ElementTy = ConvertType(CT->getElementType());
+    ResultType = ::mlir::cir::ComplexType::get(Builder.getContext(), ElementTy);
     break;
   }
   case Type::LValueReference:

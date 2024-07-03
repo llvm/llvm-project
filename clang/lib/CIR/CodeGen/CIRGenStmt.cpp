@@ -504,7 +504,9 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
         builder.CIRBaseBuilderTy::createStore(loc, V, *FnRetAlloca);
         break;
       case TEK_Complex:
-        llvm_unreachable("NYI");
+        buildComplexExprIntoLValue(RV,
+                                   makeAddrLValue(ReturnValue, RV->getType()),
+                                   /*isInit*/ true);
         break;
       case TEK_Aggregate:
         buildAggExpr(

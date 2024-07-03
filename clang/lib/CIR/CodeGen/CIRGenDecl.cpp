@@ -734,7 +734,11 @@ void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
     buildScalarInit(init, getLoc(D->getSourceRange()), lvalue);
     return;
   case TEK_Complex: {
-    assert(0 && "not implemented");
+    mlir::Value complex = buildComplexExpr(init);
+    if (capturedByInit)
+      llvm_unreachable("NYI");
+    buildStoreOfComplex(getLoc(init->getExprLoc()), complex, lvalue,
+                        /*init*/ true);
     return;
   }
   case TEK_Aggregate:

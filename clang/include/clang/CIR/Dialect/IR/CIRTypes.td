@@ -197,6 +197,32 @@ def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_LongDouble]>;
 def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//
+// ComplexType
+//===----------------------------------------------------------------------===//
+
+def CIR_ComplexType : CIR_Type<"Complex", "complex",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR complex type";
+  let description = [{
+    CIR type that represents a C complex number. `cir.complex` models the C type
+    `T _Complex`.
+
+    The parameter `elementTy` gives the type of the real and imaginary part of
+    the complex number. `elementTy` must be either a CIR integer type or a CIR
+    floating-point type.
+  }];
+
+  let parameters = (ins "mlir::Type":$elementTy);
+
+  let assemblyFormat = [{
+    `<` $elementTy `>`
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // PointerType
 //===----------------------------------------------------------------------===//
 
@@ -441,6 +467,14 @@ def PrimitiveIntOrFPPtr : Type<
     ]>, "{int,void}*"> {
 }
 
+def ComplexPtr : Type<
+    And<[
+      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::mlir::cir::ComplexType>("
+        "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">,
+    ]>, "!cir.complex*"> {
+}
+
 // Pointer to struct
 def StructPtr : Type<
     And<[
@@ -516,7 +550,7 @@ def CIR_StructType : Type<CPred<"::mlir::isa<::mlir::cir::StructType>($_self)">,
 def CIR_AnyType : AnyTypeOf<[
   CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_BoolType, CIR_ArrayType,
   CIR_VectorType, CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionInfo,
-  CIR_AnyFloat, CIR_FP16, CIR_BFloat16
+  CIR_AnyFloat, CIR_FP16, CIR_BFloat16, CIR_ComplexType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

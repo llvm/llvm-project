@@ -22,6 +22,7 @@ add_clang_library(clangCIR
   CIRGenDeclCXX.cpp
   CIRGenException.cpp
   CIRGenExpr.cpp
+  CIRGenExprComplex.cpp
   CIRGenExprConst.cpp
   CIRGenExprAgg.cpp
   CIRGenExprCXX.cpp

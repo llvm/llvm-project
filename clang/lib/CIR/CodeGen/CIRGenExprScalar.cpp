@@ -654,12 +654,11 @@ public:
   }
 
   mlir::Value VisitUnaryLNot(const UnaryOperator *E);
-  mlir::Value VisitUnaryReal(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
-  }
-  mlir::Value VisitUnaryImag(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
-  }
+  mlir::Value VisitUnaryReal(const UnaryOperator *E) { return VisitReal(E); }
+  mlir::Value VisitUnaryImag(const UnaryOperator *E) { return VisitImag(E); }
+
+  mlir::Value VisitReal(const UnaryOperator *E);
+  mlir::Value VisitImag(const UnaryOperator *E);
 
   mlir::Value VisitUnaryExtension(const UnaryOperator *E) {
     // __extension__ doesn't requred any codegen
@@ -1909,6 +1908,42 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
     return boolVal;
 
   llvm_unreachable("destination type for logical-not unary operator is NYI");
+}
+
+mlir::Value ScalarExprEmitter::VisitReal(const UnaryOperator *E) {
+  // TODO(cir): handle scalar promotion.
+
+  Expr *Op = E->getSubExpr();
+  if (Op->getType()->isAnyComplexType()) {
+    // If it's an l-value, load through the appropriate subobject l-value.
+    // Note that we have to ask E because Op might be an l-value that
+    // this won't work for, e.g. an Obj-C property.
+    if (E->isGLValue())
+      return CGF.buildLoadOfLValue(CGF.buildLValue(E), E->getExprLoc())
+          .getScalarVal();
+    // Otherwise, calculate and project.
+    llvm_unreachable("NYI");
+  }
+
+  return Visit(Op);
+}
+
+mlir::Value ScalarExprEmitter::VisitImag(const UnaryOperator *E) {
+  // TODO(cir): handle scalar promotion.
+
+  Expr *Op = E->getSubExpr();
+  if (Op->getType()->isAnyComplexType()) {
+    // If it's an l-value, load through the appropriate subobject l-value.
+    // Note that we have to ask E because Op might be an l-value that
+    // this won't work for, e.g. an Obj-C property.
+    if (E->isGLValue())
+      return CGF.buildLoadOfLValue(CGF.buildLValue(E), E->getExprLoc())
+          .getScalarVal();
+    // Otherwise, calculate and project.
+    llvm_unreachable("NYI");
+  }
+
+  return Visit(Op);
 }
 
 // Conversion from bool, integral, or floating-point to integral or

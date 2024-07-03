@@ -89,6 +89,35 @@ public:
     return getPointerTo(::mlir::cir::VoidType::get(getContext()), langAS);
   }
 
+  mlir::cir::BoolAttr getCIRBoolAttr(bool state) {
+    return mlir::cir::BoolAttr::get(getContext(), getBoolTy(), state);
+  }
+
+  mlir::TypedAttr getZeroAttr(mlir::Type t) {
+    return mlir::cir::ZeroAttr::get(getContext(), t);
+  }
+
+  mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (mlir::isa<mlir::cir::IntType>(ty))
+      return mlir::cir::IntAttr::get(ty, 0);
+    if (auto fltType = mlir::dyn_cast<mlir::cir::SingleType>(ty))
+      return mlir::cir::FPAttr::getZero(fltType);
+    if (auto fltType = mlir::dyn_cast<mlir::cir::DoubleType>(ty))
+      return mlir::cir::FPAttr::getZero(fltType);
+    if (auto complexType = mlir::dyn_cast<mlir::cir::ComplexType>(ty))
+      return getZeroAttr(complexType);
+    if (auto arrTy = mlir::dyn_cast<mlir::cir::ArrayType>(ty))
+      return getZeroAttr(arrTy);
+    if (auto ptrTy = mlir::dyn_cast<mlir::cir::PointerType>(ty))
+      return getConstPtrAttr(ptrTy, 0);
+    if (auto structTy = mlir::dyn_cast<mlir::cir::StructType>(ty))
+      return getZeroAttr(structTy);
+    if (mlir::isa<mlir::cir::BoolType>(ty)) {
+      return getCIRBoolAttr(false);
+    }
+    llvm_unreachable("Zero initializer for given type is NYI");
+  }
+
   mlir::Value createLoad(mlir::Location loc, mlir::Value ptr,
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr intAttr;

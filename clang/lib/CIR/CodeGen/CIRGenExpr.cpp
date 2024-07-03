@@ -1224,7 +1224,7 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
   }
 
   case TEK_Complex:
-    assert(0 && "not implemented");
+    return buildComplexAssignmentLValue(E);
   case TEK_Aggregate:
     assert(0 && "not implemented");
   }
@@ -1264,6 +1264,7 @@ LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
   if (E->getOpcode() == UO_Extension)
     return buildLValue(E->getSubExpr());
 
+  QualType ExprTy = getContext().getCanonicalType(E->getSubExpr()->getType());
   switch (E->getOpcode()) {
   default:
     llvm_unreachable("Unknown unary operator lvalue!");
@@ -1288,7 +1289,29 @@ LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
   }
   case UO_Real:
   case UO_Imag: {
-    assert(0 && "not implemented");
+    LValue LV = buildLValue(E->getSubExpr());
+    assert(LV.isSimple() && "real/imag on non-ordinary l-value");
+
+    // __real is valid on scalars.  This is a faster way of testing that.
+    // __imag can only produce an rvalue on scalars.
+    if (E->getOpcode() == UO_Real &&
+        !mlir::isa<mlir::cir::ComplexType>(LV.getAddress().getElementType())) {
+      assert(E->getSubExpr()->getType()->isArithmeticType());
+      return LV;
+    }
+
+    QualType T = ExprTy->castAs<clang::ComplexType>()->getElementType();
+
+    auto Loc = getLoc(E->getExprLoc());
+    Address Component =
+        (E->getOpcode() == UO_Real
+             ? buildAddrOfRealComponent(Loc, LV.getAddress(), LV.getType())
+             : buildAddrOfImagComponent(Loc, LV.getAddress(), LV.getType()));
+    // TODO(cir): TBAA info.
+    assert(!MissingFeatures::tbaa());
+    LValue ElemLV = makeAddrLValue(Component, T, LV.getBaseInfo());
+    ElemLV.getQuals().addQualifiers(LV.getQuals());
+    return ElemLV;
   }
   case UO_PreInc:
   case UO_PreDec: {
@@ -1315,7 +1338,7 @@ RValue CIRGenFunction::buildAnyExpr(const Expr *E, AggValueSlot aggSlot,
   case TEK_Scalar:
     return RValue::get(buildScalarExpr(E));
   case TEK_Complex:
-    assert(0 && "not implemented");
+    return RValue::getComplex(buildComplexExpr(E));
   case TEK_Aggregate: {
     if (!ignoreResult && aggSlot.isIgnored())
       aggSlot = CreateAggTemp(E->getType(), getLoc(E->getSourceRange()),

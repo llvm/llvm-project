@@ -92,13 +92,12 @@ public:
     ER.V2.setInt(false);
     return ER;
   }
-  static RValue getComplex(mlir::Value V1, mlir::Value V2) {
-    assert(0 && "not implemented");
-    return RValue{};
-  }
-  static RValue getComplex(const std::pair<mlir::Value, mlir::Value> &C) {
-    assert(0 && "not implemented");
-    return RValue{};
+  static RValue getComplex(mlir::Value V) {
+    RValue ER;
+    ER.V1.setPointer(V);
+    ER.V1.setInt(Complex);
+    ER.V2.setInt(false);
+    return ER;
   }
   // FIXME: Aggregate rvalues need to retain information about whether they are
   // volatile or not. Remove default to find all places that probably get this
