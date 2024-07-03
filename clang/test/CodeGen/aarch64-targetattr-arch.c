@@ -29,14 +29,18 @@ float16_t test_fp16_on_v9(float16_t x, float16_t y)
   return vabdh_f16(x, y);
 }
 
-void test_errors()
+void test_error1()
 {
 #ifdef HAS8
 // expected-error@+2{{always_inline function '__crc32cd' requires target feature 'crc'}}
 #endif
   __crc32cd(1, 1);
+}
+
+void test_error2()
+{
 #if defined(HAS8) || defined(HAS81)
-// expected-error@+2{{'svundef_s8' needs target feature sve}}
+// expected-error@+2{{SVE vector type 'svint8_t' (aka '__SVInt8_t') cannot be used in a target without sve}}
 #endif
   svundef_s8();
 }

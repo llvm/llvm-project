@@ -14,12 +14,10 @@ _Z4testbbbb
 0
 0
 # Num Bitmap Bytes:
-$4
+$2
 # Bitmap Byte Values:
 0x1
-0x2
-0x0
-0x0
+0x4
 
 
 main

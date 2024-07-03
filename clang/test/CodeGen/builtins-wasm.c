@@ -690,6 +690,20 @@ f64x2 nmadd_f64x2(f64x2 a, f64x2 b, f64x2 c) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+f16x8 madd_f16x8(f16x8 a, f16x8 b, f16x8 c) {
+  return __builtin_wasm_relaxed_madd_f16x8(a, b, c);
+  // WEBASSEMBLY: call <8 x half> @llvm.wasm.relaxed.madd.v8f16(
+  // WEBASSEMBLY-SAME: <8 x half> %a, <8 x half> %b, <8 x half> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f16x8 nmadd_f16x8(f16x8 a, f16x8 b, f16x8 c) {
+  return __builtin_wasm_relaxed_nmadd_f16x8(a, b, c);
+  // WEBASSEMBLY: call <8 x half> @llvm.wasm.relaxed.nmadd.v8f16(
+  // WEBASSEMBLY-SAME: <8 x half> %a, <8 x half> %b, <8 x half> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i8x16 laneselect_i8x16(i8x16 a, i8x16 b, i8x16 c) {
   return __builtin_wasm_relaxed_laneselect_i8x16(a, b, c);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.relaxed.laneselect.v16i8(

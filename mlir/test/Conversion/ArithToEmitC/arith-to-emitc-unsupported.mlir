@@ -81,6 +81,30 @@ func.func @arith_cmpf_tensor(%arg0: tensor<5xf32>, %arg1: tensor<5xf32>) -> tens
 
 // -----
 
+func.func @arith_negf_f80(%arg0: f80) -> f80 {
+  // expected-error @+1 {{failed to legalize operation 'arith.negf'}}
+  %n = arith.negf %arg0 : f80
+  return %n: f80
+}
+
+// -----
+
+func.func @arith_negf_tensor(%arg0: tensor<5xf32>) -> tensor<5xf32> {
+  // expected-error @+1 {{failed to legalize operation 'arith.negf'}}
+  %n = arith.negf %arg0 : tensor<5xf32>
+  return %n: tensor<5xf32>
+}
+
+// -----
+
+func.func @arith_negf_vector(%arg0: vector<5xf32>) -> vector<5xf32> {
+  // expected-error @+1 {{failed to legalize operation 'arith.negf'}}
+  %n = arith.negf %arg0 : vector<5xf32>
+  return %n: vector<5xf32>
+}
+
+// -----
+
 func.func @arith_extsi_i1_to_i32(%arg0: i1) {
   // expected-error @+1 {{failed to legalize operation 'arith.extsi'}}
   %idx = arith.extsi %arg0 : i1 to i32

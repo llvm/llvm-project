@@ -30,10 +30,10 @@ define i32 @any_of_reduction_epilog(ptr %src, i64 %N) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP7]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP8]], i32 1, i32 0
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
@@ -61,10 +61,10 @@ define i32 @any_of_reduction_epilog(ptr %src, i64 %N) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = freeze i1 [[TMP16]]
 ; CHECK-NEXT:    [[RDX_SELECT9:%.*]] = select i1 [[TMP17]], i32 1, i32 0
-; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
@@ -129,10 +129,10 @@ define i32 @any_of_reduction_epilog_arg_as_start_value(ptr %src, i64 %N, i32 %st
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP7]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP8]], i32 1, i32 [[START]]
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
@@ -160,10 +160,10 @@ define i32 @any_of_reduction_epilog_arg_as_start_value(ptr %src, i64 %N, i32 %st
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = freeze i1 [[TMP16]]
 ; CHECK-NEXT:    [[RDX_SELECT9:%.*]] = select i1 [[TMP17]], i32 1, i32 [[START]]
-; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
@@ -230,10 +230,10 @@ define i1 @any_of_reduction_i1_epilog(i64 %N, i32 %a) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze i1 [[TMP5]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP6]], i1 false, i1 false
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END6:%.*]] = trunc i64 [[N_VEC]] to i32
@@ -268,10 +268,10 @@ define i1 @any_of_reduction_i1_epilog(i64 %N, i32 %a) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[CMP_N8:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze i1 [[TMP12]]
 ; CHECK-NEXT:    [[RDX_SELECT16:%.*]] = select i1 [[TMP13]], i1 false, i1 false
-; CHECK-NEXT:    [[CMP_N8:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N8]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
@@ -365,10 +365,10 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = freeze i1 [[TMP23]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP47]], i1 false, i1 true
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul i64 [[N_VEC]], 16
@@ -420,10 +420,10 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp eq i64 [[INDEX_NEXT20]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[TMP44]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC8]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP43]])
 ; CHECK-NEXT:    [[TMP45:%.*]] = freeze i1 [[TMP49]]
 ; CHECK-NEXT:    [[RDX_SELECT22:%.*]] = select i1 [[TMP45]], i1 false, i1 true
-; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[CMP_N10]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END9]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], [[ITER_CHECK:%.*]] ]

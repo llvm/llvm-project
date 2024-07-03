@@ -1614,7 +1614,7 @@ LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
                              : CK);
 }
 
-Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
+Module *Decl::getOwningModuleForLinkage() const {
   if (isa<NamespaceDecl>(this))
     // Namespaces never have module linkage.  It is the entities within them
     // that [may] do.
@@ -1637,24 +1637,9 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
 
   case Module::ModuleHeaderUnit:
   case Module::ExplicitGlobalModuleFragment:
-  case Module::ImplicitGlobalModuleFragment: {
-    // External linkage declarations in the global module have no owning module
-    // for linkage purposes. But internal linkage declarations in the global
-    // module fragment of a particular module are owned by that module for
-    // linkage purposes.
-    // FIXME: p1815 removes the need for this distinction -- there are no
-    // internal linkage declarations that need to be referred to from outside
-    // this TU.
-    if (IgnoreLinkage)
-      return nullptr;
-    bool InternalLinkage;
-    if (auto *ND = dyn_cast<NamedDecl>(this))
-      InternalLinkage = !ND->hasExternalFormalLinkage();
-    else
-      InternalLinkage = isInAnonymousNamespace();
-    return InternalLinkage ? M->Kind == Module::ModuleHeaderUnit ? M : M->Parent
-                           : nullptr;
-  }
+  case Module::ImplicitGlobalModuleFragment:
+    // The global module shouldn't change the linkage.
+    return nullptr;
 
   case Module::PrivateModuleFragment:
     // The private module fragment is part of its containing module for linkage
@@ -2390,6 +2375,9 @@ bool VarDecl::hasInit() const {
     if (P->hasUnparsedDefaultArg() || P->hasUninstantiatedDefaultArg())
       return false;
 
+  if (auto *Eval = getEvaluatedStmt())
+    return Eval->Value.isValid();
+
   return !Init.isNull();
 }
 
@@ -2402,10 +2390,8 @@ Expr *VarDecl::getInit() {
 
   auto *Eval = getEvaluatedStmt();
 
-  return cast_if_present<Expr>(
-      Eval->Value.isOffset()
-          ? Eval->Value.get(getASTContext().getExternalSource())
-          : Eval->Value.get(nullptr));
+  return cast<Expr>(Eval->Value.get(
+      Eval->Value.isOffset() ? getASTContext().getExternalSource() : nullptr));
 }
 
 Stmt **VarDecl::getInitAddress() {

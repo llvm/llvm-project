@@ -132,7 +132,7 @@ class TypeAndTypeListTestCase(TestBase):
                         "my_type_is_named has a named type",
                     )
                     self.assertTrue(field.type.IsAggregateType())
-                elif field.name == None:
+                elif field.name is None:
                     self.assertTrue(
                         field.type.IsAnonymousType(), "Nameless type is not anonymous"
                     )

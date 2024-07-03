@@ -4,8 +4,8 @@
 define float @divf32_2(float %a) nounwind {
 ; CHECK-LABEL: divf32_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, #2.00000000
-; CHECK-NEXT:    fdiv s0, s0, s1
+; CHECK-NEXT:    fmov s1, #0.50000000
+; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    ret
   %r = fdiv float %a, 2.0
   ret float %r
@@ -46,8 +46,8 @@ define float @divf32_p75_arcp(float %a) nounwind {
 define half @divf16_2(half %a) nounwind {
 ; CHECK-LABEL: divf16_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov h1, #2.00000000
-; CHECK-NEXT:    fdiv h0, h0, h1
+; CHECK-NEXT:    fmov h1, #0.50000000
+; CHECK-NEXT:    fmul h0, h0, h1
 ; CHECK-NEXT:    ret
   %r = fdiv half %a, 2.0
   ret half %r
@@ -67,9 +67,9 @@ define half @divf16_32768(half %a) nounwind {
 define half @divf16_32768_arcp(half %a) nounwind {
 ; CHECK-LABEL: divf16_32768_arcp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #512 // =0x200
+; CHECK-NEXT:    mov w8, #30720 // =0x7800
 ; CHECK-NEXT:    fmov h1, w8
-; CHECK-NEXT:    fmul h0, h0, h1
+; CHECK-NEXT:    fdiv h0, h0, h1
 ; CHECK-NEXT:    ret
   %r = fdiv arcp half %a, 32768.0
   ret half %r
@@ -78,8 +78,8 @@ define half @divf16_32768_arcp(half %a) nounwind {
 define double @divf64_2(double %a) nounwind {
 ; CHECK-LABEL: divf64_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d1, #2.00000000
-; CHECK-NEXT:    fdiv d0, d0, d1
+; CHECK-NEXT:    fmov d1, #0.50000000
+; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    ret
   %r = fdiv double %a, 2.0
   ret double %r
@@ -88,8 +88,8 @@ define double @divf64_2(double %a) nounwind {
 define <4 x float> @divv4f32_2(<4 x float> %a) nounwind {
 ; CHECK-LABEL: divv4f32_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #64, lsl #24
-; CHECK-NEXT:    fdiv v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    movi v1.4s, #63, lsl #24
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r = fdiv <4 x float> %a, <float 2.0, float 2.0, float 2.0, float 2.0>
   ret <4 x float> %r
@@ -141,9 +141,8 @@ define <4 x float> @divv4f32_24816(<4 x float> %a) nounwind {
 define <vscale x 4 x float> @divnxv4f32_2(<vscale x 4 x float> %a) nounwind {
 ; CHECK-LABEL: divnxv4f32_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov z1.s, #2.00000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
   %r = fdiv <vscale x 4 x float> %a, splat (float 2.0)
   ret <vscale x 4 x float> %r

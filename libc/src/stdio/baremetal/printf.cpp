@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/printf.h"
+#include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
@@ -14,19 +15,12 @@
 
 #include <stdarg.h>
 
-// TODO(https://github.com/llvm/llvm-project/issues/94685) unify baremetal hooks
-
-// This is intended to be provided by the vendor.
-extern "C" size_t __llvm_libc_raw_write(const char *s, size_t size);
-
 namespace LIBC_NAMESPACE {
 
 namespace {
 
 LIBC_INLINE int raw_write_hook(cpp::string_view new_str, void *) {
-  size_t written = __llvm_libc_raw_write(new_str.data(), new_str.size());
-  if (written != new_str.size())
-    return printf_core::FILE_WRITE_ERROR;
+  write_to_stderr(new_str);
   return printf_core::WRITE_OK;
 }
 

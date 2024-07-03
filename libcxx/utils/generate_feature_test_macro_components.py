@@ -859,6 +859,11 @@ feature_test_macros = [
             "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_PMR",
         },
         {
+            "name": "__cpp_lib_modules",
+            "values": {"c++23": 202207},
+            "headers": [],
+        },
+        {
             "name": "__cpp_lib_move_iterator_concept",
             "values": {"c++20": 202207},
             "headers": ["iterator"],
@@ -1246,9 +1251,9 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_three_way_comparison",
-            "values": {"c++20": 201907},
+            "values": {"c++20": 201711},
+            # {"c++20": 201907} # P1614R2 The Mothership has Landed (see P1902R1 Missing feature-test macros 2017-2019)
             "headers": ["compare"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_to_address",

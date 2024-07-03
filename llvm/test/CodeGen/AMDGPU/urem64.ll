@@ -963,7 +963,7 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
 ; GCN-NEXT:    s_add_u32 s0, 0, 0xaaaa0000
-; GCN-NEXT:    v_mov_b32_e32 v0, 0xffffffe8
+; GCN-NEXT:    v_not_b32_e32 v0, 23
 ; GCN-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; GCN-NEXT:    s_addc_u32 s1, 0, 42
 ; GCN-NEXT:    s_add_i32 s1, s1, 0xaaaaa80

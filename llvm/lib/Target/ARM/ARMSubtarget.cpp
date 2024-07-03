@@ -68,9 +68,6 @@ static cl::opt<bool>
 ForceFastISel("arm-force-fast-isel",
                cl::init(false), cl::Hidden);
 
-static cl::opt<bool> EnableSubRegLiveness("arm-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
-
 /// initializeSubtargetDependencies - Initializes using a CPU and feature string
 /// so that we can use initializer lists for subtarget initialization.
 ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -385,8 +382,6 @@ bool ARMSubtarget::enableMachineScheduler() const {
 }
 
 bool ARMSubtarget::enableSubRegLiveness() const {
-  if (EnableSubRegLiveness.getNumOccurrences())
-    return EnableSubRegLiveness;
   // Enable SubRegLiveness for MVE to better optimize s subregs for mqpr regs
   // and q subregs for qqqqpr regs.
   return hasMVEIntegerOps();

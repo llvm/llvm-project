@@ -85,6 +85,7 @@ STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
+STATISTIC(NumCmpIntr, "Number of llvm.[us]cmp intrinsics removed");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumSMinMax,
           "Number of llvm.s{min,max} intrinsics simplified to unsigned");
@@ -366,6 +367,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   { // Scope for SwitchInstProfUpdateWrapper. It must not live during
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
+    unsigned ReachableCaseCount = 0;
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
@@ -402,6 +404,31 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
       // Increment the case iterator since we didn't delete it.
       ++CI;
+      ++ReachableCaseCount;
+    }
+
+    BasicBlock *DefaultDest = SI->getDefaultDest();
+    if (ReachableCaseCount > 1 &&
+        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
+      ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+      // The default dest is unreachable if all cases are covered.
+      if (!CR.isSizeLargerThan(ReachableCaseCount)) {
+        BasicBlock *NewUnreachableBB =
+            BasicBlock::Create(BB->getContext(), "default.unreachable",
+                               BB->getParent(), DefaultDest);
+        new UnreachableInst(BB->getContext(), NewUnreachableBB);
+
+        DefaultDest->removePredecessor(BB);
+        SI->setDefaultDest(NewUnreachableBB);
+
+        if (SuccessorsCount[DefaultDest] == 1)
+          DTU.applyUpdates({{DominatorTree::Delete, BB, DefaultDest}});
+        DTU.applyUpdates({{DominatorTree::Insert, BB, NewUnreachableBB}});
+
+        ++NumDeadCases;
+        Changed = true;
+      }
     }
   }
 
@@ -522,6 +549,35 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   return false;
 }
 
+static bool processCmpIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
+  bool IsSigned = II->getIntrinsicID() == Intrinsic::scmp;
+  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(1),
+                                                    /*UndefAllowed*/ false);
+
+  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, RHS_CR)) {
+    ++NumCmpIntr;
+    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 1));
+    II->eraseFromParent();
+    return true;
+  }
+  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, RHS_CR)) {
+    ++NumCmpIntr;
+    II->replaceAllUsesWith(ConstantInt::getSigned(II->getType(), -1));
+    II->eraseFromParent();
+    return true;
+  }
+  if (LHS_CR.icmp(ICmpInst::ICMP_EQ, RHS_CR)) {
+    ++NumCmpIntr;
+    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 0));
+    II->eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 // See if this min/max intrinsic always picks it's one specific operand.
 // If not, check whether we can canonicalize signed minmax into unsigned version
 static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
@@ -611,6 +667,11 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
 
   if (CB.getIntrinsicID() == Intrinsic::abs) {
     return processAbsIntrinsic(&cast<IntrinsicInst>(CB), LVI);
+  }
+
+  if (CB.getIntrinsicID() == Intrinsic::scmp ||
+      CB.getIntrinsicID() == Intrinsic::ucmp) {
+    return processCmpIntrinsic(&cast<IntrinsicInst>(CB), LVI);
   }
 
   if (auto *MM = dyn_cast<MinMaxIntrinsic>(&CB)) {
@@ -1283,6 +1344,12 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
+#if defined(EXPENSIVE_CHECKS)
+    assert(DT->verify(DominatorTree::VerificationLevel::Full));
+#else
+    assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+#endif // EXPENSIVE_CHECKS
+
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }

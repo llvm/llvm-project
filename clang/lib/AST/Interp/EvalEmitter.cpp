@@ -56,6 +56,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
+  S.EvaluatingDecl = VD;
 
   if (const Expr *Init = VD->getAnyInitializer()) {
     QualType T = VD->getType();
@@ -66,9 +67,11 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
 
   EvalResult.setSource(VD);
 
-  if (!this->visitDecl(VD) && EvalResult.empty())
+  if (!this->visitDecl(VD, S.inConstantContext()) && EvalResult.empty())
     EvalResult.setInvalid();
 
+  S.EvaluatingDecl = nullptr;
+  updateGlobalTemporaries();
   return std::move(this->EvalResult);
 }
 
@@ -81,7 +84,7 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(D, /*isStatic=*/false);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*isStatic=*/false);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
@@ -148,6 +151,11 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
+    // Never allow reading from a non-const pointer, unless the memory
+    // has been created in this evaluation.
+    if (!Ptr.isConst() && Ptr.block()->getEvalID() != Ctx.getEvalID())
+      return false;
+
     if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
       EvalResult.setValue(*V);
     } else {
@@ -233,6 +241,28 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
   }
 
   return true;
+}
+
+/// Global temporaries (LifetimeExtendedTemporary) carry their value
+/// around as an APValue, which codegen accesses.
+/// We set their value once when creating them, but we don't update it
+/// afterwards when code changes it later.
+/// This is what we do here.
+void EvalEmitter::updateGlobalTemporaries() {
+  for (const auto &[E, Temp] : S.SeenGlobalTemporaries) {
+    if (std::optional<unsigned> GlobalIndex = P.getGlobal(E)) {
+      const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
+      APValue *Cached = Temp->getOrCreateValue(true);
+
+      if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
+        TYPE_SWITCH(*T, { *Cached = Ptr.deref<T>().toAPValue(); });
+      } else {
+        if (std::optional<APValue> APV = Ptr.toRValue(Ctx))
+          *Cached = *APV;
+      }
+    }
+  }
+  S.SeenGlobalTemporaries.clear();
 }
 
 //===----------------------------------------------------------------------===//
