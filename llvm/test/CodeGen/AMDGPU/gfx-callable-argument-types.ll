@@ -9125,15 +9125,15 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s63, 29
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 30
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 31
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:20
-; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:16
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:16
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:20
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33
 ; GFX9-NEXT:    s_mov_b32 s5, byval_align16_f64_arg@abs32@hi
 ; GFX9-NEXT:    s_mov_b32 s4, byval_align16_f64_arg@abs32@lo
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32
+; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 30
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 31
@@ -9218,15 +9218,15 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-NEXT:    v_writelane_b32 v40, s30, 30
 ; GFX10-NEXT:    v_writelane_b32 v40, s31, 31
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:20
-; GFX10-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:16
+; GFX10-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:16
+; GFX10-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:20
 ; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s33
 ; GFX10-NEXT:    s_mov_b32 s5, byval_align16_f64_arg@abs32@hi
 ; GFX10-NEXT:    s_mov_b32 s4, byval_align16_f64_arg@abs32@lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GFX10-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    buffer_store_dword v33, off, s[0:3], s32
+; GFX10-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX10-NEXT:    v_readlane_b32 s30, v40, 30
 ; GFX10-NEXT:    v_readlane_b32 s31, v40, 31

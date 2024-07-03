@@ -1,4 +1,4 @@
-//===- MCAsmLayout.h - Assembly Layout Object -------------------*- C++ -*-===//
+//===-- Unittests for f16sub ----------------------------------------------===/
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCASMLAYOUT_H
-#define LLVM_MC_MCASMLAYOUT_H
+#include "SubTest.h"
 
-namespace llvm {
-class MCAssembler;
+#include "src/math/f16sub.h"
 
-class MCAsmLayout {
-public:
-  MCAsmLayout(MCAssembler &) {}
-};
-
-} // end namespace llvm
-
-#endif
+LIST_SUB_TESTS(float16, double, LIBC_NAMESPACE::f16sub)

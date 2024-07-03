@@ -448,6 +448,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
   CC1Args.push_back("-fcuda-is-device");
 
+  CC1Args.push_back("-fcuda-is-device");
+
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
