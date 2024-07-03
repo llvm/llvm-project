@@ -877,8 +877,7 @@ __gcspopm() {
 
 static __inline__ const void * __attribute__((__always_inline__, __nodebug__, target("gcs")))
 __gcsss(const void *__stack) {
-  __builtin_arm_gcsss1(__stack);
-  return __builtin_arm_gcsss2(0);
+  return __builtin_arm_gcsss(__stack);
 }
 #endif
 

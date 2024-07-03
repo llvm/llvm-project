@@ -23,27 +23,19 @@ entry:
   ret i64 %0
 }
 
-define void @test_gcsss1(ptr %p) {
-; CHECK-LABEL: test_gcsss1:
+define ptr @test_gcsss(ptr %p) {
+; CHECK-LABEL: test_gcsss:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    gcsss1 x0
+; CHECK-NEXT:    gcsss2 x8
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
 entry:
-  call void @llvm.aarch64.gcsss1(ptr %p)
-  ret void
-}
-
-define ptr @test_gcsss2(ptr %p) {
-; CHECK-LABEL: test_gcsss2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    gcsss2 x0
-; CHECK-NEXT:    ret
-entry:
-  %0 = call ptr @llvm.aarch64.gcsss2(ptr %p)
+  %0 = call ptr @llvm.aarch64.gcsss(ptr %p)
   ret ptr %0
 }
 
 declare i64 @llvm.aarch64.chkfeat(i64)
 declare i64 @llvm.aarch64.gcspopm(i64)
-declare void @llvm.aarch64.gcsss1(ptr)
-declare ptr @llvm.aarch64.gcsss2(ptr)
+declare ptr @llvm.aarch64.gcsss(ptr)

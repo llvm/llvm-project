@@ -48,8 +48,7 @@ uint64_t test_gcspopm() {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[__STACK_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__STACK_ADDR_I]], align 8
-// CHECK-NEXT:    call void @llvm.aarch64.gcsss1(ptr [[TMP1]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.aarch64.gcsss2(ptr null)
+// CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.aarch64.gcsss(ptr [[TMP1]])
 // CHECK-NEXT:    ret ptr [[TMP2]]
 //
 const void *test_gcsss(const void *p) {

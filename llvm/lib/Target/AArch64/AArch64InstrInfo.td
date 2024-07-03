@@ -1271,7 +1271,7 @@ class GCSRtIn<bits<3> op1, bits<3> op2, string mnemonic,
 }
 
 let mayStore = 1, mayLoad = 1 in
-def GCSSS1   : GCSRtIn<0b011, 0b010, "gcsss1", [(int_aarch64_gcsss1 (i64 GPR64:$Rt))]>;
+def GCSSS1   : GCSRtIn<0b011, 0b010, "gcsss1">;
 let mayStore = 1 in
 def GCSPUSHM : GCSRtIn<0b011, 0b000, "gcspushm">;
 
@@ -1290,8 +1290,7 @@ class GCSRtOut<bits<3> op1, bits<3> op2, string mnemonic,
 }
 
 let mayStore = 1, mayLoad = 1 in
-def GCSSS2  : GCSRtOut<0b011, 0b011, "gcsss2",
-                       [(set GPR64:$Rt, (int_aarch64_gcsss2 GPR64:$src))]>;
+def GCSSS2  : GCSRtOut<0b011, 0b011, "gcsss2">;
 let mayLoad = 1 in
 def GCSPOPM : GCSRtOut<0b011, 0b001, "gcspopm",
                        [(set GPR64:$Rt, (int_aarch64_gcspopm GPR64:$src))]>;
@@ -1322,7 +1321,6 @@ class GCSSt<string mnemonic, bits<3> op>
 }
 def GCSSTR  : GCSSt<"gcsstr",  0b000>;
 def GCSSTTR : GCSSt<"gcssttr", 0b001>;
-
 
 // ARMv8.2-A Dot Product
 let Predicates = [HasDotProd] in {
