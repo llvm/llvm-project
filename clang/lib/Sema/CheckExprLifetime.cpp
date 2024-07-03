@@ -966,27 +966,11 @@ static bool pathOnlyInitializesGslPointer(IndirectLocalPath &Path) {
   return false;
 }
 
-static void checkExprLifetimeImpl(
-    Sema &SemaRef,
-    llvm::PointerUnion<const InitializedEntity *, const AssignedEntity *>
-        CEntity,
-    Expr *Init) {
-  LifetimeKind LK = LK_FullExpression;
-
-  const AssignedEntity *AEntity = nullptr;
-  // Local variables for initialized entity.
-  const InitializedEntity *InitEntity = nullptr;
-  const InitializedEntity *ExtendingEntity = nullptr;
-  if (CEntity.is<const InitializedEntity *>()) {
-    InitEntity = CEntity.get<const InitializedEntity *>();
-    auto LTResult = getEntityLifetime(InitEntity);
-    LK = LTResult.getInt();
-    ExtendingEntity = LTResult.getPointer();
-  } else {
-    AEntity = CEntity.get<const AssignedEntity *>();
-    if (AEntity->LHS->getType()->isPointerType()) // builtin pointer type
-      LK = LK_Extended;
-  }
+static void checkExprLifetimeImpl(Sema &SemaRef,
+                                  const InitializedEntity *InitEntity,
+                                  const InitializedEntity *ExtendingEntity,
+                                  LifetimeKind LK,
+                                  const AssignedEntity *AEntity, Expr *Init) {
   // If this entity doesn't have an interesting lifetime, don't bother looking
   // for temporaries within its initializer.
   if (LK == LK_FullExpression)
@@ -1292,12 +1276,18 @@ static void checkExprLifetimeImpl(
 
 void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
                        Expr *Init) {
-  checkExprLifetimeImpl(SemaRef, &Entity, Init);
+  auto LTResult = getEntityLifetime(&Entity);
+  LifetimeKind LK = LTResult.getInt();
+  const InitializedEntity *ExtendingEntity = LTResult.getPointer();
+  checkExprLifetimeImpl(SemaRef, &Entity, ExtendingEntity, LK, nullptr, Init);
 }
 
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
                        Expr *Init) {
-  checkExprLifetimeImpl(SemaRef, &Entity, Init);
+  LifetimeKind LK = LK_FullExpression;
+  if (Entity.LHS->getType()->isPointerType()) // builtin pointer type
+    LK = LK_Extended;
+  checkExprLifetimeImpl(SemaRef, nullptr, nullptr, LK, &Entity, Init);
 }
 
 } // namespace clang::sema
