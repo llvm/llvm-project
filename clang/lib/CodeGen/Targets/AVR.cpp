@@ -112,7 +112,10 @@ public:
 class AVRTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   AVRTargetCodeGenInfo(CodeGenTypes &CGT, unsigned NPR, unsigned NRR)
-      : TargetCodeGenInfo(std::make_unique<AVRABIInfo>(CGT, NPR, NRR)) {}
+       : TargetCodeGenInfo(std::make_unique<AVRABIInfo>(CGT, NPR, NRR)) {
+     SwiftInfo =
+         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+   }
 
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override {
