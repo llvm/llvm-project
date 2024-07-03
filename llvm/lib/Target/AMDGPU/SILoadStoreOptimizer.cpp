@@ -1727,7 +1727,7 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     // under-aligned.
     const MachineMemOperand *MMO = *CI.I->memoperands_begin();
     bool NeedsConstrainedOpc =
-        STM->isXNACKEnabled() && MMO->getAlign().value() < (Width << 2);
+        STM->isXNACKEnabled() && MMO->getAlign().value() < Width * 4;
     switch (Width) {
     default:
       return 0;
