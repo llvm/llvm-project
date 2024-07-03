@@ -995,26 +995,19 @@ static bool isGlobalVarSummary(const ModuleSummaryIndex &Index,
   return false;
 }
 
-// Return the number of global summaries and record the number of function
-// summaries as output parameter.
-static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
-                                      FunctionImporter::ExportSetTy &ExportSet,
-                                      unsigned &DefinedFS) {
+// Return the number of global summaries in ExportSet.
+static unsigned
+numGlobalVarSummaries(const ModuleSummaryIndex &Index,
+                      FunctionImporter::ExportSetTy &ExportSet) {
   unsigned NumGVS = 0;
-  DefinedFS = 0;
-  for (auto &VI : ExportSet) {
+  for (auto &VI : ExportSet)
     if (isGlobalVarSummary(Index, VI.getGUID()))
       ++NumGVS;
-    else
-      ++DefinedFS;
-  }
   return NumGVS;
 }
 
-// Return the number of global summaries and record the number of function
-// summaries as output parameter. This is the same as `numGlobalVarSummaries`
-// except that it takes `FunctionImporter::FunctionsToImportTy` as input
-// parameter.
+// Given ImportMap, return the number of global summaries and record the number
+// of defined function summaries as output parameter.
 static unsigned
 numGlobalVarSummaries(const ModuleSummaryIndex &Index,
                       FunctionImporter::FunctionsToImportTy &ImportMap,
@@ -1147,12 +1140,9 @@ void llvm::ComputeCrossModuleImport(
   for (auto &ModuleImports : ImportLists) {
     auto ModName = ModuleImports.first;
     auto &Exports = ExportLists[ModName];
-    unsigned DefinedFS = 0;
-    unsigned NumGVS = numGlobalVarSummaries(Index, Exports, DefinedFS);
-    LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports " << DefinedFS
-                      << " function as definitions, "
-                      << Exports.size() - NumGVS - DefinedFS
-                      << " functions as declarations and " << NumGVS
+    unsigned NumGVS = numGlobalVarSummaries(Index, Exports);
+    LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports "
+                      << Exports.size() - NumGVS << " functions and " << NumGVS
                       << " vars. Imports from " << ModuleImports.second.size()
                       << " modules.\n");
     for (auto &Src : ModuleImports.second) {
