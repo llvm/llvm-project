@@ -200,7 +200,8 @@ X86InstructionSelector::getRegClass(LLT Ty, const RegisterBank &RB) const {
       return &X86::RFP80RegClass;
     if (Ty.getSizeInBits() == 64)
       return &X86::RFP64RegClass;
-    return &X86::RFP32RegClass;
+    if (Ty.getSizeInBits() == 32)
+      return &X86::RFP32RegClass;
   }
 
   llvm_unreachable("Unknown RegBank!");
@@ -484,7 +485,7 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
                                    X86::MOVSDmr);
     if (X86::PSRRegBankID == RB.getID())
       return Isload ? X86::LD_Fp64m : X86::ST_Fp64m;
-  } else if (Ty == LLT::scalar(80) || Ty == LLT::pointer(0, 80)) {
+  } else if (Ty == LLT::scalar(80)) {
     return Isload ? X86::LD_Fp80m : X86::ST_FpP80m;
   } else if (Ty.isVector() && Ty.getSizeInBits() == 128) {
     if (Alignment >= Align(16))
