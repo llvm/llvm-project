@@ -930,13 +930,6 @@ public:
   /// Return true if the instruction is encoded using EVEX (AVX-512).
   virtual bool hasEVEXEncoding(const MCInst &Inst) const { return false; }
 
-  /// Return true if a pair of instructions represented by \p Insts
-  /// could be fused into a single uop.
-  virtual bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
   struct X86MemOperand {
     unsigned BaseRegNum;
     int64_t ScaleImm;

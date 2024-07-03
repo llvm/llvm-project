@@ -190,6 +190,197 @@ define amdgpu_kernel void @truncstore_arg_v16i64_to_v16i8(ptr addrspace(1) %out,
   ret void
 }
 
+define void @truncstore_v5i32_to_v5i1(ptr addrspace(1) %out, <5 x i32> %val) {
+; SI-LABEL: truncstore_v5i32_to_v5i1:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v3, 1, v3
+; SI-NEXT:    v_and_b32_e32 v2, 1, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 1, v3
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_and_b32_e32 v3, 1, v4
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 2, v3
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_and_b32_e32 v3, 1, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 4, v6
+; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s6
+; SI-NEXT:    v_and_b32_e32 v2, 31, v2
+; SI-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: truncstore_v5i32_to_v5i1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v3, 1, v3
+; VI-NEXT:    v_and_b32_e32 v2, 1, v2
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 1, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_and_b32_e32 v3, 1, v4
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 2, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_and_b32_e32 v3, 1, v5
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 3, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 4, v6
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_and_b32_e32 v2, 31, v2
+; VI-NEXT:    flat_store_byte v[0:1], v2
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %trunc = trunc <5 x i32> %val to <5 x i1>
+  store <5 x i1> %trunc, ptr addrspace(1) %out
+  ret void
+}
+
+define void @truncstore_v5i32_to_v5i8(ptr addrspace(1) %out, <5 x i32> %val) {
+; SI-LABEL: truncstore_v5i32_to_v5i8:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v4, 0xff, v4
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
+; SI-NEXT:    v_and_b32_e32 v2, 0xff, v2
+; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 24, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s6
+; SI-NEXT:    v_or_b32_e32 v4, v5, v4
+; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-NEXT:    v_or_b32_e32 v2, v2, v4
+; SI-NEXT:    buffer_store_byte v6, v[0:1], s[4:7], 0 addr64 offset:4
+; SI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: truncstore_v5i32_to_v5i8:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
+; VI-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 8, v5
+; VI-NEXT:    v_or_b32_sdwa v3, v4, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_sdwa v4, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; VI-NEXT:    flat_store_byte v[2:3], v6
+; VI-NEXT:    flat_store_dword v[0:1], v4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %trunc = trunc <5 x i32> %val to <5 x i8>
+  store <5 x i8> %trunc, ptr addrspace(1) %out
+  ret void
+}
+
+define void @truncstore_v6i32_to_v6i1(ptr addrspace(1) %out, <6 x i32> %val) {
+; SI-LABEL: truncstore_v6i32_to_v6i1:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v3, 1, v3
+; SI-NEXT:    v_and_b32_e32 v2, 1, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 1, v3
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_and_b32_e32 v3, 1, v4
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 2, v3
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_and_b32_e32 v3, 1, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_and_b32_e32 v3, 1, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 4, v3
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 5, v7
+; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s6
+; SI-NEXT:    v_and_b32_e32 v2, 63, v2
+; SI-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: truncstore_v6i32_to_v6i1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v3, 1, v3
+; VI-NEXT:    v_and_b32_e32 v2, 1, v2
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 1, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_and_b32_e32 v3, 1, v4
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 2, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_and_b32_e32 v3, 1, v5
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 3, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_and_b32_e32 v3, 1, v6
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 4, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 5, v7
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_and_b32_e32 v2, 63, v2
+; VI-NEXT:    flat_store_byte v[0:1], v2
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %trunc = trunc <6 x i32> %val to <6 x i1>
+  store <6 x i1> %trunc, ptr addrspace(1) %out
+  ret void
+}
+
+define void @truncstore_v6i32_to_v6i8(ptr addrspace(1) %out, <6 x i32> %val) {
+; SI-LABEL: truncstore_v6i32_to_v6i8:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v4, 0xff, v4
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
+; SI-NEXT:    v_and_b32_e32 v2, 0xff, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 24, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_or_b32_e32 v4, v5, v4
+; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    v_or_b32_e32 v2, v2, v4
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 8, v7
+; SI-NEXT:    v_and_b32_e32 v4, 0xff, v6
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s6
+; SI-NEXT:    v_or_b32_e32 v3, v4, v3
+; SI-NEXT:    buffer_store_short v3, v[0:1], s[4:7], 0 addr64 offset:4
+; SI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: truncstore_v6i32_to_v6i8:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
+; VI-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b16_e32 v3, 8, v5
+; VI-NEXT:    v_or_b32_sdwa v3, v4, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_sdwa v4, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b16_e32 v2, 8, v7
+; VI-NEXT:    v_or_b32_sdwa v5, v6, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; VI-NEXT:    flat_store_short v[2:3], v5
+; VI-NEXT:    flat_store_dword v[0:1], v4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %trunc = trunc <6 x i32> %val to <6 x i8>
+  store <6 x i8> %trunc, ptr addrspace(1) %out
+  ret void
+}
+
 define void @truncstore_v6i32_to_v6i16(ptr addrspace(1) %out, <6 x i32> %val) {
 ; SI-LABEL: truncstore_v6i32_to_v6i16:
 ; SI:       ; %bb.0:
