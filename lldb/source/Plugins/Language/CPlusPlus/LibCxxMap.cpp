@@ -80,17 +80,10 @@ private:
 
 class MapIterator {
 public:
-  MapIterator() = default;
-  MapIterator(MapEntry entry, size_t depth = 0)
-      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
-  MapIterator(ValueObjectSP entry, size_t depth = 0)
-      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
-  MapIterator(const MapIterator &rhs)
-      : m_entry(rhs.m_entry), m_max_depth(rhs.m_max_depth), m_error(false) {}
   MapIterator(ValueObject *entry, size_t depth = 0)
       : m_entry(entry), m_max_depth(depth), m_error(false) {}
 
-  MapIterator &operator=(const MapIterator &) = default;
+  MapIterator() = default;
 
   ValueObjectSP value() { return m_entry.GetEntry(); }
 
@@ -108,7 +101,9 @@ public:
     return m_entry.GetEntry();
   }
 
-protected:
+private:
+  /// Mimicks libc++'s __tree_next algorithm, which libc++ uses
+  /// in its __tree_iteartor::operator++.
   void next() {
     if (m_entry.null())
       return;
@@ -133,7 +128,7 @@ protected:
     m_entry = MapEntry(m_entry.parent());
   }
 
-private:
+  /// Mimicks libc++'s __tree_min algorithm.
   MapEntry tree_min(MapEntry x) {
     if (x.null())
       return MapEntry();
