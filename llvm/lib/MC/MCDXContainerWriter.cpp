@@ -8,7 +8,6 @@
 
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSection.h"
