@@ -259,8 +259,7 @@ public:
                         uint64_t &FixedValue) override;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
 
   void markGnuAbi() override { SeenGnuAbi = true; }
   bool seenGnuAbi() const { return SeenGnuAbi; }
@@ -1274,8 +1273,7 @@ bool ELFObjectWriter::hasRelocationAddend() const {
   return TargetObjectWriter->hasRelocationAddend();
 }
 
-void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                               const MCAsmLayout &Layout) {
+void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
   for (const MCAssembler::Symver &S : Asm.Symvers) {
