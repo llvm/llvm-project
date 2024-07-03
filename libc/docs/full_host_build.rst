@@ -84,6 +84,7 @@ above.
 Build and install
 =================
 
+.. TODO: add this warning to the cmake
 .. warning::
    Running these install commands without setting a ``$SYSROOT`` will install
    them into your system include path, which may break your system. If you're
