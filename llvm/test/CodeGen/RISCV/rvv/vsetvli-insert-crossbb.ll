@@ -322,19 +322,19 @@ declare void @foo()
 define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 1
-; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    beqz a1, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    j .LBB6_3
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB6_2: # %if.else
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
@@ -350,7 +350,6 @@ define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsub.vv v8, v9, v8
-; CHECK-NEXT:  .LBB6_3: # %if.then
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -1063,17 +1062,48 @@ exit:
   ret <vscale x 2 x i32> %c
 }
 
+define void @cross_block_avl_extend_backwards(i1 %cond, <vscale x 8 x i8> %v, ptr %p, i64 %avl) {
+; CHECK-LABEL: cross_block_avl_extend_backwards:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    beqz a0, .LBB25_2
+; CHECK-NEXT:  # %bb.1: # %exit
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB25_2: # %bar
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:  .LBB25_3: # %foo
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    j .LBB25_3
+entry:
+  br i1 %cond, label %exit, label %bar
+foo:
+  ; Force a vl toggle
+  call void @llvm.riscv.vse.nxv8i8.i64(<vscale x 8 x i8> %v, ptr %p, i64 1)
+  ; %add's LiveRange needs to be extended backwards to here.
+  call void @llvm.riscv.vse.nxv8i8.i64(<vscale x 8 x i8> %v, ptr %p, i64 %add)
+  br label %foo
+exit:
+  ret void
+bar:
+  %add = add i64 %avl, 1
+  br label %foo
+}
+
 define void @vlmax_avl_phi(i1 %cmp, ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: vlmax_avl_phi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    beqz a0, .LBB25_2
+; CHECK-NEXT:    beqz a0, .LBB26_2
 ; CHECK-NEXT:  # %bb.1: # %foo
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
-; CHECK-NEXT:    j .LBB25_3
-; CHECK-NEXT:  .LBB25_2: # %bar
+; CHECK-NEXT:    j .LBB26_3
+; CHECK-NEXT:  .LBB26_2: # %bar
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
-; CHECK-NEXT:  .LBB25_3: # %exit
+; CHECK-NEXT:  .LBB26_3: # %exit
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
