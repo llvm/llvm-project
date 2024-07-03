@@ -7,8 +7,7 @@
 
 define <8 x i16> @undef_pmulh_128(<8 x i16> %a0) {
 ; CHECK-LABEL: @undef_pmulh_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> [[A0:%.*]], <8 x i16> undef)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> %a0, <8 x i16> undef)
   ret <8 x i16> %1
@@ -16,8 +15,7 @@ define <8 x i16> @undef_pmulh_128(<8 x i16> %a0) {
 
 define <8 x i16> @undef_pmulh_128_commute(<8 x i16> %a0) {
 ; CHECK-LABEL: @undef_pmulh_128_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> undef, <8 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> undef, <8 x i16> %a0)
   ret <8 x i16> %1
@@ -25,8 +23,7 @@ define <8 x i16> @undef_pmulh_128_commute(<8 x i16> %a0) {
 
 define <16 x i16> @undef_pmulh_256(<16 x i16> %a0) {
 ; CHECK-LABEL: @undef_pmulh_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> [[A0:%.*]], <16 x i16> undef)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> %a0, <16 x i16> undef)
   ret <16 x i16> %1
@@ -34,8 +31,7 @@ define <16 x i16> @undef_pmulh_256(<16 x i16> %a0) {
 
 define <16 x i16> @undef_pmulh_256_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @undef_pmulh_256_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> undef, <16 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> undef, <16 x i16> %a0)
   ret <16 x i16> %1
@@ -43,8 +39,7 @@ define <16 x i16> @undef_pmulh_256_commute(<16 x i16> %a0) {
 
 define <32 x i16> @undef_pmulh_512(<32 x i16> %a0) {
 ; CHECK-LABEL: @undef_pmulh_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> [[A0:%.*]], <32 x i16> undef)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> %a0, <32 x i16> undef)
   ret <32 x i16> %1
@@ -52,8 +47,7 @@ define <32 x i16> @undef_pmulh_512(<32 x i16> %a0) {
 
 define <32 x i16> @undef_pmulh_512_commute(<32 x i16> %a0) {
 ; CHECK-LABEL: @undef_pmulh_512_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> undef, <32 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> undef, <32 x i16> %a0)
   ret <32 x i16> %1
@@ -65,8 +59,7 @@ define <32 x i16> @undef_pmulh_512_commute(<32 x i16> %a0) {
 
 define <8 x i16> @zero_pmulh_128(<8 x i16> %a0) {
 ; CHECK-LABEL: @zero_pmulh_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> [[A0:%.*]], <8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> %a0, <8 x i16> zeroinitializer)
   ret <8 x i16> %1
@@ -74,8 +67,7 @@ define <8 x i16> @zero_pmulh_128(<8 x i16> %a0) {
 
 define <8 x i16> @zero_pmulh_128_commute(<8 x i16> %a0) {
 ; CHECK-LABEL: @zero_pmulh_128_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> zeroinitializer, <8 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> zeroinitializer, <8 x i16> %a0)
   ret <8 x i16> %1
@@ -83,8 +75,7 @@ define <8 x i16> @zero_pmulh_128_commute(<8 x i16> %a0) {
 
 define <16 x i16> @zero_pmulh_256(<16 x i16> %a0) {
 ; CHECK-LABEL: @zero_pmulh_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> [[A0:%.*]], <16 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> %a0, <16 x i16> zeroinitializer)
   ret <16 x i16> %1
@@ -92,8 +83,7 @@ define <16 x i16> @zero_pmulh_256(<16 x i16> %a0) {
 
 define <16 x i16> @zero_pmulh_256_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @zero_pmulh_256_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> zeroinitializer, <16 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> zeroinitializer, <16 x i16> %a0)
   ret <16 x i16> %1
@@ -101,8 +91,7 @@ define <16 x i16> @zero_pmulh_256_commute(<16 x i16> %a0) {
 
 define <32 x i16> @zero_pmulh_512(<32 x i16> %a0) {
 ; CHECK-LABEL: @zero_pmulh_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> [[A0:%.*]], <32 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> %a0, <32 x i16> zeroinitializer)
   ret <32 x i16> %1
@@ -110,8 +99,7 @@ define <32 x i16> @zero_pmulh_512(<32 x i16> %a0) {
 
 define <32 x i16> @zero_pmulh_512_commute(<32 x i16> %a0) {
 ; CHECK-LABEL: @zero_pmulh_512_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> zeroinitializer, <32 x i16> [[A0:%.*]])
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> zeroinitializer, <32 x i16> %a0)
   ret <32 x i16> %1
