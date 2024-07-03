@@ -747,108 +747,15 @@ void clang::getOpenMPCaptureRegions(
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
   assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
 
-#if 1//<<<<<<< HEAD
-  switch (DKind) {
-  case OMPD_metadirective:
-    CaptureRegions.push_back(OMPD_metadirective);
-    break;
-  case OMPD_parallel:
-  case OMPD_parallel_for:
-  case OMPD_parallel_for_simd:
-  case OMPD_parallel_master:
-  case OMPD_parallel_masked:
-  case OMPD_parallel_sections:
-  case OMPD_distribute_parallel_for:
-  case OMPD_distribute_parallel_for_simd:
-  case OMPD_parallel_loop:
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_target_teams:
-  case OMPD_target_teams_distribute:
-  case OMPD_target_teams_distribute_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_teams);
-    break;
-  case OMPD_teams:
-  case OMPD_teams_loop:
-  case OMPD_teams_distribute:
-  case OMPD_teams_distribute_simd:
-    CaptureRegions.push_back(OMPD_teams);
-    break;
-  case OMPD_target:
-  case OMPD_target_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    break;
-  case OMPD_teams_distribute_parallel_for:
-  case OMPD_teams_distribute_parallel_for_simd:
-    CaptureRegions.push_back(OMPD_teams);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_target_parallel:
-  case OMPD_target_parallel_for:
-  case OMPD_target_parallel_for_simd:
-  case OMPD_target_parallel_loop:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_task:
-  case OMPD_target_enter_data:
-  case OMPD_target_exit_data:
-  case OMPD_target_update:
-    CaptureRegions.push_back(OMPD_task);
-    break;
-  case OMPD_taskloop:
-  case OMPD_taskloop_simd:
-  case OMPD_master_taskloop:
-  case OMPD_master_taskloop_simd:
-  case OMPD_masked_taskloop:
-  case OMPD_masked_taskloop_simd:
-    CaptureRegions.push_back(OMPD_taskloop);
-    break;
-  case OMPD_parallel_masked_taskloop:
-  case OMPD_parallel_masked_taskloop_simd:
-  case OMPD_parallel_master_taskloop:
-  case OMPD_parallel_master_taskloop_simd:
-    CaptureRegions.push_back(OMPD_parallel);
-    CaptureRegions.push_back(OMPD_taskloop);
-    break;
-  case OMPD_target_teams_loop:
-  case OMPD_target_teams_distribute_parallel_for:
-  case OMPD_target_teams_distribute_parallel_for_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_teams);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_nothing:
-    CaptureRegions.push_back(OMPD_nothing);
-    break;
-  case OMPD_loop:
-    // TODO: 'loop' may require different capture regions depending on the bind
-    // clause or the parent directive when there is no bind clause. Use
-    // OMPD_unknown for now.
-  case OMPD_simd:
-  case OMPD_for:
-  case OMPD_for_simd:
-  case OMPD_sections:
-  case OMPD_single:
-  case OMPD_taskgroup:
-  case OMPD_distribute:
-  case OMPD_ordered:
-  case OMPD_target_data:
-  case OMPD_distribute_simd:
-  case OMPD_scope:
-  case OMPD_dispatch:
-    CaptureRegions.push_back(OMPD_unknown);
-    break;
-  default:
-    llvm_unreachable("Unhandled OpenMP directive");
-  }
+  auto IsTeamsLoop = [&]() {
+    // Assume the current leaf is OMPD_loop, check if the CaptureRegions
+    // contains only OMPD_teams.
+    // Upstream OMPD_teams_loop has two regions: OMPD_teams, OMPD_parallel.
+    // Downstream, it has only one: OMPD_teams. Avoid adding the parallel
+    // region in this specific case.
+    return CaptureRegions.size() == 1 && CaptureRegions[0] == OMPD_teams;
+  };
 
-#else//=======
   auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
     assert(isLeafConstruct(LKind) && "Epecting leaf directive");
     // Whether a leaf would require OMPD_unknown if it occured on its own.
@@ -884,7 +791,8 @@ void clang::getOpenMPCaptureRegions(
       // If any of the directives that push regions here are parents of 'loop',
       // assume 'parallel'. Otherwise do nothing.
       if (!CaptureRegions.empty() &&
-          !llvm::is_contained(CaptureRegions, OMPD_parallel))
+          !llvm::is_contained(CaptureRegions, OMPD_parallel) &&
+          !IsTeamsLoop())
         CaptureRegions.push_back(OMPD_parallel);
       else
         return true;
@@ -928,7 +836,6 @@ void clang::getOpenMPCaptureRegions(
   assert((CaptureRegions[0] == OMPD_unknown ||
           !llvm::is_contained(CaptureRegions, OMPD_unknown)) &&
          "Misplaced OMPD_unknown");
-#endif//>>>>>>> 59f4267c8e0625c6583327be2db1608930f2d796
 }
 
 bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
