@@ -158,12 +158,11 @@ define i8 @extract_element_binop_splat_variable_index(<4 x i8> %x, i32 %y) {
 
 ; We cannot move the extractelement before the sdiv here, because %z may be
 ; out of range, making the divisor poison and resulting in immediate UB.
-; FIXME: This is a miscompile.
 define i8 @extract_element_binop_splat_variable_index_may_trap(<4 x i8> %x, <4 x i8> %y, i32 %z) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_variable_index_may_trap(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i8> [[Y:%.*]], i32 [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sdiv i8 42, [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = sdiv <4 x i8> <i8 42, i8 42, i8 42, i8 42>, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[B]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = sdiv <4 x i8> splat (i8 42), %y
