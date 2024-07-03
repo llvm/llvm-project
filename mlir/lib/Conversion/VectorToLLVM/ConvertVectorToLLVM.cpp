@@ -102,11 +102,13 @@ static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
 static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
                             const LLVMTypeConverter &typeConverter,
                             MemRefType memRefType, Value llvmMemref, Value base,
-                            Value index, uint64_t vLen) {
+                            Value index, VectorType vectorType) {
   assert(succeeded(isMemRefTypeSupported(memRefType, typeConverter)) &&
          "unsupported memref type");
   auto pType = MemRefDescriptor(llvmMemref).getElementPtrType();
-  auto ptrsType = LLVM::getFixedVectorType(pType, vLen);
+  auto ptrsType =
+      LLVM::getVectorType(pType, vectorType.getDimSize(0),
+                          /*isScalable=*/vectorType.getScalableDims()[0]);
   return rewriter.create<LLVM::GEPOp>(
       loc, ptrsType, typeConverter.convertType(memRefType.getElementType()),
       base, index);
@@ -288,9 +290,9 @@ public:
     if (!isa<LLVM::LLVMArrayType>(llvmNDVectorTy)) {
       auto vType = gather.getVectorType();
       // Resolve address.
-      Value ptrs = getIndexedPtrs(rewriter, loc, *this->getTypeConverter(),
-                                  memRefType, base, ptr, adaptor.getIndexVec(),
-                                  /*vLen=*/vType.getDimSize(0));
+      Value ptrs =
+          getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
+                         base, ptr, adaptor.getIndexVec(), vType);
       // Replace with the gather intrinsic.
       rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
           gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
@@ -305,8 +307,7 @@ public:
       // Resolve address.
       Value ptrs = getIndexedPtrs(
           rewriter, loc, typeConverter, memRefType, base, ptr,
-          /*index=*/vectorOperands[0],
-          LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue());
+          /*index=*/vectorOperands[0], cast<VectorType>(llvm1DVectorTy));
       // Create the gather intrinsic.
       return rewriter.create<LLVM::masked_gather>(
           loc, llvm1DVectorTy, ptrs, /*mask=*/vectorOperands[1],
@@ -343,9 +344,9 @@ public:
     VectorType vType = scatter.getVectorType();
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
-    Value ptrs = getIndexedPtrs(
-        rewriter, loc, *this->getTypeConverter(), memRefType, adaptor.getBase(),
-        ptr, adaptor.getIndexVec(), /*vLen=*/vType.getDimSize(0));
+    Value ptrs =
+        getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
+                       adaptor.getBase(), ptr, adaptor.getIndexVec(), vType);
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
