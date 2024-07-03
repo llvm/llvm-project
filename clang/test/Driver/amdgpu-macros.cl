@@ -132,6 +132,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1200 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1201 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1201 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1210 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1210 -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1211 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1211 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1300 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1300 -DFAMILY=GFX13
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1301 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1301 -DFAMILY=GFX13
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1302 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1302 -DFAMILY=GFX13
@@ -192,6 +193,12 @@
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1210 -mno-cumode \
 // RUN:   %s 2>&1 | FileCheck -DMCPU=gfx1210 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1211 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1211 -mcumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1211 -mno-cumode \
+// RUN:   %s 2>&1 | FileCheck -DMCPU=gfx1211 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
 // WARN-CUMODE-DAG: warning: ignoring '-mno-cumode' option as it is not currently supported for processor '[[MCPU]]' [-Woption-ignored]
 // CUMODE-ON-DAG: #define __AMDGCN_CUMODE__ 1
 // CUMODE-OFF-DAG: #define __AMDGCN_CUMODE__ 0

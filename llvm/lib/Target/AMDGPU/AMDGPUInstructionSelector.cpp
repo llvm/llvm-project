@@ -777,10 +777,6 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
   return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectG_PTR_ADD(MachineInstr &I) const {
-  return selectG_ADD_SUB(I);
-}
-
 bool AMDGPUInstructionSelector::selectG_IMPLICIT_DEF(MachineInstr &I) const {
   const MachineOperand &MO = I.getOperand(0);
 
@@ -2119,21 +2115,6 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectPOPSExitingWaveID(
-    MachineInstr &MI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  const DebugLoc &DL = MI.getDebugLoc();
-  MachineBasicBlock *MBB = MI.getParent();
-
-  // TODO: Select this with a tablegen pattern. This is tricky because the
-  // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
-  // mayLoad/mayStore and tablegen complains about the mismatch.
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
-                 .addReg(AMDGPU::SRC_POPS_EXITING_WAVE_ID);
-  MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-}
-
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
@@ -2187,8 +2168,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectSBarrierSignalIsfirst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_leave:
     return selectSBarrierLeave(I);
-  case Intrinsic::amdgcn_pops_exiting_wave_id:
-    return selectPOPSExitingWaveID(I);
   }
   return selectImpl(I, *CoverageInfo);
 }
@@ -3940,6 +3919,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_AND_OR_XOR(I);
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_PTR_ADD:
     if (selectImpl(I, *CoverageInfo))
       return true;
     return selectG_ADD_SUB(I);
@@ -3954,6 +3934,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_FREEZE:
     return selectCOPY(I);
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
@@ -3976,14 +3957,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
     return selectG_BUILD_VECTOR(I);
-  case TargetOpcode::G_PTR_ADD:
-    if (selectImpl(I, *CoverageInfo))
-      return true;
-    return selectG_PTR_ADD(I);
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectG_IMPLICIT_DEF(I);
-  case TargetOpcode::G_FREEZE:
-    return selectCOPY(I);
   case TargetOpcode::G_INSERT:
     return selectG_INSERT(I);
   case TargetOpcode::G_INTRINSIC:

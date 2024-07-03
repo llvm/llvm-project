@@ -118,6 +118,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1210: AK = GK_GFX1210; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1211: AK = GK_GFX1211; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300: AK = GK_GFX1300; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1301: AK = GK_GFX1301; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1302: AK = GK_GFX1302; break;
@@ -207,6 +208,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
   case GK_GFX1210: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1210;
+  case GK_GFX1211: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1211;
   case GK_GFX1300: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300;
   case GK_GFX1301: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1301;
   case GK_GFX1302: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1302;
@@ -329,8 +331,9 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 
 void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
-    const MCKernelDescriptor &KD, uint64_t NextVGPR, uint64_t NextSGPR,
-    bool ReserveVCC, bool ReserveFlatScr) {
+    const MCKernelDescriptor &KD, const MCExpr *NextVGPR,
+    const MCExpr *NextSGPR, const MCExpr *ReserveVCC,
+    const MCExpr *ReserveFlatScr) {
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
   const MCAsmInfo *MAI = getContext().getAsmInfo();
 
@@ -349,19 +352,28 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     OS << '\n';
   };
 
+  auto EmitMCExpr = [&](const MCExpr *Value) {
+    int64_t evaluatableValue;
+    if (Value->evaluateAsAbsolute(evaluatableValue)) {
+      OS << static_cast<uint64_t>(evaluatableValue);
+    } else {
+      Value->print(OS, MAI);
+    }
+  };
+
   OS << "\t\t.amdhsa_group_segment_fixed_size ";
-  KD.group_segment_fixed_size->print(OS, MAI);
+  EmitMCExpr(KD.group_segment_fixed_size);
   OS << '\n';
 
   OS << "\t\t.amdhsa_private_segment_fixed_size ";
-  KD.private_segment_fixed_size->print(OS, MAI);
+  EmitMCExpr(KD.private_segment_fixed_size);
   OS << '\n';
 
   OS << "\t\t.amdhsa_kernarg_size ";
-  KD.kernarg_size->print(OS, MAI);
+  EmitMCExpr(KD.kernarg_size);
   OS << '\n';
 
-  if (isGFX12_10(STI)) {
+  if (isGFX1210Plus(STI)) {
     PrintField(
         KD.compute_pgm_rsrc2, amdhsa::COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT, ".amdhsa_user_sgpr_count");
@@ -449,8 +461,13 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
              ".amdhsa_system_vgpr_workitem_id");
 
   // These directives are required.
-  OS << "\t\t.amdhsa_next_free_vgpr " << NextVGPR << '\n';
-  OS << "\t\t.amdhsa_next_free_sgpr " << NextSGPR << '\n';
+  OS << "\t\t.amdhsa_next_free_vgpr ";
+  EmitMCExpr(NextVGPR);
+  OS << '\n';
+
+  OS << "\t\t.amdhsa_next_free_sgpr ";
+  EmitMCExpr(NextSGPR);
+  OS << '\n';
 
   if (AMDGPU::isGFX90A(STI)) {
     // MCExpr equivalent of taking the (accum_offset + 1) * 4.
@@ -463,19 +480,19 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     accum_bits = MCBinaryExpr::createMul(
         accum_bits, MCConstantExpr::create(4, getContext()), getContext());
     OS << "\t\t.amdhsa_accum_offset ";
-    int64_t IVal;
-    if (accum_bits->evaluateAsAbsolute(IVal)) {
-      OS << static_cast<uint64_t>(IVal);
-    } else {
-      accum_bits->print(OS, MAI);
-    }
+    EmitMCExpr(accum_bits);
     OS << '\n';
   }
 
-  if (!ReserveVCC)
-    OS << "\t\t.amdhsa_reserve_vcc " << ReserveVCC << '\n';
-  if (IVersion.Major >= 7 && !ReserveFlatScr && !hasArchitectedFlatScratch(STI))
-    OS << "\t\t.amdhsa_reserve_flat_scratch " << ReserveFlatScr << '\n';
+  OS << "\t\t.amdhsa_reserve_vcc ";
+  EmitMCExpr(ReserveVCC);
+  OS << '\n';
+
+  if (IVersion.Major >= 7 && !hasArchitectedFlatScratch(STI)) {
+    OS << "\t\t.amdhsa_reserve_flat_scratch ";
+    EmitMCExpr(ReserveFlatScr);
+    OS << '\n';
+  }
 
   switch (CodeObjectVersion) {
   default:
@@ -932,8 +949,9 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 
 void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
-    const MCKernelDescriptor &KernelDescriptor, uint64_t NextVGPR,
-    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {
+    const MCKernelDescriptor &KernelDescriptor, const MCExpr *NextVGPR,
+    const MCExpr *NextSGPR, const MCExpr *ReserveVCC,
+    const MCExpr *ReserveFlatScr) {
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 

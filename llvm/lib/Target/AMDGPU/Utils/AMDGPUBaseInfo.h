@@ -1414,7 +1414,8 @@ bool isGFX11(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
-bool isGFX12_10(const MCSubtargetInfo &STI);
+bool isGFX1210Only(const MCSubtargetInfo &STI);
+bool isGFX1210Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
 bool supportsWGP(const MCSubtargetInfo &STI);
@@ -1634,6 +1635,9 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+
+/// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
+bool isDPALU_DPP32BitOpc(unsigned Opc);
 
 /// \returns true if an instruction is a DP ALU DPP.
 bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);

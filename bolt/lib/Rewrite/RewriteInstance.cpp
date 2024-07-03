@@ -40,7 +40,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
@@ -82,6 +81,7 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> KeepNops;
+extern cl::opt<bool> Lite;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
@@ -139,9 +139,6 @@ KeepTmp("keep-tmp",
   cl::desc("preserve intermediate .o file"),
   cl::Hidden,
   cl::cat(BoltCategory));
-
-cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
-                   cl::cat(BoltCategory));
 
 static cl::opt<unsigned>
 LiteThresholdPct("lite-threshold-pct",
@@ -3510,9 +3507,8 @@ void RewriteInstance::emitAndLink() {
   updateOutputValues(*Linker);
 
   if (opts::UpdateDebugSections) {
-    MCAsmLayout FinalLayout(
-        static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
-    DebugInfoRewriter->updateLineTableOffsets(FinalLayout);
+    DebugInfoRewriter->updateLineTableOffsets(
+        static_cast<MCObjectStreamer &>(*Streamer).getAssembler());
   }
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())

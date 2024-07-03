@@ -3380,8 +3380,8 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX1300-NEXT:    v_mul_lo_u32 v29, v5, v10
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v16, v14, 0
-; GFX1300-NEXT:    v_mad_nc_u64_u32 v[18:19], v16, v12, 0
-; GFX1300-NEXT:    v_mad_nc_u64_u32 v[20:21], v16, v10, 0
+; GFX1300-NEXT:    v_mad_nc_u64_u32 v[20:21], v16, v12, 0
+; GFX1300-NEXT:    v_mad_nc_u64_u32 v[22:23], v16, v10, 0
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v17, v13, v[0:1]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v2, v12, v[0:1]
@@ -3390,43 +3390,43 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v4, v10, v[0:1]
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v5, v9, v[0:1]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1300-NEXT:    v_mad_nc_u64_u32 v[22:23], v6, v8, v[0:1]
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[0:1], s0, v17, v11, v[18:19]
-; GFX1300-NEXT:    v_cndmask_b32_e64 v18, 0, 1, s0
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[20:21], s0, v17, v9, v[20:21]
+; GFX1300-NEXT:    v_mad_nc_u64_u32 v[18:19], v6, v8, v[0:1]
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[0:1], s0, v17, v11, v[20:21]
+; GFX1300-NEXT:    v_cndmask_b32_e64 v20, 0, 1, s0
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[22:23], s0, v17, v9, v[22:23]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v26, 0, 1, s0
 ; GFX1300-NEXT:    v_mad_co_u64_u32 v[0:1], vcc_lo, v2, v10, v[0:1]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1300-NEXT:    v_add_co_ci_u32_e32 v24, vcc_lo, 0, v18, vcc_lo
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[18:19], vcc_lo, v3, v9, v[0:1]
+; GFX1300-NEXT:    v_add_co_ci_u32_e32 v24, vcc_lo, 0, v20, vcc_lo
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[20:21], vcc_lo, v3, v9, v[0:1]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e32 v24, vcc_lo, 0, v24, vcc_lo
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v16, v8, 0
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[18:19], vcc_lo, v4, v8, v[18:19]
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[20:21], vcc_lo, v4, v8, v[20:21]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e32 v28, vcc_lo, 0, v24, vcc_lo
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[20:21], vcc_lo, v2, v8, v[20:21]
-; GFX1300-NEXT:    v_dual_mov_b32 v24, v19 :: v_dual_mov_b32 v27, v18
-; GFX1300-NEXT:    v_mov_b32_e32 v25, v22
-; GFX1300-NEXT:    v_mul_lo_u32 v22, v6, v9
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[22:23], vcc_lo, v2, v8, v[22:23]
+; GFX1300-NEXT:    v_dual_mov_b32 v24, v21 :: v_dual_mov_b32 v27, v20
+; GFX1300-NEXT:    v_mov_b32_e32 v25, v18
+; GFX1300-NEXT:    v_mul_lo_u32 v18, v6, v9
 ; GFX1300-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, 0, v26, vcc_lo
-; GFX1300-NEXT:    v_mov_b32_e32 v26, v21
+; GFX1300-NEXT:    v_mov_b32_e32 v26, v23
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1300-NEXT:    v_mad_co_u64_u32 v[24:25], s0, v16, v13, v[24:25]
-; GFX1300-NEXT:    v_mul_lo_u32 v21, v16, v15
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[18:19], vcc_lo, v17, v12, v[24:25]
+; GFX1300-NEXT:    v_mul_lo_u32 v23, v16, v15
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[20:21], vcc_lo, v17, v12, v[24:25]
 ; GFX1300-NEXT:    v_mul_lo_u32 v24, v17, v14
 ; GFX1300-NEXT:    v_mad_co_u64_u32 v[14:15], s2, v16, v11, v[26:27]
 ; GFX1300-NEXT:    v_mul_lo_u32 v26, v2, v13
 ; GFX1300-NEXT:    v_mul_lo_u32 v27, v3, v12
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v30, 0, 1, s2
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[18:19], s1, v2, v11, v[18:19]
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[20:21], s1, v2, v11, v[20:21]
 ; GFX1300-NEXT:    v_mul_lo_u32 v25, v4, v11
 ; GFX1300-NEXT:    v_mad_co_u64_u32 v[12:13], s2, v17, v10, v[14:15]
-; GFX1300-NEXT:    v_dual_mov_b32 v14, v1 :: v_dual_mov_b32 v15, v20
+; GFX1300-NEXT:    v_dual_mov_b32 v14, v1 :: v_dual_mov_b32 v15, v22
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, s2, 0, v30, s2
-; GFX1300-NEXT:    v_mad_co_u64_u32 v[10:11], s3, v3, v10, v[18:19]
+; GFX1300-NEXT:    v_mad_co_u64_u32 v[10:11], s3, v3, v10, v[20:21]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-NEXT:    v_mad_co_u64_u32 v[12:13], s2, v2, v9, v[12:13]
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, s2, 0, v1, s2
@@ -3446,7 +3446,7 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v5, s5, v1, v10, s5
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v6, s5, v28, v11, s5
-; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, s5, v23, v21, s5
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, s5, v19, v23, s5
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, s4, v1, v24, s4
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, s2, v1, v26, s2
@@ -3455,7 +3455,7 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, s1, v1, v25, s1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v29, vcc_lo
-; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, vcc_lo, v1, v22, s0
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, vcc_lo, v1, v18, s0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_mad_u32 v7, v7, v8, v1
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, v14

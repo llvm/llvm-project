@@ -532,17 +532,6 @@ def int_amdgcn_fmad_ftz :
             [IntrNoMem, IntrSpeculatable]
 >;
 
-class AMDGPULDSIntrin :
-  Intrinsic<[llvm_any_ty],
-    [LLVMQualPointerType<3>,
-    LLVMMatchType<0>,
-    llvm_i32_ty, // ordering
-    llvm_i32_ty, // scope
-    llvm_i1_ty], // isVolatile
-    [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]
->;
-
 // FIXME: The m0 argument should be moved after the normal arguments
 class AMDGPUDSOrderedIntrinsic : Intrinsic<
   [llvm_i32_ty],
@@ -579,10 +568,6 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 // The pointer argument is assumed to be dynamically uniform if a VGPR.
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
-
-def int_amdgcn_ds_fadd : AMDGPULDSIntrin;
-def int_amdgcn_ds_fmin : AMDGPULDSIntrin;
-def int_amdgcn_ds_fmax : AMDGPULDSIntrin;
 
 def int_amdgcn_tanh : DefaultAttrsIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
@@ -2351,26 +2336,23 @@ def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
 
 def int_amdgcn_readfirstlane :
-  ClangBuiltin<"__builtin_amdgcn_readfirstlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The lane argument must be uniform across the currently active threads of the
 // current wave. Otherwise, the result is undefined.
 def int_amdgcn_readlane :
-  ClangBuiltin<"__builtin_amdgcn_readlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The value to write and lane select arguments must be uniform across the
 // currently active threads of the current wave. Otherwise, the result is
 // undefined.
 def int_amdgcn_writelane :
-  ClangBuiltin<"__builtin_amdgcn_writelane">,
-  Intrinsic<[llvm_i32_ty], [
-    llvm_i32_ty,    // uniform value to write: returned by the selected lane
-    llvm_i32_ty,    // uniform lane select
-    llvm_i32_ty     // returned by all lanes other than the selected one
+  Intrinsic<[llvm_any_ty], [
+    LLVMMatchType<0>,   // uniform value to write: returned by the selected lane
+    llvm_i32_ty,        // uniform lane select
+    LLVMMatchType<0>    // returned by all lanes other than the selected one
   ],
   [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
@@ -2752,26 +2734,25 @@ class AMDGPUGlobalLoadLDS :
      "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 
-// Use read/write of inaccessible memory to model the fact that this reads a
-// volatile value.
+// This is IntrHasSideEffects because it reads from a volatile hardware register.
 def int_amdgcn_pops_exiting_wave_id :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
 
 // llvm.amdgcn.permlane16 <old> <src0> <src1> <src2> <fi> <bound_control>
-def int_amdgcn_permlane16 : ClangBuiltin<"__builtin_amdgcn_permlane16">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
+def int_amdgcn_permlane16 :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
-def int_amdgcn_permlanex16 : ClangBuiltin<"__builtin_amdgcn_permlanex16">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
+def int_amdgcn_permlanex16 :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, IntrNoCallback, IntrNoFree]>;
 
@@ -2814,8 +2795,7 @@ def int_amdgcn_image_bvh_intersect_ray :
 
 // llvm.amdgcn.permlane64 <src0>
 def int_amdgcn_permlane64 :
-  ClangBuiltin<"__builtin_amdgcn_permlane64">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_ds_add_gs_reg_rtn :
@@ -3097,6 +3077,16 @@ def int_amdgcn_wave_id_in_wavegroup :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_wave_id_in_wavegroup">;
 
+// ML Intrinsics
+//
+// Most ML intrinsics take aux_data argument, which maps to multiple fields
+// in instruction encoding.
+//
+// aux_data[ 5: 0] maps to instr[ 63: 58] for VOP2M-VOP6M (MOD0)
+// aux_data[17: 6] maps to instr[ 87: 76] for VOP3M-VOP5M (MOD1)
+// aux_data[13: 6] maps to instr[ 83: 76] for VOP6M       (MOD1)
+// aux_data[25:18] maps to instr[127:120] for VOP5M-VOP6M (MOD2)
+
 def int_amdgcn_permute_pair_2src_rotate_group_b32 :
   ClangBuiltin<"__builtin_amdgcn_permute_pair_2src_rotate_group_b32">,
   DefaultAttrsIntrinsic<
@@ -3260,24 +3250,24 @@ multiclass Conv<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy = out
   def _3x3 : Conv3x3<outTy, weightsTensorTy, accinTy>;
 }
 
-defm int_amdgcn_wconv_fp16_fp16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_bf16_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_fp16_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_bf16_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp16_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp16_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_bf16_bf16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_f16_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_bf16_bf8  : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 
-defm int_amdgcn_wconv_fp32_fp16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_fp32_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_fp32_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp32_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_i32_iu8: Conv<llvm_anyint_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_i32_iu4: Conv<llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_f32_bf16  : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_f32_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_i32_iu8   : Conv<llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_i32_iu4   : Conv<llvm_anyint_ty, llvm_anyint_ty>;
 
-defm int_amdgcn_wconv_f32i32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_f32i32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32i32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32i32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
 
 class AMDGPUScaleBiasActivate<LLVMType data_ty, LLVMType bias_ty> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
@@ -4003,10 +3993,6 @@ multiclass AMDGPUMFp8SmfmacIntrinsic<LLVMType DestTy> {
 // bf16 atomics use v2i16 argument since there is no bf16 data type in the llvm.
 def int_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUAtomicRtn<llvm_v2i16_ty>;
 def int_amdgcn_flat_atomic_fadd_v2bf16   : AMDGPUAtomicRtn<llvm_v2i16_ty>;
-def int_amdgcn_ds_fadd_v2bf16 : DefaultAttrsIntrinsic<
-    [llvm_v2i16_ty],
-    [LLVMQualPointerType<3>, llvm_v2i16_ty],
-    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 
 defset list<Intrinsic> AMDGPUMFMAIntrinsics940 = {
 def int_amdgcn_mfma_i32_16x16x32_i8     : AMDGPUMfmaIntrinsic<llvm_v4i32_ty,  llvm_i64_ty>;
@@ -4407,7 +4393,6 @@ defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1210 = {
 def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f64_16x16x8_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x16_xf32     : AMDGPUWmmaIntrinsic<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f16_16x16x32_f16      : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;

@@ -110,7 +110,7 @@ protected:
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
-  bool GFX12_10Insts = false;
+  bool GFX1210Insts = false;
   bool GFX13Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
@@ -165,6 +165,10 @@ protected:
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
+  bool HasAtomicFMinFMaxF32GlobalInsts = false;
+  bool HasAtomicFMinFMaxF64GlobalInsts = false;
+  bool HasAtomicFMinFMaxF32FlatInsts = false;
+  bool HasAtomicFMinFMaxF64FlatInsts = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
   bool HasAtomicFaddRtnInsts = false;
@@ -175,7 +179,7 @@ protected:
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
-  bool HasGFX12_10DGEMMInsts = false;
+  bool HasGFX1211GEMMInsts = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -370,7 +374,7 @@ public:
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
   bool supportsWGP() const {
-    if (GFX12_10Insts)
+    if (GFX1210Insts)
       return false;
     return getGeneration() >= GFX10;
   }
@@ -691,24 +695,24 @@ public:
 
   // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
   bool hasBufferFlatGlobalAtomicsF64() const {
-    return hasGFX90AInsts() || hasGFX12_10Insts();
+    return hasGFX90AInsts() || hasGFX1210Insts();
   }
 
-  bool hasMTBUFInsts() const { return GFX13Insts || !hasGFX12_10Insts(); }
+  bool hasMTBUFInsts() const { return GFX13Insts || !hasGFX1210Insts(); }
 
   bool hasFormattedMUBUFInsts() const {
-    return GFX13Insts || !hasGFX12_10Insts();
+    return GFX13Insts || !hasGFX1210Insts();
   }
 
   bool hasExportInsts() const {
-    return GFX13Insts || (!hasGFX940Insts() && !hasGFX12_10Insts());
+    return GFX13Insts || (!hasGFX940Insts() && !hasGFX1210Insts());
   }
 
-  bool hasVINTERPEncoding() const { return GFX13Insts || !hasGFX12_10Insts(); }
+  bool hasVINTERPEncoding() const { return GFX13Insts || !hasGFX1210Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const {
-    return hasGFX90AInsts() || hasGFX12_10Insts();
+    return hasGFX90AInsts() || hasGFX1210Insts();
   }
 
   bool hasMultiDwordFlatScratchAddressing() const {
@@ -872,6 +876,22 @@ public:
     return HasPkFmacF16Inst;
   }
 
+  bool hasAtomicFMinFMaxF32GlobalInsts() const {
+    return HasAtomicFMinFMaxF32GlobalInsts;
+  }
+
+  bool hasAtomicFMinFMaxF64GlobalInsts() const {
+    return HasAtomicFMinFMaxF64GlobalInsts;
+  }
+
+  bool hasAtomicFMinFMaxF32FlatInsts() const {
+    return HasAtomicFMinFMaxF32FlatInsts;
+  }
+
+  bool hasAtomicFMinFMaxF64FlatInsts() const {
+    return HasAtomicFMinFMaxF64FlatInsts;
+  }
+
   bool hasAtomicDsPkAdd16Insts() const { return HasAtomicDsPkAdd16Insts; }
 
   bool hasAtomicFlatPkAdd16Insts() const { return HasAtomicFlatPkAdd16Insts; }
@@ -902,7 +922,7 @@ public:
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
 
-  bool hasGFX12_10DGEMMInsts() const { return HasGFX12_10DGEMMInsts; }
+  bool hasGFX1211GEMMInsts() const { return HasGFX1211GEMMInsts; }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 
@@ -952,7 +972,7 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
-  bool hasVectorPrefetch() const { return GFX12_10Insts; }
+  bool hasVectorPrefetch() const { return GFX1210Insts; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -1026,7 +1046,7 @@ public:
   }
 
   bool hasLDSFPAtomicAddF32() const { return GFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX12_10Insts; }
+  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX1210Insts; }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
@@ -1073,9 +1093,7 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
-  bool hasFmaakFmamkF64Insts() const {
-    return hasGFX12_10Insts();
-  }
+  bool hasFmaakFmamkF64Insts() const { return hasGFX1210Insts(); }
 
   bool hasImageInsts() const {
     return HasImageInsts;
@@ -1131,17 +1149,17 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts || GFX12_10Insts; }
+  bool hasMovB64() const { return GFX940Insts || GFX1210Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts || GFX12_10Insts; }
+  bool hasLshlAddB64() const { return GFX940Insts || GFX1210Insts; }
 
   // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return GFX12_10Insts; }
+  bool hasScaleOffset() const { return GFX1210Insts; }
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
   // FLAT GLOBAL VOffset is signed
-  bool hasSignedGVSOffset() const { return GFX12_10Insts; }
+  bool hasSignedGVSOffset() const { return GFX1210Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1286,7 +1304,7 @@ public:
   bool hasMLMathInsts() const { return HasMLMathInsts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX12_10Insts; }
+  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1210Insts; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }
@@ -1350,7 +1368,7 @@ public:
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
   bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
-  bool hasAddPC64Inst() const { return GFX12_10Insts; }
+  bool hasAddPC64Inst() const { return GFX1210Insts; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1210.
@@ -1459,49 +1477,45 @@ public:
   /// values.
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
-  bool hasGFX12_10Insts() const { return GFX12_10Insts; }
+  bool hasGFX1210Insts() const { return GFX1210Insts; }
 
-  bool hasVOPD3() const { return GFX12_10Insts; }
+  bool hasVOPD3() const { return GFX1210Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
-  bool hasAddU64SubU64() const { return GFX12_10Insts; }
+  bool hasAddU64SubU64() const { return GFX1210Insts; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return GFX12_10Insts; }
+  bool hasVectorMulU64() const { return GFX1210Insts; }
 
   // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
   // instructions.
-  bool hasMadU64U32NoCarry() const { return GFX12_10Insts; }
+  bool hasMadU64U32NoCarry() const { return GFX1210Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return GFX12_10Insts; }
+  bool hasIntMinMax64() const { return GFX1210Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-  bool hasAddMinMaxInsts() const { return GFX12_10Insts; }
+  bool hasAddMinMaxInsts() const { return GFX1210Insts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
-  bool hasPkAddMinMaxInsts() const { return GFX12_10Insts; }
+  bool hasPkAddMinMaxInsts() const { return GFX1210Insts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
-  bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
+  bool hasPkMinMax3Insts() const { return GFX1210Insts; }
 
   // \returns true if target has V_CVT_PK_F16_F32 instruction.
-  bool hasCvtPkF16Inst() const { return GFX12_10Insts && !GFX13Insts; }
+  bool hasCvtPkF16Inst() const { return GFX1210Insts && !GFX13Insts; }
 
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
-  bool hasSGetShaderCyclesInst() const { return GFX12_10Insts; }
+  bool hasSGetShaderCyclesInst() const { return GFX1210Insts; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1210 has not only fixed the bug but also
   // extended VA to 57 bits.
-  bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX12_10Insts; }
+  bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1210Insts; }
 
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return GFX13Insts; }
-
-  // \returns true if the target supports signed immediate offset for SMRD
-  // instructions.
-  bool hasSignedSMRDImmOffset() const { return getGeneration() >= GFX9; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1706,13 +1720,11 @@ public:
 
   // \returns true if the subtarget has a hazard requiring an "s_nop 0"
   // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
-  bool requiresNopBeforeDeallocVGPRs() const {
-    return !GFX12_10Insts;
-  }
+  bool requiresNopBeforeDeallocVGPRs() const { return !GFX1210Insts; }
 
   // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
-  bool requiresWaitIdleBeforeGetReg() const { return GFX12_10Insts; }
+  bool requiresWaitIdleBeforeGetReg() const { return GFX1210Insts; }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 };
@@ -1732,6 +1744,8 @@ public:
   bool hasDispatchID() const { return DispatchID; }
 
   bool hasFlatScratchInit() const { return FlatScratchInit; }
+
+  bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
 
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
 
@@ -1796,6 +1810,8 @@ private:
   bool DispatchID = false;
 
   bool FlatScratchInit = false;
+
+  bool PrivateSegmentSize = false;
 
   unsigned NumKernargPreloadSGPRs = 0;
 

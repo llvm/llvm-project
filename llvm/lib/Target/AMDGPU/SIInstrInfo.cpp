@@ -2689,7 +2689,7 @@ std::pair<MachineInstr*, MachineInstr*>
 SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
   assert (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
-  if (ST.hasMovB64() &&
+  if (ST.hasMovB64() && ST.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
       AMDGPU::isLegalDPALU_DPPControl(
           ST, MI.getOpcode(),
           getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl)->getImm())) {
@@ -9457,8 +9457,8 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX13)
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
 
-  if (MCOp == (uint16_t)-1 && ST.hasGFX12_10Insts())
-    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12_10);
+  if (MCOp == (uint16_t)-1 && ST.hasGFX1210Insts())
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX1210);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

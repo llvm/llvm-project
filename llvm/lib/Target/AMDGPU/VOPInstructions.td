@@ -31,25 +31,6 @@ class LetDummies {
   string DecoderNamespace;
 }
 
-//===----------------------------------------------------------------------===//
-// VOP Subtarget info
-//===----------------------------------------------------------------------===//
-
-class GFXGen<Predicate pred, string dn, string suffix, int sub> {
-  Predicate AssemblerPredicate = pred;
-  string DecoderNamespace = dn;
-  string Suffix = suffix;
-  int Subtarget = sub;
-}
-
-def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
-def GFX12_10Gen      : GFXGen<isGFX12_10Only, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
-def GFX12Not12_10Gen : GFXGen<isGFX12Not12_10, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-
-//===----------------------------------------------------------------------===//
-
 class VOP <string opName> {
   string OpName = opName;
 }
@@ -1148,8 +1129,9 @@ class VOP3_DPP8_Base<string OpName, VOPProfile P> :
   VOP_DPP8_Base<OpName, P, P.InsVOP3DPP8, P.AsmVOP3DPP8> {
   let OutOperandList = P.OutsVOP3DPP8;
   let AsmMatchConverter = "cvtVOP3DPP8";
-  let AsmVariantName = !if(P.HasExtVOP3DPP, AMDGPUAsmVariants.VOP3_DPP,
-                                            AMDGPUAsmVariants.Disable);
+  let AsmVariantName = !if(!or(P.HasExtVOP3DPP, P.HasExt64BitDPP),
+                           AMDGPUAsmVariants.VOP3_DPP,
+                           AMDGPUAsmVariants.Disable);
   let VOP3 = 1;
   let Size = 12;
 }
@@ -1819,7 +1801,7 @@ multiclass VOP3_BITOP3_Real_Base<GFXGen Gen, bits<10> op, bit isSingle = 0> {
 multiclass VOP3Only_ScaleSel_Real_gfx1210<bits<10> op> {
   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
   def _e64_gfx1210 :
-    VOP3_Real_Gen<ps, GFX12_10Gen>,
+    VOP3_Real_Gen<ps, GFX1210Gen>,
     VOP3a_ScaleSel_gfx1210<op, ps.Pfl>;
 }
 
@@ -1866,27 +1848,27 @@ multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = g
   VOP3Only_Realtriple<GFX13Gen, op>;
 
 multiclass VOP3Only_Real_Base_gfx1210<bits<10> op> :
-  VOP3_Real_Base<GFX12_10Gen, op, NAME, 1/*IsSingle*/>;
+  VOP3_Real_Base<GFX1210Gen, op, NAME, 1/*IsSingle*/>;
 
 multiclass VOP3Only_Realtriple_gfx1210<bits<10> op, bit isSingle = 0> :
-  VOP3_Realtriple<GFX12_10Gen, op, isSingle>;
+  VOP3_Realtriple<GFX1210Gen, op, isSingle>;
 
 multiclass VOP3Only_Realtriple_gfx1210_gfx13<
-    bits<10> gfx12_10Op, bits<10> op = gfx12_10Op> :
-  VOP3_Realtriple<GFX12_10Gen, gfx12_10Op>,
+    bits<10> gfx1210Op, bits<10> op = gfx1210Op> :
+  VOP3_Realtriple<GFX1210Gen, gfx1210Op>,
   VOP3_Realtriple<GFX13Gen, op>;
 
 multiclass VOP3Only_Realtriple_gfx1210_DPP8_gfx13<bits<10> op> :
-  VOP3_Realtriple<GFX12_10Gen, op>,
+  VOP3_Realtriple<GFX1210Gen, op>,
   VOP3_Realtriple_DPP8<GFX13Gen, op>;
 
 multiclass VOP3Only_Realtriple_gfx1210_NO_DPP_gfx13<bits<10> op> :
-  VOP3_Realtriple<GFX12_10Gen, op>,
+  VOP3_Realtriple<GFX1210Gen, op>,
   VOP3_Real_Base<GFX13Gen, op>;
 
 multiclass VOP3Only_Realtriple_t16_gfx1210_gfx13<
-    bits<10> gfx12_10Op, bits<10> op> :
-  VOP3Only_Realtriple<GFX12_10Gen, gfx12_10Op>,
+    bits<10> gfx1210Op, bits<10> op> :
+  VOP3Only_Realtriple<GFX1210Gen, gfx1210Op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
 
 multiclass VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<
@@ -1922,7 +1904,7 @@ multiclass VOP3_Real_BITOP3<GFXGen gen, bits<10> op, bit isSingle = 0> :
   VOP3_BITOP3_Real_dpp8_Base<gen, op>;
 
 multiclass VOP3_Real_BITOP3_gfx1210_gfx13<bits<10> op, bit isSingle = 0> :
-  VOP3_Real_BITOP3<GFX12_10Gen, op, isSingle>,
+  VOP3_Real_BITOP3<GFX1210Gen, op, isSingle>,
   VOP3_Real_BITOP3<GFX13Gen, op, isSingle>;
 
 //===----------------------------------------------------------------------===//

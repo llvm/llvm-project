@@ -1412,12 +1412,12 @@ private:
   /// \param SGPRRange [in] Token range, used for SGPR diagnostics.
   /// \param VGPRBlocks [out] Result VGPR block count.
   /// \param SGPRBlocks [out] Result SGPR block count.
-  bool calculateGPRBlocks(const FeatureBitset &Features, bool VCCUsed,
-                          bool FlatScrUsed, bool XNACKUsed,
+  bool calculateGPRBlocks(const FeatureBitset &Features, const MCExpr *VCCUsed,
+                          const MCExpr *FlatScrUsed, bool XNACKUsed,
                           std::optional<bool> EnableWavefrontSize32,
-                          unsigned NextFreeVGPR, SMRange VGPRRange,
-                          unsigned NextFreeSGPR, SMRange SGPRRange,
-                          unsigned &VGPRBlocks, unsigned &SGPRBlocks);
+                          const MCExpr *NextFreeVGPR, SMRange VGPRRange,
+                          const MCExpr *NextFreeSGPR, SMRange SGPRRange,
+                          const MCExpr *&VGPRBlocks, const MCExpr *&SGPRBlocks);
   bool ParseDirectiveAMDGCNTarget();
   bool ParseDirectiveAMDHSACodeObjectVersion();
   bool ParseDirectiveAMDHSAKernel();
@@ -1574,9 +1574,9 @@ public:
 
   bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
 
-  bool isGFX12_10() const {
-    return AMDGPU::isGFX12_10(getSTI());
-  }
+  bool isGFX1210Only() const { return AMDGPU::isGFX1210Only(getSTI()); }
+
+  bool isGFX1210Plus() const { return AMDGPU::isGFX1210Plus(getSTI()); }
 
   bool isGFX13() const { return AMDGPU::isGFX13(getSTI()); }
 
@@ -2969,7 +2969,7 @@ unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
     return AMDGPU::NoRegister;
   }
 
-  if (RegKind == IS_VGPR && !isGFX12_10() && RegIdx + RegWidth / 32 > 256) {
+  if (RegKind == IS_VGPR && !isGFX1210Plus() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
   }
@@ -4028,7 +4028,7 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1210 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
-  bool AllowSameVGPR = isGFX12_10();
+  bool AllowSameVGPR = isGFX1210Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
     for (auto OpName : {OpName::src0X, OpName::src0Y}) {
@@ -4164,7 +4164,7 @@ bool AMDGPUAsmParser::tryVOPD(const MCInst &Inst) {
 // form but switch to VOPD3 otherwise.
 bool AMDGPUAsmParser::tryAnotherVOPDEncoding(const MCInst &Inst) {
   const unsigned Opcode = Inst.getOpcode();
-  if (!isGFX12_10() || !isVOPD(Opcode))
+  if (!isGFX1210Plus() || !isVOPD(Opcode))
     return false;
 
   if (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3)
@@ -5115,9 +5115,15 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  // TODO: Workaround for now. FeatureGFX12_10Insts is added to GFX13, but GFX13 is not required
+  // TODO: Workaround for now. FeatureGFX1210Insts is added to GFX13, but GFX13 is not required
   // VGPRAlignment.
-  if ((!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX12_10Insts]) || isGFX13())
+  if ((!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1210Insts]) || isGFX13())
+    return true;
+
+  unsigned Opc = Inst.getOpcode();
+  // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
+  // unaligned VGPR. All others only allow even aligned VGPRs.
+  if (FB[AMDGPU::FeatureGFX90AInsts] && Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
     return true;
 
   const MCRegisterInfo *MRI = getMRI();
@@ -5266,7 +5272,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
-  if (!isGFX12_10()) {
+  if (!isGFX1210Plus()) {
     if (CPol & CPol::SCAL) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
@@ -5769,41 +5775,64 @@ bool AMDGPUAsmParser::OutOfRangeError(SMRange Range) {
 }
 
 bool AMDGPUAsmParser::calculateGPRBlocks(
-    const FeatureBitset &Features, bool VCCUsed, bool FlatScrUsed,
-    bool XNACKUsed, std::optional<bool> EnableWavefrontSize32,
-    unsigned NextFreeVGPR, SMRange VGPRRange, unsigned NextFreeSGPR,
-    SMRange SGPRRange, unsigned &VGPRBlocks, unsigned &SGPRBlocks) {
+    const FeatureBitset &Features, const MCExpr *VCCUsed,
+    const MCExpr *FlatScrUsed, bool XNACKUsed,
+    std::optional<bool> EnableWavefrontSize32, const MCExpr *NextFreeVGPR,
+    SMRange VGPRRange, const MCExpr *NextFreeSGPR, SMRange SGPRRange,
+    const MCExpr *&VGPRBlocks, const MCExpr *&SGPRBlocks) {
   // TODO(scott.linder): These calculations are duplicated from
   // AMDGPUAsmPrinter::getSIProgramInfo and could be unified.
   IsaVersion Version = getIsaVersion(getSTI().getCPU());
+  MCContext &Ctx = getContext();
 
-  unsigned NumVGPRs = NextFreeVGPR;
-  unsigned NumSGPRs = NextFreeSGPR;
+  const MCExpr *NumSGPRs = NextFreeSGPR;
+  int64_t EvaluatedSGPRs;
 
   if (Version.Major >= 10)
-    NumSGPRs = 0;
+    NumSGPRs = MCConstantExpr::create(0, Ctx);
   else {
     unsigned MaxAddressableNumSGPRs =
         IsaInfo::getAddressableNumSGPRs(&getSTI());
 
-    if (Version.Major >= 8 && !Features.test(FeatureSGPRInitBug) &&
-        NumSGPRs > MaxAddressableNumSGPRs)
+    if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) && Version.Major >= 8 &&
+        !Features.test(FeatureSGPRInitBug) &&
+        static_cast<uint64_t>(EvaluatedSGPRs) > MaxAddressableNumSGPRs)
       return OutOfRangeError(SGPRRange);
 
-    NumSGPRs +=
-        IsaInfo::getNumExtraSGPRs(&getSTI(), VCCUsed, FlatScrUsed, XNACKUsed);
+    const MCExpr *ExtraSGPRs =
+        AMDGPUMCExpr::createExtraSGPRs(VCCUsed, FlatScrUsed, XNACKUsed, Ctx);
+    NumSGPRs = MCBinaryExpr::createAdd(NumSGPRs, ExtraSGPRs, Ctx);
 
-    if ((Version.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
-        NumSGPRs > MaxAddressableNumSGPRs)
+    if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) &&
+        (Version.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
+        static_cast<uint64_t>(EvaluatedSGPRs) > MaxAddressableNumSGPRs)
       return OutOfRangeError(SGPRRange);
 
     if (Features.test(FeatureSGPRInitBug))
-      NumSGPRs = IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
+      NumSGPRs =
+          MCConstantExpr::create(IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG, Ctx);
   }
 
-  VGPRBlocks = IsaInfo::getEncodedNumVGPRBlocks(&getSTI(), NumVGPRs,
-                                                EnableWavefrontSize32);
-  SGPRBlocks = IsaInfo::getNumSGPRBlocks(&getSTI(), NumSGPRs);
+  // The MCExpr equivalent of getNumSGPRBlocks/getNumVGPRBlocks:
+  // (alignTo(max(1u, NumGPR), GPREncodingGranule) / GPREncodingGranule) - 1
+  auto GetNumGPRBlocks = [&Ctx](const MCExpr *NumGPR,
+                                unsigned Granule) -> const MCExpr * {
+    const MCExpr *OneConst = MCConstantExpr::create(1ul, Ctx);
+    const MCExpr *GranuleConst = MCConstantExpr::create(Granule, Ctx);
+    const MCExpr *MaxNumGPR = AMDGPUMCExpr::createMax({NumGPR, OneConst}, Ctx);
+    const MCExpr *AlignToGPR =
+        AMDGPUMCExpr::createAlignTo(MaxNumGPR, GranuleConst, Ctx);
+    const MCExpr *DivGPR =
+        MCBinaryExpr::createDiv(AlignToGPR, GranuleConst, Ctx);
+    const MCExpr *SubGPR = MCBinaryExpr::createSub(DivGPR, OneConst, Ctx);
+    return SubGPR;
+  };
+
+  VGPRBlocks = GetNumGPRBlocks(
+      NextFreeVGPR,
+      IsaInfo::getVGPREncodingGranule(&getSTI(), EnableWavefrontSize32));
+  SGPRBlocks =
+      GetNumGPRBlocks(NumSGPRs, IsaInfo::getSGPREncodingGranule(&getSTI()));
 
   return false;
 }
@@ -5827,14 +5856,17 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 
   IsaVersion IVersion = getIsaVersion(getSTI().getCPU());
 
+  const MCExpr *ZeroExpr = MCConstantExpr::create(0, getContext());
+  const MCExpr *OneExpr = MCConstantExpr::create(1, getContext());
+
   SMRange VGPRRange;
-  uint64_t NextFreeVGPR = 0;
-  uint64_t AccumOffset = 0;
+  const MCExpr *NextFreeVGPR = ZeroExpr;
+  const MCExpr *AccumOffset = MCConstantExpr::create(0, getContext());
   uint64_t SharedVGPRCount = 0;
   uint64_t PreloadLength = 0;
   uint64_t PreloadOffset = 0;
   SMRange SGPRRange;
-  uint64_t NextFreeSGPR = 0;
+  const MCExpr *NextFreeSGPR = ZeroExpr;
 
   // Count the number of user SGPRs implied from the enabled feature bits.
   unsigned ImpliedUserSGPRCount = 0;
@@ -5842,8 +5874,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   // Track if the asm explicitly contains the directive for the user SGPR
   // count.
   std::optional<unsigned> ExplicitUserSGPRCount;
-  bool ReserveVCC = true;
-  bool ReserveFlatScr = true;
+  const MCExpr *ReserveVCC = OneExpr;
+  const MCExpr *ReserveFlatScr = OneExpr;
   std::optional<bool> EnableWavefrontSize32;
 
   while (true) {
@@ -6037,34 +6069,29 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        COMPUTE_PGM_RSRC2_ENABLE_VGPR_WORKITEM_ID, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_next_free_vgpr") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       VGPRRange = ValRange;
-      NextFreeVGPR = Val;
+      NextFreeVGPR = ExprVal;
     } else if (ID == ".amdhsa_next_free_sgpr") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       SGPRRange = ValRange;
-      NextFreeSGPR = Val;
+      NextFreeSGPR = ExprVal;
     } else if (ID == ".amdhsa_accum_offset") {
       if (!isGFX90A())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
-      AccumOffset = Val;
+      AccumOffset = ExprVal;
     } else if (ID == ".amdhsa_reserve_vcc") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
-      if (!isUInt<1>(Val))
+      if (EvaluatableExpr && !isUInt<1>(Val))
         return OutOfRangeError(ValRange);
-      ReserveVCC = Val;
+      ReserveVCC = ExprVal;
     } else if (ID == ".amdhsa_reserve_flat_scratch") {
-      EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (IVersion.Major < 7)
         return Error(IDRange.Start, "directive requires gfx7+", IDRange);
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
                      "directive is not supported with architected flat scratch",
                      IDRange);
-      if (!isUInt<1>(Val))
+      if (EvaluatableExpr && !isUInt<1>(Val))
         return OutOfRangeError(ValRange);
-      ReserveFlatScr = Val;
+      ReserveFlatScr = ExprVal;
     } else if (ID == ".amdhsa_reserve_xnack_mask") {
       if (IVersion.Major < 8)
         return Error(IDRange.Start, "directive requires gfx8+", IDRange);
@@ -6187,41 +6214,49 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (!Seen.contains(".amdhsa_next_free_sgpr"))
     return TokError(".amdhsa_next_free_sgpr directive is required");
 
-  unsigned VGPRBlocks;
-  unsigned SGPRBlocks;
+  const MCExpr *VGPRBlocks;
+  const MCExpr *SGPRBlocks;
   if (calculateGPRBlocks(getFeatureBits(), ReserveVCC, ReserveFlatScr,
                          getTargetStreamer().getTargetID()->isXnackOnOrAny(),
                          EnableWavefrontSize32, NextFreeVGPR, VGPRRange,
                          NextFreeSGPR, SGPRRange, VGPRBlocks, SGPRBlocks))
     return true;
 
+  int64_t EvaluatedVGPRBlocks;
+  bool VGPRBlocksEvaluatable =
+      VGPRBlocks->evaluateAsAbsolute(EvaluatedVGPRBlocks);
+
   if (isGFX13Plus()) {
-    if (!isUInt<
+    if (VGPRBlocksEvaluatable &&
+        !isUInt<
             COMPUTE_PGM_RSRC1_GFX13_PLUS_GRANULATED_WORKITEM_VGPR_COUNT_WIDTH>(
-            VGPRBlocks))
+            static_cast<uint64_t>(EvaluatedVGPRBlocks)))
       return OutOfRangeError(VGPRRange);
     AMDGPU::MCKernelDescriptor::bits_set(
-        KD.compute_pgm_rsrc1, MCConstantExpr::create(VGPRBlocks, getContext()),
+        KD.compute_pgm_rsrc1, VGPRBlocks,
         COMPUTE_PGM_RSRC1_GFX13_PLUS_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT,
         COMPUTE_PGM_RSRC1_GFX13_PLUS_GRANULATED_WORKITEM_VGPR_COUNT,
         getContext());
   } else {
-    if (!isUInt<
+    if (VGPRBlocksEvaluatable &&
+        !isUInt<
             COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WORKITEM_VGPR_COUNT_WIDTH>(
-            VGPRBlocks))
+            static_cast<uint64_t>(EvaluatedVGPRBlocks)))
       return OutOfRangeError(VGPRRange);
     AMDGPU::MCKernelDescriptor::bits_set(
-        KD.compute_pgm_rsrc1, MCConstantExpr::create(VGPRBlocks, getContext()),
+        KD.compute_pgm_rsrc1, VGPRBlocks,
         COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT,
         COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WORKITEM_VGPR_COUNT,
         getContext());
 
-    if (!isUInt<
+    int64_t EvaluatedSGPRBlocks;
+    if (SGPRBlocks->evaluateAsAbsolute(EvaluatedSGPRBlocks) &&
+        !isUInt<
             COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT_WIDTH>(
-            SGPRBlocks))
+            static_cast<uint64_t>(EvaluatedSGPRBlocks)))
       return OutOfRangeError(SGPRRange);
     AMDGPU::MCKernelDescriptor::bits_set(
-        KD.compute_pgm_rsrc1, MCConstantExpr::create(SGPRBlocks, getContext()),
+        KD.compute_pgm_rsrc1, SGPRBlocks,
         COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT,
         COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT,
         getContext());
@@ -6234,7 +6269,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   unsigned UserSGPRCount =
       ExplicitUserSGPRCount ? *ExplicitUserSGPRCount : ImpliedUserSGPRCount;
 
-  if (isGFX12_10()) {
+  if (isGFX1210Plus()) {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
   AMDGPU::MCKernelDescriptor::bits_set(
@@ -6262,16 +6297,28 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (isGFX90A()) {
     if (!Seen.contains(".amdhsa_accum_offset"))
       return TokError(".amdhsa_accum_offset directive is required");
-    if (AccumOffset < 4 || AccumOffset > 256 || (AccumOffset & 3))
+    int64_t EvaluatedAccum;
+    bool AccumEvaluatable = AccumOffset->evaluateAsAbsolute(EvaluatedAccum);
+    uint64_t UEvaluatedAccum = EvaluatedAccum;
+    if (AccumEvaluatable &&
+        (UEvaluatedAccum < 4 || UEvaluatedAccum > 256 || (UEvaluatedAccum & 3)))
       return TokError("accum_offset should be in range [4..256] in "
                       "increments of 4");
-    if (AccumOffset > alignTo(std::max((uint64_t)1, NextFreeVGPR), 4))
+
+    int64_t EvaluatedNumVGPR;
+    if (NextFreeVGPR->evaluateAsAbsolute(EvaluatedNumVGPR) &&
+        AccumEvaluatable &&
+        UEvaluatedAccum >
+            alignTo(std::max((uint64_t)1, (uint64_t)EvaluatedNumVGPR), 4))
       return TokError("accum_offset exceeds total VGPR allocation");
-    MCKernelDescriptor::bits_set(
-        KD.compute_pgm_rsrc3,
-        MCConstantExpr::create(AccumOffset / 4 - 1, getContext()),
-        COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
-        COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET, getContext());
+    const MCExpr *AdjustedAccum = MCBinaryExpr::createSub(
+        MCBinaryExpr::createDiv(
+            AccumOffset, MCConstantExpr::create(4, getContext()), getContext()),
+        MCConstantExpr::create(1, getContext()), getContext());
+    MCKernelDescriptor::bits_set(KD.compute_pgm_rsrc3, AdjustedAccum,
+                                 COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
+                                 COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
+                                 getContext());
   }
 
   if (IVersion.Major >= 10 && IVersion.Major < 12) {
@@ -6280,7 +6327,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       return TokError("shared_vgpr_count directive not valid on "
                       "wavefront size 32");
     }
-    if (SharedVGPRCount * 2 + VGPRBlocks > 63) {
+
+    if (VGPRBlocksEvaluatable &&
+        (SharedVGPRCount * 2 + static_cast<uint64_t>(EvaluatedVGPRBlocks) >
+         63)) {
       return TokError("shared_vgpr_count*2 + "
                       "compute_pgm_rsrc1.GRANULATED_WORKITEM_VGPR_COUNT cannot "
                       "exceed 63\n");
@@ -8903,7 +8953,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
 ///           max(expr, ...)
 ///
 bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
-  using AGVK = AMDGPUVariadicMCExpr::VariadicKind;
+  using AGVK = AMDGPUMCExpr::VariantKind;
 
   if (isToken(AsmToken::Identifier)) {
     StringRef TokenId = getTokenStr();
@@ -8933,7 +8983,7 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   "mismatch of commas in " + Twine(TokenId) + " expression");
             return true;
           }
-          Res = AMDGPUVariadicMCExpr::create(VK, Exprs, getContext());
+          Res = AMDGPUMCExpr::create(VK, Exprs, getContext());
           return false;
         }
         const MCExpr *Expr;

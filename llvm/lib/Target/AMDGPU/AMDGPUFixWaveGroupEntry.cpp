@@ -90,8 +90,9 @@ bool AMDGPUFixWaveGroupEntry::runOnModule(Module &M) {
     MachineBasicBlock &Entry = MF->front();
 
     // TODO-GFX13: replace this condition with the real wavegroup attribute
-    auto LaneSharedSize = MFI->getLaneSharedSize();
-    bool InWaveGroup = (LaneSharedSize > 0);
+    auto LaneSharedScratchSize = MFI->getLaneSharedScratchSize();
+    auto LaneSharedVGPRSize = MFI->getLaneSharedVGPRSize();
+    bool InWaveGroup = (LaneSharedScratchSize + LaneSharedVGPRSize > 0);
     if (!InWaveGroup) {
       // assume that hw_reg_gpr_msb_idx0 has been initialized to zero by HW
       continue;
@@ -145,20 +146,25 @@ bool AMDGPUFixWaveGroupEntry::runOnModule(Module &M) {
     I = Entry.begin();
     DebugLoc DL;
     auto AlignUnit = ST.getStackAlignment();
-    auto RankScratchStart = alignTo(LaneSharedSize, AlignUnit);
+    auto RankScratchStart = alignTo(LaneSharedScratchSize, AlignUnit);
     auto PerRankScratch = alignTo(Info.PrivateSegmentSize, AlignUnit);
+    auto RankVGPRStart = alignTo(LaneSharedVGPRSize, 4u) / 4u;
     auto PerRankVGPRCnt = Info.NumVGPR;
     auto WorkGroupSize = ST.getFlatWorkGroupSizes(F).second;
     // the number of wavegroups is always 4
-    if (PerRankScratch * WorkGroupSize > ST.getMaxWaveScratchSize() * 4) {
+    constexpr unsigned NumWaveGroups = 4;
+    auto WavesPerWaveGroup =
+        (WorkGroupSize >> ST.getWavefrontSizeLog2()) / NumWaveGroups;
+    auto TotalWaveGroupScratch =
+        (RankScratchStart + PerRankScratch * WavesPerWaveGroup)
+        << ST.getWavefrontSizeLog2();
+    if (TotalWaveGroupScratch > ST.getMaxWaveScratchSize()) {
       llvm::DiagnosticInfoStackSize DiagStackSize(
-          F, PerRankScratch * WorkGroupSize / 4, ST.getMaxWaveScratchSize(),
-          DS_Error);
+          F, TotalWaveGroupScratch, ST.getMaxWaveScratchSize(), DS_Error);
       F.getContext().diagnose(DiagStackSize);
     }
-    assert(PerRankVGPRCnt * WorkGroupSize <=
-           ST.getMaxNumVGPRs(ST.getWavefrontSize()) * 4 *
-               ST.getWavefrontSize());
+    assert(RankVGPRStart + PerRankVGPRCnt * WavesPerWaveGroup <=
+           ST.getAddressableNumVGPRs());
     // first get wave-id-in-wavegroup, temporarily reuse FP
     BuildMI(Entry, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
         .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
@@ -166,6 +172,9 @@ bool AMDGPUFixWaveGroupEntry::runOnModule(Module &M) {
     BuildMI(Entry, I, DL, TII->get(AMDGPU::S_MUL_I32), FPReg)
         .addReg(FPReg)
         .addImm(PerRankVGPRCnt);
+    BuildMI(Entry, I, DL, TII->get(AMDGPU::S_ADD_I32), FPReg)
+        .addReg(FPReg)
+        .addImm(RankVGPRStart);
     // set IDX0
     BuildMI(Entry, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX0)
         .addReg(FPReg);

@@ -166,6 +166,20 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 unsigned
 AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
                                                 const GlobalVariable &GV) {
+  assert(GV.getAddressSpace() == AMDGPUAS::LANE_SHARED &&
+         "expected lane-shared address space");
+  bool InVGPR = GV.hasAttribute("lane-shared-in-vgpr");
+  if (InVGPR) {
+    auto Entry = LaneSharedVGPRObjects.insert(std::pair(&GV, 0));
+    if (!Entry.second)
+      return Entry.first->second;
+
+    unsigned Offset;
+    Offset = LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize, 4u);
+    LaneSharedVGPRSize += DL.getTypeAllocSize(GV.getValueType());
+    Entry.first->second = Offset;
+    return Offset;
+  }
   auto Entry = LaneSharedMemoryObjects.insert(std::pair(&GV, 0));
   if (!Entry.second)
     return Entry.first->second;
@@ -174,11 +188,8 @@ AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
       DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
 
   unsigned Offset;
-  assert(GV.getAddressSpace() == AMDGPUAS::LANE_SHARED &&
-         "expected lane-shared address space");
-  Offset = LaneSharedSize = alignTo(LaneSharedSize, Alignment);
-  LaneSharedSize += DL.getTypeAllocSize(GV.getValueType());
-
+  Offset = LaneSharedScratchSize = alignTo(LaneSharedScratchSize, Alignment);
+  LaneSharedScratchSize += DL.getTypeAllocSize(GV.getValueType());
   Entry.first->second = Offset;
   return Offset;
 }

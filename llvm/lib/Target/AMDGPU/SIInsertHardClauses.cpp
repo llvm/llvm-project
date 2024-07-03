@@ -104,7 +104,7 @@ public:
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
-          ST->hasGFX12_10Insts()) {
+          ST->hasGFX1210Insts()) {
         if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());

@@ -377,6 +377,11 @@ static cl::opt<bool> EnableHipStdPar(
   cl::desc("Enable HIP Standard Parallelism Offload support"), cl::init(false),
   cl::Hidden);
 
+static cl::opt<bool>
+    EnablePromoteLaneShared("amdgpu-promote-lane-shared",
+                            cl::desc("Enable promoting lane-shared into VGPR"),
+                            cl::init(true), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -427,6 +432,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULateCodeGenPreparePass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
+  initializeAMDGPUMarkPromotableLaneSharedLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
@@ -662,8 +668,7 @@ Error AMDGPUTargetMachine::buildCodeGenPipeline(
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
-void AMDGPUTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
@@ -1234,6 +1239,9 @@ bool GCNPassConfig::addPreISel() {
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     addPass(&AMDGPUPerfHintAnalysisID);
 
+  if (isPassEnabled(EnablePromoteLaneShared))
+    addPass(createAMDGPUMarkPromotableLaneSharedLegacyPass());
+
   return false;
 }
 
@@ -1445,11 +1453,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // verifier. This is only necessary with allocators which use LiveIntervals,
   // since FastRegAlloc does the replacements itself.
   addPass(createVirtRegRewriter(false));
-
-  // At this point, the sgpr-regalloc has been done and it is good to have the
-  // stack slot coloring to try to optimize the SGPR spill stack indices before
-  // attempting the custom SGPR spill lowering.
-  addPass(&StackSlotColoringID);
 
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsID);

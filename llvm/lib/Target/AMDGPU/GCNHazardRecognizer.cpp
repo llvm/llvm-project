@@ -15,7 +15,6 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -3176,13 +3175,11 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
     if (MIIsSALU && Op.isImplicit())
       continue;
 
-    // Ignore EXEC and M0
-    if (OpReg == AMDGPU::EXEC || OpReg == AMDGPU::EXEC_LO ||
-        OpReg == AMDGPU::EXEC_HI || OpReg == AMDGPU::M0 ||
-        OpReg == AMDGPU::SGPR_NULL)
+    if (!TRI.isSGPRReg(MRI, OpReg))
       continue;
 
-    if (!TRI.isSGPRReg(MRI, OpReg))
+    // Ignore special purposes registers such as NULL, EXEC, and M0.
+    if (TRI.getEncodingValue(OpReg) >= /*SGPR_NULL*/ 124)
       continue;
 
     unsigned RegN = baseSGPRNumber(OpReg, TRI);
