@@ -288,9 +288,8 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
 }
 
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
-  // Only for signed relational comparisons of scalar integers.
-  if (Cmp->getType()->isVectorTy() ||
-      !Cmp->getOperand(0)->getType()->isIntegerTy())
+  // Only for signed relational comparisons of integers.
+  if (!Cmp->getOperand(0)->getType()->isIntOrIntVectorTy())
     return false;
 
   if (!Cmp->isSigned())
@@ -505,12 +504,8 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI);
 // because it is negation-invariant.
 static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   Value *X = II->getArgOperand(0);
-  Type *Ty = X->getType();
-  if (!Ty->isIntegerTy())
-    return false;
-
   bool IsIntMinPoison = cast<ConstantInt>(II->getArgOperand(1))->isOne();
-  APInt IntMin = APInt::getSignedMinValue(Ty->getScalarSizeInBits());
+  APInt IntMin = APInt::getSignedMinValue(X->getType()->getScalarSizeInBits());
   ConstantRange Range = LVI->getConstantRangeAtUse(
       II->getOperandUse(0), /*UndefAllowed*/ IsIntMinPoison);
 
@@ -679,15 +674,13 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   }
 
   if (auto *WO = dyn_cast<WithOverflowInst>(&CB)) {
-    if (WO->getLHS()->getType()->isIntegerTy() && willNotOverflow(WO, LVI)) {
+    if (willNotOverflow(WO, LVI))
       return processOverflowIntrinsic(WO, LVI);
-    }
   }
 
   if (auto *SI = dyn_cast<SaturatingInst>(&CB)) {
-    if (SI->getType()->isIntegerTy() && willNotOverflow(SI, LVI)) {
+    if (willNotOverflow(SI, LVI))
       return processSaturatingInst(SI, LVI);
-    }
   }
 
   bool Changed = false;
@@ -761,11 +754,10 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
                              const ConstantRange &RCR) {
   assert(Instr->getOpcode() == Instruction::SDiv ||
          Instr->getOpcode() == Instruction::SRem);
-  assert(!Instr->getType()->isVectorTy());
 
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
-  unsigned OrigWidth = Instr->getType()->getIntegerBitWidth();
+  unsigned OrigWidth = Instr->getType()->getScalarSizeInBits();
 
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
@@ -788,7 +780,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
 
   ++NumSDivSRemsNarrowed;
   IRBuilder<> B{Instr};
-  auto *TruncTy = Type::getIntNTy(Instr->getContext(), NewWidth);
+  auto *TruncTy = Instr->getType()->getWithNewBitWidth(NewWidth);
   auto *LHS = B.CreateTruncOrBitCast(Instr->getOperand(0), TruncTy,
                                      Instr->getName() + ".lhs.trunc");
   auto *RHS = B.CreateTruncOrBitCast(Instr->getOperand(1), TruncTy,
@@ -809,7 +801,6 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
   Type *Ty = Instr->getType();
   assert(Instr->getOpcode() == Instruction::UDiv ||
          Instr->getOpcode() == Instruction::URem);
-  assert(!Ty->isVectorTy());
   bool IsRem = Instr->getOpcode() == Instruction::URem;
 
   Value *X = Instr->getOperand(0);
@@ -892,7 +883,6 @@ static bool narrowUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
                              const ConstantRange &YCR) {
   assert(Instr->getOpcode() == Instruction::UDiv ||
          Instr->getOpcode() == Instruction::URem);
-  assert(!Instr->getType()->isVectorTy());
 
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
@@ -905,12 +895,12 @@ static bool narrowUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
 
   // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
   // two.
-  if (NewWidth >= Instr->getType()->getIntegerBitWidth())
+  if (NewWidth >= Instr->getType()->getScalarSizeInBits())
     return false;
 
   ++NumUDivURemsNarrowed;
   IRBuilder<> B{Instr};
-  auto *TruncTy = Type::getIntNTy(Instr->getContext(), NewWidth);
+  auto *TruncTy = Instr->getType()->getWithNewBitWidth(NewWidth);
   auto *LHS = B.CreateTruncOrBitCast(Instr->getOperand(0), TruncTy,
                                      Instr->getName() + ".lhs.trunc");
   auto *RHS = B.CreateTruncOrBitCast(Instr->getOperand(1), TruncTy,
@@ -929,9 +919,6 @@ static bool narrowUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
 static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::UDiv ||
          Instr->getOpcode() == Instruction::URem);
-  if (Instr->getType()->isVectorTy())
-    return false;
-
   ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0),
                                                  /*UndefAllowed*/ false);
   // Allow undef for RHS, as we can assume it is division by zero UB.
@@ -946,7 +933,6 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
                         const ConstantRange &RCR, LazyValueInfo *LVI) {
   assert(SDI->getOpcode() == Instruction::SRem);
-  assert(!SDI->getType()->isVectorTy());
 
   if (LCR.abs().icmp(CmpInst::ICMP_ULT, RCR.abs())) {
     SDI->replaceAllUsesWith(SDI->getOperand(0));
@@ -1006,7 +992,6 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
 static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
                         const ConstantRange &RCR, LazyValueInfo *LVI) {
   assert(SDI->getOpcode() == Instruction::SDiv);
-  assert(!SDI->getType()->isVectorTy());
 
   // Check whether the division folds to a constant.
   ConstantRange DivCR = LCR.sdiv(RCR);
@@ -1064,9 +1049,6 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
 static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::SDiv ||
          Instr->getOpcode() == Instruction::SRem);
-  if (Instr->getType()->isVectorTy())
-    return false;
-
   ConstantRange LCR =
       LVI->getConstantRangeAtUse(Instr->getOperandUse(0), /*AllowUndef*/ false);
   // Allow undef for RHS, as we can assume it is division by zero UB.
@@ -1085,12 +1067,9 @@ static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 }
 
 static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy())
-    return false;
-
   ConstantRange LRange =
       LVI->getConstantRangeAtUse(SDI->getOperandUse(0), /*UndefAllowed*/ false);
-  unsigned OrigWidth = SDI->getType()->getIntegerBitWidth();
+  unsigned OrigWidth = SDI->getType()->getScalarSizeInBits();
   ConstantRange NegOneOrZero =
       ConstantRange(APInt(OrigWidth, (uint64_t)-1, true), APInt(OrigWidth, 1));
   if (NegOneOrZero.contains(LRange)) {
@@ -1117,9 +1096,6 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
 }
 
 static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy())
-    return false;
-
   const Use &Base = SDI->getOperandUse(0);
   if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
            .isAllNonNegative())
@@ -1138,9 +1114,6 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
 }
 
 static bool processPossibleNonNeg(PossiblyNonNegInst *I, LazyValueInfo *LVI) {
-  if (I->getType()->isVectorTy())
-    return false;
-
   if (I->hasNonNeg())
     return false;
 
@@ -1164,9 +1137,6 @@ static bool processUIToFP(UIToFPInst *UIToFP, LazyValueInfo *LVI) {
 }
 
 static bool processSIToFP(SIToFPInst *SIToFP, LazyValueInfo *LVI) {
-  if (SIToFP->getType()->isVectorTy())
-    return false;
-
   const Use &Base = SIToFP->getOperandUse(0);
   if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
            .isAllNonNegative())
@@ -1186,9 +1156,6 @@ static bool processSIToFP(SIToFPInst *SIToFP, LazyValueInfo *LVI) {
 
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   using OBO = OverflowingBinaryOperator;
-
-  if (BinOp->getType()->isVectorTy())
-    return false;
 
   bool NSW = BinOp->hasNoSignedWrap();
   bool NUW = BinOp->hasNoUnsignedWrap();
