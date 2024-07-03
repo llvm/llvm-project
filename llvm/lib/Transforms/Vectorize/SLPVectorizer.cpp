@@ -835,11 +835,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         auto *CallBase = cast<CallInst>(IBase);
         if (Call->getCalledFunction() != CallBase->getCalledFunction())
           return InstructionsState(VL[BaseIndex], nullptr, nullptr);
-        if (Call->hasOperandBundles() &&
+        if (Call->hasOperandBundles() && (!CallBase->hasOperandBundles() ||
             !std::equal(Call->op_begin() + Call->getBundleOperandsStartIndex(),
                         Call->op_begin() + Call->getBundleOperandsEndIndex(),
                         CallBase->op_begin() +
-                            CallBase->getBundleOperandsStartIndex()))
+                            CallBase->getBundleOperandsStartIndex())))
           return InstructionsState(VL[BaseIndex], nullptr, nullptr);
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
         if (ID != BaseID)
@@ -2434,6 +2434,21 @@ public:
   /// is delayed until BoUpSLP is destructed.
   void eraseInstruction(Instruction *I) {
     DeletedInstructions.insert(I);
+  }
+
+  /// Clear the operands of \p I, marking for deletion trivially dead operands.
+  void clearOperands(Instruction *I, const TreeEntry *Entry = nullptr) {
+    for (unsigned Idx : seq<unsigned>(I->getNumOperands())) {
+      // Ignore pointer operand of stores to keep correct DIAssignID.
+      if (isa<StoreInst>(I) && Idx == 1)
+        continue;
+      Value *Op = I->getOperand(Idx);
+      I->setOperand(Idx, PoisonValue::get(Op->getType()));
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        if (!isDeleted(OpI) && isInstructionTriviallyDead(OpI, TLI) &&
+            (!Entry || Entry->VectorizedValue != OpI))
+          eraseInstruction(OpI);
+    }
   }
 
   /// Checks if the instruction was already analyzed for being possible
@@ -14072,17 +14087,7 @@ Value *BoUpSLP::vectorizeTree(
       LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *Scalar << ".\n");
       auto *I = cast<Instruction>(Scalar);
       // Clear the operands, marking for deletion trivially dead operands.
-      for (unsigned Idx : seq<unsigned>(I->getNumOperands())) {
-        // Ignore pointer operand of stores to keep correct DIAssignID.
-        if (isa<StoreInst>(I) && Idx == 1)
-          continue;
-        Value *Op = I->getOperand(Idx);
-        I->setOperand(Idx, PoisonValue::get(Op->getType()));
-        if (auto *OpI = dyn_cast<Instruction>(Op))
-          if (!isDeleted(OpI) && isInstructionTriviallyDead(OpI, TLI) &&
-              Entry->VectorizedValue != OpI)
-            eraseInstruction(OpI);
-      }
+      clearOperands(I, Entry);
       eraseInstruction(I);
       // Retain to-be-deleted instructions for some debug-info
       // bookkeeping. NOTE: eraseInstruction only marks the instruction for
@@ -16234,7 +16239,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Ty->print(rso);
         return OptimizationRemarkMissed(SV_NAME, "UnsupportedType", I0)
                << "Cannot SLP vectorize list: type "
-               << rso.str() + " is unsupported by vectorizer";
+               << TypeStr + " is unsupported by vectorizer";
       });
       return false;
     }
@@ -17538,13 +17543,7 @@ public:
           }
           auto *I = cast<Instruction>(Ignore);
           // Clear the operands, marking for deletion trivially dead operands.
-          for (unsigned Idx : seq<unsigned>(I->getNumOperands())) {
-            Value *Op = I->getOperand(Idx);
-            I->setOperand(Idx, PoisonValue::get(Op->getType()));
-            if (auto *OpI = dyn_cast<Instruction>(Op))
-              if (!V.isDeleted(OpI) && isInstructionTriviallyDead(OpI, &TLI))
-                V.eraseInstruction(OpI);
-          }
+          V.clearOperands(I);
           V.eraseInstruction(I);
         }
       }
@@ -18137,7 +18136,8 @@ bool SLPVectorizerPass::tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
 }
 
 bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
-                                                 BasicBlock *BB, BoUpSLP &R) {
+                                                 BasicBlock *BB, BoUpSLP &R,
+                                                 bool MaxVFOnly) {
   if (!R.canMapToVector(IVI->getType()))
     return false;
 
@@ -18148,11 +18148,12 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
-  return tryToVectorizeList(BuildVectorOpds, R);
+  return tryToVectorizeList(BuildVectorOpds, R, MaxVFOnly);
 }
 
 bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
-                                                   BasicBlock *BB, BoUpSLP &R) {
+                                                   BasicBlock *BB, BoUpSLP &R,
+                                                   bool MaxVFOnly) {
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
@@ -18162,7 +18163,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
-  return tryToVectorizeList(BuildVectorInsts, R);
+  return tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly);
 }
 
 template <typename T>
@@ -18382,20 +18383,30 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
          "This function only accepts Insert instructions");
   bool OpsChanged = false;
   SmallVector<WeakTrackingVH> PostponedInsts;
-  // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
-    if (R.isDeleted(I))
-      continue;
-    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
-  }
-  // pass2 - try to match and vectorize a buildvector sequence.
-  for (auto *I : reverse(Instructions)) {
+    // pass1 - try to match and vectorize a buildvector sequence for MaxVF only.
     if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
-      OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/true);
     } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
-      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
+      OpsChanged |=
+          vectorizeInsertElementInst(LastInsertElem, BB, R, /*MaxVFOnly=*/true);
+    }
+    // pass2 - try to vectorize reductions only
+    if (R.isDeleted(I))
+      continue;
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+    if (R.isDeleted(I) || isa<CmpInst>(I))
+      continue;
+    // pass3 - try to match and vectorize a buildvector sequence.
+    if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/false);
+    } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
+      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R,
+                                               /*MaxVFOnly=*/false);
     }
   }
   // Now try to vectorize postponed instructions.

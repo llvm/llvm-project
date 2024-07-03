@@ -1080,7 +1080,7 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                  uint64_t Size, Align ByteAlignment,
                                  SMLoc Loc) {
   if (Symbol)
-    assignFragment(Symbol, &Section->getDummyFragment());
+    Symbol->setFragment(&Section->getDummyFragment());
 
   // Note: a .zerofill directive does not switch sections.
   OS << ".zerofill ";
@@ -1106,9 +1106,8 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 // e.g. _a.
 void MCAsmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, Align ByteAlignment) {
-  assignFragment(Symbol, &Section->getDummyFragment());
+  Symbol->setFragment(&Section->getDummyFragment());
 
-  assert(Symbol && "Symbol shouldn't be NULL!");
   // Instead of using the Section we'll just use the shortcut.
 
   assert(Section->getVariant() == MCSection::SV_MachO &&

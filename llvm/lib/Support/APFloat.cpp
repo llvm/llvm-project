@@ -83,8 +83,8 @@ enum class fltNanEncoding {
   // exponent is all 1s and the significand is non-zero.
   IEEE,
 
-  // Represents the behavior in the Float8E4M3 floating point type where NaN is
-  // represented by having the exponent and mantissa set to all 1s.
+  // Represents the behavior in the Float8E4M3FN floating point type where NaN
+  // is represented by having the exponent and mantissa set to all 1s.
   // This behavior matches the FP8 E4M3 type described in
   // https://arxiv.org/abs/2209.05433. We treat both signed and unsigned NaNs
   // as non-signalling, although the paper does not state whether the NaN

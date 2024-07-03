@@ -253,3 +253,16 @@ class NamespaceTestCase(TestBase):
         self.expect_expr(
             "((::B::Bar*)&::B::bar)->x()", result_type="int", result_value="42"
         )
+
+        self.expect_expr("InAnon1::var_in_anon", result_type="int", result_value="10")
+        self.expect_expr(
+            "InAnon1::InAnon2::var_in_anon", result_type="int", result_value="5"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::var_in_anon", result_type="int", result_value="15"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::InAnon2::var_in_anon",
+            result_type="int",
+            result_value="5",
+        )

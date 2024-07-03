@@ -513,11 +513,9 @@ namespace NonConstReads {
             // both-note {{read of non-const variable 'z'}}
 #else
   void *p = nullptr;
-  int arr[!p]; // ref-error {{not allowed at file scope}} \
-               // expected-error {{not allowed at file scope}}
+  int arr[!p]; // both-error {{not allowed at file scope}}
   int z;
-  int a[z]; // ref-error {{not allowed at file scope}} \
-            // expected-error {{not allowed at file scope}}
+  int a[z]; // both-error {{not allowed at file scope}}
 #endif
 
   const int y = 0;
