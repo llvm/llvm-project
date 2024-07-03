@@ -18,6 +18,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-forward.h"
+#include <cstdint>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -183,7 +185,7 @@ public:
 private:
   bool GetDataType();
 
-  void GetValueOffset(const lldb::ValueObjectSP &node);
+  std::optional<uint32_t> GetValueOffset();
 
   /// Returns the ValueObject for the __tree_node type that
   /// holds the key/value pair of the node at index \ref idx.
@@ -204,7 +206,7 @@ private:
   ValueObject *m_tree = nullptr;
   ValueObject *m_root_node = nullptr;
   CompilerType m_element_type;
-  uint32_t m_skip_size = UINT32_MAX;
+  uint32_t m_value_type_offset = UINT32_MAX;
   size_t m_count = UINT32_MAX;
   std::map<size_t, MapIterator> m_iterators;
 };
@@ -274,46 +276,43 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   }
 }
 
-void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
-    const lldb::ValueObjectSP &node) {
-  if (m_skip_size != UINT32_MAX)
-    return;
-  if (!node)
-    return;
-  CompilerType node_type(node->GetCompilerType());
-  uint64_t bit_offset;
-  if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) !=
-      UINT32_MAX) {
-    // Old layout (pre d05b10ab4fc65)
-    m_skip_size = bit_offset / 8u;
-  } else {
-    auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
-    if (!ast_ctx)
-      return;
-    CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
-        llvm::StringRef(),
-        {{"ptr0", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-         {"ptr1", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-         {"ptr2", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-         {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
-         {"payload", (m_element_type.GetCompleteType(), m_element_type)}});
-    std::string child_name;
-    uint32_t child_byte_size;
-    int32_t child_byte_offset = 0;
-    uint32_t child_bitfield_bit_size;
-    uint32_t child_bitfield_bit_offset;
-    bool child_is_base_class;
-    bool child_is_deref_of_parent;
-    uint64_t language_flags;
-    auto child_type =
-        llvm::expectedToStdOptional(tree_node_type.GetChildCompilerTypeAtIndex(
-            nullptr, 4, true, true, true, child_name, child_byte_size,
-            child_byte_offset, child_bitfield_bit_size,
-            child_bitfield_bit_offset, child_is_base_class,
-            child_is_deref_of_parent, nullptr, language_flags));
-    if (child_type && child_type->IsValid())
-      m_skip_size = (uint32_t)child_byte_offset;
-  }
+std::optional<uint32_t>
+lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset() {
+  if (!m_tree)
+    return std::nullopt;
+
+  auto ast_ctx = m_tree->GetCompilerType()
+                     .GetTypeSystem()
+                     .dyn_cast_or_null<TypeSystemClang>();
+  if (!ast_ctx)
+    return std::nullopt;
+
+  CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
+      llvm::StringRef(),
+      {{"ptr0", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+       {"ptr1", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+       {"ptr2", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+       {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
+       {"payload", (m_element_type.GetCompleteType(), m_element_type)}});
+  std::string child_name;
+  uint32_t child_byte_size;
+  int32_t child_byte_offset = 0;
+  uint32_t child_bitfield_bit_size;
+  uint32_t child_bitfield_bit_offset;
+  bool child_is_base_class;
+  bool child_is_deref_of_parent;
+  uint64_t language_flags;
+  auto child_type =
+      llvm::expectedToStdOptional(tree_node_type.GetChildCompilerTypeAtIndex(
+          nullptr, 4, true, true, true, child_name, child_byte_size,
+          child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, child_is_deref_of_parent, nullptr,
+          language_flags));
+
+  if (!child_type || !child_type->IsValid())
+    return std::nullopt;
+
+  return child_byte_offset;
 }
 
 ValueObjectSP
@@ -321,19 +320,18 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetKeyValuePair(
     size_t idx, size_t max_depth) {
   MapIterator iterator(m_root_node, max_depth);
 
-  const bool need_to_skip = (idx > 0);
-  size_t actual_advance = idx;
-  if (need_to_skip) {
+  size_t advance_by = idx;
+  if (idx > 0) {
     // If we have already created the iterator for the previous
     // index, we can start from there and advance by 1.
     auto cached_iterator = m_iterators.find(idx - 1);
     if (cached_iterator != m_iterators.end()) {
       iterator = cached_iterator->second;
-      actual_advance = 1;
+      advance_by = 1;
     }
   }
 
-  ValueObjectSP iterated_sp(iterator.advance(actual_advance));
+  ValueObjectSP iterated_sp(iterator.advance(advance_by));
   if (!iterated_sp)
     // this tree is garbage - stop
     return nullptr;
@@ -341,42 +339,21 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetKeyValuePair(
   if (!GetDataType())
     return nullptr;
 
-  if (!need_to_skip) {
-    Status error;
-    iterated_sp = iterated_sp->Dereference(error);
-    if (!iterated_sp || error.Fail())
-      return nullptr;
-
-    GetValueOffset(iterated_sp);
-    auto child_sp = iterated_sp->GetChildMemberWithName("__value_");
-    if (child_sp) {
-      // Old layout (pre 089a7cc5dea)
-      iterated_sp = child_sp;
-    } else {
-      iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
-          m_skip_size, m_element_type, true);
-    }
-
-    if (!iterated_sp)
-      return nullptr;
-  } else {
-    // because of the way our debug info is made, we need to read item 0
-    // first so that we can cache information used to generate other elements
-    if (m_skip_size == UINT32_MAX)
-      GetChildAtIndex(0);
-
-    if (m_skip_size == UINT32_MAX)
-      return nullptr;
-
-    iterated_sp = iterated_sp->GetSyntheticChildAtOffset(m_skip_size,
-                                                         m_element_type, true);
-    if (!iterated_sp)
+  if (m_value_type_offset == UINT32_MAX) {
+    if (auto offset = GetValueOffset())
+      m_value_type_offset = *offset;
+    else
       return nullptr;
   }
 
+  assert(m_value_type_offset != UINT32_MAX);
+
+  iterated_sp = iterated_sp->GetSyntheticChildAtOffset(m_value_type_offset,
+                                                       m_element_type, true);
+  if (!iterated_sp)
+    return nullptr;
+
   m_iterators[idx] = iterator;
-  assert(iterated_sp != nullptr &&
-         "Cached MapIterator for invalid ValueObject");
 
   return iterated_sp;
 }
