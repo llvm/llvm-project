@@ -144,7 +144,7 @@ public:
   /// \param Size The number of bytes to be read
   /// \param Timeout An optional timeout duration in milliseconds
   ///
-  llvm::Expected<ssize_t>
+  ssize_t
   read(char *Ptr, size_t Size,
        std::chrono::milliseconds Timeout = std::chrono::milliseconds(-1));
 };

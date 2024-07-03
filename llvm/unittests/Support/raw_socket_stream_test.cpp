@@ -59,13 +59,13 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   Client.flush();
 
   char Bytes[8];
-  llvm::Expected<ssize_t> MaybeBytesRead = Server.read(Bytes, 8);
-  ASSERT_THAT_EXPECTED(MaybeBytesRead, llvm::Succeeded());
+  ssize_t BytesRead = Server.read(Bytes, 8);
 
-  std::string String(Bytes, 8);
+  std::string string(Bytes, 8);
+  ASSERT_EQ(Server.has_error(), false);
 
-  ASSERT_EQ(8, *MaybeBytesRead);
-  ASSERT_EQ("01234567", String);
+  ASSERT_EQ(8, BytesRead);
+  ASSERT_EQ("01234567", string);
 }
 
 TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
@@ -93,10 +93,11 @@ TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
   raw_socket_stream &Server = **MaybeServer;
 
   char Bytes[8];
-  llvm::Expected<ssize_t> MaybeBytesRead =
-      Server.read(Bytes, 8, std::chrono::milliseconds(100));
-  ASSERT_EQ(llvm::errorToErrorCode(MaybeBytesRead.takeError()),
-            std::errc::timed_out);
+  ssize_t BytesRead = Server.read(Bytes, 8, std::chrono::milliseconds(100));
+  ASSERT_EQ(BytesRead, -1);
+  ASSERT_EQ(Server.has_error(), true);
+  ASSERT_EQ(Server.error(), std::errc::timed_out);
+  Server.clear_error();
 }
 
 TEST(raw_socket_streamTest, ACCEPT_WITH_TIMEOUT) {

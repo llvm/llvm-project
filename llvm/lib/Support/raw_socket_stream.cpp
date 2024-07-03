@@ -325,12 +325,16 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
   return std::make_unique<raw_socket_stream>(*FD);
 }
 
-llvm::Expected<ssize_t>
-raw_socket_stream::read(char *Ptr, size_t Size,
-                        std::chrono::milliseconds Timeout) {
+ssize_t raw_socket_stream::read(char *Ptr, size_t Size,
+                                std::chrono::milliseconds Timeout) {
   auto getActiveFD = [this]() -> int { return this->get_fd(); };
-  llvm::Error TimeoutErr = manageTimeout(Timeout, getActiveFD);
-  if (TimeoutErr)
-    return TimeoutErr;
+  llvm::Error Err = manageTimeout(Timeout, getActiveFD);
+  if (Err) {
+    llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
+      // Mimic raw_fd_stream::read error handling behavior
+      raw_fd_stream::error_detected(SE.convertToErrorCode());
+    });
+    return -1;
+  }
   return raw_fd_stream::read(Ptr, Size);
 }
