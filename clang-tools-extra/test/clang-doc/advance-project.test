@@ -1,0 +1,706 @@
+// RUN: rm -rf %t && mkdir -p %t/docs %t/build
+// RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
+// RUN: clang-doc --format=html --doxygen --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: clang-doc --format=md --doxygen --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/index.html -check-prefix=HTML-ANON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Array.html -check-prefix=HTML-ARRAY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.html -check-prefix=HTML-GLOBAL-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/Circle.html -check-prefix=HTML-CIRCLE
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/index.html -check-prefix=HTML-INNER-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/Shape.html -check-prefix=HTML-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/index.html -check-prefix=HTML-OUTER-INDEX
+
+// RUN: FileCheck %s -input-file=%t/docs/@anonymous_namespace/index.md -check-prefix=MD-ANON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Array.md -check-prefix=MD-ARRAY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.md -check-prefix=MD-GLOBAL-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/Circle.md -check-prefix=MD-CIRCLE
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/index.md -check-prefix=MD-INNER
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/InnerNamespace/Shape.md -check-prefix=MD-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/OuterNamespace/index.md -check-prefix=MD-OUTER-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/all_files.md -check-prefix=MD-ALL-FILES
+// RUN: FileCheck %s -input-file=%t/docs/index.md -check-prefix=MD-INDEX
+
+// JSON-INDEX: async function LoadIndex() {
+// JSON-INDEX-NEXT: return{
+// JSON-INDEX-NEXT:   "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:   "Name": "",
+// JSON-INDEX-NEXT:   "RefType": "default",
+// JSON-INDEX-NEXT:   "Path": "",
+// JSON-INDEX-NEXT:   "Children": [
+// JSON-INDEX-NEXT:     {
+// JSON-INDEX-NEXT:       "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:       "Name": "@nonymous_namespace",
+// JSON-INDEX-NEXT:       "RefType": "namespace",
+// JSON-INDEX-NEXT:       "Path": "@nonymous_namespace",
+// JSON-INDEX-NEXT:       "Children": []
+// JSON-INDEX-NEXT:     },
+// JSON-INDEX-NEXT:     {
+// JSON-INDEX-NEXT:       "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:       "Name": "GlobalNamespace",
+// JSON-INDEX-NEXT:       "RefType": "namespace",
+// JSON-INDEX-NEXT:       "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:       "Children": [
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Array",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         }
+// JSON-INDEX-NEXT:       ]
+// JSON-INDEX-NEXT:     },
+// JSON-INDEX-NEXT:     {
+// JSON-INDEX-NEXT:       "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:       "Name": "OuterNamespace",
+// JSON-INDEX-NEXT:       "RefType": "namespace",
+// JSON-INDEX-NEXT:       "Path": "OuterNamespace",
+// JSON-INDEX-NEXT:       "Children": [
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "InnerNamespace",
+// JSON-INDEX-NEXT:           "RefType": "namespace",
+// JSON-INDEX-NEXT:           "Path": "OuterNamespace{{[\/]+}}InnerNamespace",
+// JSON-INDEX-NEXT:           "Children": [
+// JSON-INDEX-NEXT:             {
+// JSON-INDEX-NEXT:               "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:               "Name": "Circle",
+// JSON-INDEX-NEXT:               "RefType": "record",
+// JSON-INDEX-NEXT:               "Path": "OuterNamespace{{[\/]+}}InnerNamespace",
+// JSON-INDEX-NEXT:               "Children": []
+// JSON-INDEX-NEXT:             },
+// JSON-INDEX-NEXT:             {
+// JSON-INDEX-NEXT:               "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:               "Name": "Shape",
+// JSON-INDEX-NEXT:               "RefType": "record",
+// JSON-INDEX-NEXT:               "Path": "OuterNamespace{{[\/]+}}InnerNamespace",
+// JSON-INDEX-NEXT:               "Children": []
+// JSON-INDEX-NEXT:             }
+// JSON-INDEX-NEXT:           ]
+// JSON-INDEX-NEXT:         }
+// JSON-INDEX-NEXT:       ]
+// JSON-INDEX-NEXT:     }
+// JSON-INDEX-NEXT:   ]
+// JSON-INDEX-NEXT: };
+// JSON-INDEX-NEXT: }
+
+// HTML-ANON-INDEX: <!DOCTYPE html>
+// HTML-ANON-INDEX-NEXT: <meta charset="utf-8"/>
+// HTML-ANON-INDEX-NEXT: <title>namespace @nonymous_namespace</title>
+// HTML-ANON-INDEX-NEXT: <link rel="stylesheet" href="../clang-doc-default-stylesheet.css"/>
+// HTML-ANON-INDEX-NEXT: <script src="..{{[\/]}}index_json.js"></script>
+// HTML-ANON-INDEX-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-ANON-INDEX-NEXT: <header id="project-title"></header>
+// HTML-ANON-INDEX-NEXT: <main>
+// HTML-ANON-INDEX-NEXT:   <div id="sidebar-left" path="@nonymous_namespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-ANON-INDEX-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-ANON-INDEX-NEXT:     <h1>namespace @nonymous_namespace</h1>
+// HTML-ANON-INDEX-NEXT:     <div>
+// HTML-ANON-INDEX-NEXT:       <div>
+// HTML-ANON-INDEX-NEXT:         <p> Anonymous namespace for utility functions</p>
+// HTML-ANON-INDEX-NEXT:       </div>
+// HTML-ANON-INDEX-NEXT:     </div>
+// HTML-ANON-INDEX-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-ANON-INDEX-NEXT:     <div>
+// HTML-ANON-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">getRandomNumber</h3>
+// HTML-ANON-INDEX-NEXT:       <p>int getRandomNumber()</p>
+// HTML-ANON-INDEX-NEXT:       <p>Defined at line 9 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
+// HTML-ANON-INDEX-NEXT:       <div>
+// HTML-ANON-INDEX-NEXT:         <div></div>
+// HTML-ANON-INDEX-NEXT:         <div>
+// HTML-ANON-INDEX-NEXT:           <p> This function returns a predetermined number to simulate randomness. In a real implementation, this would use a proper random number generator</p>
+// HTML-ANON-INDEX-NEXT:         </div>
+// HTML-ANON-INDEX-NEXT:       </div>
+// HTML-ANON-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">intToString</h3>
+// HTML-ANON-INDEX-NEXT:       <p>void intToString(int value, char * buffer, int &amp; index)</p>
+// HTML-ANON-INDEX-NEXT:       <p>Defined at line 18 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
+// HTML-ANON-INDEX-NEXT:       <div>
+// HTML-ANON-INDEX-NEXT:         <div></div>
+// HTML-ANON-INDEX-NEXT:         <div>
+// HTML-ANON-INDEX-NEXT:           <p> Converts an integer value to its string representation and stores the result in the provided buffer.</p>
+// HTML-ANON-INDEX-NEXT:         </div>
+// HTML-ANON-INDEX-NEXT:       </div>
+// HTML-ANON-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">doubleToString</h3>
+// HTML-ANON-INDEX-NEXT:       <p>void doubleToString(double value, char * buffer, int &amp; index)</p>
+// HTML-ANON-INDEX-NEXT:       <p>Defined at line 26 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
+// HTML-ANON-INDEX-NEXT:       <div>
+// HTML-ANON-INDEX-NEXT:         <div></div>
+// HTML-ANON-INDEX-NEXT:         <div>
+// HTML-ANON-INDEX-NEXT:           <p> Converts a double value to its string representation with two decimal places and stores the result in the provided buffer.</p>
+// HTML-ANON-INDEX-NEXT:         </div>
+// HTML-ANON-INDEX-NEXT:       </div>
+// HTML-ANON-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">print</h3>
+// HTML-ANON-INDEX-NEXT:       <p>void print(const char * str)</p>
+// HTML-ANON-INDEX-NEXT:       <p>Defined at line 33 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
+// HTML-ANON-INDEX-NEXT:       <div>
+// HTML-ANON-INDEX-NEXT:         <div></div>
+// HTML-ANON-INDEX-NEXT:         <div>
+// HTML-ANON-INDEX-NEXT:           <p> Prints the provided null-terminated string to the standard output.</p>
+// HTML-ANON-INDEX-NEXT:         </div>
+// HTML-ANON-INDEX-NEXT:       </div>
+// HTML-ANON-INDEX-NEXT:     </div>
+// HTML-ANON-INDEX-NEXT:   </div>
+// HTML-ANON-INDEX-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-ANON-INDEX-NEXT:     <ol>
+// HTML-ANON-INDEX-NEXT:       <li>
+// HTML-ANON-INDEX-NEXT:         <span>
+// HTML-ANON-INDEX-NEXT:           <a href="#Functions">Functions</a>
+// HTML-ANON-INDEX-NEXT:         </span>
+// HTML-ANON-INDEX-NEXT:         <ul>
+// HTML-ANON-INDEX-NEXT:           <li>
+// HTML-ANON-INDEX-NEXT:             <span>
+// HTML-ANON-INDEX-NEXT:               <a href="#{{([0-9A-F]{40})}}">getRandomNumber</a>
+// HTML-ANON-INDEX-NEXT:             </span>
+// HTML-ANON-INDEX-NEXT:           </li>
+// HTML-ANON-INDEX-NEXT:           <li>
+// HTML-ANON-INDEX-NEXT:             <span>
+// HTML-ANON-INDEX-NEXT:               <a href="#{{([0-9A-F]{40})}}">intToString</a>
+// HTML-ANON-INDEX-NEXT:             </span>
+// HTML-ANON-INDEX-NEXT:           </li>
+// HTML-ANON-INDEX-NEXT:           <li>
+// HTML-ANON-INDEX-NEXT:             <span>
+// HTML-ANON-INDEX-NEXT:               <a href="#{{([0-9A-F]{40})}}">doubleToString</a>
+// HTML-ANON-INDEX-NEXT:             </span>
+// HTML-ANON-INDEX-NEXT:           </li>
+// HTML-ANON-INDEX-NEXT:           <li>
+// HTML-ANON-INDEX-NEXT:             <span>
+// HTML-ANON-INDEX-NEXT:               <a href="#{{([0-9A-F]{40})}}">print</a>
+// HTML-ANON-INDEX-NEXT:             </span>
+// HTML-ANON-INDEX-NEXT:           </li>
+// HTML-ANON-INDEX-NEXT:         </ul>
+// HTML-ANON-INDEX-NEXT:       </li>
+// HTML-ANON-INDEX-NEXT:     </ol>
+// HTML-ANON-INDEX-NEXT:   </div>
+// HTML-ANON-INDEX-NEXT: </main>
+
+// HTML-ARRAY: <!DOCTYPE html>
+// HTML-ARRAY-NEXT: <meta charset="utf-8"/>
+// HTML-ARRAY-NEXT: <title>class Array</title>
+// HTML-ARRAY-NEXT: <link rel="stylesheet" href="..{{[\/]}}clang-doc-default-stylesheet.css"/>
+// HTML-ARRAY-NEXT: <script src="..{{[\/]}}index_json.js"></script>
+// HTML-ARRAY-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-ARRAY-NEXT: <header id="project-title"></header>
+// HTML-ARRAY-NEXT: <main>
+// HTML-ARRAY-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-ARRAY-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-ARRAY-NEXT:     <h1>class Array</h1>
+// HTML-ARRAY-NEXT:     <p>Defined at line 13 of file .{{[\/]}}include{{[\/]}}Array.h</p>
+// HTML-ARRAY-NEXT:     <div>
+// HTML-ARRAY-NEXT:       <div></div>
+// HTML-ARRAY-NEXT:     </div>
+// HTML-ARRAY-NEXT:     <h2 id="Members">Members</h2>
+// HTML-ARRAY-NEXT:     <ul>
+// HTML-ARRAY-NEXT:       <li>private T[Size] m_data</li>
+// HTML-ARRAY-NEXT:     </ul>
+// HTML-ARRAY-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-ARRAY-NEXT:     <div>
+// HTML-ARRAY-NEXT:       <h3 id="{{([0-9A-F]{40})}}">Array&lt;T, Size&gt;</h3>
+// HTML-ARRAY-NEXT:       <p>public void Array&lt;T, Size&gt;()</p>
+// HTML-ARRAY-NEXT:       <p>Defined at line 8 of file .{{[\/]}}src{{[\/]}}Array.cpp</p>
+// HTML-ARRAY-NEXT:       <div>
+// HTML-ARRAY-NEXT:         <div></div>
+// HTML-ARRAY-NEXT:         <div>
+// HTML-ARRAY-NEXT:           <p> Initializes all elements of the array to their default value.</p>
+// HTML-ARRAY-NEXT:         </div>
+// HTML-ARRAY-NEXT:       </div>
+// HTML-ARRAY-NEXT:       <h3 id="{{([0-9A-F]{40})}}">operator[]</h3>
+// HTML-ARRAY-NEXT:       <p>public T &amp; operator[](int index)</p>
+// HTML-ARRAY-NEXT:       <p>Defined at line 18 of file .{{[\/]}}src{{[\/]}}Array.cpp</p>
+// HTML-ARRAY-NEXT:       <div>
+// HTML-ARRAY-NEXT:         <div></div>
+// HTML-ARRAY-NEXT:         <div>
+// HTML-ARRAY-NEXT:           <p> Array access operator for Array&lt;T, Size&gt; Provides read and write access to elements in the array. This implementation does not perform bounds checking</p>
+// HTML-ARRAY-NEXT:         </div>
+// HTML-ARRAY-NEXT:       </div>
+// HTML-ARRAY-NEXT:       <h3 id="{{([0-9A-F]{40})}}">size</h3>
+// HTML-ARRAY-NEXT:       <p>public int size()</p>
+// HTML-ARRAY-NEXT:       <p>Defined at line 28 of file .{{[\/]}}src{{[\/]}}Array.cpp</p>
+// HTML-ARRAY-NEXT:       <div>
+// HTML-ARRAY-NEXT:         <div></div>
+// HTML-ARRAY-NEXT:         <div>
+// HTML-ARRAY-NEXT:           <p> Get the size of the array for Array&lt;T, Size&gt;</p>
+// HTML-ARRAY-NEXT:         </div>
+// HTML-ARRAY-NEXT:       </div>
+// HTML-ARRAY-NEXT:     </div>
+// HTML-ARRAY-NEXT:   </div>
+// HTML-ARRAY-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-ARRAY-NEXT:     <ol>
+// HTML-ARRAY-NEXT:       <li>
+// HTML-ARRAY-NEXT:         <span>
+// HTML-ARRAY-NEXT:           <a href="#Members">Members</a>
+// HTML-ARRAY-NEXT:         </span>
+// HTML-ARRAY-NEXT:       </li>
+// HTML-ARRAY-NEXT:       <li>
+// HTML-ARRAY-NEXT:         <span>
+// HTML-ARRAY-NEXT:           <a href="#Functions">Functions</a>
+// HTML-ARRAY-NEXT:         </span>
+// HTML-ARRAY-NEXT:         <ul>
+// HTML-ARRAY-NEXT:           <li>
+// HTML-ARRAY-NEXT:             <span>
+// HTML-ARRAY-NEXT:               <a href="#{{([0-9A-F]{40})}}">Array&lt;T, Size&gt;</a>
+// HTML-ARRAY-NEXT:             </span>
+// HTML-ARRAY-NEXT:           </li>
+// HTML-ARRAY-NEXT:           <li>
+// HTML-ARRAY-NEXT:             <span>
+// HTML-ARRAY-NEXT:               <a href="#{{([0-9A-F]{40})}}">operator[]</a>
+// HTML-ARRAY-NEXT:             </span>
+// HTML-ARRAY-NEXT:           </li>
+// HTML-ARRAY-NEXT:           <li>
+// HTML-ARRAY-NEXT:             <span>
+// HTML-ARRAY-NEXT:               <a href="#{{([0-9A-F]{40})}}">size</a>
+// HTML-ARRAY-NEXT:             </span>
+// HTML-ARRAY-NEXT:           </li>
+// HTML-ARRAY-NEXT:         </ul>
+// HTML-ARRAY-NEXT:       </li>
+// HTML-ARRAY-NEXT:     </ol>
+// HTML-ARRAY-NEXT:   </div>
+// HTML-ARRAY-NEXT: </main>
+
+// HTML-GLOBAL-INDEX: <!DOCTYPE html>
+// HTML-GLOBAL-INDEX-NEXT: <meta charset="utf-8"/>
+// HTML-GLOBAL-INDEX-NEXT: <title>Global Namespace</title>
+// HTML-GLOBAL-INDEX-NEXT: <link rel="stylesheet" href="..{{[\/]}}clang-doc-default-stylesheet.css"/>
+// HTML-GLOBAL-INDEX-NEXT: <script src="..{{[\/]}}index_json.js"></script>
+// HTML-GLOBAL-INDEX-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-GLOBAL-INDEX-NEXT: <header id="project-title"></header>
+// HTML-GLOBAL-INDEX-NEXT: <main>
+// HTML-GLOBAL-INDEX-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-GLOBAL-INDEX-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-GLOBAL-INDEX-NEXT:     <h1>Global Namespace</h1>
+// HTML-GLOBAL-INDEX-NEXT:     <h2 id="Namespaces">Namespaces</h2>
+// HTML-GLOBAL-INDEX-NEXT:     <ul>
+// HTML-GLOBAL-INDEX-NEXT:       <li>@nonymous_namespace</li>
+// HTML-GLOBAL-INDEX-NEXT:       <li>OuterNamespace</li>
+// HTML-GLOBAL-INDEX-NEXT:     </ul>
+// HTML-GLOBAL-INDEX-NEXT:     <h2 id="Records">Records</h2>
+// HTML-GLOBAL-INDEX-NEXT:     <ul>
+// HTML-GLOBAL-INDEX-NEXT:       <li>
+// HTML-GLOBAL-INDEX-NEXT:         <a href="Array.html">Array</a>
+// HTML-GLOBAL-INDEX-NEXT:       </li>
+// HTML-GLOBAL-INDEX-NEXT:     </ul>
+// HTML-GLOBAL-INDEX-NEXT:   </div>
+// HTML-GLOBAL-INDEX-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-GLOBAL-INDEX-NEXT:     <ol>
+// HTML-GLOBAL-INDEX-NEXT:       <li>
+// HTML-GLOBAL-INDEX-NEXT:         <span>
+// HTML-GLOBAL-INDEX-NEXT:           <a href="#Namespaces">Namespaces</a>
+// HTML-GLOBAL-INDEX-NEXT:         </span>
+// HTML-GLOBAL-INDEX-NEXT:       </li>
+// HTML-GLOBAL-INDEX-NEXT:       <li>
+// HTML-GLOBAL-INDEX-NEXT:         <span>
+// HTML-GLOBAL-INDEX-NEXT:           <a href="#Records">Records</a>
+// HTML-GLOBAL-INDEX-NEXT:         </span>
+// HTML-GLOBAL-INDEX-NEXT:       </li>
+// HTML-GLOBAL-INDEX-NEXT:     </ol>
+// HTML-GLOBAL-INDEX-NEXT:   </div>
+// HTML-GLOBAL-INDEX-NEXT: </main>
+
+// HTML-CIRCLE: <!DOCTYPE html>
+// HTML-CIRCLE-NEXT: <meta charset="utf-8"/>
+// HTML-CIRCLE-NEXT: <title>class Circle</title>
+// HTML-CIRCLE-NEXT: <link rel="stylesheet" href="..{{[\/]}}..{{[\/]}}clang-doc-default-stylesheet.css"/>
+// HTML-CIRCLE-NEXT: <script src="..{{[\/]}}..{{[\/]}}index_json.js"></script>
+// HTML-CIRCLE-NEXT: <script src="..{{[\/]}}..{{[\/]}}index.js"></script>
+// HTML-CIRCLE-NEXT: <header id="project-title"></header>
+// HTML-CIRCLE-NEXT: <main>
+// HTML-CIRCLE-NEXT:   <div id="sidebar-left" path="OuterNamespace{{[\/]}}InnerNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-CIRCLE-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-CIRCLE-NEXT:     <h1>class Circle</h1>
+// HTML-CIRCLE-NEXT:     <p>Defined at line 11 of file .{{[\/]}}include{{[\/]}}Circle.h</p>
+// HTML-CIRCLE-NEXT:     <div>
+// HTML-CIRCLE-NEXT:       <div></div>
+// HTML-CIRCLE-NEXT:     </div>
+// HTML-CIRCLE-NEXT:     <p>
+// HTML-CIRCLE-NEXT:       Inherits from
+// HTML-CIRCLE-NEXT:       <a href="Shape.html">Shape</a>
+// HTML-CIRCLE-NEXT:     </p>
+// HTML-CIRCLE-NEXT:     <h2 id="Members">Members</h2>
+// HTML-CIRCLE-NEXT:     <ul>
+// HTML-CIRCLE-NEXT:       <li>private double m_radius</li>
+// HTML-CIRCLE-NEXT:     </ul>
+// HTML-CIRCLE-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-CIRCLE-NEXT:     <div>
+// HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
+// HTML-CIRCLE-NEXT:       <p>public void Circle(int id, double radius)</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 9 of file .{{[\/]}}src{{[\/]}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <div>
+// HTML-CIRCLE-NEXT:         <div></div>
+// HTML-CIRCLE-NEXT:         <div>
+// HTML-CIRCLE-NEXT:           <p> Initializes a Circle object with a given ID and radius.</p>
+// HTML-CIRCLE-NEXT:         </div>
+// HTML-CIRCLE-NEXT:       </div>
+// HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">draw</h3>
+// HTML-CIRCLE-NEXT:       <p>public void draw()</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 19 of file .{{[\/]}}src{{[\/]}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <div>
+// HTML-CIRCLE-NEXT:         <div>
+// HTML-CIRCLE-NEXT:           <p> Draws the circle (in this case, prints circle information)</p>
+// HTML-CIRCLE-NEXT:         </div>
+// HTML-CIRCLE-NEXT:         <div>
+// HTML-CIRCLE-NEXT:           <p> This function is responsible for drawing the circle. In a real implementation, this would perform the actual drawing operation. In this stub implementation, it simply prints information about the circle.</p>
+// HTML-CIRCLE-NEXT:         </div>
+// HTML-CIRCLE-NEXT:       </div>
+// HTML-CIRCLE-NEXT:     </div>
+// HTML-CIRCLE-NEXT:   </div>
+// HTML-CIRCLE-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-CIRCLE-NEXT:     <ol>
+// HTML-CIRCLE-NEXT:       <li>
+// HTML-CIRCLE-NEXT:         <span>
+// HTML-CIRCLE-NEXT:           <a href="#Members">Members</a>
+// HTML-CIRCLE-NEXT:         </span>
+// HTML-CIRCLE-NEXT:       </li>
+// HTML-CIRCLE-NEXT:       <li>
+// HTML-CIRCLE-NEXT:         <span>
+// HTML-CIRCLE-NEXT:           <a href="#Functions">Functions</a>
+// HTML-CIRCLE-NEXT:         </span>
+// HTML-CIRCLE-NEXT:         <ul>
+// HTML-CIRCLE-NEXT:           <li>
+// HTML-CIRCLE-NEXT:             <span>
+// HTML-CIRCLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">Circle</a>
+// HTML-CIRCLE-NEXT:             </span>
+// HTML-CIRCLE-NEXT:           </li>
+// HTML-CIRCLE-NEXT:           <li>
+// HTML-CIRCLE-NEXT:             <span>
+// HTML-CIRCLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">draw</a>
+// HTML-CIRCLE-NEXT:             </span>
+// HTML-CIRCLE-NEXT:           </li>
+// HTML-CIRCLE-NEXT:         </ul>
+// HTML-CIRCLE-NEXT:       </li>
+// HTML-CIRCLE-NEXT:     </ol>
+// HTML-CIRCLE-NEXT:   </div>
+// HTML-CIRCLE-NEXT: </main>
+
+// HTML-INNER-INDEX: <!DOCTYPE html>
+// HTML-INNER-INDEX-NEXT: <meta charset="utf-8"/>
+// HTML-INNER-INDEX-NEXT: <title>namespace InnerNamespace</title>
+// HTML-INNER-INDEX-NEXT: <link rel="stylesheet" href="..{{[\/]}}..{{[\/]}}clang-doc-default-stylesheet.css"/>
+// HTML-INNER-INDEX-NEXT: <script src="..{{[\/]}}..{{[\/]}}index_json.js"></script>
+// HTML-INNER-INDEX-NEXT: <script src="..{{[\/]}}..{{[\/]}}index.js"></script>
+// HTML-INNER-INDEX-NEXT: <header id="project-title"></header>
+// HTML-INNER-INDEX-NEXT: <main>
+// HTML-INNER-INDEX-NEXT:   <div id="sidebar-left" path="OuterNamespace{{[\/]}}InnerNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-INNER-INDEX-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-INNER-INDEX-NEXT:     <h1>namespace InnerNamespace</h1>
+// HTML-INNER-INDEX-NEXT:     <div>
+// HTML-INNER-INDEX-NEXT:       <div>
+// HTML-INNER-INDEX-NEXT:         <p> Inner namespace</p>
+// HTML-INNER-INDEX-NEXT:       </div>
+// HTML-INNER-INDEX-NEXT:     </div>
+// HTML-INNER-INDEX-NEXT:     <h2 id="Records">Records</h2>
+// HTML-INNER-INDEX-NEXT:     <ul>
+// HTML-INNER-INDEX-NEXT:       <li>
+// HTML-INNER-INDEX-NEXT:         <a href="Shape.html">Shape</a>
+// HTML-INNER-INDEX-NEXT:       </li>
+// HTML-INNER-INDEX-NEXT:       <li>
+// HTML-INNER-INDEX-NEXT:         <a href="Circle.html">Circle</a>
+// HTML-INNER-INDEX-NEXT:       </li>
+// HTML-INNER-INDEX-NEXT:     </ul>
+// HTML-INNER-INDEX-NEXT:     <h2 id="Enums">Enums</h2>
+// HTML-INNER-INDEX-NEXT:     <div>
+// HTML-INNER-INDEX-NEXT:       <h3 id="{{([0-9A-F]{40})}}">enum class Color</h3>
+// HTML-INNER-INDEX-NEXT:       <ul>
+// HTML-INNER-INDEX-NEXT:         <li>Red</li>
+// HTML-INNER-INDEX-NEXT:         <li>Green</li>
+// HTML-INNER-INDEX-NEXT:         <li>Blue</li>
+// HTML-INNER-INDEX-NEXT:       </ul>
+// HTML-INNER-INDEX-NEXT:       <p>Defined at line 10 of file .{{[\/]}}include{{[\/]}}Shape.h</p>
+// HTML-INNER-INDEX-NEXT:       <div>
+// HTML-INNER-INDEX-NEXT:         <div></div>
+// HTML-INNER-INDEX-NEXT:       </div>
+// HTML-INNER-INDEX-NEXT:     </div>
+// HTML-INNER-INDEX-NEXT:   </div>
+// HTML-INNER-INDEX-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-INNER-INDEX-NEXT:     <ol>
+// HTML-INNER-INDEX-NEXT:       <li>
+// HTML-INNER-INDEX-NEXT:         <span>
+// HTML-INNER-INDEX-NEXT:           <a href="#Records">Records</a>
+// HTML-INNER-INDEX-NEXT:         </span>
+// HTML-INNER-INDEX-NEXT:       </li>
+// HTML-INNER-INDEX-NEXT:       <li>
+// HTML-INNER-INDEX-NEXT:         <span>
+// HTML-INNER-INDEX-NEXT:           <a href="#Enums">Enums</a>
+// HTML-INNER-INDEX-NEXT:         </span>
+// HTML-INNER-INDEX-NEXT:         <ul>
+// HTML-INNER-INDEX-NEXT:           <li>
+// HTML-INNER-INDEX-NEXT:             <span>
+// HTML-INNER-INDEX-NEXT:               <a href="#{{([0-9A-F]{40})}}">Color</a>
+// HTML-INNER-INDEX-NEXT:             </span>
+// HTML-INNER-INDEX-NEXT:           </li>
+// HTML-INNER-INDEX-NEXT:         </ul>
+// HTML-INNER-INDEX-NEXT:       </li>
+// HTML-INNER-INDEX-NEXT:     </ol>
+// HTML-INNER-INDEX-NEXT:   </div>
+// HTML-INNER-INDEX-NEXT: </main>
+
+// HTML-SHAPE: <!DOCTYPE html>
+// HTML-SHAPE-NEXT: <meta charset="utf-8"/>
+// HTML-SHAPE-NEXT: <title>class Shape</title>
+// HTML-SHAPE-NEXT: <link rel="stylesheet" href="..{{[\/]}}..{{[\/]}}clang-doc-default-stylesheet.css"/>
+// HTML-SHAPE-NEXT: <script src="..{{[\/]}}..{{[\/]}}index_json.js"></script>
+// HTML-SHAPE-NEXT: <script src="..{{[\/]}}..{{[\/]}}index.js"></script>
+// HTML-SHAPE-NEXT: <header id="project-title"></header>
+// HTML-SHAPE-NEXT: <main>
+// HTML-SHAPE-NEXT:   <div id="sidebar-left" path="OuterNamespace{{[\/]}}InnerNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-SHAPE-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-SHAPE-NEXT:     <h1>class Shape</h1>
+// HTML-SHAPE-NEXT:     <p>Defined at line 19 of file .{{[\/]}}include{{[\/]}}Shape.h</p>
+// HTML-SHAPE-NEXT:     <div>
+// HTML-SHAPE-NEXT:       <div></div>
+// HTML-SHAPE-NEXT:     </div>
+// HTML-SHAPE-NEXT:     <h2 id="Members">Members</h2>
+// HTML-SHAPE-NEXT:     <ul>
+// HTML-SHAPE-NEXT:       <li>private int m_id</li>
+// HTML-SHAPE-NEXT:     </ul>
+// HTML-SHAPE-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-SHAPE-NEXT:     <div>
+// HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">Shape</h3>
+// HTML-SHAPE-NEXT:       <p>public void Shape(int id)</p>
+// HTML-SHAPE-NEXT:       <p>Defined at line 9 of file .{{[\/]}}src{{[\/]}}Shape.cpp</p>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <div></div>
+// HTML-SHAPE-NEXT:         <div>
+// HTML-SHAPE-NEXT:           <p> Initializes a Shape object with a given ID.</p>
+// HTML-SHAPE-NEXT:         </div>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
+// HTML-SHAPE-NEXT:       <p>public void ~Shape()</p>
+// HTML-SHAPE-NEXT:       <p>Defined at line 16 of file .{{[\/]}}src{{[\/]}}Shape.cpp</p>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <div></div>
+// HTML-SHAPE-NEXT:         <div>
+// HTML-SHAPE-NEXT:           <p> Ensures proper cleanup of derived classes.</p>
+// HTML-SHAPE-NEXT:         </div>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">draw</h3>
+// HTML-SHAPE-NEXT:       <p>public void draw()</p>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <div></div>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">getId</h3>
+// HTML-SHAPE-NEXT:       <p>public int getId()</p>
+// HTML-SHAPE-NEXT:       <p>Defined at line 23 of file .{{[\/]}}src{{[\/]}}Shape.cpp</p>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <div></div>
+// HTML-SHAPE-NEXT:         <div>
+// HTML-SHAPE-NEXT:           <p> Get unique identifier of the shape</p>
+// HTML-SHAPE-NEXT:         </div>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:     </div>
+// HTML-SHAPE-NEXT:   </div>
+// HTML-SHAPE-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-SHAPE-NEXT:     <ol>
+// HTML-SHAPE-NEXT:       <li>
+// HTML-SHAPE-NEXT:         <span>
+// HTML-SHAPE-NEXT:           <a href="#Members">Members</a>
+// HTML-SHAPE-NEXT:         </span>
+// HTML-SHAPE-NEXT:       </li>
+// HTML-SHAPE-NEXT:       <li>
+// HTML-SHAPE-NEXT:         <span>
+// HTML-SHAPE-NEXT:           <a href="#Functions">Functions</a>
+// HTML-SHAPE-NEXT:         </span>
+// HTML-SHAPE-NEXT:         <ul>
+// HTML-SHAPE-NEXT:           <li>
+// HTML-SHAPE-NEXT:             <span>
+// HTML-SHAPE-NEXT:               <a href="#{{([0-9A-F]{40})}}">Shape</a>
+// HTML-SHAPE-NEXT:             </span>
+// HTML-SHAPE-NEXT:           </li>
+// HTML-SHAPE-NEXT:           <li>
+// HTML-SHAPE-NEXT:             <span>
+// HTML-SHAPE-NEXT:               <a href="#{{([0-9A-F]{40})}}">~Shape</a>
+// HTML-SHAPE-NEXT:             </span>
+// HTML-SHAPE-NEXT:           </li>
+// HTML-SHAPE-NEXT:           <li>
+// HTML-SHAPE-NEXT:             <span>
+// HTML-SHAPE-NEXT:               <a href="#{{([0-9A-F]{40})}}">draw</a>
+// HTML-SHAPE-NEXT:             </span>
+// HTML-SHAPE-NEXT:           </li>
+// HTML-SHAPE-NEXT:           <li>
+// HTML-SHAPE-NEXT:             <span>
+// HTML-SHAPE-NEXT:               <a href="#{{([0-9A-F]{40})}}">getId</a>
+// HTML-SHAPE-NEXT:             </span>
+// HTML-SHAPE-NEXT:           </li>
+// HTML-SHAPE-NEXT:         </ul>
+// HTML-SHAPE-NEXT:       </li>
+// HTML-SHAPE-NEXT:     </ol>
+// HTML-SHAPE-NEXT:   </div>
+// HTML-SHAPE-NEXT: </main>
+
+// HTML-OUTER-INDEX: <!DOCTYPE html>
+// HTML-OUTER-INDEX-NEXT: <meta charset="utf-8"/>
+// HTML-OUTER-INDEX-NEXT: <title>namespace OuterNamespace</title>
+// HTML-OUTER-INDEX-NEXT: <link rel="stylesheet" href="..{{[\/]}}clang-doc-default-stylesheet.css"/>
+// HTML-OUTER-INDEX-NEXT: <script src="..{{[\/]}}index_json.js"></script>
+// HTML-OUTER-INDEX-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-OUTER-INDEX-NEXT: <header id="project-title"></header>
+// HTML-OUTER-INDEX-NEXT: <main>
+// HTML-OUTER-INDEX-NEXT:   <div id="sidebar-left" path="OuterNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-OUTER-INDEX-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-OUTER-INDEX-NEXT:     <h1>namespace OuterNamespace</h1>
+// HTML-OUTER-INDEX-NEXT:     <div>
+// HTML-OUTER-INDEX-NEXT:       <div>
+// HTML-OUTER-INDEX-NEXT:         <p> Outer namespace</p>
+// HTML-OUTER-INDEX-NEXT:       </div>
+// HTML-OUTER-INDEX-NEXT:     </div>
+// HTML-OUTER-INDEX-NEXT:     <h2 id="Namespaces">Namespaces</h2>
+// HTML-OUTER-INDEX-NEXT:     <ul>
+// HTML-OUTER-INDEX-NEXT:       <li>
+// HTML-OUTER-INDEX-NEXT:         <a href="InnerNamespace{{[\/]}}index.html">InnerNamespace</a>
+// HTML-OUTER-INDEX-NEXT:       </li>
+// HTML-OUTER-INDEX-NEXT:     </ul>
+// HTML-OUTER-INDEX-NEXT:   </div>
+// HTML-OUTER-INDEX-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-OUTER-INDEX-NEXT:     <ol>
+// HTML-OUTER-INDEX-NEXT:       <li>
+// HTML-OUTER-INDEX-NEXT:         <span>
+// HTML-OUTER-INDEX-NEXT:           <a href="#Namespaces">Namespaces</a>
+// HTML-OUTER-INDEX-NEXT:         </span>
+// HTML-OUTER-INDEX-NEXT:       </li>
+// HTML-OUTER-INDEX-NEXT:     </ol>
+// HTML-OUTER-INDEX-NEXT:   </div>
+// HTML-OUTER-INDEX-NEXT: </main>
+
+// MD-ANON-INDEX: # namespace @nonymous_namespace
+// MD-ANON-INDEX:  Anonymous namespace for utility functions
+// MD-ANON-INDEX: ## Functions
+// MD-ANON-INDEX: ### getRandomNumber
+// MD-ANON-INDEX: *int getRandomNumber()*
+// MD-ANON-INDEX: *Defined at .{{[\/]}}src{{[\/]}}Utils.cpp#9*
+// MD-ANON-INDEX: **brief** Generate a "random" number
+// MD-ANON-INDEX: **note** This is not actually random in this implementation
+// MD-ANON-INDEX: **return** int A predetermined "random" number
+// MD-ANON-INDEX:  This function returns a predetermined number to simulate randomness. In a real implementation, this would use a proper random number generator
+// MD-ANON-INDEX: ### intToString
+// MD-ANON-INDEX: *void intToString(int value, char * buffer, int & index)*
+// MD-ANON-INDEX: *Defined at .{{[\/]}}src{{[\/]}}Utils.cpp#18*
+// MD-ANON-INDEX: **brief** Helper function to convert int to string
+// MD-ANON-INDEX: **value** The integer value to convert
+// MD-ANON-INDEX: **buffer** The char buffer to store the result
+// MD-ANON-INDEX: **index** Reference to the current index in the buffer
+// MD-ANON-INDEX:  Converts an integer value to its string representation and stores the result in the provided buffer.
+// MD-ANON-INDEX: ### doubleToString
+// MD-ANON-INDEX: *void doubleToString(double value, char * buffer, int & index)*
+// MD-ANON-INDEX: *Defined at .{{[\/]}}src{{[\/]}}Utils.cpp#26*
+// MD-ANON-INDEX: **brief** Helper function to convert double to string (simplified)
+// MD-ANON-INDEX: **value** The double value to convert
+// MD-ANON-INDEX: **buffer** The char buffer to store the result
+// MD-ANON-INDEX: **index** Reference to the current index in the buffer
+// MD-ANON-INDEX:  Converts a double value to its string representation with two decimal places and stores the result in the provided buffer.
+// MD-ANON-INDEX: ### print
+// MD-ANON-INDEX: *void print(const char * str)*
+// MD-ANON-INDEX: *Defined at .{{[\/]}}src{{[\/]}}Utils.cpp#33*
+// MD-ANON-INDEX: **brief** Helper function to print a string
+// MD-ANON-INDEX: **str** The null-terminated string to print
+// MD-ANON-INDEX:  Prints the provided null-terminated string to the standard output.
+
+// MD-ARRAY: # class Array
+// MD-ARRAY: *Defined at .{{[\/]}}include{{[\/]}}Array.h#13*
+// MD-ARRAY: **brief** Template class for a simple array
+// MD-ARRAY: **T** The type of elements in the array
+// MD-ARRAY: **Size** The fixed size of the array
+// MD-ARRAY: ## Members
+// MD-ARRAY: private T[Size] m_data
+// MD-ARRAY: ## Functions
+// MD-ARRAY: ### Array<T, Size>
+// MD-ARRAY: *public void Array<T, Size>()*
+// MD-ARRAY: *Defined at .{{[\/]}}src{{[\/]}}Array.cpp#8*
+// MD-ARRAY: **brief** Default constructor
+// MD-ARRAY:  Initializes all elements of the array to their default value.
+// MD-ARRAY: ### operator[]
+// MD-ARRAY: *public T & operator[](int index)*
+// MD-ARRAY: *Defined at .{{[\/]}}src{{[\/]}}Array.cpp#18*
+// MD-ARRAY: **brief** Array access operator
+// MD-ARRAY: **index** The index of the element to access
+// MD-ARRAY: **return** T& Reference to the element at the given index
+// MD-ARRAY:  Array access operator for Array<T, Size> Provides read and write access to elements in the array. This implementation does not perform bounds checking
+// MD-ARRAY: ### size
+// MD-ARRAY: *public int size()*
+// MD-ARRAY: *Defined at .{{[\/]}}src{{[\/]}}Array.cpp#28*
+// MD-ARRAY: **brief** Get the size of the array
+// MD-ARRAY: **return** int The size of the array
+// MD-ARRAY:  Get the size of the array for Array<T, Size>
+
+// MD-GLOBAL-INDEX: # Global Namespace
+// MD-GLOBAL-INDEX: ## Namespaces
+// MD-GLOBAL-INDEX: * [OuterNamespace](..{{[\/]}}OuterNamespace{{[\/]}}index.md)
+// MD-GLOBAL-INDEX: * [@nonymous_namespace](..{{[\/]}}@nonymous_namespace{{[\/]}}index.md)
+// MD-GLOBAL-INDEX: ## Records
+// MD-GLOBAL-INDEX: * [Array](Array.md)
+
+// MD-CIRCLE: # class Circle
+// MD-CIRCLE: *Defined at .{{[\/]}}include{{[\/]}}Circle.h#11*
+// MD-CIRCLE: **brief** Circle class, derived from Shape
+// MD-CIRCLE: Inherits from Shape
+// MD-CIRCLE: ## Members
+// MD-CIRCLE: private double m_radius
+// MD-CIRCLE: ## Functions
+// MD-CIRCLE: ### Circle
+// MD-CIRCLE: *public void Circle(int id, double radius)*
+// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#9*
+// MD-CIRCLE: **brief** Constructor
+// MD-CIRCLE: **id** The unique identifier for the circle
+// MD-CIRCLE: **radius** The radius of the circle
+// MD-CIRCLE:  Initializes a Circle object with a given ID and radius.
+// MD-CIRCLE: ### draw
+// MD-CIRCLE: *public void draw()*
+// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#19*
+// MD-CIRCLE: **brief** Implementation of the draw function
+// MD-CIRCLE:  Draws the circle (in this case, prints circle information)
+// MD-CIRCLE:  This function is responsible for drawing the circle. In a real implementation, this would perform the actual drawing operation. In this stub implementation, it simply prints information about the circle.
+
+// MD-INNER: # namespace InnerNamespace
+// MD-INNER:  Inner namespace
+// MD-INNER: ## Records
+// MD-INNER: * [Shape](Shape.md)
+// MD-INNER: * [Circle](Circle.md)
+// MD-INNER: ## Enums
+// MD-INNER: | enum class Color |
+// MD-INNER: --
+// MD-INNER: | Red |
+// MD-INNER: | Green |
+// MD-INNER: | Blue |
+// MD-INNER: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#10*
+// MD-INNER: **brief** Enum class for colors
+
+// MD-SHAPE: # class Shape
+// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#19*
+// MD-SHAPE: **brief** Abstract base class for shapes
+// MD-SHAPE: ## Members
+// MD-SHAPE: private int m_id
+// MD-SHAPE: ## Functions
+// MD-SHAPE: ### Shape
+// MD-SHAPE: *public void Shape(int id)*
+// MD-SHAPE: *Defined at .{{[\/]}}src{{[\/]}}Shape.cpp#9*
+// MD-SHAPE: **brief** Constructor
+// MD-SHAPE: **id** The unique identifier for the shape
+// MD-SHAPE:  Initializes a Shape object with a given ID.
+// MD-SHAPE: ### ~Shape
+// MD-SHAPE: *public void ~Shape()*
+// MD-SHAPE: *Defined at .{{[\/]}}src{{[\/]}}Shape.cpp#16*
+// MD-SHAPE: **brief** Virtual destructor
+// MD-SHAPE:  Ensures proper cleanup of derived classes.
+// MD-SHAPE: ### draw
+// MD-SHAPE: *public void draw()*
+// MD-SHAPE: **brief** Pure virtual function for drawing the shape
+// MD-SHAPE: ### getId
+// MD-SHAPE: *public int getId()*
+// MD-SHAPE: *Defined at .{{[\/]}}src{{[\/]}}Shape.cpp#23*
+// MD-SHAPE: **brief** Getter for the shape's ID
+// MD-SHAPE: **return** int The shape's ID
+// MD-SHAPE:  Get unique identifier of the shape
+
+// MD-OUTER-INDEX: # namespace OuterNamespace
+// MD-OUTER-INDEX:  Outer namespace
+// MD-OUTER-INDEX: ## Namespaces
+// MD-OUTER-INDEX: * [InnerNamespace](InnerNamespace{{[\/]}}index.md)
+
+// MD-ALL-FILES: # All Files
+// MD-ALL-FILES: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)
+// MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
+// MD-ALL-FILES: ## [OuterNamespace](OuterNamespace{{[\/]}}index.md)
+
+// MD-INDEX: #  C/C++ Reference
+// MD-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)
+// MD-INDEX: * Namespace: [OuterNamespace](OuterNamespace)
+
+// MD-ALL-FILES: # All Files
+// MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace/index.md)

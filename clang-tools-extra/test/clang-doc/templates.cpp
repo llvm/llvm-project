@@ -15,6 +15,44 @@ void function<bool, 0>(bool x) {}
 template<class... T>
 void ParamPackFunction(T... args);
 
+/**
+* @brief Simple Container template class
+*/
+template <typename T>
+class Container {
+public:
+    void store(T value) {
+        content = value;
+    }
+
+    T retrieve() {
+        return content;
+    }
+
+private:
+    T content;
+};
+
+
+/**
+* @brief Simple Container template class
+*/
+template <>
+class Container<bool> {
+public:
+    void store(bool value) {
+        content = value ? 1 : 0;
+    }
+
+    bool retrieve() {
+        return content != 0;
+    }
+
+private:
+    unsigned char content;
+};
+
+
 // CHECK: ---
 // CHECK-NEXT: USR:             '{{([0-9A-F]{40})}}'
 // CHECK-NEXT: ChildFunctions:
