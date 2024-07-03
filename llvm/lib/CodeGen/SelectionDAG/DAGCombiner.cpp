@@ -11522,7 +11522,8 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
 }
 
 template <class MatchContextClass>
-static SDValue foldBoolSelectToLogic(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldBoolSelectToLogic(SDNode *N, const SDLoc &DL,
+                                     SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::SELECT || N->getOpcode() == ISD::VSELECT ||
           N->getOpcode() == ISD::VP_SELECT) &&
          "Expected a (v)(vp.)select");
@@ -11538,25 +11539,25 @@ static SDValue foldBoolSelectToLogic(SDNode *N, SelectionDAG &DAG) {
   // select Cond, Cond, F --> or Cond, F
   // select Cond, 1, F    --> or Cond, F
   if (Cond == T || isOneOrOneSplat(T, /* AllowUndefs */ true))
-    return matcher.getNode(ISD::OR, SDLoc(N), VT, Cond, F);
+    return matcher.getNode(ISD::OR, DL, VT, Cond, F);
 
   // select Cond, T, Cond --> and Cond, T
   // select Cond, T, 0    --> and Cond, T
   if (Cond == F || isNullOrNullSplat(F, /* AllowUndefs */ true))
-    return matcher.getNode(ISD::AND, SDLoc(N), VT, Cond, T);
+    return matcher.getNode(ISD::AND, DL, VT, Cond, T);
 
   // select Cond, T, 1 --> or (not Cond), T
   if (isOneOrOneSplat(F, /* AllowUndefs */ true)) {
-    SDValue NotCond = matcher.getNode(ISD::XOR, SDLoc(N), VT, Cond,
-                                      DAG.getAllOnesConstant(SDLoc(N), VT));
-    return matcher.getNode(ISD::OR, SDLoc(N), VT, NotCond, T);
+    SDValue NotCond =
+        matcher.getNode(ISD::XOR, DL, VT, Cond, DAG.getAllOnesConstant(DL, VT));
+    return matcher.getNode(ISD::OR, DL, VT, NotCond, T);
   }
 
   // select Cond, 0, F --> and (not Cond), F
   if (isNullOrNullSplat(T, /* AllowUndefs */ true)) {
-    SDValue NotCond = matcher.getNode(ISD::XOR, SDLoc(N), VT, Cond,
-                                      DAG.getAllOnesConstant(SDLoc(N), VT));
-    return matcher.getNode(ISD::AND, SDLoc(N), VT, NotCond, F);
+    SDValue NotCond =
+        matcher.getNode(ISD::XOR, DL, VT, Cond, DAG.getAllOnesConstant(DL, VT));
+    return matcher.getNode(ISD::AND, DL, VT, NotCond, F);
   }
 
   return SDValue();
@@ -11632,7 +11633,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
     return V;
 
-  if (SDValue V = foldBoolSelectToLogic<EmptyMatchContext>(N, DAG))
+  if (SDValue V = foldBoolSelectToLogic<EmptyMatchContext>(N, DL, DAG))
     return V;
 
   // select (not Cond), N1, N2 -> select Cond, N2, N1
@@ -12253,11 +12254,12 @@ SDValue DAGCombiner::visitVP_SELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
+  SDLoc DL(N);
 
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
     return V;
 
-  if (SDValue V = foldBoolSelectToLogic<VPMatchContext>(N, DAG))
+  if (SDValue V = foldBoolSelectToLogic<VPMatchContext>(N, DL, DAG))
     return V;
 
   return SDValue();
@@ -12273,7 +12275,7 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
     return V;
 
-  if (SDValue V = foldBoolSelectToLogic<EmptyMatchContext>(N, DAG))
+  if (SDValue V = foldBoolSelectToLogic<EmptyMatchContext>(N, DL, DAG))
     return V;
 
   // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
@@ -12570,6 +12572,7 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   SDValue N3 = N->getOperand(3);
   SDValue N4 = N->getOperand(4);
   ISD::CondCode CC = cast<CondCodeSDNode>(N4)->get();
+  SDLoc DL(N);
 
   // fold select_cc lhs, rhs, x, x, cc -> x
   if (N2 == N3)
@@ -12578,11 +12581,11 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   // select_cc bool, 0, x, y, seteq -> select bool, y, x
   if (CC == ISD::SETEQ && !LegalTypes && N0.getValueType() == MVT::i1 &&
       isNullConstant(N1))
-    return DAG.getSelect(SDLoc(N), N2.getValueType(), N0, N3, N2);
+    return DAG.getSelect(DL, N2.getValueType(), N0, N3, N2);
 
   // Determine if the condition we're dealing with is constant
   if (SDValue SCC = SimplifySetCC(getSetCCResultType(N0.getValueType()), N0, N1,
-                                  CC, SDLoc(N), false)) {
+                                  CC, DL, false)) {
     AddToWorklist(SCC.getNode());
 
     // cond always true -> true val
@@ -12597,9 +12600,9 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
 
     // Fold to a simpler select_cc
     if (SCC.getOpcode() == ISD::SETCC) {
-      SDValue SelectOp = DAG.getNode(
-          ISD::SELECT_CC, SDLoc(N), N2.getValueType(), SCC.getOperand(0),
-          SCC.getOperand(1), N2, N3, SCC.getOperand(2));
+      SDValue SelectOp =
+          DAG.getNode(ISD::SELECT_CC, DL, N2.getValueType(), SCC.getOperand(0),
+                      SCC.getOperand(1), N2, N3, SCC.getOperand(2));
       SelectOp->setFlags(SCC->getFlags());
       return SelectOp;
     }
@@ -12607,10 +12610,10 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
 
   // If we can fold this based on the true/false value, do so.
   if (SimplifySelectOps(N, N2, N3))
-    return SDValue(N, 0);  // Don't revisit N.
+    return SDValue(N, 0); // Don't revisit N.
 
   // fold select_cc into other things, such as min/max/abs
-  return SimplifySelectCC(SDLoc(N), N0, N1, N2, N3, CC);
+  return SimplifySelectCC(DL, N0, N1, N2, N3, CC);
 }
 
 SDValue DAGCombiner::visitSETCC(SDNode *N) {
@@ -12623,10 +12626,9 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
+  SDLoc DL(N);
 
-  SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, SDLoc(N), !PreferSetCC);
-
-  if (Combined) {
+  if (SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, DL, !PreferSetCC)) {
     // If we prefer to have a setcc, and we don't, we'll try our best to
     // recreate one using rebuildSetCC.
     if (PreferSetCC && Combined.getOpcode() != ISD::SETCC) {
@@ -12722,7 +12724,6 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
             OpVT, ShiftOpc, ShiftCAmt->isPowerOf2(), *ShiftCAmt, AndCMask);
         // Transform is valid and we have a new preference.
         if (CanTransform && NewShiftOpc != ShiftOpc) {
-          SDLoc DL(N);
           SDValue NewShiftOrRotate =
               DAG.getNode(NewShiftOpc, DL, OpVT, ShiftOrRotate.getOperand(0),
                           ShiftOrRotate.getOperand(1));
