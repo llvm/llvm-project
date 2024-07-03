@@ -1408,7 +1408,20 @@ public:
       copySTI().ToggleFeature("southern-islands");
     }
 
-    setAvailableFeatures(ComputeAvailableFeatures(getFeatureBits()));
+    StringRef FS = getSTI().getFeatureString();
+    FeatureBitset FB = getFeatureBits();
+    int isWave32 = FS.contains("+wavefrontsize32");
+    int isWave64 = FS.contains("+wavefrontsize64");
+    // Reset default wavefrontsize features.
+    if (isWave32 + isWave64 == 1) {
+      if (isWave32 && FB[AMDGPU::FeatureWavefrontSize64])
+        copySTI().ToggleFeature(AMDGPU::FeatureWavefrontSize64);
+      else if (isWave64 && FB[AMDGPU::FeatureWavefrontSize32])
+        copySTI().ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+      FB = getFeatureBits();
+    }
+
+    setAvailableFeatures(ComputeAvailableFeatures(FB));
 
     AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
     if (ISA.Major >= 6 && isHsaAbi(getSTI())) {
