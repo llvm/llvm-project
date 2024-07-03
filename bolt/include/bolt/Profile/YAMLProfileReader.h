@@ -77,7 +77,7 @@ private:
 
   /// Infer function profile from stale data (collected on older binaries).
   bool
-  inferStaleProfile(const DenseMap<uint32_t, std::string *> IdToFunctionName,
+  inferStaleProfile(const DenseMap<uint32_t, std::string *> &IdToFunctionName,
                     BinaryFunction &Function,
                     const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
