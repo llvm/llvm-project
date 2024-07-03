@@ -1131,17 +1131,18 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needcopysign) {
     Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
     Type *nTy = FPOp->getType()->getWithNewType(nTyS);
-    unsigned size = nTy->getScalarSizeInBits();
     Value *opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->getScalarType()->isIntegerTy())
       opr_n = B.CreateZExtOrTrunc(opr_n, nTy, "__ytou");
     else
       opr_n = B.CreateFPToSI(opr1, nTy, "__ytou");
 
+    unsigned size = nTy->getScalarSizeInBits();
     Value *sign = B.CreateShl(opr_n, size-1, "__yeven");
     sign = B.CreateAnd(B.CreateBitCast(opr0, nTy), sign, "__pow_sign");
-    nval = B.CreateOr(B.CreateBitCast(nval, nTy), sign);
-    nval = B.CreateBitCast(nval, opr0->getType());
+
+    nval = B.CreateCopySign(nval, B.CreateBitCast(sign, nval->getType()),
+                            nullptr, "__pow_sign");
   }
 
   LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> "
