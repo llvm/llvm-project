@@ -39,7 +39,7 @@ struct SymbolsMapKey {
   }
 
   bool operator<(const SymbolsMapKey &Other) const {
-    return Kind < Other.Kind || Name < Other.Name;
+    return std::make_pair(Kind, Name) < std::make_pair(Other.Kind, Other.Name);
   }
 };
 template <> struct DenseMapInfo<SymbolsMapKey> {
