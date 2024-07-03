@@ -63,9 +63,8 @@ public:
     MOW.recordRelocation(Asm, Fragment, Fixup, Target, FixedValue);
   }
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {
-    MOW.executePostLayoutBinding(Asm, Layout);
+  void executePostLayoutBinding(MCAssembler &Asm) override {
+    MOW.executePostLayoutBinding(Asm);
   }
 
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
@@ -76,9 +75,8 @@ public:
                                                       IsPCRel);
   }
 
-  uint64_t getPaddingSize(const MCSection *SD,
-                          const MCAsmLayout &Layout) const {
-    return MOW.getPaddingSize(SD, Layout);
+  uint64_t getPaddingSize(MCAssembler &Asm, const MCSection *SD) const {
+    return MOW.getPaddingSize(Asm, SD);
   }
 
   void prepareObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
