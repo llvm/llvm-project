@@ -78,3 +78,11 @@
 	insertq xmm0, xmm1, 16, 8
 # CHECK-NEXT: pshufw  $1, %mm0, %mm2                  # mm2 = mm0[1,0,0,0]
 	pshufw mm2, mm0, 1
+# CHECK-NEXT: vpblendvb       %xmm2, %xmm2, %xmm1, %xmm1
+        pblendvb xmm1, xmm2, xmm0
+# CHECK-NEXT: vblendvps       %xmm0, %xmm0, %xmm2, %xmm2
+        blendvps xmm2, xmm0, xmm0
+# CHECK-NEXT: vblendvpd       %xmm0, %xmm0, %xmm2, %xmm2
+        blendvpd xmm2, xmm0, xmm0
+# CHECK-NEXT: vblendvpd       %xmm0, %xmm0, %xmm2, %xmm2
+        blendvpd xmm2, xmm0
