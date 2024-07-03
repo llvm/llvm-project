@@ -25,15 +25,16 @@ set(assets
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")
-set(resource_dir "${CMAKE_BINARY_DIR}/share/clang-doc")
 set(out_files)
 
 function(copy_files_to_dst src_dir dst_dir file)
   set(src "${src_dir}/${file}")
   set(dst "${dst_dir}/${file}")
+  message(here)
   add_custom_command(OUTPUT ${dst}
     DEPENDS ${src}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+    message(here2)
     COMMENT "Copying ${file} to ${dst_dir}"
   )
   list(APPEND out_files ${dst})
@@ -44,7 +45,12 @@ foreach(f ${assets})
   install(FILES ${asset_dir}/${f}
     DESTINATION "${CMAKE_INSTALL_DATADIR}/clang-doc"
     COMPONENT clang-doc)
-  copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
+   foreach(config ${CMAKE_CONFIGURATION_TYPES})
+     set(resource_dir "${CMAKE_BINARY_DIR}/${config}/share/clang-doc")
+     message(resource_dir="${resource_dir}")
+     copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
+   endforeach(config)
+   copy_files_to_dst(${asset_dir} "${CMAKE_BINARY_DIR}/share/clang-doc" ${f})
 endforeach(f)
 
 add_custom_target(copy-clang-doc-assets
