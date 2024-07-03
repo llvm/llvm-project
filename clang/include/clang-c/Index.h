@@ -2968,8 +2968,8 @@ enum CXTypeKind {
   CXType_Atomic = 177,
   CXType_BTFTagAttributed = 178,
 
-#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CXType_##Id,
-#include "clang/Basic/HLSLIntangibleTypes.def"
+  // HLSL Intangible Types
+  CXType_HLSLResource = 179,
 };
 
 /**

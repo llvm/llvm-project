@@ -1379,8 +1379,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     InitBuiltinType(OCLQueueTy, BuiltinType::OCLQueue);
     InitBuiltinType(OCLReserveIDTy, BuiltinType::OCLReserveID);
 
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
-  InitBuiltinType(Id##Ty, BuiltinType::Id);
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+    InitBuiltinType(Id##Ty, BuiltinType::Id);
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 

@@ -2662,6 +2662,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, MangledName);                 \
     mangleArtificialTagType(TagTypeKind::Struct, MangledName, {"__clang"});    \
     break;
+
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
