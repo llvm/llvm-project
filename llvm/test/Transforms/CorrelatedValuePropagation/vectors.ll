@@ -63,6 +63,18 @@ define <2 x i16> @infer_nowrap_nonsplat(<2 x i8> %a) {
   ret <2 x i16> %res
 }
 
+define <vscale x 2 x i16> @infer_nowrap_scalable(<vscale x 2 x i8> %a) {
+; CHECK-LABEL: define <vscale x 2 x i16> @infer_nowrap_scalable(
+; CHECK-SAME: <vscale x 2 x i8> [[A:%.*]]) {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i8> [[A]] to <vscale x 2 x i16>
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i16> [[RES]]
+;
+  %zext = zext <vscale x 2 x i8> %a to <vscale x 2 x i16>
+  %res = add <vscale x 2 x i16> %zext, splat (i16 1)
+  ret <vscale x 2 x i16> %res
+}
+
 define <2 x i16> @infer_nowrap_poison(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i16> @infer_nowrap_poison(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {

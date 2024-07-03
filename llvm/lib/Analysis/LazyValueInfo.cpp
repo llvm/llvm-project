@@ -836,8 +836,8 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 }
 
-static ConstantRange getConstantRangeFromVector(Constant *C,
-                                                FixedVectorType *Ty) {
+static ConstantRange getConstantRangeFromFixedVector(Constant *C,
+                                                     FixedVectorType *Ty) {
   unsigned BW = Ty->getScalarSizeInBits();
   ConstantRange CR = ConstantRange::getEmpty(BW);
   for (unsigned I = 0; I < Ty->getNumElements(); ++I) {
@@ -862,9 +862,13 @@ static ConstantRange toConstantRange(const ValueLatticeElement &Val,
   unsigned BW = Ty->getScalarSizeInBits();
   if (Val.isUnknown())
     return ConstantRange::getEmpty(BW);
-  if (Val.isConstant())
+  if (Val.isConstant() && Ty->isVectorTy()) {
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(
+            Val.getConstant()->getSplatValue(/*AllowPoison=*/true)))
+      return ConstantRange(CI->getValue());
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty))
-      return getConstantRangeFromVector(Val.getConstant(), VTy);
+      return getConstantRangeFromFixedVector(Val.getConstant(), VTy);
+  }
   return ConstantRange::getFull(BW);
 }
 
