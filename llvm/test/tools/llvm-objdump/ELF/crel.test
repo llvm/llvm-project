@@ -188,7 +188,7 @@ Symbols:
 #      ERR2:RELOCATION RECORDS FOR [.data]:
 # ERR2-NEXT:OFFSET           TYPE                     VALUE
 # ERR2-NEXT:warning: '[[FILE]]': unexpected end of data at offset 0x1 while reading [0x1, 0x2)
-#  ERR-NOT:{{.}}
+# ERR2-NOT:{{.}}
 
 --- !ELF
 FileHeader:
