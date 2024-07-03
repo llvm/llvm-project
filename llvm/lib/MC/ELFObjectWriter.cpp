@@ -683,7 +683,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
 
       if (Mode == NonDwoOnly && isDwoSection(Section))
         continue;
-      MSD.SectionIndex = Section.getLayoutOrder();
+      MSD.SectionIndex = Section.getOrdinal();
       assert(MSD.SectionIndex && "Invalid section index!");
       if (MSD.SectionIndex >= ELF::SHN_LORESERVE)
         HasLargeSectionIndex = true;
@@ -1034,7 +1034,7 @@ void ELFWriter::writeSection(uint32_t GroupSymbolIndex, uint64_t Offset,
     sh_link = SymbolTableIndex;
     assert(sh_link && ".symtab not found");
     const MCSection *InfoSection = Section.getLinkedToSection();
-    sh_info = InfoSection->getLayoutOrder();
+    sh_info = InfoSection->getOrdinal();
     break;
   }
 
@@ -1060,7 +1060,7 @@ void ELFWriter::writeSection(uint32_t GroupSymbolIndex, uint64_t Offset,
     // undefined. Represent this with sh_link=0.
     const MCSymbol *Sym = Section.getLinkedToSymbol();
     if (Sym && Sym->isInSection())
-      sh_link = Sym->getSection().getLayoutOrder();
+      sh_link = Sym->getSection().getOrdinal();
   }
 
   WriteSecHdrEntry(StrTabBuilder.getOffset(Section.getName()),
@@ -1147,17 +1147,17 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
       }
     }
 
-    Section.setLayoutOrder(addToSectionTable(&Section));
+    Section.setOrdinal(addToSectionTable(&Section));
     if (RelSection) {
-      RelSection->setLayoutOrder(addToSectionTable(RelSection));
+      RelSection->setOrdinal(addToSectionTable(RelSection));
       Relocations.push_back(RelSection);
     }
 
     if (GroupIdxEntry) {
       auto &Members = Groups[GroupMap[*GroupIdxEntry]];
-      Members.second.push_back(Section.getLayoutOrder());
+      Members.second.push_back(Section.getOrdinal());
       if (RelSection)
-        Members.second.push_back(RelSection->getLayoutOrder());
+        Members.second.push_back(RelSection->getOrdinal());
     }
 
     OWriter.TargetObjectWriter->addTargetSectionFlags(Ctx, Section);
