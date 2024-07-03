@@ -624,8 +624,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
       Fixup.getOffset(), nullptr,
       static_cast<MCFixupKind>(FirstLiteralRelocationKind + TB));
   auto &Asm = Layout.getAssembler();
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FB, B, FixedValueB);
+  Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }
@@ -711,8 +711,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
   uint64_t FixedValue = 0;
   MCValue NopBytes = MCValue::get(Count);
 
-  Asm.getWriter().recordRelocation(Asm, Layout, &AF, Fixup, NopBytes,
-                                   FixedValue);
+  Asm.getWriter().recordRelocation(Asm, &AF, Fixup, NopBytes, FixedValue);
 
   return true;
 }
