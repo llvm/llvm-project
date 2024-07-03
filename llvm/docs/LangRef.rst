@@ -24557,7 +24557,9 @@ Arguments:
 The first operand and the result have the same vector of integer type. The
 second operand is the vector mask and has the same number of elements as the
 result vector type. The third operand is the explicit vector length of the
-operation.
+operation. The fourth operand is a constant flag that indicates whether the
+intrinsic returns a valid result if the first operand is zero. If the first
+operand is zero and the fourth operand is true, the result is poison.
 
 Semantics:
 """"""""""
@@ -24604,7 +24606,9 @@ Arguments:
 The first operand and the result have the same vector of integer type. The
 second operand is the vector mask and has the same number of elements as the
 result vector type. The third operand is the explicit vector length of the
-operation.
+operation. The fourth operand is a constant flag that indicates whether the
+intrinsic returns a valid result if the first operand is zero. If the first
+operand is zero and the fourth operand is true, the result is poison.
 
 Semantics:
 """"""""""
