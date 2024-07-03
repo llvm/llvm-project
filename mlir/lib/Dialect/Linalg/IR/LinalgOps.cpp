@@ -2638,10 +2638,9 @@ FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   auto maxFillValue = b.create<arith::ConstantOp>(loc, maxFillValAttr);
   auto neutralMaxInitOp = b.create<linalg::FillOp>(
       loc, ValueRange{maxFillValue}, ValueRange{outputReduce});
-  Value neutralForMaxFInit = neutralMaxInitOp.result();
 
   auto reduceMaxOp = b.create<linalg::ReduceOp>(
-      loc, input, neutralForMaxFInit, reductionDim,
+      loc, input, neutralMaxInitOp.result(), reductionDim,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
         auto result =
             createLinalgReduceMaxBody(b, nestedLoc, args, elementType);
