@@ -181,26 +181,10 @@ mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
     return {Fortran::common::TypeCategory::Integer, 8};
   else if (type.isInteger(128))
     return {Fortran::common::TypeCategory::Integer, 16};
-  else if (type == fir::ComplexType::get(loc.getContext(), 2))
-    return {Fortran::common::TypeCategory::Complex, 2};
-  else if (type == fir::ComplexType::get(loc.getContext(), 3))
-    return {Fortran::common::TypeCategory::Complex, 3};
-  else if (type == fir::ComplexType::get(loc.getContext(), 4))
-    return {Fortran::common::TypeCategory::Complex, 4};
-  else if (type == fir::ComplexType::get(loc.getContext(), 8))
-    return {Fortran::common::TypeCategory::Complex, 8};
-  else if (type == fir::ComplexType::get(loc.getContext(), 10))
-    return {Fortran::common::TypeCategory::Complex, 10};
-  else if (type == fir::ComplexType::get(loc.getContext(), 16))
-    return {Fortran::common::TypeCategory::Complex, 16};
-  else if (type == fir::LogicalType::get(loc.getContext(), 1))
-    return {Fortran::common::TypeCategory::Logical, 1};
-  else if (type == fir::LogicalType::get(loc.getContext(), 2))
-    return {Fortran::common::TypeCategory::Logical, 2};
-  else if (type == fir::LogicalType::get(loc.getContext(), 4))
-    return {Fortran::common::TypeCategory::Logical, 4};
-  else if (type == fir::LogicalType::get(loc.getContext(), 8))
-    return {Fortran::common::TypeCategory::Logical, 8};
+  else if (auto complexType = mlir::dyn_cast<fir::ComplexType>(type))
+    return {Fortran::common::TypeCategory::Complex, complexType.getFKind()};
+  else if (auto logicalType = mlir::dyn_cast<fir::LogicalType>(type))
+    return {Fortran::common::TypeCategory::Logical, logicalType.getFKind()};
   else
     fir::emitFatalError(loc,
                         "unsupported type: " + fir::mlirTypeToString(type));
