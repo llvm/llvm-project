@@ -155,8 +155,8 @@ LIBC_INLINE DoubleDouble div(const DoubleDouble &a, const DoubleDouble &b) {
   double e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
   double e_lo = fputil::multiply_add(b.lo, -r.hi, a.lo);
 #else
-  DoubleDouble b_hi_r_hi = fputil::exact_mult</*NO_FMA*/ true>(b.hi, -r.hi);
-  DoubleDouble b_lo_r_hi = fputil::exact_mult</*NO_FMA*/ true>(b.lo, -r.hi);
+  DoubleDouble b_hi_r_hi = fputil::exact_mult</*NO_FMA=*/true>(b.hi, -r.hi);
+  DoubleDouble b_lo_r_hi = fputil::exact_mult</*NO_FMA=*/true>(b.lo, -r.hi);
   double e_hi = (a.hi + b_hi_r_hi.hi) + b_hi_r_hi.lo;
   double e_lo = (a.lo + b_lo_r_hi.hi) + b_lo_r_hi.lo;
 #endif // LIBC_TARGET_CPU_HAS_FMA

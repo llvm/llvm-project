@@ -61,8 +61,8 @@ TEST_F(LlvmLibcTanTest, InDoubleRange) {
   uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
-    mpfr::ForceRoundingMode __r(rounding_mode);
-    if (!__r.success)
+    mpfr::ForceRoundingMode force_rounding(rounding_mode);
+    if (!force_rounding.success)
       return;
 
     uint64_t fails = 0;
