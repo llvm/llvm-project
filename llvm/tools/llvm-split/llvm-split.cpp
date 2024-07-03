@@ -54,10 +54,10 @@ static cl::opt<bool>
                    cl::cat(SplitCategory));
 
 static cl::opt<bool>
-    TryToAvoidEmptyModules("avoid-empty-modules", cl::Prefix, cl::init(false),
-                           cl::desc("Try to avoid generating empty modules by "
-                                    "modifying the distribution of functions"),
-                           cl::cat(SplitCategory));
+    RoundRobin("round-robin", cl::Prefix, cl::init(false),
+               cl::desc("Use round-robin distribution of functions to "
+                        "modules instead of the default name-hash-based one"),
+               cl::cat(SplitCategory));
 
 static cl::opt<std::string>
     MTriple("mtriple",
@@ -128,8 +128,8 @@ int main(int argc, char **argv) {
       errs() << "warning: -preserve-locals has no effect when using "
                 "TargetMachine::splitModule\n";
     }
-    if (TryToAvoidEmptyModules)
-      errs() << "warning: -avoid-empty-modules has no effect when using "
+    if (RoundRobin)
+      errs() << "warning: -round-robin has no effect when using "
                 "TargetMachine::splitModule\n";
 
     if (TM->splitModule(*M, NumOutputs, HandleModulePart))
@@ -140,7 +140,6 @@ int main(int argc, char **argv) {
               "splitModule implementation\n";
   }
 
-  SplitModule(*M, NumOutputs, HandleModulePart, PreserveLocals,
-              TryToAvoidEmptyModules);
+  SplitModule(*M, NumOutputs, HandleModulePart, PreserveLocals, RoundRobin);
   return 0;
 }
