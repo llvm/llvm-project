@@ -682,10 +682,9 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *D,
                                                 StringRef &Slot) {
   std::set<std::string> s; // store unique register type + numbers
   for (auto it = D->attr_begin(); it != D->attr_end(); ++it) {
-    
     if (HLSLResourceBindingAttr *attr =
             dyn_cast<HLSLResourceBindingAttr>(*it)) {
-      std::string regInfo(Slot);   
+      std::string regInfo(Slot);
       auto p = s.insert(regInfo);
       if (!p.second) {
         S.Diag(attr->getLoc(), diag::err_hlsl_conflicting_register_annotations)
@@ -802,8 +801,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
     } else if (Slot[0] == 's') {
       S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_variable_type)
           << 3 << typestr;
-    // any other register type should emit
-    // err_hlsl_unsupported_register_type_and_variable_type
+      // any other register type should emit
+      // err_hlsl_unsupported_register_type_and_variable_type
     } else {
       S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
           << Slot[0] << typestr;
