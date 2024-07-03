@@ -338,6 +338,11 @@ C23 Feature Support
 - Properly promote bit-fields of bit-precise integer types to the field's type
   rather than to ``int``. #GH87641
 
+- Added the ``INFINITY`` and ``NAN`` macros to Clang's ``<float.h>``
+  freestanding implementation; these macros were defined in ``<math.h>`` in C99
+  but C23 added them to ``<float.h>`` in
+  `WG14 N2848 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf>`_.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
