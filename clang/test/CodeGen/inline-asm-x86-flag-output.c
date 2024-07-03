@@ -380,8 +380,10 @@ int test_assume_boolean_flag(long nr, volatile long *addr) {
   //CHECK: %0 = tail call { i32, i32 } asm "cmp $2,$1", "={@cca},={@ccae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr)
   //CHECK: [[RES1:%.*]] = extractvalue { i32, i32 } %0, 0
   //CHECK: [[RES2:%.*]] = extractvalue { i32, i32 } %0, 1
-  //CHECK: %1 = icmp ult i32 [[RES2]], 2
+  //CHECK: %1 = icmp ult i32 [[RES1]], 2
   //CHECK: tail call void @llvm.assume(i1 %1)
+  //CHECK: %2 = icmp ult i32 [[RES2]], 2
+  //CHECK: tail call void @llvm.assume(i1 %2)
   int x,y;
   asm("cmp %2,%1"
       : "=@cca"(x), "=@ccae"(y), "=m"(*(volatile long *)(addr))
