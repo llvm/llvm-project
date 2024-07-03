@@ -1775,8 +1775,8 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
 }
 
 static LazyValueInfo::Tristate
-getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
-                   const DataLayout &DL) {
+getPredicateResult(CmpInst::Predicate Pred, Constant *C,
+                   const ValueLatticeElement &Val, const DataLayout &DL) {
   // If we know the value is a constant, evaluate the conditional.
   Constant *Res = nullptr;
   if (Val.isConstant()) {
@@ -1805,8 +1805,8 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
         return LazyValueInfo::False;
     } else {
       // Handle more complex predicates.
-      ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(
-          (ICmpInst::Predicate)Pred, CI->getValue());
+      ConstantRange TrueValues =
+          ConstantRange::makeExactICmpRegion(Pred, CI->getValue());
       if (TrueValues.contains(CR))
         return LazyValueInfo::True;
       if (TrueValues.inverse().contains(CR))
@@ -1840,9 +1840,9 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
 /// Determine whether the specified value comparison with a constant is known to
 /// be true or false on the specified CFG edge. Pred is a CmpInst predicate.
 LazyValueInfo::Tristate
-LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
-                                  BasicBlock *FromBB, BasicBlock *ToBB,
-                                  Instruction *CxtI) {
+LazyValueInfo::getPredicateOnEdge(CmpInst::Predicate Pred, Value *V,
+                                  Constant *C, BasicBlock *FromBB,
+                                  BasicBlock *ToBB, Instruction *CxtI) {
   Module *M = FromBB->getModule();
   ValueLatticeElement Result =
       getOrCreateImpl(M).getValueOnEdge(V, FromBB, ToBB, CxtI);
@@ -1850,9 +1850,10 @@ LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
   return getPredicateResult(Pred, C, Result, M->getDataLayout());
 }
 
-LazyValueInfo::Tristate
-LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
-                              Instruction *CxtI, bool UseBlockValue) {
+LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
+                                                      Value *V, Constant *C,
+                                                      Instruction *CxtI,
+                                                      bool UseBlockValue) {
   // Is or is not NonNull are common predicates being queried. If
   // isKnownNonZero can tell us the result of the predicate, we can
   // return it quickly. But this is only a fastpath, and falling
@@ -1956,14 +1957,12 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
   return Unknown;
 }
 
-LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(unsigned P, Value *LHS,
-                                                      Value *RHS,
+LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
+                                                      Value *LHS, Value *RHS,
                                                       Instruction *CxtI,
                                                       bool UseBlockValue) {
-  CmpInst::Predicate Pred = (CmpInst::Predicate)P;
-
   if (auto *C = dyn_cast<Constant>(RHS))
-    return getPredicateAt(P, LHS, C, CxtI, UseBlockValue);
+    return getPredicateAt(Pred, LHS, C, CxtI, UseBlockValue);
   if (auto *C = dyn_cast<Constant>(LHS))
     return getPredicateAt(CmpInst::getSwappedPredicate(Pred), RHS, C, CxtI,
                           UseBlockValue);
@@ -1981,8 +1980,7 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(unsigned P, Value *LHS,
     ValueLatticeElement R =
         getOrCreateImpl(M).getValueInBlock(RHS, CxtI->getParent(), CxtI);
     Type *Ty = CmpInst::makeCmpResultType(LHS->getType());
-    if (Constant *Res = L.getCompare((CmpInst::Predicate)P, Ty, R,
-                                     M->getDataLayout())) {
+    if (Constant *Res = L.getCompare(Pred, Ty, R, M->getDataLayout())) {
       if (Res->isNullValue())
         return LazyValueInfo::False;
       if (Res->isOneValue())
