@@ -701,18 +701,19 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
   if (name == "pow") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
     std::string displayName{" ** "};
-    sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                        displayName)
+    sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+                                          displayName)
             << displayName
-            << numericMlirTypeToFortran(builder, funcType.getInput(1), loc,
-                                        displayName);
+            << mlirTypeToIntrinsicFortran(builder, funcType.getInput(1), loc,
+                                          displayName);
   } else {
     sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                          name);
+      sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+                                            name);
     for (mlir::Type argType : funcType.getInputs().drop_front()) {
-      sstream << ", " << numericMlirTypeToFortran(builder, argType, loc, name);
+      sstream << ", "
+              << mlirTypeToIntrinsicFortran(builder, argType, loc, name);
     }
     sstream << ")";
   }
