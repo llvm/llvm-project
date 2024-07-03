@@ -1247,6 +1247,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       case Intrinsic::amdgcn_raw_buffer_load:
       case Intrinsic::amdgcn_raw_atomic_buffer_load:
       case Intrinsic::amdgcn_raw_ptr_buffer_load:
+      case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load:
         OffsetIdx = 1;
         break;
       case Intrinsic::amdgcn_s_buffer_load:
@@ -1380,6 +1381,7 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
   case Intrinsic::amdgcn_raw_atomic_buffer_load:
+  case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_tbuffer_load:
   case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
   case Intrinsic::amdgcn_s_buffer_load:

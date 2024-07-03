@@ -1272,7 +1272,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         Info.ptrVal = CI.getArgOperand(1);
         return true;
       }
-      case Intrinsic::amdgcn_raw_atomic_buffer_load: {
+      case Intrinsic::amdgcn_raw_atomic_buffer_load:
+      case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load: {
         Info.memVT =
             memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
                                     std::numeric_limits<unsigned>::max());
@@ -8905,6 +8906,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_atomic_buffer_load:
+  case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format: {
     const bool IsFormat =
