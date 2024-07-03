@@ -48,9 +48,9 @@ set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-if(LLVM_LIBC_FULL_BUILD)
-  add_subdirectory(newhdrgen)
-endif()
+
+add_subdirectory(newhdrgen)
+
 
 if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
