@@ -75,7 +75,7 @@ private:
 
   /// Checks if a function profile matches a binary function.
   bool profileMatches(const yaml::bolt::BinaryFunctionProfile &Profile,
-                      BinaryFunction &BF);
+                      const BinaryFunction &BF);
 
   /// Infer function profile from stale data (collected on older binaries).
   bool inferStaleProfile(BinaryFunction &Function,
