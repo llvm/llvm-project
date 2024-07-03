@@ -175,8 +175,7 @@ private:
   void defineSection(const MCAssembler &Asm, MCSectionCOFF const &Sec);
 
   COFFSymbol *getLinkedSymbol(const MCSymbol &Symbol);
-  void DefineSymbol(const MCSymbol &Symbol, MCAssembler &Assembler,
-                    const MCAsmLayout &Layout);
+  void defineSymbol(const MCAssembler &Asm, const MCSymbol &Symbol);
 
   void SetSymbolName(COFFSymbol &S);
   void SetSectionName(COFFSection &S);
@@ -395,9 +394,9 @@ COFFSymbol *WinCOFFWriter::getLinkedSymbol(const MCSymbol &Symbol) {
 
 /// This function takes a symbol data object from the assembler
 /// and creates the associated COFF symbol staging object.
-void WinCOFFWriter::DefineSymbol(const MCSymbol &MCSym, MCAssembler &Assembler,
-                                 const MCAsmLayout &Layout) {
-  const MCSymbol *Base = Layout.getBaseSymbol(MCSym);
+void WinCOFFWriter::defineSymbol(const MCAssembler &Asm,
+                                 const MCSymbol &MCSym) {
+  const MCSymbol *Base = Asm.getBaseSymbol(MCSym);
   COFFSection *Sec = nullptr;
   MCSectionCOFF *MCSec = nullptr;
   if (Base && Base->getFragment()) {
@@ -444,7 +443,7 @@ void WinCOFFWriter::DefineSymbol(const MCSymbol &MCSym, MCAssembler &Assembler,
   }
 
   if (Local) {
-    Local->Data.Value = getSymbolValue(MCSym, Assembler);
+    Local->Data.Value = getSymbolValue(MCSym, Asm);
 
     const MCSymbolCOFF &SymbolCOFF = cast<MCSymbolCOFF>(MCSym);
     Local->Data.Type = SymbolCOFF.getType();
@@ -834,7 +833,6 @@ void WinCOFFWriter::reset() {
 }
 
 void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
-  auto &Layout = *Asm.getLayout();
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
   for (const auto &Section : Asm) {
@@ -849,7 +847,7 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
       // Define non-temporary or temporary static (private-linkage) symbols
       if (!Symbol.isTemporary() ||
           cast<MCSymbolCOFF>(Symbol).getClass() == COFF::IMAGE_SYM_CLASS_STATIC)
-        DefineSymbol(Symbol, Asm, Layout);
+        defineSymbol(Asm, Symbol);
 }
 
 void WinCOFFWriter::recordRelocation(MCAssembler &Asm,

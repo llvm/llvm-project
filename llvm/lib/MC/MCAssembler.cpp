@@ -558,10 +558,6 @@ uint64_t MCAssembler::getSymbolOffset(const MCSymbol &S) const {
   return Val;
 }
 
-uint64_t MCAsmLayout::getSymbolOffset(const MCSymbol &S) const {
-  return Assembler.getSymbolOffset(S);
-}
-
 const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
   assert(Layout);
   if (!Symbol.isVariable())
@@ -597,9 +593,6 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
   }
 
   return &ASym;
-}
-const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
-  return Assembler.getBaseSymbol(Symbol);
 }
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
