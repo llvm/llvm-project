@@ -707,7 +707,7 @@ LogicalResult ResourceSectionReader::initialize(
     auto resolveKey = [&](StringRef key) -> StringRef {
       auto it = dialectResourceHandleRenamingMap.find(key);
       if (it == dialectResourceHandleRenamingMap.end())
-        return "";
+        return key;
       return it->second;
     };
 
