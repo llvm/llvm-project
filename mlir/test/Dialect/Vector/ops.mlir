@@ -1175,7 +1175,9 @@ func.func @from_elements(%a: f32, %b: f32) -> (vector<f32>, vector<1xf32>, vecto
 
 // CHECK-LABEL: @step
 func.func @step() {
+  // CHECK: vector.step : vector<2xindex>
   %0 = vector.step : vector<2xindex>
+  // CHECK: vector.step : vector<[4]xindex>
   %1 = vector.step : vector<[4]xindex>
   return
 }
