@@ -650,7 +650,7 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
   if (PT && isKnownNonZero(BBI, DL))
     return ValueLatticeElement::getNot(ConstantPointerNull::get(PT));
 
-  if (BBI->getType()->isIntegerTy()) {
+  if (BBI->getType()->isIntOrIntVectorTy()) {
     if (auto *CI = dyn_cast<CastInst>(BBI))
       return solveBlockValueCast(CI, BB);
 
@@ -836,6 +836,24 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 }
 
+static ConstantRange getConstantRangeFromFixedVector(Constant *C,
+                                                     FixedVectorType *Ty) {
+  unsigned BW = Ty->getScalarSizeInBits();
+  ConstantRange CR = ConstantRange::getEmpty(BW);
+  for (unsigned I = 0; I < Ty->getNumElements(); ++I) {
+    Constant *Elem = C->getAggregateElement(I);
+    if (!Elem)
+      return ConstantRange::getFull(BW);
+    if (isa<PoisonValue>(Elem))
+      continue;
+    auto *CI = dyn_cast<ConstantInt>(Elem);
+    if (!CI)
+      return ConstantRange::getFull(BW);
+    CR = CR.unionWith(CI->getValue());
+  }
+  return CR;
+}
+
 static ConstantRange toConstantRange(const ValueLatticeElement &Val,
                                      Type *Ty, bool UndefAllowed = false) {
   assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
@@ -844,6 +862,13 @@ static ConstantRange toConstantRange(const ValueLatticeElement &Val,
   unsigned BW = Ty->getScalarSizeInBits();
   if (Val.isUnknown())
     return ConstantRange::getEmpty(BW);
+  if (Val.isConstant() && Ty->isVectorTy()) {
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(
+            Val.getConstant()->getSplatValue(/*AllowPoison=*/true)))
+      return ConstantRange(CI->getValue());
+    if (auto *VTy = dyn_cast<FixedVectorType>(Ty))
+      return getConstantRangeFromFixedVector(Val.getConstant(), VTy);
+  }
   return ConstantRange::getFull(BW);
 }
 
@@ -968,7 +993,7 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
     return std::nullopt;
   const ConstantRange &LHSRange = *LHSRes;
 
-  const unsigned ResultBitWidth = CI->getType()->getIntegerBitWidth();
+  const unsigned ResultBitWidth = CI->getType()->getScalarSizeInBits();
 
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
@@ -1108,7 +1133,7 @@ LazyValueInfoImpl::getValueFromSimpleICmpCondition(CmpInst::Predicate Pred,
                                                    const APInt &Offset,
                                                    Instruction *CxtI,
                                                    bool UseBlockValue) {
-  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
+  ConstantRange RHSRange(RHS->getType()->getScalarSizeInBits(),
                          /*isFullSet=*/true);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
     RHSRange = ConstantRange(CI->getValue());
@@ -1728,7 +1753,6 @@ Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
 
 ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
                                               bool UndefAllowed) {
-  assert(V->getType()->isIntegerTy());
   BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getOrCreateImpl(BB->getModule()).getValueInBlock(V, BB, CxtI);
