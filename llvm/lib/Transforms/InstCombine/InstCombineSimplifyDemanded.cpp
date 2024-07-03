@@ -91,8 +91,47 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                             KnownBits &Known, unsigned Depth,
                                             const SimplifyQuery &Q) {
   Use &U = I->getOperandUse(OpNo);
-  Value *NewVal = SimplifyDemandedUseBits(U.get(), DemandedMask, Known,
-                                          Depth, Q);
+  Value *V = U.get();
+  if (isa<Constant>(V)) {
+    llvm::computeKnownBits(V, Known, Depth, Q);
+    return false;
+  }
+
+  Known.resetAll();
+  if (DemandedMask.isZero()) {
+    // Not demanding any bits from V.
+    replaceUse(U, UndefValue::get(V->getType()));
+    return true;
+  }
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
+
+  Instruction *VInst = dyn_cast<Instruction>(V);
+  if (!VInst) {
+    llvm::computeKnownBits(V, Known, Depth, Q);
+    return false;
+  }
+
+  Value *NewVal;
+  if (VInst->hasOneUse()) {
+    // If the instruction has one use, we can directly simplify it.
+    NewVal = SimplifyDemandedUseBits(VInst, DemandedMask, Known, Depth, Q);
+  } else if (Depth != 0) {
+    // If there are multiple uses of this instruction and we aren't at the root,
+    // then we can simplify VInst to some other value, but not modify the
+    // instruction.
+    NewVal =
+        SimplifyMultipleUseDemandedBits(VInst, DemandedMask, Known, Depth, Q);
+  } else {
+    // If this is the root being simplified, allow it to have multiple uses,
+    // just set the DemandedMask to all bits and reset the context instruction.
+    // This allows visitTruncInst (for example) to simplify the operand of a
+    // trunc without duplicating all the SimplifyDemandedUseBits() logic.
+    NewVal =
+        SimplifyDemandedUseBits(VInst, APInt::getAllOnes(Known.getBitWidth()),
+                                Known, Depth, Q.getWithInstruction(VInst));
+  }
   if (!NewVal) return false;
   if (Instruction* OpInst = dyn_cast<Instruction>(U))
     salvageDebugInfo(*OpInst);
@@ -124,50 +163,21 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
 /// operands based on the information about what bits are demanded. This returns
 /// some other non-null value if it found out that V is equal to another value
 /// in the context where the specified bits are demanded, but not for all users.
-Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
+Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
+                                                 const APInt &DemandedMask,
                                                  KnownBits &Known,
                                                  unsigned Depth,
                                                  const SimplifyQuery &Q) {
-  assert(V != nullptr && "Null pointer of Value???");
+  assert(I != nullptr && "Null pointer of Value???");
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   uint32_t BitWidth = DemandedMask.getBitWidth();
-  Type *VTy = V->getType();
+  Type *VTy = I->getType();
   assert(
       (!VTy->isIntOrIntVectorTy() || VTy->getScalarSizeInBits() == BitWidth) &&
       Known.getBitWidth() == BitWidth &&
       "Value *V, DemandedMask and Known must have same BitWidth");
 
-  if (isa<Constant>(V)) {
-    llvm::computeKnownBits(V, Known, Depth, Q);
-    return nullptr;
-  }
-
-  Known.resetAll();
-  if (DemandedMask.isZero()) // Not demanding any bits from V.
-    return UndefValue::get(VTy);
-
-  if (Depth == MaxAnalysisRecursionDepth)
-    return nullptr;
-
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) {
-    llvm::computeKnownBits(V, Known, Depth, Q);
-    return nullptr;        // Only analyze instructions.
-  }
-
-  // If there are multiple uses of this value and we aren't at the root, then
-  // we can't do any simplifications of the operands, because DemandedMask
-  // only reflects the bits demanded by *one* of the users.
-  if (Depth != 0 && !I->hasOneUse())
-    return SimplifyMultipleUseDemandedBits(I, DemandedMask, Known, Depth, Q);
-
   KnownBits LHSKnown(BitWidth), RHSKnown(BitWidth);
-  // If this is the root being simplified, allow it to have multiple uses,
-  // just set the DemandedMask to all bits so that we can try to simplify the
-  // operands.  This allows visitTruncInst (for example) to simplify the
-  // operand of a trunc without duplicating all the logic below.
-  if (Depth == 0 && !V->hasOneUse())
-    DemandedMask.setAllBits();
 
   // Update flags after simplifying an operand based on the fact that some high
   // order bits are not demanded.
@@ -1105,13 +1115,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     }
 
     if (!KnownBitsComputed)
-      llvm::computeKnownBits(V, Known, Depth, Q);
+      llvm::computeKnownBits(I, Known, Depth, Q);
     break;
   }
   }
 
-  if (V->getType()->isPointerTy()) {
-    Align Alignment = V->getPointerAlignment(DL);
+  if (I->getType()->isPointerTy()) {
+    Align Alignment = I->getPointerAlignment(DL);
     Known.Zero.setLowBits(Log2(Alignment));
   }
 
@@ -1119,13 +1129,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   // constant. We can't directly simplify pointers as a constant because of
   // pointer provenance.
   // TODO: We could return `(inttoptr const)` for pointers.
-  if (!V->getType()->isPointerTy() && DemandedMask.isSubsetOf(Known.Zero | Known.One))
+  if (!I->getType()->isPointerTy() &&
+      DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
 
   if (VerifyKnownBits) {
-    KnownBits ReferenceKnown = llvm::computeKnownBits(V, Depth, Q);
+    KnownBits ReferenceKnown = llvm::computeKnownBits(I, Depth, Q);
     if (Known != ReferenceKnown) {
-      errs() << "Mismatched known bits for " << *V << " in "
+      errs() << "Mismatched known bits for " << *I << " in "
              << I->getFunction()->getName() << "\n";
       errs() << "computeKnownBits(): " << ReferenceKnown << "\n";
       errs() << "SimplifyDemandedBits(): " << Known << "\n";
