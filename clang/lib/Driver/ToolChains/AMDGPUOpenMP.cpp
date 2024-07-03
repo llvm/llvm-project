@@ -446,8 +446,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  CC1Args.push_back("-fcuda-is-device");
-
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
