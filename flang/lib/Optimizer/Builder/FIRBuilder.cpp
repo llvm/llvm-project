@@ -259,6 +259,29 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
     return recipeIface.getAllocaBlock(getRegion());
   }
 
+  // All allocations associated with an OpenMP loop wrapper must happen outside
+  // of all wrappers.
+  mlir::Operation *currentOp = getRegion().getParentOp();
+  auto wrapperIface =
+      llvm::isa<mlir::omp::LoopNestOp>(currentOp)
+          ? llvm::cast<mlir::omp::LoopWrapperInterface>(
+                currentOp->getParentOp())
+          : llvm::dyn_cast<mlir::omp::LoopWrapperInterface>(currentOp);
+  if (wrapperIface) {
+    // Cannot use LoopWrapperInterface methods here because the whole nest may
+    // not have been created at this point. Manually traverse parents instead.
+    mlir::omp::LoopWrapperInterface lastWrapperOp = wrapperIface;
+    while (true) {
+      if (auto nextWrapper =
+              llvm::dyn_cast_if_present<mlir::omp::LoopWrapperInterface>(
+                  lastWrapperOp->getParentOp()))
+        lastWrapperOp = nextWrapper;
+      else
+        break;
+    }
+    return &lastWrapperOp->getParentRegion()->front();
+  }
+
   return getEntryBlock();
 }
 
