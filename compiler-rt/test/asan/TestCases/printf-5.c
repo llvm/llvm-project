@@ -9,6 +9,9 @@
 
 // XFAIL: !rdar109379358
 
+// FIXME: The test is flaky after build bot upgrade. #97515
+// UNSUPPORTED: android
+
 #include <stdio.h>
 #include <string.h>
 int main() {
