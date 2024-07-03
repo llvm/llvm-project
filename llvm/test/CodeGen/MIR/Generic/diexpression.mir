@@ -7,6 +7,10 @@
 # RUN: sed -e 's/STACK_EXPR//g' -e 's/BODY_EXPR/DW_ATE_foobar/g' %s | not llc -x mir -run-pass none -o - 2>&1 | FileCheck --check-prefix=EXPR-ERR-BODY-INVALID-ATTR %s
 # RUN: sed -e 's/STACK_EXPR/foobar/g' -e 's/BODY_EXPR//g' %s | not llc -x mir -run-pass none -o - 2>&1 | FileCheck --check-prefix=EXPR-ERR-STACK-INVALID-INT %s
 # RUN: sed -e 's/STACK_EXPR//g' -e 's/BODY_EXPR/foobar/g' %s | not llc -x mir -run-pass none -o - 2>&1 | FileCheck --check-prefix=EXPR-ERR-BODY-INVALID-INT %s
+
+# Test that we successfully parse valid DIExpression metadata in MIR, and that
+# we reject invalid DIExpression metadata in MIR.
+
 --- |
   define void @func() #0 !dbg !6 {
   entry:

@@ -415,25 +415,14 @@ TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
 TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   LLVMContext Ctx;
   SMDiagnostic Error;
-  StringRef Source =
-      "%st = type { i32, i32 }\n"
-      "@v = common global [50 x %st] zeroinitializer, align 16\n"
-      "%0 = type { i32, i32, i32, i32 }\n"
-      "@g = common global [50 x %0] zeroinitializer, align 16\n"
-      "define void @marker4(i64 %d) {\n"
-      "entry:\n"
-      "  %conv = trunc i64 %d to i32\n"
-      "  store i32 %conv, ptr getelementptr inbounds "
-      "    ([50 x %st], ptr @v, i64 0, i64 0, i32 0), align 16\n"
-      "  store i32 %conv, ptr getelementptr inbounds "
-      "    ([50 x %0], ptr @g, i64 0, i64 0, i32 0), align 16\n"
-      "  ret void\n"
-      "}";
+  StringRef Source = "";
   SlotMapping Mapping;
   auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping);
   ASSERT_TRUE(Mod != nullptr);
   auto &M = *Mod;
   unsigned Read;
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
 
   DIExpression *Expr;
 
@@ -460,6 +449,8 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
       "!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
   ASSERT_FALSE(Expr);
   ASSERT_EQ(Error.getMessage(), "expected '(' here");
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
 }
 
 } // end anonymous namespace
