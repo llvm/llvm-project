@@ -60,12 +60,6 @@ public:
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
-  }
-
   unsigned getNumFixupKinds() const override {
     return LoongArch::NumTargetFixupKinds;
   }
