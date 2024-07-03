@@ -115,10 +115,12 @@ private:
   MCContext &Context;
 
   std::unique_ptr<MCAsmBackend> Backend;
-
   std::unique_ptr<MCCodeEmitter> Emitter;
-
   std::unique_ptr<MCObjectWriter> Writer;
+
+  bool RelaxAll = false;
+  bool SubsectionsViaSymbols = false;
+  bool IncrementalLinkerCompatible = false;
 
   SectionListType Sections;
 
@@ -150,18 +152,14 @@ private:
   /// The bundle alignment size currently set in the assembler.
   ///
   /// By default it's 0, which means bundling is disabled.
-  unsigned BundleAlignSize;
-
-  bool RelaxAll : 1;
-  bool SubsectionsViaSymbols : 1;
-  bool IncrementalLinkerCompatible : 1;
+  unsigned BundleAlignSize = 0;
 
   /// ELF specific e_header flags
   // It would be good if there were an MCELFAssembler class to hold this.
   // ELF header flags are used both by the integrated and standalone assemblers.
   // Access to the flags is necessary in cases where assembler directives affect
   // which flags to be set.
-  unsigned ELFHeaderEFlags;
+  unsigned ELFHeaderEFlags = 0;
 
   /// Used to communicate Linker Optimization Hint information between
   /// the Streamer and the .o writer
