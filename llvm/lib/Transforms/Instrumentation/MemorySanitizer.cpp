@@ -181,6 +181,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -3865,6 +3866,141 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Given two shadows AAAA..., BBBB..., return the interleaved value
+  // ABABABAB ...
+  Value *interleaveAB(IRBuilder<> &IRB, Value *left, Value *right, uint Width) {
+    assert(isa<FixedVectorType>(left->getType()));
+    assert(isa<FixedVectorType>(right->getType()));
+
+    SmallVector<Constant *> Idxs;
+
+    for (uint i = 0; i < Width; i++) {
+      Idxs.push_back(IRB.getInt32(i));
+      Idxs.push_back(IRB.getInt32(i + Width));
+    }
+
+    return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
+  }
+
+  // Given three shadows, which are already interleaved into two shadows
+  // ABABABAB and CxCxCxCx (x is undef), return the interleaved value ABCABCABC.
+  Value *interleaveABCx(IRBuilder<> &IRB, Value *left, Value *right,
+                        uint Width) {
+    assert(isa<FixedVectorType>(left->getType()));
+    assert(isa<FixedVectorType>(right->getType()));
+
+    SmallVector<Constant *> Idxs;
+
+    // Width parameter is the width of a single shadow (e.g., A).
+    // The width of AB (or Cx) is Width * 2.
+    for (uint i = 0; i < Width * 2; i += 2) {
+      Idxs.push_back(IRB.getInt32(i));
+      Idxs.push_back(IRB.getInt32(i + 1));
+      Idxs.push_back(IRB.getInt32(i + Width));
+      // Index (i + 1 + Width) contains Undef; don't copy
+    }
+
+    return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
+  }
+
+  Value *interleaveShadowOrOrigin(IRBuilder<> &IRB, IntrinsicInst &I,
+                                  bool shadowMode) {
+    // Call arguments only
+    int numArgOperands = I.getNumOperands() - 1;
+    assert(numArgOperands >= 1);
+
+    int numVectors = numArgOperands - 1;
+
+    for (int i = 0; i < numVectors; i++) {
+      assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
+    }
+
+    // Last operand is the destination
+    assert(isa<PointerType>(I.getArgOperand(numArgOperands - 1)->getType()));
+    errs() << "Assertions ok\n";
+
+    for (unsigned int i = 0; i < I.getNumOperands(); i++) {
+      errs() << "Operand " << i << ": " << I.getOperand(i)->getName() << "\n";
+    }
+
+    uint16_t Width =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
+    if (!shadowMode) {
+      Width = Width / 4; // One origin value per 32-bits of app memory
+    }
+    uint16_t ElemSize = cast<FixedVectorType>(I.getArgOperand(0)->getType())
+                            ->getElementType()
+                            ->getPrimitiveSizeInBits();
+
+    dumpInst(I);
+    errs() << "Num operands: " << I.getNumOperands() << "\n";
+    errs() << "Num arg operands: " << numArgOperands << "\n";
+    errs() << "Num vectors: " << numVectors << "\n";
+    errs() << "Width: " << Width << "\n";
+    errs() << "Elem size: " << ElemSize << "\n";
+
+    Value *interleaved = nullptr;
+    if (numVectors == 1) {
+      interleaved = getShadow(&I, 0);
+    } else if (numVectors == 2) {
+      interleaved =
+          interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
+    } else if (numVectors == 3) {
+      Value *UndefV = UndefValue::get(getShadow(&I, 0)->getType());
+      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
+      Value *Cx = interleaveAB(IRB, getShadow(&I, 2), UndefV, Width);
+      interleaved = interleaveABCx(IRB, AB, Cx, Width);
+    } else if (numVectors == 4) {
+      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
+      Value *CD = interleaveAB(IRB, getShadow(&I, 2), getShadow(&I, 3), Width);
+      interleaved = interleaveAB(IRB, AB, CD, Width * 2);
+    } else {
+      //          assert(! "Unexpected number of vectors");
+    }
+
+    return interleaved;
+  }
+
+  /// Handle Arm NEON vector store intrinsics (vst{1,2,3,4}).
+  ///
+  /// Arm NEON vector store intrinsics have the output address (pointer) as the
+  /// last argument, with the initial arguments being the inputs. They return
+  /// void.
+  void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    Value *interleavedShadow = interleaveShadowOrOrigin(IRB, I, true);
+
+    // Call arguments only
+    int numArgOperands = I.getNumOperands() - 1;
+    assert(numArgOperands >= 1);
+    Value *Addr = I.getArgOperand(numArgOperands - 1);
+
+    Value *ShadowPtr, *OriginPtr;
+    std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
+        Addr, IRB, interleavedShadow->getType(), Align(1), /*isStore*/ true);
+    IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
+
+    if (MS.TrackOrigins) {
+      setOrigin(&I, getCleanOrigin());
+
+      /*
+            errs() << "Inserting origin information ...\n";
+            Value *interleavedOrigin = interleaveShadowOrOrigin (IRB, I, false);
+
+            errs() << "Adding store for origin ...\n";
+            IRB.CreateAlignedStore(interleavedOrigin, OriginPtr, Align(1));
+      */
+
+      //      setOriginForNaryIntrinsic(I, true);
+    }
+
+    if (ClCheckAccessAddress) {
+      errs() << "Inserting shadow check ...\n";
+      insertShadowCheck(Addr, &I);
+    }
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
@@ -4203,6 +4339,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
       break;
+
+    case Intrinsic::aarch64_neon_st2:
+    case Intrinsic::aarch64_neon_st3:
+    case Intrinsic::aarch64_neon_st4: {
+      handleNEONVectorStoreIntrinsic(I);
+      break;
+    }
 
     default:
       if (!handleUnknownIntrinsic(I))
