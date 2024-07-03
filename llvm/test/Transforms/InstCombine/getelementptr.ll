@@ -1793,8 +1793,8 @@ define ptr @gep_sel_const_nuw(i1 %c) {
 
 define ptr @gep_of_udiv(ptr %p, i64 %x) {
 ; CHECK-LABEL: @gep_of_udiv(
-; CHECK-NEXT:    [[IDX:%.*]] = udiv exact i64 [[X:%.*]], 12
-; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv exact i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %idx = udiv exact i64 %x, 12
@@ -1816,8 +1816,8 @@ define ptr @gep_of_udiv_fail_not_divisible(ptr %p, i64 %x) {
 
 define ptr @gep_of_sdiv(ptr %p, i64 %x) {
 ; CHECK-LABEL: @gep_of_sdiv(
-; CHECK-NEXT:    [[IDX:%.*]] = sdiv exact i64 [[X:%.*]], -36
-; CHECK-NEXT:    [[R:%.*]] = getelementptr nusw nuw i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv exact i64 [[X:%.*]], -9
+; CHECK-NEXT:    [[R:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %idx = sdiv exact i64 %x, -36
@@ -1850,8 +1850,8 @@ define ptr @gep_of_sdiv_fail_ub(ptr %p, i64 %x) {
 
 define ptr @gep_of_lshr(ptr %p, i64 %x) {
 ; CHECK-LABEL: @gep_of_lshr(
-; CHECK-NEXT:    [[IDX:%.*]] = lshr exact i64 [[X:%.*]], 3
-; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %idx = lshr exact i64 %x, 3
@@ -1861,8 +1861,8 @@ define ptr @gep_of_lshr(ptr %p, i64 %x) {
 
 define ptr @gep_of_ashr(ptr %p, i64 %x) {
 ; CHECK-LABEL: @gep_of_ashr(
-; CHECK-NEXT:    [[IDX:%.*]] = ashr exact i64 [[X:%.*]], 3
-; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %idx = ashr exact i64 %x, 3
