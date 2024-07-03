@@ -1419,6 +1419,37 @@ def warn_objc_property_retain_of_block : Warning<
 def warn_objc_readonly_property_has_setter : Warning<
     "setter cannot be specified for a readonly property">,
     InGroup<ObjCReadonlyPropertyHasSetter>;
+
+def warn_objc_unprefixed_class_name : Warning<
+  "un-prefixed Objective-C class name">,
+  InGroup<ObjCPrefixLength>;
+def warn_objc_unprefixed_protocol_name : Warning<
+  "un-prefixed Objective-C protocol name">,
+  InGroup<ObjCPrefixLength>;
+def warn_objc_unprefixed_category_method_name : Warning<
+  "un-prefixed Objective-C method name on category">,
+  InGroup<ObjCPrefixLength>;
+
+def warn_objc_bad_class_name_prefix : Warning<
+  "Objective-C class name prefix not in permitted list">,
+  InGroup<ObjCPrefixes>;
+def warn_objc_bad_protocol_name_prefix : Warning<
+  "Objective-C protocol name prefix not in permitted list">,
+  InGroup<ObjCPrefixes>;
+def warn_objc_bad_category_method_name_prefix : Warning<
+  "Objective-C category method name prefix not in permitted list">,
+  InGroup<ObjCPrefixes>;
+
+def warn_objc_forbidden_class_name_prefix : Warning<
+  "Objective-C class name prefix in forbidden list">,
+  InGroup<ObjCForbiddenPrefixes>;
+def warn_objc_forbidden_protocol_name_prefix : Warning<
+  "Objective-C protocol name prefix in forbidden list">,
+  InGroup<ObjCForbiddenPrefixes>;
+def warn_objc_forbidden_category_method_name_prefix : Warning<
+  "Objective-C category method name prefix in forbidden list">,
+  InGroup<ObjCForbiddenPrefixes>;
+
 def warn_atomic_property_rule : Warning<
   "writable atomic property %0 cannot pair a synthesized %select{getter|setter}1 "
   "with a user defined %select{getter|setter}2">,

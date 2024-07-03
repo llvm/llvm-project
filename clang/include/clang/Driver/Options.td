@@ -3419,6 +3419,25 @@ defm objc_exceptions : BoolFOption<"objc-exceptions",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enable Objective-C exceptions">,
   NegFlag<SetFalse>>;
+def Wobjc_prefixes_EQ:
+  CommaJoined<["-"], "Wobjc-prefixes=">,
+  Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<prefixes>">,
+  HelpText<"Warn if Objective-C class or protocol names do not start with any prefix in a comma separated list <prefixes>.  Takes precedence over -Wobjc-prefix-length">,
+  MarshallingInfoStringVector<LangOpts<"ObjCAllowedPrefixes">>;
+def Wobjc_forbidden_prefixes_EQ:
+  Joined<["-"], "Wobjc-forbidden-prefixes=">,
+  Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<prefixes>">,
+  HelpText<"Warn if Objective-C class or protocol names start with any prefix in a comma separated list <prefixes>.  Takes precedence over both -Wobjc-prefixes and -Wobjc-prefix-length">,
+  MarshallingInfoStringVector<LangOpts<"ObjCForbiddenPrefixes">>;
+def Wobjc_prefix_length_EQ:
+  Joined<["-"], "Wobjc-prefix-length=">,
+  Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<N>">,
+  HelpText<"Warn if Objective-C class or protocol names do not start with a prefix of the specified length">,
+  MarshallingInfoInt<LangOpts<"ObjCPrefixLength">>;
+
 defm application_extension : BoolFOption<"application-extension",
   LangOpts<"AppExt">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
