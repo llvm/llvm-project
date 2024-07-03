@@ -1484,8 +1484,11 @@ void AddUnalignedAccessWarning(ArgStringList &CmdArgs) {
 }
 }
 
+// Each combination of options here forms a signing schema, and in most cases
+// each signing schema is its own incompatible ABI. The default values of the
+// options represent the default signing schema.
 static void handlePAuthABIOption(const ArgList &DriverArgs,
-                                 ArgStringList &CC1Args, const Driver &D) {
+                                 ArgStringList &CC1Args) {
   if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
                          options::OPT_fno_ptrauth_intrinsics))
     CC1Args.push_back("-fptrauth-intrinsics");
@@ -1579,7 +1582,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     IndirectBranches = PBP.BranchTargetEnforcement;
     GuardedControlStack = PBP.GuardedControlStack;
     if (isAArch64 && PBP.HasPauthABI)
-      handlePAuthABIOption(Args, CmdArgs, D);
+      handlePAuthABIOption(Args, CmdArgs);
   }
 
   CmdArgs.push_back(
