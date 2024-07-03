@@ -2995,6 +2995,11 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
     MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm()); // Input Za Tile
     StartIdx++;
   } else {
+    // Avoids all instructions with mnemonic za.<sz>[Reg, Imm,
+    if (MI.getOperand(0).isReg() && !MI.getOperand(1).isImm()) {
+      MIB.add(MI.getOperand(StartIdx)); // Output ZPR
+      ++StartIdx;
+    }
     MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
   }
   for (unsigned I = StartIdx; I < MI.getNumOperands(); ++I)
@@ -9966,6 +9971,26 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   EVT VT8Bit = VT.is64BitVector() ? MVT::v8i8 : MVT::v16i8;
   Val = DAG.getBitcast(VT8Bit, Val);
   Val = DAG.getNode(ISD::CTPOP, DL, VT8Bit, Val);
+
+  if (Subtarget->hasDotProd() && VT.getScalarSizeInBits() != 16 &&
+      VT.getVectorNumElements() >= 2) {
+    EVT DT = VT == MVT::v2i64 ? MVT::v4i32 : VT;
+    SDValue Zeros = DAG.getConstant(0, DL, DT);
+    SDValue Ones = DAG.getConstant(1, DL, VT8Bit);
+
+    if (VT == MVT::v2i64) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+      Val = DAG.getNode(AArch64ISD::UADDLP, DL, VT, Val);
+    } else if (VT == MVT::v2i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else if (VT == MVT::v4i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else {
+      llvm_unreachable("Unexpected type for custom ctpop lowering");
+    }
+
+    return Val;
+  }
 
   // Widen v8i8/v16i8 CTPOP result to VT by repeatedly widening pairwise adds.
   unsigned EltSize = 8;
@@ -18059,16 +18084,27 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   unsigned ShiftAmt;
 
   auto Shl = [&](SDValue N0, unsigned N1) {
+    if (!N0.getNode())
+      return SDValue();
+    // If shift causes overflow, ignore this combine.
+    if (N1 >= N0.getValueSizeInBits())
+      return SDValue();
     SDValue RHS = DAG.getConstant(N1, DL, MVT::i64);
     return DAG.getNode(ISD::SHL, DL, VT, N0, RHS);
   };
   auto Add = [&](SDValue N0, SDValue N1) {
+    if (!N0.getNode() || !N1.getNode())
+      return SDValue();
     return DAG.getNode(ISD::ADD, DL, VT, N0, N1);
   };
   auto Sub = [&](SDValue N0, SDValue N1) {
+    if (!N0.getNode() || !N1.getNode())
+      return SDValue();
     return DAG.getNode(ISD::SUB, DL, VT, N0, N1);
   };
   auto Negate = [&](SDValue N) {
+    if (!N0.getNode())
+      return SDValue();
     SDValue Zero = DAG.getConstant(0, DL, VT);
     return DAG.getNode(ISD::SUB, DL, VT, Zero, N);
   };

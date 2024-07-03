@@ -788,25 +788,23 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// NOMORE_ICP_MAGICNUM count values in the value profile of \p Inst, we
 /// cannot promote for \p Inst anymore.
 static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
-  uint32_t NumVals = 0;
   uint64_t TotalCount = 0;
-  auto ValueData =
-      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               NumVals, TotalCount, true);
+  auto ValueData = getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
+                                            MaxNumPromotions, TotalCount, true);
   // No valid value profile so no promoted targets have been recorded
   // before. Ok to do ICP.
-  if (!ValueData)
+  if (ValueData.empty())
     return true;
 
   unsigned NumPromoted = 0;
-  for (uint32_t I = 0; I < NumVals; I++) {
-    if (ValueData[I].Count != NOMORE_ICP_MAGICNUM)
+  for (const auto &V : ValueData) {
+    if (V.Count != NOMORE_ICP_MAGICNUM)
       continue;
 
     // If the promotion candidate has NOMORE_ICP_MAGICNUM count in the
     // metadata, it means the candidate has been promoted for this
     // indirect call.
-    if (ValueData[I].Value == Function::getGUID(Candidate))
+    if (V.Value == Function::getGUID(Candidate))
       return false;
     NumPromoted++;
     // If already have MaxNumPromotions promotion, don't do it anymore.
@@ -832,11 +830,10 @@ updateIDTMetaData(Instruction &Inst,
   // `MaxNumPromotions` inside it.
   if (MaxNumPromotions == 0)
     return;
-  uint32_t NumVals = 0;
   // OldSum is the existing total count in the value profile data.
   uint64_t OldSum = 0;
-  auto ValueData = getValueProfDataFromInst(
-      Inst, IPVK_IndirectCallTarget, MaxNumPromotions, NumVals, OldSum, true);
+  auto ValueData = getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
+                                            MaxNumPromotions, OldSum, true);
 
   DenseMap<uint64_t, uint64_t> ValueCountMap;
   if (Sum == 0) {
@@ -845,10 +842,8 @@ updateIDTMetaData(Instruction &Inst,
            "If sum is 0, assume only one element in CallTargets "
            "with count being NOMORE_ICP_MAGICNUM");
     // Initialize ValueCountMap with existing value profile data.
-    if (ValueData) {
-      for (uint32_t I = 0; I < NumVals; I++)
-        ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
-    }
+    for (const auto &V : ValueData)
+      ValueCountMap[V.Value] = V.Count;
     auto Pair =
         ValueCountMap.try_emplace(CallTargets[0].Value, CallTargets[0].Count);
     // If the target already exists in value profile, decrease the total
@@ -861,11 +856,9 @@ updateIDTMetaData(Instruction &Inst,
   } else {
     // Initialize ValueCountMap with existing NOMORE_ICP_MAGICNUM
     // counts in the value profile.
-    if (ValueData) {
-      for (uint32_t I = 0; I < NumVals; I++) {
-        if (ValueData[I].Count == NOMORE_ICP_MAGICNUM)
-          ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
-      }
+    for (const auto &V : ValueData) {
+      if (V.Count == NOMORE_ICP_MAGICNUM)
+        ValueCountMap[V.Value] = V.Count;
     }
 
     for (const auto &Data : CallTargets) {

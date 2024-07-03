@@ -109,6 +109,8 @@ private:
     return reinterpret_cast<Block *>(It->second.get());
   }
 
+  void updateGlobalTemporaries();
+
   // The emitter always tracks the current instruction and sets OpPC to a token
   // value which is mapped to the location of the opcode being evaluated.
   CodePtr OpPC;

@@ -86,8 +86,6 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
-  /// The index of this section in the layout order.
-  unsigned LayoutOrder = 0;
 
   /// Keeping track of bundle-locked state.
   BundleLockStateType BundleLockState = NotBundleLocked;
@@ -167,9 +165,6 @@ public:
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }
 
-  unsigned getLayoutOrder() const { return LayoutOrder; }
-  void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
-
   BundleLockStateType getBundleLockState() const { return BundleLockState; }
   void setBundleLockState(BundleLockStateType NewState);
   bool isBundleLocked() const { return BundleLockState != NotBundleLocked; }
@@ -197,18 +192,6 @@ public:
   iterator begin() const { return iterator(CurFragList->Head); }
   iterator end() const { return {}; }
   bool empty() const { return !CurFragList->Head; }
-
-  void addFragment(MCFragment &F) {
-    // The formal layout order will be finalized in MCAssembler::layout.
-    if (CurFragList->Tail) {
-      CurFragList->Tail->Next = &F;
-      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
-    } else {
-      CurFragList->Head = &F;
-      assert(F.getLayoutOrder() == 0);
-    }
-    CurFragList->Tail = &F;
-  }
 
   void dump() const;
 

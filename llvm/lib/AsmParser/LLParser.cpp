@@ -3293,17 +3293,16 @@ bool LLParser::parseFunctionType(Type *&Result) {
     return true;
 
   // Reject names on the arguments lists.
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
-    if (!ArgList[i].Name.empty())
-      return error(ArgList[i].Loc, "argument name invalid in function type");
-    if (ArgList[i].Attrs.hasAttributes())
-      return error(ArgList[i].Loc,
-                   "argument attributes invalid in function type");
+  for (const ArgInfo &Arg : ArgList) {
+    if (!Arg.Name.empty())
+      return error(Arg.Loc, "argument name invalid in function type");
+    if (Arg.Attrs.hasAttributes())
+      return error(Arg.Loc, "argument attributes invalid in function type");
   }
 
   SmallVector<Type*, 16> ArgListTy;
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i)
-    ArgListTy.push_back(ArgList[i].Ty);
+  for (const ArgInfo &Arg : ArgList)
+    ArgListTy.push_back(Arg.Ty);
 
   Result = FunctionType::get(Result, ArgListTy, IsVarArg);
   return false;
@@ -6404,9 +6403,9 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   std::vector<Type*> ParamTypeList;
   SmallVector<AttributeSet, 8> Attrs;
 
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
-    ParamTypeList.push_back(ArgList[i].Ty);
-    Attrs.push_back(ArgList[i].Attrs);
+  for (const ArgInfo &Arg : ArgList) {
+    ParamTypeList.push_back(Arg.Ty);
+    Attrs.push_back(Arg.Attrs);
   }
 
   AttributeList PAL =
@@ -7230,8 +7229,8 @@ bool LLParser::parseIndirectBr(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   IndirectBrInst *IBI = IndirectBrInst::Create(Address, DestList.size());
-  for (unsigned i = 0, e = DestList.size(); i != e; ++i)
-    IBI->addDestination(DestList[i]);
+  for (BasicBlock *Dest : DestList)
+    IBI->addDestination(Dest);
   Inst = IBI;
   return false;
 }
@@ -7246,8 +7245,8 @@ bool LLParser::resolveFunctionType(Type *RetType,
   if (!FuncTy) {
     // Pull out the types of all of the arguments...
     std::vector<Type*> ParamTypes;
-    for (unsigned i = 0, e = ArgList.size(); i != e; ++i)
-      ParamTypes.push_back(ArgList[i].V->getType());
+    for (const ParamInfo &Arg : ArgList)
+      ParamTypes.push_back(Arg.V->getType());
 
     if (!FunctionType::isValidReturnType(RetType))
       return true;
@@ -7310,19 +7309,19 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   // correctly.  Also, gather any parameter attributes.
   FunctionType::param_iterator I = Ty->param_begin();
   FunctionType::param_iterator E = Ty->param_end();
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
+  for (const ParamInfo &Arg : ArgList) {
     Type *ExpectedTy = nullptr;
     if (I != E) {
       ExpectedTy = *I++;
     } else if (!Ty->isVarArg()) {
-      return error(ArgList[i].Loc, "too many arguments specified");
+      return error(Arg.Loc, "too many arguments specified");
     }
 
-    if (ExpectedTy && ExpectedTy != ArgList[i].V->getType())
-      return error(ArgList[i].Loc, "argument is not of expected type '" +
-                                       getTypeString(ExpectedTy) + "'");
-    Args.push_back(ArgList[i].V);
-    ArgAttrs.push_back(ArgList[i].Attrs);
+    if (ExpectedTy && ExpectedTy != Arg.V->getType())
+      return error(Arg.Loc, "argument is not of expected type '" +
+                                getTypeString(ExpectedTy) + "'");
+    Args.push_back(Arg.V);
+    ArgAttrs.push_back(Arg.Attrs);
   }
 
   if (I != E)
@@ -7623,19 +7622,19 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
   // correctly.  Also, gather any parameter attributes.
   FunctionType::param_iterator I = Ty->param_begin();
   FunctionType::param_iterator E = Ty->param_end();
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
+  for (const ParamInfo &Arg : ArgList) {
     Type *ExpectedTy = nullptr;
     if (I != E) {
       ExpectedTy = *I++;
     } else if (!Ty->isVarArg()) {
-      return error(ArgList[i].Loc, "too many arguments specified");
+      return error(Arg.Loc, "too many arguments specified");
     }
 
-    if (ExpectedTy && ExpectedTy != ArgList[i].V->getType())
-      return error(ArgList[i].Loc, "argument is not of expected type '" +
-                                       getTypeString(ExpectedTy) + "'");
-    Args.push_back(ArgList[i].V);
-    ArgAttrs.push_back(ArgList[i].Attrs);
+    if (ExpectedTy && ExpectedTy != Arg.V->getType())
+      return error(Arg.Loc, "argument is not of expected type '" +
+                                getTypeString(ExpectedTy) + "'");
+    Args.push_back(Arg.V);
+    ArgAttrs.push_back(Arg.Attrs);
   }
 
   if (I != E)
@@ -8018,19 +8017,19 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
   // correctly.  Also, gather any parameter attributes.
   FunctionType::param_iterator I = Ty->param_begin();
   FunctionType::param_iterator E = Ty->param_end();
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
+  for (const ParamInfo &Arg : ArgList) {
     Type *ExpectedTy = nullptr;
     if (I != E) {
       ExpectedTy = *I++;
     } else if (!Ty->isVarArg()) {
-      return error(ArgList[i].Loc, "too many arguments specified");
+      return error(Arg.Loc, "too many arguments specified");
     }
 
-    if (ExpectedTy && ExpectedTy != ArgList[i].V->getType())
-      return error(ArgList[i].Loc, "argument is not of expected type '" +
-                                       getTypeString(ExpectedTy) + "'");
-    Args.push_back(ArgList[i].V);
-    Attrs.push_back(ArgList[i].Attrs);
+    if (ExpectedTy && ExpectedTy != Arg.V->getType())
+      return error(Arg.Loc, "argument is not of expected type '" +
+                                getTypeString(ExpectedTy) + "'");
+    Args.push_back(Arg.V);
+    Attrs.push_back(Arg.Attrs);
   }
 
   if (I != E)

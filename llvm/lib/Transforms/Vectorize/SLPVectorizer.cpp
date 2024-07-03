@@ -835,11 +835,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         auto *CallBase = cast<CallInst>(IBase);
         if (Call->getCalledFunction() != CallBase->getCalledFunction())
           return InstructionsState(VL[BaseIndex], nullptr, nullptr);
-        if (Call->hasOperandBundles() &&
+        if (Call->hasOperandBundles() && (!CallBase->hasOperandBundles() ||
             !std::equal(Call->op_begin() + Call->getBundleOperandsStartIndex(),
                         Call->op_begin() + Call->getBundleOperandsEndIndex(),
                         CallBase->op_begin() +
-                            CallBase->getBundleOperandsStartIndex()))
+                            CallBase->getBundleOperandsStartIndex())))
           return InstructionsState(VL[BaseIndex], nullptr, nullptr);
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
         if (ID != BaseID)
@@ -8350,7 +8350,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                       return std::min(S, I);
                     }),
                 EltsPerVector);
-            Indices.push_back(OffsetReg1);
+            Indices.push_back(OffsetReg1 % NumElts);
           }
           Idx = I - OffsetReg1;
         }
@@ -8390,10 +8390,13 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                  SubMask);
       }
       for (unsigned Idx : Indices) {
-        Cost += ::getShuffleCost(TTI, TTI::SK_ExtractSubvector,
-                                 FixedVectorType::get(ScalarTy, NumElts),
-                                 std::nullopt, CostKind, Idx,
-                                 FixedVectorType::get(ScalarTy, EltsPerVector));
+        assert((Idx + EltsPerVector) <= alignTo(NumElts, EltsPerVector) &&
+               "SK_ExtractSubvector index out of range");
+        Cost += ::getShuffleCost(
+            TTI, TTI::SK_ExtractSubvector,
+            FixedVectorType::get(ScalarTy, alignTo(NumElts, EltsPerVector)),
+            std::nullopt, CostKind, Idx,
+            FixedVectorType::get(ScalarTy, EltsPerVector));
       }
       // Second attempt to check, if just a permute is better estimated than
       // subvector extract.
@@ -16208,7 +16211,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Ty->print(rso);
         return OptimizationRemarkMissed(SV_NAME, "UnsupportedType", I0)
                << "Cannot SLP vectorize list: type "
-               << rso.str() + " is unsupported by vectorizer";
+               << TypeStr + " is unsupported by vectorizer";
       });
       return false;
     }
