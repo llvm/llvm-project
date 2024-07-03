@@ -188,8 +188,12 @@ bool AMDGPUTargetInfo::initFeatureMap(
 
   // TODO: Should move this logic into TargetParser
   std::string ErrorMsg;
-  if (!insertWaveSizeFeature(CPU, getTriple(), Features, ErrorMsg)) {
-    Diags.Report(diag::err_invalid_feature_combination) << ErrorMsg;
+  bool IsCombinationError;
+  if (!insertWaveSizeFeature(CPU, getTriple(), Features, ErrorMsg,
+                             IsCombinationError)) {
+    Diags.Report(IsCombinationError ? diag::err_invalid_feature_combination
+                                    : diag::err_opt_not_valid_on_target)
+        << ErrorMsg;
     return false;
   }
 

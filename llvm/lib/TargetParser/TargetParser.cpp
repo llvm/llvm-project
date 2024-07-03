@@ -618,15 +618,20 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
 
 bool AMDGPU::insertWaveSizeFeature(StringRef GPU, const Triple &T,
                                    StringMap<bool> &Features,
-                                   std::string &ErrorMsg) {
+                                   std::string &ErrorMsg,
+                                   bool &IsCombinationError) {
   bool IsWave32Capable = isWave32Capable(GPU, T);
   const bool IsNullGPU = GPU.empty();
-  // FIXME: Not diagnosing wavefrontsize32 on wave64 only targets.
-  const bool HaveWave32 =
-      (IsWave32Capable || IsNullGPU) && Features.count("wavefrontsize32");
+  const bool HaveWave32 = Features.count("wavefrontsize32");
   const bool HaveWave64 = Features.count("wavefrontsize64");
   if (HaveWave32 && HaveWave64) {
     ErrorMsg = "'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive";
+    IsCombinationError = true;
+    return false;
+  }
+  if (HaveWave32 && !IsNullGPU && !IsWave32Capable) {
+    ErrorMsg = "wavefrontsize32";
+    IsCombinationError = false;
     return false;
   }
   // Don't assume any wavesize with an unknown subtarget.

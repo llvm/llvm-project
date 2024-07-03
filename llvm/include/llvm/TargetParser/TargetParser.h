@@ -178,7 +178,8 @@ void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
 
 /// Inserts wave size feature for given GPU into features map
 bool insertWaveSizeFeature(StringRef GPU, const Triple &T,
-                           StringMap<bool> &Features, std::string &ErrorMsg);
+                           StringMap<bool> &Features, std::string &ErrorMsg,
+                           bool &IsCombinationError);
 
 } // namespace AMDGPU
 } // namespace llvm
