@@ -396,8 +396,11 @@ uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
 
     auto NamespaceToProfiledBFSizesIt =
         NamespaceToProfiledBFSizes.find(Namespace);
+    // Skip if there are no ProfileBFs with a given \p Namespace.
     if (NamespaceToProfiledBFSizesIt == NamespaceToProfiledBFSizes.end())
       continue;
+    // Skip if there are no ProfileBFs in a given \p Namespace with
+    // equal number of blocks.
     if (NamespaceToProfiledBFSizesIt->second.count(BF->size()) == 0)
       continue;
     auto NamespaceToBFsIt = NamespaceToBFs.find(Namespace);
@@ -408,7 +411,7 @@ uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
   }
 
   // Iterates through all profiled functions and binary functions belonging to
-  // the same namespace and matches based on edit distance thresehold.
+  // the same namespace and matches based on edit distance threshold.
   assert(YamlBP.Functions.size() == ProfiledBFNamespaces.size() &&
          ProfiledBFNamespaces.size() == ProfileBFDemangledNames.size());
   for (size_t I = 0; I < YamlBP.Functions.size(); ++I) {
@@ -416,6 +419,7 @@ uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     std::string &YamlBFNamespace = ProfiledBFNamespaces[I];
     if (YamlBF.Used)
       continue;
+    // Skip if there are no BFs in a given \p Namespace.
     auto It = NamespaceToBFs.find(YamlBFNamespace);
     if (It == NamespaceToBFs.end())
       continue;
