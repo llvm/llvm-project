@@ -563,6 +563,15 @@ functions:
       - type: float
       - type: float
       - type: float
+  - name: f16fma
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: double
+      - type: double
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16fmaf
     standards: 
       - stdc
@@ -572,6 +581,24 @@ functions:
       - type: float
       - type: float
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16fmal
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: long double
+      - type: long double
+      - type: long double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16fmaf128
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: float128
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
   - name: fmod
     standards: 
       - stdc
@@ -913,6 +940,14 @@ functions:
     arguments:
       - type: long double
       - type: int
+  - name: ldexpf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: ldexpf128
     standards: 
       - stdc
@@ -1761,6 +1796,14 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: scalblnf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: long
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: scalbn
     standards: 
       - stdc
@@ -1781,6 +1824,13 @@ functions:
     return_type: long double
     arguments:
       - type: long double
+      - type: int
+  - name: scalbnf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
       - type: int
   - name: scalbnf128
     standards: 
@@ -1875,10 +1925,150 @@ functions:
       - type: _Float16 *
       - type: _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16sqrtf
+  - name: getpayloadf16
     standards: 
       - stdc
     return_type: _Float16
     arguments:
+      - type: _Float16 *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: setpayloadf16
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16 *
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: setpayloadsigf16
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16 *
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16addf128
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: f16subf128
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: f16sqrtf
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
       - type: float
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16sqrtf128
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: f16add
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: double
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16addf
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: float
+      - type: float
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16addl
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: long double
+      - type: long double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16sub
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: double
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16subf
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: float
+      - type: float
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16subl
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: long double
+      - type: long double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16div
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: double
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16divf
+    standards:
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: float
+      - type: float
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16divf128
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: f16divl
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: long double
+      - type: long double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16sqrt
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16sqrtl
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: long double
     guard: LIBC_TYPES_HAS_FLOAT16
