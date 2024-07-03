@@ -880,7 +880,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   // Check transpose (only available for f16/bf16)
   if ((typeA != WGMMATypes::f16 && typeA != WGMMATypes::bf16) &&
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
-       getLayoutB() == mlir::NVVM::MMALayout::col)) {
+       getLayoutB() == mlir::NVVM::MMALayout::row)) {
     return emitOpError()
            << "given layouts layout_a = " << stringifyMMALayout(getLayoutA())
            << " and layout_b = " << stringifyMMALayout(getLayoutB())
