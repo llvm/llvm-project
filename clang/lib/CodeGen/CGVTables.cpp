@@ -1079,33 +1079,38 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
     return llvm::GlobalVariable::InternalLinkage;
 
-  // V-tables for non-template classes with an owning module are always
-  // uniquely emitted in that module.
-  if (RD->isInNamedModule())
-    return llvm::GlobalVariable::ExternalLinkage;
-
-  // We're at the end of the translation unit, so the current key
-  // function is fully correct.
-  const CXXMethodDecl *keyFunction = Context.getCurrentKeyFunction(RD);
-  if (keyFunction && !RD->hasAttr<DLLImportAttr>()) {
+  bool IsInNamedModule = RD->isInNamedModule();
+  // If the CXXRecordDecl are not in a module unit, we need to get
+  // its key function. We're at the end of the translation unit, so the current
+  // key function is fully correct.
+  const CXXMethodDecl *keyFunction =
+      IsInNamedModule ? nullptr : Context.getCurrentKeyFunction(RD);
+  if (IsInNamedModule || (keyFunction && !RD->hasAttr<DLLImportAttr>())) {
     // If this class has a key function, use that to determine the
     // linkage of the vtable.
     const FunctionDecl *def = nullptr;
-    if (keyFunction->hasBody(def))
+    if (keyFunction && keyFunction->hasBody(def))
       keyFunction = cast<CXXMethodDecl>(def);
 
-    switch (keyFunction->getTemplateSpecializationKind()) {
-      case TSK_Undeclared:
-      case TSK_ExplicitSpecialization:
+    bool IsExternalDefinition =
+        IsInNamedModule ? RD->shouldEmitInExternalSource() : !def;
+
+    TemplateSpecializationKind Kind =
+        IsInNamedModule ? RD->getTemplateSpecializationKind()
+                        : keyFunction->getTemplateSpecializationKind();
+
+    switch (Kind) {
+    case TSK_Undeclared:
+    case TSK_ExplicitSpecialization:
       assert(
-          (def || CodeGenOpts.OptimizationLevel > 0 ||
+          (IsInNamedModule || def || CodeGenOpts.OptimizationLevel > 0 ||
            CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
-          "Shouldn't query vtable linkage without key function, "
-          "optimizations, or debug info");
-      if (!def && CodeGenOpts.OptimizationLevel > 0)
+          "Shouldn't query vtable linkage without the class in module units, "
+          "key function, optimizations, or debug info");
+      if (IsExternalDefinition && CodeGenOpts.OptimizationLevel > 0)
         return llvm::GlobalVariable::AvailableExternallyLinkage;
 
-      if (keyFunction->isInlined())
+      if (keyFunction && keyFunction->isInlined())
         return !Context.getLangOpts().AppleKext
                    ? llvm::GlobalVariable::LinkOnceODRLinkage
                    : llvm::Function::InternalLinkage;
@@ -1124,7 +1129,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
       case TSK_ExplicitInstantiationDeclaration:
         llvm_unreachable("Should not have been asked to emit this");
-    }
+      }
   }
 
   // -fapple-kext mode does not support weak linkage, so we must use
