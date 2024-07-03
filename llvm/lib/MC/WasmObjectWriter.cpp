@@ -1633,7 +1633,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
                              WS.getName());
 
         int64_t Size = 0;
-        if (!WS.getSize()->evaluateAsAbsolute(Size, Layout))
+        if (!WS.getSize()->evaluateAsAbsolute(Size, Asm))
           report_fatal_error(".size expression must be evaluatable");
 
         auto &DataSection = static_cast<MCSectionWasm &>(WS.getSection());
@@ -1752,7 +1752,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         // size of the alias.  When an offset from the base is involved this
         // can result in a offset + size goes past the end of the data section
         // which out object format doesn't support.  So we must clamp it.
-        if (!Base->getSize()->evaluateAsAbsolute(Size, Layout))
+        if (!Base->getSize()->evaluateAsAbsolute(Size, Asm))
           report_fatal_error(".size expression must be evaluatable");
         const WasmDataSegment &Segment =
             DataSegments[DataSection.getSegmentIndex()];
