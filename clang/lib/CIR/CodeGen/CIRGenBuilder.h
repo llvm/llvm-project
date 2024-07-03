@@ -136,14 +136,6 @@ public:
     return mlir::cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
-  mlir::TypedAttr getZeroAttr(mlir::Type t) {
-    return mlir::cir::ZeroAttr::get(getContext(), t);
-  }
-
-  mlir::cir::BoolAttr getCIRBoolAttr(bool state) {
-    return mlir::cir::BoolAttr::get(getContext(), getBoolTy(), state);
-  }
-
   mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
     assert(mlir::isa<mlir::cir::PointerType>(t) && "expected cir.ptr");
     return getConstPtrAttr(t, 0);
@@ -265,6 +257,8 @@ public:
       return mlir::cir::FPAttr::getZero(fltType);
     if (auto fltType = mlir::dyn_cast<mlir::cir::BF16Type>(ty))
       return mlir::cir::FPAttr::getZero(fltType);
+    if (auto complexType = mlir::dyn_cast<mlir::cir::ComplexType>(ty))
+      return getZeroAttr(complexType);
     if (auto arrTy = mlir::dyn_cast<mlir::cir::ArrayType>(ty))
       return getZeroAttr(arrTy);
     if (auto ptrTy = mlir::dyn_cast<mlir::cir::PointerType>(ty))
@@ -764,6 +758,42 @@ public:
     return create<mlir::cir::GetMemberOp>(loc, result, base, name, index);
   }
 
+  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
+                                  mlir::Value imag) {
+    auto resultComplexTy =
+        mlir::cir::ComplexType::get(getContext(), real.getType());
+    return create<mlir::cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  }
+
+  /// Create a cir.complex.real_ptr operation that derives a pointer to the real
+  /// part of the complex value pointed to by the specified pointer value.
+  mlir::Value createRealPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<mlir::cir::PointerType>(value.getType());
+    auto srcComplexTy =
+        mlir::cast<mlir::cir::ComplexType>(srcPtrTy.getPointee());
+    return create<mlir::cir::ComplexRealPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementTy()), value);
+  }
+
+  Address createRealPtr(mlir::Location loc, Address addr) {
+    return Address{createRealPtr(loc, addr.getPointer()), addr.getAlignment()};
+  }
+
+  /// Create a cir.complex.imag_ptr operation that derives a pointer to the
+  /// imaginary part of the complex value pointed to by the specified pointer
+  /// value.
+  mlir::Value createImagPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<mlir::cir::PointerType>(value.getType());
+    auto srcComplexTy =
+        mlir::cast<mlir::cir::ComplexType>(srcPtrTy.getPointee());
+    return create<mlir::cir::ComplexImagPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementTy()), value);
+  }
+
+  Address createImagPtr(mlir::Location loc, Address addr) {
+    return Address{createImagPtr(loc, addr.getPointer()), addr.getAlignment()};
+  }
+
   /// Cast the element type of the given address to a different type,
   /// preserving information like the alignment.
   cir::Address createElementBitCast(mlir::Location loc, cir::Address addr,
@@ -776,15 +806,18 @@ public:
                    addr.getAlignment());
   }
 
-  mlir::Value createLoad(mlir::Location loc, Address addr) {
+  mlir::Value createLoad(mlir::Location loc, Address addr,
+                         bool isVolatile = false) {
     auto ptrTy =
         mlir::dyn_cast<mlir::cir::PointerType>(addr.getPointer().getType());
     if (addr.getElementType() != ptrTy.getPointee())
       addr = addr.withPointer(
           createPtrBitcast(addr.getPointer(), addr.getElementType()));
 
-    return create<mlir::cir::LoadOp>(loc, addr.getElementType(),
-                                     addr.getPointer());
+    return create<mlir::cir::LoadOp>(
+        loc, addr.getElementType(), addr.getPointer(), /*isDeref=*/false,
+        /*is_volatile=*/isVolatile, /*alignment=*/mlir::IntegerAttr{},
+        /*mem_order=*/mlir::cir::MemOrderAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,

@@ -1175,6 +1175,90 @@ def BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
+  let summary = "Create a complex value from its real and imaginary parts";
+  let description = [{
+    `cir.complex.create` operation takes two operands that represent the real
+    and imaginary part of a complex number, and yields the complex number.
+
+    Example:
+
+    ```mlir
+    %0 = cir.const #cir.fp<1.000000e+00> : !cir.double
+    %1 = cir.const #cir.fp<2.000000e+00> : !cir.double
+    %2 = cir.complex.create %0, %1 : !cir.complex<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins CIR_AnyIntOrFloat:$real, CIR_AnyIntOrFloat:$imag);
+
+  let assemblyFormat = [{
+    $real `,` $imag
+    `:` qualified(type($real)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexRealPtrOp and ComplexImagPtrOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
+  let summary = "Extract the real part of a complex value";
+  let description = [{
+    `cir.complex.real_ptr` operation takes a pointer operand that points to a
+    complex value of type `!cir.complex` and yields a pointer to the real part
+    of the operand.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real_ptr %0 : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
+    ```
+  }];
+
+  let results = (outs PrimitiveIntOrFPPtr:$result);
+  let arguments = (ins ComplexPtr:$operand);
+
+  let assemblyFormat = [{
+    $operand `:`
+    qualified(type($operand)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def ComplexImagPtrOp : CIR_Op<"complex.imag_ptr", [Pure]> {
+  let summary = "Extract the imaginary part of a complex value";
+  let description = [{
+    `cir.complex.imag_ptr` operation takes a pointer operand that points to a
+    complex value of type `!cir.complex` and yields a pointer to the imaginary
+    part of the operand.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.imag_ptr %0 : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
+    ```
+  }];
+
+  let results = (outs PrimitiveIntOrFPPtr:$result);
+  let arguments = (ins ComplexPtr:$operand);
+
+  let assemblyFormat = [{
+    $operand `:`
+    qualified(type($operand)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // BitsOp
 //===----------------------------------------------------------------------===//
 
