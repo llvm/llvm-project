@@ -350,8 +350,8 @@ private:
                           const MCAssembler &Asm, const MCAsmLayout &Layout);
   void writeCustomRelocSections();
 
-  uint64_t getProvisionalValue(const WasmRelocationEntry &RelEntry,
-                               const MCAsmLayout &Layout);
+  uint64_t getProvisionalValue(const MCAssembler &Asm,
+                               const WasmRelocationEntry &RelEntry);
   void applyRelocations(ArrayRef<WasmRelocationEntry> Relocations,
                         uint64_t ContentsOffset, const MCAsmLayout &Layout);
 
@@ -638,8 +638,8 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 // to make the object format more readable and more likely to be directly
 // useable.
 uint64_t
-WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
-                                      const MCAsmLayout &Layout) {
+WasmObjectWriter::getProvisionalValue(const MCAssembler &Asm,
+                                      const WasmRelocationEntry &RelEntry) {
   if ((RelEntry.Type == wasm::R_WASM_GLOBAL_INDEX_LEB ||
        RelEntry.Type == wasm::R_WASM_GLOBAL_INDEX_I32) &&
       !RelEntry.Symbol->isGlobal()) {
@@ -656,7 +656,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
   case wasm::R_WASM_TABLE_INDEX_I64: {
     // Provisional value is table address of the resolved symbol itself
     const MCSymbolWasm *Base =
-        cast<MCSymbolWasm>(Layout.getBaseSymbol(*RelEntry.Symbol));
+        cast<MCSymbolWasm>(Asm.getBaseSymbol(*RelEntry.Symbol));
     assert(Base->isFunction());
     if (RelEntry.Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB ||
         RelEntry.Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB64)
@@ -772,7 +772,7 @@ void WasmObjectWriter::applyRelocations(
                       RelEntry.Offset;
 
     LLVM_DEBUG(dbgs() << "applyRelocation: " << RelEntry << "\n");
-    uint64_t Value = getProvisionalValue(RelEntry, Layout);
+    uint64_t Value = getProvisionalValue(Layout.getAssembler(), RelEntry);
 
     switch (RelEntry.Type) {
     case wasm::R_WASM_FUNCTION_INDEX_LEB:
@@ -1353,7 +1353,7 @@ void WasmObjectWriter::prepareImports(
     // Register types for all functions, including those with private linkage
     // (because wasm always needs a type signature).
     if (WS.isFunction()) {
-      const auto *BS = Layout.getBaseSymbol(S);
+      const auto *BS = Asm.getBaseSymbol(S);
       if (!BS)
         report_fatal_error(Twine(S.getName()) +
                            ": absolute addressing not supported!");
@@ -1727,7 +1727,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
 
       assert(S.isDefined());
 
-      const auto *BS = Layout.getBaseSymbol(S);
+      const auto *BS = Asm.getBaseSymbol(S);
       if (!BS)
         report_fatal_error(Twine(S.getName()) +
                            ": absolute addressing not supported!");
@@ -1830,7 +1830,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         return;
       assert(Rel.Symbol->isFunction());
       const MCSymbolWasm *Base =
-          cast<MCSymbolWasm>(Layout.getBaseSymbol(*Rel.Symbol));
+          cast<MCSymbolWasm>(Asm.getBaseSymbol(*Rel.Symbol));
       uint32_t FunctionIndex = WasmIndices.find(Base)->second;
       uint32_t TableIndex = TableElems.size() + InitialTableOffset;
       if (TableIndices.try_emplace(Base, TableIndex).second) {
