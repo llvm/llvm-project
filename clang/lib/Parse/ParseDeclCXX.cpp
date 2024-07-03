@@ -445,6 +445,14 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
 ///         'export' declaration
 ///         'export' '{' declaration-seq[opt] '}'
 ///
+/// HLSL: Parse export function declaration.
+///
+///      export-function-declaration: 
+///         'export' function-declaration
+/// 
+///      export-declaration-group:
+///         'export' '{' function-declaration-seq[opt] '}'
+///
 Decl *Parser::ParseExportDeclaration() {
   assert(Tok.is(tok::kw_export));
   SourceLocation ExportLoc = ConsumeToken();
