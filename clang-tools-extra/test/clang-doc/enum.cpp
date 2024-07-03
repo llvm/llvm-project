@@ -1,9 +1,7 @@
-// RUN: mkdir -p %t/docs %t/build
 // RUN: clang-doc --format=html --doxygen --output=%t/docs --executor=standalone %s
 // RUN: clang-doc --format=md --doxygen --output=%t/docs --executor=standalone %s
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.html -check-prefix=HTML-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.md -check-prefix=MD-INDEX
-// RUN: rm -rf %t
 
 /**
  * @brief For specifying RGB colors
