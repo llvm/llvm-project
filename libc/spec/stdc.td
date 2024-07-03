@@ -968,6 +968,13 @@ def StdC : StandardSpec<"stdc"> {
               RetValSpec<IntType>,
               [ArgSpec<IntType>, ArgSpec<FILEPtr>]
           >,
+          FunctionSpec<
+              "vasprintf",
+              RetValSpec<IntType>,
+              [ArgSpec<CharRestrictedPtrPtr>,
+               ArgSpec<ConstCharPtr>,
+               ArgSpec<VaListType>]
+          >,
       ],
       [
           ObjectSpec<
