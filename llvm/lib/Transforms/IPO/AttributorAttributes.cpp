@@ -8866,7 +8866,7 @@ struct AADenormalFPMathImpl : public AADenormalFPMath {
     if (Known.ModeF32.isValid())
       OS << " denormal-fp-math-f32=" << Known.ModeF32;
     OS << ']';
-    return OS.str();
+    return Str;
   }
 };
 
@@ -8979,7 +8979,7 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     OS << " / ";
     getAssumed().print(OS);
     OS << ">";
-    return OS.str();
+    return Str;
   }
 
   /// Helper function to get a SCEV expr for the associated value at program
@@ -9656,7 +9656,7 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -10778,7 +10778,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   template <typename AAType>
