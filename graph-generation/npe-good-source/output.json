@@ -8,24 +8,11 @@
             "locations": [
                 {
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
-                    "beginLine": 16,
-                    "beginColumn": 5,
-                    "endLine": 16,
-                    "endColumn": 16,
-                    "content": "int *x1 = 0"
-                }
-            ]
-        },
-        {
-            "type": "npe-good-source",
-            "locations": [
-                {
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
                     "beginLine": 17,
                     "beginColumn": 5,
                     "endLine": 17,
-                    "endColumn": 19,
-                    "content": "int *x2 = NULL"
+                    "endColumn": 16,
+                    "content": "int *x1 = 0"
                 }
             ]
         },
@@ -37,6 +24,19 @@
                     "beginLine": 18,
                     "beginColumn": 5,
                     "endLine": 18,
+                    "endColumn": 19,
+                    "content": "int *x2 = NULL"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
+                    "beginLine": 19,
+                    "beginColumn": 5,
+                    "endLine": 19,
                     "endColumn": 22,
                     "content": "int *x3 = nullptr"
                 }
@@ -47,9 +47,9 @@
             "locations": [
                 {
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
-                    "beginLine": 26,
+                    "beginLine": 29,
                     "beginColumn": 5,
-                    "endLine": 26,
+                    "endLine": 29,
                     "endColumn": 21,
                     "content": "int *z2 = null()"
                 }
@@ -60,9 +60,9 @@
             "locations": [
                 {
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
-                    "beginLine": 27,
+                    "beginLine": 30,
                     "beginColumn": 5,
-                    "endLine": 27,
+                    "endLine": 30,
                     "endColumn": 24,
                     "content": "int *z3 = mayNull()"
                 }
