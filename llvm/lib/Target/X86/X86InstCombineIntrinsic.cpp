@@ -502,6 +502,27 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   return Builder.CreateTrunc(Shuffle, ResTy);
 }
 
+static Value *simplifyX86pmulh(IntrinsicInst &II,
+                               InstCombiner::BuilderTy &Builder) {
+  Value *Arg0 = II.getArgOperand(0);
+  Value *Arg1 = II.getArgOperand(1);
+  auto *ResTy = cast<FixedVectorType>(II.getType());
+  [[maybe_unused]] auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
+  assert(ArgTy == ResTy && ResTy->getScalarSizeInBits() == 16 &&
+         "Unexpected PMULH types");
+
+  // Multiply by undef -> zero (NOT undef!) as other arg could still be zero.
+  if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
+  // Multiply by zero.
+  if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
+  // TODO: Constant folding.
+  return nullptr;
+}
+
 static Value *simplifyX86pmadd(IntrinsicInst &II,
                                InstCombiner::BuilderTy &Builder,
                                bool IsPMADDWD) {
@@ -2568,6 +2589,20 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
+  case Intrinsic::x86_sse2_pmulh_w:
+  case Intrinsic::x86_avx2_pmulh_w:
+  case Intrinsic::x86_avx512_pmulh_w_512:
+  case Intrinsic::x86_sse2_pmulhu_w:
+  case Intrinsic::x86_avx2_pmulhu_w:
+  case Intrinsic::x86_avx512_pmulhu_w_512:
+  case Intrinsic::x86_ssse3_pmul_hr_sw_128:
+  case Intrinsic::x86_avx2_pmul_hr_sw:
+  case Intrinsic::x86_avx512_pmul_hr_sw_512:
+    if (Value *V = simplifyX86pmulh(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
   case Intrinsic::x86_sse2_pmadd_wd:
   case Intrinsic::x86_avx2_pmadd_wd:
   case Intrinsic::x86_avx512_pmaddw_d_512:
@@ -2800,6 +2835,23 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
 
+    // Peek through a one-use shuffle - VectorCombine should have simplified
+    // this for cases where we're splitting wider vectors to use blendv
+    // intrinsics.
+    Value *MaskSrc = nullptr;
+    ArrayRef<int> ShuffleMask;
+    if (match(Mask, PatternMatch::m_OneUse(PatternMatch::m_Shuffle(
+                        PatternMatch::m_Value(MaskSrc), PatternMatch::m_Undef(),
+                        PatternMatch::m_Mask(ShuffleMask))))) {
+      // Bail if the shuffle was irregular or contains undefs.
+      int NumElts = cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
+      if (NumElts < (int)ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
+          any_of(ShuffleMask,
+                 [NumElts](int M) { return M < 0 || M >= NumElts; }))
+        break;
+      Mask = MaskSrc;
+    }
+
     // Convert to a vector select if we can bypass casts and find a boolean
     // vector condition value.
     Value *BoolVec;
@@ -2809,11 +2861,26 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         BoolVec->getType()->getScalarSizeInBits() == 1) {
       auto *MaskTy = cast<FixedVectorType>(Mask->getType());
       auto *OpTy = cast<FixedVectorType>(II.getType());
+      unsigned NumMaskElts = MaskTy->getNumElements();
+      unsigned NumOperandElts = OpTy->getNumElements();
+
+      // If we peeked through a shuffle, reapply the shuffle to the bool vector.
+      if (MaskSrc) {
+        unsigned NumMaskSrcElts =
+            cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
+        NumMaskElts = (ShuffleMask.size() * NumMaskElts) / NumMaskSrcElts;
+        // Multiple mask bits maps to the same operand element - bail out.
+        if (NumMaskElts > NumOperandElts)
+          break;
+        SmallVector<int> ScaledMask;
+        if (!llvm::scaleShuffleMaskElts(NumMaskElts, ShuffleMask, ScaledMask))
+          break;
+        BoolVec = IC.Builder.CreateShuffleVector(BoolVec, ScaledMask);
+        MaskTy = FixedVectorType::get(MaskTy->getElementType(), NumMaskElts);
+      }
       assert(MaskTy->getPrimitiveSizeInBits() ==
                  OpTy->getPrimitiveSizeInBits() &&
              "Not expecting mask and operands with different sizes");
-      unsigned NumMaskElts = MaskTy->getNumElements();
-      unsigned NumOperandElts = OpTy->getNumElements();
 
       if (NumMaskElts == NumOperandElts) {
         return SelectInst::Create(BoolVec, Op1, Op0);
@@ -3157,6 +3224,21 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     break;
   }
 
+  case Intrinsic::x86_sse2_pmulh_w:
+  case Intrinsic::x86_avx2_pmulh_w:
+  case Intrinsic::x86_avx512_pmulh_w_512:
+  case Intrinsic::x86_sse2_pmulhu_w:
+  case Intrinsic::x86_avx2_pmulhu_w:
+  case Intrinsic::x86_avx512_pmulhu_w_512:
+  case Intrinsic::x86_ssse3_pmul_hr_sw_128:
+  case Intrinsic::x86_avx2_pmul_hr_sw:
+  case Intrinsic::x86_avx512_pmul_hr_sw_512: {
+    simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
+    // NOTE: mulh(undef,undef) != undef.
+    break;
+  }
+
   case Intrinsic::x86_sse2_packssdw_128:
   case Intrinsic::x86_sse2_packsswb_128:
   case Intrinsic::x86_sse2_packuswb_128:
@@ -3223,6 +3305,7 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     APInt Op1UndefElts(InnerVWidth, 0);
     simplifyAndSetOp(&II, 0, OpDemandedElts, Op0UndefElts);
     simplifyAndSetOp(&II, 1, OpDemandedElts, Op1UndefElts);
+    // NOTE: madd(undef,undef) != undef.
     break;
   }
 
