@@ -30,7 +30,6 @@ public:
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
   ValueObjectSP left() const {
-    static ConstString g_left("__left_");
     if (!m_entry_sp)
       return m_entry_sp;
     return m_entry_sp->GetSyntheticChildAtOffset(
@@ -38,7 +37,6 @@ public:
   }
 
   ValueObjectSP right() const {
-    static ConstString g_right("__right_");
     if (!m_entry_sp)
       return m_entry_sp;
     return m_entry_sp->GetSyntheticChildAtOffset(
@@ -47,7 +45,6 @@ public:
   }
 
   ValueObjectSP parent() const {
-    static ConstString g_parent("__parent_");
     if (!m_entry_sp)
       return m_entry_sp;
     return m_entry_sp->GetSyntheticChildAtOffset(
@@ -83,17 +80,10 @@ private:
 
 class MapIterator {
 public:
-  MapIterator() = default;
-  MapIterator(MapEntry entry, size_t depth = 0)
-      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
-  MapIterator(ValueObjectSP entry, size_t depth = 0)
-      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
-  MapIterator(const MapIterator &rhs)
-      : m_entry(rhs.m_entry), m_max_depth(rhs.m_max_depth), m_error(false) {}
   MapIterator(ValueObject *entry, size_t depth = 0)
       : m_entry(entry), m_max_depth(depth), m_error(false) {}
 
-  MapIterator &operator=(const MapIterator &) = default;
+  MapIterator() = default;
 
   ValueObjectSP value() { return m_entry.GetEntry(); }
 
@@ -111,7 +101,9 @@ public:
     return m_entry.GetEntry();
   }
 
-protected:
+private:
+  /// Mimicks libc++'s __tree_next algorithm, which libc++ uses
+  /// in its __tree_iteartor::operator++.
   void next() {
     if (m_entry.null())
       return;
@@ -136,7 +128,7 @@ protected:
     m_entry = MapEntry(m_entry.parent());
   }
 
-private:
+  /// Mimicks libc++'s __tree_min algorithm.
   MapEntry tree_min(MapEntry x) {
     if (x.null())
       return MapEntry();
@@ -275,6 +267,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
   uint64_t bit_offset;
   if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) !=
       UINT32_MAX) {
+    // Old layout (pre 089a7cc5dea)
     m_skip_size = bit_offset / 8u;
   } else {
     auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
@@ -336,45 +329,47 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
         nullptr; // this will stop all future searches until an Update() happens
     return iterated_sp;
   }
-  if (GetDataType()) {
-    if (!need_to_skip) {
-      Status error;
-      iterated_sp = iterated_sp->Dereference(error);
-      if (!iterated_sp || error.Fail()) {
-        m_tree = nullptr;
-        return lldb::ValueObjectSP();
-      }
-      GetValueOffset(iterated_sp);
-      auto child_sp = iterated_sp->GetChildMemberWithName("__value_");
-      if (child_sp)
-        iterated_sp = child_sp;
-      else
-        iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
-            m_skip_size, m_element_type, true);
-      if (!iterated_sp) {
-        m_tree = nullptr;
-        return lldb::ValueObjectSP();
-      }
-    } else {
-      // because of the way our debug info is made, we need to read item 0
-      // first so that we can cache information used to generate other elements
-      if (m_skip_size == UINT32_MAX)
-        GetChildAtIndex(0);
-      if (m_skip_size == UINT32_MAX) {
-        m_tree = nullptr;
-        return lldb::ValueObjectSP();
-      }
-      iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
-          m_skip_size, m_element_type, true);
-      if (!iterated_sp) {
-        m_tree = nullptr;
-        return lldb::ValueObjectSP();
-      }
-    }
-  } else {
+
+  if (!GetDataType()) {
     m_tree = nullptr;
     return lldb::ValueObjectSP();
   }
+
+  if (!need_to_skip) {
+    Status error;
+    iterated_sp = iterated_sp->Dereference(error);
+    if (!iterated_sp || error.Fail()) {
+      m_tree = nullptr;
+      return lldb::ValueObjectSP();
+    }
+    GetValueOffset(iterated_sp);
+    auto child_sp = iterated_sp->GetChildMemberWithName("__value_");
+    if (child_sp)
+      iterated_sp = child_sp;
+    else
+      iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
+          m_skip_size, m_element_type, true);
+    if (!iterated_sp) {
+      m_tree = nullptr;
+      return lldb::ValueObjectSP();
+    }
+  } else {
+    // because of the way our debug info is made, we need to read item 0
+    // first so that we can cache information used to generate other elements
+    if (m_skip_size == UINT32_MAX)
+      GetChildAtIndex(0);
+    if (m_skip_size == UINT32_MAX) {
+      m_tree = nullptr;
+      return lldb::ValueObjectSP();
+    }
+    iterated_sp = iterated_sp->GetSyntheticChildAtOffset(m_skip_size,
+                                                         m_element_type, true);
+    if (!iterated_sp) {
+      m_tree = nullptr;
+      return lldb::ValueObjectSP();
+    }
+  }
+
   // at this point we have a valid
   // we need to copy current_sp into a new object otherwise we will end up with
   // all items named __value_

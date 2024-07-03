@@ -30,25 +30,27 @@ ProgramHeaders:
 # GNU-NEXT:   NetBSD-CORE          0x00000000	NT_NETBSDCORE_AUXV (ELF auxiliary vector data)
 # GNU-NEXT:   NetBSD-CORE@3615     0x00000000	PT_LWPSTATUS (ptrace_lwpstatus structure)
 
-# LLVM:      Notes [
+# LLVM:      NoteSections [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0x78
 # LLVM-NEXT:     Size: 0x50
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: NetBSD-CORE
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_NETBSDCORE_PROCINFO (procinfo structure)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: NetBSD-CORE
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_NETBSDCORE_AUXV (ELF auxiliary vector data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: NetBSD-CORE@3615
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: PT_LWPSTATUS (ptrace_lwpstatus structure)
-# LLVM-NEXT:     }
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: NetBSD-CORE
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_NETBSDCORE_PROCINFO (procinfo structure)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: NetBSD-CORE
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_NETBSDCORE_AUXV (ELF auxiliary vector data)
+# LLVM-NEXT:            }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: NetBSD-CORE@3615
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: PT_LWPSTATUS (ptrace_lwpstatus structure)
+# LLVM-NEXT:        }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]

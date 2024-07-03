@@ -655,22 +655,38 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
 // cloned region.
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
-      Entry);
-  for (VPBlockBase *BB : RPOT) {
+  VPBlockBase *Exiting = nullptr;
+  // First, clone blocks reachable from Entry.
+  for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
     VPBlockBase *NewBB = BB->clone();
-    for (VPBlockBase *Pred : BB->getPredecessors())
-      VPBlockUtils::connectBlocks(Old2NewVPBlocks[Pred], NewBB);
-
     Old2NewVPBlocks[BB] = NewBB;
+    if (BB->getNumSuccessors() == 0) {
+      assert(!Exiting && "Multiple exiting blocks?");
+      Exiting = BB;
+    }
+  }
+
+  // Second, update the predecessors & successors of the cloned blocks.
+  for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
+    VPBlockBase *NewBB = Old2NewVPBlocks[BB];
+    SmallVector<VPBlockBase *> NewPreds;
+    for (VPBlockBase *Pred : BB->getPredecessors()) {
+      NewPreds.push_back(Old2NewVPBlocks[Pred]);
+    }
+    NewBB->setPredecessors(NewPreds);
+    SmallVector<VPBlockBase *> NewSuccs;
+    for (VPBlockBase *Succ : BB->successors()) {
+      NewSuccs.push_back(Old2NewVPBlocks[Succ]);
+    }
+    NewBB->setSuccessors(NewSuccs);
   }
 
 #if !defined(NDEBUG)
   // Verify that the order of predecessors and successors matches in the cloned
   // version.
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-      NewRPOT(Old2NewVPBlocks[Entry]);
-  for (const auto &[OldBB, NewBB] : zip(RPOT, NewRPOT)) {
+  for (const auto &[OldBB, NewBB] :
+       zip(vp_depth_first_shallow(Entry),
+           vp_depth_first_shallow(Old2NewVPBlocks[Entry]))) {
     for (const auto &[OldPred, NewPred] :
          zip(OldBB->getPredecessors(), NewBB->getPredecessors()))
       assert(NewPred == Old2NewVPBlocks[OldPred] && "Different predecessors");
@@ -681,8 +697,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   }
 #endif
 
-  return std::make_pair(Old2NewVPBlocks[Entry],
-                        Old2NewVPBlocks[*reverse(RPOT).begin()]);
+  return std::make_pair(Old2NewVPBlocks[Entry], Old2NewVPBlocks[Exiting]);
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
@@ -752,72 +767,6 @@ void VPRegionBlock::execute(VPTransformState *State) {
   State->Instance.reset();
 }
 
-InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
-  InstructionCost Cost = 0;
-  for (VPRecipeBase &R : Recipes)
-    Cost += R.cost(VF, Ctx);
-  return Cost;
-}
-
-InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
-  if (!isReplicator()) {
-    InstructionCost Cost = 0;
-    for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
-      Cost += Block->cost(VF, Ctx);
-    InstructionCost BackedgeCost =
-        Ctx.TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
-    LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
-                      << ": vector loop backedge\n");
-    Cost += BackedgeCost;
-    return Cost;
-  }
-
-  // Compute the cost of a replicate region. Replicating isn't supported for
-  // scalable vectors, return an invalid cost for them.
-  // TODO: Discard scalable VPlans with replicate recipes earlier after
-  // construction.
-  if (VF.isScalable())
-    return InstructionCost::getInvalid();
-
-  // First compute the cost of the conditionally executed recipes, followed by
-  // account for the branching cost, except if the mask is a header mask or
-  // uniform condition.
-  using namespace llvm::VPlanPatternMatch;
-  VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  InstructionCost ThenCost = Then->cost(VF, Ctx);
-
-  // Note the cost estimates below closely match the current legacy cost model.
-  auto *BOM = cast<VPBranchOnMaskRecipe>(&getEntryBasicBlock()->front());
-  VPValue *Cond = BOM->getOperand(0);
-
-  // Check if Cond is a header mask and don't account for branching costs as the
-  // header mask will always be true except in the last iteration.
-  if (vputils::isHeaderMask(Cond, *getPlan()))
-    return ThenCost;
-
-  // For the scalar case, we may not always execute the original predicated
-  // block, Thus, scale the block's cost by the probability of executing it.
-  if (VF.isScalar())
-    return ThenCost / getReciprocalPredBlockProb();
-
-  // Check if Cond is a uniform compare and don't account for branching costs as
-  // a uniform condition corresponds to a single branch per VF.
-  if (vputils::isUniformBoolean(Cond))
-    return ThenCost;
-
-  // Add the cost for branches around scalarized and predicated blocks.
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-
-  auto *Vec_i1Ty = VectorType::get(IntegerType::getInt1Ty(Ctx.LLVMCtx), VF);
-  auto FixedVF = VF.getFixedValue(); // Known to be non scalable.
-  InstructionCost Cost = ThenCost;
-  Cost += Ctx.TTI.getScalarizationOverhead(Vec_i1Ty, APInt::getAllOnes(FixedVF),
-                                           /*Insert*/ false, /*Extract*/ true,
-                                           CostKind);
-  Cost += Ctx.TTI.getCFInstrCost(Instruction::Br, CostKind) * FixedVF;
-  return Cost;
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
@@ -856,9 +805,9 @@ VPlan::~VPlan() {
 
 VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
                                    BasicBlock *PH) {
-  VPIRBasicBlock *Preheader = new VPIRBasicBlock(PH);
+  VPIRBasicBlock *Entry = new VPIRBasicBlock(PH);
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
-  auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
+  auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
   // Create empty VPRegionBlock, to be filled during processing later.
@@ -1005,12 +954,6 @@ void VPlan::execute(VPTransformState *State) {
   assert(State->CFG.DTU.getDomTree().verify(
              DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
-}
-
-InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
-  // For now only return the cost of the vector loop region, ignoring any other
-  // blocks, like the preheader or middle blocks.
-  return getVectorLoopRegion()->cost(VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1555,8 +1498,7 @@ bool vputils::isHeaderMask(VPValue *V, VPlan &Plan) {
   auto IsWideCanonicalIV = [](VPValue *A) {
     return isa<VPWidenCanonicalIVRecipe>(A) ||
            (isa<VPWidenIntOrFpInductionRecipe>(A) &&
-            cast<VPWidenIntOrFpInductionRecipe>(A)->isCanonical()) ||
-           match(A, m_ScalarIVSteps(m_CanonicalIV(), m_SpecificInt(1)));
+            cast<VPWidenIntOrFpInductionRecipe>(A)->isCanonical());
   };
 
   VPValue *A, *B;
@@ -1567,18 +1509,4 @@ bool vputils::isHeaderMask(VPValue *V, VPlan &Plan) {
 
   return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
          IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
-}
-
-bool vputils::isUniformBoolean(VPValue *Cond) {
-  if (match(Cond, m_Not(m_VPValue())))
-    Cond = Cond->getDefiningRecipe()->getOperand(0);
-  auto *R = Cond->getDefiningRecipe();
-  if (!R)
-    return true;
-  // TODO: match additional patterns preserving uniformity of booleans, e.g.,
-  // AND/OR/etc.
-  return match(R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
-         all_of(R->operands(), [](VPValue *Op) {
-           return vputils::isUniformAfterVectorization(Op);
-         });
 }

@@ -803,6 +803,13 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       llvm::Constant *VTableAddressPoint =
           CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
                                                 VTableClass);
+      if (auto Authentication =
+              CGM.getVTablePointerAuthentication(VTableClass)) {
+        VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
+            VTableAddressPoint, *Authentication);
+        if (!VTableAddressPoint)
+          return false;
+      }
       if (!AppendBytes(Offset, VTableAddressPoint))
         return false;
     }
@@ -1647,7 +1654,7 @@ namespace {
       // messing around with llvm::Constant structures, which never itself
       // does anything that should be visible in compiler output.
       for (auto &entry : Locations) {
-        assert(entry.first->getParent() == nullptr && "not a placeholder!");
+        assert(entry.first->getName() == "" && "not a placeholder!");
         entry.first->replaceAllUsesWith(entry.second);
         entry.first->eraseFromParent();
       }
@@ -1809,6 +1816,43 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
   auto nonMemoryDestType = getNonMemoryType(CGM, destType);
   auto C = tryEmitPrivate(value, nonMemoryDestType);
   return (C ? emitForMemory(C, destType) : nullptr);
+}
+
+/// Try to emit a constant signed pointer, given a raw pointer and the
+/// destination ptrauth qualifier.
+///
+/// This can fail if the qualifier needs address discrimination and the
+/// emitter is in an abstract mode.
+llvm::Constant *
+ConstantEmitter::tryEmitConstantSignedPointer(llvm::Constant *UnsignedPointer,
+                                              PointerAuthQualifier Schema) {
+  assert(Schema && "applying trivial ptrauth schema");
+
+  if (Schema.hasKeyNone())
+    return UnsignedPointer;
+
+  unsigned Key = Schema.getKey();
+
+  // Create an address placeholder if we're using address discrimination.
+  llvm::GlobalValue *StorageAddress = nullptr;
+  if (Schema.isAddressDiscriminated()) {
+    // We can't do this if the emitter is in an abstract state.
+    if (isAbstract())
+      return nullptr;
+
+    StorageAddress = getCurrentAddrPrivate();
+  }
+
+  llvm::ConstantInt *Discriminator =
+      llvm::ConstantInt::get(CGM.IntPtrTy, Schema.getExtraDiscriminator());
+
+  llvm::Constant *SignedPointer = CGM.getConstantSignedPointer(
+      UnsignedPointer, Key, StorageAddress, Discriminator);
+
+  if (Schema.isAddressDiscriminated())
+    registerCurrentAddrPrivate(SignedPointer, StorageAddress);
+
+  return SignedPointer;
 }
 
 llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
@@ -2024,10 +2068,27 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
-    if (auto FD = dyn_cast<FunctionDecl>(D))
-      return CGM.GetAddrOfFunction(FD);
+    auto PtrAuthSign = [&](llvm::Constant *C) {
+      CGPointerAuthInfo AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
 
-    if (auto VD = dyn_cast<VarDecl>(D)) {
+      if (AuthInfo) {
+        if (hasNonZeroOffset())
+          return ConstantLValue(nullptr);
+
+        C = applyOffset(C);
+        C = CGM.getConstantSignedPointer(
+            C, AuthInfo.getKey(), nullptr,
+            cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
+        return ConstantLValue(C, /*applied offset*/ true);
+      }
+
+      return ConstantLValue(C);
+    };
+
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      return PtrAuthSign(CGM.getRawFunctionPointer(FD));
+
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
       if (!VD->hasLocalStorage()) {
         if (VD->isFileVarDecl() || VD->hasExternalStorage())
@@ -2040,13 +2101,13 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       }
     }
 
-    if (auto *GD = dyn_cast<MSGuidDecl>(D))
+    if (const auto *GD = dyn_cast<MSGuidDecl>(D))
       return CGM.GetAddrOfMSGuidDecl(GD);
 
-    if (auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
+    if (const auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
       return CGM.GetAddrOfUnnamedGlobalConstantDecl(GCD);
 
-    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
+    if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
       return CGM.GetAddrOfTemplateParamObject(TPO);
 
     return nullptr;

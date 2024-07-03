@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -41,9 +42,9 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   std::vector<Record *> SortedExtensions =
       RK.getAllDerivedDefinitions("Extension");
   auto Alphabetical = [](Record *A, Record *B) -> bool {
-    const auto MarchA = A->getValueAsString("MArchName");
-    const auto MarchB = B->getValueAsString("MArchName");
-    return MarchA.compare(MarchB) < 0; // A lexographically less than B
+    const auto NameA = A->getValueAsString("Name");
+    const auto NameB = B->getValueAsString("Name");
+    return NameA.compare(NameB) < 0; // A lexographically less than B
   };
   std::sort(SortedExtensions.begin(), SortedExtensions.end(), Alphabetical);
 
@@ -95,17 +96,19 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   for (const Record *Rec : SortedExtensions) {
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
     OS << "  ";
-    OS << "{\"" << Rec->getValueAsString("MArchName") << "\"";
-    if (auto Alias = Rec->getValueAsString("MArchAlias"); Alias.empty())
+    OS << "{\"" << Rec->getValueAsString("UserVisibleName") << "\"";
+    if (auto Alias = Rec->getValueAsString("UserVisibleAlias"); Alias.empty())
       OS << ", {}";
     else
       OS << ", \"" << Alias << "\"";
     OS << ", AArch64::" << AEK;
+    OS << ", \"" << Rec->getValueAsString("ArchFeatureName") << "\"";
+    OS << ", \"" << Rec->getValueAsString("Desc") << "\"";
     OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
     OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
     OS << "},\n";
   };
-  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {} },\n";
+  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, {}, {} },\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
@@ -215,6 +218,36 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
   OS << "#undef EMIT_ARCHITECTURES\n"
      << "#endif // EMIT_ARCHITECTURES\n"
+     << "\n";
+
+  // Emit CPU Aliases
+  OS << "#ifdef EMIT_CPU_ALIAS\n"
+     << "inline constexpr Alias CpuAliases[] = {\n";
+
+  llvm::StringSet<> Processors;
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorModel"))
+    Processors.insert(Rec->getValueAsString("Name"));
+
+  llvm::StringSet<> Aliases;
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorAlias")) {
+    auto Name = Rec->getValueAsString("Name");
+    auto Alias = Rec->getValueAsString("Alias");
+    if (!Processors.contains(Alias))
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' references a non-existent ProcessorModel '" + Alias + "'");
+    if (Processors.contains(Name))
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' duplicates an existing ProcessorModel");
+    if (!Aliases.insert(Name).second)
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' duplicates an existing ProcessorAlias");
+
+    OS << llvm::formatv(R"(  { "{0}", "{1}" },)", Name, Alias) << '\n';
+  }
+
+  OS << "};\n"
+     << "#undef EMIT_CPU_ALIAS\n"
+     << "#endif // EMIT_CPU_ALIAS\n"
      << "\n";
 
   // Emit CPU information

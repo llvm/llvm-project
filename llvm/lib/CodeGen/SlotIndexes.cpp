@@ -26,7 +26,7 @@ SlotIndexes::SlotIndexes() : MachineFunctionPass(ID) {
 
 SlotIndexes::~SlotIndexes() {
   // The indexList's nodes are all allocated in the BumpPtrAllocator.
-  indexList.clearAndLeakNodesUnsafely();
+  indexList.clear();
 }
 
 INITIALIZE_PASS(SlotIndexes, DEBUG_TYPE,
@@ -75,7 +75,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
   MBBRanges.resize(mf->getNumBlockIDs());
   idx2MBBMap.reserve(mf->size());
 
-  indexList.push_back(createEntry(nullptr, index));
+  indexList.push_back(*createEntry(nullptr, index));
 
   // Iterate over the function.
   for (MachineBasicBlock &MBB : *mf) {
@@ -87,7 +87,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
         continue;
 
       // Insert a store index for the instr.
-      indexList.push_back(createEntry(&MI, index += SlotIndex::InstrDist));
+      indexList.push_back(*createEntry(&MI, index += SlotIndex::InstrDist));
 
       // Save this base index in the maps.
       mi2iMap.insert(std::make_pair(
@@ -95,7 +95,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
     }
 
     // We insert one blank instructions between basic blocks.
-    indexList.push_back(createEntry(nullptr, index += SlotIndex::InstrDist));
+    indexList.push_back(*createEntry(nullptr, index += SlotIndex::InstrDist));
 
     MBBRanges[MBB.getNumber()].first = blockStartIndex;
     MBBRanges[MBB.getNumber()].second = SlotIndex(&indexList.back(),

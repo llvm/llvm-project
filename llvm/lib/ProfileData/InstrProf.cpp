@@ -228,6 +228,12 @@ cl::opt<bool> EnableVTableValueProfiling(
              "the types of a C++ pointer. The information is used in indirect "
              "call promotion to do selective vtable-based comparison."));
 
+cl::opt<bool> EnableVTableProfileUse(
+    "enable-vtable-profile-use", cl::init(false),
+    cl::desc("If ThinLTO and WPD is enabled and this option is true, vtable "
+             "profiles will be used by ICP pass for more efficient indirect "
+             "call sequence. If false, type profiles won't be used."));
+
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
                                     bool AddSegmentInfo) {
@@ -391,7 +397,7 @@ std::string getPGOName(const GlobalVariable &V, bool InLTO) {
   // PGONameMetadata should be set by compiler at profile use time
   // and read by symtab creation to look up symbols corresponding to
   // a MD5 hash.
-  return getIRPGOObjectName(V, InLTO, /*PGONameMetadata=*/nullptr);
+  return getIRPGOObjectName(V, InLTO, V.getMetadata(getPGONameMetadataName()));
 }
 
 // See getIRPGOObjectName() for a discription of the format.
@@ -480,8 +486,7 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
-    if (Error E = addVTableWithName(
-            G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+    if (Error E = addVTableWithName(G, getPGOName(G, InLTO)))
       return E;
   }
 
@@ -1001,6 +1006,7 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
   }
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getOrCreateValueSitesForKind(ValueKind);
+  assert(ValueSites.size() == Site);
   if (N == 0)
     ValueSites.emplace_back();
   else
@@ -1336,65 +1342,71 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
   return MD;
 }
 
-static bool getValueProfDataFromInstImpl(const MDNode *const MD,
-                                         const uint32_t MaxNumDataWant,
-                                         InstrProfValueData ValueData[],
-                                         uint32_t &ActualNumValueData,
-                                         uint64_t &TotalC, bool GetNoICPValue) {
+SmallVector<InstrProfValueData, 4>
+getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
+                         uint32_t MaxNumValueData, uint64_t &TotalC,
+                         bool GetNoICPValue) {
+  // Four inline elements seem to work well in practice.  With MaxNumValueData,
+  // this array won't grow very big anyway.
+  SmallVector<InstrProfValueData, 4> ValueData;
+  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
+  if (!MD)
+    return ValueData;
   const unsigned NOps = MD->getNumOperands();
   // Get total count
   ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
   if (!TotalCInt)
-    return false;
+    return ValueData;
   TotalC = TotalCInt->getZExtValue();
-  ActualNumValueData = 0;
 
+  ValueData.reserve((NOps - 3) / 2);
   for (unsigned I = 3; I < NOps; I += 2) {
-    if (ActualNumValueData >= MaxNumDataWant)
+    if (ValueData.size() >= MaxNumValueData)
       break;
     ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
     ConstantInt *Count =
         mdconst::dyn_extract<ConstantInt>(MD->getOperand(I + 1));
-    if (!Value || !Count)
-      return false;
+    if (!Value || !Count) {
+      ValueData.clear();
+      return ValueData;
+    }
     uint64_t CntValue = Count->getZExtValue();
     if (!GetNoICPValue && (CntValue == NOMORE_ICP_MAGICNUM))
       continue;
-    ValueData[ActualNumValueData].Value = Value->getZExtValue();
-    ValueData[ActualNumValueData].Count = CntValue;
-    ActualNumValueData++;
+    InstrProfValueData V;
+    V.Value = Value->getZExtValue();
+    V.Count = CntValue;
+    ValueData.push_back(V);
   }
-  return true;
-}
-
-std::unique_ptr<InstrProfValueData[]>
-getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
-                         uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
-                         uint64_t &TotalC, bool GetNoICPValue) {
-  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
-  if (!MD)
-    return nullptr;
-  auto ValueDataArray = std::make_unique<InstrProfValueData[]>(MaxNumValueData);
-  if (!getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueDataArray.get(),
-                                    ActualNumValueData, TotalC, GetNoICPValue))
-    return nullptr;
-  return ValueDataArray;
+  return ValueData;
 }
 
 MDNode *getPGOFuncNameMetadata(const Function &F) {
   return F.getMetadata(getPGOFuncNameMetadataName());
 }
 
-void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
-  // Only for internal linkage functions.
-  if (PGOFuncName == F.getName())
-      return;
-  // Don't create duplicated meta-data.
-  if (getPGOFuncNameMetadata(F))
+static void createPGONameMetadata(GlobalObject &GO, StringRef MetadataName,
+                                  StringRef PGOName) {
+  // Only for internal linkage functions or global variables. The name is not
+  // the same as PGO name for these global objects.
+  if (GO.getName() == PGOName)
     return;
-  LLVMContext &C = F.getContext();
-  MDNode *N = MDNode::get(C, MDString::get(C, PGOFuncName));
-  F.setMetadata(getPGOFuncNameMetadataName(), N);
+
+  // Don't create duplicated metadata.
+  if (GO.getMetadata(MetadataName))
+    return;
+
+  LLVMContext &C = GO.getContext();
+  MDNode *N = MDNode::get(C, MDString::get(C, PGOName));
+  GO.setMetadata(MetadataName, N);
+}
+
+void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
+  return createPGONameMetadata(F, getPGOFuncNameMetadataName(), PGOFuncName);
+}
+
+void createPGONameMetadata(GlobalObject &GO, StringRef PGOName) {
+  return createPGONameMetadata(GO, getPGONameMetadataName(), PGOName);
 }
 
 bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {

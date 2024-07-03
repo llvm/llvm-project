@@ -86,6 +86,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1108,6 +1109,31 @@ void ASTContext::setCurrentNamedModule(Module *M) {
   assert(!CurrentCXXNamedModule &&
          "We should set named module for ASTContext for only once");
   CurrentCXXNamedModule = M;
+}
+
+bool ASTContext::isInSameModule(const Module *M1, const Module *M2) {
+  if (!M1 != !M2)
+    return false;
+
+  /// Get the representative module for M. The representative module is the
+  /// first module unit for a specific primary module name. So that the module
+  /// units have the same representative module belongs to the same module.
+  ///
+  /// The process is helpful to reduce the expensive string operations.
+  auto GetRepresentativeModule = [this](const Module *M) {
+    auto Iter = SameModuleLookupSet.find(M);
+    if (Iter != SameModuleLookupSet.end())
+      return Iter->second;
+
+    const Module *RepresentativeModule =
+        PrimaryModuleNameMap.try_emplace(M->getPrimaryModuleInterfaceName(), M)
+            .first->second;
+    SameModuleLookupSet[M] = RepresentativeModule;
+    return RepresentativeModule;
+  };
+
+  assert(M1 && "Shouldn't call `isInSameModule` if both M1 and M2 are none.");
+  return GetRepresentativeModule(M1) == GetRepresentativeModule(M2);
 }
 
 ExternCContextDecl *ASTContext::getExternCContextDecl() const {
@@ -3103,6 +3129,17 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
     return QualType(TypeNode, Quals.getFastQualifiers());
 }
 
+uint16_t
+ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
+  assert(RD->isPolymorphic() &&
+         "Attempted to get vtable pointer discriminator on a monomorphic type");
+  std::unique_ptr<MangleContext> MC(createMangleContext());
+  SmallString<256> Str;
+  llvm::raw_svector_ostream Out(Str);
+  MC->mangleCXXVTable(RD, Out);
+  return llvm::getPointerAuthStableSipHash(Str);
+}
+
 QualType ASTContext::getObjCGCQualType(QualType T,
                                        Qualifiers::GC GCAttr) const {
   QualType CanT = getCanonicalType(T);
@@ -4576,11 +4613,13 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers>(
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo,
+      FunctionEffect, EffectConditionExpr, Qualifiers>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
-      EPI.ExtParameterInfos ? NumArgs : 0,
+      EPI.ExtParameterInfos ? NumArgs : 0, EPI.FunctionEffects.size(),
+      EPI.FunctionEffects.conditions().size(),
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));
@@ -10525,6 +10564,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
 
+  std::optional<FunctionEffectSet> MergedFX;
+
   if (lproto && rproto) { // two C99 style function prototypes
     assert((AllowCXX ||
             (!lproto->hasExceptionSpec() && !rproto->hasExceptionSpec())) &&
@@ -10539,6 +10580,25 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
+
+    // Function effects are handled similarly to noreturn, see above.
+    FunctionEffectsRef LHSFX = lproto->getFunctionEffects();
+    FunctionEffectsRef RHSFX = rproto->getFunctionEffects();
+    if (LHSFX != RHSFX) {
+      if (IsConditionalOperator)
+        MergedFX = FunctionEffectSet::getIntersection(LHSFX, RHSFX);
+      else {
+        FunctionEffectSet::Conflicts Errs;
+        MergedFX = FunctionEffectSet::getUnion(LHSFX, RHSFX, Errs);
+        // Here we're discarding a possible error due to conflicts in the effect
+        // sets. But we're not in a context where we can report it. The
+        // operation does however guarantee maintenance of invariants.
+      }
+      if (*MergedFX != LHSFX)
+        allLTypes = false;
+      if (*MergedFX != RHSFX)
+        allRTypes = false;
+    }
 
     SmallVector<FunctionProtoType::ExtParameterInfo, 4> newParamInfos;
     bool canUseLeft, canUseRight;
@@ -10583,6 +10643,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     EPI.ExtInfo = einfo;
     EPI.ExtParameterInfos =
         newParamInfos.empty() ? nullptr : newParamInfos.data();
+    if (MergedFX)
+      EPI.FunctionEffects = *MergedFX;
     return getFunctionType(retType, types, EPI);
   }
 
@@ -10620,6 +10682,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
     FunctionProtoType::ExtProtoInfo EPI = proto->getExtProtoInfo();
     EPI.ExtInfo = einfo;
+    if (MergedFX)
+      EPI.FunctionEffects = *MergedFX;
     return getFunctionType(retType, proto->getParamTypes(), EPI);
   }
 
@@ -13841,4 +13905,75 @@ StringRef ASTContext::getCUIDHash() const {
     return StringRef();
   CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
   return CUIDHash;
+}
+
+const CXXRecordDecl *
+ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
+  assert(ThisClass);
+  assert(ThisClass->isPolymorphic());
+  const CXXRecordDecl *PrimaryBase = ThisClass;
+  while (1) {
+    assert(PrimaryBase);
+    assert(PrimaryBase->isPolymorphic());
+    auto &Layout = getASTRecordLayout(PrimaryBase);
+    auto Base = Layout.getPrimaryBase();
+    if (!Base || Base == PrimaryBase || !Base->isPolymorphic())
+      break;
+    PrimaryBase = Base;
+  }
+  return PrimaryBase;
+}
+
+bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
+                                         StringRef MangledName) {
+  auto *Method = cast<CXXMethodDecl>(VirtualMethodDecl.getDecl());
+  assert(Method->isVirtual());
+  bool DefaultIncludesPointerAuth =
+      LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
+
+  if (!DefaultIncludesPointerAuth)
+    return true;
+
+  auto Existing = ThunksToBeAbbreviated.find(VirtualMethodDecl);
+  if (Existing != ThunksToBeAbbreviated.end())
+    return Existing->second.contains(MangledName.str());
+
+  std::unique_ptr<MangleContext> Mangler(createMangleContext());
+  llvm::StringMap<llvm::SmallVector<std::string, 2>> Thunks;
+  auto VtableContext = getVTableContext();
+  if (const auto *ThunkInfos = VtableContext->getThunkInfo(VirtualMethodDecl)) {
+    auto *Destructor = dyn_cast<CXXDestructorDecl>(Method);
+    for (const auto &Thunk : *ThunkInfos) {
+      SmallString<256> ElidedName;
+      llvm::raw_svector_ostream ElidedNameStream(ElidedName);
+      if (Destructor)
+        Mangler->mangleCXXDtorThunk(Destructor, VirtualMethodDecl.getDtorType(),
+                                    Thunk, /* elideOverrideInfo */ true,
+                                    ElidedNameStream);
+      else
+        Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ true,
+                             ElidedNameStream);
+      SmallString<256> MangledName;
+      llvm::raw_svector_ostream mangledNameStream(MangledName);
+      if (Destructor)
+        Mangler->mangleCXXDtorThunk(Destructor, VirtualMethodDecl.getDtorType(),
+                                    Thunk, /* elideOverrideInfo */ false,
+                                    mangledNameStream);
+      else
+        Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ false,
+                             mangledNameStream);
+
+      if (Thunks.find(ElidedName) == Thunks.end())
+        Thunks[ElidedName] = {};
+      Thunks[ElidedName].push_back(std::string(MangledName));
+    }
+  }
+  llvm::StringSet<> SimplifiedThunkNames;
+  for (auto &ThunkList : Thunks) {
+    llvm::sort(ThunkList.second);
+    SimplifiedThunkNames.insert(ThunkList.second[0]);
+  }
+  bool Result = SimplifiedThunkNames.contains(MangledName);
+  ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
+  return Result;
 }

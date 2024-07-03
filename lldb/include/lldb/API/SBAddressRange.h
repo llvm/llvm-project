@@ -11,6 +11,10 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class AddressRange;
+}
+
 namespace lldb {
 
 class LLDB_API SBAddressRange {
@@ -57,6 +61,8 @@ private:
   friend class SBBlock;
   friend class SBFunction;
   friend class SBProcess;
+
+  lldb_private::AddressRange &ref() const;
 
   AddressRangeUP m_opaque_up;
 };

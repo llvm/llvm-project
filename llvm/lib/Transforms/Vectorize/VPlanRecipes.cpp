@@ -39,7 +39,6 @@ using VectorParts = SmallVector<Value *, 2>;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
-extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -256,40 +255,6 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
   insertBefore(BB, I);
 }
 
-InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
-  if (auto *S = dyn_cast<VPSingleDefRecipe>(this)) {
-    auto *UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-    if (UI && Ctx.skipCostComputation(UI, VF.isVector()))
-      return 0;
-  }
-
-  InstructionCost RecipeCost = computeCost(VF, Ctx);
-  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-      RecipeCost.isValid())
-    RecipeCost = InstructionCost(ForceTargetInstructionCost);
-
-  LLVM_DEBUG({
-    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
-    dump();
-  });
-  return RecipeCost;
-}
-
-InstructionCost VPRecipeBase::computeCost(ElementCount VF,
-                                          VPCostContext &Ctx) const {
-  // Compute the cost for the recipe falling back to the legacy cost model using
-  // the underlying instruction. If there is no underlying instruction, returns
-  // 0.
-  Instruction *UI = nullptr;
-  if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
-    UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-  else if (auto *IG = dyn_cast<VPInterleaveRecipe>(this))
-    UI = IG->getInsertPos();
-  else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
-    UI = &WidenMem->getIngredient();
-  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
-}
-
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -477,20 +442,20 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       return nullptr;
 
     Value *Cond = State.get(getOperand(0), VPIteration(Part, 0));
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination for exiting blocks now and
     // to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-
-    if (getParent()->isExiting())
-      CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-
     CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+
+    if (!getParent()->isExiting())
+      return CondBr;
+
+    VPRegionBlock *ParentRegion = getParent()->getParent();
+    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+    CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
     return CondBr;
   }
   case VPInstruction::BranchOnCount: {
@@ -1537,7 +1502,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
     // Use i32 for the gep index type when the value is constant,
     // or query DataLayout for a more suitable index type otherwise.
     const DataLayout &DL =
-        Builder.GetInsertBlock()->getModule()->getDataLayout();
+        Builder.GetInsertBlock()->getDataLayout();
     Type *IndexTy = State.VF.isScalable() && (IsReverse || Part > 0)
                         ? DL.getIndexType(IndexedTy->getPointerTo())
                         : Builder.getInt32Ty();
@@ -1976,7 +1941,7 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "cannot be used in per-lane");
-  const DataLayout &DL = State.CFG.PrevBB->getModule()->getDataLayout();
+  const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
   SCEVExpander Exp(SE, DL, "induction");
 
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),

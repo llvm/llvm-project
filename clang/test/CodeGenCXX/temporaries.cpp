@@ -683,8 +683,7 @@ namespace Vector {
   // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1sE_
   // CHECK: store ptr @_ZGRN6Vector1sE_, ptr @_ZN6Vector1sE,
   int &&s = S().w[1];
-  // FIXME PR16204: The following code leads to an assertion in Sema.
-  //int &&s = S().w.y;
+  int &&ss = S().w.y;
 }
 
 namespace ImplicitTemporaryCleanup {

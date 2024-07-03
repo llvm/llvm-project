@@ -268,7 +268,7 @@ APPCONTAINER: -appcontainer
 RUN: ld.lld -m i386pep --version 2>&1 | FileCheck -check-prefix=VERSION %s
 RUN: ld.lld -m i386pep -v 2>&1 | FileCheck -check-prefix=VERSION %s
 RUN: not ld.lld -m i386pep -v xyz 2>&1 | FileCheck -check-prefix=VERSION %s
-VERSION: LLD {{.*}} (compatible with GNU linkers)
+VERSION: LLD {{.*}}, compatible with GNU linkers
 
 RUN: ld.lld -m i386pep --help 2>&1 | FileCheck -check-prefix=HELP %s
 HELP: USAGE:
