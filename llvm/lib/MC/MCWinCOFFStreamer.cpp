@@ -288,7 +288,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 
   if (!T.isWindowsMSVCEnvironment() && ByteAlignment > 1) {
     SmallString<128> Directive;
-    raw_svector_ostream OS(Directive);
+    buffered_svector_ostream OS(Directive);
     const MCObjectFileInfo *MFI = getContext().getObjectFileInfo();
 
     OS << " -aligncomm:\"" << Symbol->getName() << "\","
@@ -296,7 +296,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 
     pushSection();
     switchSection(MFI->getDrectveSection());
-    emitBytes(Directive);
+    emitBytes(OS.str());
     popSection();
   }
 }

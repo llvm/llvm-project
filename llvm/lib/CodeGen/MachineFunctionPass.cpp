@@ -85,7 +85,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
                                   IsInterestingPass &&
                                   isFunctionInPrintList(MF.getName());
   if (ShouldPrintChanged) {
-    raw_svector_ostream OS(BeforeStr);
+    buffered_svector_ostream OS(BeforeStr);
     MF.print(OS);
   }
 
@@ -122,7 +122,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   // than quiet/verbose are unimplemented and treated the same as 'quiet'.
   if (ShouldPrintChanged || !IsInterestingPass) {
     if (ShouldPrintChanged) {
-      raw_svector_ostream OS(AfterStr);
+      buffered_svector_ostream OS(AfterStr);
       MF.print(OS);
     }
     if (IsInterestingPass && BeforeStr != AfterStr) {

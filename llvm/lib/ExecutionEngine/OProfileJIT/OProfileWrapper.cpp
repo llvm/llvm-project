@@ -127,8 +127,8 @@ bool OProfileWrapper::checkForOProfileProcEntry() {
     if (Entry->d_type == DT_DIR) {
       // Build a path from the current entry name
       SmallString<256> CmdLineFName;
-      raw_svector_ostream(CmdLineFName) << "/proc/" << Entry->d_name
-                                        << "/cmdline";
+      buffered_svector_ostream(CmdLineFName)
+          << "/proc/" << Entry->d_name << "/cmdline";
 
       // Open the cmdline file
       int CmdLineFD = open(CmdLineFName.c_str(), S_IRUSR);

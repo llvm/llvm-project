@@ -773,9 +773,9 @@ void CodeViewDebug::emitTypeGlobalHashes() {
       // Emit an EOL-comment describing which TypeIndex this hash corresponds
       // to, as well as the stringified SHA1 hash.
       SmallString<32> Comment;
-      raw_svector_ostream CommentOS(Comment);
+      buffered_svector_ostream CommentOS(Comment);
       CommentOS << formatv("{0:X+} [{1}]", TI.getIndex(), GHR);
-      OS.AddComment(Comment);
+      OS.AddComment(CommentOS.str());
       ++TI;
     }
     assert(GHR.Hash.size() == 8);

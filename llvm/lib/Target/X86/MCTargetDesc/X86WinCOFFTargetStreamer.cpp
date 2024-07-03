@@ -317,7 +317,7 @@ void FPOStateMachine::emitFrameDataRecord(MCStreamer &OS, MCSymbol *Label) {
 
   // Compute the new FrameFunc string.
   FrameFunc.clear();
-  raw_svector_ostream FuncOS(FrameFunc);
+  buffered_svector_ostream FuncOS(FrameFunc);
   const MCRegisterInfo *MRI = OS.getContext().getRegisterInfo();
   assert((StackAlign == 0 || FrameReg != 0) &&
          "cannot align stack without frame reg");

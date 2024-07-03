@@ -2841,7 +2841,7 @@ void ModuloScheduleTest::runOnLoop(MachineFunction &MF, MachineLoop &L) {
 void ModuloScheduleTestAnnotater::annotate() {
   for (MachineInstr *MI : S.getInstructions()) {
     SmallVector<char, 16> SV;
-    raw_svector_ostream OS(SV);
+    buffered_svector_ostream OS(SV);
     OS << "Stage-" << S.getStage(MI) << "_Cycle-" << S.getCycle(MI);
     MCSymbol *Sym = MF.getContext().getOrCreateSymbol(OS.str());
     MI->setPostInstrSymbol(MF, Sym);

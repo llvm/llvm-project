@@ -361,7 +361,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   // Emit the inline asm to a temporary string so we can emit it through
   // EmitInlineAsm.
   SmallString<256> StringData;
-  raw_svector_ostream OS(StringData);
+  buffered_svector_ostream OS(StringData);
 
   AsmPrinter *AP = const_cast<AsmPrinter*>(this);
   EmitInlineAsmStr(AsmStr, MI, MMI, MAI, AP, LocCookie, OS);
@@ -411,7 +411,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
     }
   }
 
-  emitInlineAsm(StringData, getSubtargetInfo(), TM.Options.MCOptions, LocMD,
+  emitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
                 MI->getInlineAsmDialect());
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't

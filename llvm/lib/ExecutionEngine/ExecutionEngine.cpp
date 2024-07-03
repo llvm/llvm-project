@@ -885,7 +885,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     }
 
     SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
+    buffered_svector_ostream OS(Msg);
     OS << "ConstantExpr not handled: " << *CE;
     report_fatal_error(OS.str());
   }
@@ -1025,7 +1025,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
 
   default:
     SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
+    buffered_svector_ostream OS(Msg);
     OS << "ERROR: Constant unimplemented for type: " << *C->getType();
     report_fatal_error(OS.str());
   }
@@ -1149,7 +1149,7 @@ void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
   }
   default:
     SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
+    buffered_svector_ostream OS(Msg);
     OS << "Cannot load value of type " << *Ty << "!";
     report_fatal_error(OS.str());
   }

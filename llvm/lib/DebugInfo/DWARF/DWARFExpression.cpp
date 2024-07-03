@@ -454,7 +454,7 @@ static bool printCompactDWARFExpr(
       auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
       if (RegName.empty())
         return false;
-      raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
+      buffered_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
       S << RegName;
       break;
     }
@@ -464,7 +464,7 @@ static bool printCompactDWARFExpr(
       auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
       if (RegName.empty())
         return false;
-      raw_svector_ostream S(Stack.emplace_back().String);
+      buffered_svector_ostream S(Stack.emplace_back().String);
       S << RegName;
       if (Offset)
         S << format("%+" PRId64, Offset);
@@ -477,7 +477,7 @@ static bool printCompactDWARFExpr(
       uint64_t SubExprLength = Op.getRawOperand(0);
       DWARFExpression::iterator SubExprEnd = I.skipBytes(SubExprLength);
       ++I;
-      raw_svector_ostream S(Stack.emplace_back().String);
+      buffered_svector_ostream S(Stack.emplace_back().String);
       S << "entry(";
       printCompactDWARFExpr(S, I, SubExprEnd, GetNameForDWARFReg);
       S << ")";
@@ -506,7 +506,8 @@ static bool printCompactDWARFExpr(
         auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
         if (RegName.empty())
           return false;
-        raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
+        buffered_svector_ostream S(
+            Stack.emplace_back(PrintedExpr::Value).String);
         S << RegName;
       } else if (Opcode >= dwarf::DW_OP_breg0 &&
                  Opcode <= dwarf::DW_OP_breg31) {
@@ -515,7 +516,7 @@ static bool printCompactDWARFExpr(
         auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
         if (RegName.empty())
           return false;
-        raw_svector_ostream S(Stack.emplace_back().String);
+        buffered_svector_ostream S(Stack.emplace_back().String);
         S << RegName;
         if (Offset)
           S << format("%+" PRId64, Offset);

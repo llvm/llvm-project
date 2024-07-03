@@ -6714,7 +6714,7 @@ std::string OpenMPIRBuilder::getNameWithSeparators(ArrayRef<StringRef> Parts,
                                                    StringRef FirstSeparator,
                                                    StringRef Separator) {
   SmallString<128> Buffer;
-  llvm::raw_svector_ostream OS(Buffer);
+  buffered_svector_ostream OS(Buffer);
   StringRef Sep = FirstSeparator;
   for (StringRef Part : Parts) {
     OS << Sep << Part;
@@ -8136,7 +8136,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
 void TargetRegionEntryInfo::getTargetRegionEntryFnName(
     SmallVectorImpl<char> &Name, StringRef ParentName, unsigned DeviceID,
     unsigned FileID, unsigned Line, unsigned Count) {
-  raw_svector_ostream OS(Name);
+  buffered_svector_ostream OS(Name);
   OS << "__omp_offloading" << llvm::format("_%x", DeviceID)
      << llvm::format("_%x_", FileID) << ParentName << "_l" << Line;
   if (Count)
@@ -8224,7 +8224,7 @@ Constant *OpenMPIRBuilder::getAddrOfDeclareTargetVar(
        Config.hasRequiresUnifiedSharedMemory())) {
     SmallString<64> PtrName;
     {
-      raw_svector_ostream OS(PtrName);
+      buffered_svector_ostream OS(PtrName);
       OS << MangledName;
       if (!IsExternallyVisible)
         OS << format("_%x", EntryInfo.FileID);

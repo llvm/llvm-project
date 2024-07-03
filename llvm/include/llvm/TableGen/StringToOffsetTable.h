@@ -44,7 +44,7 @@ public:
   void EmitString(raw_ostream &O) {
     // Escape the string.
     SmallString<256> Str;
-    raw_svector_ostream(Str).write_escaped(AggregateString);
+    buffered_svector_ostream(Str).write_escaped(AggregateString);
     AggregateString = std::string(Str);
 
     O << "    \"";

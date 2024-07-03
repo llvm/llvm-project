@@ -602,8 +602,10 @@ uint32_t WinCOFFWriter::writeSectionContents(MCAssembler &Asm,
   // Save the contents of the section to a temporary buffer, we need this
   // to CRC the data before we dump it into the object file.
   SmallVector<char, 128> Buf;
-  raw_svector_ostream VecOS(Buf);
-  Asm.writeSectionData(VecOS, &MCSec);
+  {
+    buffered_svector_ostream VecOS(Buf);
+    Asm.writeSectionData(VecOS, &MCSec);
+  }
 
   // Write the section contents to the object file.
   W.OS << Buf;
@@ -1089,7 +1091,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
     auto *Sec = Asm.getContext().getCOFFSection(
         ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
-    raw_svector_ostream OS(Frag->getContents());
+    buffered_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
         continue;
@@ -1111,7 +1113,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
     auto *Sec = Asm.getContext().getCOFFSection(
         ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
-    raw_svector_ostream OS(Frag->getContents());
+    buffered_svector_ostream OS(Frag->getContents());
     for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();

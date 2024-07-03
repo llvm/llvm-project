@@ -109,7 +109,8 @@ bool CFGuardLongjmp::runOnMachineFunction(MachineFunction &MF) {
   // of longjmp targets.
   for (MachineInstr *Setjmp : SetjmpCalls) {
     SmallString<128> SymbolName;
-    raw_svector_ostream(SymbolName) << "$cfgsj_" << MF.getName() << SetjmpNum++;
+    buffered_svector_ostream(SymbolName)
+        << "$cfgsj_" << MF.getName() << SetjmpNum++;
     MCSymbol *SjSymbol = MF.getContext().getOrCreateSymbol(SymbolName);
 
     Setjmp->setPostInstrSymbol(MF, SjSymbol);

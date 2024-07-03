@@ -160,16 +160,19 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
 
   // The RuntimeDyld will take ownership of this shortly
   SmallVector<char, 4096> ObjBufferSV;
-  raw_svector_ostream ObjStream(ObjBufferSV);
 
-  // Turn the machine code intermediate representation into bytes in memory
-  // that may be executed.
-  if (TM->addPassesToEmitMC(PM, Ctx, ObjStream, !getVerifyModules()))
-    report_fatal_error("Target does not support MC emission!");
+  {
+    buffered_svector_ostream ObjStream(ObjBufferSV);
 
-  // Initialize passes.
-  PM.run(*M);
-  // Flush the output buffer to get the generated code into memory
+    // Turn the machine code intermediate representation into bytes in memory
+    // that may be executed.
+    if (TM->addPassesToEmitMC(PM, Ctx, ObjStream, !getVerifyModules()))
+      report_fatal_error("Target does not support MC emission!");
+
+    // Initialize passes.
+    PM.run(*M);
+    // Flush the output buffer to get the generated code into memory
+  }
 
   auto CompiledObjBuffer = std::make_unique<SmallVectorMemoryBuffer>(
       std::move(ObjBufferSV), /*RequiresNullTerminator=*/false);

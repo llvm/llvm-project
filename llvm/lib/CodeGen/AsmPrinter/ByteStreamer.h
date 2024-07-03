@@ -108,7 +108,7 @@ public:
       Comments.push_back(Comment.str());
   }
   void emitSLEB128(uint64_t DWord, const Twine &Comment) override {
-    raw_svector_ostream OSE(Buffer);
+    buffered_svector_ostream OSE(Buffer);
     unsigned Length = encodeSLEB128(DWord, OSE);
     if (GenerateComments) {
       Comments.push_back(Comment.str());
@@ -121,7 +121,7 @@ public:
   }
   void emitULEB128(uint64_t DWord, const Twine &Comment,
                    unsigned PadTo) override {
-    raw_svector_ostream OSE(Buffer);
+    buffered_svector_ostream OSE(Buffer);
     unsigned Length = encodeULEB128(DWord, OSE, PadTo);
     if (GenerateComments) {
       Comments.push_back(Comment.str());

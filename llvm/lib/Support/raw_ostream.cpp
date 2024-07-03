@@ -369,8 +369,10 @@ raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
     llvm::write_hex(*this, FN.HexValue, Style, FN.Width);
   } else {
     llvm::SmallString<16> Buffer;
-    llvm::raw_svector_ostream Stream(Buffer);
-    llvm::write_integer(Stream, FN.DecValue, 0, IntegerStyle::Integer);
+    {
+      buffered_svector_ostream Stream(Buffer);
+      llvm::write_integer(Stream, FN.DecValue, 0, IntegerStyle::Integer);
+    }
     if (Buffer.size() < FN.Width)
       indent(FN.Width - Buffer.size());
     (*this) << Buffer;

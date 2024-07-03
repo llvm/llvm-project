@@ -576,9 +576,11 @@ void VFABI::setVectorVariantNames(CallInst *CI,
     return;
 
   SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const std::string &VariantMapping : VariantMappings)
-    Out << VariantMapping << ",";
+  {
+    buffered_svector_ostream Out(Buffer);
+    for (const std::string &VariantMapping : VariantMappings)
+      Out << VariantMapping << ",";
+  }
   // Get rid of the trailing ','.
   assert(!Buffer.str().empty() && "Must have at least one char.");
   Buffer.pop_back();

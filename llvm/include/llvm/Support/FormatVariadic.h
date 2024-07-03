@@ -115,8 +115,7 @@ public:
 
   template <unsigned N> SmallString<N> sstr() const {
     SmallString<N> Result;
-    raw_svector_ostream Stream(Result);
-    Stream << *this;
+    buffered_svector_ostream(Result) << *this;
     return Result;
   }
 

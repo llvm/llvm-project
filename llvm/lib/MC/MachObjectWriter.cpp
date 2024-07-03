@@ -791,7 +791,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
     auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
     Frag.getContents().clear();
-    raw_svector_ostream OS(Frag.getContents());
+    buffered_svector_ostream OS(Frag.getContents());
     for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();

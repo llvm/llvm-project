@@ -107,7 +107,7 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
     // succeeds (e.g. handling EINTR) and we can't use errs() here because
     // raw ostreams can call report_fatal_error.
     SmallVector<char, 64> Buffer;
-    raw_svector_ostream OS(Buffer);
+    buffered_svector_ostream OS(Buffer);
     OS << "LLVM ERROR: " << Reason << "\n";
     StringRef MessageStr = OS.str();
     ssize_t written = ::write(2, MessageStr.data(), MessageStr.size());

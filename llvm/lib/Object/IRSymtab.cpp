@@ -242,7 +242,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
 
   SmallString<64> Name;
   {
-    raw_svector_ostream OS(Name);
+    buffered_svector_ostream OS(Name);
     Msymtab.printSymbolName(OS, Msym);
   }
   setStr(Sym.Name, Saver.save(Name.str()));

@@ -178,7 +178,7 @@ static void CrashHandler(void *) {
   setCrashLogMessage(crashHandlerString.c_str());
 
   {
-    raw_svector_ostream Stream(crashHandlerString);
+    buffered_svector_ostream Stream(crashHandlerString);
     PrintCurStackTrace(Stream);
   }
 

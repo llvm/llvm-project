@@ -657,7 +657,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
   bool HasPrefix = false;
   if (const auto *F = dyn_cast<Function>(GO)) {
     if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
-      raw_svector_ostream(Name) << '.' << *Prefix;
+      Name += ".";
+      Name += *Prefix;
       HasPrefix = true;
     }
   }
@@ -1747,14 +1748,18 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       StringRef COMDATSymName = Sym->getName();
 
       if (const auto *F = dyn_cast<Function>(GO))
-        if (std::optional<StringRef> Prefix = F->getSectionPrefix())
-          raw_svector_ostream(Name) << '$' << *Prefix;
+        if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
+          Name += "$";
+          Name += *Prefix;
+        }
 
       // Append "$symbol" to the section name *before* IR-level mangling is
       // applied when targetting mingw. This is what GCC does, and the ld.bfd
       // COFF linker will not properly handle comdats otherwise.
-      if (getContext().getTargetTriple().isWindowsGNUEnvironment())
-        raw_svector_ostream(Name) << '$' << ComdatGV->getName();
+      if (getContext().getTargetTriple().isWindowsGNUEnvironment()) {
+        Name += "$";
+        Name += ComdatGV->getName();
+      }
 
       return getContext().getCOFFSection(Name, Characteristics, COMDATSymName,
                                          Selection, UniqueID);
@@ -1971,10 +1976,12 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
       LastLetter = 'C';
     else if (Priority == 400)
       LastLetter = 'L';
-    raw_svector_ostream OS(Name);
-    OS << ".CRT$X" << (IsCtor ? "C" : "T") << LastLetter;
-    if (AddPrioritySuffix)
-      OS << format("%05u", Priority);
+    {
+      buffered_svector_ostream OS(Name);
+      OS << ".CRT$X" << (IsCtor ? "C" : "T") << LastLetter;
+      if (AddPrioritySuffix)
+        OS << format("%05u", Priority);
+    }
     MCSectionCOFF *Sec = Ctx.getCOFFSection(
         Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ);
     return Ctx.getAssociativeCOFFSection(Sec, KeySym, 0);
@@ -2200,9 +2207,10 @@ selectWasmSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
   SmallString<128> Name = getSectionPrefixForGlobal(Kind, /*IsLarge=*/false);
 
   if (const auto *F = dyn_cast<Function>(GO)) {
-    const auto &OptionalPrefix = F->getSectionPrefix();
-    if (OptionalPrefix)
-      raw_svector_ostream(Name) << '.' << *OptionalPrefix;
+    if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
+      Name += ".";
+      Name += *Prefix;
+    }
   }
 
   if (EmitUniqueSection && UniqueSectionNames) {
@@ -2707,7 +2715,8 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(
     // name of the LSDA csect so that each function has its own LSDA csect.
     // This helps the linker to garbage-collect EH info of unused functions.
     SmallString<128> NameStr = LSDA->getName();
-    raw_svector_ostream(NameStr) << '.' << F.getName();
+    NameStr += ".";
+    NameStr += F.getName();
     LSDA = getContext().getXCOFFSection(NameStr, LSDA->getKind(),
                                         LSDA->getCsectProp());
   }

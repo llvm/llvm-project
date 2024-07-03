@@ -43,7 +43,7 @@ Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
   SmallVector<char, 0> ObjBufferSV;
 
   {
-    raw_svector_ostream ObjStream(ObjBufferSV);
+    buffered_svector_ostream ObjStream(ObjBufferSV);
 
     legacy::PassManager PM;
     MCContext *Ctx;

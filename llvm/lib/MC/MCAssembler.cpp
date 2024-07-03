@@ -1152,15 +1152,18 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
       Value = 0;
   }
   Data.clear();
-  raw_svector_ostream OSE(Data);
-  // The compiler can generate EH table assembly that is impossible to assemble
-  // without either adding padding to an LEB fragment or adding extra padding
-  // to a later alignment fragment. To accommodate such tables, relaxation can
-  // only increase an LEB fragment size here, not decrease it. See PR35809.
-  if (LF.isSigned())
-    encodeSLEB128(Value, OSE, PadTo);
-  else
-    encodeULEB128(Value, OSE, PadTo);
+  {
+    buffered_svector_ostream OSE(Data);
+    // The compiler can generate EH table assembly that is impossible to
+    // assemble without either adding padding to an LEB fragment or adding extra
+    // padding to a later alignment fragment. To accommodate such tables,
+    // relaxation can only increase an LEB fragment size here, not decrease it.
+    // See PR35809.
+    if (LF.isSigned())
+      encodeSLEB128(Value, OSE, PadTo);
+    else
+      encodeULEB128(Value, OSE, PadTo);
+  }
   return OldSize != LF.getContents().size();
 }
 
@@ -1291,11 +1294,13 @@ bool MCAssembler::relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &PF) {
   (void)Abs;
   SmallVectorImpl<char> &Data = PF.getContents();
   Data.clear();
-  raw_svector_ostream OSE(Data);
   PF.getFixups().clear();
 
-  // AddrDelta is a signed integer
-  encodeSLEB128(AddrDelta, OSE, OldSize);
+  {
+    buffered_svector_ostream OSE(Data);
+    // AddrDelta is a signed integer
+    encodeSLEB128(AddrDelta, OSE, OldSize);
+  }
   return OldSize != Data.size();
 }
 

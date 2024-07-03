@@ -94,7 +94,7 @@ MCSymbol *MachineBasicBlock::getEHCatchretSymbol() const {
   if (!CachedEHCatchretMCSymbol) {
     const MachineFunction *MF = getParent();
     SmallString<128> SymbolName;
-    raw_svector_ostream(SymbolName)
+    buffered_svector_ostream(SymbolName)
         << "$ehgcr_" << MF->getFunctionNumber() << '_' << getNumber();
     CachedEHCatchretMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
   }

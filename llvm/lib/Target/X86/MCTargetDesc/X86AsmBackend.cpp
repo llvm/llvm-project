@@ -756,7 +756,7 @@ void X86AsmBackend::relaxInstruction(MCInst &Inst,
 
   if (RelaxedOp == Inst.getOpcode()) {
     SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
+    buffered_svector_ostream OS(Tmp);
     Inst.dump_pretty(OS);
     OS << "\n";
     report_fatal_error("unexpected instruction to relax: " + OS.str());

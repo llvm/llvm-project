@@ -302,7 +302,7 @@ MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
     AlwaysAddSuffix = false;
 
     NewName.resize(NameLen);
-    raw_svector_ostream(NewName) << NameEntry.second.NextUniqueID++;
+    buffered_svector_ostream(NewName) << NameEntry.second.NextUniqueID++;
     EntryPtr = &getSymbolTableEntry(NewName.str());
   }
 
@@ -454,7 +454,7 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
   // at the same time replace invalid characters with '_'.
   for (size_t I = 0; I < InvalidName.size(); ++I) {
     if (!MAI->isAcceptableChar(InvalidName[I]) || InvalidName[I] == '_') {
-      raw_svector_ostream(ValidName).write_hex(InvalidName[I]);
+      buffered_svector_ostream(ValidName).write_hex(InvalidName[I]);
       InvalidName[I] = '_';
     }
   }

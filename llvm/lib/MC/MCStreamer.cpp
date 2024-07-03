@@ -70,7 +70,7 @@ void MCTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
 
 void MCTargetStreamer::emitValue(const MCExpr *Value) {
   SmallString<128> Str;
-  raw_svector_ostream OS(Str);
+  buffered_svector_ostream OS(Str);
 
   Value->print(OS, Streamer.getContext().getAsmInfo());
   Streamer.emitRawText(OS.str());
@@ -81,7 +81,7 @@ void MCTargetStreamer::emitRawBytes(StringRef Data) {
   const char *Directive = MAI->getData8bitsDirective();
   for (const unsigned char C : Data.bytes()) {
     SmallString<128> Str;
-    raw_svector_ostream OS(Str);
+    buffered_svector_ostream OS(Str);
 
     OS << Directive << (unsigned)C;
     Streamer.emitRawText(OS.str());
@@ -160,20 +160,20 @@ void MCStreamer::emitIntValue(const APInt &Value) {
 /// client having to pass in a MCExpr for constant integers.
 unsigned MCStreamer::emitULEB128IntValue(uint64_t Value, unsigned PadTo) {
   SmallString<128> Tmp;
-  raw_svector_ostream OSE(Tmp);
+  buffered_svector_ostream OSE(Tmp);
   encodeULEB128(Value, OSE, PadTo);
   emitBytes(OSE.str());
-  return Tmp.size();
+  return OSE.tell();
 }
 
 /// EmitSLEB128IntValue - Special case of EmitSLEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.
 unsigned MCStreamer::emitSLEB128IntValue(int64_t Value) {
   SmallString<128> Tmp;
-  raw_svector_ostream OSE(Tmp);
+  buffered_svector_ostream OSE(Tmp);
   encodeSLEB128(Value, OSE);
   emitBytes(OSE.str());
-  return Tmp.size();
+  return OSE.tell();
 }
 
 void MCStreamer::emitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {
