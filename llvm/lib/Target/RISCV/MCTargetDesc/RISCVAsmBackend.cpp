@@ -571,7 +571,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(
     return false;
 
   Value = Layout.getSymbolOffset(SA) + AUIPCTarget.getConstant();
-  Value -= Layout.getFragmentOffset(AUIPCDF) + AUIPCFixup->getOffset();
+  Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
   if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
     WasForced = true;
