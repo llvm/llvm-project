@@ -3189,6 +3189,21 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     break;
   }
 
+  case Intrinsic::x86_sse2_pmulh_w:
+  case Intrinsic::x86_avx2_pmulh_w:
+  case Intrinsic::x86_avx512_pmulh_w_512:
+  case Intrinsic::x86_sse2_pmulhu_w:
+  case Intrinsic::x86_avx2_pmulhu_w:
+  case Intrinsic::x86_avx512_pmulhu_w_512:
+  case Intrinsic::x86_ssse3_pmul_hr_sw_128:
+  case Intrinsic::x86_avx2_pmul_hr_sw:
+  case Intrinsic::x86_avx512_pmul_hr_sw_512: {
+    simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
+    // NOTE: mulh(undef,undef) != undef.
+    break;
+  }
+
   case Intrinsic::x86_sse2_packssdw_128:
   case Intrinsic::x86_sse2_packsswb_128:
   case Intrinsic::x86_sse2_packuswb_128:
@@ -3255,6 +3270,7 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     APInt Op1UndefElts(InnerVWidth, 0);
     simplifyAndSetOp(&II, 0, OpDemandedElts, Op0UndefElts);
     simplifyAndSetOp(&II, 1, OpDemandedElts, Op1UndefElts);
+    // NOTE: madd(undef,undef) != undef.
     break;
   }
 
