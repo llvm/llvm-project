@@ -154,6 +154,19 @@ private:
   CaseMap OldCaseLabels;
 };
 
+template <class Emitter> class StmtExprScope final {
+public:
+  StmtExprScope(Compiler<Emitter> *Ctx) : Ctx(Ctx), OldFlag(Ctx->InStmtExpr) {
+    Ctx->InStmtExpr = true;
+  }
+
+  ~StmtExprScope() { Ctx->InStmtExpr = OldFlag; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  bool OldFlag;
+};
+
 } // namespace interp
 } // namespace clang
 
@@ -3028,6 +3041,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   BlockScope<Emitter> BS(this);
+  StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
   const Stmt *Result = CS->getStmtExprResult();
@@ -4019,7 +4033,7 @@ template <class Emitter> bool Compiler<Emitter>::visitLoopBody(const Stmt *S) {
     return true;
 
   if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
-    for (auto *InnerStmt : CS->body())
+    for (const auto *InnerStmt : CS->body())
       if (!visitStmt(InnerStmt))
         return false;
     return true;
@@ -4031,7 +4045,7 @@ template <class Emitter> bool Compiler<Emitter>::visitLoopBody(const Stmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
   BlockScope<Emitter> Scope(this);
-  for (auto *InnerStmt : S->body())
+  for (const auto *InnerStmt : S->body())
     if (!visitStmt(InnerStmt))
       return false;
   return true;
@@ -4056,6 +4070,9 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
+  if (this->InStmtExpr)
+    return this->emitUnsupported(RS);
+
   if (const Expr *RE = RS->getRetValue()) {
     ExprScope<Emitter> RetScope(this);
     if (ReturnType) {
