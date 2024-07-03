@@ -30,7 +30,6 @@ public:
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
   ValueObjectSP left() const {
-    static ConstString g_left("__left_");
     if (!m_entry_sp)
       return m_entry_sp;
     return m_entry_sp->GetSyntheticChildAtOffset(
@@ -38,7 +37,6 @@ public:
   }
 
   ValueObjectSP right() const {
-    static ConstString g_right("__right_");
     if (!m_entry_sp)
       return m_entry_sp;
     return m_entry_sp->GetSyntheticChildAtOffset(
@@ -47,7 +45,6 @@ public:
   }
 
   ValueObjectSP parent() const {
-    static ConstString g_parent("__parent_");
     if (!m_entry_sp)
       return m_entry_sp;
     return m_entry_sp->GetSyntheticChildAtOffset(
