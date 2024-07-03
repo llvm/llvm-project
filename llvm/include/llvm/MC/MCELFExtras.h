@@ -10,6 +10,7 @@
 #define LLVM_MC_MCELFEXTRAS_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
