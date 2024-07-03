@@ -10,7 +10,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcSinTest = LIBC_NAMESPACE::testing::FPTest<double>;
+using LlvmLibcTanTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 using LIBC_NAMESPACE::testing::tlog;
 
