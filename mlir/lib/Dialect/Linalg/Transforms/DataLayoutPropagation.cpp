@@ -883,7 +883,7 @@ static LogicalResult pushDownUnPackOpThroughExpandShape(
     tensor::UnPackOp unPackOp, tensor::ExpandShapeOp expandOp,
     PatternRewriter &rewriter, ControlPropagationFn controlFn) {
   // User controlled propagation function.
-  if (!controlFn(expandOp.getSrcMutable()))
+  if (!controlFn(&expandOp.getSrcMutable()))
     return failure();
 
   SmallVector<int64_t> innerTileSizes = unPackOp.getStaticTiles();
