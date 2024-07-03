@@ -2,6 +2,8 @@
 import os
 import logging
 import subprocess
+import sys
+import difflib
 
 def config_logger():
     LOG_FORMAT = '%(asctime)s %(levelname)s [%(name)s] %(message)s'
@@ -83,10 +85,17 @@ docker run -t \
     new_output = read_output(output_path)
     if original_output != new_output:
         logging.error(f"  Output mismatch: {dir}")
-        logging.info("======== Original ========")
-        print(original_output)
-        logging.info("======== New ========")
-        print(new_output)
+
+        diff = difflib.unified_diff(
+            original_output.splitlines(),
+            new_output.splitlines(),
+            fromfile='intented output',
+            tofile='actual output'
+        )
+        # 打印差异
+        print(''.join(diff))
+        sys.stdout.flush()
+
         raise Exception(f"Output mismatch: {dir}")
 
 if __name__ == '__main__':
