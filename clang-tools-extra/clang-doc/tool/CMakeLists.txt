@@ -25,6 +25,7 @@ set(assets
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")
+set(resource_dir "${LLVM_SHARE_DIR}/clang-doc")
 set(out_files)
 
 function(copy_files_to_dst src_dir dst_dir file)
@@ -43,7 +44,7 @@ foreach(f ${assets})
   install(FILES ${asset_dir}/${f}
     DESTINATION "${CMAKE_INSTALL_DATADIR}/clang-doc"
     COMPONENT clang-doc)
-  copy_files_to_dst(${asset_dir} ${LLVM_SHARE_DIR} ${f})
+  copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
 endforeach(f)
 
 add_custom_target(copy-clang-doc-assets
