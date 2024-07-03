@@ -747,6 +747,7 @@ void clang::getOpenMPCaptureRegions(
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
   assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
 
+#if 1//<<<<<<< HEAD
   switch (DKind) {
   case OMPD_metadirective:
     CaptureRegions.push_back(OMPD_metadirective);
@@ -846,6 +847,88 @@ void clang::getOpenMPCaptureRegions(
   default:
     llvm_unreachable("Unhandled OpenMP directive");
   }
+
+#else//=======
+  auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
+    assert(isLeafConstruct(LKind) && "Epecting leaf directive");
+    // Whether a leaf would require OMPD_unknown if it occured on its own.
+    switch (LKind) {
+    case OMPD_metadirective:
+      CaptureRegions.push_back(OMPD_metadirective);
+      break;
+    case OMPD_nothing:
+      CaptureRegions.push_back(OMPD_nothing);
+      break;
+    case OMPD_parallel:
+      CaptureRegions.push_back(OMPD_parallel);
+      break;
+    case OMPD_target:
+      CaptureRegions.push_back(OMPD_task);
+      CaptureRegions.push_back(OMPD_target);
+      break;
+    case OMPD_task:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_update:
+      CaptureRegions.push_back(OMPD_task);
+      break;
+    case OMPD_teams:
+      CaptureRegions.push_back(OMPD_teams);
+      break;
+    case OMPD_taskloop:
+      CaptureRegions.push_back(OMPD_taskloop);
+      break;
+    case OMPD_loop:
+      // TODO: 'loop' may require different capture regions depending on the
+      // bind clause or the parent directive when there is no bind clause.
+      // If any of the directives that push regions here are parents of 'loop',
+      // assume 'parallel'. Otherwise do nothing.
+      if (!CaptureRegions.empty() &&
+          !llvm::is_contained(CaptureRegions, OMPD_parallel))
+        CaptureRegions.push_back(OMPD_parallel);
+      else
+        return true;
+      break;
+    case OMPD_dispatch:
+    case OMPD_distribute:
+    case OMPD_for:
+    case OMPD_masked:
+    case OMPD_master:
+    case OMPD_ordered:
+    case OMPD_scope:
+    case OMPD_sections:
+    case OMPD_simd:
+    case OMPD_single:
+    case OMPD_target_data:
+    case OMPD_taskgroup:
+      // These directives (when standalone) use OMPD_unknown as the region,
+      // but when they're constituents of a compound directive, and other
+      // leafs from that directive have specific regions, then these directives
+      // add no additional regions.
+      return true;
+    default:
+      llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
+      llvm_unreachable("Unexpected directive");
+    }
+    return false;
+  };
+
+  bool MayNeedUnknownRegion = false;
+  for (OpenMPDirectiveKind L : getLeafConstructsOrSelf(DKind))
+    MayNeedUnknownRegion |= GetRegionsForLeaf(L);
+
+  // We need OMPD_unknown when no regions were added, and specific leaf
+  // constructs were present. Push a single OMPD_unknown as the capture
+  /// region.
+  if (CaptureRegions.empty() && MayNeedUnknownRegion)
+    CaptureRegions.push_back(OMPD_unknown);  
+
+  // OMPD_unknown is only expected as the only region. If other regions
+  // are present OMPD_unknown should not be present.
+  assert((CaptureRegions[0] == OMPD_unknown ||
+          !llvm::is_contained(CaptureRegions, OMPD_unknown)) &&
+         "Misplaced OMPD_unknown");
+#endif//>>>>>>> 59f4267c8e0625c6583327be2db1608930f2d796
 }
 
 bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
