@@ -165,12 +165,12 @@ TEST_F(ValueObjectMockProcessTest, Enum) {
 TEST_F(ValueObjectMockProcessTest, BitFieldLikeEnum) {
   // These enumerators set individual bits in the value, as if it were a flag
   // set. lldb treats this as a "bitfield like enum". This means we show values
-  // as hex, a value of 0 shows nothing, and values with no exact enumerator are
-  // shown as combinations of the other values.
+  // as hex, and values without exact matches are shown as a combination of
+  // enumerators and any remaining value left over.
   TestDumpValueObject(
       MakeEnumType({{"test_2", 2}, {"test_4", 4}}, false),
       {
-          {0, {}, "(TestEnum) test_var =\n"},
+          {0, {}, "(TestEnum) test_var = 0x0\n"},
           {1, {}, "(TestEnum) test_var = 0x1\n"},
           {2, {}, "(TestEnum) test_var = test_2\n"},
           {4, {}, "(TestEnum) test_var = test_4\n"},
