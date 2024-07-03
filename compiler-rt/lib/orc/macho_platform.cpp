@@ -383,9 +383,10 @@ private:
 
   Expected<void *> dlupdateImpl(void *DSOHandle, int Mode);
   Error dlupdateFull(std::unique_lock<std::mutex> &JDStatesLock,
-                   JITDylibState &JDS);
+                     JITDylibState &JDS);
   Error dlupdateInitialize(std::unique_lock<std::mutex> &JDStatesLock,
-                         JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
+                           JITDylibState &JDS,
+                           MachOJITDylibDepInfoMap &DepInfo);
 
   Error dlcloseImpl(void *DSOHandle);
   Error dlcloseDeinitialize(std::unique_lock<std::mutex> &JDStatesLock,
@@ -1267,7 +1268,7 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
 }
 
 Expected<void *> MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle,
-                                                       int Mode) {
+                                                         int Mode) {
   std::unique_lock<std::mutex> Lock(JDStatesMutex);
 
   // Try to find JITDylib state by DSOHandle.

@@ -623,8 +623,8 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       InitializedDylib.insert(&JD);
   }
 
-  if (auto WrapperAddr = ES.lookup(
-          MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
+  if (auto WrapperAddr =
+          ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
     if (dlupdate)
       return ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
                                                DSOHandles[&JD], DSOHandles[&JD],
