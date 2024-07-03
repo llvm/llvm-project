@@ -197,7 +197,7 @@ struct SemiNCAInfo {
       constexpr bool Direction = IsReverse != IsPostDom;  // XOR.
       auto Successors = getChildren<Direction>(BB, BatchUpdates);
       if (SuccOrder && Successors.size() > 1)
-        llvm::sort(Successors, [SuccOrder](NodePtr A, NodePtr B) {
+        llvm::sort(Successors, [&](NodePtr A, NodePtr B) {
           return SuccOrder->find(A)->second < SuccOrder->find(B)->second;
         });
 
