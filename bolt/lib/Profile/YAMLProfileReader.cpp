@@ -28,7 +28,7 @@ extern cl::opt<bool> InferStaleProfile;
 
 cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
     "name-similarity-function-matching-threshold",
-    cl::desc("Match functions using namespace and edit distance."), cl::init(0),
+    cl::desc("Match functions using namespace and edit distance"), cl::init(0),
     cl::Hidden, cl::cat(BoltOptCategory));
 
 static llvm::cl::opt<bool>
@@ -352,7 +352,7 @@ bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
 
 uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
   uint64_t MatchedWithNameSimilarity = 0;
-  ItaniumPartialDemangler ItaniumPartialDemangler;
+  ItaniumPartialDemangler Demangler;
 
   // Demangle and derive namespace from function name.
   auto DemangleName = [&](std::string &FunctionName) {
@@ -360,18 +360,18 @@ uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     return demangle(RestoredName);
   };
   auto DeriveNameSpace = [&](std::string &DemangledName) {
-    if (ItaniumPartialDemangler.partialDemangle(DemangledName.c_str()))
+    if (Demangler.partialDemangle(DemangledName.c_str()))
       return std::string("");
     std::vector<char> Buffer(DemangledName.begin(), DemangledName.end());
     size_t BufferSize = Buffer.size();
-    char *NameSpace = ItaniumPartialDemangler.getFunctionDeclContextName(
-        &Buffer[0], &BufferSize);
-    return NameSpace ? std::string(NameSpace) : std::string("");
+    char *NameSpace =
+        Demangler.getFunctionDeclContextName(&Buffer[0], &BufferSize);
+    return std::string(NameSpace, BufferSize);
   };
 
   // Maps namespaces to associated function block counts and gets profile
   // function names and namespaces to minimize the number of BFs to process and
-  // avoid repeated name demangling/namespace derivision.
+  // avoid repeated name demangling/namespace derivation.
   StringMap<std::set<uint32_t>> NamespaceToProfiledBFSizes;
   std::vector<std::string> ProfileBFDemangledNames;
   ProfileBFDemangledNames.reserve(YamlBP.Functions.size());
@@ -388,7 +388,7 @@ uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
 
   StringMap<std::vector<BinaryFunction *>> NamespaceToBFs;
 
-  // Maps namespaces to BFs disincluding binary functions with no equal sized
+  // Maps namespaces to BFs excluding binary functions with no equal sized
   // profiled functions belonging to the same namespace.
   for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
     std::string DemangledName = BF->getDemangledName();
