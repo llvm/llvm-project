@@ -67,6 +67,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
+  SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // deduce element type of untyped pointers
   Type *deduceElementType(Value *I, bool UnknownElemTypeI8);
@@ -384,9 +385,10 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
       auto AsArgIt = ResTypeByArg.find(DemangledName);
-      if (AsArgIt != ResTypeByArg.end())
+      if (AsArgIt != ResTypeByArg.end()) {
         Ty = deduceElementTypeHelper(CI->getArgOperand(AsArgIt->second),
                                      Visited);
+      }
     }
   }
 
@@ -543,6 +545,28 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     } else if (ElemTy1) {
       KnownElemTy = ElemTy1;
       Ops.push_back(std::make_pair(Op0, 0));
+    }
+  } else if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (Function *CalledF = CI->getCalledFunction()) {
+      std::string DemangledName =
+          getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      if (DemangledName.length() > 0 &&
+          !StringRef(DemangledName).starts_with("llvm.")) {
+        auto [Grp, Opcode, ExtNo] =
+            SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+        if (Opcode == SPIRV::OpGroupAsyncCopy) {
+          for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2;
+               ++i) {
+            Value *Op = CI->getArgOperand(i);
+            if (!isPointerTy(Op->getType()))
+              continue;
+            ++PtrCnt;
+            if (Type *ElemTy = GR->findDeducedElementType(Op))
+              KnownElemTy = ElemTy; // src will rewrite dest if both are defined
+            Ops.push_back(std::make_pair(Op, i));
+          }
+        }
+      }
     }
   }
 
@@ -1385,6 +1409,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(Func);
   GR = ST.getSPIRVGlobalRegistry();
+  InstrSet = ST.isOpenCLEnv() ? SPIRV::InstructionSet::OpenCL_std
+                              : SPIRV::InstructionSet::GLSL_std_450;
 
   F = &Func;
   IRBuilder<> B(Func.getContext());
