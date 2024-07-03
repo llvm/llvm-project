@@ -43,6 +43,7 @@ group("unittests") {
     "Passes/Plugins:PluginsTests",
     "ProfileData:ProfileDataTests",
     "Remarks:RemarksTests",
+    "SandboxIR:SandboxIRTests",
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
     "TableGen:TableGenTests",

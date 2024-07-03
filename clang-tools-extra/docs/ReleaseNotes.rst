@@ -241,10 +241,10 @@ Changes in existing checks
   false positives resulting from use of optionals in unevaluated context.
 
 - Improved :doc:`bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
-  false positives and adding a new (off-by-default) option
-  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
-  (except for a few that are idiomatic).
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by clarifying the
+  diagnostics, eliminating some false positives and adding a new
+  (off-by-default) option `WarnOnSizeOfPointer` that reports all
+  ``sizeof(pointer)`` expressions (except for a few that are idiomatic).
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
