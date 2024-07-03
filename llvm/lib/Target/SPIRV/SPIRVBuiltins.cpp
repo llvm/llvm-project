@@ -2384,10 +2384,10 @@ static bool generateLoadStoreInst(const SPIRV::IncomingCall *Call,
 }
 
 namespace SPIRV {
-// Try to find a builtin funtion attributes by a demangled function name and
+// Try to find a builtin function attributes by a demangled function name and
 // return a tuple <builtin group, op code, ext instruction number>, or a special
-// tuple value <-1, 0, 0> if the builtin funtion is not found.
-// Not all builtin funtions are supported, only those with a ready-to-use op
+// tuple value <-1, 0, 0> if the builtin function is not found.
+// Not all builtin functions are supported, only those with a ready-to-use op
 // code or instruction number defined in TableGen.
 // TODO: consider a major rework of mapping demangled calls into a builtin
 // functions to unify search and decrease number of individual cases.

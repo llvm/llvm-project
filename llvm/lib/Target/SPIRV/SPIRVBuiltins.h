@@ -19,7 +19,7 @@
 
 namespace llvm {
 namespace SPIRV {
-/// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
+/// Lowers a builtin function call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 ///
 /// \return the lowering success status if the called function is a recognized
@@ -38,7 +38,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  const SmallVectorImpl<Register> &Args,
                                  SPIRVGlobalRegistry *GR);
 
-/// Helper external function for finding a builtin funtion attributes
+/// Helper function for finding a builtin function attributes
 /// by a demangled function name. Defined in SPIRVBuiltins.cpp.
 std::tuple<int, unsigned, unsigned>
 mapBuiltinToOpcode(const StringRef DemangledCall,
