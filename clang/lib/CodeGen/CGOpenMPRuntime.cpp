@@ -8030,8 +8030,8 @@ private:
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           const Expr *E = L.VarRef;
-          if (VD && E && VD->getType()->isAnyPointerType() &&
-              isa<DeclRefExpr>(E))
+          if (VD && VD->getType()->isAnyPointerType() &&
+              isa_and_present<DeclRefExpr>(E))
             HasMapBasePtr = true;
           if (VD && VD->getType()->isAnyPointerType() &&
               isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(E))
