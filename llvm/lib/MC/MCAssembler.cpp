@@ -1158,8 +1158,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
                  : LF.getValue().evaluateAsAbsolute(Value, *Layout);
   if (!Abs) {
     bool Relaxed, UseZeroPad;
-    std::tie(Relaxed, UseZeroPad) =
-        getBackend().relaxLEB128(LF, *Layout, Value);
+    std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(*this, LF, Value);
     if (!Relaxed) {
       getContext().reportError(LF.getValue().getLoc(),
                                Twine(LF.isSigned() ? ".s" : ".u") +
@@ -1246,9 +1245,8 @@ bool MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
 }
 
 bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
-
   bool WasRelaxed;
-  if (getBackend().relaxDwarfLineAddr(DF, *Layout, WasRelaxed))
+  if (getBackend().relaxDwarfLineAddr(*this, DF, WasRelaxed))
     return WasRelaxed;
 
   MCContext &Context = getContext();
@@ -1270,7 +1268,7 @@ bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
 
 bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
   bool WasRelaxed;
-  if (getBackend().relaxDwarfCFA(DF, *Layout, WasRelaxed))
+  if (getBackend().relaxDwarfCFA(*this, DF, WasRelaxed))
     return WasRelaxed;
 
   MCContext &Context = getContext();
