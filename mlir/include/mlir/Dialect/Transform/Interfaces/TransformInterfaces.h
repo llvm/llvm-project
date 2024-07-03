@@ -14,7 +14,6 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 #include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc"
@@ -1595,7 +1594,7 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
 }
 
 template <typename OpTy>
-mlir::LogicalResult
+llvm::LogicalResult
 mlir::transform::TransformEachOpTrait<OpTy>::verifyTrait(Operation *op) {
   static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
                 "expected single-operand op");
