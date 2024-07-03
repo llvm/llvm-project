@@ -199,7 +199,7 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 bool SPIRVPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   addPass(createSPIRVPostLegalizerPass());
-  addPass(createSPIRVEmitNonSemanticDIPass());
+  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
   return false;
 }
 

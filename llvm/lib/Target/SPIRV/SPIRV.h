@@ -9,9 +9,7 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRV_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRV_H
 
-#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class SPIRVTargetMachine;
@@ -26,7 +24,7 @@ FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerPass();
 FunctionPass *createSPIRVPostLegalizerPass();
 ModulePass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
-MachineFunctionPass *createSPIRVEmitNonSemanticDIPass();
+MachineFunctionPass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM);
 InstructionSelector *
 createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const SPIRVSubtarget &Subtarget,
