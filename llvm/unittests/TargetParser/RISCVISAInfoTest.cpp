@@ -341,25 +341,6 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
       "unsupported non-standard user-level extension 'xmadeup'");
 }
 
-TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32i_zmadeup", "rv64i_smadeup", "rv64i_xmadeup"}) {
-    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
-    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-    RISCVISAInfo &Info = **MaybeISAInfo;
-    const auto &Exts = Info.getExtensions();
-    EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
-  }
-
-  // Checks that supported extensions aren't incorrectly ignored when a
-  // version is present (an early version of the patch had this mistake).
-  auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv32i_zbc1p0_xmadeup", true, false, true);
-  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-  const auto &Exts = (*MaybeISAInfo)->getExtensions();
-  EXPECT_TRUE(Exts.at("zbc") == (RISCVISAUtils::ExtensionVersion{1, 0}));
-}
-
 TEST(ParseArchString, AcceptsVersionInLongOrShortForm) {
   for (StringRef Input : {"rv64i2p1"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
@@ -391,35 +372,6 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionVersionsByDefault) {
   EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv32izifencei10p10", true)
                          .takeError()),
             "unsupported version number 10.10 for extension 'zifencei'");
-}
-
-TEST(ParseArchString,
-     UsesDefaultVersionForUnrecognisedBaseISAVersionWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32i0p1", "rv32i99p99", "rv64i0p1", "rv64i99p99"}) {
-    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
-    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-    const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
-  }
-  for (StringRef Input : {"rv32e0p1", "rv32e99p99", "rv64e0p1", "rv64e99p99"}) {
-    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
-    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-    const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("e") == (RISCVISAUtils::ExtensionVersion{2, 0}));
-  }
-}
-
-TEST(ParseArchString,
-     IgnoresExtensionsWithUnrecognizedVersionsWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32im1p1", "rv64i_svnapot10p9", "rv32i_zicsr0p5"}) {
-    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
-    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-    const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
-  }
 }
 
 TEST(ParseArchString, AcceptsUnderscoreSplittingExtensions) {
