@@ -723,8 +723,7 @@ static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
   if (MemType.isVector())
     return RTLIB::UNKNOWN_LIBCALL;
 
-#define LCALLS(A, B)                                                           \
-  { A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL }
+#define LCALLS(A, B) {A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL}
 #define LCALL5(A)                                                              \
   LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8), LCALLS(A, 16)
   switch (Opc) {
@@ -980,6 +979,150 @@ LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
                        LocObserver, nullptr);
 }
 
+/// Returns the corresponding libcall for the given Pred and
+/// the ICMP predicate that should be generated to compare with #0
+/// after the libcall.
+static std::pair<RTLIB::Libcall, CmpInst::Predicate>
+getFCMPLibcallDesc(const CmpInst::Predicate Pred) {
+
+  switch (Pred) {
+  case CmpInst::FCMP_OEQ:
+    return {RTLIB::OEQ_F128, CmpInst::ICMP_EQ};
+  case CmpInst::FCMP_UNE:
+    return {RTLIB::UNE_F128, CmpInst::ICMP_NE};
+  case CmpInst::FCMP_OGE:
+    return {RTLIB::OGE_F128, CmpInst::ICMP_SGE};
+  case CmpInst::FCMP_OLT:
+    return {RTLIB::OLT_F128, CmpInst::ICMP_SLT};
+  case CmpInst::FCMP_OLE:
+    return {RTLIB::OLE_F128, CmpInst::ICMP_SLE};
+  case CmpInst::FCMP_OGT:
+    return {RTLIB::OGT_F128, CmpInst::ICMP_SGT};
+  case CmpInst::FCMP_UNO:
+    return {RTLIB::UO_F128, CmpInst::ICMP_NE};
+  default:
+    return {RTLIB::UNKNOWN_LIBCALL, CmpInst::BAD_ICMP_PREDICATE};
+  }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
+                                   MachineInstr &MI,
+                                   LostDebugLocObserver &LocObserver) {
+  auto &MF = MIRBuilder.getMF();
+  auto &Ctx = MF.getFunction().getContext();
+
+  LLT OpLLT = MRI.getType(MI.getOperand(2).getReg());
+  if (OpLLT != LLT::scalar(128) ||
+      OpLLT != MRI.getType(MI.getOperand(3).getReg()))
+    return UnableToLegalize;
+
+  Type *OpType = getFloatTypeForLLT(Ctx, OpLLT);
+
+  // Libcall always return i32
+  constexpr LLT I32LLT = LLT::scalar(32);
+  constexpr LLT PredTy = LLT::scalar(1);
+
+  const Register DstReg = MI.getOperand(0).getReg();
+  const Register Op1 = MI.getOperand(2).getReg();
+  const Register Op2 = MI.getOperand(3).getReg();
+  const auto Pred =
+      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+  // Generates a libcall followed by ICMP
+  const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
+                                const CmpInst::Predicate ICmpPred) -> Register {
+    Register Temp = MRI.createGenericVirtualRegister(I32LLT);
+    // Generate libcall, storing result into Temp
+    const auto Status =
+        createLibcall(MIRBuilder, Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+                      {{Op1, OpType, 0}, {Op2, OpType, 1}}, LocObserver, &MI);
+    if (!Status)
+      return MCRegister::NoRegister;
+
+    // FCMP libcall always returns an i32, we need to compare it with #0 to get
+    // the final result.
+    const Register Res = MRI.createGenericVirtualRegister(PredTy);
+    MIRBuilder.buildICmp(ICmpPred, Res, Temp,
+                         MIRBuilder.buildConstant(I32LLT, 0));
+    return Res;
+  };
+
+  // Simple case if we have a direct mapping from predicate to libcall
+  if (const auto [Libcall, ICmpPred] = getFCMPLibcallDesc(Pred);
+      Libcall != RTLIB::UNKNOWN_LIBCALL &&
+      ICmpPred != CmpInst::BAD_ICMP_PREDICATE) {
+    if (const auto Res = BuildLibcall(Libcall, ICmpPred)) {
+      MIRBuilder.buildCopy(DstReg, Res);
+      return Legalized;
+    }
+    return UnableToLegalize;
+  }
+
+  // No direct mapping found, should be generated as combination of libcalls.
+
+  switch (Pred) {
+  case CmpInst::FCMP_UEQ: {
+    // FCMP_UEQ: unordered or equal
+    // Convert into (FCMP_OEQ || FCMP_UNO).
+
+    const auto [OeqLibcall, OeqPred] = getFCMPLibcallDesc(CmpInst::FCMP_OEQ);
+    const auto Oeq = BuildLibcall(OeqLibcall, OeqPred);
+
+    const auto [UnoLibcall, UnoPred] = getFCMPLibcallDesc(CmpInst::FCMP_UNO);
+    const auto Uno = BuildLibcall(UnoLibcall, UnoPred);
+
+    MIRBuilder.buildCopy(DstReg, MIRBuilder.buildOr(PredTy, Oeq, Uno));
+    break;
+  }
+  case CmpInst::FCMP_ONE: {
+    // FCMP_ONE: ordered and operands are unequal
+    // Convert into (!FCMP_OEQ && !FCMP_UNO).
+
+    // We inverse the predicate instead of generating a NOT
+    // to save one instruciton.
+    // On AArch64 isel can even select two cmp into a single ccmp.
+    const auto [OeqLibcall, OeqPred] = getFCMPLibcallDesc(CmpInst::FCMP_OEQ);
+    const auto NotOeq =
+        BuildLibcall(OeqLibcall, CmpInst::getInversePredicate(OeqPred));
+
+    const auto [UnoLibcall, UnoPred] = getFCMPLibcallDesc(CmpInst::FCMP_UNO);
+    const auto NotUno =
+        BuildLibcall(UnoLibcall, CmpInst::getInversePredicate(UnoPred));
+
+    if (NotOeq && NotUno)
+      MIRBuilder.buildCopy(DstReg, MIRBuilder.buildAnd(PredTy, NotOeq, NotUno));
+    else
+      return UnableToLegalize;
+
+    break;
+  }
+  case CmpInst::FCMP_ULT:
+  case CmpInst::FCMP_UGE:
+  case CmpInst::FCMP_UGT:
+  case CmpInst::FCMP_ULE:
+  case CmpInst::FCMP_ORD: {
+    // Convert into: !(inverse(Pred))
+    // E.g. FCMP_ULT becomes !FCMP_OGE
+    // This is equivalent to the following, but saves some instructions.
+    //   MIRBuilder.buildNot(
+    //       PredTy,
+    //       MIRBuilder.buildFCmp(CmpInst::getInversePredicate(Pred), PredTy,
+    //                            Op1, Op2));
+    const auto [InversedLibcall, InversedPred] =
+        getFCMPLibcallDesc(CmpInst::getInversePredicate(Pred));
+    MIRBuilder.buildCopy(
+        DstReg, BuildLibcall(InversedLibcall,
+                             CmpInst::getInversePredicate(InversedPred)));
+    break;
+  }
+  default:
+    return UnableToLegalize;
+  }
+
+  return Legalized;
+}
+
 // The function is used to legalize operations that set default environment
 // state. In C library a call like `fesetmode(FE_DFL_MODE)` is used for that.
 // On most targets supported in glibc FE_DFL_MODE is defined as
@@ -1116,6 +1259,12 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       return UnableToLegalize;
     LegalizeResult Status =
         conversionLibcall(MI, MIRBuilder, ToTy, FromTy, LocObserver);
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_FCMP: {
+    LegalizeResult Status = createFCMPLibcall(MIRBuilder, MI, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
