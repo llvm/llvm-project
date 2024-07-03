@@ -25,11 +25,6 @@ set(assets
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")
-if("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
-  set(resource_dir "${CMAKE_BINARY_DIR}/$<CONFIG>/share/clang-doc")
-else()
-  set(resource_dir "${CMAKE_BINARY_DIR}/share/clang-doc")
-endif()
 set(out_files)
 
 function(copy_files_to_dst src_dir dst_dir file)
@@ -48,7 +43,7 @@ foreach(f ${assets})
   install(FILES ${asset_dir}/${f}
     DESTINATION "${CMAKE_INSTALL_DATADIR}/clang-doc"
     COMPONENT clang-doc)
-  copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
+  copy_files_to_dst(${asset_dir} ${LLVM_SHARE_DIR} ${f})
 endforeach(f)
 
 add_custom_target(copy-clang-doc-assets

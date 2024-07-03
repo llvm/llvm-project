@@ -452,6 +452,12 @@ if(WIN32 OR CYGWIN)
 else()
   set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 endif()
+# set shared directory
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+  set(LLVM_SHARE_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/share")
+else()
+  set(LLVM_SHARE_DIR "${CMAKE_BINARY_DIR}/share")
+endif()
 
 # Each of them corresponds to llvm-config's.
 set(LLVM_TOOLS_BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR}) # --bindir
