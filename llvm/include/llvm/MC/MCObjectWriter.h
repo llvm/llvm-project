@@ -15,7 +15,6 @@
 
 namespace llvm {
 
-class MCAsmLayout;
 class MCAssembler;
 class MCFixup;
 class MCFragment;
@@ -54,8 +53,7 @@ public:
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete.
-  virtual void executePostLayoutBinding(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) = 0;
+  virtual void executePostLayoutBinding(MCAssembler &Asm) {}
 
   /// Record a relocation entry.
   ///
@@ -115,7 +113,7 @@ public:
   /// This routine is called by the assembler after layout and relaxation is
   /// complete, fixups have been evaluated and applied, and relocations
   /// generated.
-  virtual uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) = 0;
+  virtual uint64_t writeObject(MCAssembler &Asm) = 0;
 
   /// @}
 };

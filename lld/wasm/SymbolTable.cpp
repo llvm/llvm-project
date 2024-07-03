@@ -681,10 +681,10 @@ TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
   WasmTableType *type = make<WasmTableType>();
   type->ElemType = ValType::FUNCREF;
   type->Limits = limits;
-  StringRef module(defaultModule);
   uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
   flags |= WASM_SYMBOL_UNDEFINED;
-  Symbol *sym = addUndefinedTable(name, name, module, flags, nullptr, type);
+  Symbol *sym =
+      addUndefinedTable(name, name, defaultModule, flags, nullptr, type);
   sym->markLive();
   sym->forceExport = config->exportTable;
   return cast<TableSymbol>(sym);
@@ -724,8 +724,11 @@ TableSymbol *SymbolTable::resolveIndirectFunctionTable(bool required) {
   }
 
   if (config->importTable) {
-    if (existing)
+    if (existing) {
+      existing->importModule = defaultModule;
+      existing->importName = functionTableName;
       return cast<TableSymbol>(existing);
+    }
     if (required)
       return createUndefinedIndirectFunctionTable(functionTableName);
   } else if ((existing && existing->isLive()) || config->exportTable ||

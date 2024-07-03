@@ -2048,6 +2048,42 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   return Builder.CreateShuffleVector(V1, ArrayRef(Indexes, Size));
 }
 
+/// Attempt to convert vpermi2/vpermt2 to shufflevector if the mask is constant.
+static Value *simplifyX86vpermv3(const IntrinsicInst &II,
+                                 InstCombiner::BuilderTy &Builder) {
+  auto *V = dyn_cast<Constant>(II.getArgOperand(1));
+  if (!V)
+    return nullptr;
+
+  auto *VecTy = cast<FixedVectorType>(II.getType());
+  unsigned Size = VecTy->getNumElements();
+  assert((Size == 2 || Size == 4 || Size == 8 || Size == 16 || Size == 32 ||
+          Size == 64) &&
+         "Unexpected shuffle mask size");
+
+  // Construct a shuffle mask from constant integers or UNDEFs.
+  int Indexes[64];
+
+  for (unsigned I = 0; I < Size; ++I) {
+    Constant *COp = V->getAggregateElement(I);
+    if (!COp || (!isa<UndefValue>(COp) && !isa<ConstantInt>(COp)))
+      return nullptr;
+
+    if (isa<UndefValue>(COp)) {
+      Indexes[I] = -1;
+      continue;
+    }
+
+    uint32_t Index = cast<ConstantInt>(COp)->getZExtValue();
+    Index &= (2 * Size) - 1;
+    Indexes[I] = Index;
+  }
+
+  auto V1 = II.getArgOperand(0);
+  auto V2 = II.getArgOperand(2);
+  return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes, Size));
+}
+
 std::optional<Instruction *>
 X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   auto SimplifyDemandedVectorEltsLow = [&IC](Value *Op, unsigned Width,
@@ -2764,6 +2800,23 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
 
+    // Peek through a one-use shuffle - VectorCombine should have simplified
+    // this for cases where we're splitting wider vectors to use blendv
+    // intrinsics.
+    Value *MaskSrc = nullptr;
+    ArrayRef<int> ShuffleMask;
+    if (match(Mask, PatternMatch::m_OneUse(PatternMatch::m_Shuffle(
+                        PatternMatch::m_Value(MaskSrc), PatternMatch::m_Undef(),
+                        PatternMatch::m_Mask(ShuffleMask))))) {
+      // Bail if the shuffle was irregular or contains undefs.
+      int NumElts = cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
+      if (NumElts < ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
+          any_of(ShuffleMask,
+                 [NumElts](int M) { return M < 0 || M >= NumElts; }))
+        break;
+      Mask = MaskSrc;
+    }
+
     // Convert to a vector select if we can bypass casts and find a boolean
     // vector condition value.
     Value *BoolVec;
@@ -2773,11 +2826,26 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         BoolVec->getType()->getScalarSizeInBits() == 1) {
       auto *MaskTy = cast<FixedVectorType>(Mask->getType());
       auto *OpTy = cast<FixedVectorType>(II.getType());
+      unsigned NumMaskElts = MaskTy->getNumElements();
+      unsigned NumOperandElts = OpTy->getNumElements();
+
+      // If we peeked through a shuffle, reapply the shuffle to the bool vector.
+      if (MaskSrc) {
+        unsigned NumMaskSrcElts =
+            cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
+        NumMaskElts = (ShuffleMask.size() * NumMaskElts) / NumMaskSrcElts;
+        // Multiple mask bits maps to the same operand element - bail out.
+        if (NumMaskElts > NumOperandElts)
+          break;
+        SmallVector<int> ScaledMask;
+        if (!llvm::scaleShuffleMaskElts(NumMaskElts, ShuffleMask, ScaledMask))
+          break;
+        BoolVec = IC.Builder.CreateShuffleVector(BoolVec, ScaledMask);
+        MaskTy = FixedVectorType::get(MaskTy->getElementType(), NumMaskElts);
+      }
       assert(MaskTy->getPrimitiveSizeInBits() ==
                  OpTy->getPrimitiveSizeInBits() &&
              "Not expecting mask and operands with different sizes");
-      unsigned NumMaskElts = MaskTy->getNumElements();
-      unsigned NumOperandElts = OpTy->getNumElements();
 
       if (NumMaskElts == NumOperandElts) {
         return SelectInst::Create(BoolVec, Op1, Op0);
@@ -2830,6 +2898,29 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512_permvar_sf_512:
   case Intrinsic::x86_avx512_permvar_si_512:
     if (Value *V = simplifyX86vpermv(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
+  case Intrinsic::x86_avx512_vpermi2var_d_128:
+  case Intrinsic::x86_avx512_vpermi2var_d_256:
+  case Intrinsic::x86_avx512_vpermi2var_d_512:
+  case Intrinsic::x86_avx512_vpermi2var_hi_128: 
+  case Intrinsic::x86_avx512_vpermi2var_hi_256: 
+  case Intrinsic::x86_avx512_vpermi2var_hi_512: 
+  case Intrinsic::x86_avx512_vpermi2var_pd_128: 
+  case Intrinsic::x86_avx512_vpermi2var_pd_256: 
+  case Intrinsic::x86_avx512_vpermi2var_pd_512: 
+  case Intrinsic::x86_avx512_vpermi2var_ps_128: 
+  case Intrinsic::x86_avx512_vpermi2var_ps_256: 
+  case Intrinsic::x86_avx512_vpermi2var_ps_512: 
+  case Intrinsic::x86_avx512_vpermi2var_q_128:
+  case Intrinsic::x86_avx512_vpermi2var_q_256:
+  case Intrinsic::x86_avx512_vpermi2var_q_512:
+  case Intrinsic::x86_avx512_vpermi2var_qi_128:
+  case Intrinsic::x86_avx512_vpermi2var_qi_256:
+  case Intrinsic::x86_avx512_vpermi2var_qi_512:
+    if (Value *V = simplifyX86vpermv3(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
     break;

@@ -296,7 +296,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-integer-call")) {
     diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
-                           "that results in an integer")
+                           "of integer type")
         << E->getSourceRange();
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-this")) {
     diag(E->getBeginLoc(),
@@ -314,7 +314,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
           << E->getSourceRange();
     } else {
       diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
-                             "that results in a pointer")
+                             "of pointer type")
           << E->getSourceRange();
     }
   } else if (const auto *E = Result.Nodes.getNodeAs<BinaryOperator>(
@@ -348,25 +348,28 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     } else if (ElementSize > CharUnits::Zero() &&
                DenominatorSize > CharUnits::Zero() &&
                ElementSize != DenominatorSize) {
-      diag(E->getOperatorLoc(), "suspicious usage of 'sizeof(...)/sizeof(...)';"
-                                " numerator is not a multiple of denominator")
+      // FIXME: Apparently there are no testcases that cover this branch!
+      diag(E->getOperatorLoc(),
+           "suspicious usage of 'sizeof(array)/sizeof(...)';"
+           " denominator differs from the size of array elements")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (NumTy && DenomTy && NumTy == DenomTy) {
-      // FIXME: This message is wrong, it should not refer to sizeof "pointer"
-      // usage (and by the way, it would be to clarify all the messages).
       diag(E->getOperatorLoc(),
-           "suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'")
+           "suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions "
+           "have the same type")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (!WarnOnSizeOfPointer) {
       // When 'WarnOnSizeOfPointer' is enabled, these messages become redundant:
       if (PointedTy && DenomTy && PointedTy == DenomTy) {
         diag(E->getOperatorLoc(),
-             "suspicious usage of sizeof pointer 'sizeof(T*)/sizeof(T)'")
+             "suspicious usage of 'sizeof(...)/sizeof(...)'; size of pointer "
+             "is divided by size of pointed type")
             << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
       } else if (NumTy && DenomTy && NumTy->isPointerType() &&
                  DenomTy->isPointerType()) {
         diag(E->getOperatorLoc(),
-             "suspicious usage of sizeof pointer 'sizeof(P*)/sizeof(Q*)'")
+             "suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions "
+             "have pointer types")
             << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
       }
     }

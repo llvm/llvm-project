@@ -811,6 +811,12 @@ std::optional<std::string> ToolChain::getStdlibPath() const {
   return getTargetSubDirPath(P);
 }
 
+std::optional<std::string> ToolChain::getStdlibIncludePath() const {
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "include");
+  return getTargetSubDirPath(P);
+}
+
 ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   path_list Paths;
 
