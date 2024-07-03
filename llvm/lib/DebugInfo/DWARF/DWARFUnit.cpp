@@ -495,78 +495,21 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     Context.getRecoverableErrorHandler()(std::move(e));
 }
 
-static bool DoubleCheckedRWLocker(llvm::sys::RWMutex &Mutex,
-                                  const std::function<bool()> &reader,
-                                  const std::function<void()> &writer) {
-  {
-    llvm::sys::ScopedReader Lock(Mutex);
-    if (reader())
-      return true;
-  }
-  llvm::sys::ScopedWriter Lock(Mutex);
-  if (reader())
-    return true;
-  // If we get here, then the reader function returned false. This means that
-  // no one else is currently writing to this data structure and it's safe for
-  // us to write to it now. The scoped writer lock guarantees there are no
-  // other readers or writers at this point.
-  writer();
-  return false;
-}
-
-// Helper to safely check if the Compile-Unit DIE has been extracted already.
-// If not, then extract it, and return false, indicating that it was *not*
-// already extracted.
-bool DWARFUnit::extractCUDieIfNeeded(bool CUDieOnly, bool &HasCUDie) {
-  return DoubleCheckedRWLocker(
-      ExtractCUDieMutex,
-      // Calculate if the CU DIE has been extracted already.
-      [&]() {
-        return ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1);
-      },
-      // Lambda to extract the CU DIE.
-      [&]() {
-        HasCUDie = !DieArray.empty();
-        extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
-      });
-}
-
-// Helper to safely check if the non-Compile-Unit DIEs have been parsed
-// already. If they haven't been parsed, go ahead and parse them.
-Error DWARFUnit::extractNonCUDIEsIfNeeded(bool HasCUDie) {
-  Error Result = Error::success();
-  DoubleCheckedRWLocker(
-      ExtractNonCUDIEsMutex,
-      // Lambda to check if all DIEs have been extracted already.
-      [=]() { return (DieArray.empty() || HasCUDie); },
-      // Lambda to extract all the DIEs using the helper function
-      [&]() {
-        if (Error E = extractNonCUDIEsHelper()) {
-          // Consume the success placeholder and save the actual error
-          consumeError(std::move(Result));
-          Result = std::move(E);
-        }
-      });
-  return Result;
-}
-
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  // Acquire the FreeDIEsMutex lock (in read-mode) to prevent the Compile Unit
-  // DIE from being freed by a thread calling clearDIEs() after the CU DIE was
-  // parsed, but before the rest of the DIEs are parsed, as there are no other
-  // locks held during that brief period.
-  llvm::sys::ScopedReader FreeLock(FreeDIEsMutex);
-  bool HasCUDie = false;
-  if (extractCUDieIfNeeded(CUDieOnly, HasCUDie))
-    return Error::success();
-  // Right here is where the above-mentioned race condition exists.
-  return extractNonCUDIEsIfNeeded(HasCUDie);
-}
+  if ((CUDieOnly && !DieArray.empty()) ||
+      DieArray.size() > 1)
+    return Error::success(); // Already parsed.
 
-// Helper used from the tryExtractDIEsIfNeeded function: it must already have
-// acquired the ExtractNonCUDIEsMutex for writing.
-Error DWARFUnit::extractNonCUDIEsHelper() {
+  bool HasCUDie = !DieArray.empty();
+  extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
+
+  if (DieArray.empty())
+    return Error::success();
+
   // If CU DIE was just parsed, copy several attribute values from it.
+  if (HasCUDie)
+    return Error::success();
+
   DWARFDie UnitDie(this, &DieArray[0]);
   if (std::optional<uint64_t> DWOId =
           toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
@@ -710,10 +653,6 @@ bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie) {
-  // We need to acquire the FreeDIEsMutex lock in write-mode, because we are
-  // going to free the DIEs, when other threads might be trying to create them.
-  llvm::sys::ScopedWriter FreeLock(FreeDIEsMutex);
-
   // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
   // shrink_to_fit() is a *non-binding* request to reduce capacity() to size().
   // It depends on the implementation whether the request is fulfilled.

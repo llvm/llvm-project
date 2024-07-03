@@ -36,7 +36,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
-#include <sys/uio.h>
 #include <unistd.h>
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif

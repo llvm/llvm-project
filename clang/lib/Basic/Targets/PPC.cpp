@@ -928,17 +928,18 @@ bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 
 bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
   llvm::Triple Triple = getTriple();
-  if (Triple.isOSAIX()) {
-#define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, OP, VALUE) .Case(NAME, true)
-    return llvm::StringSwitch<bool>(CPUName)
-#include "llvm/TargetParser/PPCTargetParser.def"
-        .Default(false);
-  }
-
-  assert(Triple.isOSLinux() &&
+  assert((Triple.isOSAIX() || Triple.isOSLinux()) &&
          "__builtin_cpu_is() is only supported for AIX and Linux.");
-#define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
-  return llvm::StringSwitch<bool>(CPUName)
+
+#define PPC_CPU(NAME, Linux_SUPPORT_METHOD, LinuxID, AIX_SUPPORT_METHOD,       \
+                AIXID)                                                         \
+  .Case(NAME, {Linux_SUPPORT_METHOD, AIX_SUPPORT_METHOD})
+
+  std::pair<unsigned, unsigned> SuppportMethod =
+      llvm::StringSwitch<std::pair<unsigned, unsigned>>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
-      .Default(false);
+          .Default({BUILTIN_PPC_UNSUPPORTED, BUILTIN_PPC_UNSUPPORTED});
+  return Triple.isOSLinux()
+             ? (SuppportMethod.first != BUILTIN_PPC_UNSUPPORTED)
+             : (SuppportMethod.second != BUILTIN_PPC_UNSUPPORTED);
 }

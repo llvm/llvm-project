@@ -904,6 +904,9 @@ bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 /// based on the vscale_range function attribute.
 ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
 
+/// Determine the possible constant range of a vector constant.
+ConstantRange getVectorConstantRange(const Constant *C);
+
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.
 ConstantRange computeConstantRange(const Value *V, bool ForSigned,
