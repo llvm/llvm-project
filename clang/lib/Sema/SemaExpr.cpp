@@ -6121,10 +6121,7 @@ bool Sema::CheckArgsForPlaceholders(MultiExprArg args) {
 ///                  it does not contain any pointer arguments without
 ///                  an address space qualifer.  Otherwise the rewritten
 ///                  FunctionDecl is returned.
-///
-/// Pointer return type with no explicit address space is assigned the
-/// default address space where pointer points to based on the language
-/// option used to compile it.
+/// TODO: Handle pointer return types.
 static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
                                                 FunctionDecl *FDecl,
                                                 MultiExprArg ArgExprs) {
@@ -6168,46 +6165,13 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     OverloadParams.push_back(Context.getPointerType(PointeeType));
   }
 
-  QualType ReturnTy = FT->getReturnType();
-  QualType OverloadReturnTy = ReturnTy;
-  if (ReturnTy->isPointerType() &&
-      !ReturnTy->getPointeeType().hasAddressSpace()) {
-    if (Sema->getLangOpts().OpenCL) {
-      NeedsNewDecl = true;
-
-      QualType ReturnPtTy = ReturnTy->getPointeeType();
-      unsigned BuiltinID = FDecl->getBuiltinID();
-      LangAS defClAS;
-
-      // __builtin_alloca* should always return pointer to stack/private
-      // Address Space, while for other builtins with return pointer type,
-      // it should depend on the OpenCL version.
-      switch (BuiltinID) {
-      case Builtin::BI__builtin_alloca_uninitialized:
-      case Builtin::BI__builtin_alloca:
-      case Builtin::BI__builtin_alloca_with_align_uninitialized:
-      case Builtin::BI__builtin_alloca_with_align: {
-        defClAS = LangAS::opencl_private;
-        break;
-      }
-      default: {
-        defClAS = Context.getDefaultOpenCLPointeeAddrSpace();
-        break;
-      }
-      }
-
-      ReturnPtTy = Context.getAddrSpaceQualType(ReturnPtTy, defClAS);
-      OverloadReturnTy = Context.getPointerType(ReturnPtTy);
-    }
-  }
-
   if (!NeedsNewDecl)
     return nullptr;
 
   FunctionProtoType::ExtProtoInfo EPI;
   EPI.Variadic = FT->isVariadic();
-  QualType OverloadTy =
-      Context.getFunctionType(OverloadReturnTy, OverloadParams, EPI);
+  QualType OverloadTy = Context.getFunctionType(FT->getReturnType(),
+                                                OverloadParams, EPI);
   DeclContext *Parent = FDecl->getParent();
   FunctionDecl *OverloadDecl = FunctionDecl::Create(
       Context, Parent, FDecl->getLocation(), FDecl->getLocation(),
