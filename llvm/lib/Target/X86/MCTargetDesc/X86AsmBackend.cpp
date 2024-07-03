@@ -917,7 +917,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       }
 
 #ifndef NDEBUG
-      const uint64_t OrigOffset = Layout.getFragmentOffset(&F);
+      const uint64_t OrigOffset = Asm.getFragmentOffset(F);
 #endif
       const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
@@ -950,7 +950,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
         cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
 
 #ifndef NDEBUG
-      const uint64_t FinalOffset = Layout.getFragmentOffset(&F);
+      const uint64_t FinalOffset = Asm.getFragmentOffset(F);
       const uint64_t FinalSize = Asm.computeFragmentSize(F);
       assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
              "can't move start of next fragment!");
@@ -973,7 +973,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   // The layout is done. Mark every fragment as valid.
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
     MCSection &Section = *Layout.getSectionOrder()[i];
-    Layout.getFragmentOffset(&*Section.curFragList()->Tail);
+    Asm.getFragmentOffset(*Section.curFragList()->Tail);
     Asm.computeFragmentSize(*Section.curFragList()->Tail);
   }
 }
