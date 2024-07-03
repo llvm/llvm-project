@@ -919,7 +919,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
 #ifndef NDEBUG
       const uint64_t OrigOffset = Layout.getFragmentOffset(&F);
 #endif
-      const uint64_t OrigSize = Asm.computeFragmentSize(Layout, F);
+      const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
       // To keep the effects local, prefer to relax instructions closest to
       // the align directive.  This is purely about human understandability
@@ -951,7 +951,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
 
 #ifndef NDEBUG
       const uint64_t FinalOffset = Layout.getFragmentOffset(&F);
-      const uint64_t FinalSize = Asm.computeFragmentSize(Layout, F);
+      const uint64_t FinalSize = Asm.computeFragmentSize(F);
       assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
              "can't move start of next fragment!");
       assert(FinalSize == RemainingSize && "inconsistent size computation?");
@@ -974,7 +974,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
     MCSection &Section = *Layout.getSectionOrder()[i];
     Layout.getFragmentOffset(&*Section.curFragList()->Tail);
-    Asm.computeFragmentSize(Layout, *Section.curFragList()->Tail);
+    Asm.computeFragmentSize(*Section.curFragList()->Tail);
   }
 }
 
