@@ -2023,7 +2023,7 @@ void MCDataFragmentMerger::reset() {
 }
 
 Error MCCASBuilder::createPaddingRef(const MCSection *Sec) {
-  uint64_t Pad = ObjectWriter.getPaddingSize(Sec, Layout);
+  uint64_t Pad = ObjectWriter.getPaddingSize(Asm, Sec);
   auto Fill = PaddingRef::create(*this, Pad);
   if (!Fill)
     return Fill.takeError();
@@ -2946,7 +2946,7 @@ partitionFragment(const MCAsmLayout &Layout, SmallVector<char, 0> &Addends,
     uint32_t RelocOffset = getRelocationOffset(Reloc);
     if (PrevOffset == RelocOffset)
       continue;
-    uint64_t FragmentOffset = Layout.getFragmentOffset(&Fragment);
+    uint64_t FragmentOffset = Layout.getAssembler().getFragmentOffset(Fragment);
     if (RelocOffset < FragmentOffset + FragmentContents.size()) {
       /// RelocOffsetInFragment: This is used to denote the offset of the
       /// relocation in the current Fragment. Relocation offsets are always from
