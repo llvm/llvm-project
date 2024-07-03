@@ -297,8 +297,7 @@ private:
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override;
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
+  void executePostLayoutBinding(MCAssembler &Asm) override;
   void prepareImports(SmallVectorImpl<wasm::WasmImport> &Imports,
                       MCAssembler &Asm, const MCAsmLayout &Layout);
   uint64_t writeObject(MCAssembler &Asm) override;
@@ -452,8 +451,7 @@ void WasmObjectWriter::writeHeader(const MCAssembler &Asm) {
   W->write<uint32_t>(wasm::WasmVersion);
 }
 
-void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                                const MCAsmLayout &Layout) {
+void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // Some compilation units require the indirect function table to be present
   // but don't explicitly reference it.  This is the case for call_indirect
   // without the reference-types feature, and also function bitcasts in all
