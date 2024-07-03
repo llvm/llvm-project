@@ -810,9 +810,14 @@ define float @extra_args_same_several_times(ptr nocapture readonly %x, i32 %a, i
 ; THRESHOLD-NEXT:    [[CONV:%.*]] = sitofp i32 [[MUL]] to float
 ; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[X:%.*]], align 4
 ; THRESHOLD-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
-; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP1]], 1.300000e+01
-; THRESHOLD-NEXT:    [[TMP2:%.*]] = fmul fast float [[CONV]], 2.000000e+00
-; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[OP_RDX]], [[TMP2]]
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
+; THRESHOLD-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[CONV]], i32 1
+; THRESHOLD-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP3]], <float 1.300000e+01, float 2.000000e+00>
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = fmul fast <2 x float> [[TMP3]], <float 1.300000e+01, float 2.000000e+00>
+; THRESHOLD-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i32 0
+; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
+; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[TMP7]], [[TMP8]]
 ; THRESHOLD-NEXT:    ret float [[OP_RDX1]]
 ;
   entry:
