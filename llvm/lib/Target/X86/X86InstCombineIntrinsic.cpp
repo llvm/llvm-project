@@ -503,13 +503,15 @@ static Value *simplifyX86pack(IntrinsicInst &II,
 }
 
 static Value *simplifyX86pmulh(IntrinsicInst &II,
-                               InstCombiner::BuilderTy &Builder) {
+                               InstCombiner::BuilderTy &Builder, bool IsSigned,
+                               bool IsRounding) {
   Value *Arg0 = II.getArgOperand(0);
   Value *Arg1 = II.getArgOperand(1);
   auto *ResTy = cast<FixedVectorType>(II.getType());
-  [[maybe_unused]] auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
+  auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
   assert(ArgTy == ResTy && ResTy->getScalarSizeInBits() == 16 &&
          "Unexpected PMULH types");
+  assert((!IsRounding || IsSigned) && "PMULHRS instruction must be signed");
 
   // Multiply by undef -> zero (NOT undef!) as other arg could still be zero.
   if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
@@ -519,8 +521,33 @@ static Value *simplifyX86pmulh(IntrinsicInst &II,
   if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
     return ConstantAggregateZero::get(ResTy);
 
-  // TODO: Constant folding.
-  return nullptr;
+  // Constant folding.
+  if (!isa<Constant>(Arg0) || !isa<Constant>(Arg1))
+    return nullptr;
+
+  // Extend to twice the width and multiply.
+  auto Cast =
+      IsSigned ? Instruction::CastOps::SExt : Instruction::CastOps::ZExt;
+  auto *ExtTy = FixedVectorType::getExtendedElementVectorType(ArgTy);
+  Value *LHS = Builder.CreateCast(Cast, Arg0, ExtTy);
+  Value *RHS = Builder.CreateCast(Cast, Arg1, ExtTy);
+  Value *Mul = Builder.CreateMul(LHS, RHS);
+
+  if (IsRounding) {
+    // PMULHRSW: truncate to vXi18 of the most significant bits, add one and
+    // extract bits[16:1].
+    auto *RndEltTy = IntegerType::get(ExtTy->getContext(), 18);
+    auto *RndTy = FixedVectorType::get(RndEltTy, ExtTy);
+    Mul = Builder.CreateLShr(Mul, 14);
+    Mul = Builder.CreateTrunc(Mul, RndTy);
+    Mul = Builder.CreateAdd(Mul, ConstantInt::get(RndTy, 1));
+    Mul = Builder.CreateLShr(Mul, 1);
+  } else {
+    // PMULH/PMULHU: extract the vXi16 most significant bits.
+    Mul = Builder.CreateLShr(Mul, 16);
+  }
+
+  return Builder.CreateTrunc(Mul, ResTy);
 }
 
 static Value *simplifyX86pmadd(IntrinsicInst &II,
@@ -2592,13 +2619,23 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_sse2_pmulh_w:
   case Intrinsic::x86_avx2_pmulh_w:
   case Intrinsic::x86_avx512_pmulh_w_512:
+    if (Value *V = simplifyX86pmulh(II, IC.Builder, true, false)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
   case Intrinsic::x86_sse2_pmulhu_w:
   case Intrinsic::x86_avx2_pmulhu_w:
   case Intrinsic::x86_avx512_pmulhu_w_512:
+    if (Value *V = simplifyX86pmulh(II, IC.Builder, false, false)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
   case Intrinsic::x86_ssse3_pmul_hr_sw_128:
   case Intrinsic::x86_avx2_pmul_hr_sw:
   case Intrinsic::x86_avx512_pmul_hr_sw_512:
-    if (Value *V = simplifyX86pmulh(II, IC.Builder)) {
+    if (Value *V = simplifyX86pmulh(II, IC.Builder, true, true)) {
       return IC.replaceInstUsesWith(II, V);
     }
     break;
