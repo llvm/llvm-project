@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -emit-bytecode | mlir-opt
+// RUN: mlir-opt %s -emit-bytecode | mlir-opt | FileCheck %s
 
 module {
 }
@@ -8,7 +8,7 @@ module {
   external_resources: {
     // CHECK-NEXT: mlir_reproducer
     mlir_reproducer: {
-      // CHECK-NEXT: pipeline: "builtin.module(func.func(canonicalize,cse))"
+      // CHECK-NEXT: pipeline: "builtin.module(func.func(canonicalize,cse))",
       pipeline: "builtin.module(func.func(canonicalize,cse))",
       // CHECK-NEXT: disable_threading: true
       disable_threading: true,
