@@ -1266,3 +1266,13 @@ static_assert(ReturnInStmtExpr() == 1, ""); // both-error {{not an integral cons
                                             // both-note {{in call to}}
 
 #endif
+
+namespace ComparisonAgainstOnePastEnd {
+  int a, b;
+  static_assert(&a + 1 == &b, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
+  static_assert(&a == &b + 1, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&b + 1' that points past the end of a complete object has unspecified value}}
+
+  static_assert(&a + 1 == &b + 1, ""); // both-error {{static assertion failed}}
+};

@@ -422,10 +422,10 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
       LoopPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_ptr");
   Value *Element = LoopBuilder.CreateAlignedLoad(
       EltTy, LoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, IndexPtr),
-      PartSrcAlign, "element");
+      PartSrcAlign, SrcIsVolatile, "element");
   LoopBuilder.CreateAlignedStore(
       Element, LoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, IndexPtr),
-      PartDstAlign);
+      PartDstAlign, DstIsVolatile);
   LoopBuilder.CreateCondBr(
       LoopBuilder.CreateICmpEQ(IndexPtr, ConstantInt::get(TypeOfCopyLen, 0)),
       ExitBB, LoopBB);
@@ -440,10 +440,11 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   IRBuilder<> FwdLoopBuilder(FwdLoopBB);
   PHINode *FwdCopyPhi = FwdLoopBuilder.CreatePHI(TypeOfCopyLen, 0, "index_ptr");
   Value *SrcGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, FwdCopyPhi);
-  Value *FwdElement =
-      FwdLoopBuilder.CreateAlignedLoad(EltTy, SrcGEP, PartSrcAlign, "element");
+  Value *FwdElement = FwdLoopBuilder.CreateAlignedLoad(
+      EltTy, SrcGEP, PartSrcAlign, SrcIsVolatile, "element");
   Value *DstGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, FwdCopyPhi);
-  FwdLoopBuilder.CreateAlignedStore(FwdElement, DstGEP, PartDstAlign);
+  FwdLoopBuilder.CreateAlignedStore(FwdElement, DstGEP, PartDstAlign,
+                                    DstIsVolatile);
   Value *FwdIndexPtr = FwdLoopBuilder.CreateAdd(
       FwdCopyPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_increment");
   FwdLoopBuilder.CreateCondBr(FwdLoopBuilder.CreateICmpEQ(FwdIndexPtr, CopyLen),
