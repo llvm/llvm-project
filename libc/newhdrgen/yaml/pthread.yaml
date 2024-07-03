@@ -366,3 +366,51 @@ functions:
     arguments:
       - type: pthread_key_t
       - type: const void *
+  - name: pthread_rwlock_init
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+      - type: const pthread_rwlockattr_t *__restrict
+  - name: pthread_rwlock_tryrdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_trywrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_timedrdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: const struct timespec *__restrict
+  - name: pthread_rwlock_timedwrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: const struct timespec *__restrict
+  - name: pthread_rwlock_rdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_wrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_unlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_destroy
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
