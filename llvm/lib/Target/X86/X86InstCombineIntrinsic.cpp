@@ -2800,6 +2800,23 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
 
+    // Peek through a one-use shuffle - VectorCombine should have simplified
+    // this for cases where we're splitting wider vectors to use blendv
+    // intrinsics.
+    Value *MaskSrc = nullptr;
+    ArrayRef<int> ShuffleMask;
+    if (match(Mask, PatternMatch::m_OneUse(PatternMatch::m_Shuffle(
+                        PatternMatch::m_Value(MaskSrc), PatternMatch::m_Undef(),
+                        PatternMatch::m_Mask(ShuffleMask))))) {
+      // Bail if the shuffle was irregular or contains undefs.
+      int NumElts = cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
+      if (NumElts < ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
+          any_of(ShuffleMask,
+                 [NumElts](int M) { return M < 0 || M >= NumElts; }))
+        break;
+      Mask = MaskSrc;
+    }
+
     // Convert to a vector select if we can bypass casts and find a boolean
     // vector condition value.
     Value *BoolVec;
@@ -2809,11 +2826,26 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         BoolVec->getType()->getScalarSizeInBits() == 1) {
       auto *MaskTy = cast<FixedVectorType>(Mask->getType());
       auto *OpTy = cast<FixedVectorType>(II.getType());
+      unsigned NumMaskElts = MaskTy->getNumElements();
+      unsigned NumOperandElts = OpTy->getNumElements();
+
+      // If we peeked through a shuffle, reapply the shuffle to the bool vector.
+      if (MaskSrc) {
+        unsigned NumMaskSrcElts =
+            cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
+        NumMaskElts = (ShuffleMask.size() * NumMaskElts) / NumMaskSrcElts;
+        // Multiple mask bits maps to the same operand element - bail out.
+        if (NumMaskElts > NumOperandElts)
+          break;
+        SmallVector<int> ScaledMask;
+        if (!llvm::scaleShuffleMaskElts(NumMaskElts, ShuffleMask, ScaledMask))
+          break;
+        BoolVec = IC.Builder.CreateShuffleVector(BoolVec, ScaledMask);
+        MaskTy = FixedVectorType::get(MaskTy->getElementType(), NumMaskElts);
+      }
       assert(MaskTy->getPrimitiveSizeInBits() ==
                  OpTy->getPrimitiveSizeInBits() &&
              "Not expecting mask and operands with different sizes");
-      unsigned NumMaskElts = MaskTy->getNumElements();
-      unsigned NumOperandElts = OpTy->getNumElements();
 
       if (NumMaskElts == NumOperandElts) {
         return SelectInst::Create(BoolVec, Op1, Op0);
