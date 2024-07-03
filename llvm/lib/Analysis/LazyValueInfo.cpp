@@ -1792,27 +1792,11 @@ getPredicateResult(CmpInst::Predicate Pred, Constant *C,
     if (!CI) return LazyValueInfo::Unknown;
 
     const ConstantRange &CR = Val.getConstantRange();
-    if (Pred == ICmpInst::ICMP_EQ) {
-      if (!CR.contains(CI->getValue()))
-        return LazyValueInfo::False;
-
-      if (CR.isSingleElement())
-        return LazyValueInfo::True;
-    } else if (Pred == ICmpInst::ICMP_NE) {
-      if (!CR.contains(CI->getValue()))
-        return LazyValueInfo::True;
-
-      if (CR.isSingleElement())
-        return LazyValueInfo::False;
-    } else {
-      // Handle more complex predicates.
-      ConstantRange TrueValues =
-          ConstantRange::makeExactICmpRegion(Pred, CI->getValue());
-      if (TrueValues.contains(CR))
-        return LazyValueInfo::True;
-      if (TrueValues.inverse().contains(CR))
-        return LazyValueInfo::False;
-    }
+    ConstantRange RHS(CI->getValue());
+    if (CR.icmp(Pred, RHS))
+      return LazyValueInfo::True;
+    if (CR.icmp(CmpInst::getInversePredicate(Pred), RHS))
+      return LazyValueInfo::False;
     return LazyValueInfo::Unknown;
   }
 
