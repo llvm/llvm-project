@@ -28,9 +28,9 @@ Example:
     Base *b = new Derived[10];
 
     b += 1;
-    // warning: pointer arithmetic on class that declares a virtual function,
-    //          which can result in undefined behavior if the pointee is a
-    //          different class
+    // warning: pointer arithmetic on class that declares a virtual function can
+    // result in undefined behavior if the dynamic type differs from the
+    // pointer type
 
     delete[] static_cast<Derived*>(b);
   }

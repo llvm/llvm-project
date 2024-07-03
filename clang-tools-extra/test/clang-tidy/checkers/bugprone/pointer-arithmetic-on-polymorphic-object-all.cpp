@@ -26,19 +26,19 @@ void operators() {
   Base *b = new Derived[10];
 
   b += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base' can result in undefined behavior if the dynamic type differs from the pointer type [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   b = b + 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic on polymorphic object of type 'Base' can result in undefined behavior if the dynamic type differs from the pointer type [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   b++;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base' can result in undefined behavior if the dynamic type differs from the pointer type [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   --b;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pointer arithmetic on polymorphic object of type 'Base' can result in undefined behavior if the dynamic type differs from the pointer type [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   b[1];
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base' can result in undefined behavior if the dynamic type differs from the pointer type [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   delete[] static_cast<Derived*>(b);
 }
