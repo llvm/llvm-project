@@ -1063,21 +1063,21 @@ exit:
 }
 
 define void @cross_block_avl_extend_backwards(i1 %cond, <vscale x 8 x i8> %v, ptr %p, i64 %avl) {
-; CHECK-LABEL: extend_avl_backwards:
+; CHECK-LABEL: cross_block_avl_extend_backwards:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    beqz a0, .LBB26_2
+; CHECK-NEXT:    beqz a0, .LBB25_2
 ; CHECK-NEXT:  # %bb.1: # %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB26_2: # %bar
+; CHECK-NEXT:  .LBB25_2: # %bar
 ; CHECK-NEXT:    addi a2, a2, 1
-; CHECK-NEXT:  .LBB26_3: # %foo
+; CHECK-NEXT:  .LBB25_3: # %foo
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    j .LBB26_3
+; CHECK-NEXT:    j .LBB25_3
 entry:
   br i1 %cond, label %exit, label %bar
 foo:
@@ -1097,13 +1097,13 @@ define void @vlmax_avl_phi(i1 %cmp, ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: vlmax_avl_phi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    beqz a0, .LBB25_2
+; CHECK-NEXT:    beqz a0, .LBB26_2
 ; CHECK-NEXT:  # %bb.1: # %foo
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
-; CHECK-NEXT:    j .LBB25_3
-; CHECK-NEXT:  .LBB25_2: # %bar
+; CHECK-NEXT:    j .LBB26_3
+; CHECK-NEXT:  .LBB26_2: # %bar
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
-; CHECK-NEXT:  .LBB25_3: # %exit
+; CHECK-NEXT:  .LBB26_3: # %exit
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
