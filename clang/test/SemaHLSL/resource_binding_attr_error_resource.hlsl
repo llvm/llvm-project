@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
+// This test validates the diagnostics that are emitted when a variable with a "resource" type
+// is bound to a register using the register annotation
 
 // expected-error@+1  {{uav type 'RWBuffer<int>' requires register type 'u', but register type 'b' was used}}
 RWBuffer<int> a : register(b2, space1);

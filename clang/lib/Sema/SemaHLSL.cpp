@@ -513,40 +513,47 @@ bool isDeclaredWithinCOrTBuffer(const Decl *decl) {
   return false;
 }
 
+const CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *SamplerUAVOrSRV) {
+  const Type *Ty = SamplerUAVOrSRV->getType()->getPointeeOrArrayElementType();
+  if (!Ty)
+    llvm_unreachable("Resource class must have an element type.");
+
+  if (const BuiltinType *BTy = dyn_cast<BuiltinType>(Ty)) {
+    /* QualType QT = SamplerUAVOrSRV->getType();
+    PrintingPolicy PP = S.getPrintingPolicy();
+    std::string typestr = QualType::getAsString(QT.split(), PP);
+
+    S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_resource_type)
+        << typestr;
+    return; */
+    return nullptr;
+  }
+
+  const CXXRecordDecl *TheRecordDecl = Ty->getAsCXXRecordDecl();
+  if (!TheRecordDecl)
+    llvm_unreachable("Resource class should have a resource type declaration.");
+
+  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(TheRecordDecl))
+    TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
+  TheRecordDecl = TheRecordDecl->getCanonicalDecl();
+  return TheRecordDecl;
+}
+
 const HLSLResourceAttr *
 getHLSLResourceAttrFromEitherDecl(VarDecl *SamplerUAVOrSRV,
                                   HLSLBufferDecl *CBufferOrTBuffer) {
 
   if (SamplerUAVOrSRV) {
-    const Type *Ty = SamplerUAVOrSRV->getType()->getPointeeOrArrayElementType();
-    if (!Ty)
-      llvm_unreachable("Resource class must have an element type.");
-
-    if (const BuiltinType *BTy = dyn_cast<BuiltinType>(Ty)) {
-      /* QualType QT = SamplerUAVOrSRV->getType();
-      PrintingPolicy PP = S.getPrintingPolicy();
-      std::string typestr = QualType::getAsString(QT.split(), PP);
-
-      S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_resource_type)
-          << typestr;
-      return; */
-      return nullptr;
-    }
-
-    const CXXRecordDecl *TheRecordDecl = Ty->getAsCXXRecordDecl();
-    if (!TheRecordDecl)
-      llvm_unreachable(
-          "Resource class should have a resource type declaration.");
-
-    if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(TheRecordDecl))
-      TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
-    TheRecordDecl = TheRecordDecl->getCanonicalDecl();
+    const CXXRecordDecl *TheRecordDecl =
+        getRecordDeclFromVarDecl(SamplerUAVOrSRV);
     const auto *Attr = TheRecordDecl->getAttr<HLSLResourceAttr>();
     return Attr;
   } else if (CBufferOrTBuffer) {
     const auto *Attr = CBufferOrTBuffer->getAttr<HLSLResourceAttr>();
     return Attr;
   }
+  llvm_unreachable("one of the two conditions should be true.");
+  return nullptr;
 }
 
 void traverseType(QualType T, register_binding_flags &r) {
@@ -802,46 +809,50 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   }
 
   // finally, we handle the udt case
-
   if (f.udt) {
-    for (auto it = D->attr_begin(); it != D->attr_end(); ++it) {
-      if (HLSLResourceBindingAttr *attr =
-              dyn_cast<HLSLResourceBindingAttr>(*it)) {
-        llvm::StringRef registerTypeSlotRef = attr->getSlot();
-        std::string registerTypeSlot(registerTypeSlotRef);
-        if (registerTypeSlot.front() == 't') {
-          if (!f.srv) {
-            S.Diag(attr->getLoc(),
-                   diag::warn_hlsl_UDT_missing_resource_type_member)
-                << typestr << "t" << 0;
-          }
-        } else if (registerTypeSlot.front() == 'u') {
-          if (!f.uav) {
-            S.Diag(attr->getLoc(),
-                   diag::warn_hlsl_UDT_missing_resource_type_member)
-                << typestr << "u" << 1;
-          }
-        } else if (registerTypeSlot.front() == 'b') {
-          if (!f.cbv) {
-            S.Diag(attr->getLoc(),
-                   diag::warn_hlsl_UDT_missing_resource_type_member)
-                << typestr << "b" << 2;
-          }
-        } else if (registerTypeSlot.front() == 's') {
-          if (!f.sampler) {
-            S.Diag(attr->getLoc(),
-                   diag::warn_hlsl_UDT_missing_resource_type_member)
-                << typestr << "s" << 3;
-          }
-        } else if (registerTypeSlot.front() == 'c') {
-          if (!f.srv)
-            S.Diag(attr->getLoc(), diag::warn_hlsl_UDT_missing_basic_type);
-        } else {
-          S.Diag(attr->getLoc(),
-                 diag::err_hlsl_unsupported_register_type_and_variable_type)
-              << registerTypeSlot.front() << typestr;
-        }
+    switch (Slot[0]) {
+    case 't': {
+      if (!f.srv) {
+        S.Diag(D->getLocation(),
+               diag::warn_hlsl_UDT_missing_resource_type_member)
+            << typestr << "t" << 0;
       }
+      break;
+    }
+    case 'u': {
+      if (!f.uav) {
+        S.Diag(D->getLocation(),
+               diag::warn_hlsl_UDT_missing_resource_type_member)
+            << typestr << "u" << 1;
+      }
+      break;
+    }
+    case 'b': {
+      if (!f.cbv) {
+        S.Diag(D->getLocation(),
+               diag::warn_hlsl_UDT_missing_resource_type_member)
+            << typestr << "b" << 2;
+      }
+      break;
+    }
+    case 's': {
+      if (!f.sampler) {
+        S.Diag(D->getLocation(),
+               diag::warn_hlsl_UDT_missing_resource_type_member)
+            << typestr << "s" << 3;
+      }
+      break;
+    }
+    case 'c': {
+      if (!f.srv)
+        S.Diag(D->getLocation(), diag::warn_hlsl_UDT_missing_basic_type);
+      break;
+    }
+    default: {
+      S.Diag(D->getLocation(),
+             diag::err_hlsl_unsupported_register_type_and_variable_type)
+          << Slot.front() << typestr;
+    }
     }
   }
 }
