@@ -577,9 +577,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         "profile name");
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
-  MapVector<std::string, RISCVISAUtils::ExtensionVersion,
-            std::map<std::string, unsigned>>
-      SeenExtMap;
 
   // The canonical order specified in ISA manual.
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
@@ -603,8 +600,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
             EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
       return std::move(E);
 
-    // Postpone AddExtension until end of this function
-    SeenExtMap[StringRef(&Baseline, 1).str()] = {Major, Minor};
+    ISAInfo->Exts[std::string(1, Baseline)] = {Major, Minor};
     break;
   case 'g':
     // g expands to extensions in RISCVGImplications.
@@ -618,11 +614,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // No matter which version is given to `g`, we always set imafd to default
     // version since the we don't have clear version scheme for that on
     // ISA spec.
-    for (const auto *Ext : RISCVGImplications) {
+    for (const char *Ext : RISCVGImplications) {
       auto Version = findDefaultVersion(Ext);
       assert(Version && "Default extension version not found?");
       // Postpone AddExtension until end of this function
-      SeenExtMap[Ext] = {Version->Major, Version->Minor};
+      ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
     }
     break;
   }
@@ -686,22 +682,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       if (Name.size() == 1)
         Ext = Ext.substr(ConsumeLength);
 
-      // Check if duplicated extension.
-      if (SeenExtMap.contains(Name.str()))
+      if (!RISCVISAInfo::isSupportedExtension(Name))
+        return getStringErrorForInvalidExt(Name);
+
+      // Insert and error for duplicates.
+      if (!ISAInfo->Exts
+               .emplace(Name.str(),
+                        RISCVISAUtils::ExtensionVersion{Major, Minor})
+               .second)
         return createStringError(errc::invalid_argument,
                                  "duplicated " + Desc + " '" + Name + "'");
 
-      SeenExtMap[Name.str()] = {Major, Minor};
     } while (!Ext.empty());
-  }
-
-  // Check all Extensions are supported.
-  for (auto &SeenExtAndVers : SeenExtMap) {
-    const std::string &ExtName = SeenExtAndVers.first;
-
-    if (!RISCVISAInfo::isSupportedExtension(ExtName))
-      return getStringErrorForInvalidExt(ExtName);
-    ISAInfo->Exts[ExtName] = SeenExtAndVers.second;
   }
 
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
