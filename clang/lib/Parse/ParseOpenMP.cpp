@@ -1761,7 +1761,7 @@ StmtResult Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
 
   StmtResult AssociatedStmt;
 
-  // Fix the scope for assume.
+  // Begin marking the scope for assume.
   if (DKind == llvm::omp::Directive::OMPD_assume) {
 
     if (Tok.getKind() == clang::tok::annot_pragma_openmp_end)
@@ -1781,7 +1781,7 @@ StmtResult Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
     AssociatedStmt = Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(
         AssociatedStmt.get());
 
-    // End the scope for assume.
+    // Ending the scope for assume.
     ParseOpenMPEndAssumesDirective(Loc);
     Actions.OpenMP().EndOpenMPDSABlock(nullptr);
     if (Tok.getKind() == clang::tok::annot_pragma_openmp_end)

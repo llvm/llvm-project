@@ -25,7 +25,6 @@ main() {
     A[i] = 0;
   }
 
-
   // assume is for the "simd" region
   // DUMP:      OMPSimdDirective
   // DUMP-NEXT:   CapturedStmt
