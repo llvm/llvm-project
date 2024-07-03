@@ -170,7 +170,7 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   llvm::sys::path::append(AssetsPath, "..");
   llvm::SmallString<128> tempCopyDbg = AssetsPath;
   llvm::sys::path::append(tempCopyDbg, "Debug");
-  // index.js may be in the debug
+  // The executable that ran clangDoc may be in the Debug directory.
   if (!llvm::sys::fs::is_directory(tempCopyDbg))
     llvm::sys::path::append(AssetsPath, "..");
   llvm::sys::path::append(AssetsPath, "share", "clang-doc");
