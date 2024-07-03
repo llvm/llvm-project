@@ -27,7 +27,6 @@ class MCFragment;
 class MCLEBFragment;
 class MCRelaxableFragment;
 class MCSymbol;
-class MCAsmLayout;
 class MCAssembler;
 class MCContext;
 struct MCDwarfFrameInfo;
@@ -237,8 +236,7 @@ public:
                             const MCSubtargetInfo *STI) const = 0;
 
   /// Give backend an opportunity to finish layout after relaxation
-  virtual void finishLayout(MCAssembler const &Asm,
-                            MCAsmLayout &Layout) const {}
+  virtual void finishLayout(MCAssembler const &Asm) const {}
 
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
