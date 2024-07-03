@@ -73,12 +73,25 @@ private:
   bool parseFunctionProfile(BinaryFunction &Function,
                             const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
+  /// Returns block cnt equality if IgnoreHash is true, otherwise, hash equality
+  bool profileMatches(const yaml::bolt::BinaryFunctionProfile &Profile,
+                      BinaryFunction &BF);
+
   /// Infer function profile from stale data (collected on older binaries).
   bool inferStaleProfile(BinaryFunction &Function,
                          const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
   /// Initialize maps for profile matching.
   void buildNameMaps(BinaryContext &BC);
+
+  /// Matches functions using exact name.
+  size_t matchWithExactName();
+
+  /// Matches function using LTO comomon name.
+  size_t matchWithLTOCommonName();
+
+  /// Matches functions using exact hash.
+  size_t matchWithHash(BinaryContext &BC);
 
   /// Update matched YAML -> BinaryFunction pair.
   void matchProfileToFunction(yaml::bolt::BinaryFunctionProfile &YamlBF,

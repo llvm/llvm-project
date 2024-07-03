@@ -3025,6 +3025,32 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
 }
 
+template <class Emitter>
+bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
+  BlockScope<Emitter> BS(this);
+
+  const CompoundStmt *CS = E->getSubStmt();
+  const Stmt *Result = CS->getStmtExprResult();
+  for (const Stmt *S : CS->body()) {
+    if (S != Result) {
+      if (!this->visitStmt(S))
+        return false;
+      continue;
+    }
+
+    assert(S == Result);
+    // This better produces a value (i.e. is an expression).
+    if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
+      if (DiscardResult)
+        return this->discard(ResultExpr);
+      return this->delegate(ResultExpr);
+    }
+    return false;
+  }
+
+  return true;
+}
+
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
@@ -3494,6 +3520,11 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
+  auto checkDecl = [&]() -> bool {
+    bool NeedsOp = VD->isLocalVarDecl() && VD->isStaticLocal();
+    return !NeedsOp || this->emitCheckDecl(VD, VD);
+  };
+
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
@@ -3501,20 +3532,22 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
 
       if (VarT) {
         if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*VarT, GlobalIndex, VD);
+          return checkDecl() && false;
+
+        return checkDecl() && this->emitInitGlobal(*VarT, GlobalIndex, VD);
       }
-      return this->visitGlobalInitializer(Init, GlobalIndex);
+
+      return checkDecl() && this->visitGlobalInitializer(Init, GlobalIndex);
     };
 
     // We've already seen and initialized this global.
     if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
       if (P.getPtrGlobal(*GlobalIndex).isInitialized())
-        return true;
+        return checkDecl();
 
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.
-      return Init && initGlobal(*GlobalIndex);
+      return Init && checkDecl() && initGlobal(*GlobalIndex);
     }
 
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
@@ -3522,9 +3555,10 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD) {
     if (!GlobalIndex)
       return false;
 
-    return !Init || initGlobal(*GlobalIndex);
+    return !Init || (checkDecl() && initGlobal(*GlobalIndex));
   } else {
     VariableScope<Emitter> LocalScope(this, VD);
+
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
           VD, *VarT, VD->getType().isConstQualified());
@@ -4005,7 +4039,7 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
-  for (auto *D : DS->decls()) {
+  for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl,
             FunctionDecl>(D))
       continue;
@@ -4906,8 +4940,11 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       return this->emitGetLocal(PT_Ptr, Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
-    if (IsReference)
-      return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
+    if (IsReference) {
+      if (!Ctx.getLangOpts().CPlusPlus11)
+        return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
+      return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
+    }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {

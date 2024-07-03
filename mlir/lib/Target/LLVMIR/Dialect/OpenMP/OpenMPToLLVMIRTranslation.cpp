@@ -1435,7 +1435,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   };
 
   llvm::Value *ifCond = nullptr;
-  if (auto ifExprVar = opInst.getIfExprVar())
+  if (auto ifExprVar = opInst.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifExprVar);
   llvm::Value *numThreads = nullptr;
   if (auto numThreadsVar = opInst.getNumThreadsVar())

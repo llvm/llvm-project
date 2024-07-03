@@ -71,11 +71,6 @@ C++ Specific Potentially Breaking Changes
 
   To fix this, update libstdc++ to version 14.1.1 or greater.
 
-- Clang now emits errors when Thread Safety Analysis trylock attributes are
-  applied to functions or methods with incompatible return values, such as
-  constructors, destructors, and void-returning functions. This only affects the
-  ``TRY_ACQUIRE`` and ``TRY_ACQUIRE_SHARED`` attributes (and any synonyms).
-
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -151,6 +146,22 @@ Clang Frontend Potentially Breaking Changes
 
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
+
+- The comment parser now matches comments to declarations even if there is a
+  preprocessor macro in between the comment and declaration. This change is
+  intended to improve Clang's support for parsing documentation comments and
+  to better conform to Doxygen's behavior.
+
+  This has the potential to cause ``-Wdocumentation`` warnings, especially in
+  cases where a function-like macro has a documentation comment and is followed
+  immediately by a normal function. The function-like macro's documentation
+  comments will be attributed to the subsequent function and may cause
+  ``-Wdocumentation`` warnings such as mismatched parameter names, or invalid
+  return documentation comments.
+
+  In cases where the ``-Wdocumentation`` warnings are thrown, the suggested fix
+  is to document the declaration following the macro so that the warnings are
+  fixed.
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
@@ -623,9 +634,16 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
+- Clang now has an improved error message for captures that refer to a class member.
+  Fixes #GH94764.
+
 - Clang now diagnoses unsupported class declarations for ``std::initializer_list<E>`` when they are
   used rather than when they are needed for constant evaluation or when code is generated for them.
   The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
+
+- Clang now diagnoses dangling cases where a pointer is assigned to a temporary
+  that will be destroyed at the end of the full expression.
+  Fixes #GH54492.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -735,15 +753,13 @@ Bug Fixes in This Version
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
 
-- Clang's Thread Safety Analysis now evaluates trylock success arguments of enum
-  types rather than silently defaulting to false. This fixes a class of false
-  negatives where the analysis failed to detect unchecked access to guarded
-  data.
-
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
+
+- Clang now allows pointee types of atomic builtin arguments to be complete template types
+  that was not instantiated elsewhere.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1112,6 +1128,11 @@ clang-format
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
+- Adds ``KeepEmptyLines`` option to deprecate ``KeepEmptyLinesAtEOF``
+  and ``KeepEmptyLinesAtTheStartOfBlocks``.
+- Add ``ExceptDoubleParentheses`` sub-option for ``SpacesInParensOptions``
+  to override addition of spaces between multiple, non-redundant parentheses
+  similar to the rules used for ``RemoveParentheses``.
 
 libclang
 --------

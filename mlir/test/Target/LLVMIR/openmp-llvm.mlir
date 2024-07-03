@@ -164,7 +164,7 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 // CHECK: br label %[[OUTLINED_EXIT_IF_1:.*]]
 // CHECK: [[OUTLINED_EXIT_IF_1]]:
 // CHECK: br label %[[RETURN_BLOCK_IF_1:.*]]
-  omp.parallel if(%1 : i1) {
+  omp.parallel if(%1) {
     omp.barrier
     omp.terminator
   }

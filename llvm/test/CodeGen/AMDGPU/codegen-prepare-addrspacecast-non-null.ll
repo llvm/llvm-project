@@ -171,23 +171,23 @@ define void @knownbits_on_priv_to_flat(ptr addrspace(5) %ptr) {
 define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; OPT-LABEL: define void @recursive_phis(
 ; OPT-SAME: i1 [[COND:%.*]], ptr addrspace(5) [[PTR:%.*]]) {
-; OPT-NEXT:  entry:
+; OPT-NEXT:  [[ENTRY:.*]]:
 ; OPT-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 1, addrspace(5)
-; OPT-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
-; OPT:       then:
+; OPT-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; OPT:       [[THEN]]:
 ; OPT-NEXT:    [[PTR_INT:%.*]] = ptrtoint ptr addrspace(5) [[PTR]] to i32
 ; OPT-NEXT:    [[PTR_OR:%.*]] = and i32 [[PTR_INT]], 65535
 ; OPT-NEXT:    [[KB_PTR:%.*]] = inttoptr i32 [[PTR_OR]] to ptr addrspace(5)
-; OPT-NEXT:    br label [[FINALLY:%.*]]
-; OPT:       else:
-; OPT-NEXT:    [[OTHER_PHI:%.*]] = phi ptr addrspace(5) [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[PHI_PTR:%.*]], [[FINALLY]] ]
-; OPT-NEXT:    br label [[FINALLY]]
-; OPT:       finally:
-; OPT-NEXT:    [[PHI_PTR]] = phi ptr addrspace(5) [ [[KB_PTR]], [[THEN]] ], [ [[OTHER_PHI]], [[ELSE]] ]
+; OPT-NEXT:    br label %[[FINALLY:.*]]
+; OPT:       [[ELSE]]:
+; OPT-NEXT:    [[OTHER_PHI:%.*]] = phi ptr addrspace(5) [ [[ALLOCA]], %[[ENTRY]] ], [ [[PHI_PTR:%.*]], %[[FINALLY]] ]
+; OPT-NEXT:    br label %[[FINALLY]]
+; OPT:       [[FINALLY]]:
+; OPT-NEXT:    [[PHI_PTR]] = phi ptr addrspace(5) [ [[KB_PTR]], %[[THEN]] ], [ [[OTHER_PHI]], %[[ELSE]] ]
 ; OPT-NEXT:    [[TMP0:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[PHI_PTR]])
 ; OPT-NEXT:    store volatile i32 7, ptr [[TMP0]], align 4
-; OPT-NEXT:    br i1 [[COND]], label [[ELSE]], label [[END:%.*]]
-; OPT:       end:
+; OPT-NEXT:    br i1 [[COND]], label %[[ELSE]], label %[[END:.*]]
+; OPT:       [[END]]:
 ; OPT-NEXT:    ret void
 ;
 ; DAGISEL-ASM-LABEL: recursive_phis:
