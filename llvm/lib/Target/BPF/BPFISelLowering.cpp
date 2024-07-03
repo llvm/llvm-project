@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -53,6 +54,12 @@ static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
 BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
                                      const BPFSubtarget &STI)
     : TargetLowering(TM) {
+
+  // Declare that these mem intrinsics are not available.
+  // PreISel pass should be able to expand them in this case.
+  setLibcallName(RTLIB::MEMCPY, nullptr);
+  setLibcallName(RTLIB::MEMMOVE, nullptr);
+  setLibcallName(RTLIB::MEMSET, nullptr);
 
   // Set up the register classes.
   addRegisterClass(MVT::i64, &BPF::GPRRegClass);
