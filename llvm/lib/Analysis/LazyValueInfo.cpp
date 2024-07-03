@@ -650,7 +650,7 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
   if (PT && isKnownNonZero(BBI, DL))
     return ValueLatticeElement::getNot(ConstantPointerNull::get(PT));
 
-  if (BBI->getType()->isIntegerTy()) {
+  if (BBI->getType()->isIntOrIntVectorTy()) {
     if (auto *CI = dyn_cast<CastInst>(BBI))
       return solveBlockValueCast(CI, BB);
 
@@ -844,6 +844,8 @@ static ConstantRange toConstantRange(const ValueLatticeElement &Val,
   unsigned BW = Ty->getScalarSizeInBits();
   if (Val.isUnknown())
     return ConstantRange::getEmpty(BW);
+  if (Val.isConstant() && Ty->isVectorTy())
+    return getVectorConstantRange(Val.getConstant());
   return ConstantRange::getFull(BW);
 }
 
@@ -968,7 +970,7 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
     return std::nullopt;
   const ConstantRange &LHSRange = *LHSRes;
 
-  const unsigned ResultBitWidth = CI->getType()->getIntegerBitWidth();
+  const unsigned ResultBitWidth = CI->getType()->getScalarSizeInBits();
 
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
@@ -1108,7 +1110,7 @@ LazyValueInfoImpl::getValueFromSimpleICmpCondition(CmpInst::Predicate Pred,
                                                    const APInt &Offset,
                                                    Instruction *CxtI,
                                                    bool UseBlockValue) {
-  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
+  ConstantRange RHSRange(RHS->getType()->getScalarSizeInBits(),
                          /*isFullSet=*/true);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
     RHSRange = ConstantRange(CI->getValue());
@@ -1728,7 +1730,6 @@ Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
 
 ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
                                               bool UndefAllowed) {
-  assert(V->getType()->isIntegerTy());
   BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getOrCreateImpl(BB->getModule()).getValueInBlock(V, BB, CxtI);
