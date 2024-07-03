@@ -502,6 +502,27 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   return Builder.CreateTrunc(Shuffle, ResTy);
 }
 
+static Value *simplifyX86pmulh(IntrinsicInst &II,
+                               InstCombiner::BuilderTy &Builder) {
+  Value *Arg0 = II.getArgOperand(0);
+  Value *Arg1 = II.getArgOperand(1);
+  auto *ResTy = cast<FixedVectorType>(II.getType());
+  [[maybe_unused]] auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
+  assert(ArgTy == ResTy && ResTy->getScalarSizeInBits() == 16 &&
+         "Unexpected PMULH types");
+
+  // Multiply by undef -> zero (NOT undef!) as other arg could still be zero.
+  if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
+  // Multiply by zero.
+  if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
+  // TODO: Constant folding.
+  return nullptr;
+}
+
 static Value *simplifyX86pmadd(IntrinsicInst &II,
                                InstCombiner::BuilderTy &Builder,
                                bool IsPMADDWD) {
@@ -2568,6 +2589,20 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
+  case Intrinsic::x86_sse2_pmulh_w:
+  case Intrinsic::x86_avx2_pmulh_w:
+  case Intrinsic::x86_avx512_pmulh_w_512:
+  case Intrinsic::x86_sse2_pmulhu_w:
+  case Intrinsic::x86_avx2_pmulhu_w:
+  case Intrinsic::x86_avx512_pmulhu_w_512:
+  case Intrinsic::x86_ssse3_pmul_hr_sw_128:
+  case Intrinsic::x86_avx2_pmul_hr_sw:
+  case Intrinsic::x86_avx512_pmul_hr_sw_512:
+    if (Value *V = simplifyX86pmulh(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
   case Intrinsic::x86_sse2_pmadd_wd:
   case Intrinsic::x86_avx2_pmadd_wd:
   case Intrinsic::x86_avx512_pmaddw_d_512:
@@ -3189,6 +3224,21 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     break;
   }
 
+  case Intrinsic::x86_sse2_pmulh_w:
+  case Intrinsic::x86_avx2_pmulh_w:
+  case Intrinsic::x86_avx512_pmulh_w_512:
+  case Intrinsic::x86_sse2_pmulhu_w:
+  case Intrinsic::x86_avx2_pmulhu_w:
+  case Intrinsic::x86_avx512_pmulhu_w_512:
+  case Intrinsic::x86_ssse3_pmul_hr_sw_128:
+  case Intrinsic::x86_avx2_pmul_hr_sw:
+  case Intrinsic::x86_avx512_pmul_hr_sw_512: {
+    simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
+    // NOTE: mulh(undef,undef) != undef.
+    break;
+  }
+
   case Intrinsic::x86_sse2_packssdw_128:
   case Intrinsic::x86_sse2_packsswb_128:
   case Intrinsic::x86_sse2_packuswb_128:
@@ -3255,6 +3305,7 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     APInt Op1UndefElts(InnerVWidth, 0);
     simplifyAndSetOp(&II, 0, OpDemandedElts, Op0UndefElts);
     simplifyAndSetOp(&II, 1, OpDemandedElts, Op1UndefElts);
+    // NOTE: madd(undef,undef) != undef.
     break;
   }
 
