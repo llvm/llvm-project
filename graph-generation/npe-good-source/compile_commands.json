@@ -1,0 +1,7 @@
+[
+    {
+        "command": "c++ -c single-source.cpp",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp"
+    }
+]

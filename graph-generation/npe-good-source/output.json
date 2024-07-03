@@ -1,0 +1,72 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/input.json",
+    "results": [
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
+                    "beginLine": 16,
+                    "beginColumn": 5,
+                    "endLine": 16,
+                    "endColumn": 16,
+                    "content": "int *x1 = 0"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
+                    "beginLine": 17,
+                    "beginColumn": 5,
+                    "endLine": 17,
+                    "endColumn": 19,
+                    "content": "int *x2 = NULL"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
+                    "beginLine": 18,
+                    "beginColumn": 5,
+                    "endLine": 18,
+                    "endColumn": 22,
+                    "content": "int *x3 = nullptr"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
+                    "beginLine": 26,
+                    "beginColumn": 5,
+                    "endLine": 26,
+                    "endColumn": 21,
+                    "content": "int *z2 = null()"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe-good-source/single-source.cpp",
+                    "beginLine": 27,
+                    "beginColumn": 5,
+                    "endLine": 27,
+                    "endColumn": 24,
+                    "content": "int *z3 = mayNull()"
+                }
+            ]
+        }
+    ]
+}
