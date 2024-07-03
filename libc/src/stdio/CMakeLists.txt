@@ -185,6 +185,37 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.writer
 )
 
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    vfprintf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
+)
+
+add_entrypoint_object(
+  vasprintf
+  SRCS
+    vasprintf.cpp
+  HDRS
+    vasprintf.h
+  DEPENDS
+    libc.src.__support.arg_list
+)
+
+add_stdio_entrypoint_object(
+  fileno
+  SRCS
+    fileno.cpp
+  HDRS
+    fileno.h
+  DEPENDS
+    libc.src.stdio.fileno
+)
+
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
