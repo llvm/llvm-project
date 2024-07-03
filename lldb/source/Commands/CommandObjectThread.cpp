@@ -132,7 +132,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   std::optional<std::string> GetRepeatCommand(Args &current_args,
-                                              uint32_t idx) override {
+                                              uint32_t index) override {
     llvm::StringRef count_opt("--count");
     llvm::StringRef start_opt("--start");
 

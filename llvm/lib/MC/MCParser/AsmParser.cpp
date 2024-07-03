@@ -1082,7 +1082,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 }
 
 bool AsmParser::checkForValidSection() {
-  if (!ParsingMSInlineAsm && !getStreamer().getCurrentSectionOnly()) {
+  if (!ParsingMSInlineAsm && !getStreamer().getCurrentFragment()) {
     Out.initSections(false, getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
@@ -6238,7 +6238,7 @@ bool AsmParser::parseMSInlineAsm(
   if (AsmStart != AsmEnd)
     OS << StringRef(AsmStart, AsmEnd - AsmStart);
 
-  AsmString = OS.str();
+  AsmString = AsmStringIR;
   return false;
 }
 

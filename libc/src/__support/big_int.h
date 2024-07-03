@@ -387,7 +387,8 @@ public:
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                                    !cpp::is_same_v<T, bool>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
     const bool is_neg = Signed && (v < 0);
@@ -440,7 +441,7 @@ public:
     constexpr size_t MAX_COUNT =
         T_SIZE > Bits ? WORD_COUNT : T_SIZE / WORD_SIZE;
     for (size_t i = 1; i < MAX_COUNT; ++i)
-      lo += static_cast<T>(val[i]) << (WORD_SIZE * i);
+      lo += static_cast<T>(static_cast<T>(val[i]) << (WORD_SIZE * i));
     if constexpr (Signed && (T_SIZE > Bits)) {
       // Extend sign for negative numbers.
       constexpr T MASK = (~T(0) << Bits);

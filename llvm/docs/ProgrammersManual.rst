@@ -2066,8 +2066,10 @@ insertion/deleting/queries with low constant factors) and is very stingy with
 malloc traffic.
 
 Note that, unlike :ref:`std::set <dss_set>`, the iterators of ``SmallPtrSet``
-are invalidated whenever an insertion occurs.  Also, the values visited by the
-iterators are not visited in sorted order.
+are invalidated whenever an insertion or erasure occurs. The ``remove_if``
+method can be used to remove elements while iterating over the set.
+
+Also, the values visited by the iterators are not visited in sorted order.
 
 .. _dss_stringset:
 

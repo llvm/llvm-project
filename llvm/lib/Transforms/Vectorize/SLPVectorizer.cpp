@@ -835,11 +835,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         auto *CallBase = cast<CallInst>(IBase);
         if (Call->getCalledFunction() != CallBase->getCalledFunction())
           return InstructionsState(VL[BaseIndex], nullptr, nullptr);
-        if (Call->hasOperandBundles() &&
+        if (Call->hasOperandBundles() && (!CallBase->hasOperandBundles() ||
             !std::equal(Call->op_begin() + Call->getBundleOperandsStartIndex(),
                         Call->op_begin() + Call->getBundleOperandsEndIndex(),
                         CallBase->op_begin() +
-                            CallBase->getBundleOperandsStartIndex()))
+                            CallBase->getBundleOperandsStartIndex())))
           return InstructionsState(VL[BaseIndex], nullptr, nullptr);
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
         if (ID != BaseID)
@@ -8304,20 +8304,31 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         });
     // FIXME: this must be moved to TTI for better estimation.
     unsigned EltsPerVector = getPartNumElems(VL.size(), NumParts);
-    auto CheckPerRegistersShuffle =
-        [&](MutableArrayRef<int> Mask,
-            SmallVector<int> Indices) -> std::optional<TTI::ShuffleKind> {
+    auto CheckPerRegistersShuffle = [&](MutableArrayRef<int> Mask,
+                                        SmallVectorImpl<unsigned> &Indices)
+        -> std::optional<TTI::ShuffleKind> {
       if (NumElts <= EltsPerVector)
         return std::nullopt;
+      int OffsetReg0 =
+          alignDown(std::accumulate(Mask.begin(), Mask.end(), INT_MAX,
+                                    [](int S, int I) {
+                                      if (I == PoisonMaskElem)
+                                        return S;
+                                      return std::min(S, I);
+                                    }),
+                    EltsPerVector);
+      int OffsetReg1 = OffsetReg0;
       DenseSet<int> RegIndices;
       // Check that if trying to permute same single/2 input vectors.
       TTI::ShuffleKind ShuffleKind = TTI::SK_PermuteSingleSrc;
       int FirstRegId = -1;
-      Indices.assign(1, -1);
-      for (int &I : Mask) {
+      Indices.assign(1, OffsetReg0);
+      for (auto [Pos, I] : enumerate(Mask)) {
         if (I == PoisonMaskElem)
           continue;
-        int RegId = (I / NumElts) * NumParts + (I % NumElts) / EltsPerVector;
+        int Idx = I - OffsetReg0;
+        int RegId =
+            (Idx / NumElts) * NumParts + (Idx % NumElts) / EltsPerVector;
         if (FirstRegId < 0)
           FirstRegId = RegId;
         RegIndices.insert(RegId);
@@ -8325,14 +8336,25 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           return std::nullopt;
         if (RegIndices.size() == 2) {
           ShuffleKind = TTI::SK_PermuteTwoSrc;
-          if (Indices.size() == 1)
-            Indices.push_back(-1);
+          if (Indices.size() == 1) {
+            OffsetReg1 = alignDown(
+                std::accumulate(
+                    std::next(Mask.begin(), Pos), Mask.end(), INT_MAX,
+                    [&](int S, int I) {
+                      if (I == PoisonMaskElem)
+                        return S;
+                      int RegId = ((I - OffsetReg0) / NumElts) * NumParts +
+                                  ((I - OffsetReg0) % NumElts) / EltsPerVector;
+                      if (RegId == FirstRegId)
+                        return S;
+                      return std::min(S, I);
+                    }),
+                EltsPerVector);
+            Indices.push_back(OffsetReg1 % NumElts);
+          }
+          Idx = I - OffsetReg1;
         }
-        if (RegId == FirstRegId)
-          Indices.front() = I % NumElts;
-        else
-          Indices.back() = I % NumElts;
-        I = (I % NumElts) % EltsPerVector +
+        I = (Idx % NumElts) % EltsPerVector +
             (RegId == FirstRegId ? 0 : EltsPerVector);
       }
       return ShuffleKind;
@@ -8349,7 +8371,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           Part * EltsPerVector, getNumElems(Mask.size(), EltsPerVector, Part));
       SmallVector<int> SubMask(EltsPerVector, PoisonMaskElem);
       copy(MaskSlice, SubMask.begin());
-      SmallVector<int> Indices;
+      SmallVector<unsigned, 2> Indices;
       std::optional<TTI::ShuffleKind> RegShuffleKind =
           CheckPerRegistersShuffle(SubMask, Indices);
       if (!RegShuffleKind) {
@@ -8367,12 +8389,24 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                  FixedVectorType::get(ScalarTy, EltsPerVector),
                                  SubMask);
       }
-      for (int Idx : Indices) {
-        Cost += ::getShuffleCost(TTI, TTI::SK_ExtractSubvector,
-                                 FixedVectorType::get(ScalarTy, NumElts),
-                                 std::nullopt, CostKind, Idx,
-                                 FixedVectorType::get(ScalarTy, EltsPerVector));
+      for (unsigned Idx : Indices) {
+        assert((Idx + EltsPerVector) <= alignTo(NumElts, EltsPerVector) &&
+               "SK_ExtractSubvector index out of range");
+        Cost += ::getShuffleCost(
+            TTI, TTI::SK_ExtractSubvector,
+            FixedVectorType::get(ScalarTy, alignTo(NumElts, EltsPerVector)),
+            std::nullopt, CostKind, Idx,
+            FixedVectorType::get(ScalarTy, EltsPerVector));
       }
+      // Second attempt to check, if just a permute is better estimated than
+      // subvector extract.
+      SubMask.assign(NumElts, PoisonMaskElem);
+      copy(MaskSlice, SubMask.begin());
+      InstructionCost OriginalCost =
+          ::getShuffleCost(TTI, *ShuffleKinds[Part],
+                           FixedVectorType::get(ScalarTy, NumElts), SubMask);
+      if (OriginalCost < Cost)
+        Cost = OriginalCost;
     }
     return Cost;
   }
@@ -10269,7 +10303,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
-    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User)) {
+    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User);
+        VU && VU->getOperand(1) == EU.Scalar) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
         if (!UsedInserts.insert(VU).second)
           continue;
@@ -13768,7 +13803,8 @@ Value *BoUpSLP::vectorizeTree(
       continue;
     }
 
-    if (auto *VU = dyn_cast<InsertElementInst>(User)) {
+    if (auto *VU = dyn_cast<InsertElementInst>(User);
+        VU && VU->getOperand(1) == Scalar) {
       // Skip if the scalar is another vector op or Vec is not an instruction.
       if (!Scalar->getType()->isVectorTy() && isa<Instruction>(Vec)) {
         if (auto *FTy = dyn_cast<FixedVectorType>(User->getType())) {
@@ -15549,7 +15585,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   DT = DT_;
   AC = AC_;
   DB = DB_;
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   Stores.clear();
   GEPs.clear();
@@ -16175,7 +16211,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Ty->print(rso);
         return OptimizationRemarkMissed(SV_NAME, "UnsupportedType", I0)
                << "Cannot SLP vectorize list: type "
-               << rso.str() + " is unsupported by vectorizer";
+               << TypeStr + " is unsupported by vectorizer";
       });
       return false;
     }
@@ -18072,7 +18108,8 @@ bool SLPVectorizerPass::tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
 }
 
 bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
-                                                 BasicBlock *BB, BoUpSLP &R) {
+                                                 BasicBlock *BB, BoUpSLP &R,
+                                                 bool MaxVFOnly) {
   if (!R.canMapToVector(IVI->getType()))
     return false;
 
@@ -18083,11 +18120,12 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
-  return tryToVectorizeList(BuildVectorOpds, R);
+  return tryToVectorizeList(BuildVectorOpds, R, MaxVFOnly);
 }
 
 bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
-                                                   BasicBlock *BB, BoUpSLP &R) {
+                                                   BasicBlock *BB, BoUpSLP &R,
+                                                   bool MaxVFOnly) {
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
@@ -18097,7 +18135,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
-  return tryToVectorizeList(BuildVectorInsts, R);
+  return tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly);
 }
 
 template <typename T>
@@ -18317,20 +18355,30 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
          "This function only accepts Insert instructions");
   bool OpsChanged = false;
   SmallVector<WeakTrackingVH> PostponedInsts;
-  // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
-    if (R.isDeleted(I))
-      continue;
-    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
-  }
-  // pass2 - try to match and vectorize a buildvector sequence.
-  for (auto *I : reverse(Instructions)) {
+    // pass1 - try to match and vectorize a buildvector sequence for MaxVF only.
     if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
-      OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/true);
     } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
-      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
+      OpsChanged |=
+          vectorizeInsertElementInst(LastInsertElem, BB, R, /*MaxVFOnly=*/true);
+    }
+    // pass2 - try to vectorize reductions only
+    if (R.isDeleted(I))
+      continue;
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+    if (R.isDeleted(I) || isa<CmpInst>(I))
+      continue;
+    // pass3 - try to match and vectorize a buildvector sequence.
+    if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/false);
+    } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
+      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R,
+                                               /*MaxVFOnly=*/false);
     }
   }
   // Now try to vectorize postponed instructions.

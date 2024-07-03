@@ -239,7 +239,7 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
   assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
 
   // Add the size of the pointed element to ScEnd.
-  auto &DL = Lp->getHeader()->getModule()->getDataLayout();
+  auto &DL = Lp->getHeader()->getDataLayout();
   Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
@@ -309,7 +309,7 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
     return false;
 
   const DataLayout &DL =
-      SinkAR->getLoop()->getHeader()->getModule()->getDataLayout();
+      SinkAR->getLoop()->getHeader()->getDataLayout();
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
 
@@ -1494,7 +1494,7 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
     return std::nullopt;
   }
 
-  auto &DL = Lp->getHeader()->getModule()->getDataLayout();
+  auto &DL = Lp->getHeader()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
   const APInt &APStepVal = C->getAPInt();
@@ -1907,7 +1907,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
     const DenseMap<Value *, SmallVector<const Value *, 16>>
         &UnderlyingObjects) {
-  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  auto &DL = InnermostLoop->getHeader()->getDataLayout();
   auto &SE = *PSE.getSE();
   auto [APtr, AIsWrite] = A;
   auto [BPtr, BIsWrite] = B;
@@ -2027,7 +2027,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   }
 
   ScalarEvolution &SE = *PSE.getSE();
-  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  auto &DL = InnermostLoop->getHeader()->getDataLayout();
   uint64_t MaxStride = std::max(StrideA, StrideB);
 
   // If the distance between the acecsses is larger than their maximum absolute
@@ -2805,7 +2805,7 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
 /// stores. This ignores trailing indices that have no effect on the final
 /// pointer.
 static unsigned getGEPInductionOperand(const GetElementPtrInst *Gep) {
-  const DataLayout &DL = Gep->getModule()->getDataLayout();
+  const DataLayout &DL = Gep->getDataLayout();
   unsigned LastOperand = Gep->getNumOperands() - 1;
   TypeSize GEPAllocSize = DL.getTypeAllocSize(Gep->getResultElementType());
 
@@ -2961,7 +2961,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // Match the types so we can compare the stride and the MaxBTC.
   // The Stride can be positive/negative, so we sign extend Stride;
   // The backedgeTakenCount is non-negative, so we zero extend MaxBTC.
-  const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   uint64_t StrideTypeSizeBits = DL.getTypeSizeInBits(StrideExpr->getType());
   uint64_t BETypeSizeBits = DL.getTypeSizeInBits(MaxBTC->getType());
   const SCEV *CastedStride = StrideExpr;

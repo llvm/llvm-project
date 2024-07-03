@@ -156,14 +156,17 @@ public:
     StringRef Name = F->getName();
 
     // These will all likely lower to a single selection DAG node.
+    // clang-format off
     if (Name == "copysign" || Name == "copysignf" || Name == "copysignl" ||
-        Name == "fabs" || Name == "fabsf" || Name == "fabsl" || Name == "sin" ||
+        Name == "fabs" || Name == "fabsf" || Name == "fabsl" ||
         Name == "fmin" || Name == "fminf" || Name == "fminl" ||
         Name == "fmax" || Name == "fmaxf" || Name == "fmaxl" ||
-        Name == "sinf" || Name == "sinl" || Name == "cos" || Name == "cosf" ||
-        Name == "cosl" || Name == "sqrt" || Name == "sqrtf" || Name == "sqrtl")
+        Name == "sin"  || Name == "sinf"  || Name == "sinl"  || 
+        Name == "cos"  || Name == "cosf"  || Name == "cosl"  || 
+        Name == "tan"  || Name == "tanf"  || Name == "tanl"  || 
+        Name == "sqrt" || Name == "sqrtf" || Name == "sqrtl")
       return false;
-
+    // clang-format on
     // These are all likely to be optimized into something smaller.
     if (Name == "pow" || Name == "powf" || Name == "powl" || Name == "exp2" ||
         Name == "exp2l" || Name == "exp2f" || Name == "floor" ||
@@ -457,6 +460,7 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
+  bool hasConditionalLoadStoreForType(Type *Ty) const { return false; }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     return Vector ? 1 : 0;
