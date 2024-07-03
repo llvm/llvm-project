@@ -87,8 +87,8 @@ docker run -t \
         logging.error(f"  Output mismatch: {dir}")
 
         diff = difflib.unified_diff(
-            original_output.splitlines(),
-            new_output.splitlines(),
+            original_output.splitlines(keepends=True),
+            new_output.splitlines(keepends=True),
             fromfile='intented output',
             tofile='actual output'
         )
