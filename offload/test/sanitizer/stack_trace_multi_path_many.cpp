@@ -4,9 +4,12 @@
 // : %fcheck-generic --check-prefixes=CHECK < %t.out
 // : %libomptarget-compileoptxx-generic -fsanitize=offload -O3
 // : not %libomptarget-run-generic 2> %t.out
-// RUN: %libomptarget-compileoptxx-generic -fsanitize=offload -O3 -g
+// RUN: %libomptarget-compileoptxx-generic -fsanitize=offload -O3 -g -DLEVELS=11
 // RUN: not %libomptarget-run-generic 2> %t.out
-// RUN: %fcheck-generic --check-prefixes=DEBUG < %t.out
+// RUN: %fcheck-generic --check-prefixes=DBG11 < %t.out
+//  %libomptarget-compileoptxx-generic -fsanitize=offload -O3 -g -DLEVELS=12
+//  not %libomptarget-run-generic 2> %t.out
+//  %fcheck-generic --check-prefixes=DBG12 < %t.out
 // clang-format on
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
@@ -33,10 +36,10 @@ int main(void) {
   int *ValidInt = (int *)omp_target_alloc(4, omp_get_default_device());
 #pragma omp target is_device_ptr(ValidInt)
   {
-    level<12>(ValidInt);
+    level<LEVELS>(ValidInt);
     short *ValidShort = ((short *)ValidInt) + 2;
-    level<12>(ValidShort);
+    level<LEVELS>(ValidShort);
     char *Invalid = ((char *)ValidInt) + 4;
-    level<12>(Invalid);
+    level<LEVELS>(Invalid);
   }
 }
