@@ -333,6 +333,7 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 
   return Error::success();
 }
+
 bool YAMLProfileReader::profileMatches(
     const yaml::bolt::BinaryFunctionProfile &Profile, BinaryFunction &BF) {
   if (opts::IgnoreHash)

@@ -73,7 +73,7 @@ private:
   bool parseFunctionProfile(BinaryFunction &Function,
                             const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
-  /// Returns block cnt equality if IgnoreHash is true, otherwise, hash equality
+  /// Checks if a function profile matches a binary function.
   bool profileMatches(const yaml::bolt::BinaryFunctionProfile &Profile,
                       BinaryFunction &BF);
 
