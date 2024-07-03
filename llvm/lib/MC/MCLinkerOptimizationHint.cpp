@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLinkerOptimizationHint.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
