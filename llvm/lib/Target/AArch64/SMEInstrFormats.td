@@ -3283,10 +3283,50 @@ class sme2_movt_zt_to_zt<string mnemonic, bits<7> opc>
   let Inst{4-0}   = Zt;
 }
 
-multiclass sme2_movt_zt_to_zt<string mnemonic, bits<7> opc> {
+multiclass sme2_movt_zt_to_zt<string mnemonic, bits<7> opc, SDPatternOperator intrinsic_lane, SDPatternOperator intrinsic> {
   def NAME : sme2_movt_zt_to_zt<mnemonic, opc>;
+  def NAME # _PSEUDO
+      : Pseudo<(outs), (ins ZTR:$ZT, sme_elm_idx0_3:$off2, ZPRAny:$Zt), []>, Sched<[]> {
+    let usesCustomInserter = 1;
+  }
   def : InstAlias<mnemonic # "\t$ZTt, $Zt",
                  (!cast<Instruction>(NAME) ZTR:$ZTt, 0, ZPRAny:$Zt), 1>;
+
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv16i8:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv8i16:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv4i32:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv2i64:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv8f16:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv4f32:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv2f64:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+  def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), nxv8bf16:$zn, sme_elm_idx0_3:$imm),
+             (!cast<Instruction>(NAME # _PSEUDO) $zt, sme_elm_idx0_3:$imm, $zn)>;
+
+ //Alias intrinsic
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv8i16:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv4i32:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv2i64:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv8f16:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv4f32:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv2f64:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  def : Pat<(intrinsic (imm_to_zt untyped:$zt), nxv8bf16:$zn),
+            (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+
 }
 
 //===----------------------------------------------------------------------===//
