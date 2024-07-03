@@ -69,6 +69,30 @@ TEST(MatmulTranspose, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
   result.Destroy();
 
+  RTNAME(MatmulTransposeInteger4Integer2)(result, *x, *y, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 2);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(1).Extent(), 2);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Integer, 4}));
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(0), 46);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(1), 67);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(2), 64);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
+
+  std::memset(
+      result.raw().base_addr, 0, result.Elements() * result.ElementBytes());
+  result.GetDimension(0).SetLowerBound(0);
+  result.GetDimension(1).SetLowerBound(2);
+  RTNAME(MatmulTransposeDirectInteger4Integer2)
+  (result, *x, *y, __FILE__, __LINE__);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(0), 46);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(1), 67);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(2), 64);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
+  result.Destroy();
+
   RTNAME(MatmulTranspose)(result, *z, *v, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 1);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
@@ -79,7 +103,38 @@ TEST(MatmulTranspose, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(2), -30);
   result.Destroy();
 
+  RTNAME(MatmulTransposeInteger2Integer8)(result, *z, *v, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 1);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 3);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Integer, 8}));
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(0), -24);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(1), -27);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(2), -30);
+  result.Destroy();
+
   RTNAME(MatmulTranspose)(result, *m, *z, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 2);
+  ASSERT_EQ(result.GetDimension(0).LowerBound(), 1);
+  ASSERT_EQ(result.GetDimension(0).UpperBound(), 4);
+  ASSERT_EQ(result.GetDimension(1).LowerBound(), 1);
+  ASSERT_EQ(result.GetDimension(1).UpperBound(), 3);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Integer, 2}));
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(0), 0);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(1), 9);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(2), 6);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(3), 15);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(4), 0);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(5), 10);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(6), 7);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(7), 17);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(8), 0);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(9), 11);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(10), 8);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int16_t>(11), 19);
+  result.Destroy();
+
+  RTNAME(MatmulTransposeInteger2Integer2)(result, *m, *z, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   ASSERT_EQ(result.GetDimension(0).LowerBound(), 1);
   ASSERT_EQ(result.GetDimension(0).UpperBound(), 4);
@@ -162,7 +217,35 @@ TEST(MatmulTranspose, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
   result.Destroy();
 
+  RTNAME(MatmulTransposeInteger4Integer2)
+  (result, sectionX2, *y, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 2);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(1).Extent(), 2);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Integer, 4}));
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(0), 46);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(1), 67);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(2), 64);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
+  result.Destroy();
+
   RTNAME(MatmulTranspose)(result, *x, sectionY2, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 2);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(1).Extent(), 2);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Integer, 4}));
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(0), 46);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(1), 67);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(2), 64);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
+  result.Destroy();
+
+  RTNAME(MatmulTransposeInteger4Integer2)
+  (result, *x, sectionY2, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 2);
@@ -188,7 +271,32 @@ TEST(MatmulTranspose, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
   result.Destroy();
 
+  RTNAME(MatmulTransposeInteger4Integer2)
+  (result, sectionX2, sectionY2, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 2);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(1).Extent(), 2);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Integer, 4}));
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(0), 46);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(1), 67);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(2), 64);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
+  result.Destroy();
+
   RTNAME(MatmulTranspose)(result, sectionZ2, *v, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 1);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 3);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Integer, 8}));
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(0), -24);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(1), -27);
+  EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(2), -30);
+  result.Destroy();
+
+  RTNAME(MatmulTransposeInteger2Integer8)
+  (result, sectionZ2, *v, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 1);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 3);
@@ -222,6 +330,25 @@ TEST(MatmulTranspose, Basic) {
       static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(2)));
   EXPECT_FALSE(
       static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(3)));
+  result.Destroy();
+
+  RTNAME(MatmulTransposeLogical1Logical2)
+  (result, *xLog, *yLog, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 2);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(1).Extent(), 2);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Logical, 2}));
+  EXPECT_FALSE(
+      static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(0)));
+  EXPECT_FALSE(
+      static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(1)));
+  EXPECT_TRUE(
+      static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(2)));
+  EXPECT_FALSE(
+      static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(3)));
+  result.Destroy();
 
   RTNAME(MatmulTranspose)(result, *yLog, *vLog, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 1);
@@ -232,4 +359,17 @@ TEST(MatmulTranspose, Basic) {
       static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(0)));
   EXPECT_TRUE(
       static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(1)));
+  result.Destroy();
+
+  RTNAME(MatmulTransposeLogical2Logical1)
+  (result, *yLog, *vLog, __FILE__, __LINE__);
+  ASSERT_EQ(result.rank(), 1);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  ASSERT_EQ(result.type(), (TypeCode{TypeCategory::Logical, 2}));
+  EXPECT_FALSE(
+      static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(0)));
+  EXPECT_TRUE(
+      static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(1)));
+  result.Destroy();
 }

@@ -15,7 +15,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -381,8 +380,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   llvm_unreachable("invalid fragment kind");
 }
 
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {}
-
 // Compute the amount of padding required before the fragment \p F to
 // obey bundling restrictions, where \p FOffset is the fragment's offset in
 // its section and \p FSize is the fragment's size.
@@ -547,7 +544,7 @@ uint64_t MCAssembler::getSymbolOffset(const MCSymbol &S) const {
 }
 
 const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
-  assert(Layout);
+  assert(HasLayout);
   if (!Symbol.isVariable())
     return &Symbol;
 
@@ -584,6 +581,7 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 }
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
+  assert(HasLayout);
   // The size is the last fragment's end offset.
   const MCFragment &F = *Sec.curFragList()->Tail;
   return getFragmentOffset(F) + computeFragmentSize(F);
@@ -937,7 +935,7 @@ MCAssembler::handleFixup(MCFragment &F, const MCFixup &Fixup,
   return std::make_tuple(Target, FixedValue, IsResolved);
 }
 
-void MCAssembler::layout(MCAsmLayout &Layout) {
+void MCAssembler::layout() {
   assert(getBackendPtr() && "Expected assembler backend");
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - pre-layout\n--\n";
@@ -968,7 +966,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   }
 
   // Layout until everything fits.
-  this->Layout = &Layout;
+  this->HasLayout = true;
   while (layoutOnce()) {
     if (getContext().hadError())
       return;
@@ -1074,14 +1072,12 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 }
 
 void MCAssembler::Finish() {
-  // Create the layout object.
-  MCAsmLayout Layout(*this);
-  layout(Layout);
+  layout();
 
   // Write the object file.
   stats::ObjectBytes += getWriter().writeObject(*this);
 
-  this->Layout = nullptr;
+  HasLayout = false;
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
