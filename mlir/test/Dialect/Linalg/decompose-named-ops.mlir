@@ -63,7 +63,7 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 // GENERALIZECHECK:         %[[SUB:.+]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP2]], #[[$MAP2]]]
 // GENERALIZECHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel"]}
 // GENERALIZECHECK-SAME:      ins(%[[ARG0]], %[[CST]] : tensor<2x16x32xf32>, tensor<2x16x32xf32>)
-// GENERALIZECHECK-SAME:      outs(%[[CST]] : tensor<2x16x32xf32>) {
+// GENERALIZECHECK-SAME:      outs(%[[DST]] : tensor<2x16x32xf32>) {
 // GENERALIZECHECK-NEXT:      ^bb0(%[[LHS:.+]]: f32, %[[RHS:.+]]: f32, %[[OUT:.+]]: f32):
 // GENERALIZECHECK-NEXT:      %[[SUBF:.+]] = arith.subf %[[LHS]], %[[RHS]] : f32
 // GENERALIZECHECK-NEXT:      linalg.yield %[[SUBF]] : f32
@@ -71,12 +71,11 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 // GENERALIZECHECK:         %[[EXP:.+]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP2]]]
 // GENERALIZECHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel"]}
 // GENERALIZECHECK-SAME:      ins(%[[SUB]] : tensor<2x16x32xf32>)
-// GENERALIZECHECK-SAME:      outs(%[[CST]] : tensor<2x16x32xf32>) {
+// GENERALIZECHECK-SAME:      outs(%[[DST]] : tensor<2x16x32xf32>) {
 // GENERALIZECHECK-NEXT:      ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
 // GENERALIZECHECK-NEXT:      %[[EXPF:.+]] = math.exp %[[IN]] : f32
 // GENERALIZECHECK-NEXT:      linalg.yield %[[EXPF]] : f32
 // GENERALIZECHECK-NEXT:    } -> tensor<2x16x32xf32>
-// GENERALIZECHECK-DAG:     %[[EMP:.+]] = tensor.empty() : tensor<2x16xf32>
 // GENERALIZECHECK:         %[[FIL:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]],
 // GENERALIZECHECK-SAME:      iterator_types = ["parallel", "parallel"]}
 // GENERALIZECHECK-SAME:      ins(%[[ZERO]] : f32) outs(%[[EMP]] : tensor<2x16xf32>) {
