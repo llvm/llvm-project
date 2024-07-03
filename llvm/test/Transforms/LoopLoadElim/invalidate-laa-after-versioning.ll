@@ -12,7 +12,7 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    br label [[INNER_1_LVER_CHECK:%.*]]
 ; CHECK:       inner.1.lver.check:
 ; CHECK-NEXT:    [[PTR_PHI:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ @glob.1, [[OUTER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr double, ptr [[PTR_PHI]], i64 3
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds double, ptr [[PTR_PHI]], i64 3
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[ARG1:%.*]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[INNER_1_PH_LVER_ORIG:%.*]], label [[INNER_1_PH:%.*]]
 ; CHECK:       inner.1.ph.lver.orig:
@@ -28,7 +28,7 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[TMP29_LVER_ORIG:%.*]] = load double, ptr [[GEP_4_LVER_ORIG]], align 8
 ; CHECK-NEXT:    [[PTR_IV_1_NEXT_LVER_ORIG]] = getelementptr inbounds double, ptr [[PTR_IV_1_LVER_ORIG]], i64 1
 ; CHECK-NEXT:    [[IV_NEXT_LVER_ORIG]] = add nuw nsw i64 [[IV_1_LVER_ORIG]], 1
-; CHECK-NEXT:    [[C_1_LVER_ORIG:%.*]] = icmp eq i64 [[IV_1_LVER_ORIG]], 1
+; CHECK-NEXT:    [[C_1_LVER_ORIG:%.*]] = icmp eq i64 [[IV_1_LVER_ORIG]], 2
 ; CHECK-NEXT:    br i1 [[C_1_LVER_ORIG]], label [[INNER_1_EXIT_LOOPEXIT:%.*]], label [[INNER_1_LVER_ORIG]]
 ; CHECK:       inner.1.ph:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PTR_PHI]], i64 16
@@ -46,7 +46,7 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = load double, ptr [[GEP_4]], align 8
 ; CHECK-NEXT:    [[PTR_IV_1_NEXT]] = getelementptr inbounds double, ptr [[PTR_IV_1]], i64 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV_1]], 1
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV_1]], 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV_1]], 2
 ; CHECK-NEXT:    br i1 [[C_1]], label [[INNER_1_EXIT_LOOPEXIT1:%.*]], label [[INNER_1]]
 ; CHECK:       inner.1.exit.loopexit:
 ; CHECK-NEXT:    [[LCSSA_PTR_IV_1_PH:%.*]] = phi ptr [ [[PTR_IV_1_LVER_ORIG]], [[INNER_1_LVER_ORIG]] ]
@@ -72,7 +72,8 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVAR_LCSSA]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 24
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_1]], i64 [[TMP1]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_7]], [[GEP_1]]
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[PTR_PHI]], i64 32
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_7]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_PHI]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[INNER_3_PH_LVER_ORIG:%.*]], label [[INNER_3_PH:%.*]]
@@ -86,13 +87,13 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[GEP_9_LVER_ORIG:%.*]] = getelementptr double, ptr [[PTR_PHI]], i64 [[IV_2_LVER_ORIG]]
 ; CHECK-NEXT:    [[TMP18_LVER_ORIG:%.*]] = load double, ptr [[GEP_9_LVER_ORIG]], align 8
 ; CHECK-NEXT:    [[IV_2_NEXT_LVER_ORIG]] = add nuw nsw i64 [[IV_2_LVER_ORIG]], 1
-; CHECK-NEXT:    [[C_2_LVER_ORIG:%.*]] = icmp eq i64 [[IV_2_LVER_ORIG]], 1
+; CHECK-NEXT:    [[C_2_LVER_ORIG:%.*]] = icmp eq i64 [[IV_2_LVER_ORIG]], 2
 ; CHECK-NEXT:    br i1 [[C_2_LVER_ORIG]], label [[OUTER_LATCH_LOOPEXIT:%.*]], label [[INNER_3_LVER_ORIG]]
 ; CHECK:       inner.3.ph:
-; CHECK-NEXT:    [[LOAD_INITIAL5:%.*]] = load double, ptr [[PTR_PHI]], align 8
+; CHECK-NEXT:    [[LOAD_INITIAL6:%.*]] = load double, ptr [[PTR_PHI]], align 8
 ; CHECK-NEXT:    br label [[INNER_3:%.*]]
 ; CHECK:       inner.3:
-; CHECK-NEXT:    [[STORE_FORWARDED6:%.*]] = phi double [ [[LOAD_INITIAL5]], [[INNER_3_PH]] ], [ 0.000000e+00, [[INNER_3]] ]
+; CHECK-NEXT:    [[STORE_FORWARDED7:%.*]] = phi double [ [[LOAD_INITIAL6]], [[INNER_3_PH]] ], [ 0.000000e+00, [[INNER_3]] ]
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ 0, [[INNER_3_PH]] ], [ [[IV_2_NEXT:%.*]], [[INNER_3]] ]
 ; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds double, ptr [[GEP_6]], i64 [[IV_2]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_7]], align 8
@@ -100,11 +101,11 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr double, ptr [[PTR_PHI]], i64 [[IV_2]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr [[GEP_9]], align 8
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add nuw nsw i64 [[IV_2]], 1
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i64 [[IV_2]], 1
-; CHECK-NEXT:    br i1 [[C_2]], label [[OUTER_LATCH_LOOPEXIT4:%.*]], label [[INNER_3]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i64 [[IV_2]], 2
+; CHECK-NEXT:    br i1 [[C_2]], label [[OUTER_LATCH_LOOPEXIT5:%.*]], label [[INNER_3]]
 ; CHECK:       outer.latch.loopexit:
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
-; CHECK:       outer.latch.loopexit4:
+; CHECK:       outer.latch.loopexit5:
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    br label [[INNER_1_LVER_CHECK]]
@@ -128,7 +129,7 @@ inner.1:
   %tmp29 = load double, ptr %gep.4, align 8
   %ptr.iv.1.next = getelementptr inbounds double, ptr %ptr.iv.1, i64 1
   %iv.next = add nuw nsw i64 %iv.1, 1
-  %c.1 = icmp eq i64 %iv.1, 1
+  %c.1 = icmp eq i64 %iv.1, 2
   br i1 %c.1, label %inner.1.exit, label %inner.1
 
 inner.1.exit:                                              ; preds = %bb22
@@ -155,7 +156,7 @@ inner.3:                                             ; preds = %bb14, %bb10
   %gep.9 = getelementptr double, ptr %ptr.phi, i64 %iv.2
   %tmp18 = load double, ptr %gep.9, align 8
   %iv.2.next = add nuw nsw i64 %iv.2, 1
-  %c.2 = icmp eq i64 %iv.2, 1
+  %c.2 = icmp eq i64 %iv.2, 2
   br i1 %c.2, label %outer.latch, label %inner.3
 
 outer.latch:

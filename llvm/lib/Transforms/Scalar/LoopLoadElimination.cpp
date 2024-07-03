@@ -598,10 +598,11 @@ public:
       }
 
       // Point of no-return, start the transformation.  First, version the loop
-      // if necessary.
-
-      LoopVersioning LV(LAI, Checks, L, LI, DT, PSE.getSE());
-      LV.versionLoop();
+      // if it's not a single-iteration loop.
+      if (!PSE.getBackedgeTakenCount()->isOne()) {
+        LoopVersioning LV(LAI, Checks, L, LI, DT, PSE.getSE());
+        LV.versionLoop();
+      }
 
       // After versioning, some of the candidates' pointers could stop being
       // SCEVAddRecs. We need to filter them out.

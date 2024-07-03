@@ -6,26 +6,11 @@ define void @single_iteration_versioning(ptr %arg, ptr %arg1, i1 %arg2) {
 ; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]], i1 [[ARG2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARG]], align 4
-; CHECK-NEXT:    br i1 [[ARG2]], label %[[NOLOOP_EXIT:.*]], label %[[LOOP_LVER_CHECK:.*]]
-; CHECK:       [[LOOP_LVER_CHECK]]:
+; CHECK-NEXT:    br i1 [[ARG2]], label %[[NOLOOP_EXIT:.*]], label %[[LOOP_PH:.*]]
+; CHECK:       [[LOOP_PH]]:
 ; CHECK-NEXT:    [[SEXT7:%.*]] = sext i32 [[LOAD]] to i64
 ; CHECK-NEXT:    [[GEP8:%.*]] = getelementptr i8, ptr [[ARG1]], i64 8
 ; CHECK-NEXT:    [[GEP9:%.*]] = getelementptr i8, ptr [[ARG1]], i64 16
-; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[LOAD]], 1
-; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
-; CHECK:       [[LOOP_PH_LVER_ORIG]]:
-; CHECK-NEXT:    br label %[[LOOP_LVER_ORIG:.*]]
-; CHECK:       [[LOOP_LVER_ORIG]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, %[[LOOP_PH_LVER_ORIG]] ], [ [[ADD:%.*]], %[[LOOP_LVER_ORIG]] ]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[PHI]], [[SEXT7]]
-; CHECK-NEXT:    [[GEP10:%.*]] = getelementptr double, ptr [[GEP8]], i64 [[MUL]]
-; CHECK-NEXT:    [[LOAD11:%.*]] = load double, ptr [[GEP10]], align 8
-; CHECK-NEXT:    [[GEP13_LVER_ORIG:%.*]] = getelementptr double, ptr [[GEP9]], i64 [[MUL]]
-; CHECK-NEXT:    store double [[LOAD11]], ptr [[GEP13_LVER_ORIG]], align 8
-; CHECK-NEXT:    [[ADD]] = add i64 [[PHI]], 1
-; CHECK-NEXT:    [[ICMP_LVER_ORIG:%.*]] = icmp eq i64 [[PHI]], 1
-; CHECK-NEXT:    br i1 [[ICMP_LVER_ORIG]], label %[[EXIT_LOOPEXIT_LOOPEXIT:.*]], label %[[LOOP_LVER_ORIG]]
-; CHECK:       [[LOOP_PH]]:
 ; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load double, ptr [[GEP8]], align 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -38,17 +23,13 @@ define void @single_iteration_versioning(ptr %arg, ptr %arg1, i1 %arg2) {
 ; CHECK-NEXT:    store double [[STORE_FORWARDED]], ptr [[GEP13]], align 8
 ; CHECK-NEXT:    [[ADD1]] = add i64 [[PHI1]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i64 [[PHI1]], 1
-; CHECK-NEXT:    br i1 [[ICMP]], label %[[EXIT_LOOPEXIT_LOOPEXIT1:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[NOLOOP_EXIT]]:
 ; CHECK-NEXT:    [[SEXT2:%.*]] = sext i32 [[LOAD]] to i64
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr double, ptr [[ARG1]], i64 [[SEXT2]]
 ; CHECK-NEXT:    [[LOAD6:%.*]] = load double, ptr [[GEP2]], align 8
 ; CHECK-NEXT:    store double [[LOAD6]], ptr [[ARG]], align 8
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[EXIT_LOOPEXIT_LOOPEXIT]]:
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
-; CHECK:       [[EXIT_LOOPEXIT_LOOPEXIT1]]:
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
