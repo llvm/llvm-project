@@ -1689,5 +1689,10 @@ def : InstRW<[WLat30, MCD], (instregex "STC(PS|RW)$")>;
 def : InstRW<[WLat30, MCD], (instregex "TPE?I$")>;
 def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 
+//===----------------------------------------------------------------------===//
+// NOPs
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "NOP(R)?$")>;
 }
 

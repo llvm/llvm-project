@@ -2349,6 +2349,12 @@ class AsmCondBranchRR<string mnemonic, bits<8> opcode>
   : InstRR<opcode, (outs), (ins imm32zx4:$R1, GR64:$R2),
            mnemonic#"\t$R1, $R2", []>;
 
+class NeverCondBranchRR<string mnemonic, bits<8> opcode>
+  : InstRR<opcode, (outs), (ins GR64:$R2),
+           mnemonic#"\t$R2", []> {
+  let R1 = 0;
+}
+
 class FixedCondBranchRR<CondVariant V, string mnemonic, bits<8> opcode,
                       SDPatternOperator operator = null_frag>
   : InstRR<opcode, (outs), (ins ADDR64:$R2),
@@ -2369,6 +2375,13 @@ class AsmCondBranchRX<string mnemonic, bits<8> opcode>
   : InstRXb<opcode, (outs),
             (ins imm32zx4:$M1, (bdxaddr12only $B2, $D2, $X2):$XBD2),
             mnemonic#"\t$M1, $XBD2", []>;
+
+class NeverCondBranchRX<string mnemonic, bits<8> opcode> 
+  : InstRXb<opcode, (outs),
+            (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
+            mnemonic#"\t$XBD2", []> {
+  let M1 = 0;
+}
 
 class FixedCondBranchRX<CondVariant V, string mnemonic, bits<8> opcode>
   : InstRXb<opcode, (outs), (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
