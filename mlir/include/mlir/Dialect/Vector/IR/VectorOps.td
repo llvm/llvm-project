@@ -3028,11 +3028,7 @@ def Vector_StepOp : Vector_Op<"step", [Pure]> {
     index type that represents a linear sequence from 0 to N-1, where N is the
     number of elements in the `result` vector.
 
-    Supports fixed-width and scalable vectors. For a fixed-width `step` vector,
-    the canonical representation is `arith.constant dense<[0, .., N-1]>`. A
-    scalable step cannot be represented as a constant and is lowered to the
-    [llvm.experimental.stepvector](https://llvm.org/docs/LangRef.html#llvm-experimental-stepvector-intrinsic)
-    intrinsic.
+    Supports fixed-width and scalable vectors.
 
     Examples:
 
