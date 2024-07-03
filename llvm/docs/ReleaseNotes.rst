@@ -354,24 +354,24 @@ Changes to the LLVM tools
   would continue. Additionally, it can now continue when it encounters
   instructions which lack scheduling information. The behaviour can be
   controlled by the newly introduced
-  `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
-  documented in `--help` output and the command guide. (`#90474
-  <https://github.com/llvm/llvm-project/pull/90474>`)
+  ``--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>``, as
+  documented in ``--help`` output and the command guide. (`#90474
+  <https://github.com/llvm/llvm-project/pull/90474>`_)
 
 * llvm-readobj's LLVM output format for ELF core files has been changed.
   Similarly, the JSON format has been fixed for this case. The NT_FILE note
   now has a map for the mapped files. (`#92835
-  <https://github.com/llvm/llvm-project/pull/92835>`).
+  <https://github.com/llvm/llvm-project/pull/92835>`_).
 
 * llvm-cov now generates HTML report with JavaScript code to allow simple
   jumping between uncovered parts (lines/regions/branches) of code 
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
-  <https://github.com/llvm/llvm-project/pull/95662>`).
+  <https://github.com/llvm/llvm-project/pull/95662>`_).
 
 * llvm-config now quotes and escapes paths emitted in stdout, to account for
   spaces or other special characters in path.
-  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`).
+  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
 
 Changes to LLDB
 ---------------------------------
