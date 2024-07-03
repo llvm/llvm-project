@@ -94,7 +94,7 @@ private:
   /// Contains a map of TU hashes to a Foreign TU indecies.
   /// This is used to reduce the size of Foreign TU list since there could be
   /// multiple TUs with the same hash.
-  std::unordered_map<uint64_t, uint32_t> TUHashToIndexMap;
+  DenseMap<uint64_t, uint32_t> TUHashToIndexMap;
 
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {
