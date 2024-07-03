@@ -18,13 +18,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Listener::Listener(const char *name)
-    : m_name(name), m_broadcasters(), m_broadcasters_mutex(), m_events(),
-      m_events_mutex(), m_is_shadow() {
+Listener::Listener(const char *name) : m_name(name) {
   Log *log = GetLog(LLDBLog::Object);
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Listener::Listener('%s')", static_cast<void *>(this),
-              m_name.c_str());
+  LLDB_LOGF(log, "%p Listener::Listener('%s')", static_cast<void *>(this),
+            m_name.c_str());
 }
 
 Listener::~Listener() {
