@@ -891,6 +891,9 @@ Bug Fixes in This Version
 - Fixed an assertion failure when a template non-type parameter contains
   an invalid expression.
 
+- Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
+  be used in C++.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
