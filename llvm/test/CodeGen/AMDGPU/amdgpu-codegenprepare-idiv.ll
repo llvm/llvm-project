@@ -72,31 +72,31 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ;
 ; GFX9-LABEL: udiv_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
-; GFX9-NEXT:    s_sub_i32 s4, 0, s3
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s7
+; GFX9-NEXT:    s_sub_i32 s0, 0, s7
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX9-NEXT:    s_mul_i32 s4, s4, s5
-; GFX9-NEXT:    s_mul_hi_u32 s4, s5, s4
-; GFX9-NEXT:    s_add_i32 s5, s5, s4
-; GFX9-NEXT:    s_mul_hi_u32 s4, s2, s5
-; GFX9-NEXT:    s_mul_i32 s5, s4, s3
-; GFX9-NEXT:    s_sub_i32 s2, s2, s5
-; GFX9-NEXT:    s_add_i32 s6, s4, 1
-; GFX9-NEXT:    s_sub_i32 s5, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s4, s6, s4
-; GFX9-NEXT:    s_cselect_b32 s2, s5, s2
-; GFX9-NEXT:    s_add_i32 s5, s4, 1
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s5, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    s_mul_i32 s0, s0, s1
+; GFX9-NEXT:    s_mul_hi_u32 s0, s1, s0
+; GFX9-NEXT:    s_add_i32 s1, s1, s0
+; GFX9-NEXT:    s_mul_hi_u32 s0, s6, s1
+; GFX9-NEXT:    s_mul_i32 s1, s0, s7
+; GFX9-NEXT:    s_sub_i32 s1, s6, s1
+; GFX9-NEXT:    s_add_i32 s2, s0, 1
+; GFX9-NEXT:    s_sub_i32 s3, s1, s7
+; GFX9-NEXT:    s_cmp_ge_u32 s1, s7
+; GFX9-NEXT:    s_cselect_b32 s0, s2, s0
+; GFX9-NEXT:    s_cselect_b32 s1, s3, s1
+; GFX9-NEXT:    s_add_i32 s2, s0, 1
+; GFX9-NEXT:    s_cmp_ge_u32 s1, s7
+; GFX9-NEXT:    s_cselect_b32 s0, s2, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = udiv i32 %x, %y
   store i32 %r, ptr addrspace(1) %out
@@ -167,29 +167,29 @@ define amdgpu_kernel void @urem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ;
 ; GFX9-LABEL: urem_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
-; GFX9-NEXT:    s_sub_i32 s4, 0, s3
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s7
+; GFX9-NEXT:    s_sub_i32 s0, 0, s7
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX9-NEXT:    s_mul_i32 s4, s4, s5
-; GFX9-NEXT:    s_mul_hi_u32 s4, s5, s4
-; GFX9-NEXT:    s_add_i32 s5, s5, s4
-; GFX9-NEXT:    s_mul_hi_u32 s4, s2, s5
-; GFX9-NEXT:    s_mul_i32 s4, s4, s3
-; GFX9-NEXT:    s_sub_i32 s2, s2, s4
-; GFX9-NEXT:    s_sub_i32 s4, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s4, s2
-; GFX9-NEXT:    s_sub_i32 s4, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s4, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    s_mul_i32 s0, s0, s1
+; GFX9-NEXT:    s_mul_hi_u32 s0, s1, s0
+; GFX9-NEXT:    s_add_i32 s1, s1, s0
+; GFX9-NEXT:    s_mul_hi_u32 s0, s6, s1
+; GFX9-NEXT:    s_mul_i32 s0, s0, s7
+; GFX9-NEXT:    s_sub_i32 s0, s6, s0
+; GFX9-NEXT:    s_sub_i32 s1, s0, s7
+; GFX9-NEXT:    s_cmp_ge_u32 s0, s7
+; GFX9-NEXT:    s_cselect_b32 s0, s1, s0
+; GFX9-NEXT:    s_sub_i32 s1, s0, s7
+; GFX9-NEXT:    s_cmp_ge_u32 s0, s7
+; GFX9-NEXT:    s_cselect_b32 s0, s1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = urem i32 %x, %y
   store i32 %r, ptr addrspace(1) %out
@@ -280,37 +280,37 @@ define amdgpu_kernel void @sdiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ;
 ; GFX9-LABEL: sdiv_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_abs_i32 s4, s3
-; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s4
-; GFX9-NEXT:    s_sub_i32 s5, 0, s4
-; GFX9-NEXT:    s_xor_b32 s3, s2, s3
-; GFX9-NEXT:    s_abs_i32 s2, s2
+; GFX9-NEXT:    s_abs_i32 s0, s7
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s0
+; GFX9-NEXT:    s_xor_b32 s1, s6, s7
+; GFX9-NEXT:    s_abs_i32 s2, s6
+; GFX9-NEXT:    s_sub_i32 s3, 0, s0
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX9-NEXT:    s_ashr_i32 s3, s3, 31
+; GFX9-NEXT:    s_ashr_i32 s1, s1, 31
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v0
-; GFX9-NEXT:    s_mul_i32 s5, s5, s6
-; GFX9-NEXT:    s_mul_hi_u32 s5, s6, s5
-; GFX9-NEXT:    s_add_i32 s6, s6, s5
-; GFX9-NEXT:    s_mul_hi_u32 s5, s2, s6
-; GFX9-NEXT:    s_mul_i32 s6, s5, s4
+; GFX9-NEXT:    s_mul_i32 s3, s3, s6
+; GFX9-NEXT:    s_mul_hi_u32 s3, s6, s3
+; GFX9-NEXT:    s_add_i32 s6, s6, s3
+; GFX9-NEXT:    s_mul_hi_u32 s3, s2, s6
+; GFX9-NEXT:    s_mul_i32 s6, s3, s0
 ; GFX9-NEXT:    s_sub_i32 s2, s2, s6
-; GFX9-NEXT:    s_add_i32 s7, s5, 1
-; GFX9-NEXT:    s_sub_i32 s6, s2, s4
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX9-NEXT:    s_cselect_b32 s5, s7, s5
+; GFX9-NEXT:    s_add_i32 s7, s3, 1
+; GFX9-NEXT:    s_sub_i32 s6, s2, s0
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
+; GFX9-NEXT:    s_cselect_b32 s3, s7, s3
 ; GFX9-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX9-NEXT:    s_add_i32 s6, s5, 1
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX9-NEXT:    s_cselect_b32 s2, s6, s5
-; GFX9-NEXT:    s_xor_b32 s2, s2, s3
-; GFX9-NEXT:    s_sub_i32 s2, s2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX9-NEXT:    s_add_i32 s6, s3, 1
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
+; GFX9-NEXT:    s_cselect_b32 s0, s6, s3
+; GFX9-NEXT:    s_xor_b32 s0, s0, s1
+; GFX9-NEXT:    s_sub_i32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = sdiv i32 %x, %y
   store i32 %r, ptr addrspace(1) %out
@@ -394,34 +394,34 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ;
 ; GFX9-LABEL: srem_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_abs_i32 s3, s3
-; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
-; GFX9-NEXT:    s_sub_i32 s5, 0, s3
-; GFX9-NEXT:    s_ashr_i32 s4, s2, 31
-; GFX9-NEXT:    s_abs_i32 s2, s2
+; GFX9-NEXT:    s_abs_i32 s0, s7
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s0
+; GFX9-NEXT:    s_ashr_i32 s1, s6, 31
+; GFX9-NEXT:    s_abs_i32 s2, s6
+; GFX9-NEXT:    s_sub_i32 s3, 0, s0
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v0
-; GFX9-NEXT:    s_mul_i32 s5, s5, s6
-; GFX9-NEXT:    s_mul_hi_u32 s5, s6, s5
-; GFX9-NEXT:    s_add_i32 s6, s6, s5
-; GFX9-NEXT:    s_mul_hi_u32 s5, s2, s6
-; GFX9-NEXT:    s_mul_i32 s5, s5, s3
-; GFX9-NEXT:    s_sub_i32 s2, s2, s5
-; GFX9-NEXT:    s_sub_i32 s5, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s5, s2
-; GFX9-NEXT:    s_sub_i32 s5, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s5, s2
-; GFX9-NEXT:    s_xor_b32 s2, s2, s4
-; GFX9-NEXT:    s_sub_i32 s2, s2, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX9-NEXT:    s_mul_i32 s3, s3, s6
+; GFX9-NEXT:    s_mul_hi_u32 s3, s6, s3
+; GFX9-NEXT:    s_add_i32 s6, s6, s3
+; GFX9-NEXT:    s_mul_hi_u32 s3, s2, s6
+; GFX9-NEXT:    s_mul_i32 s3, s3, s0
+; GFX9-NEXT:    s_sub_i32 s2, s2, s3
+; GFX9-NEXT:    s_sub_i32 s3, s2, s0
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
+; GFX9-NEXT:    s_cselect_b32 s2, s3, s2
+; GFX9-NEXT:    s_sub_i32 s3, s2, s0
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
+; GFX9-NEXT:    s_cselect_b32 s0, s3, s2
+; GFX9-NEXT:    s_xor_b32 s0, s0, s1
+; GFX9-NEXT:    s_sub_i32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = srem i32 %x, %y
   store i32 %r, ptr addrspace(1) %out
@@ -5482,13 +5482,13 @@ define amdgpu_kernel void @udiv_i32_pow2_shl_denom(ptr addrspace(1) %out, i32 %x
 ;
 ; GFX9-LABEL: udiv_i32_pow2_shl_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_add_i32 s3, s3, 12
-; GFX9-NEXT:    s_lshr_b32 s2, s2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_add_i32 s0, s7, 12
+; GFX9-NEXT:    s_lshr_b32 s0, s6, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %shl.y = shl i32 4096, %y
   %r = udiv i32 %x, %shl.y
@@ -5524,14 +5524,14 @@ define amdgpu_kernel void @udiv_v2i32_pow2k_denom(ptr addrspace(1) %out, <2 x i3
 ;
 ; GFX9-LABEL: udiv_v2i32_pow2k_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b32 s2, s2, 12
-; GFX9-NEXT:    s_lshr_b32 s3, s3, 12
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    s_lshr_b32 s0, s6, 12
+; GFX9-NEXT:    s_lshr_b32 s1, s7, 12
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = udiv <2 x i32> %x, <i32 4096, i32 4096>
   store <2 x i32> %r, ptr addrspace(1) %out
@@ -5570,18 +5570,18 @@ define amdgpu_kernel void @udiv_v2i32_mixed_pow2k_denom(ptr addrspace(1) %out, <
 ;
 ; GFX9-LABEL: udiv_v2i32_mixed_pow2k_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_mul_hi_u32 s4, s3, 0x100101
-; GFX9-NEXT:    s_sub_i32 s3, s3, s4
-; GFX9-NEXT:    s_lshr_b32 s3, s3, 1
-; GFX9-NEXT:    s_add_i32 s3, s3, s4
-; GFX9-NEXT:    s_lshr_b32 s2, s2, 12
-; GFX9-NEXT:    s_lshr_b32 s3, s3, 11
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    s_mul_hi_u32 s1, s7, 0x100101
+; GFX9-NEXT:    s_sub_i32 s2, s7, s1
+; GFX9-NEXT:    s_lshr_b32 s2, s2, 1
+; GFX9-NEXT:    s_add_i32 s2, s2, s1
+; GFX9-NEXT:    s_lshr_b32 s0, s6, 12
+; GFX9-NEXT:    s_lshr_b32 s1, s2, 11
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = udiv <2 x i32> %x, <i32 4096, i32 4095>
   store <2 x i32> %r, ptr addrspace(1) %out
@@ -5875,14 +5875,14 @@ define amdgpu_kernel void @urem_i32_pow2_shl_denom(ptr addrspace(1) %out, i32 %x
 ;
 ; GFX9-LABEL: urem_i32_pow2_shl_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshl_b32 s3, 0x1000, s3
-; GFX9-NEXT:    s_add_i32 s3, s3, -1
-; GFX9-NEXT:    s_and_b32 s2, s2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_lshl_b32 s0, 0x1000, s7
+; GFX9-NEXT:    s_add_i32 s0, s0, -1
+; GFX9-NEXT:    s_and_b32 s0, s6, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %shl.y = shl i32 4096, %y
   %r = urem i32 %x, %shl.y
@@ -5918,14 +5918,14 @@ define amdgpu_kernel void @urem_v2i32_pow2k_denom(ptr addrspace(1) %out, <2 x i3
 ;
 ; GFX9-LABEL: urem_v2i32_pow2k_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s2, s2, 0xfff
-; GFX9-NEXT:    s_and_b32 s3, s3, 0xfff
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    s_and_b32 s0, s6, 0xfff
+; GFX9-NEXT:    s_and_b32 s1, s7, 0xfff
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = urem <2 x i32> %x, <i32 4096, i32 4096>
   store <2 x i32> %r, ptr addrspace(1) %out
@@ -6234,41 +6234,41 @@ define amdgpu_kernel void @sdiv_i32_pow2_shl_denom(ptr addrspace(1) %out, i32 %x
 ;
 ; GFX9-LABEL: sdiv_i32_pow2_shl_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshl_b32 s3, 0x1000, s3
-; GFX9-NEXT:    s_ashr_i32 s4, s3, 31
-; GFX9-NEXT:    s_add_i32 s3, s3, s4
-; GFX9-NEXT:    s_xor_b32 s3, s3, s4
-; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
-; GFX9-NEXT:    s_sub_i32 s6, 0, s3
-; GFX9-NEXT:    s_ashr_i32 s5, s2, 31
-; GFX9-NEXT:    s_add_i32 s2, s2, s5
+; GFX9-NEXT:    s_lshl_b32 s0, 0x1000, s7
+; GFX9-NEXT:    s_ashr_i32 s1, s0, 31
+; GFX9-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-NEXT:    s_xor_b32 s0, s0, s1
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s0
+; GFX9-NEXT:    s_ashr_i32 s2, s6, 31
+; GFX9-NEXT:    s_add_i32 s3, s6, s2
+; GFX9-NEXT:    s_sub_i32 s6, 0, s0
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX9-NEXT:    s_xor_b32 s2, s2, s5
+; GFX9-NEXT:    s_xor_b32 s3, s3, s2
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX9-NEXT:    s_mul_i32 s6, s6, s7
 ; GFX9-NEXT:    s_mul_hi_u32 s6, s7, s6
 ; GFX9-NEXT:    s_add_i32 s7, s7, s6
-; GFX9-NEXT:    s_mul_hi_u32 s6, s2, s7
-; GFX9-NEXT:    s_mul_i32 s8, s6, s3
-; GFX9-NEXT:    s_sub_i32 s2, s2, s8
+; GFX9-NEXT:    s_mul_hi_u32 s6, s3, s7
+; GFX9-NEXT:    s_mul_i32 s8, s6, s0
+; GFX9-NEXT:    s_sub_i32 s3, s3, s8
 ; GFX9-NEXT:    s_add_i32 s7, s6, 1
-; GFX9-NEXT:    s_sub_i32 s8, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
+; GFX9-NEXT:    s_sub_i32 s8, s3, s0
+; GFX9-NEXT:    s_cmp_ge_u32 s3, s0
 ; GFX9-NEXT:    s_cselect_b32 s6, s7, s6
-; GFX9-NEXT:    s_cselect_b32 s2, s8, s2
+; GFX9-NEXT:    s_cselect_b32 s3, s8, s3
 ; GFX9-NEXT:    s_add_i32 s7, s6, 1
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s7, s6
-; GFX9-NEXT:    s_xor_b32 s3, s5, s4
-; GFX9-NEXT:    s_xor_b32 s2, s2, s3
-; GFX9-NEXT:    s_sub_i32 s2, s2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX9-NEXT:    s_cmp_ge_u32 s3, s0
+; GFX9-NEXT:    s_cselect_b32 s0, s7, s6
+; GFX9-NEXT:    s_xor_b32 s1, s2, s1
+; GFX9-NEXT:    s_xor_b32 s0, s0, s1
+; GFX9-NEXT:    s_sub_i32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %shl.y = shl i32 4096, %y
   %r = sdiv i32 %x, %shl.y
@@ -6310,20 +6310,20 @@ define amdgpu_kernel void @sdiv_v2i32_pow2k_denom(ptr addrspace(1) %out, <2 x i3
 ;
 ; GFX9-LABEL: sdiv_v2i32_pow2k_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_ashr_i32 s4, s2, 31
-; GFX9-NEXT:    s_ashr_i32 s5, s3, 31
-; GFX9-NEXT:    s_lshr_b32 s4, s4, 20
-; GFX9-NEXT:    s_lshr_b32 s5, s5, 20
-; GFX9-NEXT:    s_add_i32 s2, s2, s4
-; GFX9-NEXT:    s_add_i32 s3, s3, s5
-; GFX9-NEXT:    s_ashr_i32 s2, s2, 12
-; GFX9-NEXT:    s_ashr_i32 s3, s3, 12
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    s_ashr_i32 s0, s6, 31
+; GFX9-NEXT:    s_ashr_i32 s1, s7, 31
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 20
+; GFX9-NEXT:    s_lshr_b32 s1, s1, 20
+; GFX9-NEXT:    s_add_i32 s0, s6, s0
+; GFX9-NEXT:    s_add_i32 s1, s7, s1
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 12
+; GFX9-NEXT:    s_ashr_i32 s1, s1, 12
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = sdiv <2 x i32> %x, <i32 4096, i32 4096>
   store <2 x i32> %r, ptr addrspace(1) %out
@@ -6365,21 +6365,21 @@ define amdgpu_kernel void @ssdiv_v2i32_mixed_pow2k_denom(ptr addrspace(1) %out, 
 ;
 ; GFX9-LABEL: ssdiv_v2i32_mixed_pow2k_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_ashr_i32 s4, s2, 31
-; GFX9-NEXT:    s_mul_hi_i32 s5, s3, 0x80080081
-; GFX9-NEXT:    s_lshr_b32 s4, s4, 20
-; GFX9-NEXT:    s_add_i32 s5, s5, s3
-; GFX9-NEXT:    s_add_i32 s2, s2, s4
-; GFX9-NEXT:    s_lshr_b32 s3, s5, 31
-; GFX9-NEXT:    s_ashr_i32 s4, s5, 11
-; GFX9-NEXT:    s_ashr_i32 s2, s2, 12
-; GFX9-NEXT:    s_add_i32 s4, s4, s3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s4
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    s_ashr_i32 s0, s6, 31
+; GFX9-NEXT:    s_mul_hi_i32 s1, s7, 0x80080081
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 20
+; GFX9-NEXT:    s_add_i32 s1, s1, s7
+; GFX9-NEXT:    s_add_i32 s0, s6, s0
+; GFX9-NEXT:    s_lshr_b32 s2, s1, 31
+; GFX9-NEXT:    s_ashr_i32 s1, s1, 11
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 12
+; GFX9-NEXT:    s_add_i32 s1, s1, s2
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = sdiv <2 x i32> %x, <i32 4096, i32 4095>
   store <2 x i32> %r, ptr addrspace(1) %out
@@ -6746,38 +6746,38 @@ define amdgpu_kernel void @srem_i32_pow2_shl_denom(ptr addrspace(1) %out, i32 %x
 ;
 ; GFX9-LABEL: srem_i32_pow2_shl_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshl_b32 s3, 0x1000, s3
-; GFX9-NEXT:    s_ashr_i32 s4, s3, 31
-; GFX9-NEXT:    s_add_i32 s3, s3, s4
-; GFX9-NEXT:    s_xor_b32 s3, s3, s4
-; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
-; GFX9-NEXT:    s_sub_i32 s5, 0, s3
-; GFX9-NEXT:    s_ashr_i32 s4, s2, 31
-; GFX9-NEXT:    s_add_i32 s2, s2, s4
+; GFX9-NEXT:    s_lshl_b32 s0, 0x1000, s7
+; GFX9-NEXT:    s_ashr_i32 s1, s0, 31
+; GFX9-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-NEXT:    s_xor_b32 s0, s0, s1
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s0
+; GFX9-NEXT:    s_ashr_i32 s1, s6, 31
+; GFX9-NEXT:    s_add_i32 s2, s6, s1
+; GFX9-NEXT:    s_sub_i32 s3, 0, s0
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX9-NEXT:    s_xor_b32 s2, s2, s4
+; GFX9-NEXT:    s_xor_b32 s2, s2, s1
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v0
-; GFX9-NEXT:    s_mul_i32 s5, s5, s6
-; GFX9-NEXT:    s_mul_hi_u32 s5, s6, s5
-; GFX9-NEXT:    s_add_i32 s6, s6, s5
-; GFX9-NEXT:    s_mul_hi_u32 s5, s2, s6
-; GFX9-NEXT:    s_mul_i32 s5, s5, s3
-; GFX9-NEXT:    s_sub_i32 s2, s2, s5
-; GFX9-NEXT:    s_sub_i32 s5, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s5, s2
-; GFX9-NEXT:    s_sub_i32 s5, s2, s3
-; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s5, s2
-; GFX9-NEXT:    s_xor_b32 s2, s2, s4
-; GFX9-NEXT:    s_sub_i32 s2, s2, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX9-NEXT:    s_mul_i32 s3, s3, s6
+; GFX9-NEXT:    s_mul_hi_u32 s3, s6, s3
+; GFX9-NEXT:    s_add_i32 s6, s6, s3
+; GFX9-NEXT:    s_mul_hi_u32 s3, s2, s6
+; GFX9-NEXT:    s_mul_i32 s3, s3, s0
+; GFX9-NEXT:    s_sub_i32 s2, s2, s3
+; GFX9-NEXT:    s_sub_i32 s3, s2, s0
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
+; GFX9-NEXT:    s_cselect_b32 s2, s3, s2
+; GFX9-NEXT:    s_sub_i32 s3, s2, s0
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
+; GFX9-NEXT:    s_cselect_b32 s0, s3, s2
+; GFX9-NEXT:    s_xor_b32 s0, s0, s1
+; GFX9-NEXT:    s_sub_i32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %shl.y = shl i32 4096, %y
   %r = srem i32 %x, %shl.y
@@ -6821,22 +6821,22 @@ define amdgpu_kernel void @srem_v2i32_pow2k_denom(ptr addrspace(1) %out, <2 x i3
 ;
 ; GFX9-LABEL: srem_v2i32_pow2k_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_ashr_i32 s4, s2, 31
-; GFX9-NEXT:    s_ashr_i32 s5, s3, 31
-; GFX9-NEXT:    s_lshr_b32 s4, s4, 20
-; GFX9-NEXT:    s_lshr_b32 s5, s5, 20
-; GFX9-NEXT:    s_add_i32 s4, s2, s4
-; GFX9-NEXT:    s_add_i32 s5, s3, s5
-; GFX9-NEXT:    s_and_b32 s4, s4, 0xfffff000
-; GFX9-NEXT:    s_sub_i32 s2, s2, s4
-; GFX9-NEXT:    s_and_b32 s4, s5, 0xfffff000
-; GFX9-NEXT:    s_sub_i32 s3, s3, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    s_ashr_i32 s0, s6, 31
+; GFX9-NEXT:    s_ashr_i32 s1, s7, 31
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 20
+; GFX9-NEXT:    s_lshr_b32 s1, s1, 20
+; GFX9-NEXT:    s_add_i32 s0, s6, s0
+; GFX9-NEXT:    s_add_i32 s1, s7, s1
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xfffff000
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xfffff000
+; GFX9-NEXT:    s_sub_i32 s0, s6, s0
+; GFX9-NEXT:    s_sub_i32 s1, s7, s1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
   %r = srem <2 x i32> %x, <i32 4096, i32 4096>
   store <2 x i32> %r, ptr addrspace(1) %out

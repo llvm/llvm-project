@@ -1234,11 +1234,8 @@ void SILoadStoreOptimizer::copyToDestRegs(
   // The constrained sload instructions in S_LOAD_IMM class will have
   // `early-clobber` flag in the dst operand. Remove the flag before using the
   // MOs in copies.
-  if (Dest0->isEarlyClobber())
-    Dest0->setIsEarlyClobber(false);
-
-  if (Dest1->isEarlyClobber())
-    Dest1->setIsEarlyClobber(false);
+  Dest0->setIsEarlyClobber(false);
+  Dest1->setIsEarlyClobber(false);
 
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
@@ -1729,24 +1726,23 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     // If XNACK is enabled, use the constrained opcodes when the first load is
     // under-aligned.
     const MachineMemOperand *MMO = *CI.I->memoperands_begin();
-    auto NeedsConstrainedOpc = [&MMO, Width](const GCNSubtarget &ST) {
-      return ST.isXNACKEnabled() && MMO->getAlign().value() < Width;
-    };
+    bool NeedsConstrainedOpc =
+        STM->isXNACKEnabled() && MMO->getAlign().value() < (Width << 2);
     switch (Width) {
     default:
       return 0;
     case 2:
-      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX2_IMM_ec
-                                       : AMDGPU::S_LOAD_DWORDX2_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX2_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX2_IMM;
     case 3:
-      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX3_IMM_ec
-                                       : AMDGPU::S_LOAD_DWORDX3_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX3_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX3_IMM;
     case 4:
-      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX4_IMM_ec
-                                       : AMDGPU::S_LOAD_DWORDX4_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX4_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX4_IMM;
     case 8:
-      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX8_IMM_ec
-                                       : AMDGPU::S_LOAD_DWORDX8_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX8_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX8_IMM;
     }
   }
   case GLOBAL_LOAD:

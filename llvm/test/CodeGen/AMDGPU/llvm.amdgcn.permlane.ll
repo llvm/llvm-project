@@ -245,24 +245,26 @@ define amdgpu_kernel void @v_permlane16_b32_vvv(ptr addrspace(1) %out, i32 %src0
 define amdgpu_kernel void @v_permlane16_b32_vvs(ptr addrspace(1) %out, i32 %src0, i32 %src2) {
 ; GFX10-SDAG-LABEL: v_permlane16_b32_vvs:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX10-SDAG-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-SDAG-NEXT:    s_mov_b32 null, 0
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-SDAG-NEXT:    v_permlane16_b32 v1, v1, s2, s3
-; GFX10-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s6
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v1, v1, s0, s7
+; GFX10-SDAG-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-SDAG-NEXT:    s_endpgm
 ;
 ; GFX10-GISEL-LABEL: v_permlane16_b32_vvs:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-GISEL-NEXT:    s_mov_b32 null, 0
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-GISEL-NEXT:    v_permlane16_b32 v0, v0, s4, s3
-; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s6
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v0, v0, s0, s7
+; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: v_permlane16_b32_vvs:
@@ -325,27 +327,17 @@ define amdgpu_kernel void @v_permlane16_b32_vvs(ptr addrspace(1) %out, i32 %src0
 }
 
 define amdgpu_kernel void @v_permlane16_b32_vsv(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
-; GFX10-SDAG-LABEL: v_permlane16_b32_vsv:
-; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s2, v1
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-SDAG-NEXT:    v_permlane16_b32 v0, v0, s3, s2
-; GFX10-SDAG-NEXT:    global_store_dword v1, v0, s[0:1]
-; GFX10-SDAG-NEXT:    s_endpgm
-;
-; GFX10-GISEL-LABEL: v_permlane16_b32_vsv:
-; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-GISEL-NEXT:    v_permlane16_b32 v0, v0, s3, s4
-; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
-; GFX10-GISEL-NEXT:    s_endpgm
+; GFX10-LABEL: v_permlane16_b32_vsv:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    s_mov_b32 null, 0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, s6
+; GFX10-NEXT:    v_permlane16_b32 v0, v0, s7, s0
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
+; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: v_permlane16_b32_vsv:
 ; GFX11-SDAG:       ; %bb.0:
@@ -781,24 +773,26 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv(ptr addrspace(1) %out, i32 %src
 define amdgpu_kernel void @v_permlanex16_b32_vvs(ptr addrspace(1) %out, i32 %src0, i32 %src2) {
 ; GFX10-SDAG-LABEL: v_permlanex16_b32_vvs:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX10-SDAG-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-SDAG-NEXT:    s_mov_b32 null, 0
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-SDAG-NEXT:    v_permlanex16_b32 v1, v1, s2, s3
-; GFX10-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s6
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v1, v1, s0, s7
+; GFX10-SDAG-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-SDAG-NEXT:    s_endpgm
 ;
 ; GFX10-GISEL-LABEL: v_permlanex16_b32_vvs:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-GISEL-NEXT:    s_mov_b32 null, 0
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-GISEL-NEXT:    v_permlanex16_b32 v0, v0, s4, s3
-; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s6
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v0, v0, s0, s7
+; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: v_permlanex16_b32_vvs:
@@ -861,27 +855,17 @@ define amdgpu_kernel void @v_permlanex16_b32_vvs(ptr addrspace(1) %out, i32 %src
 }
 
 define amdgpu_kernel void @v_permlanex16_b32_vsv(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
-; GFX10-SDAG-LABEL: v_permlanex16_b32_vsv:
-; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s2, v1
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-SDAG-NEXT:    v_permlanex16_b32 v0, v0, s3, s2
-; GFX10-SDAG-NEXT:    global_store_dword v1, v0, s[0:1]
-; GFX10-SDAG-NEXT:    s_endpgm
-;
-; GFX10-GISEL-LABEL: v_permlanex16_b32_vsv:
-; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-GISEL-NEXT:    v_permlanex16_b32 v0, v0, s3, s4
-; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
-; GFX10-GISEL-NEXT:    s_endpgm
+; GFX10-LABEL: v_permlanex16_b32_vsv:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    s_mov_b32 null, 0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, s6
+; GFX10-NEXT:    v_permlanex16_b32 v0, v0, s7, s0
+; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
+; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: v_permlanex16_b32_vsv:
 ; GFX11-SDAG:       ; %bb.0:

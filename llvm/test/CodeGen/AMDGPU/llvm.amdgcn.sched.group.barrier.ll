@@ -29,18 +29,18 @@ entry:
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_READ_VALU_WRITE:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; GCN-NEXT:    ; kill: killed $sgpr0_sgpr1
+; GCN-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
-; GCN-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; GCN-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
-; GCN-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; GCN-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v32, s[4:5]
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v32, s[4:5] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[8:11], v32, s[4:5] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v32, s[4:5] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[16:19], v32, s[4:5] offset:64
+; GCN-NEXT:    global_load_dwordx4 v[20:23], v32, s[4:5] offset:80
+; GCN-NEXT:    global_load_dwordx4 v[24:27], v32, s[4:5] offset:96
+; GCN-NEXT:    global_load_dwordx4 v[28:31], v32, s[4:5] offset:112
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(8) SyncID(0)
 ; GCN-NEXT:    s_waitcnt vmcnt(7)
 ; GCN-NEXT:    v_mul_lo_u32 v3, v3, v3
@@ -82,32 +82,32 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; GCN-NEXT:    v_mul_lo_u32 v30, v30, v30
 ; GCN-NEXT:    v_mul_lo_u32 v29, v29, v29
 ; GCN-NEXT:    v_mul_lo_u32 v28, v28, v28
-; GCN-NEXT:    global_store_dwordx4 v32, v[28:31], s[2:3] offset:112
-; GCN-NEXT:    global_store_dwordx4 v32, v[24:27], s[2:3] offset:96
-; GCN-NEXT:    global_store_dwordx4 v32, v[20:23], s[2:3] offset:80
-; GCN-NEXT:    global_store_dwordx4 v32, v[16:19], s[2:3] offset:64
-; GCN-NEXT:    global_store_dwordx4 v32, v[12:15], s[2:3] offset:48
-; GCN-NEXT:    global_store_dwordx4 v32, v[8:11], s[2:3] offset:32
-; GCN-NEXT:    global_store_dwordx4 v32, v[4:7], s[2:3] offset:16
-; GCN-NEXT:    global_store_dwordx4 v32, v[0:3], s[2:3]
+; GCN-NEXT:    global_store_dwordx4 v32, v[28:31], s[6:7] offset:112
+; GCN-NEXT:    global_store_dwordx4 v32, v[24:27], s[6:7] offset:96
+; GCN-NEXT:    global_store_dwordx4 v32, v[20:23], s[6:7] offset:80
+; GCN-NEXT:    global_store_dwordx4 v32, v[16:19], s[6:7] offset:64
+; GCN-NEXT:    global_store_dwordx4 v32, v[12:15], s[6:7] offset:48
+; GCN-NEXT:    global_store_dwordx4 v32, v[8:11], s[6:7] offset:32
+; GCN-NEXT:    global_store_dwordx4 v32, v[4:7], s[6:7] offset:16
+; GCN-NEXT:    global_store_dwordx4 v32, v[0:3], s[6:7]
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(30) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000040) size(8) SyncID(0)
 ; GCN-NEXT:    s_endpgm
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_READ_VALU_WRITE:
 ; EXACTCUTOFF:       ; %bb.0:
-; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr0_sgpr1
+; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v32, s[4:5]
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v32, s[4:5] offset:16
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v32, s[4:5] offset:32
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[12:15], v32, s[4:5] offset:48
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[16:19], v32, s[4:5] offset:64
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[20:23], v32, s[4:5] offset:80
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[24:27], v32, s[4:5] offset:96
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[28:31], v32, s[4:5] offset:112
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(7)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v3, v3, v3
@@ -149,14 +149,14 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v30, v30, v30
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v29, v29, v29
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v28, v28, v28
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[28:31], s[2:3] offset:112
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[24:27], s[2:3] offset:96
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[20:23], s[2:3] offset:80
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[16:19], s[2:3] offset:64
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[12:15], s[2:3] offset:48
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[8:11], s[2:3] offset:32
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[4:7], s[2:3] offset:16
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[0:3], s[2:3]
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[28:31], s[6:7] offset:112
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[24:27], s[6:7] offset:96
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[20:23], s[6:7] offset:80
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[16:19], s[6:7] offset:64
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[12:15], s[6:7] offset:48
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[8:11], s[6:7] offset:32
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[4:7], s[6:7] offset:16
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[0:3], s[6:7]
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(30) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_endpgm
@@ -178,17 +178,17 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:96
+; GCN-NEXT:    global_load_dwordx4 v[28:31], v32, s[4:5] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[8:11], v32, s[4:5] offset:96
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_mul_lo_u32 v29, v29, v29
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v9, v9, v9
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v32, s[4:5]
 ; GCN-NEXT:    v_mul_lo_u32 v8, v8, v8
 ; GCN-NEXT:    v_mul_lo_u32 v28, v28, v28
 ; GCN-NEXT:    v_mul_lo_u32 v31, v31, v31
@@ -198,12 +198,12 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v3, v3, v3
 ; GCN-NEXT:    v_mul_lo_u32 v2, v2, v2
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:112
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v32, s[4:5] offset:112
 ; GCN-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; GCN-NEXT:    v_mul_lo_u32 v0, v0, v0
 ; GCN-NEXT:    v_mul_lo_u32 v11, v11, v11
 ; GCN-NEXT:    v_mul_lo_u32 v10, v10, v10
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v32, s[4:5] offset:48
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -218,11 +218,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v13, v13, v13
 ; GCN-NEXT:    v_mul_lo_u32 v15, v15, v15
-; GCN-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:80
+; GCN-NEXT:    global_load_dwordx4 v[16:19], v32, s[4:5] offset:80
 ; GCN-NEXT:    v_mul_lo_u32 v14, v14, v14
 ; GCN-NEXT:    v_mul_lo_u32 v12, v12, v12
-; GCN-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:64
-; GCN-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[20:23], v32, s[4:5] offset:64
+; GCN-NEXT:    global_load_dwordx4 v[24:27], v32, s[4:5] offset:32
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -242,14 +242,14 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; GCN-NEXT:    v_mul_lo_u32 v21, v21, v21
 ; GCN-NEXT:    v_mul_lo_u32 v20, v20, v20
 ; GCN-NEXT:    v_mul_lo_u32 v16, v16, v16
-; GCN-NEXT:    global_store_dwordx4 v32, v[4:7], s[2:3] offset:112
-; GCN-NEXT:    global_store_dwordx4 v32, v[8:11], s[2:3] offset:96
-; GCN-NEXT:    global_store_dwordx4 v32, v[16:19], s[2:3] offset:80
-; GCN-NEXT:    global_store_dwordx4 v32, v[20:23], s[2:3] offset:64
-; GCN-NEXT:    global_store_dwordx4 v32, v[12:15], s[2:3] offset:48
-; GCN-NEXT:    global_store_dwordx4 v32, v[24:27], s[2:3] offset:32
-; GCN-NEXT:    global_store_dwordx4 v32, v[28:31], s[2:3] offset:16
-; GCN-NEXT:    global_store_dwordx4 v32, v[0:3], s[2:3]
+; GCN-NEXT:    global_store_dwordx4 v32, v[4:7], s[6:7] offset:112
+; GCN-NEXT:    global_store_dwordx4 v32, v[8:11], s[6:7] offset:96
+; GCN-NEXT:    global_store_dwordx4 v32, v[16:19], s[6:7] offset:80
+; GCN-NEXT:    global_store_dwordx4 v32, v[20:23], s[6:7] offset:64
+; GCN-NEXT:    global_store_dwordx4 v32, v[12:15], s[6:7] offset:48
+; GCN-NEXT:    global_store_dwordx4 v32, v[24:27], s[6:7] offset:32
+; GCN-NEXT:    global_store_dwordx4 v32, v[28:31], s[6:7] offset:16
+; GCN-NEXT:    global_store_dwordx4 v32, v[0:3], s[6:7]
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -258,17 +258,17 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU:
 ; EXACTCUTOFF:       ; %bb.0:
-; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:16
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:96
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[28:31], v32, s[4:5] offset:16
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v32, s[4:5] offset:96
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(1)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v29, v29, v29
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v9, v9, v9
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v32, s[4:5]
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v8, v8, v8
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v28, v28, v28
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v31, v31, v31
@@ -278,12 +278,12 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v3, v3, v3
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v2, v2, v2
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:112
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v32, s[4:5] offset:112
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v0, v0, v0
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v11, v11, v11
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v10, v10, v10
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[12:15], v32, s[4:5] offset:48
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -298,11 +298,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v13, v13, v13
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v15, v15, v15
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:80
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[16:19], v32, s[4:5] offset:80
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v14, v14, v14
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v12, v12, v12
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:64
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:32
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[20:23], v32, s[4:5] offset:64
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[24:27], v32, s[4:5] offset:32
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -322,14 +322,14 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v21, v21, v21
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v20, v20, v20
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v16, v16, v16
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[4:7], s[2:3] offset:112
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[8:11], s[2:3] offset:96
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[16:19], s[2:3] offset:80
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[20:23], s[2:3] offset:64
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[12:15], s[2:3] offset:48
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[24:27], s[2:3] offset:32
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[28:31], s[2:3] offset:16
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[0:3], s[2:3]
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[4:7], s[6:7] offset:112
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[8:11], s[6:7] offset:96
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[16:19], s[6:7] offset:80
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[20:23], s[6:7] offset:64
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[12:15], s[6:7] offset:48
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[24:27], s[6:7] offset:32
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[28:31], s[6:7] offset:16
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v32, v[0:3], s[6:7]
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -381,18 +381,18 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v16, 7, v0
-; GCN-NEXT:    ; kill: killed $sgpr0_sgpr1
+; GCN-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v16, s[0:1] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[0:1] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v16, s[4:5] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[4:5] offset:48
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_mul_lo_u32 v13, v13, v13
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v7, v7, v7
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[0:1]
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[4:5]
 ; GCN-NEXT:    v_mul_lo_u32 v6, v6, v6
 ; GCN-NEXT:    v_mul_lo_u32 v12, v12, v12
 ; GCN-NEXT:    v_mul_lo_u32 v15, v15, v15
@@ -403,25 +403,25 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; GCN-NEXT:    v_mul_lo_u32 v2, v2, v2
 ; GCN-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; GCN-NEXT:    v_mul_lo_u32 v0, v0, v0
-; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[2:3]
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[0:1] offset:112
+; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[4:5] offset:112
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v3, v3, v3
 ; GCN-NEXT:    v_mul_lo_u32 v2, v2, v2
 ; GCN-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; GCN-NEXT:    v_mul_lo_u32 v0, v0, v0
-; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[2:3] offset:112
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[0:1] offset:96
+; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7] offset:112
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[4:5] offset:96
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v3, v3, v3
 ; GCN-NEXT:    v_mul_lo_u32 v2, v2, v2
 ; GCN-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; GCN-NEXT:    v_mul_lo_u32 v0, v0, v0
-; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[2:3] offset:96
+; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7] offset:96
 ; GCN-NEXT:    v_mul_lo_u32 v5, v5, v5
 ; GCN-NEXT:    v_mul_lo_u32 v4, v4, v4
-; GCN-NEXT:    global_store_dwordx4 v16, v[4:7], s[2:3] offset:48
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[0:1] offset:64
+; GCN-NEXT:    global_store_dwordx4 v16, v[4:7], s[6:7] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[4:5] offset:64
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -430,9 +430,9 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; GCN-NEXT:    v_mul_lo_u32 v6, v6, v6
 ; GCN-NEXT:    v_mul_lo_u32 v5, v5, v5
 ; GCN-NEXT:    v_mul_lo_u32 v4, v4, v4
-; GCN-NEXT:    global_store_dwordx4 v16, v[4:7], s[2:3] offset:64
-; GCN-NEXT:    global_store_dwordx4 v16, v[12:15], s[2:3] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[8:11], v16, s[0:1] offset:16
+; GCN-NEXT:    global_store_dwordx4 v16, v[4:7], s[6:7] offset:64
+; GCN-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[8:11], v16, s[4:5] offset:16
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -452,15 +452,15 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; GCN-NEXT:    v_mul_lo_u32 v8, v8, v8
 ; GCN-NEXT:    v_mul_lo_u32 v11, v11, v11
 ; GCN-NEXT:    v_mul_lo_u32 v10, v10, v10
-; GCN-NEXT:    global_store_dwordx4 v16, v[8:11], s[2:3] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[8:11], v16, s[0:1] offset:80
+; GCN-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[8:11], v16, s[4:5] offset:80
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v11, v11, v11
 ; GCN-NEXT:    v_mul_lo_u32 v10, v10, v10
 ; GCN-NEXT:    v_mul_lo_u32 v9, v9, v9
 ; GCN-NEXT:    v_mul_lo_u32 v8, v8, v8
-; GCN-NEXT:    global_store_dwordx4 v16, v[8:11], s[2:3] offset:80
+; GCN-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:80
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -469,18 +469,18 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE:
 ; EXACTCUTOFF:       ; %bb.0:
-; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v16, 7, v0
-; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr0_sgpr1
+; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[12:15], v16, s[0:1] offset:32
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v16, s[0:1] offset:48
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[12:15], v16, s[4:5] offset:32
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v16, s[4:5] offset:48
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(1)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v13, v13, v13
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v7, v7, v7
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v16, s[0:1]
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v16, s[4:5]
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v6, v6, v6
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v12, v12, v12
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v15, v15, v15
@@ -491,25 +491,25 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v2, v2, v2
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v0, v0, v0
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[0:3], s[2:3]
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v16, s[0:1] offset:112
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7]
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v16, s[4:5] offset:112
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v3, v3, v3
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v2, v2, v2
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v0, v0, v0
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[0:3], s[2:3] offset:112
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v16, s[0:1] offset:96
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7] offset:112
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v16, s[4:5] offset:96
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v3, v3, v3
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v2, v2, v2
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v1, v1, v1
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v0, v0, v0
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[0:3], s[2:3] offset:96
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[0:3], s[6:7] offset:96
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v5, v5, v5
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v4, v4, v4
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[4:7], s[2:3] offset:48
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v16, s[0:1] offset:64
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[4:7], s[6:7] offset:48
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v16, s[4:5] offset:64
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -518,9 +518,9 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v6, v6, v6
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v5, v5, v5
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v4, v4, v4
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[4:7], s[2:3] offset:64
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[12:15], s[2:3] offset:32
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v16, s[0:1] offset:16
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[4:7], s[6:7] offset:64
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[12:15], s[6:7] offset:32
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v16, s[4:5] offset:16
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -540,15 +540,15 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v8, v8, v8
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v11, v11, v11
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v10, v10, v10
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[8:11], s[2:3] offset:16
-; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v16, s[0:1] offset:80
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:16
+; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[8:11], v16, s[4:5] offset:80
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_waitcnt vmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v11, v11, v11
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v10, v10, v10
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v9, v9, v9
 ; EXACTCUTOFF-NEXT:    v_mul_lo_u32 v8, v8, v8
-; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[8:11], s[2:3] offset:80
+; EXACTCUTOFF-NEXT:    global_store_dwordx4 v16, v[8:11], s[6:7] offset:80
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
@@ -614,10 +614,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_cluster:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_add_u32_e32 v1, s0, v0
+; GCN-NEXT:    v_add_u32_e32 v1, s2, v0
 ; GCN-NEXT:    ds_read_b128 a[28:31], v1 offset:112
 ; GCN-NEXT:    ds_read_b128 a[24:27], v1 offset:96
 ; GCN-NEXT:    ds_read_b128 a[20:23], v1 offset:80
@@ -661,7 +661,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GCN-NEXT:    ds_read_b128 a[136:139], v2 offset:57376
 ; GCN-NEXT:    ds_read_b128 a[140:143], v2 offset:57392
 ; GCN-NEXT:    v_mov_b32_e32 v2, 2.0
-; GCN-NEXT:    v_add_u32_e32 v0, s1, v0
+; GCN-NEXT:    v_add_u32_e32 v0, s3, v0
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(40) SyncID(0)
 ; GCN-NEXT:    s_waitcnt lgkmcnt(14)
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
@@ -681,7 +681,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GCN-NEXT:    ds_write_b128 v0, a[8:11] offset:32
 ; GCN-NEXT:    ds_write_b128 v0, a[4:7] offset:16
 ; GCN-NEXT:    ds_write_b128 v0, a[0:3]
-; GCN-NEXT:    v_mov_b32_e32 v0, s1
+; GCN-NEXT:    v_mov_b32_e32 v0, s3
 ; GCN-NEXT:    ds_write_b128 v0, a[56:59] offset:8288
 ; GCN-NEXT:    ds_write_b128 v0, a[60:63] offset:8304
 ; GCN-NEXT:    ds_write_b128 v0, a[48:51] offset:8256
@@ -720,10 +720,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_MFMA_cluster:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
-; EXACTCUTOFF-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; EXACTCUTOFF-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    v_add_u32_e32 v1, s0, v0
+; EXACTCUTOFF-NEXT:    v_add_u32_e32 v1, s2, v0
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[28:31], v1 offset:112
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[24:27], v1 offset:96
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[20:23], v1 offset:80
@@ -767,7 +767,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[136:139], v2 offset:57376
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[140:143], v2 offset:57392
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v2, 2.0
-; EXACTCUTOFF-NEXT:    v_add_u32_e32 v0, s1, v0
+; EXACTCUTOFF-NEXT:    v_add_u32_e32 v0, s3, v0
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(40) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(14)
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v2, a[0:31]
@@ -787,7 +787,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[8:11] offset:32
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[4:7] offset:16
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[0:3]
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v0, s1
+; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v0, s3
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[56:59] offset:8288
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[60:63] offset:8304
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[48:51] offset:8256
@@ -862,12 +862,12 @@ entry:
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 7, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2.0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_add_u32_e32 v0, s0, v1
+; GCN-NEXT:    v_add_u32_e32 v0, s2, v1
 ; GCN-NEXT:    ds_read_b128 a[28:31], v0 offset:112
 ; GCN-NEXT:    ds_read_b128 a[24:27], v0 offset:96
 ; GCN-NEXT:    ds_read_b128 a[20:23], v0 offset:80
@@ -878,7 +878,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-NEXT:    ds_read_b128 a[12:15], v0 offset:48
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GCN-NEXT:    v_add_u32_e32 v1, s1, v1
+; GCN-NEXT:    v_add_u32_e32 v1, s3, v1
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-NEXT:    s_nop 7
@@ -902,7 +902,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-NEXT:    ds_read_b128 a[0:3], v0 offset:8192
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
@@ -995,12 +995,12 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
-; EXACTCUTOFF-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; EXACTCUTOFF-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v1, 7, v0
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v2, 1.0
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v3, 2.0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
-; EXACTCUTOFF-NEXT:    v_add_u32_e32 v0, s0, v1
+; EXACTCUTOFF-NEXT:    v_add_u32_e32 v0, s2, v1
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[28:31], v0 offset:112
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[24:27], v0 offset:96
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[20:23], v0 offset:80
@@ -1011,7 +1011,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[12:15], v0 offset:48
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; EXACTCUTOFF-NEXT:    v_add_u32_e32 v1, s1, v1
+; EXACTCUTOFF-NEXT:    v_add_u32_e32 v1, s3, v1
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_nop 7
@@ -1035,7 +1035,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[0:3], v0 offset:8192
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v1, s1
+; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v1, s3
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
