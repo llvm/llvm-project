@@ -608,12 +608,12 @@ static void printParallelRegion(OpAsmPrinter &p, Operation *op, Region &region,
 
 /// reduction-entry-list ::= reduction-entry
 ///                        | reduction-entry-list `,` reduction-entry
-/// reduction-entry ::= symbol-ref `->` ssa-id `:` type
+/// reduction-entry ::= (`byref`)? symbol-ref `->` ssa-id `:` type
 static ParseResult
 parseReductionVarList(OpAsmParser &parser,
                       SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
                       SmallVectorImpl<Type> &types, DenseBoolArrayAttr &isByRef,
-                      ArrayAttr &redcuctionSymbols) {
+                      ArrayAttr &reductionSymbols) {
   SmallVector<SymbolRefAttr> reductionVec;
   SmallVector<bool> isByRefVec;
   if (failed(parser.parseCommaSeparatedList([&]() {
@@ -629,7 +629,7 @@ parseReductionVarList(OpAsmParser &parser,
     return failure();
   isByRef = makeDenseBoolArrayAttr(parser.getContext(), isByRefVec);
   SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
-  redcuctionSymbols = ArrayAttr::get(parser.getContext(), reductions);
+  reductionSymbols = ArrayAttr::get(parser.getContext(), reductions);
   return success();
 }
 
@@ -1133,7 +1133,7 @@ static void printMembersIndex(OpAsmPrinter &p, MapInfoOp op,
                               DenseIntElementsAttr membersIdx) {
   llvm::ArrayRef<int64_t> shape = membersIdx.getShapedType().getShape();
   assert(shape.size() <= 2);
-  
+
   if (!membersIdx)
     return;
 
@@ -1141,8 +1141,7 @@ static void printMembersIndex(OpAsmPrinter &p, MapInfoOp op,
     p << "[";
     int rowOffset = i * shape[1];
     for (int j = 0; j < shape[1]; ++j) {
-      p << membersIdx.getValues<
-          int32_t>()[rowOffset + j];
+      p << membersIdx.getValues<int32_t>()[rowOffset + j];
       if ((j + 1) < shape[1])
         p << ",";
     }
@@ -1161,8 +1160,9 @@ parseMapEntries(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand blockArg;
   Type argType;
   auto parseEntries = [&]() -> ParseResult {
-    if (parser.parseOperand(arg) || parser.parseArrow() ||
-        parser.parseOperand(blockArg))
+    if (parser.parseOperand(arg))
+      return failure();
+    if (succeeded(parser.parseOptionalArrow()) && parser.parseOperand(blockArg))
       return failure();
     mapOperands.push_back(arg);
     return success();
@@ -1190,12 +1190,18 @@ parseMapEntries(OpAsmParser &parser,
 static void printMapEntries(OpAsmPrinter &p, Operation *op,
                             OperandRange mapOperands,
                             TypeRange mapOperandTypes) {
-  auto &region = op->getRegion(0);
+  // Get pointer to the region if this is an omp.target, because printing map
+  // clauses for that operation has to also show the correspondence of each
+  // variable to the corresponding block argument.
+  Block *entryBlock = isa<TargetOp>(op) ? &op->getRegion(0).front() : nullptr;
   unsigned argIndex = 0;
 
   for (const auto &mapOp : mapOperands) {
-    const auto &blockArg = region.front().getArgument(argIndex);
-    p << mapOp << " -> " << blockArg;
+    p << mapOp;
+    if (entryBlock) {
+      const auto &blockArg = entryBlock->getArgument(argIndex);
+      p << " -> " << blockArg;
+    }
     argIndex++;
     if (argIndex < mapOperands.size())
       p << ", ";
@@ -1467,7 +1473,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                      const TargetClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
-  // inReductionDeclSymbols, reductionVars, reductionByRefAttr,
+  // inReduceVarByRef, inReductionDeclSymbols, reductionVars, reduceVarByRef,
   // reductionDeclSymbols.
   TargetOp::build(
       builder, state, clauses.ifVar, clauses.deviceVar, clauses.threadLimitVar,
@@ -1491,12 +1497,11 @@ LogicalResult TargetOp::verify() {
 void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        ArrayRef<NamedAttribute> attributes) {
   ParallelOp::build(
-      builder, state, /*if_expr_var=*/nullptr, /*num_threads_var=*/nullptr,
+      builder, state, /*if_expr=*/nullptr, /*num_threads_var=*/nullptr,
       /*allocate_vars=*/ValueRange(), /*allocators_vars=*/ValueRange(),
       /*reduction_vars=*/ValueRange(), /*reduction_vars_byref=*/nullptr,
-      /*reductions=*/nullptr,
-      /*proc_bind_val=*/nullptr, /*private_vars=*/ValueRange(),
-      /*privatizers=*/nullptr);
+      /*reductions=*/nullptr, /*proc_bind_val=*/nullptr,
+      /*private_vars=*/ValueRange(), /*privatizers=*/nullptr);
   state.addAttributes(attributes);
 }
 
@@ -1600,7 +1605,7 @@ static bool opInGlobalImplicitParallelRegion(Operation *op) {
 void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: reductionByRefAttr, privateVars, privatizers.
+  // TODO Store clauses in op: privateVars, privatizers.
   TeamsOp::build(builder, state, clauses.numTeamsLowerVar,
                  clauses.numTeamsUpperVar, clauses.ifVar,
                  clauses.threadLimitVar, clauses.allocateVars,
@@ -1648,7 +1653,7 @@ LogicalResult TeamsOp::verify() {
 void SectionsOp::build(OpBuilder &builder, OperationState &state,
                        const SectionsClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: reductionByRefAttr, privateVars, privatizers.
+  // TODO Store clauses in op: privateVars, privatizers.
   SectionsOp::build(builder, state, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionVarsByRef),
                     makeArrayAttr(ctx, clauses.reductionDeclSymbols),
@@ -1782,12 +1787,12 @@ LogicalResult WsloopOp::verify() {
 void SimdOp::build(OpBuilder &builder, OperationState &state,
                    const SimdClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, reductionByRefAttr, reductionVars,
-  // privatizers, reductionDeclSymbols.
+  // TODO Store clauses in op: privateVars, privatizers, reductionVars,
+  // reduceVarByRef, reductionDeclSymbols.
   SimdOp::build(builder, state, clauses.alignedVars,
                 makeArrayAttr(ctx, clauses.alignmentAttrs), clauses.ifVar,
                 clauses.nontemporalVars, clauses.orderAttr,
-                clauses.orderModAttr, clauses.simdlenAttr, clauses.safelenAttr);
+                clauses.orderModAttr, clauses.safelenAttr, clauses.simdlenAttr);
 }
 
 LogicalResult SimdOp::verify() {
@@ -1996,7 +2001,7 @@ LogicalResult TaskgroupOp::verify() {
 void TaskloopOp::build(OpBuilder &builder, OperationState &state,
                        const TaskloopClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: reductionByRefAttr, privateVars, privatizers.
+  // TODO Store clauses in op: privateVars, privatizers.
   TaskloopOp::build(
       builder, state, clauses.ifVar, clauses.finalVar, clauses.untiedAttr,
       clauses.mergeableAttr, clauses.inReductionVars,
@@ -2158,7 +2163,8 @@ void LoopNestOp::gatherWrappers(
 
 void CriticalDeclareOp::build(OpBuilder &builder, OperationState &state,
                               const CriticalClauseOps &clauses) {
-  CriticalDeclareOp::build(builder, state, clauses.nameAttr, clauses.hintAttr);
+  CriticalDeclareOp::build(builder, state, clauses.criticalNameAttr,
+                           clauses.hintAttr);
 }
 
 LogicalResult CriticalDeclareOp::verify() {
@@ -2372,8 +2378,14 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for CancelOp
+// CancelOp
 //===----------------------------------------------------------------------===//
+
+void CancelOp::build(OpBuilder &builder, OperationState &state,
+                     const CancelClauseOps &clauses) {
+  CancelOp::build(builder, state, clauses.cancelDirectiveNameAttr,
+                  clauses.ifVar);
+}
 
 LogicalResult CancelOp::verify() {
   ClauseCancellationConstructType cct = getCancellationConstructTypeVal();
@@ -2421,9 +2433,15 @@ LogicalResult CancelOp::verify() {
   // TODO : Add more when we support taskgroup.
   return success();
 }
+
 //===----------------------------------------------------------------------===//
-// Verifier for CancelOp
+// CancellationPointOp
 //===----------------------------------------------------------------------===//
+
+void CancellationPointOp::build(OpBuilder &builder, OperationState &state,
+                                const CancellationPointClauseOps &clauses) {
+  CancellationPointOp::build(builder, state, clauses.cancelDirectiveNameAttr);
+}
 
 LogicalResult CancellationPointOp::verify() {
   ClauseCancellationConstructType cct = getCancellationConstructTypeVal();
