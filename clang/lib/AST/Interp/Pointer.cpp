@@ -143,7 +143,7 @@ APValue Pointer::toAPValue() const {
 
   if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
     return APValue(Base, CharUnits::Zero(), Path,
-                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+                   /*IsOnePastEnd=*/isOnePastEnd(), /*IsNullPtr=*/false);
 
   // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();
@@ -181,7 +181,8 @@ APValue Pointer::toAPValue() const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/isOnePastEnd(),
+                 /*IsNullPtr=*/false);
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
@@ -348,7 +349,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
 
     // Invalid pointers.
     if (Ptr.isDummy() || !Ptr.isLive() || !Ptr.isBlockPointer() ||
-        (!Ptr.isUnknownSizeArray() && Ptr.isOnePastEnd()))
+        Ptr.isPastEnd())
       return false;
 
     // Primitive values.
