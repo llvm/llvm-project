@@ -311,23 +311,46 @@ class ThreadAPITestCase(TestBase):
 
     def step_instruction_in_called_function(self):
         main_file_spec = lldb.SBFileSpec("main.cpp")
-        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(self, "Set break point at this line", main_file_spec)
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Set break point at this line", main_file_spec
+        )
         options = lldb.SBExpressionOptions()
         options.SetIgnoreBreakpoints(False)
 
-        call_me_bkpt = target.BreakpointCreateBySourceRegex("Set a breakpoint in call_me",
-                                                            main_file_spec)
-        self.assertGreater(call_me_bkpt.GetNumLocations(), 0, "Got at least one location in call_me")
+        call_me_bkpt = target.BreakpointCreateBySourceRegex(
+            "Set a breakpoint in call_me", main_file_spec
+        )
+        self.assertGreater(
+            call_me_bkpt.GetNumLocations(), 0, "Got at least one location in call_me"
+        )
         # Now run the expression, this will fail because we stopped at a breakpoint:
-        self.runCmd('expr -i 0 -- call_me(true)', check=False)
+        self.runCmd("expr -i 0 -- call_me(true)", check=False)
         # Now we should be stopped in call_me:
-        self.assertEqual(thread.frames[0].name, "call_me(bool)", "Stopped in call_me(bool)")
+        self.assertEqual(
+            thread.frames[0].name, "call_me(bool)", "Stopped in call_me(bool)"
+        )
         # Now do a various API steps.  These should not cause the expression context to get unshipped:
         thread.StepInstruction(False)
-        self.assertEqual(thread.frames[0].name, "call_me(bool)", "Still in call_me(bool) after StepInstruction")
+        self.assertEqual(
+            thread.frames[0].name,
+            "call_me(bool)",
+            "Still in call_me(bool) after StepInstruction",
+        )
         thread.StepInstruction(True)
-        self.assertEqual(thread.frames[0].name, "call_me(bool)", "Still in call_me(bool) after NextInstruction")
+        self.assertEqual(
+            thread.frames[0].name,
+            "call_me(bool)",
+            "Still in call_me(bool) after NextInstruction",
+        )
         thread.StepInto()
-        self.assertEqual(thread.frames[0].name, "call_me(bool)", "Still in call_me(bool) after StepInto")
+        self.assertEqual(
+            thread.frames[0].name,
+            "call_me(bool)",
+            "Still in call_me(bool) after StepInto",
+        )
         thread.StepOver(False)
-        self.assertEqual(thread.frames[0].name, "call_me(bool)", "Still in call_me(bool) after StepOver")
+        self.assertEqual(
+            thread.frames[0].name,
+            "call_me(bool)",
+            "Still in call_me(bool) after StepOver",
+        )
