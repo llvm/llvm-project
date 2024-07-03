@@ -136,6 +136,9 @@ void test5(A *a) {
 }
 
 // CHECK-LABEL: define void @test5(
+// CHECK: %[[FLAGS:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 1
+// SIG_STR: store i32 -1040187392, ptr %[[FLAGS]], align 4
+// NO_SIG_STR: store i32 -2113929216, ptr %[[FLAGS]], align 4
 // CHECK: %[[V0:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR0]], ptr %[[V0]],
 

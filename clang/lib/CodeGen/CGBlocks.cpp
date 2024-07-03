@@ -822,7 +822,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     descriptor = buildBlockDescriptor(CGM, blockInfo);
 
     // Compute the initial on-stack block flags.
-    flags = BLOCK_HAS_SIGNATURE;
+    if (!CGM.getCodeGenOpts().DisableBlockSignatureString)
+      flags = BLOCK_HAS_SIGNATURE;
     if (blockInfo.HasCapturedVariableLayout)
       flags |= BLOCK_HAS_EXTENDED_LAYOUT;
     if (blockInfo.NeedsCopyDispose)
@@ -1308,7 +1309,9 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
       fields.add(CGM.getNSConcreteGlobalBlock());
 
     // __flags
-    BlockFlags flags = BLOCK_IS_GLOBAL | BLOCK_HAS_SIGNATURE;
+    BlockFlags flags = BLOCK_IS_GLOBAL;
+    if (!CGM.getCodeGenOpts().DisableBlockSignatureString)
+      flags |= BLOCK_HAS_SIGNATURE;
     if (blockInfo.UsesStret)
       flags |= BLOCK_USE_STRET;
 
