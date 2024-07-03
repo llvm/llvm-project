@@ -22142,8 +22142,8 @@ static SDValue performVectorShiftCombine(SDNode *N,
     if (DCI.DAG.ComputeNumSignBits(Op.getOperand(0)) > ShiftImm)
       return Op.getOperand(0);
 
-  // If the right shift is exact, the shifted out bits matter.
-  if (N->getOpcode() == AArch64ISD::VASHR && N->getFlags().hasExact())
+  // If the shift is exact, the shifted out bits matter.
+  if (N->getFlags().hasExact())
     return SDValue();
 
   APInt ShiftedOutBits = APInt::getLowBitsSet(OpScalarSize, ShiftImm);
