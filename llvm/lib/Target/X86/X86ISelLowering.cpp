@@ -41334,15 +41334,13 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     return SDValue();
   }
   case X86ISD::VPERMV3: {
-    // VPERM[I,T]2[B,W] are 3 uops on Skylake and Icelake so we try to use
-    // VPERMV.
+    // Combine VPERMV3 to widened VPERMV if the two source operands are split
+    // from the same vector.
     SDValue V1 = peekThroughBitcasts(N.getOperand(0));
     SDValue V2 = peekThroughBitcasts(N.getOperand(2));
     MVT SVT = V1.getSimpleValueType();
-    MVT EVT = VT.getVectorElementType();
     MVT NVT = VT.getDoubleNumVectorElementsVT();
-    if ((EVT == MVT::i8 || EVT == MVT::i16) &&
-        (NVT.is256BitVector() ||
+    if ((NVT.is256BitVector() ||
          (NVT.is512BitVector() && Subtarget.hasEVEX512())) &&
         V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         V1.getConstantOperandVal(1) == 0 &&
