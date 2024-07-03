@@ -176,8 +176,7 @@ public:
   ///
   /// \param Asm - The assembler.
   /// \param RevGroupMap - Maps a signature symbol to the group section.
-  void computeSymbolTable(MCAssembler &Asm,
-                          const RevGroupMapTy &RevGroupMap);
+  void computeSymbolTable(MCAssembler &Asm, const RevGroupMapTy &RevGroupMap);
 
   void writeAddrsigSection();
 
