@@ -47,3 +47,6 @@ v_cvt_pknorm_i16_f16 v5, v1, v2
 
 v_cvt_pknorm_u16_f16 v5, v1, v2
 // GFX13: v_cvt_pk_norm_u16_f16 v5, v1, v2        ; encoding: [0x05,0x00,0x13,0xd7,0x01,0x05,0x02,0x00]
+
+v_perm_pk4_b8_u8 v5, v1, v2, s3
+// GFX13: v_perm_b32 v5, v1, v2, s3               ; encoding: [0x05,0x00,0x44,0xd7,0x01,0x05,0x0e,0x00]

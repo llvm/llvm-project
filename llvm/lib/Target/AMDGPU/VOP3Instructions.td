@@ -2011,6 +2011,10 @@ defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<0x362, 0x
 defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<0x363, 0x325, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<0x364, 0x370, "v_xor_b16">;
 
+def : AMDGPUMnemonicAlias<"v_perm_pk4_b8_u8", "v_perm_b32"> {
+  let AssemblerPredicate = isGFX13Plus;
+}
+
 // These instructions differ from GFX12 variant by supporting DPP:
 defm V_FMA_F64                       : VOP3Only_Realtriple_gfx1210_gfx13<0x214>;
 defm V_DIV_FIXUP_F64                 : VOP3Only_Realtriple_gfx1210<0x228>;
