@@ -41,8 +41,8 @@ namespace llvm {
 /// * populate the thunk in its populateThunk method
 ///
 /// Note that if some other pass is responsible for rewriting the functions,
-/// insertThunks method can simply create all possible thunks at once, probably
-/// postponed until the first occurrence of possibly affected MF.
+/// the insertThunks method may simply create all possible thunks at once,
+/// probably postponed until the first occurrence of possibly affected MF.
 ///
 /// Alternatively, insertThunks method can rewrite MF by itself and only insert
 /// the thunks being called. In that case InsertedThunks variable can be used
@@ -98,7 +98,8 @@ protected:
 
   /// Populate the thunk function with instructions.
   ///
-  /// If multiple thunks are created, inspect the thunk's name.
+  /// If multiple thunks are created, the content that must be inserted in the
+  /// thunk function body should be derived from the MF's name.
   ///
   /// Depending on the preceding passes in the pass manager, by the time
   /// populateThunk is called, MF may have a few target-specific instructions
@@ -171,7 +172,8 @@ bool ThunkInserter<Derived, InsertedThunksTy>::run(MachineModuleInfo &MMI,
 
     // The target can use InsertedThunks to detect whether relevant thunks
     // have already been inserted.
-    // FIXME: Make insertThunks return if MF was modified.
+    // FIXME: Provide the way for insertThunks to notify us whether it changed
+    //        the MF, instead of conservatively assuming it did.
     InsertedThunks |= getDerived().insertThunks(MMI, MF, InsertedThunks);
     return true;
   }
