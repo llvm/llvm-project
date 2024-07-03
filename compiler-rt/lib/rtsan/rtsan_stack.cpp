@@ -14,6 +14,7 @@
 #include <sanitizer_common/sanitizer_stacktrace.h>
 
 using namespace __sanitizer;
+using namespace __rtsan;
 
 // We must define our own implementation of this method for our runtime.
 // This one is just copied from UBSan.
@@ -37,7 +38,6 @@ static void SetGlobalStackTraceFormat() {
   OverrideCommonFlags(cf);
 }
 
-using namespace __rtsan;
 void __rtsan::PrintStackTrace() {
 
   BufferedStackTrace stack{};

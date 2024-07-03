@@ -41,7 +41,7 @@ using namespace rtsan_testing;
 using namespace std::chrono_literals;
 
 TEST(TestRtsan, VectorPushBackAllocationDiesWhenRealtime) {
-  std::vector<float> vec{};
+  std::vector<float> vec;
   auto Func = [&vec]() { vec.push_back(0.4f); };
   ExpectRealtimeDeath(Func);
   ASSERT_EQ(0u, vec.size());
@@ -79,14 +79,14 @@ TEST(TestRtsan, OfstreamCreationDiesWhenRealtime) {
 }
 
 TEST(TestRtsan, LockingAMutexDiesWhenRealtime) {
-  std::mutex mutex{};
+  std::mutex mutex;
   auto Func = [&]() { mutex.lock(); };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
 }
 
 TEST(TestRtsan, UnlockingAMutexDiesWhenRealtime) {
-  std::mutex mutex{};
+  std::mutex mutex;
   mutex.lock();
   auto Func = [&]() { mutex.unlock(); };
   ExpectRealtimeDeath(Func);
@@ -96,14 +96,14 @@ TEST(TestRtsan, UnlockingAMutexDiesWhenRealtime) {
 #if RTSAN_TEST_SHARED_MUTEX
 
 TEST(TestRtsan, LockingASharedMutexDiesWhenRealtime) {
-  std::shared_mutex mutex{};
+  std::shared_mutex mutex;
   auto Func = [&]() { mutex.lock(); };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
 }
 
 TEST(TestRtsan, UnlockingASharedMutexDiesWhenRealtime) {
-  std::shared_mutex mutex{};
+  std::shared_mutex mutex;
   mutex.lock();
   auto Func = [&]() { mutex.unlock(); };
   ExpectRealtimeDeath(Func);
@@ -111,14 +111,14 @@ TEST(TestRtsan, UnlockingASharedMutexDiesWhenRealtime) {
 }
 
 TEST(TestRtsan, SharedLockingASharedMutexDiesWhenRealtime) {
-  std::shared_mutex mutex{};
+  std::shared_mutex mutex;
   auto Func = [&]() { mutex.lock_shared(); };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
 }
 
 TEST(TestRtsan, SharedUnlockingASharedMutexDiesWhenRealtime) {
-  std::shared_mutex mutex{};
+  std::shared_mutex mutex;
   mutex.lock_shared();
   auto Func = [&]() { mutex.unlock_shared(); };
   ExpectRealtimeDeath(Func);
@@ -141,7 +141,7 @@ void InvokeStdFunction(std::function<void()> &&function) { function(); }
 } // namespace
 
 TEST(TestRtsan, CopyingALambdaWithLargeCaptureDiesWhenRealtime) {
-  std::array<float, 16> lots_of_data{};
+  std::array<float, 16> lots_of_data;
   auto lambda = [lots_of_data]() mutable {
     // Stop everything getting optimised out
     lots_of_data[3] = 0.25f;
@@ -158,7 +158,7 @@ TEST(TestRtsan, AccessingALargeAtomicVariableDiesWhenRealtime) {
   ASSERT_TRUE(small_atomic.is_lock_free());
   RealtimeInvoke([&small_atomic]() { float x = small_atomic.load(); });
 
-  std::atomic<std::array<float, 2048>> large_atomic{};
+  std::atomic<std::array<float, 2048>> large_atomic;
   ASSERT_FALSE(large_atomic.is_lock_free());
   auto Func = [&]() { auto x = large_atomic.load(); };
   ExpectRealtimeDeath(Func);
@@ -196,7 +196,7 @@ TEST(TestRtsan, ThrowingAnExceptionDiesWhenRealtime) {
 }
 
 TEST(TestRtsan, DoesNotDieIfTurnedOff) {
-  std::mutex mutex{};
+  std::mutex mutex;
   auto RealtimeUnsafeFunc = [&]() {
     __rtsan_off();
     mutex.lock();

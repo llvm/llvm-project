@@ -23,11 +23,13 @@
 static pthread_key_t context_key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 
-static void internalFree(void *ptr) { __sanitizer::InternalFree(ptr); }
+// InternalFree cannot be passed directly to pthread_key_create
+// because it expects a signature with only one arg
+static void InternalFreeWrapper(void *ptr) { __sanitizer::InternalFree(ptr); }
 
 static __rtsan::Context &GetContextForThisThreadImpl() {
   auto make_thread_local_context_key = []() {
-    CHECK_EQ(pthread_key_create(&context_key, internalFree), 0);
+    CHECK_EQ(pthread_key_create(&context_key, InternalFreeWrapper), 0);
   };
 
   pthread_once(&key_once, make_thread_local_context_key);
@@ -59,19 +61,18 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
 */
 static void InvokeViolationDetectedAction() { exit(EXIT_FAILURE); }
 
-namespace __rtsan {
+__rtsan::Context::Context() = default;
 
-Context::Context() = default;
+void __rtsan::Context::RealtimePush() { realtime_depth++; }
 
-void Context::RealtimePush() { realtime_depth++; }
+void __rtsan::Context::RealtimePop() { realtime_depth--; }
 
-void Context::RealtimePop() { realtime_depth--; }
+void __rtsan::Context::BypassPush() { bypass_depth++; }
 
-void Context::BypassPush() { bypass_depth++; }
+void __rtsan::Context::BypassPop() { bypass_depth--; }
 
-void Context::BypassPop() { bypass_depth--; }
-
-void Context::ExpectNotRealtime(const char *intercepted_function_name) {
+void __rtsan::Context::ExpectNotRealtime(
+    const char *intercepted_function_name) {
   if (InRealtimeContext() && !IsBypassed()) {
     BypassPush();
     PrintDiagnostics(intercepted_function_name);
@@ -80,11 +81,11 @@ void Context::ExpectNotRealtime(const char *intercepted_function_name) {
   }
 }
 
-bool Context::InRealtimeContext() const { return realtime_depth > 0; }
+bool __rtsan::Context::InRealtimeContext() const { return realtime_depth > 0; }
 
-bool Context::IsBypassed() const { return bypass_depth > 0; }
+bool __rtsan::Context::IsBypassed() const { return bypass_depth > 0; }
 
-void Context::PrintDiagnostics(const char *intercepted_function_name) {
+void __rtsan::Context::PrintDiagnostics(const char *intercepted_function_name) {
   fprintf(stderr,
           "Real-time violation: intercepted call to real-time unsafe function "
           "`%s` in real-time context! Stack trace:\n",
@@ -92,6 +93,6 @@ void Context::PrintDiagnostics(const char *intercepted_function_name) {
   __rtsan::PrintStackTrace();
 }
 
-Context &GetContextForThisThread() { return GetContextForThisThreadImpl(); }
-
-} // namespace __rtsan
+__rtsan::Context &__rtsan::GetContextForThisThread() {
+  return GetContextForThisThreadImpl();
+}

@@ -9,14 +9,6 @@ config.test_source_root = os.path.dirname(__file__)
 # Setup default compiler flags use with -frtsan-instrument option.
 clang_rtsan_cflags = ["-frtsan-instrument", config.target_cflags]
 
-# If libc++ was used to build rtsan libraries, libc++ is needed. Fix applied
-# to Linux only since -rpath may not be portable. This can be extended to
-# other platforms.
-if config.libcxx_used == "1" and config.host_os == "Linux":
-    clang_rtsan_cflags = clang_rtsan_cflags + (
-        ["-L%s -lc++ -Wl,-rpath=%s" % (config.llvm_shlib_dir, config.llvm_shlib_dir)]
-    )
-
 clang_rtsan_cxxflags = config.cxx_mode_flags + clang_rtsan_cflags
 
 
@@ -40,16 +32,6 @@ config.substitutions.append(
 config.substitutions.append(("%clang_rtsan ", build_invocation(clang_rtsan_cflags)))
 config.substitutions.append(("%clangxx_rtsan", build_invocation(clang_rtsan_cxxflags)))
 config.substitutions.append(("%llvm_rtsan", llvm_rtsan))
-config.substitutions.append(
-    (
-        "%rtsanlib",
-        (
-            "-lm -lpthread %s -lrt -L%s "
-            "-Wl,-whole-archive -lclang_rt.rtsan%s -Wl,-no-whole-archive"
-        )
-        % (libdl_flag, config.compiler_rt_libdir, config.target_suffix),
-    )
-)
 
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
