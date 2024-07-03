@@ -973,7 +973,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     SingleDecl = ParseModuleImport(SourceLocation(), IS);
   } break;
   case tok::kw_export:
-    if (getLangOpts().CPlusPlusModules) {
+    if (getLangOpts().CPlusPlusModules || getLangOpts().HLSL) {
       ProhibitAttributes(Attrs);
       SingleDecl = ParseExportDeclaration();
       break;
