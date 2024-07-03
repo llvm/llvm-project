@@ -2567,7 +2567,8 @@ void SoftmaxOp::getEffects(
 TypedAttr createInitValueForReduceMaxOp(Type type, OpBuilder &b) {
   if (isa<FloatType>(type))
     return b.getFloatAttr(
-        type, APFloat::getSmallest(cast<FloatType>(type).getFloatSemantics()));
+        type, APFloat::getLargest(cast<FloatType>(type).getFloatSemantics(),
+                                  /*Negative=*/true));
   if (isa<IntegerType>(type))
     return b.getIntegerAttr(
         type, APInt::getSignedMinValue(type.getIntOrFloatBitWidth()));

@@ -8,7 +8,7 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 
 // CHECK:      func.func @softmax(%[[ARG0:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>, %[[DST:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
 // CHECK-DAG:  %[[ZERO:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK-DAG:  %[[INF:.+]] = arith.constant 1.401300e-45 : f32
+// CHECK-DAG:  %[[INF:.+]] = arith.constant -3.40282347E+38 : f32
 // CHECK-DAG:  %[[EMP:.+]] = tensor.empty() : tensor<2x16xf32>
 // CHECK-DAG:  %[[FIL:.+]] = linalg.fill
 // CHECK-NEXT: %[[RED:.+]] = linalg.reduce ins(%[[ARG0]] : tensor<2x16x32xf32>)
@@ -39,7 +39,7 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 // GENERALIZECHECK-LABEL: func @softmax
 // GENERALIZECHECK-SAME:     (%[[ARG0:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>, %[[DST:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
 // GENERALIZECHECK-DAG:     %[[ZERO:.+]] = arith.constant 0.000000e+00 : f32
-// GENERALIZECHECK-DAG:     %[[INF:.+]] = arith.constant 1.401300e-45 : f32
+// GENERALIZECHECK-DAG:     %[[INF:.+]] = arith.constant -3.40282347E+38 : f32
 // GENERALIZECHECK-DAG:     %[[EMP:.+]] = tensor.empty() : tensor<2x16xf32>
 // GENERALIZECHECK-DAG:     %[[FIL:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]],
 // GENERALIZECHECK-SAME:      iterator_types = ["parallel", "parallel"]}

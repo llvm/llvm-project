@@ -212,7 +212,7 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 // CHECK-LABEL:      func.func @softmax(
 // CHECK-SAME:           %[[ARG0:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>, %[[DST:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
 // CHECK-DAG:        %[[D1:.+]] = tensor.empty() : tensor<2x16xf32>
-// CHECK-DAG:        %[[CST:.+]] = arith.constant 1.401300e-45 : f32
+// CHECK-DAG:        %[[CST:.+]] = arith.constant -3.40282347E+38 : f32
 // CHECK:        %[[D2:.+]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP3]]],
 // CHECK-SAME:      iterator_types = ["parallel", "parallel"]}
 // CHECK-SAME:      ins(%[[CST]] : f32) outs(%[[D1]] : tensor<2x16xf32>) {
