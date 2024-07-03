@@ -25,7 +25,7 @@ set(assets
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")
-if(MSVC)
+if("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
   set(resource_dir "${CMAKE_BINARY_DIR}/$<CONFIG>/share/clang-doc")
 else()
   set(resource_dir "${CMAKE_BINARY_DIR}/share/clang-doc")
