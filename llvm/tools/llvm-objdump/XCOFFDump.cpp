@@ -34,6 +34,7 @@ namespace {
 class XCOFFDumper : public objdump::Dumper {
   const XCOFFObjectFile &Obj;
   unsigned Width;
+
 public:
   XCOFFDumper(const object::XCOFFObjectFile &O) : Dumper(O), Obj(O) {}
 
