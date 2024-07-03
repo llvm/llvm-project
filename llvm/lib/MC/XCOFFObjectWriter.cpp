@@ -12,7 +12,6 @@
 
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -379,18 +378,16 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void writeSectionHeaderTable();
   void writeSections(const MCAssembler &Asm);
   void writeSectionForControlSectionEntry(const MCAssembler &Asm,
-                                          const MCAsmLayout &Layout,
                                           const CsectSectionEntry &CsectEntry,
                                           uint64_t &CurrentAddressLocation);
   void writeSectionForDwarfSectionEntry(const MCAssembler &Asm,
-                                        const MCAsmLayout &Layout,
                                         const DwarfSectionEntry &DwarfEntry,
                                         uint64_t &CurrentAddressLocation);
-  void writeSectionForExceptionSectionEntry(
-      const MCAssembler &Asm, const MCAsmLayout &Layout,
-      ExceptionSectionEntry &ExceptionEntry, uint64_t &CurrentAddressLocation);
+  void
+  writeSectionForExceptionSectionEntry(const MCAssembler &Asm,
+                                       ExceptionSectionEntry &ExceptionEntry,
+                                       uint64_t &CurrentAddressLocation);
   void writeSectionForCInfoSymSectionEntry(const MCAssembler &Asm,
-                                           const MCAsmLayout &Layout,
                                            CInfoSymSectionEntry &CInfoSymEntry,
                                            uint64_t &CurrentAddressLocation);
   void writeSymbolTable(MCAssembler &Asm);
@@ -419,7 +416,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // *) Assigns symbol table indices.
   // *) Builds up the section header table by adding any non-empty sections to
   //    `Sections`.
-  void assignAddressesAndIndices(MCAssembler &Asm, const MCAsmLayout &);
+  void assignAddressesAndIndices(MCAssembler &Asm);
   // Called after relocations are recorded.
   void finalizeSectionInfo();
   void finalizeRelocationInfo(SectionEntry *Sec, uint64_t RelCount);
@@ -655,7 +652,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
     Strings.add(Vers);
 
   Strings.finalize();
-  assignAddressesAndIndices(Asm, *Asm.getLayout());
+  assignAddressesAndIndices(Asm);
 }
 
 void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
@@ -813,17 +810,14 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 }
 
 void XCOFFObjectWriter::writeSections(const MCAssembler &Asm) {
-  auto &Layout = *Asm.getLayout();
   uint64_t CurrentAddressLocation = 0;
   for (const auto *Section : Sections)
-    writeSectionForControlSectionEntry(Asm, Layout, *Section,
-                                       CurrentAddressLocation);
+    writeSectionForControlSectionEntry(Asm, *Section, CurrentAddressLocation);
   for (const auto &DwarfSection : DwarfSections)
-    writeSectionForDwarfSectionEntry(Asm, Layout, DwarfSection,
-                                     CurrentAddressLocation);
-  writeSectionForExceptionSectionEntry(Asm, Layout, ExceptionSection,
+    writeSectionForDwarfSectionEntry(Asm, DwarfSection, CurrentAddressLocation);
+  writeSectionForExceptionSectionEntry(Asm, ExceptionSection,
                                        CurrentAddressLocation);
-  writeSectionForCInfoSymSectionEntry(Asm, Layout, CInfoSymSection,
+  writeSectionForCInfoSymSectionEntry(Asm, CInfoSymSection,
                                       CurrentAddressLocation);
 }
 
@@ -1419,8 +1413,7 @@ void XCOFFObjectWriter::addCInfoSymEntry(StringRef Name, StringRef Metadata) {
       std::make_unique<CInfoSymInfo>(Name.str(), Metadata.str()));
 }
 
-void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
-                                                  const MCAsmLayout &Layout) {
+void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm) {
   // The symbol table starts with all the C_FILE symbols. Each C_FILE symbol
   // requires 1 or 2 auxiliary entries.
   uint32_t SymbolTableIndex =
@@ -1597,8 +1590,8 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm,
 }
 
 void XCOFFObjectWriter::writeSectionForControlSectionEntry(
-    const MCAssembler &Asm, const MCAsmLayout &Layout,
-    const CsectSectionEntry &CsectEntry, uint64_t &CurrentAddressLocation) {
+    const MCAssembler &Asm, const CsectSectionEntry &CsectEntry,
+    uint64_t &CurrentAddressLocation) {
   // Nothing to write for this Section.
   if (CsectEntry.Index == SectionEntry::UninitializedIndex)
     return;
@@ -1644,8 +1637,8 @@ void XCOFFObjectWriter::writeSectionForControlSectionEntry(
 }
 
 void XCOFFObjectWriter::writeSectionForDwarfSectionEntry(
-    const MCAssembler &Asm, const MCAsmLayout &Layout,
-    const DwarfSectionEntry &DwarfEntry, uint64_t &CurrentAddressLocation) {
+    const MCAssembler &Asm, const DwarfSectionEntry &DwarfEntry,
+    uint64_t &CurrentAddressLocation) {
   // There could be a gap (without corresponding zero padding) between
   // sections. For example DWARF section alignment is bigger than
   // DefaultSectionAlign.
@@ -1672,8 +1665,8 @@ void XCOFFObjectWriter::writeSectionForDwarfSectionEntry(
 }
 
 void XCOFFObjectWriter::writeSectionForExceptionSectionEntry(
-    const MCAssembler &Asm, const MCAsmLayout &Layout,
-    ExceptionSectionEntry &ExceptionEntry, uint64_t &CurrentAddressLocation) {
+    const MCAssembler &Asm, ExceptionSectionEntry &ExceptionEntry,
+    uint64_t &CurrentAddressLocation) {
   for (auto it = ExceptionEntry.ExceptionTable.begin();
        it != ExceptionEntry.ExceptionTable.end(); it++) {
     // For every symbol that has exception entries, you must start the entries
@@ -1695,8 +1688,8 @@ void XCOFFObjectWriter::writeSectionForExceptionSectionEntry(
 }
 
 void XCOFFObjectWriter::writeSectionForCInfoSymSectionEntry(
-    const MCAssembler &Asm, const MCAsmLayout &Layout,
-    CInfoSymSectionEntry &CInfoSymEntry, uint64_t &CurrentAddressLocation) {
+    const MCAssembler &Asm, CInfoSymSectionEntry &CInfoSymEntry,
+    uint64_t &CurrentAddressLocation) {
   if (!CInfoSymSection.Entry)
     return;
 
