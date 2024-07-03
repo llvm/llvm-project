@@ -2579,14 +2579,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::sin: {
+  case Intrinsic::sin:
+  case Intrinsic::amdgcn_sin: {
     Value *X;
     if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
       // sin(-x) --> -sin(x)
-      Value *NewSin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, II);
-      Instruction *FNeg = UnaryOperator::CreateFNeg(NewSin);
-      FNeg->copyFastMathFlags(II);
-      return FNeg;
+      Value *NewSin = Builder.CreateUnaryIntrinsic(IID, X, II);
+      return UnaryOperator::CreateFNegFMF(NewSin, II);
     }
     break;
   }
@@ -2640,6 +2639,31 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
                                ConstantFP::get(II->getType(), 1.0));
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
+    }
+
+    // ldexp(x, c ? exp : 0) -> c ? ldexp(x, exp) : x
+    // ldexp(x, c ? 0 : exp) -> c ? x : ldexp(x, exp)
+    ///
+    // TODO: If we cared, should insert a canonicalize for x
+    Value *SelectCond, *SelectLHS, *SelectRHS;
+    if (match(II->getArgOperand(1),
+              m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
+                                m_Value(SelectRHS))))) {
+      Value *NewLdexp = nullptr;
+      Value *Select = nullptr;
+      if (match(SelectRHS, m_ZeroInt())) {
+        NewLdexp = Builder.CreateLdexp(Src, SelectLHS);
+        Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
+      } else if (match(SelectLHS, m_ZeroInt())) {
+        NewLdexp = Builder.CreateLdexp(Src, SelectRHS);
+        Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
+      }
+
+      if (NewLdexp) {
+        Select->takeName(II);
+        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
+        return replaceInstUsesWith(*II, Select);
+      }
     }
 
     break;

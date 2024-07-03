@@ -3639,6 +3639,9 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     Observer.changingInstr(MI);
     bitcastDst(MI, CastTy, 0);
     MMO.setType(CastTy);
+    // The range metadata is no longer valid when reinterpreted as a different
+    // type.
+    MMO.clearRanges();
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -7210,6 +7213,10 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
   // constants are a nan and -0.0, but the final result should preserve
   // everything.
   unsigned Flags = MI.getFlags();
+
+  // We masked the sign bit and the not-sign bit, so these are disjoint.
+  Flags |= MachineInstr::Disjoint;
+
   MIRBuilder.buildOr(Dst, And0, And1, Flags);
 
   MI.eraseFromParent();
