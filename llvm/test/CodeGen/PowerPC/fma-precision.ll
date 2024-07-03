@@ -140,15 +140,17 @@ define double @fma_multi_uses2(double %a, double %b, double %c, double %d, ptr %
 define double @fma_multi_uses3(double %a, double %b, double %c, double %d, double %f, double %g, ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: fma_multi_uses3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xsmuldp 0, 1, 2
-; CHECK-NEXT:    xsmuldp 1, 5, 6
+; CHECK-NEXT:    xsmuldp 7, 1, 2
+; CHECK-NEXT:    xsmuldp 0, 5, 6
 ; CHECK-NEXT:    ld 3, 96(1)
-; CHECK-NEXT:    stfd 0, 0(9)
-; CHECK-NEXT:    stfd 0, 0(10)
-; CHECK-NEXT:    stfd 1, 0(3)
-; CHECK-NEXT:    xsnmsubadp 1, 3, 4
+; CHECK-NEXT:    stfd 7, 0(9)
+; CHECK-NEXT:    stfd 7, 0(10)
+; CHECK-NEXT:    stfd 0, 0(3)
 ; CHECK-NEXT:    xsnmsubadp 0, 3, 4
-; CHECK-NEXT:    xsadddp 1, 0, 1
+; CHECK-NEXT:    xsnegdp 3, 3
+; CHECK-NEXT:    xsmaddadp 0, 1, 2
+; CHECK-NEXT:    xsmaddadp 0, 3, 4
+; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
   %ab = fmul contract reassoc double %a, %b
   %cd = fmul contract reassoc double %c, %d
