@@ -17,6 +17,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-forward.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -184,6 +185,22 @@ private:
 
   void GetValueOffset(const lldb::ValueObjectSP &node);
 
+  /// Returns the ValueObject for the __tree_node type that
+  /// holds the key/value pair of the node at index \ref idx.
+  ///
+  /// \param[in] idx The child index that we're looking to get
+  ///                the key/value pair for.
+  ///
+  /// \param[in] max_depth The maximum search depth after which
+  ///                      we stop trying to find the key/value
+  ///                      pair for.
+  ///
+  /// \returns On success, returns the ValueObjectSP corresponding
+  ///          to the __tree_node's __value_ member (which holds
+  ///          the key/value pair the formatter wants to display).
+  ///          On failure, will return nullptr.
+  ValueObjectSP GetKeyValuePair(size_t idx, size_t max_depth);
+
   ValueObject *m_tree = nullptr;
   ValueObject *m_root_node = nullptr;
   CompilerType m_element_type;
@@ -267,7 +284,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
   uint64_t bit_offset;
   if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) !=
       UINT32_MAX) {
-    // Old layout (pre 089a7cc5dea)
+    // Old layout (pre d05b10ab4fc65)
     m_skip_size = bit_offset / 8u;
   } else {
     auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
@@ -299,6 +316,71 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
   }
 }
 
+ValueObjectSP
+lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetKeyValuePair(
+    size_t idx, size_t max_depth) {
+  MapIterator iterator(m_root_node, max_depth);
+
+  const bool need_to_skip = (idx > 0);
+  size_t actual_advance = idx;
+  if (need_to_skip) {
+    // If we have already created the iterator for the previous
+    // index, we can start from there and advance by 1.
+    auto cached_iterator = m_iterators.find(idx - 1);
+    if (cached_iterator != m_iterators.end()) {
+      iterator = cached_iterator->second;
+      actual_advance = 1;
+    }
+  }
+
+  ValueObjectSP iterated_sp(iterator.advance(actual_advance));
+  if (!iterated_sp)
+    // this tree is garbage - stop
+    return nullptr;
+
+  if (!GetDataType())
+    return nullptr;
+
+  if (!need_to_skip) {
+    Status error;
+    iterated_sp = iterated_sp->Dereference(error);
+    if (!iterated_sp || error.Fail())
+      return nullptr;
+
+    GetValueOffset(iterated_sp);
+    auto child_sp = iterated_sp->GetChildMemberWithName("__value_");
+    if (child_sp) {
+      // Old layout (pre 089a7cc5dea)
+      iterated_sp = child_sp;
+    } else {
+      iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
+          m_skip_size, m_element_type, true);
+    }
+
+    if (!iterated_sp)
+      return nullptr;
+  } else {
+    // because of the way our debug info is made, we need to read item 0
+    // first so that we can cache information used to generate other elements
+    if (m_skip_size == UINT32_MAX)
+      GetChildAtIndex(0);
+
+    if (m_skip_size == UINT32_MAX)
+      return nullptr;
+
+    iterated_sp = iterated_sp->GetSyntheticChildAtOffset(m_skip_size,
+                                                         m_element_type, true);
+    if (!iterated_sp)
+      return nullptr;
+  }
+
+  m_iterators[idx] = iterator;
+  assert(iterated_sp != nullptr &&
+         "Cached MapIterator for invalid ValueObject");
+
+  return iterated_sp;
+}
+
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
@@ -306,68 +388,16 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   static ConstString g_nc("__nc");
   uint32_t num_children = CalculateNumChildrenIgnoringErrors();
   if (idx >= num_children)
-    return lldb::ValueObjectSP();
+    return nullptr;
+
   if (m_tree == nullptr || m_root_node == nullptr)
-    return lldb::ValueObjectSP();
+    return nullptr;
 
-  MapIterator iterator(m_root_node, num_children);
-
-  const bool need_to_skip = (idx > 0);
-  size_t actual_advancde = idx;
-  if (need_to_skip) {
-    auto cached_iterator = m_iterators.find(idx - 1);
-    if (cached_iterator != m_iterators.end()) {
-      iterator = cached_iterator->second;
-      actual_advancde = 1;
-    }
-  }
-
-  ValueObjectSP iterated_sp(iterator.advance(actual_advancde));
-  if (!iterated_sp) {
-    // this tree is garbage - stop
-    m_tree =
-        nullptr; // this will stop all future searches until an Update() happens
-    return iterated_sp;
-  }
-
-  if (!GetDataType()) {
+  ValueObjectSP key_val_sp = GetKeyValuePair(idx, /*max_depth=*/num_children);
+  if (!key_val_sp) {
+    // this will stop all future searches until an Update() happens
     m_tree = nullptr;
-    return lldb::ValueObjectSP();
-  }
-
-  if (!need_to_skip) {
-    Status error;
-    iterated_sp = iterated_sp->Dereference(error);
-    if (!iterated_sp || error.Fail()) {
-      m_tree = nullptr;
-      return lldb::ValueObjectSP();
-    }
-    GetValueOffset(iterated_sp);
-    auto child_sp = iterated_sp->GetChildMemberWithName("__value_");
-    if (child_sp)
-      iterated_sp = child_sp;
-    else
-      iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
-          m_skip_size, m_element_type, true);
-    if (!iterated_sp) {
-      m_tree = nullptr;
-      return lldb::ValueObjectSP();
-    }
-  } else {
-    // because of the way our debug info is made, we need to read item 0
-    // first so that we can cache information used to generate other elements
-    if (m_skip_size == UINT32_MAX)
-      GetChildAtIndex(0);
-    if (m_skip_size == UINT32_MAX) {
-      m_tree = nullptr;
-      return lldb::ValueObjectSP();
-    }
-    iterated_sp = iterated_sp->GetSyntheticChildAtOffset(m_skip_size,
-                                                         m_element_type, true);
-    if (!iterated_sp) {
-      m_tree = nullptr;
-      return lldb::ValueObjectSP();
-    }
+    return nullptr;
   }
 
   // at this point we have a valid
@@ -375,7 +405,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   // all items named __value_
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  auto potential_child_sp = iterated_sp->Clone(ConstString(name.GetString()));
+  auto potential_child_sp = key_val_sp->Clone(ConstString(name.GetString()));
   if (potential_child_sp) {
     switch (potential_child_sp->GetNumChildrenIgnoringErrors()) {
     case 1: {
@@ -396,7 +426,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     }
     }
   }
-  m_iterators[idx] = iterator;
   return potential_child_sp;
 }
 
