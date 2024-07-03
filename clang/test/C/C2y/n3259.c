@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c2y -Wall -pedantic -Wno-unused -Wpre-c2y-compat -verify=pre-c2y %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c23 -Wall -pedantic -Wno-unused %s -verify -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64 -std=c2y -Wall -pedantic -Wno-unused -Wpre-c2y-compat -verify=pre-c2y %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64 -std=c23 -Wall -pedantic -Wno-unused %s -verify -emit-llvm -o - | FileCheck %s
 
 /* WG14 N3259: Yes
  * Support ++ and -- on complex values
