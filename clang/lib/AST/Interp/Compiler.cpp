@@ -4139,6 +4139,7 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   LabelTy EndLabel = this->getLabel();  // Label after the loop.
   LoopScope<Emitter> LS(this, EndLabel, CondLabel);
 
+  this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
   if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
@@ -4174,12 +4175,14 @@ template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
   LoopScope<Emitter> LS(this, EndLabel, CondLabel);
   LocalScope<Emitter> Scope(this);
 
+  this->fallthrough(StartLabel);
   this->emitLabel(StartLabel);
   {
     DestructorScope<Emitter> DS(Scope);
 
     if (!this->visitLoopBody(Body))
       return false;
+    this->fallthrough(CondLabel);
     this->emitLabel(CondLabel);
     if (!this->visitBool(Cond))
       return false;
@@ -4187,6 +4190,7 @@ template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
   if (!this->jumpTrue(StartLabel))
     return false;
 
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
   return true;
 }
@@ -4207,6 +4211,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
 
   if (Init && !this->visitStmt(Init))
     return false;
+  this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
   if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
@@ -4225,6 +4230,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
 
     if (Body && !this->visitLoopBody(Body))
       return false;
+    this->fallthrough(IncLabel);
     this->emitLabel(IncLabel);
     if (Inc && !this->discard(Inc))
       return false;
@@ -4232,6 +4238,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
 
   if (!this->jump(CondLabel))
     return false;
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
   return true;
 }
@@ -4263,6 +4270,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
     return false;
 
   // Now the condition as well as the loop variable assignment.
+  this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
   if (!this->visitBool(Cond))
     return false;
@@ -4279,13 +4287,16 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 
     if (!this->visitLoopBody(Body))
       return false;
+  this->fallthrough(IncLabel);
     this->emitLabel(IncLabel);
     if (!this->discard(Inc))
       return false;
   }
+
   if (!this->jump(CondLabel))
     return false;
 
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
   return true;
 }
