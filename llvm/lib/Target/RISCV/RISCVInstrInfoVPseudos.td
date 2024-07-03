@@ -6629,6 +6629,7 @@ defm PseudoVIOTA_M: VPseudoVIOTA_M;
 //===----------------------------------------------------------------------===//
 // 15.9. Vector Element Index Instruction
 //===----------------------------------------------------------------------===//
+let isReMaterializable = 1 in
 defm PseudoVID : VPseudoVID_V;
 } // Predicates = [HasVInstructions]
 
