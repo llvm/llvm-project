@@ -627,8 +627,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
     addFullAddress(MIB, AM).addUse(DefReg);
   }
   bool Constrained = constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  if (Constrained)
-    I.addImplicitDefUseOperands(MF);
+  I.addImplicitDefUseOperands(MF);
   return Constrained;
 }
 
@@ -1523,8 +1522,8 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
   const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   // Create the load from the constant pool.
   const ConstantFP *CFP = I.getOperand(1).getFPImm();
-  const auto &DataLayout = MF.getDataLayout();
-  Align Alignment = DataLayout.getPrefTypeAlign(CFP->getType());
+  const auto &DL = MF.getDataLayout();
+  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
   const DebugLoc &DbgLoc = I.getDebugLoc();
 
   unsigned Opc =
@@ -1544,7 +1543,7 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
-        LLT::pointer(0, DataLayout.getPointerSizeInBits()), Alignment);
+        LLT::pointer(0, DL.getPointerSizeInBits()), Alignment);
 
     LoadInst =
         addDirectMem(BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg),
