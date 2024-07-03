@@ -91,7 +91,6 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
 
   // Used by legalize types to correctly generate the setcc result.
-  // AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
   setOperationPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
   setOperationPromotedToType(ISD::BR_CC, MVT::i1, MVT::i32);
 
@@ -106,9 +105,6 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Expand);
-
-  // make BRCOND legal, its actually only legal for a subset of conds
-  setOperationAction(ISD::BRCOND, MVT::Other, Legal);
 
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);

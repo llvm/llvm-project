@@ -425,28 +425,6 @@ def : Pat<(brcc SETLE, AR:$s, AR:$t, bb:$target),
 def : Pat<(brcc SETULE, AR:$s, AR:$t, bb:$target),
           (BGEU AR:$t, AR:$s, bb:$target)>;
 
-def : Pat<(brcond (i32 (seteq AR:$s, AR:$t)), bb:$target),
-          (BEQ AR:$s, AR:$t, bb:$target)>;
-def : Pat<(brcond (i32 (setne AR:$s, AR:$t)), bb:$target),
-          (BNE AR:$s, AR:$t, bb:$target)>;
-def : Pat<(brcond (i32 (setge AR:$s, AR:$t)), bb:$target),
-          (BGE AR:$s, AR:$t, bb:$target)>;
-def : Pat<(brcond (i32 (setle AR:$s, AR:$t)), bb:$target),
-          (BLT AR:$s, AR:$t, bb:$target)>;
-def : Pat<(brcond (i32 (setuge AR:$s, AR:$t)), bb:$target),
-          (BGEU AR:$s, AR:$t, bb:$target)>;
-def : Pat<(brcond (i32 (setult AR:$s, AR:$t)), bb:$target),
-          (BLTU AR:$s, AR:$t, bb:$target)>;
-def : Pat<(brcond (i32 (setgt AR:$s, AR:$t)), bb:$target),
-          (BLT AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcond (i32 (setugt AR:$s, AR:$t)), bb:$target),
-          (BLTU AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcond (i32 (setle AR:$s, AR:$t)), bb:$target),
-          (BGE AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcond (i32 (setule AR:$s, AR:$t)), bb:$target),
-          (BGEU AR:$t, AR:$s, bb:$target)>;
-
-def : Pat<(brcond AR:$s, bb:$target), (BNEZ AR:$s, bb:$target)>;
 
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
