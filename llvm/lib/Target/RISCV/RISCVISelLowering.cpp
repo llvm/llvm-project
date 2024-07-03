@@ -1074,7 +1074,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
                            VT, Custom);
         setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                            ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
+                            ISD::EXTRACT_SUBVECTOR},
                            VT, Custom);
         if (Subtarget.hasStdExtZfhminOrZhinxmin())
           setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
@@ -1317,7 +1317,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
                              VT, Custom);
           setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                              ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
+                              ISD::EXTRACT_SUBVECTOR},
                              VT, Custom);
           setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
           setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
@@ -1559,7 +1559,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                              const CallInst &I,
                                              MachineFunction &MF,
                                              unsigned Intrinsic) const {
-  auto &DL = I.getModule()->getDataLayout();
+  auto &DL = I.getDataLayout();
 
   auto SetRVVLoadStoreInfo = [&](unsigned PtrOp, bool IsStore,
                                  bool IsUnitStrided, bool UsePtrVal = false) {
@@ -9326,7 +9326,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MVT ScalarVT = ContainerVT.getVectorElementType();
     if (IsUnmasked && isNullConstant(Stride) && ContainerVT.isInteger()) {
       SDValue ScalarLoad =
-          DAG.getExtLoad(ISD::ZEXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
+          DAG.getExtLoad(ISD::EXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
                          ScalarVT, Load->getMemOperand());
       Chain = ScalarLoad.getValue(1);
       Result = lowerScalarSplat(SDValue(), ScalarLoad, VL, ContainerVT, DL, DAG,
@@ -16894,7 +16894,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                        DAG.getNode(ISD::FNEG, DL, VT, NewFPExtRound));
   }
   case ISD::MGATHER: {
-    const auto *MGN = dyn_cast<MaskedGatherSDNode>(N);
+    const auto *MGN = cast<MaskedGatherSDNode>(N);
     const EVT VT = N->getValueType(0);
     SDValue Index = MGN->getIndex();
     SDValue ScaleOp = MGN->getScale();
@@ -16994,7 +16994,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::MSCATTER:{
-    const auto *MSN = dyn_cast<MaskedScatterSDNode>(N);
+    const auto *MSN = cast<MaskedScatterSDNode>(N);
     SDValue Index = MSN->getIndex();
     SDValue ScaleOp = MSN->getScale();
     ISD::MemIndexType IndexType = MSN->getIndexType();
@@ -17030,7 +17030,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::VP_GATHER: {
-    const auto *VPGN = dyn_cast<VPGatherSDNode>(N);
+    const auto *VPGN = cast<VPGatherSDNode>(N);
     SDValue Index = VPGN->getIndex();
     SDValue ScaleOp = VPGN->getScale();
     ISD::MemIndexType IndexType = VPGN->getIndexType();
@@ -17055,7 +17055,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::VP_SCATTER: {
-    const auto *VPSN = dyn_cast<VPScatterSDNode>(N);
+    const auto *VPSN = cast<VPScatterSDNode>(N);
     SDValue Index = VPSN->getIndex();
     SDValue ScaleOp = VPSN->getScale();
     ISD::MemIndexType IndexType = VPSN->getIndexType();
@@ -20906,7 +20906,7 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
   // sign-extend.
   if (AI->getOperation() == AtomicRMWInst::Min ||
       AI->getOperation() == AtomicRMWInst::Max) {
-    const DataLayout &DL = AI->getModule()->getDataLayout();
+    const DataLayout &DL = AI->getDataLayout();
     unsigned ValWidth =
         DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
     Value *SextShamt =
@@ -21531,7 +21531,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
   if (!isLegalInterleavedAccessType(VTy, Factor, LI->getAlign(),
                                     LI->getPointerAddressSpace(),
-                                    LI->getModule()->getDataLayout()))
+                                    LI->getDataLayout()))
     return false;
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
@@ -21585,7 +21585,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
                                    ShuffleVTy->getNumElements() / Factor);
   if (!isLegalInterleavedAccessType(VTy, Factor, SI->getAlign(),
                                     SI->getPointerAddressSpace(),
-                                    SI->getModule()->getDataLayout()))
+                                    SI->getDataLayout()))
     return false;
 
   auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
@@ -21630,7 +21630,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
 
   if (!isLegalInterleavedAccessType(ResVTy, Factor, LI->getAlign(),
                                     LI->getPointerAddressSpace(),
-                                    LI->getModule()->getDataLayout()))
+                                    LI->getDataLayout()))
     return false;
 
   Function *VlsegNFunc;
@@ -21680,7 +21680,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
 
   if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
                                     SI->getPointerAddressSpace(),
-                                    SI->getModule()->getDataLayout()))
+                                    SI->getDataLayout()))
     return false;
 
   Function *VssegNFunc;

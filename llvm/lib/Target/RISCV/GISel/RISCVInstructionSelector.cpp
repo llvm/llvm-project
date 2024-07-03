@@ -1148,16 +1148,16 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
 
 // Convert an FCMP predicate to one of the supported F or D instructions.
 static unsigned getFCmpOpcode(CmpInst::Predicate Pred, unsigned Size) {
-  assert((Size == 32 || Size == 64) && "Unsupported size");
+  assert((Size == 16 || Size == 32 || Size == 64) && "Unsupported size");
   switch (Pred) {
   default:
     llvm_unreachable("Unsupported predicate");
   case CmpInst::FCMP_OLT:
-    return Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
+    return Size == 16 ? RISCV::FLT_H : Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
   case CmpInst::FCMP_OLE:
-    return Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
+    return Size == 16 ? RISCV::FLE_H : Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
   case CmpInst::FCMP_OEQ:
-    return Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
+    return Size == 16 ? RISCV::FEQ_H : Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
   }
 }
 
@@ -1209,7 +1209,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
   Register RHS = CmpMI.getRHSReg();
 
   unsigned Size = MRI.getType(LHS).getSizeInBits();
-  assert((Size == 32 || Size == 64) && "Unexpected size");
+  assert((Size == 16 || Size == 32 || Size == 64) && "Unexpected size");
 
   Register TmpReg = DstReg;
 

@@ -686,6 +686,10 @@ class Attr {
   bit PragmaAttributeSupport;
   // Set to true if this attribute accepts parameter pack expansion expressions.
   bit AcceptsExprPack = 0;
+  // To support multiple enum parameters to an attribute without breaking
+  // our existing general parsing we need to have a separate flag that
+  // opts an attribute into strict parsing of attribute parameters
+  bit StrictEnumParameters = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -4575,6 +4579,31 @@ def NoRandomizeLayout : InheritableAttr {
   let LangOpts = [COnly];
 }
 def : MutualExclusions<[RandomizeLayout, NoRandomizeLayout]>;
+
+def VTablePointerAuthentication : InheritableAttr {
+  let Spellings = [Clang<"ptrauth_vtable_pointer">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [Undocumented];
+  let StrictEnumParameters = 1;
+  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ true,
+                ["default_key", "no_authentication", "process_dependent",
+                 "process_independent"],
+                ["DefaultKey", "NoKey", "ProcessDependent",
+                 "ProcessIndependent"]>,
+              EnumArgument<"AddressDiscrimination", "AddressDiscriminationMode",
+                /*is_string=*/ true,
+                ["default_address_discrimination", "no_address_discrimination",
+                 "address_discrimination"],
+                ["DefaultAddressDiscrimination", "NoAddressDiscrimination",
+                 "AddressDiscrimination"]>,
+              EnumArgument<"ExtraDiscrimination", "ExtraDiscrimination",
+                /*is_string=*/ true,
+                ["default_extra_discrimination", "no_extra_discrimination",
+                 "type_discrimination", "custom_discrimination"],
+                ["DefaultExtraDiscrimination", "NoExtraDiscrimination",
+                 "TypeDiscrimination", "CustomDiscrimination"]>,
+              IntArgument<"CustomDiscriminationValue", 1>];
+}
 
 def FunctionReturnThunks : InheritableAttr,
     TargetSpecificAttr<TargetAnyX86> {
