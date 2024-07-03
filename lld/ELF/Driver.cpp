@@ -631,7 +631,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // of Libtool. We cannot convince every software developer to migrate to
   // the latest version and re-generate scripts. So we have this hack.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    message(getLLDVersion() + " (compatible with GNU linkers)");
+    message(getLLDVersion() + ", compatible with GNU linkers");
 
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -1269,7 +1269,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->dynamicLinker = getDynamicLinker(args);
   config->ehFrameHdr =
       args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
-  config->emitLLVM = args.hasArg(OPT_plugin_opt_emit_llvm, false);
+  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
