@@ -1,12 +1,12 @@
-//===---- X86FixupBufferSecurityCheck.cpp Fix Buffer Security Check Call---===//
+//===- X86WinFixupBufferSecurityCheck.cpp Fix Buffer Security Check Call -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Buffer Security Check implementation inserts platform specific callback into
-// code. For windows __security_check_cookie call gets call everytime function
+// Buffer Security Check implementation inserts windows specific callback into
+// code. On windows, __security_check_cookie call gets call everytime function
 // is return without fixup. Since this function is defined in runtime library,
 // it incures cost of call in dll which simply does comparison and returns most
 // time. With Fixup, We selective move to call in DLL only if comparison fails.
@@ -25,7 +25,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-fixup-bscheck"
+#define DEBUG_TYPE "x86-win-fixup-bscheck"
 
 namespace {
 
@@ -36,7 +36,7 @@ public:
   X86WinFixupBufferSecurityCheckPass() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
-    return "X86 Fixup Buffer Security Check";
+    return "X86 Windows Fixup Buffer Security Check";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
