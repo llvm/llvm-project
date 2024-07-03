@@ -995,7 +995,7 @@ static bool isGlobalVarSummary(const ModuleSummaryIndex &Index,
   return false;
 }
 
-// Return the number of global summaries in ExportSet.
+// Return the number of global variable summaries in ExportSet.
 static unsigned
 numGlobalVarSummaries(const ModuleSummaryIndex &Index,
                       FunctionImporter::ExportSetTy &ExportSet) {
@@ -1006,8 +1006,8 @@ numGlobalVarSummaries(const ModuleSummaryIndex &Index,
   return NumGVS;
 }
 
-// Given ImportMap, return the number of global summaries and record the number
-// of defined function summaries as output parameter.
+// Given ImportMap, return the number of global variable summaries and record
+// the number of defined function summaries as output parameter.
 static unsigned
 numGlobalVarSummaries(const ModuleSummaryIndex &Index,
                       FunctionImporter::FunctionsToImportTy &ImportMap,
