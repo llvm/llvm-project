@@ -574,8 +574,7 @@ void RISCVPassConfig::addPostRegAlloc() {
     addPass(createRISCVRedundantCopyEliminationPass());
 }
 
-void RISCVTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
                                                  OptimizationLevel Level) {
     LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
