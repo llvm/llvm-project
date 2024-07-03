@@ -2404,6 +2404,7 @@ void LSRInstance::OptimizeShadowIV() {
 
     /* Add new PHINode. */
     PHINode *NewPH = PHINode::Create(DestTy, 2, "IV.S.", PH->getIterator());
+    NewPH->setDebugLoc(PH->getDebugLoc());
 
     /* create new increment. '++d' in above example. */
     Constant *CFP = ConstantFP::get(DestTy, C->getZExtValue());
@@ -2411,6 +2412,7 @@ void LSRInstance::OptimizeShadowIV() {
         Incr->getOpcode() == Instruction::Add ? Instruction::FAdd
                                               : Instruction::FSub,
         NewPH, CFP, "IV.S.next.", Incr->getIterator());
+    NewIncr->setDebugLoc(Incr->getDebugLoc());
 
     NewPH->addIncoming(NewInit, PH->getIncomingBlock(Entry));
     NewPH->addIncoming(NewIncr, PH->getIncomingBlock(Latch));
