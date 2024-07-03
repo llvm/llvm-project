@@ -452,12 +452,6 @@ if(WIN32 OR CYGWIN)
 else()
   set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 endif()
-# set shared directory
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-  set(LLVM_SHARE_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/share")
-else()
-  set(LLVM_SHARE_DIR "${CMAKE_BINARY_DIR}/share")
-endif()
 
 # Each of them corresponds to llvm-config's.
 set(LLVM_TOOLS_BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR}) # --bindir
@@ -578,11 +572,11 @@ option(LLVM_ENABLE_Z3_SOLVER
 )
 
 if (LLVM_ENABLE_Z3_SOLVER)
-  find_package(Z3 4.8.9)
+  find_package(Z3 4.7.1)
 
   if (LLVM_Z3_INSTALL_DIR)
     if (NOT Z3_FOUND)
-      message(FATAL_ERROR "Z3 >= 4.8.9 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
+      message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
     endif()
   endif()
 
