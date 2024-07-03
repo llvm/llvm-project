@@ -371,7 +371,7 @@ uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     if (Demangler.partialDemangle(DemangledName.c_str()))
       return std::string("");
     std::vector<char> Buffer(DemangledName.begin(), DemangledName.end());
-    size_t BufferSize = Buffer.size();
+    size_t BufferSize;
     char *NameSpace =
         Demangler.getFunctionDeclContextName(&Buffer[0], &BufferSize);
     return std::string(NameSpace, BufferSize);
