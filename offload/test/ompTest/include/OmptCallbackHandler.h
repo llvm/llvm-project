@@ -8,6 +8,8 @@
 
 #include <vector>
 
+namespace omptest {
+
 /// Handler class to do whatever is needed to be done when a callback is invoked
 /// by the OMP runtime
 /// Supports a RecordAndReplay mechanism in which all OMPT events are recorded
@@ -125,7 +127,7 @@ public:
 private:
   /// Wrapper around emplace_back for potential additional logging / checking or
   /// so
-  void recordEvent(omptest::OmptAssertEvent &&Event);
+  void recordEvent(OmptAssertEvent &&Event);
 
   /// Listeners to be notified
   std::vector<OmptListener *> Subscribers;
@@ -134,10 +136,12 @@ private:
   bool RecordAndReplay{false};
 
   /// Recorded events in Record and Replay mode
-  std::vector<omptest::OmptAssertEvent> RecordedEvents;
+  std::vector<OmptAssertEvent> RecordedEvents;
 };
 
+} // namespace omptest
+
 // Pointer to global callback handler
-extern OmptCallbackHandler *Handler;
+extern omptest::OmptCallbackHandler *Handler;
 
 #endif

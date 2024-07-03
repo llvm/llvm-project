@@ -8,9 +8,12 @@
 #include <unordered_map>
 #include <vector>
 
+// Forward declarations.
+namespace omptest {
 struct OmptEventAsserter;
 class OmptEventReporter;
 struct OmptSequencedAsserter;
+} // namespace omptest
 
 struct Error {
   operator bool() { return Fail; }
@@ -18,7 +21,7 @@ struct Error {
 };
 
 /// A pretty crude test case abstraction
-class TestCase : public OmptEventGroupInterface {
+class TestCase : public omptest::OmptEventGroupInterface {
 public:
   TestCase(const std::string &name)
       : IsDisabled(name.rfind("DISABLED_", 0) == 0), Name(name) {}

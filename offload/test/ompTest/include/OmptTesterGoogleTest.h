@@ -14,13 +14,13 @@
 
 namespace testing {
 class GTEST_API_ OmptTestCase : public testing::Test,
-                                public OmptEventGroupInterface {
+                                public omptest::OmptEventGroupInterface {
 public:
 protected:
   void SetUp() override {
-    OmptCallbackHandler::get().subscribe(SequenceAsserter.get());
-    OmptCallbackHandler::get().subscribe(SetAsserter.get());
-    OmptCallbackHandler::get().subscribe(EventReporter.get());
+    omptest::OmptCallbackHandler::get().subscribe(SequenceAsserter.get());
+    omptest::OmptCallbackHandler::get().subscribe(SetAsserter.get());
+    omptest::OmptCallbackHandler::get().subscribe(EventReporter.get());
   }
 
   void TearDown() override {
@@ -28,7 +28,7 @@ protected:
     flush_traced_devices();
 
     // Remove subscribers to not be notified of events after test execution.
-    OmptCallbackHandler::get().clearSubscribers();
+    omptest::OmptCallbackHandler::get().clearSubscribers();
 
     // This common testcase must not encounter any failures.
     if (SequenceAsserter->getState() == omptest::AssertState::fail ||
@@ -44,7 +44,7 @@ protected:
     flush_traced_devices();
 
     // Remove subscribers to not be notified of events after test execution.
-    OmptCallbackHandler::get().clearSubscribers();
+    omptest::OmptCallbackHandler::get().clearSubscribers();
 
     // This eXpectedly failing testcase has to encounter at least one failure.
     if (SequenceAsserter->getState() == omptest::AssertState::pass &&

@@ -72,6 +72,17 @@
   OMPT_ASSERT_SEQUENCE_EVENT(Name, "", EventTy, __VA_ARGS__)                   \
   OMPT_ASSERT_SEQUENCE_SUSPEND()
 
+#define OMPT_ASSERTER_MODE_STRICT(Asserter)                                    \
+  Asserter->setOperationMode(AssertMode::strict);
+#define OMPT_ASSERTER_MODE_RELAXED(Asserter)                                   \
+  Asserter->setOperationMode(AssertMode::relaxed);
+#define OMPT_ASSERT_SEQUENCE_MODE_STRICT()                                     \
+  OMPT_ASSERTER_MODE_STRICT(SequenceAsserter)
+#define OMPT_ASSERT_SEQUENCE_MODE_RELAXED()                                    \
+  OMPT_ASSERTER_MODE_RELAXED(SequenceAsserter)
+#define OMPT_ASSERT_SET_MODE_STRICT() OMPT_ASSERTER_MODE_STRICT(SetAsserter)
+#define OMPT_ASSERT_SET_MODE_RELAXED() OMPT_ASSERTER_MODE_RELAXED(SetAsserter)
+
 // Enable / disable asserters entirely
 #define OMPT_ASSERTER_DISABLE(Asserter) Asserter->setActive(false);
 #define OMPT_ASSERTER_ENABLE(Asserter) Asserter->setActive(true);

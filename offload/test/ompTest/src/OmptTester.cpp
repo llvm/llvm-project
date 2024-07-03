@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <cstring>
 
+using namespace omptest;
+
 // Callback handler, which receives and relays OMPT callbacks
 extern OmptCallbackHandler *Handler;
 

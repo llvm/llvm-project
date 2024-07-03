@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+using namespace omptest;
+
 Error TestCase::exec() {
   Error E;
   E.Fail = false;

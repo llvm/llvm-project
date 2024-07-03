@@ -147,6 +147,8 @@ bool OmptAsserter::verifyEventGroups(const OmptAssertEvent &ExpectedEvent,
   return true;
 }
 
+void OmptAsserter::setOperationMode(AssertMode Mode) { OperationMode = Mode; }
+
 void OmptSequencedAsserter::insert(OmptAssertEvent &&AE) {
   std::lock_guard<std::mutex> Lock(AssertMutex);
   Events.emplace_back(std::move(AE));
@@ -201,7 +203,7 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
 
   // If we are actively asserting, increment the event counter.
   // Otherwise: If passively asserting, we will keep waiting for a match.
-  auto &E = AssertionSuspended ? Events[NextEvent] : Events[NextEvent++];
+  auto &E = Events[NextEvent];
   if (E == AE && verifyEventGroups(E, AE)) {
     if (E.getEventExpectedState() == ObserveState::always) {
       ++NumAssertSuccesses;
@@ -211,15 +213,15 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
     }
 
     // Return to active assertion
-    if (AssertionSuspended) {
+    if (AssertionSuspended)
       AssertionSuspended = false;
-      ++NextEvent;
-    }
 
+    // Match found, increment index
+    ++NextEvent;
     return;
   }
 
-  if (AssertionSuspended)
+  if (AssertionSuspended || OperationMode == AssertMode::relaxed)
     return;
 
   reportError(E, AE, "[OmptSequencedAsserter] The events are not equal");
@@ -276,7 +278,7 @@ void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
       return;
 
     reportError(
-        AE, "[OmptSequencedAsserter] Encountered marker while still awaiting " +
+        AE, "[OmptEventAsserter] Encountered marker while still awaiting " +
                 std::to_string(NumRemainingEvents) + " events. Asserted " +
                 std::to_string(NumAssertSuccesses) + " events successfully.");
     State = AssertState::fail;
@@ -295,6 +297,16 @@ void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
       }
       return;
     }
+  }
+
+  if (OperationMode == AssertMode::strict) {
+    reportError(AE, "[OmptEventAsserter] Too many events to check (" +
+                        std::to_string(NumNotifications) + "). Asserted " +
+                        std::to_string(NumAssertSuccesses) +
+                        " events successfully. (Remaining events: " +
+                        std::to_string(getRemainingEventCount()) + ")");
+    State = AssertState::fail;
+    return;
   }
 }
 

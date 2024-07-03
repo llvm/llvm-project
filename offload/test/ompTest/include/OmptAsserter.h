@@ -10,8 +10,13 @@
 #include <set>
 #include <vector>
 
+namespace omptest {
+
 // Forward declaration.
 class OmptEventGroupInterface;
+
+enum class AssertMode { strict, relaxed };
+enum class AssertState { pass, fail };
 
 /// General base class for the subscriber/notification pattern in
 /// OmptCallbachHandler. Derived classes need to implement the notify method.
@@ -82,8 +87,16 @@ public:
   /// Determine and return the asserter's current state.
   virtual omptest::AssertState getState();
 
+  /// Check the given events' group association. If the event indicates the
+  /// begin/end of an OpenMP target region, we will create/deprecate the
+  /// expected event's group. Return true if the expected event group exists
+  /// (and is active), otherwise: false. Note: BufferRecords may also match with
+  /// deprecated groups as they may be delivered asynchronously.
   bool verifyEventGroups(const omptest::OmptAssertEvent &ExpectedEvent,
                          const omptest::OmptAssertEvent &ObservedEvent);
+
+  /// Set the asserter's mode of operation w.r.t. assertion.
+  void setOperationMode(AssertMode Mode);
 
 protected:
   /// The asserter's current state.
@@ -94,6 +107,9 @@ protected:
 
   /// Pointer to the parent TestCase.
   OmptEventGroupInterface *TC{nullptr};
+
+  /// Operation mode during assertion / notification.
+  AssertMode OperationMode{AssertMode::strict};
 };
 
 /// Class that can assert in a sequenced fashion, i.e., events have to occur in
@@ -194,5 +210,7 @@ private:
   std::map<std::string, omptest::AssertEventGroup> DeprecatedEventGroups{};
   std::set<std::string> EncounteredMarkers{};
 };
+
+} // namespace omptest
 
 #endif

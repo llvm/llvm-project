@@ -11,7 +11,6 @@
 
 namespace omptest{
 
-enum class AssertState { pass, fail };
 enum class ObserveState { generated, always, never };
 
 struct OmptAssertEvent {

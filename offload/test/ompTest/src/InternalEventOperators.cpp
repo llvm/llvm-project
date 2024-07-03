@@ -31,7 +31,8 @@ event_class_operator_w_body(TargetEmi,                                         \
 )
 event_class_operator_w_body(TargetDataOp,                                      \
   bool isSameOpType = (Expected.OpType == Observed.OpType);                    \
-  bool isSameSize = (Expected.Bytes == Observed.Bytes);                        \
+  bool isSameSize = (Expected.Bytes == expectedDefault(size_t)) ?              \
+                       true : (Expected.Bytes == Observed.Bytes);              \
   bool isSameSrcAddr = (Expected.SrcAddr == expectedDefault(void *)) ?         \
                           true : (Expected.SrcAddr == Observed.SrcAddr);       \
   bool isSameDstAddr = (Expected.DstAddr == expectedDefault(void *)) ?         \
@@ -48,7 +49,8 @@ event_class_operator_w_body(TargetDataOp,                                      \
 event_class_operator_w_body(TargetDataOpEmi,                                   \
   bool isSameOpType = (Expected.OpType == Observed.OpType);                    \
   bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
-  bool isSameSize = (Expected.Bytes == Observed.Bytes);                        \
+  bool isSameSize = (Expected.Bytes == expectedDefault(size_t)) ?              \
+                       true : (Expected.Bytes == Observed.Bytes);              \
   bool isSameSrcAddr = (Expected.SrcAddr == expectedDefault(void *)) ?         \
                           true : (Expected.SrcAddr == Observed.SrcAddr);       \
   bool isSameDstAddr = (Expected.DstAddr == expectedDefault(void *)) ?         \
