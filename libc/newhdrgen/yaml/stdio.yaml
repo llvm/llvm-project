@@ -130,6 +130,13 @@ functions:
     return_type: int
     arguments:
       - type: FILE *
+  - name: fdopen
+    standards: 
+      - POSIX
+    return_type: FILE *
+    arguments:
+      - type: int
+      - type: const char *
   - name: clearerr
     standards: 
       - stdc

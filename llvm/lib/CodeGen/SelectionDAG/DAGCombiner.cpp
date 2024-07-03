@@ -5101,9 +5101,9 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
 
   // fold (mulhs x, 1) -> (sra x, size(x)-1)
   if (isOneConstant(N1))
-    return DAG.getNode(ISD::SRA, DL, N0.getValueType(), N0,
+    return DAG.getNode(ISD::SRA, DL, VT, N0,
                        DAG.getConstant(N0.getScalarValueSizeInBits() - 1, DL,
-                                       getShiftAmountTy(N0.getValueType())));
+                                       getShiftAmountTy(VT)));
 
   // fold (mulhs x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
@@ -5161,7 +5161,7 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
 
   // fold (mulhu x, 1) -> 0
   if (isOneConstant(N1))
-    return DAG.getConstant(0, DL, N0.getValueType());
+    return DAG.getConstant(0, DL, VT);
 
   // fold (mulhu x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
