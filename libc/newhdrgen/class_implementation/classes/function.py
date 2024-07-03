@@ -23,7 +23,7 @@ class Function:
         self.attributes = attributes or []
 
     def __str__(self):
-        attributes_str = " ".join(self.attributes)
+        attributes_str = self.attributes
         arguments_str = ", ".join(self.arguments)
         result = f"{self.return_type} {self.name}({arguments_str}){attributes_str};"
         if self.guard:

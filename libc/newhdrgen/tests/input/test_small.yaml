@@ -23,6 +23,8 @@ functions:
     arguments: []
     standards: 
       - stdc
+    guard: FUNC_A_16
+    attributes: CONST_FUNC_A
   - name: func_b
     return_type: int
     arguments:
@@ -30,3 +32,5 @@ functions:
       - type: float
     standards: 
       - stdc
+    guard: FUNC_B_16
+    attributes: CONST_FUNC_B
