@@ -3452,6 +3452,19 @@ class BinaryRRFa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let OpType = "reg";
 }
 
+
+class UnaryRRFa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
+                 RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRFa<opcode, (outs cls1:$R1), (ins cls2:$R2, cls2:$R3),
+             mnemonic#"\t$R1, $R2",
+             [(set cls1:$R1, (operator cls2:$R2, cls2:$R3))]> {
+  let R3 = R2;
+  let M4 = 0;
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
+}
+
+
 multiclass BinaryRRAndK<string mnemonic, bits<8> opcode1, bits<16> opcode2,
                         SDPatternOperator operator, RegisterOperand cls1,
                         RegisterOperand cls2> {

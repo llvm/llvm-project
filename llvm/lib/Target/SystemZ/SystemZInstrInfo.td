@@ -1380,6 +1380,10 @@ let Predicates = [FeatureMiscellaneousExtensions3],
   let isCommutable = 1, CCValues = 0xC, CompareZeroCCMask = 0x8 in {
     def NORK : BinaryRRFa<"nork", 0xB976, nor, GR32, GR32, GR32>;
     def NOGRK : BinaryRRFa<"nogrk", 0xB966, nor, GR64, GR64, GR64>;
+    let isAsmParserOnly = 1 in {
+      def NOTR : UnaryRRFa<"notr", 0xB976, nor, GR32, GR32>;
+      def NOTGR : UnaryRRFa<"notgr", 0xB966, nor, GR64, GR64>;
+    }
   }
 
   // NXOR.

@@ -471,6 +471,7 @@ def : InstRW<[WLat1, FXa, NormalGr], (instregex "NC(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "OC(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NN(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NO(G)?RK$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NOT(G)?R$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NX(G)?RK$")>;
 
 //===----------------------------------------------------------------------===//
