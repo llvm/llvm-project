@@ -1247,10 +1247,10 @@ LogicalResult FlatLinearValueConstraints::unionBoundingBox(
   if (!areVarsAligned(*this, otherCst)) {
     FlatLinearValueConstraints otherCopy(otherCst);
     mergeAndAlignVars(/*offset=*/getNumDimVars(), this, &otherCopy);
-    return success(IntegerPolyhedron::unionBoundingBox(otherCopy));
+    return IntegerPolyhedron::unionBoundingBox(otherCopy);
   }
 
-  return success(IntegerPolyhedron::unionBoundingBox(otherCst));
+  return IntegerPolyhedron::unionBoundingBox(otherCst);
 }
 
 //===----------------------------------------------------------------------===//
