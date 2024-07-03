@@ -414,6 +414,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.isnan
+    libc.src.math.isnanf
+    libc.src.math.isnanl
     libc.src.math.llogb
     libc.src.math.llogbf
     libc.src.math.llogbl
