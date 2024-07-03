@@ -199,15 +199,24 @@ define <2 x float> @sitofp(<2 x i8> %a) {
   ret <2 x float> %res
 }
 
-; TODO: Add support for this.
 define <2 x i16> @and(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i16> @and(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = and <2 x i16> [[ZEXT]], <i16 255, i16 255>
-; CHECK-NEXT:    ret <2 x i16> [[RES]]
+; CHECK-NEXT:    ret <2 x i16> [[ZEXT]]
 ;
   %zext = zext <2 x i8> %a to <2 x i16>
   %res = and <2 x i16> %zext, splat (i16 u0xff)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @and_with_poison(<2 x i8> %a) {
+; CHECK-LABEL: define <2 x i16> @and_with_poison(
+; CHECK-SAME: <2 x i8> [[A:%.*]]) {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[ZEXT]]
+;
+  %zext = zext <2 x i8> %a to <2 x i16>
+  %res = and <2 x i16> %zext, <i16 u0xff, i16 poison>
   ret <2 x i16> %res
 }
