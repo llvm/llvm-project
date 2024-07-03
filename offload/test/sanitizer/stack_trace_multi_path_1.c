@@ -16,6 +16,8 @@
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
+#include <omp.h>
+
 [[clang::optnone]] int deref(int *P) { return *P; }
 
 [[gnu::noinline]] int bar(int *P) { return deref(P); }
@@ -23,11 +25,10 @@
 
 int main(void) {
 
-#pragma omp target
+  int *Valid = (int *)omp_target_alloc(4, omp_get_default_device());
+#pragma omp target is_device_ptr(Valid)
   {
     int *NullPtr = 0;
-    int X;
-    int *Valid = &X;
     // clang-format off
     // CHECK: ERROR: OffloadSanitizer out-of-bounds access on address 0x0000000000000000 at pc [[PC:.*]]
     // CHECK: WRITE of size 4 at 0x0000000000000000 thread <0, 0, 0> block <0, 0, 0> (acc 1, heap)

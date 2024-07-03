@@ -2051,10 +2051,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   if (PTO.CallGraphProfile)
     MPM.addPass(CGProfilePass(/*InLTOPostLink=*/true));
 
-  invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
-
   if (EnableOffloadSanitizer)
     MPM.addPass(GPUSanPass());
+
+  invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);

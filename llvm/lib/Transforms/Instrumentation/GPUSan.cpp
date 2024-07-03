@@ -778,42 +778,99 @@ bool GPUSanImpl::instrument() {
     return false;
   }();
 
-  for (Function &Fn : M)
+  SmallVector<Function *> Kernels;
+  for (Function &Fn : M) {
+    if (Fn.hasFnAttribute("kernel"))
+      Kernels.push_back(&Fn);
     if (!Fn.getName().contains("ompx") && !Fn.getName().contains("__kmpc") &&
         !Fn.getName().starts_with("rpc_"))
       if (!Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
         Changed |= instrumentFunction(Fn);
+  }
 
-  SmallVector<std::pair<CallBase *, ConstantInt *>> AmbiguousCallsNumbered;
+  SmallVector<CallBase *> AmbiguousCallsOrdered;
+  SmallVector<Constant *> AmbiguousCallsMapping;
+  if (LocationMap.empty())
+    AmbiguousCalls.clear();
   for (size_t I = 0; I < AmbiguousCalls.size(); ++I) {
     CallBase &CB = *AmbiguousCalls[I];
-    AmbiguousCallsNumbered.push_back({&CB, getSourceIndex(CB)});
+    AmbiguousCallsOrdered.push_back(&CB);
+    AmbiguousCallsMapping.push_back(getSourceIndex(CB));
   }
-  IntegerType *ITy = nullptr;
+
+  uint64_t AmbiguousCallsBitWidth =
+      llvm::PowerOf2Ceil(AmbiguousCalls.size() + 1);
+
+  new GlobalVariable(M, Int64Ty, /*isConstant=*/true,
+                     GlobalValue::ExternalLinkage,
+                     ConstantInt::get(Int64Ty, AmbiguousCallsBitWidth),
+                     "__san.num_ambiguous_calls", nullptr,
+                     GlobalValue::ThreadLocalMode::NotThreadLocal, 1);
+
   if (size_t NumAmbiguousCalls = AmbiguousCalls.size()) {
-    ITy = IntegerType::get(Ctx, llvm::PowerOf2Ceil(NumAmbiguousCalls));
-    auto *ArrayTy = ArrayType::get(ITy, 1024);
+    {
+      auto *ArrayTy = ArrayType::get(Int64Ty, NumAmbiguousCalls);
+      auto *GV = new GlobalVariable(
+          M, ArrayTy, /*isConstant=*/true, GlobalValue::ExternalLinkage,
+          ConstantArray::get(ArrayTy, AmbiguousCallsMapping),
+          "__san.ambiguous_calls_mapping", nullptr,
+          GlobalValue::ThreadLocalMode::NotThreadLocal, 4);
+      GV->setVisibility(GlobalValue::ProtectedVisibility);
+    }
+
+    auto *ArrayTy = ArrayType::get(Int64Ty, 1024);
     LocationsArray = new GlobalVariable(
         M, ArrayTy, /*isConstant=*/false, GlobalValue::PrivateLinkage,
         UndefValue::get(ArrayTy), "__san.calls", nullptr,
         GlobalValue::ThreadLocalMode::NotThreadLocal, 3);
 
+    auto *OldFn = M.getFunction("__san_get_location_value");
+    if (OldFn)
+      OldFn->setName("");
     Function *LocationGetter = Function::Create(
-        FunctionType::get(Int64Ty, false), llvm::GlobalValue::ExternalLinkage,
+        FunctionType::get(Int64Ty, false), GlobalValue::ExternalLinkage,
         "__san_get_location_value", M);
+    if (OldFn) {
+      OldFn->replaceAllUsesWith(LocationGetter);
+      OldFn->eraseFromParent();
+    }
     auto *EntryBB = BasicBlock::Create(Ctx, "entry", LocationGetter);
     IRBuilder<> IRB(EntryBB);
     Value *Idx = IRB.CreateCall(getThreadIdFn(), {}, "san.gtid");
-    Value *Ptr = IRB.CreateGEP(ITy, LocationsArray, {Idx});
-    auto *LocationValue = IRB.CreateLoad(ITy, Ptr);
-    IRB.CreateRet(IRB.CreateZExt(LocationValue, Int64Ty));
+    Value *Ptr = IRB.CreateGEP(Int64Ty, LocationsArray, {Idx});
+    auto *LocationValue = IRB.CreateLoad(Int64Ty, Ptr);
+    IRB.CreateRet(LocationValue);
   }
 
-  for (auto &It : AmbiguousCallsNumbered) {
-    IRBuilder<> IRB(It.first);
+  Function *InitSharedFn =
+      Function::Create(FunctionType::get(VoidTy, false),
+                       GlobalValue::PrivateLinkage, "__san.init_shared", &M);
+  auto *EntryBB = BasicBlock::Create(Ctx, "entry", InitSharedFn);
+  IRBuilder<> IRB(EntryBB);
+  if (!AmbiguousCalls.empty()) {
     Value *Idx = IRB.CreateCall(getThreadIdFn(), {}, "san.gtid");
-    Value *Ptr = IRB.CreateGEP(ITy, LocationsArray, {Idx});
-    IRB.CreateStore(It.second, Ptr);
+    Value *Ptr = IRB.CreateGEP(Int64Ty, LocationsArray, {Idx});
+    IRB.CreateStore(ConstantInt::get(Int64Ty, 0), Ptr);
+  }
+  IRB.CreateRetVoid();
+
+  for (auto *KernelFn : Kernels) {
+    IRBuilder<> IRB(&*KernelFn->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+    IRB.CreateCall(InitSharedFn, {});
+  }
+
+  for (const auto &It : llvm::enumerate(AmbiguousCallsOrdered)) {
+    IRBuilder<> IRB(It.value());
+    Value *Idx = IRB.CreateCall(getThreadIdFn(), {}, "san.gtid");
+    Value *Ptr = IRB.CreateGEP(Int64Ty, LocationsArray, {Idx});
+    Value *OldVal = IRB.CreateLoad(Int64Ty, Ptr);
+    Value *OldValShifted = IRB.CreateShl(
+        OldVal, ConstantInt::get(Int64Ty, AmbiguousCallsBitWidth));
+    Value *NewVal = IRB.CreateBinOp(Instruction::Or, OldValShifted,
+                                    ConstantInt::get(Int64Ty, It.index() + 1));
+    IRB.CreateStore(NewVal, Ptr);
+    IRB.SetInsertPoint(It.value()->getNextNode());
+    IRB.CreateStore(OldVal, Ptr);
   }
 
   auto *NamesTy = ArrayType::get(Int8Ty, ConcatenatedString.size() + 1);

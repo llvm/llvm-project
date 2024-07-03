@@ -2195,13 +2195,11 @@ void GPUSanTy::checkAndReportError() {
   DeviceImageTy *Image = nullptr;
   for (auto &It : Device.SanitizerTrapInfos) {
     STI = It.second;
-    errs() << "STI " << STI << "\n";
     if (!STI || STI->ErrorCode == SanitizerTrapInfoTy::None)
       continue;
     Image = It.first;
     break;
   }
-  errs() << "Img " << Image << "\n";
   if (!Image)
     return;
 
@@ -2211,19 +2209,26 @@ void GPUSanTy::checkAndReportError() {
   auto Default = []() { return "\033[1m\033[0m"; };
 
   GenericGlobalHandlerTy &GHandler = Device.Plugin.getGlobalHandler();
-  auto GetImagePtr = [&](GlobalTy &GV) {
+  auto GetImagePtr = [&](GlobalTy &GV, bool Quiet = false) {
     if (auto Err = GHandler.getGlobalMetadataFromImage(Device, *Image, GV)) {
-      REPORT("WARNING: Failed to read backtrace "
-             "(%s)\n",
-             toString(std::move(Err)).data());
+      if (Quiet)
+        consumeError(std::move(Err));
+      else
+        REPORT("WARNING: Failed to read backtrace "
+               "(%s)\n",
+               toString(std::move(Err)).data());
       return false;
     }
     return true;
   };
   GlobalTy LocationsGV("__san.locations", -1);
   GlobalTy LocationNamesGV("__san.location_names", -1);
+  GlobalTy AmbiguousCallsBitWidthGV("__san.num_ambiguous_calls", -1);
+  GlobalTy AmbiguousCallsLocationsGV("__san.ambiguous_calls_mapping", -1);
   if (GetImagePtr(LocationsGV))
     GetImagePtr(LocationNamesGV);
+  GetImagePtr(AmbiguousCallsBitWidthGV, /*Quiet=*/true);
+  GetImagePtr(AmbiguousCallsLocationsGV, /*Quiet=*/true);
 
   fprintf(stderr, "============================================================"
                   "====================\n");
@@ -2233,9 +2238,12 @@ void GPUSanTy::checkAndReportError() {
       fprintf(stderr, "    no backtrace available\n");
       return;
     }
-    fprintf(stderr, "%lu\n", STI->CallId);
     char *LocationNames = LocationNamesGV.getPtrAs<char>();
     LocationEncodingTy *Locations = LocationsGV.getPtrAs<LocationEncodingTy>();
+    uint64_t *AmbiguousCallsBitWidth =
+        AmbiguousCallsBitWidthGV.getPtrAs<uint64_t>();
+    uint64_t *AmbiguousCallsLocations =
+        AmbiguousCallsLocationsGV.getPtrAs<uint64_t>();
     int32_t FrameIdx = 0;
     do {
       LocationEncodingTy &LE = Locations[LocationId];
@@ -2244,6 +2252,13 @@ void GPUSanTy::checkAndReportError() {
               &LocationNames[LE.FileNameIdx], LE.LineNo, LE.ColumnNo);
       LocationId = LE.ParentIdx;
       FrameIdx++;
+      if (LocationId < 0 && STI->CallId != 0 && AmbiguousCallsBitWidth &&
+          AmbiguousCallsLocations) {
+        uint64_t LastCallId =
+            STI->CallId & ((1 << *AmbiguousCallsBitWidth) - 1);
+        LocationId = AmbiguousCallsLocations[LastCallId - 1];
+        STI->CallId >>= (*AmbiguousCallsBitWidth);
+      }
     } while (LocationId >= 0);
     fputc('\n', stderr);
   };

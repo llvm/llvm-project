@@ -416,6 +416,11 @@ ompx_get_allocation_info_global(_AS_PTR(void, AllocationKind::GLOBAL) P) {
 ompx_leak_check() {
   AllocationTracker<AllocationKind::GLOBAL>::leakCheck();
 }
+
+[[gnu::weak, gnu::noinline, gnu::used, gnu::retain]] int64_t
+__san_get_location_value() {
+  return -1;
+}
 }
 
 #pragma omp end declare target
