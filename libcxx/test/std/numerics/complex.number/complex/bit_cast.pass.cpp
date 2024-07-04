@@ -19,8 +19,7 @@ constexpr void test() {
   using Complex                       = std::complex<T>;
   unsigned char data[sizeof(Complex)] = {0};
 
-  Complex c = std::bit_cast<Complex>(data);
-  (void)c;
+  [[maybe_unused]] Complex c = std::bit_cast<Complex>(data);
 }
 
 constexpr bool test_all() {
