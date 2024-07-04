@@ -1323,12 +1323,13 @@ def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface
     Decomposes high-level named ops into a sequence of non-aggregate named ops
     via `AggregatedOpInterface`.
 
-    The operation ignores non-decomposable ops. The return handles point to
-    a sequence of named ops produced by the decomposition.
+    The operation ignores non-decomposable ops. The return handle points to
+    a sequence of named ops produced by the all decompositions (i.e. the 
+    information about decomposed op origin is lost).
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat =
       "$target attr-dict `:` functional-type(operands, results)";
 

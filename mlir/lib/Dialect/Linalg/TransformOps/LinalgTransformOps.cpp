@@ -430,11 +430,13 @@ transform::DecomposeOp::applyToOne(transform::TransformRewriter &rewriter,
 
 // Decompose the target operation if it implements the AggregatedOpInterface.
 // Push the decomposed operations (the ones that replaces the values produced by
-// \p target) in the `results`.
+// \p target) in the `results`. Decompositions for all targets bind to the same
+// single ouptut value, thus the information about the original targets is lost.
 DiagnosedSilenceableFailure
 transform::DecomposeInterfaceOp::apply(transform::TransformRewriter &rewriter,
                                        TransformResults &transformResults,
                                        TransformState &state) {
+  SmallVector<Operation *> allDecomposedOps;
   for (auto [i, target] : llvm::enumerate(state.getPayloadOps(getTarget()))) {
     auto decomposableOp = dyn_cast<AggregatedOpInterface>(target);
     if (!decomposableOp)
@@ -446,9 +448,9 @@ transform::DecomposeInterfaceOp::apply(transform::TransformRewriter &rewriter,
       return emitDefaultSilenceableFailure(target);
 
     rewriter.replaceOp(decomposableOp, maybeNewResults->decomposedValues);
-    transformResults.set(cast<OpResult>(getResult(i)),
-                         maybeNewResults->decomposedOps);
+    allDecomposedOps.append(maybeNewResults->decomposedOps);
   }
+  transformResults.set(cast<OpResult>(getResult()), allDecomposedOps);
   return DiagnosedSilenceableFailure::success();
 }
 
