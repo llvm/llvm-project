@@ -5,4 +5,10 @@ macros: []
 types: []
 enums: []
 objects: []
-functions: []
+functions:
+  - name: getauxval
+    standards: 
+      - GNUExtensions
+    return_type: unsigned long
+    arguments:
+      - type: unsigned long
