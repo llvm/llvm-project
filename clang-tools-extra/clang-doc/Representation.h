@@ -480,12 +480,15 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 struct ClangDocContext {
   ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
-                  bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
+                  bool PublicOnly, bool FTimeTrace, int Granularity,
+                  StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl,
                   std::vector<std::string> UserStylesheets);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.
+  bool FTimeTrace; // Indicates if ftime trace is turned on
+  int Granularity; // Granularity of ftime trace
   std::string OutDirectory; // Directory for outputting generated files.
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if

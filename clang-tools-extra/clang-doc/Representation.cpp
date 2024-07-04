@@ -366,10 +366,12 @@ void Index::sort() {
 
 ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
+                                 bool FTimeTrace, int Granularity,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
                                  std::vector<std::string> UserStylesheets)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
+      FTimeTrace(FTimeTrace), Granularity(Granularity),
       OutDirectory(OutDirectory), UserStylesheets(UserStylesheets) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
