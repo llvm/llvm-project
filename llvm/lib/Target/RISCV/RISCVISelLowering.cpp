@@ -1319,7 +1319,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
                              VT, Custom);
           setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                              ISD::EXTRACT_SUBVECTOR},
+                              ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_SHUFFLE},
                              VT, Custom);
           setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
           setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
@@ -5040,6 +5040,14 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           return convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
         }
 
+        MVT SplatVT = ContainerVT;
+
+        // If we don't have Zfh, we need to use an integer scalar load.
+        if (SVT == MVT::f16 && !Subtarget.hasStdExtZfh()) {
+          SVT = MVT::i16;
+          SplatVT = ContainerVT.changeVectorElementType(SVT);
+        }
+
         // Otherwise use a scalar load and splat. This will give the best
         // opportunity to fold a splat into the operation. ISel can turn it into
         // the x0 strided load if we aren't able to fold away the select.
@@ -5055,10 +5063,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                              Ld->getMemOperand()->getFlags());
         DAG.makeEquivalentMemoryOrdering(Ld, V);
 
-        unsigned Opc =
-            VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
+        unsigned Opc = SplatVT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
+                                                 : RISCVISD::VMV_V_X_VL;
         SDValue Splat =
-            DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), V, VL);
+            DAG.getNode(Opc, DL, SplatVT, DAG.getUNDEF(ContainerVT), V, VL);
+        Splat = DAG.getBitcast(ContainerVT, Splat);
         return convertFromScalableVector(VT, Splat, DAG, Subtarget);
       }
 
