@@ -712,12 +712,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalFor({{s32, s32},
-             {s64, s32},
-             {s32, s64},
-             {s64, s64},
-             {v2s64, v2s64},
-             {v4s32, v4s32},
-             {v2s32, v2s32}})
+                 {s64, s32},
+                 {s32, s64},
+                 {s64, s64},
+                 {v2s64, v2s64},
+                 {v4s32, v4s32},
+                 {v2s32, v2s32}})
       .legalIf([=](const LegalityQuery &Query) {
         return HasFP16 &&
                (Query.Types[0] == s16 || Query.Types[0] == v4s16 ||
@@ -748,8 +748,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
-      .libcallFor(
-          {{s16, s128}, {s32, s128}, {s64, s128}, {s128, s128}, {s128, s32}, {s128, s64}});
+      .libcallFor({{s16, s128},
+                   {s32, s128},
+                   {s64, s128},
+                   {s128, s128},
+                   {s128, s32},
+                   {s128, s64}});
 
   // Control-flow
   getActionDefinitionsBuilder(G_BRCOND)
