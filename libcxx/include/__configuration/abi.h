@@ -115,10 +115,6 @@
 #  if defined(__FreeBSD__) && __FreeBSD__ < 14
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
-// AIX and 64-bit MVS must use _FillHelper for ABI backward compatibility.
-#  if defined(_AIX) || (defined(__MVS__) && defined(__64BIT__))
-#    define _LIBCXX_IOS_USE_FILL_HELPER
-#  endif
 #endif
 
 // We had some bugs where we use [[no_unique_address]] together with construct_at,
