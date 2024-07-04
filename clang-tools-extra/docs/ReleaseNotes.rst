@@ -131,6 +131,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a Boost ranges version instead.
+
 - New :doc:`bugprone-crtp-constructor-accessibility
   <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
 
