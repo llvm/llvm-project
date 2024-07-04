@@ -21,13 +21,7 @@
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
-// PAUTHABI2-NOT: "-fptrauth-intrinsics"
-// PAUTHABI2-NOT: "-fptrauth-calls"
-// PAUTHABI2-NOT: "-fptrauth-returns"
-// PAUTHABI2-NOT: "-fptrauth-auth-traps"
-// PAUTHABI2-NOT: "-fptrauth-vtable-pointer-address-discrimination"
-// PAUTHABI2-NOT: "-fptrauth-vtable-pointer-type-discrimination"
-// PAUTHABI2-NOT: "-fptrauth-init-fini"
+// PAUTHABI2-NOT: "-fptrauth-
 
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
