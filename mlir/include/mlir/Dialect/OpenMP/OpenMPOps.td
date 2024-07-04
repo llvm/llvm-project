@@ -1589,8 +1589,6 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
     threads of the current team.
   }] # clausesDescription;
 
-  let regions = (region AnyRegion:$region);
-
   let builders = [
     OpBuilder<(ins CArg<"const MaskedClauseOps &">:$clauses)>
   ];
