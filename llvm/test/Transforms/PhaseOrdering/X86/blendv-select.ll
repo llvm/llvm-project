@@ -14,21 +14,8 @@
 define <4 x double> @x86_pblendvb_v4f64_v2f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v4f64_v2f64(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x double> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x double> [[A:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double> [[B:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[TMP5]], <2 x i64> [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x double> [[A]] to <4 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x double> [[B]] to <4 x i64>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP12:%.*]] = select <2 x i1> [[TMP7]], <2 x i64> [[TMP11]], <2 x i64> [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <4 x i64> [[TMP13]] to <4 x double>
-; CHECK-NEXT:    ret <4 x double> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <4 x i1> [[CMP]], <4 x double> [[B:%.*]], <4 x double> [[A:%.*]]
+; CHECK-NEXT:    ret <4 x double> [[DOTV]]
 ;
   %a.bc = bitcast <4 x double> %a to <32 x i8>
   %b.bc = bitcast <4 x double> %b to <32 x i8>
@@ -51,21 +38,8 @@ define <4 x double> @x86_pblendvb_v4f64_v2f64(<4 x double> %a, <4 x double> %b, 
 define <8 x float> @x86_pblendvb_v8f32_v4f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v8f32_v4f32(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x float> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x float> [[A:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x float> [[B:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP5]], <4 x i32> [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x float> [[A]] to <8 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x float> [[B]] to <8 x i32>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[TMP11]], <4 x i32> [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <8 x i32> [[TMP13]] to <8 x float>
-; CHECK-NEXT:    ret <8 x float> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[CMP]], <8 x float> [[B:%.*]], <8 x float> [[A:%.*]]
+; CHECK-NEXT:    ret <8 x float> [[DOTV]]
 ;
   %a.bc = bitcast <8 x float> %a to <32 x i8>
   %b.bc = bitcast <8 x float> %b to <32 x i8>
@@ -228,21 +202,8 @@ define <4 x i64> @x86_pblendvb_v32i8_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i64>
 define <8 x double> @x86_pblendvb_v8f64_v4f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v8f64_v4f64(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x double> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x double> [[A:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[TMP2]], <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x double> [[B:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i64> [[TMP4]], <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[TMP5]], <4 x i64> [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x double> [[A]] to <8 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i64> [[TMP8]], <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x double> [[B]] to <8 x i64>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP11]], <4 x i64> [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <8 x i64> [[TMP13]] to <8 x double>
-; CHECK-NEXT:    ret <8 x double> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[CMP]], <8 x double> [[B:%.*]], <8 x double> [[A:%.*]]
+; CHECK-NEXT:    ret <8 x double> [[DOTV]]
 ;
   %a.bc = bitcast <8 x double> %a to <64 x i8>
   %b.bc = bitcast <8 x double> %b to <64 x i8>
@@ -265,21 +226,8 @@ define <8 x double> @x86_pblendvb_v8f64_v4f64(<8 x double> %a, <8 x double> %b, 
 define <16 x float> @x86_pblendvb_v16f32_v8f32(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x float> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v16f32_v8f32(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <16 x float> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i1> [[CMP]], <16 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x float> [[A:%.*]] to <16 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[TMP2]], <16 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x float> [[B:%.*]] to <16 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i32> [[TMP4]], <16 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> [[TMP5]], <8 x i32> [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i1> [[CMP]], <16 x i1> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x float> [[A]] to <16 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i32> [[TMP8]], <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x float> [[B]] to <16 x i32>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x i32> [[TMP10]], <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP12:%.*]] = select <8 x i1> [[TMP7]], <8 x i32> [[TMP11]], <8 x i32> [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP12]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <16 x i32> [[TMP13]] to <16 x float>
-; CHECK-NEXT:    ret <16 x float> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <16 x i1> [[CMP]], <16 x float> [[B:%.*]], <16 x float> [[A:%.*]]
+; CHECK-NEXT:    ret <16 x float> [[DOTV]]
 ;
   %a.bc = bitcast <16 x float> %a to <64 x i8>
   %b.bc = bitcast <16 x float> %b to <64 x i8>
