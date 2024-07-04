@@ -528,7 +528,7 @@ struct _LIBCPP_PACKED _FillHelper {
   _LIBCPP_HIDE_FROM_ABI void __init() { __set_ = false; }
   _LIBCPP_HIDE_FROM_ABI _FillHelper& operator=(typename _Traits::int_type __x) { __set_ = true; __fill_val_ = __x; return *this; }
   _LIBCPP_HIDE_FROM_ABI bool __is_set() const { return __set_; }
-  _LIBCPP_HIDE_FROM_ABI typename _Traits::int_type __fill() const { return __fill_val_; }
+  _LIBCPP_HIDE_FROM_ABI typename _Traits::int_type __get() const { return __fill_val_; }
 
 private:
   typename _Traits::int_type __fill_val_;
