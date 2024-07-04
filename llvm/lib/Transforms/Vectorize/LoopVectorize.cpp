@@ -9073,7 +9073,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     auto *FinalReductionResult = new VPInstruction(
         VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
     FinalReductionResult->insertBefore(*MiddleVPBB, IP);
-    IP = std::next(FinalReductionResult->getIterator());
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult,
         [](VPUser &User, unsigned) { return isa<VPLiveOut>(&User); });
