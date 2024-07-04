@@ -111,7 +111,7 @@
 // HTML-ANON-INDEX:   </div>
 // HTML-ANON-INDEX:   <h3 id="{{([0-9A-F]{40})}}">doubleToString</h3>
 // HTML-ANON-INDEX:   <p>void doubleToString(double value, char * buffer, int &amp; index)</p>
-// HTML-ANON-INDEX:   <p>Defined at line 26 of file ./src/Utils.cpp</p>
+// HTML-ANON-INDEX:   <p>Defined at line 26 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
 // HTML-ANON-INDEX:   <div>
 // HTML-ANON-INDEX:     <div></div>
 // HTML-ANON-INDEX:     <div>
@@ -130,7 +130,7 @@
 // HTML-ANON-INDEX: </div>
 
 // HTML-ARRAY: <h1>class Array</h1>
-// HTML-ARRAY: <p>Defined at line 13 of file ./include\Array.h</p>
+// HTML-ARRAY: <p>Defined at line 13 of file .{{[\/]}}include{{[\/]}}Array.h</p>
 // HTML-ARRAY: <div>
 // HTML-ARRAY:   <div></div>
 // HTML-ARRAY: </div>
@@ -160,7 +160,7 @@
 // HTML-ARRAY:   </div>
 // HTML-ARRAY:   <h3 id="{{([0-9A-F]{40})}}">size</h3>
 // HTML-ARRAY:   <p>public int size()</p>
-// HTML-ARRAY:   <p>Defined at line 30 of file ./src/Array.cpp</p>
+// HTML-ARRAY:   <p>Defined at line 30 of file .{{[\/]}}src{{[\/]}}Array.cpp</p>
 // HTML-ARRAY:   <div>
 // HTML-ARRAY:     <div></div>
 // HTML-ARRAY:     <div>
@@ -261,7 +261,7 @@
 // HTML-SHAPE: <div>
 // HTML-SHAPE:   <h3 id="{{([0-9A-F]{40})}}">Shape</h3>
 // HTML-SHAPE:   <p>public void Shape(int id)</p>
-// HTML-SHAPE:   <p>Defined at line 9 of file ./src/Shape.cpp</p>
+// HTML-SHAPE:   <p>Defined at line 9 of file .{{[\/]}}src{{[\/]}}Shape.cpp</p>
 // HTML-SHAPE:   <div>
 // HTML-SHAPE:     <div></div>
 // HTML-SHAPE:     <div>
@@ -270,7 +270,7 @@
 // HTML-SHAPE:   </div>
 // HTML-SHAPE:   <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
 // HTML-SHAPE:   <p>public void ~Shape()</p>
-// HTML-SHAPE:   <p>Defined at line 16 of file ./src/Shape.cpp</p>
+// HTML-SHAPE:   <p>Defined at line 16 of file .{{[\/]}}src{{[\/]}}Shape.cpp</p>
 // HTML-SHAPE:   <div>
 // HTML-SHAPE:     <div></div>
 // HTML-SHAPE:     <div>
