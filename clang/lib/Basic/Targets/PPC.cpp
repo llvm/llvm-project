@@ -622,8 +622,8 @@ bool PPCTargetInfo::initFeatureMap(
     addP10SpecificFeatures(Features);
   }
 
-  // Power11 includes all the same features as Power10 plus any features specific
-  // to the Power11 core.
+  // Power11 includes all the same features as Power10 plus any features
+  // specific to the Power11 core.
   if (CPU == "pwr11" || CPU == "power11") {
     initFeatureMap(Features, Diags, "pwr10", FeaturesVec);
     addP11SpecificFeatures(Features);
