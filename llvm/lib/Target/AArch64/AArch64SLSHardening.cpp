@@ -183,15 +183,12 @@ static const struct ThunkNameAndReg {
 namespace {
 struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
   const char *getThunkPrefix() { return SLSBLRNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
-    if (InsertedThunks)
-      return false;
+  bool mayUseThunk(const MachineFunction &MF) {
     ComdatThunks &= !MF.getSubtarget<AArch64Subtarget>().hardenSlsNoComdat();
-    // FIXME: This could also check if there are any BLRs in the function
-    // to more accurately reflect if a thunk will be needed.
     return MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr();
   }
-  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
+                    bool ExistingThunks);
   void populateThunk(MachineFunction &MF);
 
 private:
@@ -200,7 +197,10 @@ private:
 } // namespace
 
 bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
-                                       MachineFunction &MF) {
+                                       MachineFunction &MF,
+                                       bool ExistingThunks) {
+  if (ExistingThunks)
+    return false;
   // FIXME: It probably would be possible to filter which thunks to produce
   // based on which registers are actually used in BLR instructions in this
   // function. But would that be a worthwhile optimization?
@@ -210,6 +210,8 @@ bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
+  assert(MF.getFunction().hasComdat() == ComdatThunks &&
+         "ComdatThunks value changed since MF creation");
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
   assert(MF.getName().starts_with(getThunkPrefix()));
@@ -411,30 +413,13 @@ FunctionPass *llvm::createAArch64SLSHardeningPass() {
 }
 
 namespace {
-class AArch64IndirectThunks : public MachineFunctionPass {
+class AArch64IndirectThunks : public ThunkInserterPass<SLSBLRThunkInserter> {
 public:
   static char ID;
 
-  AArch64IndirectThunks() : MachineFunctionPass(ID) {}
+  AArch64IndirectThunks() : ThunkInserterPass(ID) {}
 
   StringRef getPassName() const override { return "AArch64 Indirect Thunks"; }
-
-  bool doInitialization(Module &M) override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
-  std::tuple<SLSBLRThunkInserter> TIs;
-
-  template <typename... ThunkInserterT>
-  static void initTIs(Module &M,
-                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (..., std::get<ThunkInserterT>(ThunkInserters).init(M));
-  }
-  template <typename... ThunkInserterT>
-  static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
-                     std::tuple<ThunkInserterT...> &ThunkInserters) {
-    return (0 | ... | std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF));
-  }
 };
 
 } // end anonymous namespace
@@ -443,15 +428,4 @@ char AArch64IndirectThunks::ID = 0;
 
 FunctionPass *llvm::createAArch64IndirectThunks() {
   return new AArch64IndirectThunks();
-}
-
-bool AArch64IndirectThunks::doInitialization(Module &M) {
-  initTIs(M, TIs);
-  return false;
-}
-
-bool AArch64IndirectThunks::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << getPassName() << '\n');
-  auto &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-  return runTIs(MMI, MF, TIs);
 }
