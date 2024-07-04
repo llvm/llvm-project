@@ -21,7 +21,7 @@ enum Color {
 // HTML-INDEX:     <li>Green</li>
 // HTML-INDEX:     <li>Blue</li>
 // HTML-INDEX:   </ul>
-// HTML-INDEX:   <p>Defined at line 11 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX:   <p>Defined at line 9 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX:   <div>
 // HTML-INDEX:     <div></div>
 // HTML-INDEX:   </div>
