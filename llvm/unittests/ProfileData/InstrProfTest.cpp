@@ -942,12 +942,10 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   Instruction *Inst2 = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0);
 
-  uint32_t N;
   uint64_t T;
   auto ValueData =
-      getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_NE(ValueData, nullptr);
-  ASSERT_EQ(3U, N);
+      getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(3));
   ASSERT_EQ(21U, T);
   // The result should be sorted already:
   ASSERT_EQ(6000U, ValueData[0].Value);
@@ -956,22 +954,19 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(5U, ValueData[1].Count);
   ASSERT_EQ(4000U, ValueData[2].Value);
   ASSERT_EQ(4U, ValueData[2].Count);
-  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 1, N, T);
-  ASSERT_NE(ValueData, nullptr);
-  ASSERT_EQ(1U, N);
+  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 1, T);
+  ASSERT_THAT(ValueData, SizeIs(1));
   ASSERT_EQ(21U, T);
 
-  ValueData =
-      getValueProfDataFromInst(*Inst2, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_EQ(ValueData, nullptr);
+  ValueData = getValueProfDataFromInst(*Inst2, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(0));
 
   // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
-  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_NE(ValueData, nullptr);
-  ASSERT_EQ(5U, N);
+  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(5));
   ASSERT_EQ(21U, T);
   ASSERT_EQ(6000U, ValueData[0].Value);
   ASSERT_EQ(6U, ValueData[0].Count);
@@ -991,9 +986,8 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
                               {5000, 2}, {6000, 1}};
   annotateValueSite(*M, *Inst, ArrayRef(VD0Sorted).slice(2), 10,
                     IPVK_IndirectCallTarget, 5);
-  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_NE(ValueData, nullptr);
-  ASSERT_EQ(4U, N);
+  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(4));
   ASSERT_EQ(10U, T);
   ASSERT_EQ(3000U, ValueData[0].Value);
   ASSERT_EQ(4U, ValueData[0].Count);

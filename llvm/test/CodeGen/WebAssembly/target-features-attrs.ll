@@ -1,6 +1,5 @@
-; RUN: llc < %s | FileCheck %s --check-prefixes CHECK,ATTRS
-; RUN: llc < %s -mcpu=mvp -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
-; RUN: llc < %s -mcpu=bleeding-edge | FileCheck %s --check-prefixes CHECK,BLEEDING-EDGE
+; RUN: llc -mcpu=mvp < %s | FileCheck %s
+; RUN: llc -mcpu=mvp -mattr=+simd128 < %s | FileCheck %s --check-prefixes SIMD128
 
 ; Test that codegen emits target features from the command line or
 ; function attributes correctly and that features are enabled for the
@@ -33,84 +32,53 @@ attributes #2 = { "target-features"="+reference-types" }
 ; CHECK-LABEL: fn_atomics:
 
 ; Expanded atomicrmw min
-; ATTRS:       loop
+; CHECK:       loop
 ; CHECK:       i32.atomic.rmw.cmpxchg
-; ATTRS:       end_loop
+; CHECK:       end_loop
 
 ; nontrapping fptoint
 ; CHECK:       i32.trunc_sat_f32_u
-; ATTRS:       i32.store
+; CHECK:       i32.store
 
 ; `fn_nontrapping_fptoint` should be the same as `fn_atomics`
 ; CHECK-LABEL: fn_nontrapping_fptoint:
 
 ; Expanded atomicrmw min
-; ATTRS:       loop
+; CHECK:       loop
 ; CHECK:       i32.atomic.rmw.cmpxchg
-; ATTRS:       end_loop
+; CHECK:       end_loop
 
 ; nontrapping fptoint
 ; CHECK:       i32.trunc_sat_f32_u
-; ATTRS:       i32.store
+; CHECK:       i32.store
 
+; Features in function attributes:
+; +atomics, +nontrapping-fptoint, +reference-types
 ; CHECK-LABEL: .custom_section.target_features,"",@
+; CHECK-NEXT: .int8  3
+; CHECK-NEXT: .int8  43
+; CHECK-NEXT: .int8  7
+; CHECK-NEXT: .ascii  "atomics"
+; CHECK-NEXT: .int8  43
+; CHECK-NEXT: .int8  19
+; CHECK-NEXT: .ascii  "nontrapping-fptoint"
+; CHECK-NEXT: .int8  43
+; CHECK-NEXT: .int8  15
+; CHECK-NEXT: .ascii  "reference-types"
 
-; +atomics, +reference-types, +mutable-globals
-; ATTRS-NEXT: .int8	5
-; ATTRS-NEXT: .int8	43
-; ATTRS-NEXT: .int8	7
-; ATTRS-NEXT: .ascii	"atomics"
-; ATTRS-NEXT: .int8	43
-; ATTRS-NEXT: .int8	15
-; ATTRS-NEXT: .ascii	"mutable-globals"
-; ATTRS-NEXT: .int8	43
-; ATTRS-NEXT: .int8	19
-; ATTRS-NEXT: .ascii	"nontrapping-fptoint"
-; ATTRS-NEXT: .int8	43
-; ATTRS-NEXT: .int8	15
-; ATTRS-NEXT: .ascii	"reference-types"
-; ATTRS-NEXT: .int8	43
-; ATTRS-NEXT: .int8	8
-
+; Features in function attributes + features specified by -mattr= option:
 ; +atomics, +nontrapping-fptoint, +reference-types, +simd128
-; SIMD128-NEXT: .int8 4
-; SIMD128-NEXT: .int8 43
-; SIMD128-NEXT: .int8 7
-; SIMD128-NEXT: .ascii "atomics"
-; SIMD128-NEXT: .int8 43
-; SIMD128-NEXT: .int8 19
-; SIMD128-NEXT: .ascii "nontrapping-fptoint"
-; SIMD128-NEXT: .int8 43
-; SIMD128-NEXT: .int8 15
-; SIMD128-NEXT: .ascii "reference-types"
-; SIMD128-NEXT: .int8 43
-; SIMD128-NEXT: .int8 7
-; SIMD128-NEXT: .ascii "simd128"
-
-; +atomics, +bulk-memory, +mutable-globals, +nontrapping-fptoint,
-; +reference-types, +sign-ext, +simd128, +tail-call
-; BLEEDING-EDGE-NEXT: .int8   8
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   7
-; BLEEDING-EDGE-NEXT: .ascii  "atomics"
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   11
-; BLEEDING-EDGE-NEXT: .ascii  "bulk-memory"
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   15
-; BLEEDING-EDGE-NEXT: .ascii  "mutable-globals"
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   19
-; BLEEDING-EDGE-NEXT: .ascii  "nontrapping-fptoint"
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   15
-; BLEEDING-EDGE-NEXT: .ascii  "reference-types"
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   8
-; BLEEDING-EDGE-NEXT: .ascii  "sign-ext"
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   7
-; BLEEDING-EDGE-NEXT: .ascii  "simd128"
-; BLEEDING-EDGE-NEXT: .int8   43
-; BLEEDING-EDGE-NEXT: .int8   9
-; BLEEDING-EDGE-NEXT: .ascii  "tail-call"
+; SIMD128-LABEL: .custom_section.target_features,"",@
+; SIMD128-NEXT: .int8  4
+; SIMD128-NEXT: .int8  43
+; SIMD128-NEXT: .int8  7
+; SIMD128-NEXT: .ascii  "atomics"
+; SIMD128-NEXT: .int8  43
+; SIMD128-NEXT: .int8  19
+; SIMD128-NEXT: .ascii  "nontrapping-fptoint"
+; SIMD128-NEXT: .int8  43
+; SIMD128-NEXT: .int8  15
+; SIMD128-NEXT: .ascii  "reference-types"
+; SIMD128-NEXT: .int8  43
+; SIMD128-NEXT: .int8  7
+; SIMD128-NEXT: .ascii  "simd128"

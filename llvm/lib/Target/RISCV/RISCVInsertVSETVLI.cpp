@@ -586,13 +586,14 @@ public:
   }
   // Most AVLIsReg infos will have a single defining MachineInstr, unless it was
   // a PHI node. In that case getAVLVNInfo()->def will point to the block
-  // boundary slot.  If LiveIntervals isn't available, then nullptr is returned.
+  // boundary slot and this will return nullptr.  If LiveIntervals isn't
+  // available, nullptr is also returned.
   const MachineInstr *getAVLDefMI(const LiveIntervals *LIS) const {
     assert(hasAVLReg());
-    if (!LIS)
+    if (!LIS || getAVLVNInfo()->isPHIDef())
       return nullptr;
     auto *MI = LIS->getInstructionFromIndex(getAVLVNInfo()->def);
-    assert(!(getAVLVNInfo()->isPHIDef() && MI));
+    assert(MI);
     return MI;
   }
 
@@ -927,6 +928,7 @@ private:
 
   VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) const;
   VSETVLIInfo computeInfoForInstr(const MachineInstr &MI) const;
+  void forwardVSETVLIAVL(VSETVLIInfo &Info) const;
 };
 
 } // end anonymous namespace
@@ -936,6 +938,26 @@ char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
+
+// If the AVL is defined by a vsetvli's output vl with the same VLMAX, we can
+// replace the AVL operand with the AVL of the defining vsetvli. E.g.
+//
+// %vl = PseudoVSETVLI %avl:gpr, SEW=32, LMUL=M1
+// $x0 = PseudoVSETVLI %vl:gpr, SEW=32, LMUL=M1
+// ->
+// %vl = PseudoVSETVLI %avl:gpr, SEW=32, LMUL=M1
+// $x0 = PseudoVSETVLI %avl:gpr, SEW=32, LMUL=M1
+void RISCVInsertVSETVLI::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
+  if (!Info.hasAVLReg())
+    return;
+  const MachineInstr *DefMI = Info.getAVLDefMI(LIS);
+  if (!DefMI || !isVectorConfigInstr(*DefMI))
+    return;
+  VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
+  if (!DefInstrInfo.hasSameVLMAX(Info))
+    return;
+  Info.setAVL(DefInstrInfo);
+}
 
 // Return a VSETVLIInfo representing the changes made by this VSETVLI or
 // VSETIVLI instruction.
@@ -962,16 +984,7 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
-  // If AVL is defined by a vsetvli with the same VLMAX, we can replace the
-  // AVL operand with the AVL of the defining vsetvli.
-  if (NewInfo.hasAVLReg()) {
-    if (const MachineInstr *DefMI = NewInfo.getAVLDefMI(LIS);
-        DefMI && isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
-      if (DefInstrInfo.hasSameVLMAX(NewInfo))
-        NewInfo.setAVL(DefInstrInfo);
-    }
-  }
+  forwardVSETVLIAVL(NewInfo);
 
   return NewInfo;
 }
@@ -1060,16 +1073,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 #endif
   InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
 
-  // If AVL is defined by a vsetvli with the same VLMAX, we can replace the
-  // AVL operand with the AVL of the defining vsetvli.
-  if (InstrInfo.hasAVLReg()) {
-    if (const MachineInstr *DefMI = InstrInfo.getAVLDefMI(LIS);
-        DefMI && isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
-      if (DefInstrInfo.hasSameVLMAX(InstrInfo))
-        InstrInfo.setAVL(DefInstrInfo);
-    }
-  }
+  forwardVSETVLIAVL(InstrInfo);
 
   return InstrInfo;
 }
@@ -1157,10 +1161,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // isn't always the case, e.g. PseudoVMV_X_S doesn't have an AVL operand or
     // we've taken the AVL from the VL output of another vsetvli.
     LiveInterval &LI = LIS->getInterval(AVLReg);
-    // Need to get non-const VNInfo
-    VNInfo *VNI = LI.getValNumInfo(Info.getAVLVNInfo()->id);
-    LI.addSegment(LiveInterval::Segment(
-        VNI->def, LIS->getInstructionIndex(*MI).getRegSlot(), VNI));
+    LIS->extendToIndices(LI, {LIS->getInstructionIndex(*MI).getRegSlot()});
   }
 }
 
@@ -1704,9 +1705,11 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
             MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
             if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
                 MRI->use_nodbg_empty(OldVLReg)) {
-              VLOpDef->eraseFromParent();
-              if (LIS)
+              if (LIS) {
                 LIS->removeInterval(OldVLReg);
+                LIS->RemoveMachineInstrFromMaps(*VLOpDef);
+              }
+              VLOpDef->eraseFromParent();
             }
           }
           MI.setDesc(NextMI->getDesc());

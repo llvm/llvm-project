@@ -245,9 +245,6 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   if (!target_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  if (!valobj_sp)
-    return lldb::ChildCacheState::eRefetch;
-
   // this must be a ValueObject* because it is a child of the ValueObject we
   // are producing children for it if were a ValueObjectSP, we would end up
   // with a loop (iterator -> synthetic -> child -> parent == iterator) and

@@ -303,6 +303,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_GROUP);
     STRINGIFY_ENUM_CASE(ELF, SHT_SYMTAB_SHNDX);
     STRINGIFY_ENUM_CASE(ELF, SHT_RELR);
+    STRINGIFY_ENUM_CASE(ELF, SHT_CREL);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_REL);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_RELA);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_RELR);
@@ -390,6 +391,73 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
   }
 
   return Relocs;
+}
+
+template <class ELFT>
+Expected<uint64_t>
+ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
+  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
+  Error Err = Error::success();
+  uint64_t Hdr = 0;
+  Hdr = Data.getULEB128(&Hdr, &Err);
+  if (Err)
+    return Err;
+  return Hdr;
+}
+
+template <class ELFT>
+Expected<typename ELFFile<ELFT>::RelsOrRelas>
+ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
+  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
+  DataExtractor::Cursor Cur(0);
+  const uint64_t Hdr = Data.getULEB128(Cur);
+  const size_t Count = Hdr / 8;
+  const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
+  const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
+  std::vector<Elf_Rel> Rels;
+  std::vector<Elf_Rela> Relas;
+  if (Hdr & ELF::CREL_HDR_ADDEND)
+    Relas.resize(Count);
+  else
+    Rels.resize(Count);
+  typename ELFT::uint Offset = 0, Addend = 0;
+  uint32_t SymIdx = 0, Type = 0;
+  for (size_t I = 0; I != Count; ++I) {
+    // The delta offset and flags member may be larger than uint64_t. Special
+    // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
+    // ULEB128 bytes encode the remaining delta offset bits.
+    const uint8_t B = Data.getU8(Cur);
+    Offset += B >> FlagBits;
+    if (B >= 0x80)
+      Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
+    // Delta symidx/type/addend members (SLEB128).
+    if (B & 1)
+      SymIdx += Data.getSLEB128(Cur);
+    if (B & 2)
+      Type += Data.getSLEB128(Cur);
+    if (B & 4 & Hdr)
+      Addend += Data.getSLEB128(Cur);
+    if (Hdr & ELF::CREL_HDR_ADDEND) {
+      Relas[I].r_offset = Offset << Shift;
+      Relas[I].setSymbolAndType(SymIdx, Type, false);
+      Relas[I].r_addend = Addend;
+    } else {
+      Rels[I].r_offset = Offset << Shift;
+      Rels[I].setSymbolAndType(SymIdx, Type, false);
+    }
+  }
+  if (!Cur)
+    return std::move(Cur.takeError());
+  return std::make_pair(std::move(Rels), std::move(Relas));
+}
+
+template <class ELFT>
+Expected<typename ELFFile<ELFT>::RelsOrRelas>
+ELFFile<ELFT>::crels(const Elf_Shdr &Sec) const {
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  return decodeCrel(*ContentsOrErr);
 }
 
 template <class ELFT>

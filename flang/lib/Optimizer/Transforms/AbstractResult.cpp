@@ -84,7 +84,7 @@ public:
   CallConversion(mlir::MLIRContext *context, bool shouldBoxResult)
       : OpRewritePattern<Op>(context, 1), shouldBoxResult{shouldBoxResult} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto result = op->getResult(0);
@@ -192,7 +192,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   SaveResultOpConversion(mlir::MLIRContext *context)
       : OpRewritePattern(context) {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::SaveResultOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.eraseOp(op);
@@ -205,7 +205,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   ReturnOpConversion(mlir::MLIRContext *context, mlir::Value newArg)
       : OpRewritePattern(context), newArg{newArg} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(mlir::func::ReturnOp ret,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = ret.getLoc();
@@ -258,7 +258,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   AddrOfOpConversion(mlir::MLIRContext *context, bool shouldBoxResult)
       : OpRewritePattern(context), shouldBoxResult{shouldBoxResult} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::AddrOfOp addrOf,
                   mlir::PatternRewriter &rewriter) const override {
     auto oldFuncTy = mlir::cast<mlir::FunctionType>(addrOf.getType());
