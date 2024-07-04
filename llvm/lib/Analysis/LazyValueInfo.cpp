@@ -1775,29 +1775,26 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
   return toConstantRange(Result, V->getType(), /*UndefAllowed*/ true);
 }
 
-static LazyValueInfo::Tristate
-getPredicateResult(CmpInst::Predicate Pred, Constant *C,
-                   const ValueLatticeElement &Val, const DataLayout &DL) {
+static Constant *getPredicateResult(CmpInst::Predicate Pred, Constant *C,
+                                    const ValueLatticeElement &Val,
+                                    const DataLayout &DL) {
   // If we know the value is a constant, evaluate the conditional.
-  Constant *Res = nullptr;
-  if (Val.isConstant()) {
-    Res = ConstantFoldCompareInstOperands(Pred, Val.getConstant(), C, DL);
-    if (ConstantInt *ResCI = dyn_cast_or_null<ConstantInt>(Res))
-      return ResCI->isZero() ? LazyValueInfo::False : LazyValueInfo::True;
-    return LazyValueInfo::Unknown;
-  }
+  if (Val.isConstant())
+    return ConstantFoldCompareInstOperands(Pred, Val.getConstant(), C, DL);
 
+  Type *ResTy = CmpInst::makeCmpResultType(C->getType());
   if (Val.isConstantRange()) {
     ConstantInt *CI = dyn_cast<ConstantInt>(C);
-    if (!CI) return LazyValueInfo::Unknown;
+    if (!CI)
+      return nullptr;
 
     const ConstantRange &CR = Val.getConstantRange();
     ConstantRange RHS(CI->getValue());
     if (CR.icmp(Pred, RHS))
-      return LazyValueInfo::True;
+      return ConstantInt::getTrue(ResTy);
     if (CR.icmp(CmpInst::getInversePredicate(Pred), RHS))
-      return LazyValueInfo::False;
-    return LazyValueInfo::Unknown;
+      return ConstantInt::getFalse(ResTy);
+    return nullptr;
   }
 
   if (Val.isNotConstant()) {
@@ -1805,29 +1802,29 @@ getPredicateResult(CmpInst::Predicate Pred, Constant *C,
     // "V != C1".
     if (Pred == ICmpInst::ICMP_EQ) {
       // !C1 == C -> false iff C1 == C.
-      Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
-                                            Val.getNotConstant(), C, DL);
+      Constant *Res = ConstantFoldCompareInstOperands(
+          ICmpInst::ICMP_NE, Val.getNotConstant(), C, DL);
       if (Res && Res->isNullValue())
-        return LazyValueInfo::False;
+        return ConstantInt::getFalse(ResTy);
     } else if (Pred == ICmpInst::ICMP_NE) {
       // !C1 != C -> true iff C1 == C.
-      Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
-                                            Val.getNotConstant(), C, DL);
+      Constant *Res = ConstantFoldCompareInstOperands(
+          ICmpInst::ICMP_NE, Val.getNotConstant(), C, DL);
       if (Res && Res->isNullValue())
-        return LazyValueInfo::True;
+        return ConstantInt::getTrue(ResTy);
     }
-    return LazyValueInfo::Unknown;
+    return nullptr;
   }
 
-  return LazyValueInfo::Unknown;
+  return nullptr;
 }
 
 /// Determine whether the specified value comparison with a constant is known to
 /// be true or false on the specified CFG edge. Pred is a CmpInst predicate.
-LazyValueInfo::Tristate
-LazyValueInfo::getPredicateOnEdge(CmpInst::Predicate Pred, Value *V,
-                                  Constant *C, BasicBlock *FromBB,
-                                  BasicBlock *ToBB, Instruction *CxtI) {
+Constant *LazyValueInfo::getPredicateOnEdge(CmpInst::Predicate Pred, Value *V,
+                                            Constant *C, BasicBlock *FromBB,
+                                            BasicBlock *ToBB,
+                                            Instruction *CxtI) {
   Module *M = FromBB->getModule();
   ValueLatticeElement Result =
       getOrCreateImpl(M).getValueOnEdge(V, FromBB, ToBB, CxtI);
@@ -1835,10 +1832,9 @@ LazyValueInfo::getPredicateOnEdge(CmpInst::Predicate Pred, Value *V,
   return getPredicateResult(Pred, C, Result, M->getDataLayout());
 }
 
-LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
-                                                      Value *V, Constant *C,
-                                                      Instruction *CxtI,
-                                                      bool UseBlockValue) {
+Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,
+                                        Constant *C, Instruction *CxtI,
+                                        bool UseBlockValue) {
   // Is or is not NonNull are common predicates being queried. If
   // isKnownNonZero can tell us the result of the predicate, we can
   // return it quickly. But this is only a fastpath, and falling
@@ -1847,18 +1843,19 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
   const DataLayout &DL = M->getDataLayout();
   if (V->getType()->isPointerTy() && C->isNullValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
+    Type *ResTy = CmpInst::makeCmpResultType(C->getType());
     if (Pred == ICmpInst::ICMP_EQ)
-      return LazyValueInfo::False;
+      return ConstantInt::getFalse(ResTy);
     else if (Pred == ICmpInst::ICMP_NE)
-      return LazyValueInfo::True;
+      return ConstantInt::getTrue(ResTy);
   }
 
   auto &Impl = getOrCreateImpl(M);
   ValueLatticeElement Result =
       UseBlockValue ? Impl.getValueInBlock(V, CxtI->getParent(), CxtI)
                     : Impl.getValueAt(V, CxtI);
-  Tristate Ret = getPredicateResult(Pred, C, Result, DL);
-  if (Ret != Unknown)
+  Constant *Ret = getPredicateResult(Pred, C, Result, DL);
+  if (Ret)
     return Ret;
 
   // Note: The following bit of code is somewhat distinct from the rest of LVI;
@@ -1889,7 +1886,7 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
   // analysis below.
   pred_iterator PI = pred_begin(BB), PE = pred_end(BB);
   if (PI == PE)
-    return Unknown;
+    return nullptr;
 
   // If V is a PHI node in the same block as the context, we need to ask
   // questions about the predicate as applied to the incoming value along
@@ -1897,23 +1894,23 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
   // known along all incoming edges.
   if (auto *PHI = dyn_cast<PHINode>(V))
     if (PHI->getParent() == BB) {
-      Tristate Baseline = Unknown;
+      Constant *Baseline = nullptr;
       for (unsigned i = 0, e = PHI->getNumIncomingValues(); i < e; i++) {
         Value *Incoming = PHI->getIncomingValue(i);
         BasicBlock *PredBB = PHI->getIncomingBlock(i);
         // Note that PredBB may be BB itself.
-        Tristate Result =
+        Constant *Result =
             getPredicateOnEdge(Pred, Incoming, C, PredBB, BB, CxtI);
 
         // Keep going as long as we've seen a consistent known result for
         // all inputs.
         Baseline = (i == 0) ? Result /* First iteration */
                             : (Baseline == Result ? Baseline
-                                                  : Unknown); /* All others */
-        if (Baseline == Unknown)
+                                                  : nullptr); /* All others */
+        if (!Baseline)
           break;
       }
-      if (Baseline != Unknown)
+      if (Baseline)
         return Baseline;
     }
 
@@ -1924,11 +1921,11 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
     // For predecessor edge, determine if the comparison is true or false
     // on that edge. If they're all true or all false, we can conclude
     // the value of the comparison in this block.
-    Tristate Baseline = getPredicateOnEdge(Pred, V, C, *PI, BB, CxtI);
-    if (Baseline != Unknown) {
+    Constant *Baseline = getPredicateOnEdge(Pred, V, C, *PI, BB, CxtI);
+    if (Baseline) {
       // Check that all remaining incoming values match the first one.
       while (++PI != PE) {
-        Tristate Ret = getPredicateOnEdge(Pred, V, C, *PI, BB, CxtI);
+        Constant *Ret = getPredicateOnEdge(Pred, V, C, *PI, BB, CxtI);
         if (Ret != Baseline)
           break;
       }
@@ -1939,13 +1936,12 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
     }
   }
 
-  return Unknown;
+  return nullptr;
 }
 
-LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
-                                                      Value *LHS, Value *RHS,
-                                                      Instruction *CxtI,
-                                                      bool UseBlockValue) {
+Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *LHS,
+                                        Value *RHS, Instruction *CxtI,
+                                        bool UseBlockValue) {
   if (auto *C = dyn_cast<Constant>(RHS))
     return getPredicateAt(Pred, LHS, C, CxtI, UseBlockValue);
   if (auto *C = dyn_cast<Constant>(LHS))
@@ -1960,19 +1956,14 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred,
     ValueLatticeElement L =
         getOrCreateImpl(M).getValueInBlock(LHS, CxtI->getParent(), CxtI);
     if (L.isOverdefined())
-      return LazyValueInfo::Unknown;
+      return nullptr;
 
     ValueLatticeElement R =
         getOrCreateImpl(M).getValueInBlock(RHS, CxtI->getParent(), CxtI);
     Type *Ty = CmpInst::makeCmpResultType(LHS->getType());
-    if (Constant *Res = L.getCompare(Pred, Ty, R, M->getDataLayout())) {
-      if (Res->isNullValue())
-        return LazyValueInfo::False;
-      if (Res->isOneValue())
-        return LazyValueInfo::True;
-    }
+    return L.getCompare(Pred, Ty, R, M->getDataLayout());
   }
-  return LazyValueInfo::Unknown;
+  return nullptr;
 }
 
 void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
