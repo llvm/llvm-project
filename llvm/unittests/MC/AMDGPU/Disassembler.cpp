@@ -132,3 +132,76 @@ TEST(AMDGPUDisassembler, MultiDisassembler) {
   StrBuffer[InsnStr.size()] = '\0';
   EXPECT_EQ(StringRef(StrBuffer), "\ts_version UC_VERSION_GFX10");
 }
+
+// Test UC_VERSION symbols can be overriden without crashing.
+// There is no valid behaviour if symbols are redefined in this way.
+TEST(AMDGPUDisassembler, UCVersionOverride) {
+  LLVMInitializeAMDGPUTargetInfo();
+  LLVMInitializeAMDGPUTargetMC();
+  LLVMInitializeAMDGPUDisassembler();
+
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+
+  // Skip test if AMDGPU not built.
+  if (!TheTarget)
+    GTEST_SKIP();
+
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCAsmInfo> MAI(
+      TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
+  std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TripleName, CPUName, ""));
+  auto Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(),
+                                         MRI.get(), STI.get());
+
+  // Define custom UC_VERSION before initializing disassembler.
+  const uint8_t UC_VERSION_GFX10_DEFAULT = 0x04;
+  const uint8_t UC_VERSION_GFX10_NEW = 0x99;
+  auto Sym = Ctx->getOrCreateSymbol("UC_VERSION_GFX10");
+  Sym->setVariableValue(MCConstantExpr::create(UC_VERSION_GFX10_NEW, *Ctx));
+
+  int AsmPrinterVariant = MAI->getAssemblerDialect();
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TripleName), AsmPrinterVariant, *MAI, *MII, *MRI));
+
+  testing::internal::CaptureStderr();
+  std::unique_ptr<MCDisassembler> DisAsm(
+      TheTarget->createMCDisassembler(*STI, *Ctx));
+  std::string Output = testing::internal::GetCapturedStderr();
+  EXPECT_TRUE(Output.find("<unknown>:0: warning: unsupported redefinition of UC_VERSION_GFX10") !=
+              std::string::npos);
+
+  SmallVector<char, 64> InsnStr, AnnoStr;
+  raw_svector_ostream OS(InsnStr);
+  raw_svector_ostream Annotations(AnnoStr);
+  formatted_raw_ostream FormattedOS(OS);
+
+  char StrBuffer[128];
+
+  // Decode S_VERSION instruction with original or custom version.
+  uint8_t Versions[] = {UC_VERSION_GFX10_DEFAULT, UC_VERSION_GFX10_NEW};
+  for (uint8_t Version : Versions) {
+    uint8_t Bytes[] = {Version, 0x00, 0x80, 0xb0};
+    size_t InstSize = 0U;
+    MCInst Inst;
+
+    AnnoStr.clear();
+    InsnStr.clear();
+    MCDisassembler::DecodeStatus Status =
+        DisAsm->getInstruction(Inst, InstSize, Bytes, 0, Annotations);
+    ASSERT_TRUE(Status == MCDisassembler::Success);
+    EXPECT_EQ(InstSize, 4U);
+
+    IP->printInst(&Inst, 0, Annotations.str(), *STI, FormattedOS);
+    ASSERT_TRUE(InsnStr.size() < (sizeof(StrBuffer) - 1));
+    std::memcpy(StrBuffer, InsnStr.data(), InsnStr.size());
+    StrBuffer[InsnStr.size()] = '\0';
+
+    if (Version == UC_VERSION_GFX10_DEFAULT)
+      EXPECT_EQ(StringRef(StrBuffer), "\ts_version UC_VERSION_GFX10");
+    else
+      EXPECT_EQ(StringRef(StrBuffer), "\ts_version 153");
+  }
+}
