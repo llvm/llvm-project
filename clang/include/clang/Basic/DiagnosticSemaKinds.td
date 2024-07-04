@@ -7991,6 +7991,8 @@ def err_ambiguous_delete_operand : Error<
 def warn_delete_incomplete : Warning<
   "deleting pointer to incomplete type %0 may cause undefined behavior">,
   InGroup<DeleteIncomplete>;
+def err_delete_incomplete : Error<
+  "cannot delete pointer to incomplete type %0">;
 def err_delete_incomplete_class_type : Error<
   "deleting incomplete class type %0; no conversions to pointer type">;
 def err_delete_explicit_conversion : Error<
