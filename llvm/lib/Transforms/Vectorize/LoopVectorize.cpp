@@ -9011,6 +9011,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     }
   }
   Builder.setInsertPoint(&*LatchVPBB->begin());
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());
+  VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
@@ -9119,8 +9122,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // also modeled in VPlan.
     auto *FinalReductionResult = new VPInstruction(
         VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
-    cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor())
-        ->appendRecipe(FinalReductionResult);
+    FinalReductionResult->insertBefore(*MiddleVPBB, IP);
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult,
         [](VPUser &User, unsigned) { return isa<VPLiveOut>(&User); });
