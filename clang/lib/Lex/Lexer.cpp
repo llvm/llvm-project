@@ -3198,24 +3198,28 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
     } else {
       // While the file physically ends in a newline, the previous
       // line might have ended in a splice, so it would be deleted
-      const char *LastSpliceLocation = LastNewline.data();
-      while (LastSpliceLocation != BufferStart &&
-             isHorizontalWhitespace(*--LastSpliceLocation))
-        ;
+      StringRef WithoutLastNewline =
+          StringRef(BufferStart, LastNewline.data() - BufferStart);
+      while (!WithoutLastNewline.empty()) {
+        if (isHorizontalWhitespace(WithoutLastNewline.back())) {
+          WithoutLastNewline = WithoutLastNewline.drop_back();
+        } else {
+          break;
+        }
+      }
 
-      bool LastIsSplice = *LastSpliceLocation == '\\';
-      if (*LastSpliceLocation == '/' && LangOpts.Trigraphs)
-        // Check for "??/" trigraph for "\"
-        LastIsSplice =
-            LastSpliceLocation != BufferStart && *--LastSpliceLocation == '?' &&
-            LastSpliceLocation != BufferStart && *--LastSpliceLocation == '?';
-
-      if (LastIsSplice) {
+      if (WithoutLastNewline.ends_with('\\') ||
+          (LangOpts.Trigraphs && WithoutLastNewline.ends_with("??"
+                                                              "/"))) {
         PP->Diag(getSourceLocation(LastNewline.data(), LastNewline.size()),
                  DiagID);
-        Diag(LastSpliceLocation, diag::note_backslash_newline_eof)
-            << FixItHint::CreateRemoval(getSourceLocation(
-                   LastSpliceLocation, *LastSpliceLocation == '\\' ? 1 : 3));
+        std::size_t SpliceSize = WithoutLastNewline.back() == '\\' ? 1 : 3;
+        SourceLocation LastSpliceLocation =
+            getSourceLocation(WithoutLastNewline.data() +
+                                  (WithoutLastNewline.size() - SpliceSize),
+                              SpliceSize);
+        PP->Diag(LastSpliceLocation, diag::note_backslash_newline_eof)
+            << FixItHint::CreateRemoval(LastSpliceLocation);
       }
     }
   }
