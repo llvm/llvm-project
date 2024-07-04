@@ -4,7 +4,7 @@ Running the analyzer within Xcode
 .. contents::
    :local:
 
-Since Xcode 3.2, users have been able to run the Clang Static Analyzer `directly within Xcode <https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1>`_.
+Since Xcode 3.2, users have been able to run the static analyzer `directly within Xcode <https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1>`_.
 
 It integrates directly with the Xcode build system and presents analysis results directly within Xcode's editor.
 

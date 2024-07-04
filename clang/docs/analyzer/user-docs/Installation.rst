@@ -10,7 +10,7 @@ This page describes how to download and install the analyzer. Once the analyzer 
 Building the Analyzer from Source
 ---------------------------------
 
-Currently there are no officially supported binary distributions for Clang Static Analyzer.
+Currently there are no officially supported binary distributions for the static analyzer.
 You must build Clang and LLVM manually.
 To do so, please follow the instructions for `building Clang from source code <https://clang.llvm.org/get_started.html#build>`_.
 

@@ -1,7 +1,7 @@
 Command Line Usage: scan-build and CodeChecker
 ==============================================
 
-This document provides guidelines for running Clang Static Analyzer from the command line on whole projects.
+This document provides guidelines for running the static analyzer from the command line on whole projects.
 CodeChecker and scan-build are two CLI tools for using CSA on multiple files (tranlation units).
 Both provide a way of driving the analyzer, detecting compilation flags, and generating reports.
 CodeChecker is more actively maintained, provides heuristics for working with multiple versions of popular compilers and it also comes with a web-based GUI for viewing, filtering, categorizing and suppressing the results.
@@ -10,9 +10,9 @@ Therefore CodeChecker is recommended in case you need any of the above features 
 Comparison of CodeChecker and scan-build
 ----------------------------------------
 
-Static Analyzer is by design a GUI tool originally intended to be consumed by the XCode IDE.
+The static analyzer is by design a GUI tool originally intended to be consumed by the XCode IDE.
 Its purpose is to find buggy execution paths in the program, and such paths are very hard to comprehend by looking at a non-interactive standard output.
-It is possible, however, to invoke the Static Analyzer from the command line in order to obtain analysis results, and then later view them interactively in a graphical interface.
+It is possible, however, to invoke the static analyzer from the command line in order to obtain analysis results, and then later view them interactively in a graphical interface.
 The following tools are used commonly to run the analyzer from the command line.
 Both tools are wrapper scripts to drive the analysis and the underlying invocations of the Clang compiler:
 
@@ -21,8 +21,8 @@ Both tools are wrapper scripts to drive the analysis and the underlying invocati
     - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
     - Does not include support for cross-translation-unit analysis.
 
-2. CodeChecker_ is a driver and web server that runs the Static Analyzer on your projects on demand and maintains a database of issues.
-    - Perfect for managing large amounts of Static Analyzer warnings in a collaborative environment.
+2. CodeChecker_ is a driver and web server that runs the static analyzer on your projects on demand and maintains a database of issues.
+    - Perfect for managing large amounts of thee static analyzer warnings in a collaborative environment.
     - Generally much more feature-rich than scan-build.
     - Supports incremental analysis: Results can be stored in a database, subsequent analysis runs can be compared to list the newly added defects.
     - :doc:`CrossTranslationUnit` is supported fully on Linux via CodeChecker.
@@ -162,7 +162,7 @@ Conceptually Xcode projects for iPhone applications are nearly the same as their
 Recommendation: use "Build and Analyze"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The absolute easiest way to analyze iPhone projects is to use the `Analyze feature in Xcode <https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1>`_ (which is based on the Clang Static Analyzer). There a user can analyze their project right from a menu without most of the setup described later.
+The absolute easiest way to analyze iPhone projects is to use the `Analyze feature in Xcode <https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1>`_ (which is based on the static analyzer). There a user can analyze their project right from a menu without most of the setup described later.
 
 `Instructions are available <../xcode.html>`_ on this website on how to use open source builds of the analyzer as a replacement for the one bundled with Xcode.
 
