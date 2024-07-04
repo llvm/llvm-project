@@ -1370,6 +1370,7 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
 
       // If V is the condition of the branch itself, then we know exactly what
       // it is.
+      // NB: The condition on a `br` can't be a vector type.
       if (Condition == Val)
         return ValueLatticeElement::get(ConstantInt::get(
                               Type::getInt1Ty(Val->getContext()), isTrueDest));
@@ -1723,7 +1724,7 @@ Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
   if (Result.isConstantRange()) {
     const ConstantRange &CR = Result.getConstantRange();
     if (const APInt *SingleVal = CR.getSingleElement())
-      return ConstantInt::get(V->getContext(), *SingleVal);
+      return ConstantInt::get(V->getType(), *SingleVal);
   }
   return nullptr;
 }
@@ -1758,7 +1759,7 @@ Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
   if (Result.isConstantRange()) {
     const ConstantRange &CR = Result.getConstantRange();
     if (const APInt *SingleVal = CR.getSingleElement())
-      return ConstantInt::get(V->getContext(), *SingleVal);
+      return ConstantInt::get(V->getType(), *SingleVal);
   }
   return nullptr;
 }
