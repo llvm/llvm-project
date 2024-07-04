@@ -443,8 +443,8 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     Value *Cond = State.get(getOperand(0), VPIteration(Part, 0));
     // Replace the temporary unreachable terminator with a new conditional
-    //  branch, hooking it up to backward destination for exiting blocks now and
-    //  to forward destination(s) later when they are created.
+    // branch, hooking it up to backward destination for exiting blocks now and
+    // to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
     CondBr->setSuccessor(0, nullptr);

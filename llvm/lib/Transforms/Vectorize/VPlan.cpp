@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlan.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
@@ -448,9 +449,11 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPIRBasicBlock::execute(VPTransformState *State) {
+  assert(getHierarchicalSuccessors().size() <= 2);
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
-  if (getSingleSuccessor() && isa<UnreachableInst>(getIRBasicBlock()->getTerminator())) {
+  if (getSingleSuccessor()) {
+    assert(isa<UnreachableInst>(getIRBasicBlock()->getTerminator()));
     auto *Br = State->Builder.CreateBr(getIRBasicBlock());
     Br->setOperand(0, nullptr);
     getIRBasicBlock()->getTerminator()->eraseFromParent();
@@ -648,14 +651,14 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
+static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
 
-// Clone the CFG for all nodes in the single-entry-single-exit region reachable
-// from \p Entry, this includes cloning the blocks and their recipes. Operands
-// of cloned recipes will NOT be updated. Remapping of operands must be done
-// separately. Returns a pair with the new entry and exiting blocks of the
-// cloned region. If \p Entry isn't part of a region, return nullptr for the exiting block.
-static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
+// Clone the CFG for all nodes reachable from \p Entry, this includes cloning
+// the blocks and their recipes. Operands of cloned recipes will NOT be updated.
+// Remapping of operands must be done separately. Returns a pair with the new
+// entry and exiting blocks of the cloned region. If \p Entry isn't part of a
+// region, return nullptr for the exiting block.
+static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
   bool InRegion = Entry->getParent();
@@ -668,6 +671,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
       Exiting = BB;
     }
   }
+  assert((!InRegion || Exiting) && "regions must have a single exiting block");
 
   // Second, update the predecessors & successors of the cloned blocks.
   for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
@@ -700,11 +704,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   }
 #endif
 
-  return std::make_pair(Old2NewVPBlocks[Entry], InRegion ? Old2NewVPBlocks[Exiting] : nullptr);
+  return std::make_pair(Old2NewVPBlocks[Entry],
+                        Exiting ? Old2NewVPBlocks[Exiting] : nullptr);
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
-  const auto &[NewEntry, NewExiting] = cloneSESE(getEntry());
+  const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
   auto *NewRegion =
       new VPRegionBlock(NewEntry, NewExiting, getName(), isReplicator());
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
@@ -820,41 +825,41 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
-  // Add a check in the middle block to see if we have completed
+  VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
+  if (!RequiresScalarEpilogueCheck) {
+    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+    return Plan;
+  }
+
+  // If needed, add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.  Three cases:
-  // 1) If we require a scalar epilogue, there is no conditional branch as
-  //    we unconditionally branch to the scalar preheader.  Do nothing.
-  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
+  // 1) If (N - N%VF) == N, then we *don't* need to run the remainder.
   //    Thus if tail is to be folded, we know we don't need to run the
-  //    remainder and we can use the previous value for the condition (true).
+  //    remainder and we can set the condition to true.
+  // 2) If we require a scalar epilogue, there is no conditional branch as
+  //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
-  if (RequiresScalarEpilogueCheck) {
-    auto *VPExitBlock = new VPIRBasicBlock(IRExitBlock);
-    VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+  auto *VPExitBlock = new VPIRBasicBlock(IRExitBlock);
+  // The connection order corresponds to the operands of the conditional branch.
+  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+  VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
-    auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
-    // Here we use the same DebugLoc as the scalar loop latch terminator instead
-    // of the corresponding compare because they may have ended up with
-    // different line numbers and we want to avoid awkward line stepping while
-    // debugging. Eg. if the compare has got a line number inside the loop.
-    VPValue *Cmp =
-        TailFolded
-            ? Plan->getOrAddLiveIn(ConstantInt::getTrue(
-                  IntegerType::getInt1Ty(TripCount->getType()->getContext())))
-            : new VPInstruction(Instruction::ICmp, CmpInst::ICMP_EQ,
-                                Plan->getTripCount(),
-                                &Plan->getVectorTripCount(),
-                                ScalarLatchTerm->getDebugLoc(), "cmp.n");
-    if (auto *VPI = Cmp->getDefiningRecipe())
-      MiddleVPBB->appendRecipe(VPI);
-    auto *Br = new VPInstruction(VPInstruction::BranchOnCond, {Cmp},
-                                 ScalarLatchTerm->getDebugLoc());
-    MiddleVPBB->appendRecipe(Br);
-  }
-  VPBasicBlock *PHWrapper = new VPBasicBlock("scalar.ph");
-  VPBlockUtils::connectBlocks(MiddleVPBB, PHWrapper);
-
+  auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
+  // Here we use the same DebugLoc as the scalar loop latch terminator instead
+  // of the corresponding compare because they may have ended up with
+  // different line numbers and we want to avoid awkward line stepping while
+  // debugging. Eg. if the compare has got a line number inside the loop.
+  VPBuilder Builder(MiddleVPBB);
+  VPValue *Cmp =
+      TailFolded
+          ? Plan->getOrAddLiveIn(ConstantInt::getTrue(
+                IntegerType::getInt1Ty(TripCount->getType()->getContext())))
+          : Builder.createICmp(CmpInst::ICMP_EQ, Plan->getTripCount(),
+                               &Plan->getVectorTripCount(),
+                               ScalarLatchTerm->getDebugLoc(), "cmp.n");
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
+                       ScalarLatchTerm->getDebugLoc());
   return Plan;
 }
 
@@ -898,7 +903,9 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 }
 
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
-/// VPBB are moved to the newly created VPIRBasicBlock.
+/// VPBB are moved to the newly created VPIRBasicBlock.  VPBB must have a single
+/// predecessor, which is rewired to the new VPIRBasicBlock. All successors of
+/// VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRMiddleVPBB = new VPIRBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB))
@@ -929,9 +936,9 @@ void VPlan::execute(VPTransformState *State) {
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
   // Replace regular VPBB's for the middle and scalar preheader blocks with
-  // VPIRBasicBlocks with VPIRBasicBlocks wrapping their IR blocks. The IR
-  // blocks are created during skeleton creation, so we can only create the
-  // VPIRBasicBlocks after legacy skeleton creation.
+  // VPIRBasicBlocks wrapping their IR blocks. The IR blocks are created during
+  // skeleton creation, so we can only create the VPIRBasicBlocks now during
+  // VPlan execution rather than earlier during VPlan construction.
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
@@ -951,12 +958,13 @@ void VPlan::execute(VPTransformState *State) {
   replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
   // Disconnect the middle block from its single successor (the scalar loop
-  // header) in both the CFG and DT. The branch will be created during VPlan
+  // header) in both the CFG and DT. The branch will be recreated during VPlan
   // execution.
   auto *BrInst = new UnreachableInst(MiddleBB->getContext());
   BrInst->insertBefore(MiddleBB->getTerminator());
   MiddleBB->getTerminator()->eraseFromParent();
   State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
+
   // Generate code in the loop pre-header and body.
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
     Block->execute(State);
@@ -1161,7 +1169,7 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 VPlan *VPlan::duplicate() {
   // Clone blocks.
   VPBasicBlock *NewPreheader = Preheader->clone();
-  const auto &[NewEntry, __] = cloneSESE(Entry);
+  const auto &[NewEntry, __] = cloneFrom(Entry);
 
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry));
