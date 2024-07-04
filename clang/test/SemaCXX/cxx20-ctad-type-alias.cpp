@@ -266,7 +266,7 @@ template <typename U>
 using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>' against 'int'}} \
                     // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<type-parameter-0-0>) Bar(Foo<type-parameter-0-0>) -> Foo<type-parameter-0-0>'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied}} \
-                    // expected-note {{implicit deduction guide declared as 'template <typename T> requires False<T> && __is_deducible(test18::Bar, Foo<int>) Bar(type-parameter-0-0) -> Foo<int>'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <typename T> requires False<type-parameter-0-0> && __is_deducible(test18::Bar, Foo<int>) Bar(type-parameter-0-0) -> Foo<int>'}} \
                     // expected-note {{candidate function template not viable}} \
                     // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<type-parameter-0-0>) Bar() -> Foo<type-parameter-0-0>'}}
 
