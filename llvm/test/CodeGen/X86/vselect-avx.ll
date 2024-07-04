@@ -259,7 +259,7 @@ define void @blendv_split(ptr %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <
   ret void
 }
 
-; TODO: Concatenate 128-bit pblendvb back together on AVX2+ targets (hidden by SSE __m128i bitcasts)
+; Concatenate 128-bit pblendvb back together on AVX2+ targets (hidden by SSE __m128i bitcasts)
 define <4 x i64> @vselect_concat_split_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i64>  %c, <4 x i64> %d) {
 ; AVX1-LABEL: vselect_concat_split_v16i8:
 ; AVX1:       ## %bb.0:
@@ -277,24 +277,13 @@ define <4 x i64> @vselect_concat_split_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i6
 ; AVX2-LABEL: vselect_concat_split_v16i8:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm3
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm2
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: vselect_concat_split_v16i8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
-; AVX512-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm4
-; AVX512-NEXT:    ## kill: def $xmm1 killed $xmm1 killed $ymm1 def $ymm1
-; AVX512-NEXT:    vpternlogq $226, %xmm0, %xmm2, %xmm1
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vpternlogq $226, %xmm0, %xmm3, %xmm4
-; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm1, %ymm0
+; AVX512-NEXT:    vpternlogq $216, %ymm2, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %a.bc = bitcast <4 x i64> %a to <32 x i8>
   %b.bc = bitcast <4 x i64> %b to <32 x i8>
