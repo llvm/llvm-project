@@ -17,7 +17,9 @@ Array<T, Size>::Array() {
 */
 template <typename T, int Size>
 T& Array<T, Size>::operator[](int index) {
-   // Implementation stub
+   /**
+    * @brief internal comment
+    */
    static T dummy;
    return dummy;
 }
