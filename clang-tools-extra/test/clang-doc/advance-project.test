@@ -90,25 +90,25 @@
 // HTML-ANON-INDEX: </div>
 // HTML-ANON-INDEX: <h2 id="Functions">Functions</h2>
 // HTML-ANON-INDEX: <div>
-// HTML-ANON-INDEX:   <h3 id="6C29E21B8E17CC2B7644472BEEA8AE41173AC8A5">getRandomNumber</h3>
+// HTML-ANON-INDEX:   <h3 id="{{([0-9A-F]{40})}}">getRandomNumber</h3>
 // HTML-ANON-INDEX:   <p>int getRandomNumber()</p>
-// HTML-ANON-INDEX:   <p>Defined at line 9 of file ./src/Utils.cpp</p>
+// HTML-ANON-INDEX:   <p>Defined at line 9 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
 // HTML-ANON-INDEX:   <div>
 // HTML-ANON-INDEX:     <div></div>
 // HTML-ANON-INDEX:     <div>
 // HTML-ANON-INDEX:       <p> This function returns a predetermined number to simulate randomness. In a real implementation, this would use a proper random number generator</p>
 // HTML-ANON-INDEX:     </div>
 // HTML-ANON-INDEX:   </div>
-// HTML-ANON-INDEX:   <h3 id="C880E378D7684B69ACB874F378AE97484CFC8A31">intToString</h3>
+// HTML-ANON-INDEX:   <h3 id="{{([0-9A-F]{40})}}">intToString</h3>
 // HTML-ANON-INDEX:   <p>void intToString(int value, char * buffer, int &amp; index)</p>
-// HTML-ANON-INDEX:   <p>Defined at line 18 of file ./src/Utils.cpp</p>
+// HTML-ANON-INDEX:   <p>Defined at line 18 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
 // HTML-ANON-INDEX:   <div>
 // HTML-ANON-INDEX:     <div></div>
 // HTML-ANON-INDEX:     <div>
 // HTML-ANON-INDEX:       <p> Converts an integer value to its string representation and stores the result in the provided buffer.</p>
 // HTML-ANON-INDEX:     </div>
 // HTML-ANON-INDEX:   </div>
-// HTML-ANON-INDEX:   <h3 id="BF4741DC50474C9F02654E187CF39DF4ACFC4C03">doubleToString</h3>
+// HTML-ANON-INDEX:   <h3 id="{{([0-9A-F]{40})}}">doubleToString</h3>
 // HTML-ANON-INDEX:   <p>void doubleToString(double value, char * buffer, int &amp; index)</p>
 // HTML-ANON-INDEX:   <p>Defined at line 26 of file ./src/Utils.cpp</p>
 // HTML-ANON-INDEX:   <div>
@@ -117,9 +117,9 @@
 // HTML-ANON-INDEX:       <p> Converts a double value to its string representation with two decimal places and stores the result in the provided buffer.</p>
 // HTML-ANON-INDEX:     </div>
 // HTML-ANON-INDEX:   </div>
-// HTML-ANON-INDEX:   <h3 id="8DFD5FCED322C10A7E16339E1CADBB4809B1BCB8">print</h3>
+// HTML-ANON-INDEX:   <h3 id="{{([0-9A-F]{40})}}">print</h3>
 // HTML-ANON-INDEX:   <p>void print(const char * str)</p>
-// HTML-ANON-INDEX:   <p>Defined at line 33 of file ./src/Utils.cpp</p>
+// HTML-ANON-INDEX:   <p>Defined at line 33 of file .{{[\/]}}src{{[\/]}}Utils.cpp</p>
 // HTML-ANON-INDEX:   <div>
 // HTML-ANON-INDEX:     <div></div>
 // HTML-ANON-INDEX:     <div>
@@ -141,7 +141,7 @@
 // HTML-ARRAY: <div>
 // HTML-ARRAY:   <h3 id="{{([0-9A-F]{40})}}">Array&lt;T, Size&gt;</h3>
 // HTML-ARRAY:   <p>public void Array&lt;T, Size&gt;()</p>
-// HTML-ARRAY:   <p>Defined at line 8 of file ./src/Array.cpp</p>
+// HTML-ARRAY:   <p>Defined at line 8 of file .{{[\/]}}src{{[\/]}}Array.cpp</p>
 // HTML-ARRAY:   <div>
 // HTML-ARRAY:     <div></div>
 // HTML-ARRAY:     <div>
@@ -150,7 +150,7 @@
 // HTML-ARRAY:   </div>
 // HTML-ARRAY:   <h3 id="{{([0-9A-F]{40})}}">operator[]</h3>
 // HTML-ARRAY:   <p>public T &amp; operator[](int index)</p>
-// HTML-ARRAY:   <p>Defined at line 18 of file ./src/Array.cpp</p>
+// HTML-ARRAY:   <p>Defined at line 18 of file .{{[\/]}}src{{[\/]}}Array.cpp</p>
 // HTML-ARRAY:   <div>
 // HTML-ARRAY:     <div></div>
 // HTML-ARRAY:     <div>
@@ -182,7 +182,7 @@
 // HTML-GLOBAL-INDEX: </ul>
 
 // HTML-CIRCLE: <h1>class Circle</h1>
-// HTML-CIRCLE: <p>Defined at line 11 of file ./include\Circle.h</p>
+// HTML-CIRCLE: <p>Defined at line 11 of file .{{[\/]}}include{{[\/]}}Circle.h</p>
 // HTML-CIRCLE: <div>
 // HTML-CIRCLE:   <div></div>
 // HTML-CIRCLE: </div>
@@ -196,18 +196,18 @@
 // HTML-CIRCLE: </ul>
 // HTML-CIRCLE: <h2 id="Functions">Functions</h2>
 // HTML-CIRCLE: <div>
-// HTML-CIRCLE:   <h3 id="7E26D8D3972531B03E87C4F71F7BB9CB14A62163">Circle</h3>
+// HTML-CIRCLE:   <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
 // HTML-CIRCLE:   <p>public void Circle(int id, double radius)</p>
-// HTML-CIRCLE:   <p>Defined at line 9 of file ./src/Circle.cpp</p>
+// HTML-CIRCLE:   <p>Defined at line 9 of file .{{[\/]}}src{{[\/]}}Circle.cpp</p>
 // HTML-CIRCLE:   <div>
 // HTML-CIRCLE:     <div></div>
 // HTML-CIRCLE:     <div>
 // HTML-CIRCLE:       <p> Initializes a Circle object with a given ID and radius.</p>
 // HTML-CIRCLE:     </div>
 // HTML-CIRCLE:   </div>
-// HTML-CIRCLE:   <h3 id="1C706B81F8827714D0B4D0F2A8DEF4A43123CDA1">draw</h3>
+// HTML-CIRCLE:   <h3 id="{{([0-9A-F]{40})}}">draw</h3>
 // HTML-CIRCLE:   <p>public void draw()</p>
-// HTML-CIRCLE:   <p>Defined at line 19 of file ./src/Circle.cpp</p>
+// HTML-CIRCLE:   <p>Defined at line 19 of file .{{[\/]}}src{{[\/]}}Circle.cpp</p>
 // HTML-CIRCLE:   <div>
 // HTML-CIRCLE:     <div>
 // HTML-CIRCLE:       <p> Draws the circle (in this case, prints circle information)</p>
@@ -235,20 +235,20 @@
 // HTML-INNER-INDEX: </ul>
 // HTML-INNER-INDEX: <h2 id="Enums">Enums</h2>
 // HTML-INNER-INDEX: <div>
-// HTML-INNER-INDEX:   <h3 id="A4FE515807D3532E918D1CDBD3CA93B91CD190E1">enum class Color</h3>
+// HTML-INNER-INDEX:   <h3 id="{{([0-9A-F]{40})}}">enum class Color</h3>
 // HTML-INNER-INDEX:   <ul>
 // HTML-INNER-INDEX:     <li>Red</li>
 // HTML-INNER-INDEX:     <li>Green</li>
 // HTML-INNER-INDEX:     <li>Blue</li>
 // HTML-INNER-INDEX:   </ul>
-// HTML-INNER-INDEX:   <p>Defined at line 10 of file ./include\Shape.h</p>
+// HTML-INNER-INDEX:   <p>Defined at line 10 of file .{{[\/]}}include{{[\/]}}Shape.h</p>
 // HTML-INNER-INDEX:   <div>
 // HTML-INNER-INDEX:     <div></div>
 // HTML-INNER-INDEX:   </div>
 // HTML-INNER-INDEX: </div>
 
 // HTML-SHAPE: <h1>class Shape</h1>
-// HTML-SHAPE: <p>Defined at line 19 of file ./include\Shape.h</p>
+// HTML-SHAPE: <p>Defined at line 19 of file .{{[\/]}}include{{[\/]}}Shape.h</p>
 // HTML-SHAPE: <div>
 // HTML-SHAPE:   <div></div>
 // HTML-SHAPE: </div>
@@ -258,7 +258,7 @@
 // HTML-SHAPE: </ul>
 // HTML-SHAPE: <h2 id="Functions">Functions</h2>
 // HTML-SHAPE: <div>
-// HTML-SHAPE:   <h3 id="ABFA7AB203B23B24A99594914F62759F5AC618E3">Shape</h3>
+// HTML-SHAPE:   <h3 id="{{([0-9A-F]{40})}}">Shape</h3>
 // HTML-SHAPE:   <p>public void Shape(int id)</p>
 // HTML-SHAPE:   <p>Defined at line 9 of file ./src/Shape.cpp</p>
 // HTML-SHAPE:   <div>
@@ -267,7 +267,7 @@
 // HTML-SHAPE:       <p> Initializes a Shape object with a given ID.</p>
 // HTML-SHAPE:     </div>
 // HTML-SHAPE:   </div>
-// HTML-SHAPE:   <h3 id="8EDF9441A0D4B6D98283B374F259232B685F5229">~Shape</h3>
+// HTML-SHAPE:   <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
 // HTML-SHAPE:   <p>public void ~Shape()</p>
 // HTML-SHAPE:   <p>Defined at line 16 of file ./src/Shape.cpp</p>
 // HTML-SHAPE:   <div>
@@ -276,14 +276,14 @@
 // HTML-SHAPE:       <p> Ensures proper cleanup of derived classes.</p>
 // HTML-SHAPE:     </div>
 // HTML-SHAPE:   </div>
-// HTML-SHAPE:   <h3 id="9A3BD58E984415F7D9D4CC4DE55B01BC9227A713">draw</h3>
+// HTML-SHAPE:   <h3 id="{{([0-9A-F]{40})}}">draw</h3>
 // HTML-SHAPE:   <p>public void draw()</p>
 // HTML-SHAPE:   <div>
 // HTML-SHAPE:     <div></div>
 // HTML-SHAPE:   </div>
 // HTML-SHAPE:   <h3 id="505BF8791AEB9B44E0E3373F5D750E875156BCCD">getId</h3>
 // HTML-SHAPE:   <p>public int getId()</p>
-// HTML-SHAPE:   <p>Defined at line 23 of file ./src/Shape.cpp</p>
+// HTML-SHAPE:   <p>Defined at line 23 of file .{{[\/]}}src{{[\/]}}Shape.cpp</p>
 // HTML-SHAPE:   <div>
 // HTML-SHAPE:     <div></div>
 // HTML-SHAPE:     <div>
@@ -301,7 +301,7 @@
 // HTML-OUTER-INDEX: <h2 id="Namespaces">Namespaces</h2>
 // HTML-OUTER-INDEX: <ul>
 // HTML-OUTER-INDEX:   <li>
-// HTML-OUTER-INDEX:     <a href="InnerNamespace/index.html">InnerNamespace</a>
+// HTML-OUTER-INDEX:     <a href="InnerNamespace{{[\/]}}index.html">InnerNamespace</a>
 // HTML-OUTER-INDEX:   </li>
 // HTML-OUTER-INDEX: </ul>
 
