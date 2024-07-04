@@ -412,7 +412,7 @@ define amdgpu_ps void @global_atomic_fmin_uni_address_div_value_agent_scope_unsa
 ; IR-ITERATIVE:       13:
 ; IR-ITERATIVE-NEXT:    ret void
 ; IR-ITERATIVE:       ComputeLoop:
-; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi float [ 0x7FF0000000000000, [[TMP2]] ], [ [[TMP17]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi float [ 0x7FF8000000000000, [[TMP2]] ], [ [[TMP17]], [[COMPUTELOOP]] ]
 ; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP20:%.*]], [[COMPUTELOOP]] ]
 ; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true)
 ; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
@@ -437,18 +437,18 @@ define amdgpu_ps void @global_atomic_fmin_uni_address_div_value_agent_scope_unsa
 ; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
 ; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0)
 ; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]])
-; IR-DPP-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.set.inactive.f32(float [[VAL:%.*]], float 0x7FF0000000000000)
-; IR-DPP-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float [[TMP9]], i32 273, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.set.inactive.f32(float [[VAL:%.*]], float 0x7FF8000000000000)
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP9]], i32 273, i32 15, i32 15, i1 false)
 ; IR-DPP-NEXT:    [[TMP11:%.*]] = call float @llvm.minnum.f32(float [[TMP9]], float [[TMP10]])
-; IR-DPP-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float [[TMP11]], i32 274, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP11]], i32 274, i32 15, i32 15, i1 false)
 ; IR-DPP-NEXT:    [[TMP13:%.*]] = call float @llvm.minnum.f32(float [[TMP11]], float [[TMP12]])
-; IR-DPP-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float [[TMP13]], i32 276, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP13]], i32 276, i32 15, i32 15, i1 false)
 ; IR-DPP-NEXT:    [[TMP15:%.*]] = call float @llvm.minnum.f32(float [[TMP13]], float [[TMP14]])
-; IR-DPP-NEXT:    [[TMP16:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float [[TMP15]], i32 280, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP15]], i32 280, i32 15, i32 15, i1 false)
 ; IR-DPP-NEXT:    [[TMP17:%.*]] = call float @llvm.minnum.f32(float [[TMP15]], float [[TMP16]])
-; IR-DPP-NEXT:    [[TMP18:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float [[TMP17]], i32 322, i32 10, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP17]], i32 322, i32 10, i32 15, i1 false)
 ; IR-DPP-NEXT:    [[TMP19:%.*]] = call float @llvm.minnum.f32(float [[TMP17]], float [[TMP18]])
-; IR-DPP-NEXT:    [[TMP20:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF0000000000000, float [[TMP19]], i32 323, i32 12, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP19]], i32 323, i32 12, i32 15, i1 false)
 ; IR-DPP-NEXT:    [[TMP21:%.*]] = call float @llvm.minnum.f32(float [[TMP19]], float [[TMP20]])
 ; IR-DPP-NEXT:    [[TMP22:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[TMP21]], i32 63)
 ; IR-DPP-NEXT:    [[TMP23:%.*]] = call float @llvm.amdgcn.strict.wwm.f32(float [[TMP22]])
@@ -532,7 +532,7 @@ define amdgpu_ps void @global_atomic_fmax_uni_address_div_value_agent_scope_unsa
 ; IR-ITERATIVE:       13:
 ; IR-ITERATIVE-NEXT:    ret void
 ; IR-ITERATIVE:       ComputeLoop:
-; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi float [ 0xFFF0000000000000, [[TMP2]] ], [ [[TMP17]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi float [ 0x7FF8000000000000, [[TMP2]] ], [ [[TMP17]], [[COMPUTELOOP]] ]
 ; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP20:%.*]], [[COMPUTELOOP]] ]
 ; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true) #[[ATTR7]]
 ; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
@@ -557,18 +557,18 @@ define amdgpu_ps void @global_atomic_fmax_uni_address_div_value_agent_scope_unsa
 ; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
 ; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR8]]
-; IR-DPP-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.set.inactive.f32(float [[VAL:%.*]], float 0xFFF0000000000000) #[[ATTR8]]
-; IR-DPP-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float [[TMP9]], i32 273, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.set.inactive.f32(float [[VAL:%.*]], float 0x7FF8000000000000) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP9]], i32 273, i32 15, i32 15, i1 false) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP11:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[TMP9]], float [[TMP10]], metadata !"fpexcept.strict") #[[ATTR8]]
-; IR-DPP-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float [[TMP11]], i32 274, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP11]], i32 274, i32 15, i32 15, i1 false) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP13:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[TMP11]], float [[TMP12]], metadata !"fpexcept.strict") #[[ATTR8]]
-; IR-DPP-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float [[TMP13]], i32 276, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP13]], i32 276, i32 15, i32 15, i1 false) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP15:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[TMP13]], float [[TMP14]], metadata !"fpexcept.strict") #[[ATTR8]]
-; IR-DPP-NEXT:    [[TMP16:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float [[TMP15]], i32 280, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP15]], i32 280, i32 15, i32 15, i1 false) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP17:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[TMP15]], float [[TMP16]], metadata !"fpexcept.strict") #[[ATTR8]]
-; IR-DPP-NEXT:    [[TMP18:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float [[TMP17]], i32 322, i32 10, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP17]], i32 322, i32 10, i32 15, i1 false) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP19:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[TMP17]], float [[TMP18]], metadata !"fpexcept.strict") #[[ATTR8]]
-; IR-DPP-NEXT:    [[TMP20:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0xFFF0000000000000, float [[TMP19]], i32 323, i32 12, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call float @llvm.amdgcn.update.dpp.f32(float 0x7FF8000000000000, float [[TMP19]], i32 323, i32 12, i32 15, i1 false) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP21:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[TMP19]], float [[TMP20]], metadata !"fpexcept.strict") #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP22:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[TMP21]], i32 63) #[[ATTR8]]
 ; IR-DPP-NEXT:    [[TMP23:%.*]] = call float @llvm.amdgcn.strict.wwm.f32(float [[TMP22]]) #[[ATTR8]]

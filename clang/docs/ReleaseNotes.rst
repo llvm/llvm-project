@@ -147,22 +147,6 @@ Clang Frontend Potentially Breaking Changes
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
 
-- The comment parser now matches comments to declarations even if there is a
-  preprocessor macro in between the comment and declaration. This change is
-  intended to improve Clang's support for parsing documentation comments and
-  to better conform to Doxygen's behavior.
-
-  This has the potential to cause ``-Wdocumentation`` warnings, especially in
-  cases where a function-like macro has a documentation comment and is followed
-  immediately by a normal function. The function-like macro's documentation
-  comments will be attributed to the subsequent function and may cause
-  ``-Wdocumentation`` warnings such as mismatched parameter names, or invalid
-  return documentation comments.
-
-  In cases where the ``-Wdocumentation`` warnings are thrown, the suggested fix
-  is to document the declaration following the macro so that the warnings are
-  fixed.
-
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
 - Renamed ``CursorKind`` variant 272 from ``OMP_TEAMS_DISTRIBUTE_DIRECTIVE``
@@ -354,6 +338,11 @@ C23 Feature Support
 - Properly promote bit-fields of bit-precise integer types to the field's type
   rather than to ``int``. #GH87641
 
+- Added the ``INFINITY`` and ``NAN`` macros to Clang's ``<float.h>``
+  freestanding implementation; these macros were defined in ``<math.h>`` in C99
+  but C23 added them to ``<float.h>`` in
+  `WG14 N2848 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf>`_.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -408,6 +397,11 @@ Non-comprehensive list of changes in this release
 
 - ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
   errors and certain default-to-error ``-W`` diagnostics to warnings.
+
+- Support importing C++20 modules in clang-repl.
+
+- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
+  textual and JSON dumping for various ``TypeLoc``-related nodes.
 
 New Compiler Flags
 ------------------
@@ -960,6 +954,8 @@ Bug Fixes to C++ Support
   forward-declared class. (#GH93512).
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
+- Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
+  of the address of operator. (#GH97483).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1168,11 +1164,6 @@ Crash and bug fixes
 
 Improvements
 ^^^^^^^^^^^^
-
-- Support importing C++20 modules in clang-repl.
-
-- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
-  textual and JSON dumping for various ``TypeLoc``-related nodes.
 
 Moved checkers
 ^^^^^^^^^^^^^^
