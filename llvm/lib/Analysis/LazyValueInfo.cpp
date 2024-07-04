@@ -1370,6 +1370,7 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
 
       // If V is the condition of the branch itself, then we know exactly what
       // it is.
+      // NB: The condition on a `br` can't be a vector type.
       if (Condition == Val)
         return ValueLatticeElement::get(ConstantInt::get(
                               Type::getInt1Ty(Val->getContext()), isTrueDest));
@@ -1723,7 +1724,7 @@ Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
   if (Result.isConstantRange()) {
     const ConstantRange &CR = Result.getConstantRange();
     if (const APInt *SingleVal = CR.getSingleElement())
-      return ConstantInt::get(V->getContext(), *SingleVal);
+      return ConstantInt::get(V->getType(), *SingleVal);
   }
   return nullptr;
 }
@@ -1758,7 +1759,7 @@ Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
   if (Result.isConstantRange()) {
     const ConstantRange &CR = Result.getConstantRange();
     if (const APInt *SingleVal = CR.getSingleElement())
-      return ConstantInt::get(V->getContext(), *SingleVal);
+      return ConstantInt::get(V->getType(), *SingleVal);
   }
   return nullptr;
 }
@@ -1791,27 +1792,11 @@ getPredicateResult(CmpInst::Predicate Pred, Constant *C,
     if (!CI) return LazyValueInfo::Unknown;
 
     const ConstantRange &CR = Val.getConstantRange();
-    if (Pred == ICmpInst::ICMP_EQ) {
-      if (!CR.contains(CI->getValue()))
-        return LazyValueInfo::False;
-
-      if (CR.isSingleElement())
-        return LazyValueInfo::True;
-    } else if (Pred == ICmpInst::ICMP_NE) {
-      if (!CR.contains(CI->getValue()))
-        return LazyValueInfo::True;
-
-      if (CR.isSingleElement())
-        return LazyValueInfo::False;
-    } else {
-      // Handle more complex predicates.
-      ConstantRange TrueValues =
-          ConstantRange::makeExactICmpRegion(Pred, CI->getValue());
-      if (TrueValues.contains(CR))
-        return LazyValueInfo::True;
-      if (TrueValues.inverse().contains(CR))
-        return LazyValueInfo::False;
-    }
+    ConstantRange RHS(CI->getValue());
+    if (CR.icmp(Pred, RHS))
+      return LazyValueInfo::True;
+    if (CR.icmp(CmpInst::getInversePredicate(Pred), RHS))
+      return LazyValueInfo::False;
     return LazyValueInfo::Unknown;
   }
 

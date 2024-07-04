@@ -220,3 +220,24 @@ define <2 x i16> @and_with_poison(<2 x i8> %a) {
   %res = and <2 x i16> %zext, <i16 u0xff, i16 poison>
   ret <2 x i16> %res
 }
+
+
+
+define <4 x i64> @issue_97674_getConstantOnEdge(i1 %cond) {
+entry:
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:
+  %folds = add <4 x i64> zeroinitializer, <i64 1, i64 1, i64 1, i64 1>
+  br label %if.end
+
+if.end:
+  %r = phi <4 x i64> [ %folds, %if.then ], [ zeroinitializer, %entry ]
+  ret <4 x i64> %r
+}
+    
+define <4 x i64> @issue_97674_getConstant() {
+entry:
+  %folds = add <4 x i64> zeroinitializer, zeroinitializer
+  ret <4 x i64> %folds
+}
