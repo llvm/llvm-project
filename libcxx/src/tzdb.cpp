@@ -626,29 +626,49 @@ static void __parse_leap_seconds(vector<leap_second>& __leap_seconds, istream&& 
   // seconds since 1 January 1970.
   constexpr auto __offset = sys_days{1970y / January / 1} - sys_days{1900y / January / 1};
 
-  while (true) {
-    switch (__input.peek()) {
-    case istream::traits_type::eof():
-      return;
+  struct __entry {
+    sys_seconds __timestamp;
+    seconds __value;
+  };
+  vector<__entry> __entries;
+  [&] {
+    while (true) {
+      switch (__input.peek()) {
+      case istream::traits_type::eof():
+        return;
 
-    case ' ':
-    case '\t':
-    case '\n':
-      __input.get();
-      continue;
+      case ' ':
+      case '\t':
+      case '\n':
+        __input.get();
+        continue;
 
-    case '#':
+      case '#':
+        chrono::__skip_line(__input);
+        continue;
+      }
+
+      sys_seconds __date = sys_seconds{seconds{chrono::__parse_integral(__input, false)}} - __offset;
+      chrono::__skip_mandatory_whitespace(__input);
+      seconds __value{chrono::__parse_integral(__input, false)};
       chrono::__skip_line(__input);
-      continue;
+
+      __entries.emplace_back(__date, __value);
     }
+  }();
+  // The Standard requires the leap seconds to be sorted. The file
+  // leap-seconds.list usually provides them in sorted order, but that is not
+  // guaranteed so we ensure it here.
+  ranges::sort(__entries, {}, &__entry::__timestamp);
 
-    sys_seconds __date = sys_seconds{seconds{chrono::__parse_integral(__input, false)}} - __offset;
-    chrono::__skip_mandatory_whitespace(__input);
-    seconds __value{chrono::__parse_integral(__input, false)};
-    chrono::__skip_line(__input);
-
-    __leap_seconds.emplace_back(std::__private_constructor_tag{}, __date, __value);
-  }
+  // The database should contain the number of seconds inserted by a leap
+  // second (1 or -1). So the difference between the two elements is stored.
+  // std::ranges::views::adjacent has not been implemented yet.
+  (void)ranges::adjacent_find(__entries, [&](const __entry& __first, const __entry& __second) {
+    __leap_seconds.emplace_back(
+        std::__private_constructor_tag{}, __second.__timestamp, __second.__value - __first.__value);
+    return false;
+  });
 }
 
 void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
@@ -667,10 +687,6 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
   // The latter is much easier to parse, it seems Howard shares that
   // opinion.
   chrono::__parse_leap_seconds(__tzdb.leap_seconds, ifstream{__root / "leap-seconds.list"});
-  // The Standard requires the leap seconds to be sorted. The file
-  // leap-seconds.list usually provides them in sorted order, but that is not
-  // guaranteed so we ensure it here.
-  std::ranges::sort(__tzdb.leap_seconds);
 }
 
 #ifdef _WIN32
