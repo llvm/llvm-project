@@ -1306,6 +1306,160 @@ entry:
   ret <2 x double> %c
 }
 
+define <3 x double> @stofp_v3i128_v3f64(<3 x i128> %a) {
+; CHECK-SD-LABEL: stofp_v3i128_v3f64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset w19, -8
+; CHECK-SD-NEXT:    .cfi_offset w20, -16
+; CHECK-SD-NEXT:    .cfi_offset w21, -24
+; CHECK-SD-NEXT:    .cfi_offset w22, -32
+; CHECK-SD-NEXT:    .cfi_offset w30, -48
+; CHECK-SD-NEXT:    .cfi_offset b8, -56
+; CHECK-SD-NEXT:    .cfi_offset b9, -64
+; CHECK-SD-NEXT:    mov x19, x5
+; CHECK-SD-NEXT:    mov x20, x4
+; CHECK-SD-NEXT:    mov x21, x3
+; CHECK-SD-NEXT:    mov x22, x2
+; CHECK-SD-NEXT:    bl __floattidf
+; CHECK-SD-NEXT:    mov x0, x22
+; CHECK-SD-NEXT:    mov x1, x21
+; CHECK-SD-NEXT:    fmov d8, d0
+; CHECK-SD-NEXT:    bl __floattidf
+; CHECK-SD-NEXT:    mov x0, x20
+; CHECK-SD-NEXT:    mov x1, x19
+; CHECK-SD-NEXT:    fmov d9, d0
+; CHECK-SD-NEXT:    bl __floattidf
+; CHECK-SD-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    fmov d0, d8
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    fmov d1, d9
+; CHECK-SD-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: stofp_v3i128_v3f64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w21, -24
+; CHECK-GI-NEXT:    .cfi_offset w22, -32
+; CHECK-GI-NEXT:    .cfi_offset w30, -48
+; CHECK-GI-NEXT:    .cfi_offset b8, -56
+; CHECK-GI-NEXT:    .cfi_offset b9, -64
+; CHECK-GI-NEXT:    mov x19, x2
+; CHECK-GI-NEXT:    mov x20, x3
+; CHECK-GI-NEXT:    mov x21, x4
+; CHECK-GI-NEXT:    mov x22, x5
+; CHECK-GI-NEXT:    bl __floattidf
+; CHECK-GI-NEXT:    mov x0, x19
+; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    fmov d8, d0
+; CHECK-GI-NEXT:    bl __floattidf
+; CHECK-GI-NEXT:    mov x0, x21
+; CHECK-GI-NEXT:    mov x1, x22
+; CHECK-GI-NEXT:    fmov d9, d0
+; CHECK-GI-NEXT:    bl __floattidf
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    fmov d0, d8
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    fmov d1, d9
+; CHECK-GI-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = sitofp <3 x i128> %a to <3 x double>
+  ret <3 x double> %c
+}
+
+define <3 x double> @utofp_v3i128_v3f64(<3 x i128> %a) {
+; CHECK-SD-LABEL: utofp_v3i128_v3f64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset w19, -8
+; CHECK-SD-NEXT:    .cfi_offset w20, -16
+; CHECK-SD-NEXT:    .cfi_offset w21, -24
+; CHECK-SD-NEXT:    .cfi_offset w22, -32
+; CHECK-SD-NEXT:    .cfi_offset w30, -48
+; CHECK-SD-NEXT:    .cfi_offset b8, -56
+; CHECK-SD-NEXT:    .cfi_offset b9, -64
+; CHECK-SD-NEXT:    mov x19, x5
+; CHECK-SD-NEXT:    mov x20, x4
+; CHECK-SD-NEXT:    mov x21, x3
+; CHECK-SD-NEXT:    mov x22, x2
+; CHECK-SD-NEXT:    bl __floatuntidf
+; CHECK-SD-NEXT:    mov x0, x22
+; CHECK-SD-NEXT:    mov x1, x21
+; CHECK-SD-NEXT:    fmov d8, d0
+; CHECK-SD-NEXT:    bl __floatuntidf
+; CHECK-SD-NEXT:    mov x0, x20
+; CHECK-SD-NEXT:    mov x1, x19
+; CHECK-SD-NEXT:    fmov d9, d0
+; CHECK-SD-NEXT:    bl __floatuntidf
+; CHECK-SD-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    fmov d0, d8
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    fmov d1, d9
+; CHECK-SD-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: utofp_v3i128_v3f64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    stp d9, d8, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w21, -24
+; CHECK-GI-NEXT:    .cfi_offset w22, -32
+; CHECK-GI-NEXT:    .cfi_offset w30, -48
+; CHECK-GI-NEXT:    .cfi_offset b8, -56
+; CHECK-GI-NEXT:    .cfi_offset b9, -64
+; CHECK-GI-NEXT:    mov x19, x2
+; CHECK-GI-NEXT:    mov x20, x3
+; CHECK-GI-NEXT:    mov x21, x4
+; CHECK-GI-NEXT:    mov x22, x5
+; CHECK-GI-NEXT:    bl __floatuntidf
+; CHECK-GI-NEXT:    mov x0, x19
+; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    fmov d8, d0
+; CHECK-GI-NEXT:    bl __floatuntidf
+; CHECK-GI-NEXT:    mov x0, x21
+; CHECK-GI-NEXT:    mov x1, x22
+; CHECK-GI-NEXT:    fmov d9, d0
+; CHECK-GI-NEXT:    bl __floatuntidf
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    fmov d0, d8
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    fmov d1, d9
+; CHECK-GI-NEXT:    ldp d9, d8, [sp], #64 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = uitofp <3 x i128> %a to <3 x double>
+  ret <3 x double> %c
+}
+
 define <2 x double> @stofp_v2i64_v2f64(<2 x i64> %a) {
 ; CHECK-LABEL: stofp_v2i64_v2f64:
 ; CHECK:       // %bb.0: // %entry
