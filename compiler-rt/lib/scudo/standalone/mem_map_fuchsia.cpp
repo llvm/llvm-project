@@ -227,7 +227,9 @@ void MemMapFuchsia::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {
 }
 
 bool ReservedMemoryFuchsia::createImpl(UNUSED uptr Addr, uptr Size,
-                                       UNUSED const char *Name, uptr Flags) {
+                                       UNUSED const char *Name, uptr Flags,
+                                       UNUSED uptr Alignment) {
+  // TODO: Add the support of alignment.
   const bool AllowNoMem = !!(Flags & MAP_ALLOWNOMEM);
 
   // Reserve memory by mapping the placeholder VMO without any permission.

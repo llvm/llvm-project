@@ -127,10 +127,25 @@ void MemMapLinux::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
 }
 
 bool ReservedMemoryLinux::createImpl(uptr Addr, uptr Size, const char *Name,
-                                     uptr Flags) {
+                                     uptr Flags, uptr Alignment) {
   ReservedMemoryLinux::MemMapT MemMap;
-  if (!MemMap.map(Addr, Size, Name, Flags | MAP_NOACCESS))
+  uptr MapSize = Size;
+  if (Alignment != getPageSizeCached())
+    MapSize += Alignment;
+  if (!MemMap.map(Addr, MapSize, Name, Flags | MAP_NOACCESS))
     return false;
+
+  if (Alignment != getPageSizeCached()) {
+    uptr Offset = MemMap.getBase() % Alignment;
+    if (Offset != 0) {
+      Offset = Alignment - Offset;
+      MemMap.unmap(MemMap.getBase(), Offset);
+    }
+    MemMap.unmap(MemMap.getBase() + Size, MemMap.getCapacity() - Size);
+  }
+
+  DCHECK_EQ(MemMap.getBase() % Alignment, 0);
+  DCHECK_EQ(MemMap.getCapacity(), Size);
 
   MapBase = MemMap.getBase();
   MapCapacity = MemMap.getCapacity();
