@@ -98,8 +98,8 @@ public:
   /// \param Timeout An optional timeout duration in milliseconds. Setting
   /// Timeout to a negative number causes ::accept to block indefinitely
   ///
-  Expected<std::unique_ptr<raw_socket_stream>>
-  accept(std::chrono::milliseconds Timeout = std::chrono::milliseconds(-1));
+  Expected<std::unique_ptr<raw_socket_stream>> accept(
+      const std::chrono::milliseconds &Timeout = std::chrono::milliseconds(-1));
 
   /// Creates a listening socket bound to the specified file system path.
   /// Handles the socket creation, binding, and immediately starts listening for
@@ -144,9 +144,9 @@ public:
   /// \param Size The number of bytes to be read
   /// \param Timeout An optional timeout duration in milliseconds
   ///
-  ssize_t
-  read(char *Ptr, size_t Size,
-       std::chrono::milliseconds Timeout = std::chrono::milliseconds(-1));
+  ssize_t read(
+      char *Ptr, size_t Size,
+      const std::chrono::milliseconds &Timeout = std::chrono::milliseconds(-1));
 };
 
 } // end namespace llvm

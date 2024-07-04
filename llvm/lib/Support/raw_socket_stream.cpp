@@ -188,9 +188,9 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 //
 // getActiveFD is a callback to handle ActiveFD's of std::atomic<int> and int
 static std::error_code
-manageTimeout(std::chrono::milliseconds Timeout,
-              std::function<int()> getActiveFD,
-              std::optional<int> CancelFD = std::nullopt) {
+manageTimeout(const std::chrono::milliseconds &Timeout,
+              const std::function<int()> &getActiveFD,
+              const std::optional<int> &CancelFD = std::nullopt) {
   struct pollfd FD[2];
   FD[0].events = POLLIN;
 #ifdef _WIN32
@@ -252,7 +252,7 @@ manageTimeout(std::chrono::milliseconds Timeout,
 }
 
 Expected<std::unique_ptr<raw_socket_stream>>
-ListeningSocket::accept(std::chrono::milliseconds Timeout) {
+ListeningSocket::accept(const std::chrono::milliseconds &Timeout) {
   auto getActiveFD = [this]() -> int { return FD; };
   std::error_code TimeoutErr = manageTimeout(Timeout, getActiveFD, PipeFD[0]);
   if (TimeoutErr)
@@ -329,7 +329,7 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 }
 
 ssize_t raw_socket_stream::read(char *Ptr, size_t Size,
-                                std::chrono::milliseconds Timeout) {
+                                const std::chrono::milliseconds &Timeout) {
   auto getActiveFD = [this]() -> int { return this->get_fd(); };
   std::error_code Err = manageTimeout(Timeout, getActiveFD);
   // Mimic raw_fd_stream::read error handling behavior
