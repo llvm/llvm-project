@@ -512,7 +512,7 @@ def IsolatedOneRegionWithRecursiveMemoryEffectsOp
         RecursiveMemoryEffects,
         IsolatedFromAbove,
         SingleBlockImplicitTerminator<"RegionYieldOp">,
-        DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+        DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getEntrySuccessorOperands"]>]> {
   let description = [{
     IsolatedFromAbove Op that has one region and recursive side effects.
   }];

@@ -640,9 +640,8 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
       continue;
 
     // Adhere to function boundary ABI: no ownership of function argument
-    // MemRefs is taken. Likewise for ops marked IsolatedFromAbove.
-    if ((isa<FunctionOpInterface>(block->getParentOp()) ||
-         block->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>()) &&
+    // MemRefs is taken.
+    if (isa<FunctionOpInterface>(block->getParentOp()) &&
         block->isEntryBlock()) {
       Value newArg = buildBoolValue(builder, arg.getLoc(), false);
       state.updateOwnership(arg, newArg);

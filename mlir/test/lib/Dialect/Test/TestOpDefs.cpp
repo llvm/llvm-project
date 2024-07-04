@@ -10,6 +10,7 @@
 #include "TestOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 
@@ -114,10 +115,16 @@ void IsolatedRegionOp::print(OpAsmPrinter &p) {
 // IsolatedOneRegionWithRecursiveMemoryEffectsOp
 //===----------------------------------------------------------------------===//
 
+OperandRange
+IsolatedOneRegionWithRecursiveMemoryEffectsOp::getEntrySuccessorOperands(
+    RegionBranchPoint) {
+  return getOperands();
+}
+
 void IsolatedOneRegionWithRecursiveMemoryEffectsOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent())
-    regions.emplace_back(&getBody());
+    regions.emplace_back(&getBody(), getBody().getArguments());
   else
     regions.emplace_back((*this)->getResults());
 }

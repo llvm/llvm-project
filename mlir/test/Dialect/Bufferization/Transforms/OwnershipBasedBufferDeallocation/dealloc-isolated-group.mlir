@@ -1,5 +1,5 @@
 // RUN: mlir-opt -verify-diagnostics -ownership-based-buffer-deallocation \
-// RUN:   -buffer-deallocation-simplification -split-input-file %s | FileCheck %s
+// RUN:   -buffer-deallocation-simplification -split-input-file -canonicalize %s | FileCheck %s
 
 func.func @function_call() {
   %alloc = memref.alloc() : memref<f64>
@@ -15,14 +15,15 @@ func.func @function_call() {
 // CHECK-LABEL: func @function_call()
 //       CHECK: [[ALLOC0:%.+]] = memref.alloc(
 //  CHECK-NEXT: [[ALLOC1:%.+]] = memref.alloc(
-//  CHECK-NEXT: [[RET:%.+]]:2 = test.isolated_one_region_with_recursive_memory_effects [[ALLOC0]]
-//  CHECK-NEXT: ^bb0([[ARG:%.+]]: memref<f64>)
-//       CHECK:   test.region_yield [[ARG]]
+//  CHECK-NEXT: [[RET:%.+]]:2 = test.isolated_one_region_with_recursive_memory_effects [[ALLOC0]], %false
+//  CHECK-NEXT: ^bb0([[ARG:%.+]]: memref<f64>, [[OWN:%.+]]: i1)
+//       CHECK:   test.region_yield [[ARG]], [[OWN]]
 //   CHECK-NOT:   bufferization.dealloc
 //       CHECK: }
 //  CHECK-NEXT: test.copy
 //  CHECK-NEXT: [[BASE:%[a-zA-Z0-9_]+]]{{.*}} = memref.extract_strided_metadata [[RET]]#0
-//  CHECK-NEXT: bufferization.dealloc ([[ALLOC0]], [[ALLOC1]], [[BASE]] :{{.*}}) if (%true, %true, [[RET]]#1)
+//  CHECK-NEXT: bufferization.dealloc ([[ALLOC1]] :{{.*}}) if (%true)
+//  CHECK-NEXT: bufferization.dealloc ([[ALLOC0]], [[BASE]] :{{.*}}) if (%true, [[RET]]#1)
 
 // -----
 
@@ -42,9 +43,9 @@ func.func @function_call_requries_merged_ownership_mid_block(%arg0: i1) {
 //       CHECK:   [[ALLOC0:%.+]] = memref.alloc(
 //  CHECK-NEXT:   [[ALLOC1:%.+]] = memref.alloca(
 //  CHECK-NEXT:   [[SELECT:%.+]] = arith.select{{.*}}[[ALLOC0]], [[ALLOC1]]
-//  CHECK-NEXT:   [[RET:%.+]]:2 = test.isolated_one_region_with_recursive_memory_effects [[SELECT]]
-//  CHECK-NEXT:   ^bb0([[ARG:%.+]]: memref<f64>)
-//       CHECK:     test.region_yield [[ARG]]
+//  CHECK-NEXT:   [[RET:%.+]]:2 = test.isolated_one_region_with_recursive_memory_effects [[SELECT]], %false
+//  CHECK-NEXT:   ^bb0([[ARG:%.+]]: memref<f64>, [[OWN:%.+]]: i1)
+//       CHECK:     test.region_yield [[ARG]], [[OWN]]
 //   CHECK-NOT:     bufferization.dealloc
 //       CHECK:   }
 //  CHECK-NEXT:   test.copy
@@ -66,10 +67,10 @@ func.func @g(%arg0: memref<f32>) -> memref<f32> {
 
 // CHECK-LABEL:   func.func @g(
 // CHECK-SAME:                 %[[VAL_0:.*]]: memref<f32>) -> memref<f32> {
-// CHECK:           %[[BLOCK:.*]]:2 = test.isolated_one_region_with_recursive_memory_effects %[[VAL_0]] {
-// CHECK:           ^bb0(%[[ARG:.*]]: memref<f32>):
-// CHECK:             test.region_yield %[[ARG]], %false : memref<f32>, i1
-// CHECK:           } : (memref<f32>) -> (memref<f32>, i1)
+// CHECK:           %[[BLOCK:.*]]:2 = test.isolated_one_region_with_recursive_memory_effects %[[VAL_0]], %false {
+// CHECK:           ^bb0(%[[ARG:.*]]: memref<f32>, [[OWN:%.+]]: i1):
+// CHECK:             test.region_yield %[[ARG]], [[OWN]] : memref<f32>, i1
+// CHECK:           }
 // CHECK:           %[[VAL_4:.*]] = scf.if %[[BLOCK]]#1 -> (memref<f32>) {
 // CHECK:             scf.yield %[[BLOCK]]#0 : memref<f32>
 // CHECK:           } else {
@@ -106,20 +107,21 @@ func.func @alloc_yielded_from_block() {
 // CHECK-LABEL:   func.func @alloc_yielded_from_block() {
 // CHECK:           %true = arith.constant true
 // CHECK:           %[[ALLOC:.*]] = memref.alloc() : memref<f64>
-// CHECK:           %[[BLOCK:.*]]:2 = test.isolated_one_region_with_recursive_memory_effects %[[ALLOC]] {
-// CHECK:           ^bb0(%[[ARG:.*]]: memref<f64>):
+// CHECK:           %[[BLOCK:.*]]:2 = test.isolated_one_region_with_recursive_memory_effects %[[ALLOC]], %false {
+// CHECK:           ^bb0(%[[ARG:.*]]: memref<f64>, [[OWN:%.+]]: i1):
 // CHECK:             %[[VAL_9:.*]] = arith.cmpf oeq
-// CHECK:             %[[VAL_10:.*]]:2 = scf.if %[[VAL_9]] -> (memref<f64>, i1) {
+// CHECK:             %[[VAL_10:.*]] = scf.if %[[VAL_9]] -> (memref<f64>) {
 // CHECK:               %[[BLOCK_ALLOC:.*]] = memref.alloc() : memref<f64>
-// CHECK:               scf.yield %[[BLOCK_ALLOC]], %true_{{[0-9]*}} : memref<f64>, i1
+// CHECK:               scf.yield %[[BLOCK_ALLOC]] : memref<f64>
 // CHECK:             } else {
-// CHECK:               scf.yield %[[ARG]], %false : memref<f64>, i1
+// CHECK:               scf.yield %[[ARG]] : memref<f64>
 // CHECK:             }
-// CHECK:             test.region_yield %[[VAL_10]]#0, %[[VAL_10]]#1 : memref<f64>, i1
-// CHECK:           } : (memref<f64>) -> (memref<f64>, i1)
+// CHECK:             bufferization.dealloc ({{.*}}) if ([[OWN]])
+// CHECK:             test.region_yield %[[VAL_10]]
+// CHECK:           }
 // CHECK:           test.copy
 // CHECK:           %[[BUF:.*]], %[[OFFSET:.*]] = memref.extract_strided_metadata %[[BLOCK]]#0 : memref<f64> -> memref<f64>, index
-// CHECK:           bufferization.dealloc (%[[ALLOC]], %{{.*}}, %[[BUF]] : memref<f64>, memref<f64>, memref<f64>) if (%true, %true, %[[BLOCK]]#1)
+// CHECK:           bufferization.dealloc (%[[ALLOC]], %[[BUF]] : memref<f64>, memref<f64>) if (%true, %[[BLOCK]]#1)
 // CHECK:           return
 // CHECK:         }
 
