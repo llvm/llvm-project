@@ -256,12 +256,6 @@ public:
   // If this symbol is equivalent to A + Constant, return A.
   const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
 
-  /// Check whether a particular symbol is visible to the linker and is required
-  /// in the symbol table, or whether it can be discarded by the assembler. This
-  /// also effects whether the assembler treats the label as potentially
-  /// defining a separate atom.
-  bool isSymbolLinkerVisible(const MCSymbol &SD) const;
-
   /// Emit the section contents to \p OS.
   void writeSectionData(raw_ostream &OS, const MCSection *Section) const;
 
