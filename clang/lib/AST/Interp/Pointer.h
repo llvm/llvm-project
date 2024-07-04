@@ -638,6 +638,7 @@ private:
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
     assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
+    assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
     return getDescriptor(asBlockPointer().Base);
   }
 

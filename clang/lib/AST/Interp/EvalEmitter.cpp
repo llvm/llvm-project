@@ -57,6 +57,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
+  EvalResult.setSource(VD);
 
   if (const Expr *Init = VD->getAnyInitializer()) {
     QualType T = VD->getType();
