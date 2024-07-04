@@ -1,3 +1,5 @@
+! REQUIRES:  aarch64-registered-target && x86-registered-target
+
 ! RUN: %flang_fc1 -triple aarch64 -emit-llvm -mcmodel=tiny %s -o - | FileCheck %s -check-prefix=CHECK-TINY
 ! RUN: %flang_fc1 -emit-llvm -mcmodel=small %s -o - | FileCheck %s -check-prefix=CHECK-SMALL
 ! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -mcmodel=kernel %s -o - | FileCheck %s -check-prefix=CHECK-KERNEL

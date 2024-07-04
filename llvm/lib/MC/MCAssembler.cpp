@@ -160,17 +160,6 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   return true;
 }
 
-bool MCAssembler::isSymbolLinkerVisible(const MCSymbol &Symbol) const {
-  // Non-temporary labels should always be visible to the linker.
-  if (!Symbol.isTemporary())
-    return true;
-
-  if (Symbol.isUsedInReloc())
-    return true;
-
-  return false;
-}
-
 bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
                                 MCValue &Target, const MCSubtargetInfo *STI,
                                 uint64_t &Value, bool &WasForced) const {
