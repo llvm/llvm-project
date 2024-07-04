@@ -57,12 +57,12 @@ define i32 @test_signext_b(ptr nocapture readonly %ptr, i8 signext %arg) {
 ; CHECK-LABEL: test_signext_b:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    mov w8, #20894 // =0x519e
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    add w9, w9, w1
-; CHECK-NEXT:    sxtb w9, w9
-; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    cmp w8, w9, sxtb
+; CHECK-NEXT:    mov w8, #20894 // =0x519e
 ; CHECK-NEXT:    mov w9, #42 // =0x2a
-; CHECK-NEXT:    csel w0, w9, w8, ge
+; CHECK-NEXT:    csel w0, w9, w8, lt
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %ptr, align 1
@@ -97,12 +97,12 @@ define i32 @test_signext_h(ptr nocapture readonly %ptr, i16 signext %arg) {
 ; CHECK-LABEL: test_signext_h:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrh w9, [x0]
-; CHECK-NEXT:    mov w8, #20894 // =0x519e
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    add w9, w9, w1
-; CHECK-NEXT:    sxth w9, w9
-; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    cmp w8, w9, sxth
+; CHECK-NEXT:    mov w8, #20894 // =0x519e
 ; CHECK-NEXT:    mov w9, #42 // =0x2a
-; CHECK-NEXT:    csel w0, w9, w8, ge
+; CHECK-NEXT:    csel w0, w9, w8, lt
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, ptr %ptr, align 1

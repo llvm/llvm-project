@@ -3813,7 +3813,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                              const SDLoc &dl) {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     EVT VT = RHS.getValueType();
-    uint64_t C = RHSC->getZExtValue();
+    uint64_t C = RHSC->getAPIntValue().abs().getZExtValue();
     if (!isLegalArithImmed(C)) {
       // Constant does not fit, try adjusting it by one?
       switch (CC) {
@@ -3826,6 +3826,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
             (VT == MVT::i64 && C != 0x80000000ULL &&
              isLegalArithImmed(C - 1ULL))) {
           CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
+          if (C != RHSC->getAPIntValue())
+            C = (C ^ ~0) + 1;
           C = (VT == MVT::i32) ? (uint32_t)(C - 1) : C - 1;
           RHS = DAG.getConstant(C, dl, VT);
         }
@@ -3836,6 +3838,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
              isLegalArithImmed((uint32_t)(C - 1))) ||
             (VT == MVT::i64 && C != 0ULL && isLegalArithImmed(C - 1ULL))) {
           CC = (CC == ISD::SETULT) ? ISD::SETULE : ISD::SETUGT;
+          if (C != RHSC->getAPIntValue())
+            C = (C ^ ~0) + 1;
           C = (VT == MVT::i32) ? (uint32_t)(C - 1) : C - 1;
           RHS = DAG.getConstant(C, dl, VT);
         }
@@ -3847,6 +3851,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
             (VT == MVT::i64 && C != INT64_MAX &&
              isLegalArithImmed(C + 1ULL))) {
           CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+          if (C != RHSC->getAPIntValue())
+            C = (C ^ ~0) + 1;
           C = (VT == MVT::i32) ? (uint32_t)(C + 1) : C + 1;
           RHS = DAG.getConstant(C, dl, VT);
         }
@@ -3858,6 +3864,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
             (VT == MVT::i64 && C != UINT64_MAX &&
              isLegalArithImmed(C + 1ULL))) {
           CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
+          if (C != RHSC->getAPIntValue())
+            C = (C ^ ~0) + 1;
           C = (VT == MVT::i32) ? (uint32_t)(C + 1) : C + 1;
           RHS = DAG.getConstant(C, dl, VT);
         }
