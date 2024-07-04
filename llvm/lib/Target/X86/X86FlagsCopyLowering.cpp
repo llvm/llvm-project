@@ -264,15 +264,9 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
     // Nothing to do for a degenerate empty function...
     return false;
 
-  bool HasCopies = false;
-  for (const MachineInstr &DefInst : MRI->def_instructions(X86::EFLAGS)) {
-    if (DefInst.getOpcode() == TargetOpcode::COPY) {
-      HasCopies = true;
-      break;
-    }
-  }
-
-  if (!HasCopies)
+  if (none_of(MRI->def_instructions(X86::EFLAGS), [](const MachineInstr &MI) {
+        return MI.getOpcode() == TargetOpcode::COPY;
+      }))
     return false;
 
   // We change the code, so we don't preserve the dominator tree anyway. If we
