@@ -146,16 +146,6 @@ ABI Affecting Changes
   ``random_device`` could throw a ``system_error`` with this value. It now
   throws ``ENOMSG``.
 
-- libcxx ``std::basic_ios`` uses ``WEOF`` to indicate that the fill value is
-  uninitialized. However, on platforms where the size of ``char_type`` is
-  equal to or greater than the size of ``int_type`` and ``char_type`` is
-  unsigned, ``std::char_traits<char_type>::eq_int_type()`` cannot distinguish
-  between ``WEOF`` and ``WCHAR_MAX``. Helper class ``_FillHelper`` is
-  added where a boolean variable is used to indicate whether the fill value
-  has been initialized so that a fill value ``WEOF`` set by the user won't be
-  treated as indicating the fill value is uninitialized. ``_FillHelper`` is
-  used in ABI version 2 and does not affect ABI version 1.
-
 Build System Changes
 --------------------
 
