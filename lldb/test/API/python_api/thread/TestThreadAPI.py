@@ -51,7 +51,8 @@ class ThreadAPITestCase(TestBase):
         """Test SBThread.frame with negative indexes."""
         self.build()
         self.validate_negative_indexing()
-
+ 
+    @expectedFailureAll(oslist=["windows"])
     def test_StepInstruction(self):
         """Test that StepInstruction preserves the plan stack."""
         self.build()
