@@ -891,10 +891,29 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   // The null-check means that the initializer is conditionally
   // evaluated.
   ConditionalEvaluation conditional(*this);
+  mlir::OpBuilder::InsertPoint ifBody, postIfBody;
+  mlir::Location loc = getLoc(E->getSourceRange());
 
   if (nullCheck) {
-    llvm_unreachable("NYI");
+    conditional.begin(*this);
+    mlir::Value nullPtr =
+        builder.getNullPtr(allocation.getPointer().getType(), loc);
+    mlir::Value nullCmpResult = builder.createCompare(
+        loc, mlir::cir::CmpOpKind::ne, allocation.getPointer(), nullPtr);
+
+    // mlir::Value Failed = CGF.getBuilder().createNot(Success);
+    builder.create<mlir::cir::IfOp>(loc, nullCmpResult,
+                                    /*withElseRegion=*/false,
+                                    [&](mlir::OpBuilder &, mlir::Location) {
+                                      ifBody = builder.saveInsertionPoint();
+                                    });
+    postIfBody = builder.saveInsertionPoint();
   }
+
+  // All the actual work to be done should be placed inside the IfOp above,
+  // so change the insertion point over there.
+  if (ifBody.isSet())
+    builder.restoreInsertionPoint(ifBody);
 
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown.
@@ -957,7 +976,14 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   }
 
   if (nullCheck) {
-    llvm_unreachable("NYI");
+    conditional.end(*this);
+    // resultPtr is already updated in the first null check phase.
+
+    // Reset insertion point to resume back to post ifOp.
+    if (postIfBody.isSet()) {
+      builder.create<mlir::cir::YieldOp>(loc);
+      builder.restoreInsertionPoint(postIfBody);
+    }
   }
 
   return resultPtr;
