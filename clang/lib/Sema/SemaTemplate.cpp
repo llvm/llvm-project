@@ -2743,8 +2743,7 @@ Expr *
 buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
                            TypeAliasTemplateDecl *AliasTemplate,
                            ArrayRef<DeducedTemplateArgument> DeduceResults,
-                           unsigned FirstUndeducedParamIdx,
-                           Expr *IsDeducible) {
+                           unsigned FirstUndeducedParamIdx, Expr *IsDeducible) {
   Expr *RC = F->getTemplateParameters()->getRequiresClause();
   if (!RC)
     return IsDeducible;
@@ -2805,7 +2804,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
     if (D.isNull()) { // non-deduced template parameters of f
-      NamedDecl* TP = F->getTemplateParameters()->getParam(Index);
+      NamedDecl *TP = F->getTemplateParameters()->getParam(Index);
       MultiLevelTemplateArgumentList Args;
       Args.setKind(TemplateSubstitutionKind::Rewrite);
       Args.addOuterTemplateArguments(TemplateArgsForBuildingRC);
@@ -3153,9 +3152,9 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
 
     Expr *IsDeducible = buildIsDeducibleConstraint(
         SemaRef, AliasTemplate, FPrime->getReturnType(), FPrimeTemplateParams);
-    Expr *RequiresClause = buildAssociatedConstraints(
-        SemaRef, F, AliasTemplate, DeduceResults,
-        FirstUndeducedParamIdx, IsDeducible);
+    Expr *RequiresClause =
+        buildAssociatedConstraints(SemaRef, F, AliasTemplate, DeduceResults,
+                                   FirstUndeducedParamIdx, IsDeducible);
 
     auto *FPrimeTemplateParamList = TemplateParameterList::Create(
         Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
