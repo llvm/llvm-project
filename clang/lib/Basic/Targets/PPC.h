@@ -172,10 +172,10 @@ public:
                          ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
                          ArchDefinePpcgr | ArchDefinePpcsq)
               .Case("future",
-                      ArchDefineFuture | ArchDefinePwr11 | ArchDefinePwr10 |
-                      ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
-                      ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
-                      ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefineFuture | ArchDefinePwr11 | ArchDefinePwr10 |
+                         ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
+                         ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("8548", "e500", ArchDefineE500)
               .Default(ArchDefineNone);
     }
