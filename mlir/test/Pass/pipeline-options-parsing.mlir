@@ -21,4 +21,4 @@
 // CHECK_2: test-options-pass{enum=one list=1 string= string-list=a,b}
 // CHECK_3: builtin.module(builtin.module(func.func(test-options-pass{enum=zero list=3 string= }),func.func(test-options-pass{enum=one list=1,2,3,4 string= })))
 // CHECK_4: builtin.module(builtin.module(func.func(test-options-pass{enum=zero list=3 string= }),func.func(test-options-pass{enum=one list=1,2,3,4 string=foobar })))
-// CHECK_5: builtin.module(builtin.module(func.func(test-options-pass{enum=zero list=3 string= }),func.func(test-options-pass{enum=one list=1,2,3,4 string=foo bar baz })))
+// CHECK_5: builtin.module(builtin.module(func.func(test-options-pass{enum=zero list=3 string= }),func.func(test-options-pass{enum=one list=1,2,3,4 string={foo bar baz} })))
