@@ -2323,12 +2323,6 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     return OS.str();
   };
 
-  const std::map<uint64_t, const char *> TagNames = {
-      {DT_NEEDED, "Shared library"},       {DT_SONAME, "Library soname"},
-      {DT_AUXILIARY, "Auxiliary library"}, {DT_USED, "Not needed object"},
-      {DT_FILTER, "Filter library"},       {DT_RPATH, "Library rpath"},
-      {DT_RUNPATH, "Library runpath"},
-  };
   // Handle custom printing of architecture specific tags
   switch (Obj.getHeader().e_machine) {
   case EM_AARCH64:
@@ -2489,11 +2483,18 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_AUXILIARY:
   case DT_USED:
   case DT_FILTER:
-    return (Twine(TagNames.at(Type)) + ": " + getDynamicString(Value)).str();
   case DT_RPATH:
-  case DT_RUNPATH:
+  case DT_RUNPATH: {
+    const std::map<uint64_t, const char *> TagNames = {
+        {DT_NEEDED, "Shared library"},       {DT_SONAME, "Library soname"},
+        {DT_AUXILIARY, "Auxiliary library"}, {DT_USED, "Not needed object"},
+        {DT_FILTER, "Filter library"},       {DT_RPATH, "Library rpath"},
+        {DT_RUNPATH, "Library runpath"},
+    };
+
     return (Twine(TagNames.at(Type)) + ": [" + getDynamicString(Value) + "]")
         .str();
+  }
   case DT_FLAGS:
     return FormatFlags(Value, ArrayRef(ElfDynamicDTFlags));
   case DT_FLAGS_1:

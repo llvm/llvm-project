@@ -6319,7 +6319,7 @@ bool AsmParser::parseMSInlineAsm(
   if (AsmStart != AsmEnd)
     OS << StringRef(AsmStart, AsmEnd - AsmStart);
 
-  AsmString = OS.str();
+  AsmString = AsmStringIR;
   return false;
 }
 
