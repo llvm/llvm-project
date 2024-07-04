@@ -70,6 +70,7 @@ static std::string normalizeCPUName(StringRef CPUName, const llvm::Triple &T) {
       .Case("power8", "pwr8")
       .Case("power9", "pwr9")
       .Case("power10", "pwr10")
+      .Case("power11", "pwr11")
       .Case("future", "future")
       .Case("powerpc", "ppc")
       .Case("powerpc64", "ppc64")
@@ -103,6 +104,8 @@ const char *ppc::getPPCAsmModeForCPU(StringRef Name) {
       .Case("power9", "-mpower9")
       .Case("pwr10", "-mpower10")
       .Case("power10", "-mpower10")
+      .Case("pwr11", "-mpower11")
+      .Case("power11", "-mpower11")
       .Default("-many");
 }
 
