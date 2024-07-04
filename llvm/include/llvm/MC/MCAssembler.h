@@ -46,7 +46,6 @@ class MCRelaxableFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
-class MCAsmLayout;
 class MCContext;
 class MCCodeEmitter;
 class MCFragment;
@@ -71,8 +70,6 @@ struct DataRegionData {
 };
 
 class MCAssembler {
-  friend class MCAsmLayout;
-
 public:
   using SectionListType = std::vector<MCSection *>;
   using SymbolDataListType = std::vector<const MCSymbol *>;
@@ -118,7 +115,7 @@ private:
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCObjectWriter> Writer;
 
-  MCAsmLayout *Layout = nullptr;
+  bool HasLayout = false;
   bool RelaxAll = false;
   bool SubsectionsViaSymbols = false;
   bool IncrementalLinkerCompatible = false;
@@ -210,9 +207,6 @@ private:
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
-  /// finishLayout - Finalize a layout, including fragment lowering.
-  void finishLayout(MCAsmLayout &Layout);
-
   std::tuple<MCValue, uint64_t, bool>
   handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
@@ -262,15 +256,8 @@ public:
   // If this symbol is equivalent to A + Constant, return A.
   const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
 
-  /// Check whether a particular symbol is visible to the linker and is required
-  /// in the symbol table, or whether it can be discarded by the assembler. This
-  /// also effects whether the assembler treats the label as potentially
-  /// defining a separate atom.
-  bool isSymbolLinkerVisible(const MCSymbol &SD) const;
-
   /// Emit the section contents to \p OS.
-  void writeSectionData(raw_ostream &OS, const MCSection *Section,
-                        const MCAsmLayout &Layout) const;
+  void writeSectionData(raw_ostream &OS, const MCSection *Section) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
   bool isThumbFunc(const MCSymbol *Func) const;
@@ -347,7 +334,7 @@ public:
   void Finish();
 
   // Layout all section and prepare them for emission.
-  void layout(MCAsmLayout &Layout);
+  void layout();
 
   // FIXME: This does not belong here.
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
@@ -360,8 +347,7 @@ public:
     IncrementalLinkerCompatible = Value;
   }
 
-  MCAsmLayout *getLayout() const { return Layout; }
-  bool hasLayout() const { return Layout; }
+  bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 

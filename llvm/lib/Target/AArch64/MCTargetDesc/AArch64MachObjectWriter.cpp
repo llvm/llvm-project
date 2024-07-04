@@ -12,7 +12,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -278,18 +277,14 @@ void AArch64MachObjectWriter::recordRelocation(
       return;
     }
 
-    Value +=
-        (!A->getFragment() ? 0
-                           : Writer->getSymbolAddress(*A, *Asm.getLayout())) -
-        (!A_Base || !A_Base->getFragment()
-             ? 0
-             : Writer->getSymbolAddress(*A_Base, *Asm.getLayout()));
-    Value -=
-        (!B->getFragment() ? 0
-                           : Writer->getSymbolAddress(*B, *Asm.getLayout())) -
-        (!B_Base || !B_Base->getFragment()
-             ? 0
-             : Writer->getSymbolAddress(*B_Base, *Asm.getLayout()));
+    Value += (!A->getFragment() ? 0 : Writer->getSymbolAddress(*A, Asm)) -
+             (!A_Base || !A_Base->getFragment()
+                  ? 0
+                  : Writer->getSymbolAddress(*A_Base, Asm));
+    Value -= (!B->getFragment() ? 0 : Writer->getSymbolAddress(*B, Asm)) -
+             (!B_Base || !B_Base->getFragment()
+                  ? 0
+                  : Writer->getSymbolAddress(*B_Base, Asm));
 
     Type = MachO::ARM64_RELOC_UNSIGNED;
 
@@ -358,11 +353,11 @@ void AArch64MachObjectWriter::recordRelocation(
       // The index is the section ordinal (1-based).
       const MCSection &Sec = Symbol->getSection();
       Index = Sec.getOrdinal() + 1;
-      Value += Writer->getSymbolAddress(*Symbol, *Asm.getLayout());
+      Value += Writer->getSymbolAddress(*Symbol, Asm);
 
       if (IsPCRel)
-        Value -= Writer->getFragmentAddress(Fragment, *Asm.getLayout()) +
-                 Fixup.getOffset() + (1ULL << Log2Size);
+        Value -= Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset() +
+                 (1ULL << Log2Size);
     } else {
       llvm_unreachable(
           "This constant variable should have been expanded during evaluation");
