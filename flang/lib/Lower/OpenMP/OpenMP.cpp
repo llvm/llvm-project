@@ -296,7 +296,9 @@ static void getDeclareTargetInfo(
   } else if (const auto *clauseList{
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     List<Clause> clauses = makeClauses(*clauseList, semaCtx);
-    if (clauses.empty()) {
+    if (clauses.empty() &&
+        (!eval.getOwningProcedure()->isMainProgram() ||
+         eval.getOwningProcedure()->getMainProgramSymbol())) {
       // Case: declare target, implicit capture of function
       symbolAndClause.emplace_back(
           mlir::omp::DeclareTargetCaptureClause::to,
@@ -1134,7 +1136,7 @@ static void genSingleClauses(lower::AbstractConverter &converter,
 static void genTargetClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::StatementContext &stmtCtx, const List<Clause> &clauses,
-    mlir::Location loc, bool processHostOnlyClauses, bool processReduction,
+    mlir::Location loc, bool processHostOnlyClauses,
     mlir::omp::TargetClauseOps &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::SmallVectorImpl<mlir::Location> &mapLocs,
@@ -1676,7 +1678,7 @@ static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
             mlir::Location loc, const ConstructQueue &queue,
-            ConstructQueue::iterator item, bool outerCombined = false) {
+            ConstructQueue::iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   lower::StatementContext stmtCtx;
 
@@ -1690,10 +1692,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<mlir::Location> mapLocs, devicePtrLocs, deviceAddrLocs;
   llvm::SmallVector<mlir::Type> mapTypes, devicePtrTypes, deviceAddrTypes;
   genTargetClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
-                   processHostOnlyClauses, /*processReduction=*/outerCombined,
-                   clauseOps, mapSyms, mapLocs, mapTypes, deviceAddrSyms,
-                   deviceAddrLocs, deviceAddrTypes, devicePtrSyms,
-                   devicePtrLocs, devicePtrTypes);
+                   processHostOnlyClauses, clauseOps, mapSyms, mapLocs,
+                   mapTypes, deviceAddrSyms, deviceAddrLocs, deviceAddrTypes,
+                   devicePtrSyms, devicePtrLocs, devicePtrTypes);
 
   llvm::SmallVector<const semantics::Symbol *> privateSyms;
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
@@ -2099,8 +2100,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genSingleOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_target:
-    genTargetOp(converter, symTable, semaCtx, eval, loc, queue, item,
-                /*outerCombined=*/false);
+    genTargetOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_target_data:
     genTargetDataOp(converter, symTable, semaCtx, eval, loc, queue, item);

@@ -125,7 +125,7 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
 uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
                                           const MCSection *Sec) const {
   uint64_t EndAddr = getSectionAddress(Sec) + Asm.getSectionAddressSize(*Sec);
-  unsigned Next = Sec->getLayoutOrder() + 1;
+  unsigned Next = cast<MCSectionMachO>(Sec)->getLayoutOrder() + 1;
   if (Next >= SectionOrder.size())
     return 0;
 
@@ -582,7 +582,7 @@ void MachObjectWriter::computeSymbolTable(
 
   // Build the string table.
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    if (!Asm.isSymbolLinkerVisible(Symbol))
+    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
       continue;
 
     StringTable.add(Symbol.getName());
@@ -596,7 +596,7 @@ void MachObjectWriter::computeSymbolTable(
   // important for letting us diff .o files.
   for (const MCSymbol &Symbol : Asm.symbols()) {
     // Ignore non-linker visible symbols.
-    if (!Asm.isSymbolLinkerVisible(Symbol))
+    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
       continue;
 
     if (!Symbol.isExternal() && !Symbol.isUndefined())
@@ -622,7 +622,7 @@ void MachObjectWriter::computeSymbolTable(
   // Now add the data for local symbols.
   for (const MCSymbol &Symbol : Asm.symbols()) {
     // Ignore non-linker visible symbols.
-    if (!Asm.isSymbolLinkerVisible(Symbol))
+    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
       continue;
 
     if (Symbol.isExternal() || Symbol.isUndefined())
@@ -676,13 +676,13 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
   for (MCSection &Sec : Asm) {
     if (!Sec.isVirtualSection()) {
       SectionOrder.push_back(&Sec);
-      Sec.setLayoutOrder(i++);
+      cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
   }
   for (MCSection &Sec : Asm) {
     if (Sec.isVirtualSection()) {
       SectionOrder.push_back(&Sec);
-      Sec.setLayoutOrder(i++);
+      cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
   }
 
