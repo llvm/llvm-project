@@ -1090,7 +1090,7 @@ public:
   bool selectUserVectorizationFactor(ElementCount UserVF) {
     collectUniformsAndScalars(UserVF);
     collectInstsToScalarize(UserVF);
-    return expectedCost(UserVF).first.isValid();
+    return expectedCost(UserVF).isValid();
   }
 
   /// \return The size (in bits) of the smallest and widest types in the code
@@ -1591,20 +1591,13 @@ public:
     Scalars.clear();
   }
 
-  /// The vectorization cost is a combination of the cost itself and a boolean
-  /// indicating whether any of the contributing operations will actually
-  /// operate on vector values after type legalization in the backend. If this
-  /// latter value is false, then all operations will be scalarized (i.e. no
-  /// vectorization has actually taken place).
-  using VectorizationCostTy = std::pair<InstructionCost, bool>;
-
   /// Returns the expected execution cost. The unit of the cost does
   /// not matter because we use the 'cost' units to compare different
   /// vector widths. The cost that is returned is *not* normalized by
   /// the factor width. If \p Invalid is not nullptr, this function
   /// will add a pair(Instruction*, ElementCount) to \p Invalid for
   /// each instruction that has an Invalid cost for the given VF.
-  VectorizationCostTy
+  InstructionCost
   expectedCost(ElementCount VF,
                SmallVectorImpl<InstructionVFPair> *Invalid = nullptr);
 
@@ -4870,32 +4863,67 @@ static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
 
 static bool willGenerateVectorInstructions(VPlan &Plan, ElementCount VF,
                                            const TargetTransformInfo &TTI) {
+  assert(VF.isVector() && "Checking a scalar VF?");
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
                           Plan.getCanonicalIV()->getScalarType()->getContext());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
-      if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe, VPScalarCastRecipe,
-              VPReplicateRecipe, VPInstruction, VPActiveLaneMaskPHIRecipe,
-              VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
-              VPVectorPointerRecipe>(&R))
+      switch (R.getVPDefID()) {
+      case VPDef::VPDerivedIVSC:
+      case VPDef::VPScalarIVStepsSC:
+      case VPDef::VPScalarCastSC:
+      case VPDef::VPReplicateSC:
+      case VPDef::VPInstructionSC:
+      case VPDef::VPCanonicalIVPHISC:
+      case VPDef::VPVectorPointerSC:
+      case VPDef::VPExpandSCEVSC:
+      case VPDef::VPEVLBasedIVPHISC:
+      case VPDef::VPPredInstPHISC:
+      case VPDef::VPBranchOnMaskSC:
         continue;
+      case VPDef::VPReductionSC:
+      case VPDef::VPActiveLaneMaskPHISC:
+      case VPDef::VPWidenCallSC:
+      case VPDef::VPWidenCanonicalIVSC:
+      case VPDef::VPWidenCastSC:
+      case VPDef::VPWidenGEPSC:
+      case VPDef::VPWidenSC:
+      case VPDef::VPWidenSelectSC:
+      case VPDef::VPBlendSC:
+      case VPDef::VPFirstOrderRecurrencePHISC:
+      case VPDef::VPWidenPHISC:
+      case VPDef::VPWidenIntOrFpInductionSC:
+      case VPDef::VPWidenPointerInductionSC:
+      case VPDef::VPReductionPHISC:
+      case VPDef::VPInterleaveSC:
+      case VPDef::VPWidenLoadEVLSC:
+      case VPDef::VPWidenLoadSC:
+      case VPDef::VPWidenStoreEVLSC:
+      case VPDef::VPWidenStoreSC:
+        break;
+      default:
+        llvm_unreachable("unhandled recipe");
+      }
 
       auto WillWiden = [&TypeInfo, &TTI, VF](VPValue *VPV) {
         Type *ScalarTy = TypeInfo.inferScalarType(VPV);
         Type *VectorTy = ToVectorTy(ScalarTy, VF);
-        unsigned NumParts = TTI.getNumberOfParts(VectorTy);
-        if (!NumParts)
+        unsigned NumLegalParts = TTI.getNumberOfParts(VectorTy);
+        if (!NumLegalParts)
           return false;
-        if (VF.isScalable())
+        if (VF.isScalable()) {
           // <vscale x 1 x iN> is assumed to be profitable over iN because
           // scalable registers are a distinct register class from scalar ones.
           // If we ever find a target which wants to lower scalable vectors
           // back to scalars, we'll need to update this code to explicitly
           // ask TTI about the register class uses for each part.
-          return NumParts <= VF.getKnownMinValue();
-        else
-          return NumParts < VF.getKnownMinValue();
+          return NumLegalParts <= VF.getKnownMinValue();
+        }
+        // Two or more parts that share a register - are vectorized.
+        assert(NumLegalParts <= VF.getKnownMinValue() &&
+               "More parts than elements?");
+        return NumLegalParts < VF.getKnownMinValue();
       };
       SmallVector<VPValue *> VPValuesToCheck;
       if (auto *WidenStore = dyn_cast<VPWidenStoreRecipe>(&R)) {
@@ -4915,8 +4943,7 @@ static bool willGenerateVectorInstructions(VPlan &Plan, ElementCount VF,
 }
 
 VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
-  InstructionCost ExpectedCost =
-      CM.expectedCost(ElementCount::getFixed(1)).first;
+  InstructionCost ExpectedCost = CM.expectedCost(ElementCount::getFixed(1));
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ExpectedCost << ".\n");
   assert(ExpectedCost.isValid() && "Unexpected invalid cost for scalar loop");
   assert(any_of(VPlans,
@@ -4945,9 +4972,8 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       if (VF.isScalar())
         continue;
 
-      LoopVectorizationCostModel::VectorizationCostTy C =
-          CM.expectedCost(VF, &InvalidCosts);
-      VectorizationFactor Candidate(VF, C.first, ScalarCost.ScalarCost);
+      InstructionCost C = CM.expectedCost(VF, &InvalidCosts);
+      VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
 #ifndef NDEBUG
       unsigned AssumedMinimumVscale =
@@ -4964,7 +4990,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       LLVM_DEBUG(dbgs() << ".\n");
 #endif
 
-      if (!willGenerateVectorInstructions(*P, VF, TTI) && !ForceVectorization) {
+      if (!ForceVectorization && !willGenerateVectorInstructions(*P, VF, TTI)) {
         LLVM_DEBUG(
             dbgs()
             << "LV: Not considering vector loop of width " << VF
@@ -5265,7 +5291,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
   if (LoopCost == 0) {
-    LoopCost = expectedCost(VF).first;
+    LoopCost = expectedCost(VF);
     assert(LoopCost.isValid() && "Expected to have chosen a VF with valid cost");
 
     // Loop body is free and there is no need for interleaving.
@@ -5887,14 +5913,13 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
   return Discount;
 }
 
-LoopVectorizationCostModel::VectorizationCostTy
-LoopVectorizationCostModel::expectedCost(
+InstructionCost LoopVectorizationCostModel::expectedCost(
     ElementCount VF, SmallVectorImpl<InstructionVFPair> *Invalid) {
-  VectorizationCostTy Cost;
+  InstructionCost Cost;
 
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    VectorizationCostTy BlockCost;
+    InstructionCost BlockCost;
 
     // For each instruction in the old loop.
     for (Instruction &I : BB->instructionsWithoutDebug()) {
@@ -5913,7 +5938,7 @@ LoopVectorizationCostModel::expectedCost(
       if (Invalid && !C.isValid())
         Invalid->emplace_back(&I, VF);
 
-      BlockCost.first += C;
+      BlockCost += C;
       LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
                         << VF << " For instruction: " << I << '\n');
     }
@@ -5926,10 +5951,9 @@ LoopVectorizationCostModel::expectedCost(
     // cost by the probability of executing it. blockNeedsPredication from
     // Legal is used so as to not include all blocks in tail folded loops.
     if (VF.isScalar() && Legal->blockNeedsPredication(BB))
-      BlockCost.first /= getReciprocalPredBlockProb();
+      BlockCost /= getReciprocalPredBlockProb();
 
-    Cost.first += BlockCost.first;
-    Cost.second |= BlockCost.second;
+    Cost += BlockCost;
   }
 
   return Cost;
