@@ -82,8 +82,9 @@ template <class T> static bool forEachCall(Function &Intrin, T Callback) {
   while (!Intrin.use_empty() && (!LastUse || LastUse->getNext())) {
     Use *U = LastUse ? LastUse->getNext() : &*Intrin.use_begin();
     bool Removed = false;
-    auto CI = dyn_cast<CallInst>(U->getUser());
-    if (CI && CI->getCalledOperand() == &Intrin)
+    // An intrinsic cannot have its address taken, so it cannot be an argument
+    // operand. It might be used as operand in debug metadata, though.
+    if (auto CI = dyn_cast<CallInst>(U->getUser()))
       Changed |= Removed = Callback(CI);
     if (!Removed)
       LastUse = U;
