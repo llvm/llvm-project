@@ -37,12 +37,12 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<loop>
+; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>
@@ -107,12 +107,12 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:    EMIT vp<[[RESUME_3:%.+]]> = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<loop>
+; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>

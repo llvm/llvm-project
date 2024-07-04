@@ -1067,12 +1067,12 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -1146,12 +1146,12 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop.header>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

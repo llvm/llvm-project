@@ -39,12 +39,12 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>:
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -80,12 +80,12 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>:
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

@@ -35,12 +35,12 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -72,12 +72,12 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

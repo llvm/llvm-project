@@ -45,12 +45,12 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq ir<8>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<outer.header>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<outer.header>:
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:

@@ -160,6 +160,14 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     errs() << "Same IR basic block used by multiple wrapper blocks!\n";
     return false;
   }
+
+  VPBlockBase *MiddleBB =
+      IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
+  if (IRBB != IRBB->getPlan()->getPreheader() &&
+      IRBB->getSinglePredecessor() != MiddleBB) {
+    errs() << "VPIRBasicBlock can only be used as pre-header at the moment!\n";
+    return false;
+  }
   return true;
 }
 

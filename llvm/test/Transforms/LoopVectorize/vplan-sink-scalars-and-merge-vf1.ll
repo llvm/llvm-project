@@ -47,12 +47,12 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<0>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT:  Successor(s): ir-bb<for.end>, ir-bb<for.body>
+; CHECK-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.end>
+; CHECK-NEXT:  ir-bb<for.end>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.body>
+; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
