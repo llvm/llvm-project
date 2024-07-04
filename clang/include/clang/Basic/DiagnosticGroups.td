@@ -299,6 +299,10 @@ def CPre23CompatPedantic : DiagGroup<"pre-c23-compat-pedantic",
 def : DiagGroup<"pre-c2x-compat", [CPre23Compat]>;
 def : DiagGroup<"pre-c2x-compat-pedantic", [CPre23CompatPedantic]>;
 
+def CPre2yCompat : DiagGroup<"pre-c2y-compat">;
+def CPre2yCompatPedantic : DiagGroup<"pre-c2y-compat-pedantic",
+                                     [CPre2yCompat]>;
+
 // Warnings for C++ code which is not compatible with previous C++ standards.
 def CXXPre14Compat : DiagGroup<"pre-c++14-compat">;
 def : DiagGroup<"c++98-c++11-compat", [CXXPre14Compat]>;
@@ -430,6 +434,7 @@ def LogicalOpParentheses: DiagGroup<"logical-op-parentheses">;
 def LogicalNotParentheses: DiagGroup<"logical-not-parentheses">;
 def ShiftOpParentheses: DiagGroup<"shift-op-parentheses">;
 def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
+def DanglingAssignment: DiagGroup<"dangling-assignment">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
@@ -437,7 +442,8 @@ def DanglingGsl : DiagGroup<"dangling-gsl">;
 def ReturnStackAddress : DiagGroup<"return-stack-address">;
 // Name of this warning in GCC
 def : DiagGroup<"return-local-addr", [ReturnStackAddress]>;
-def Dangling : DiagGroup<"dangling", [DanglingField,
+def Dangling : DiagGroup<"dangling", [DanglingAssignment,
+                                      DanglingField,
                                       DanglingInitializerList,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
@@ -506,7 +512,7 @@ def MaxUnsignedZero : DiagGroup<"max-unsigned-zero">;
 def MissingBraces : DiagGroup<"missing-braces">;
 def MissingDeclarations: DiagGroup<"missing-declarations">;
 def : DiagGroup<"missing-format-attribute">;
-def : DiagGroup<"missing-include-dirs">;
+def MissingIncludeDirs : DiagGroup<"missing-include-dirs">;
 def MissingNoreturn : DiagGroup<"missing-noreturn">;
 def MultiChar : DiagGroup<"multichar">;
 def : DiagGroup<"nested-externs">;
@@ -1195,6 +1201,9 @@ def C23 : DiagGroup<"c23-extensions">;
 
 def : DiagGroup<"c2x-extensions", [C23]>;
 
+// A warning group for warnings about using C2y features as extensions.
+def C2y : DiagGroup<"c2y-extensions">;
+
 // Previously supported warning group which is no longer pertinent as binary
 // literals are a C++14 and C23 extension now instead of a GNU extension.
 def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
@@ -1527,6 +1536,10 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
 def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;
 
+// Warnings and notes related to the function effects system underlying
+// the nonblocking and nonallocating attributes.
+def FunctionEffects : DiagGroup<"function-effects">;
+
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
 
@@ -1535,3 +1548,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
+
+// Warnings about using the non-standard extension having an explicit specialization
+// with a storage class specifier.
+def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;

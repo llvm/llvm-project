@@ -185,11 +185,7 @@ ConstString ValueObjectVTable::GetDisplayTypeName() {
 
 bool ValueObjectVTable::IsInScope() { return GetParent()->IsInScope(); }
 
-ValueObject *ValueObjectVTable::CreateChildAtIndex(size_t idx,
-                                                   bool synthetic_array_member,
-                                                   int32_t synthetic_index) {
-  if (synthetic_array_member)
-    return nullptr;
+ValueObject *ValueObjectVTable::CreateChildAtIndex(size_t idx) {
   return new ValueObjectVTableChild(*this, idx, m_addr_size);
 }
 

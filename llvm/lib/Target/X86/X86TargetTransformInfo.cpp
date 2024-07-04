@@ -169,9 +169,32 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   if (ST->is64Bit()) {
     if (Vector && ST->hasAVX512())
       return 32;
+    if (!Vector && ST->hasEGPR())
+      return 32;
     return 16;
   }
   return 8;
+}
+
+bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
+  if (!ST->hasCF())
+    return false;
+  if (!Ty)
+    return true;
+  // Conditional faulting is supported by CFCMOV, which only accepts
+  // 16/32/64-bit operands.
+  // TODO: Support f32/f64 with VMOVSS/VMOVSD with zero mask when it's
+  // profitable.
+  if (!Ty->isIntegerTy())
+    return false;
+  switch (cast<IntegerType>(Ty)->getBitWidth()) {
+  default:
+    return false;
+  case 16:
+  case 32:
+  case 64:
+    return true;
+  }
 }
 
 TypeSize
@@ -849,7 +872,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,   MVT::v64i8,   {  1,  1, 1, 1 } }, // psubb
     { ISD::SUB,   MVT::v32i16,  {  1,  1, 1, 1 } }, // psubw
 
-    { ISD::MUL,   MVT::v64i8,   {  5, 10,10,11 } },
+    { ISD::MUL,   MVT::v16i8,   {  4, 12, 4, 5 } }, // extend/pmullw/trunc
+    { ISD::MUL,   MVT::v32i8,   {  3, 10, 7,10 } }, // pmaddubsw
+    { ISD::MUL,   MVT::v64i8,   {  3, 11, 7,10 } }, // pmaddubsw
     { ISD::MUL,   MVT::v32i16,  {  1,  5, 1, 1 } }, // pmullw
 
     { ISD::SUB,   MVT::v32i8,   {  1,  1, 1, 1 } }, // psubb
@@ -1115,7 +1140,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::ADD,  MVT::v4i64,   {  1,  1, 1, 2 } }, // paddq
 
     { ISD::MUL,  MVT::v16i8,   {  5, 18, 6,12 } }, // extend/pmullw/pack
-    { ISD::MUL,  MVT::v32i8,   {  6, 11,10,19 } }, // unpack/pmullw
+    { ISD::MUL,  MVT::v32i8,   {  4,  8, 8,16 } }, // pmaddubsw
     { ISD::MUL,  MVT::v16i16,  {  2,  5, 1, 2 } }, // pmullw
     { ISD::MUL,  MVT::v8i32,   {  4, 10, 1, 2 } }, // pmulld
     { ISD::MUL,  MVT::v4i32,   {  2, 10, 1, 2 } }, // pmulld
@@ -1166,7 +1191,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // We don't have to scalarize unsupported ops. We can issue two half-sized
     // operations and we only need to extract the upper YMM half.
     // Two ops + 1 extract + 1 insert = 4.
-    { ISD::MUL,     MVT::v32i8,   { 12, 13, 22, 23 } }, // unpack/pmullw + split
+    { ISD::MUL,     MVT::v32i8,   { 10, 11, 18, 19 } }, // pmaddubsw + split
+    { ISD::MUL,     MVT::v16i8,   {  5,  6,  8, 12 } }, // 2*pmaddubsw/3*and/psllw/or
     { ISD::MUL,     MVT::v16i16,  {  4,  8,  5,  6 } }, // pmullw + split
     { ISD::MUL,     MVT::v8i32,   {  5,  8,  5, 10 } }, // pmulld + split
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
@@ -1306,12 +1332,20 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i32,  { 16, 17,15,19 } }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v2i64,  {  8, 17, 5, 7 } }, // splat+shuffle sequence.
 
-    { ISD::MUL,  MVT::v16i8,  {  5, 18,10,12 } }, // 2*unpack/2*pmullw/2*and/pack
     { ISD::MUL,  MVT::v4i32,  {  2, 11, 1, 1 } }  // pmulld (Nehalem from agner.org)
   };
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry SSSE3CostTable[] = {
+    { ISD::MUL,  MVT::v16i8,  {  5, 18,10,12 } }, // 2*pmaddubsw/3*and/psllw/or
+  };
+
+  if (ST->hasSSSE3())
+    if (const auto *Entry = CostTableLookup(SSSE3CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
@@ -1351,7 +1385,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::ADD,  MVT::v2i64,  {  1,  2, 1, 2 } }, // paddq
     { ISD::SUB,  MVT::v2i64,  {  1,  2, 1, 2 } }, // psubq
 
-    { ISD::MUL,  MVT::v16i8,  {  5, 18,12,12 } }, // 2*unpack/2*pmullw/2*and/pack
+    { ISD::MUL,  MVT::v16i8,  {  6, 18,12,12 } }, // 2*unpack/2*pmullw/2*and/pack
     { ISD::MUL,  MVT::v8i16,  {  1,  5, 1, 1 } }, // pmullw
     { ISD::MUL,  MVT::v4i32,  {  6,  8, 7, 7 } }, // 3*pmuludq/4*shuffle
     { ISD::MUL,  MVT::v2i64,  {  7, 10,10,10 } }, // 3*pmuludq/3*shift/2*add
@@ -4059,7 +4093,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i8,      {  1, 1, 2, 2 } }, // popcnt(zext())
   };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::ABS,        MVT::i64,     {  1,  2,  3,  4 } }, // SUB+CMOV
+    { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
     { ISD::BSWAP,      MVT::i64,     {  1,  2,  1,  2 } },
     { ISD::CTLZ,       MVT::i64,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
@@ -4080,9 +4114,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::UMULO,      MVT::i64,     {  2 } }, // mulq + seto
   };
   static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
-    { ISD::ABS,        MVT::i32,     {  1,  2,  3,  4 } }, // SUB+XOR+SRA or SUB+CMOV
-    { ISD::ABS,        MVT::i16,     {  2,  2,  3,  4 } }, // SUB+XOR+SRA or SUB+CMOV
-    { ISD::ABS,        MVT::i8,      {  2,  4,  4,  4 } }, // SUB+XOR+SRA
+    { ISD::ABS,        MVT::i32,     {  1,  2,  3,  3 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i16,     {  2,  2,  3,  3 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i8,      {  2,  4,  4,  3 } }, // SUB+XOR+SRA
     { ISD::BITREVERSE, MVT::i32,     {  9, 12, 17, 19 } },
     { ISD::BITREVERSE, MVT::i16,     {  9, 12, 17, 19 } },
     { ISD::BITREVERSE, MVT::i8,      {  7,  9, 13, 14 } },
@@ -4257,6 +4291,37 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
 
   if (ISD != ISD::DELETED_NODE) {
+    auto adjustTableCost = [&](int ISD, unsigned Cost,
+                               std::pair<InstructionCost, MVT> LT,
+                               FastMathFlags FMF) -> InstructionCost {
+      InstructionCost LegalizationCost = LT.first;
+      MVT MTy = LT.second;
+
+      // If there are no NANs to deal with, then these are reduced to a
+      // single MIN** or MAX** instruction instead of the MIN/CMP/SELECT that we
+      // assume is used in the non-fast case.
+      if (ISD == ISD::FMAXNUM || ISD == ISD::FMINNUM) {
+        if (FMF.noNaNs())
+          return LegalizationCost * 1;
+      }
+
+      // For cases where some ops can be folded into a load/store, assume free.
+      if (MTy.isScalarInteger()) {
+        if (ISD == ISD::BSWAP && ST->hasMOVBE() && ST->hasFastMOVBE()) {
+          if (const Instruction *II = ICA.getInst()) {
+            if (II->hasOneUse() && isa<StoreInst>(II->user_back()))
+              return TTI::TCC_Free;
+            if (auto *LI = dyn_cast<LoadInst>(II->getOperand(0))) {
+              if (LI->hasOneUse())
+                return TTI::TCC_Free;
+            }
+          }
+        }
+      }
+
+      return LegalizationCost * (int)Cost;
+    };
+
     // Legalize the type.
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(OpTy);
     MVT MTy = LT.second;
@@ -4275,180 +4340,132 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ISD == ISD::FSQRT && CostKind == TTI::TCK_CodeSize)
       return LT.first;
 
-    auto adjustTableCost = [](int ISD, unsigned Cost,
-                              InstructionCost LegalizationCost,
-                              FastMathFlags FMF) {
-      // If there are no NANs to deal with, then these are reduced to a
-      // single MIN** or MAX** instruction instead of the MIN/CMP/SELECT that we
-      // assume is used in the non-fast case.
-      if (ISD == ISD::FMAXNUM || ISD == ISD::FMINNUM) {
-        if (FMF.noNaNs())
-          return LegalizationCost * 1;
-      }
-      return LegalizationCost * (int)Cost;
-    };
-
     if (ST->useGLMDivSqrtCosts())
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasVBMI2())
       if (const auto *Entry = CostTableLookup(AVX512VBMI2CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasBITALG())
       if (const auto *Entry = CostTableLookup(AVX512BITALGCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasVPOPCNTDQ())
       if (const auto *Entry = CostTableLookup(AVX512VPOPCNTDQCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasGFNI())
       if (const auto *Entry = CostTableLookup(GFNICostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasCDI())
       if (const auto *Entry = CostTableLookup(AVX512CDCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasBWI())
       if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasXOP())
       if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasSSE42())
       if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasSSE41())
       if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasSSSE3())
       if (const auto *Entry = CostTableLookup(SSSE3CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasSSE1())
       if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->hasBMI()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(BMI64CostTbl, ISD, MTy))
           if (auto KindCost = Entry->Cost[CostKind])
-            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                   ICA.getFlags());
+            return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(BMI32CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
     }
 
     if (ST->hasLZCNT()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(LZCNT64CostTbl, ISD, MTy))
           if (auto KindCost = Entry->Cost[CostKind])
-            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                   ICA.getFlags());
+            return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(LZCNT32CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
     }
 
     if (ST->hasPOPCNT()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(POPCNT64CostTbl, ISD, MTy))
           if (auto KindCost = Entry->Cost[CostKind])
-            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                   ICA.getFlags());
+            return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(POPCNT32CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
-    }
-
-    if (ISD == ISD::BSWAP && ST->hasMOVBE() && ST->hasFastMOVBE()) {
-      if (const Instruction *II = ICA.getInst()) {
-        if (II->hasOneUse() && isa<StoreInst>(II->user_back()))
-          return TTI::TCC_Free;
-        if (auto *LI = dyn_cast<LoadInst>(II->getOperand(0))) {
-          if (LI->hasOneUse())
-            return TTI::TCC_Free;
-        }
-      }
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
     }
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
-                                 ICA.getFlags());
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return adjustTableCost(Entry->ISD, *KindCost, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
@@ -5074,7 +5091,12 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcVTy);
   auto VT = TLI->getValueType(DL, SrcVTy);
   InstructionCost Cost = 0;
-  if (VT.isSimple() && LT.second != VT.getSimpleVT() &&
+  MVT Ty = LT.second;
+  if (Ty == MVT::i16 || Ty == MVT::i32 || Ty == MVT::i64)
+    // APX masked load/store for scalar is cheap.
+    return Cost + LT.first;
+
+  if (VT.isSimple() && Ty != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires extend/truncate for data and a shuffle for mask.
     Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, std::nullopt,
@@ -5082,9 +5104,9 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
             getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, std::nullopt,
                            CostKind, 0, nullptr);
 
-  else if (LT.first * LT.second.getVectorNumElements() > NumElem) {
+  else if (LT.first * Ty.getVectorNumElements() > NumElem) {
     auto *NewMaskTy = FixedVectorType::get(MaskTy->getElementType(),
-                                           LT.second.getVectorNumElements());
+                                           Ty.getVectorNumElements());
     // Expanding requires fill mask with zeroes
     Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, std::nullopt,
                            CostKind, 0, MaskTy);
@@ -5903,14 +5925,14 @@ bool X86TTIImpl::canMacroFuseCmp() {
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+  Type *ScalarTy = DataTy->getScalarType();
+
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) && cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() && hasConditionalLoadStoreForType(ScalarTy);
+
   if (!ST->hasAVX())
     return false;
-
-  // The backend can't handle a single element vector.
-  if (isa<VectorType>(DataTy) &&
-      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
-    return false;
-  Type *ScalarTy = DataTy->getScalarType();
 
   if (ScalarTy->isPointerTy())
     return true;

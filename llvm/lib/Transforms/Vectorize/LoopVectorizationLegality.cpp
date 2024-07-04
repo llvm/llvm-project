@@ -692,7 +692,7 @@ void LoopVectorizationLegality::addInductionPhi(
     InductionCastsToIgnore.insert(*Casts.begin());
 
   Type *PhiTy = Phi->getType();
-  const DataLayout &DL = Phi->getModule()->getDataLayout();
+  const DataLayout &DL = Phi->getDataLayout();
 
   // Get the widest type.
   if (!PhiTy->isFloatingPointTy()) {
@@ -1500,6 +1500,16 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // Go over each instruction and look at memory deps.
   if (!canVectorizeMemory()) {
     LLVM_DEBUG(dbgs() << "LV: Can't vectorize due to memory conflicts\n");
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
+  if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
+    reportVectorizationFailure("could not determine number of loop iterations",
+                               "could not determine number of loop iterations",
+                               "CantComputeNumberOfIterations", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else

@@ -55,9 +55,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:  entry:
 ; TFCOMMON-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFCOMMON-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFCOMMON-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFCOMMON-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFCOMMON-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFCOMMON-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFCOMMON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFCOMMON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -85,9 +83,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:  entry:
 ; TFA_INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFA_INTERLEAVE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFA_INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -203,9 +199,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:  entry:
 ; TFCOMMON-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFCOMMON-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFCOMMON-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFCOMMON-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFCOMMON-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFCOMMON-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFCOMMON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFCOMMON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -238,9 +232,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:  entry:
 ; TFA_INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFA_INTERLEAVE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFA_INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -381,9 +373,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:  entry:
 ; TFCOMMON-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFCOMMON-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFCOMMON-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFCOMMON-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFCOMMON-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFCOMMON-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFCOMMON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFCOMMON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -417,9 +407,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:  entry:
 ; TFA_INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFA_INTERLEAVE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFA_INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -688,9 +676,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:  entry:
 ; TFALWAYS-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFALWAYS-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFALWAYS-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFALWAYS-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFALWAYS-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFALWAYS-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFALWAYS-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFALWAYS-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFALWAYS-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -718,9 +704,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:  entry:
 ; TFFALLBACK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFFALLBACK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFFALLBACK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFFALLBACK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFFALLBACK-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -748,9 +732,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:  entry:
 ; TFA_INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFA_INTERLEAVE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFA_INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -870,9 +852,7 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFALWAYS-NEXT:  entry:
 ; TFALWAYS-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFALWAYS-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFALWAYS-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFALWAYS-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFALWAYS-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFALWAYS-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFALWAYS-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFALWAYS-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFALWAYS-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -907,9 +887,7 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFFALLBACK-NEXT:  entry:
 ; TFFALLBACK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFFALLBACK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFFALLBACK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFFALLBACK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFFALLBACK-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -944,9 +922,7 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFA_INTERLEAVE-NEXT:  entry:
 ; TFA_INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TFA_INTERLEAVE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFA_INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFA_INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

@@ -256,9 +256,7 @@ public:
     if (isIntegralPointer())
       return false;
 
-    unsigned Base = asBlockPointer().Base;
-    return Base != 0 && Base != sizeof(InlineDescriptor) &&
-           Base != RootPtrMark && getFieldDesc()->asDecl();
+    return !isRoot() && getFieldDesc()->asDecl();
   }
 
   /// Accessor for information about the declaration site.
@@ -462,9 +460,7 @@ public:
   bool isMutable() const {
     if (!isBlockPointer())
       return false;
-    return asBlockPointer().Base != 0 &&
-           asBlockPointer().Base != sizeof(InlineDescriptor) &&
-           getInlineDesc()->IsFieldMutable;
+    return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
 
   bool isWeak() const {
@@ -517,6 +513,8 @@ public:
   unsigned getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
+    if (isOnePastEnd())
+      return PastEndMark;
     return Offset;
   }
 
@@ -555,8 +553,19 @@ public:
     if (!asBlockPointer().Pointee)
       return false;
 
-    return isElementPastEnd() ||
+    if (isUnknownSizeArray())
+      return false;
+
+    return isElementPastEnd() || isPastEnd() ||
            (getSize() == getOffset() && !isZeroSizeArray());
+  }
+
+  /// Checks if the pointer points past the end of the object.
+  bool isPastEnd() const {
+    if (isIntegralPointer())
+      return false;
+
+    return !isZero() && Offset > PointeeStorage.BS.Pointee->getSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
@@ -620,12 +629,14 @@ public:
 private:
   friend class Block;
   friend class DeadBlock;
+  friend class MemberPointer;
   friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
+    assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
     return getDescriptor(asBlockPointer().Base);
   }
 

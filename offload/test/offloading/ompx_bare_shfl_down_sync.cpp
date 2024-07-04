@@ -1,11 +1,6 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 //
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// REQUIRES: gpu
 
 #include <cassert>
 #include <cmath>
@@ -23,7 +18,7 @@ bool equal(T LHS, T RHS) {
 template <typename T,
           std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
 bool equal(T LHS, T RHS) {
-  return std::abs(LHS - RHS) < std::numeric_limits<T>::epsilon();
+  return __builtin_fabs(LHS - RHS) < std::numeric_limits<T>::epsilon();
 }
 
 template <typename T> void test() {

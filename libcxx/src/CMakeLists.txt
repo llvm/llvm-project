@@ -275,8 +275,13 @@ if (LIBCXX_ENABLE_SHARED)
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
     # will attempt to use the manifest tool to generate the bundled manifest
-    set_target_properties(cxx_shared PROPERTIES
-                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+    if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
+      set_target_properties(cxx_shared PROPERTIES
+                            APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+    else()
+      set_target_properties(cxx_shared PROPERTIES
+                            APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
+    endif()
   endif()
 endif()
 
@@ -340,6 +345,9 @@ if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TI
     include/tzdb/types_private.h
     include/tzdb/tzdb_list_private.h
     include/tzdb/tzdb_private.h
+    # TODO TZDB The exception could be moved in chrono once the TZDB library
+    # is no longer experimental.
+    chrono_exception.cpp
     time_zone.cpp
     tzdb.cpp
     tzdb_list.cpp

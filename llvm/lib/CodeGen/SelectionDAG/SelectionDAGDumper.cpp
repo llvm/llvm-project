@@ -75,6 +75,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     }
     return "<<Unknown Node #" + utostr(getOpcode()) + ">>";
 
+    // clang-format off
 #ifndef NDEBUG
   case ISD::DELETED_NODE:               return "<<Deleted Node!>>";
 #endif
@@ -96,6 +97,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_UMIN:           return "AtomicLoadUMin";
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
   case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
+  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
+  case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -124,6 +127,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ConstantFP:                 return "ConstantFP";
   case ISD::GlobalAddress:              return "GlobalAddress";
   case ISD::GlobalTLSAddress:           return "GlobalTLSAddress";
+  case ISD::PtrAuthGlobalAddress:       return "PtrAuthGlobalAddress";
   case ISD::FrameIndex:                 return "FrameIndex";
   case ISD::JumpTable:                  return "JumpTable";
   case ISD::JUMP_TABLE_DEBUG_INFO:
@@ -165,8 +169,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     if (cast<ConstantSDNode>(this)->isOpaque())
       return "OpaqueTargetConstant";
     return "TargetConstant";
-
-    // clang-format off
 
   case ISD::TargetConstantFP:           return "TargetConstantFP";
   case ISD::TargetGlobalAddress:        return "TargetGlobalAddress";
@@ -210,6 +212,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FCOS:                       return "fcos";
   case ISD::STRICT_FCOS:                return "strict_fcos";
   case ISD::FSINCOS:                    return "fsincos";
+  case ISD::FTAN:                       return "ftan";
+  case ISD::STRICT_FTAN:                return "strict_ftan";
   case ISD::FTRUNC:                     return "ftrunc";
   case ISD::STRICT_FTRUNC:              return "strict_ftrunc";
   case ISD::FFLOOR:                     return "ffloor";
@@ -289,6 +293,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SMAX:                       return "smax";
   case ISD::UMIN:                       return "umin";
   case ISD::UMAX:                       return "umax";
+  case ISD::SCMP:                       return "scmp";
+  case ISD::UCMP:                       return "ucmp";
 
   case ISD::FLDEXP:                     return "fldexp";
   case ISD::STRICT_FLDEXP:              return "strict_fldexp";

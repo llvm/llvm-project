@@ -24,6 +24,8 @@
 #include <memory>
 
 namespace clang {
+class ParsedAttr;
+
 class SemaRISCV : public SemaBase {
 public:
   SemaRISCV(Sema &S);
@@ -35,6 +37,9 @@ public:
                            const llvm::StringMap<bool> &FeatureMap);
 
   bool isValidRVVBitcast(QualType srcType, QualType destType);
+
+  void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
+  bool isAliasValid(unsigned BuiltinID, StringRef AliasName);
 
   /// Indicate RISC-V vector builtin functions enabled or not.
   bool DeclareRVVBuiltins = false;

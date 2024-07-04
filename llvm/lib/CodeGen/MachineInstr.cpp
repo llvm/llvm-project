@@ -98,7 +98,7 @@ void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
 MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      DbgLoc(std::move(DL)), DebugInstrNum(0) {
+      DbgLoc(std::move(DL)), DebugInstrNum(0), Opcode(TID.Opcode) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
@@ -117,7 +117,8 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
 /// uniqueness.
 MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0) {
+      Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0),
+      Opcode(MI.getOpcode()) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   CapOperands = OperandCapacity::get(MI.getNumOperands());
@@ -143,6 +144,7 @@ void MachineInstr::setDesc(const MCInstrDesc &TID) {
   if (getParent())
     getMF()->handleChangeDesc(*this, TID);
   MCID = &TID;
+  Opcode = TID.Opcode;
 }
 
 void MachineInstr::moveBefore(MachineInstr *MovePos) {
@@ -575,6 +577,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
     if (TI->hasNoSignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoSWrap;
     if (TI->hasNoUnsignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  } else if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    if (GEP->hasNoUnsignedSignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoUSWrap;
+    if (GEP->hasNoUnsignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
   }
 

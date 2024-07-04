@@ -548,8 +548,8 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
     return;
   }
 
-  int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
-  int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
+  int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
+  int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
   // legal.

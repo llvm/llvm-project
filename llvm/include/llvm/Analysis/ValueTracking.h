@@ -100,6 +100,12 @@ KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                        const KnownBits &KnownRHS,
                                        unsigned Depth, const SimplifyQuery &SQ);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond, Value *Arm,
+                                 bool Invert, unsigned Depth,
+                                 const SimplifyQuery &Q);
+
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                          const WithCache<const Value *> &RHSCache,
@@ -135,6 +141,13 @@ bool isKnownNonZero(const Value *V, const SimplifyQuery &Q, unsigned Depth = 0);
 /// 2: <X, Y> if X = sub (A, B) and Y = sub (B, A)
 bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false,
                      bool AllowPoison = true);
+
+/// Return true iff:
+/// 1. X is poison implies Y is poison.
+/// 2. X is true implies Y is false.
+/// 3. X is false implies Y is true.
+/// Otherwise, return false.
+bool isKnownInversion(const Value *X, const Value *Y);
 
 /// Returns true if the give value is known to be non-negative.
 bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
@@ -890,6 +903,9 @@ bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 /// Determine the possible constant range of vscale with the given bit width,
 /// based on the vscale_range function attribute.
 ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
+
+/// Determine the possible constant range of a vector constant.
+ConstantRange getVectorConstantRange(const Constant *C);
 
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.

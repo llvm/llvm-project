@@ -15,6 +15,7 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
 
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
+  CheckExprLifetime.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
@@ -28,6 +29,7 @@ add_clang_library(clangSema
   Sema.cpp
   SemaAMDGPU.cpp
   SemaARM.cpp
+  SemaAVR.cpp
   SemaAccess.cpp
   SemaAttr.cpp
   SemaAPINotes.cpp
@@ -58,12 +60,15 @@ add_clang_library(clangSema
   SemaLambda.cpp
   SemaLookup.cpp
   SemaLoongArch.cpp
+  SemaM68k.cpp
   SemaMIPS.cpp
+  SemaMSP430.cpp
   SemaModule.cpp
   SemaNVPTX.cpp
   SemaObjC.cpp
   SemaObjCProperty.cpp
   SemaOpenACC.cpp
+  SemaOpenCL.cpp
   SemaOpenMP.cpp
   SemaOverload.cpp
   SemaPPC.cpp
@@ -73,6 +78,7 @@ add_clang_library(clangSema
   SemaStmtAsm.cpp
   SemaStmtAttr.cpp
   SemaSYCL.cpp
+  SemaSwift.cpp
   SemaSystemZ.cpp
   SemaTemplate.cpp
   SemaTemplateDeduction.cpp

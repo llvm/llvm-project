@@ -7,6 +7,8 @@ set(LLVM_SUBPROJECT_TITLE "liboffload")
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(offload C CXX ASM)
+else()
+  set(OPENMP_STANDALONE_BUILD FALSE)
 endif()
 
 # Check that the library can actually be built.
@@ -280,15 +282,15 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
-
-  macro(pythonize_bool var)
-  if (${var})
-    set(${var} True)
-  else()
-    set(${var} False)
-  endif()
-  endmacro()
 endif()
+
+macro(pythonize_bool var)
+if (${var})
+  set(${var} True)
+else()
+  set(${var} False)
+endif()
+endmacro()
 
 if(OPENMP_STANDALONE_BUILD OR TARGET omp)
   # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG

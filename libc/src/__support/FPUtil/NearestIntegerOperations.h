@@ -199,7 +199,8 @@ round_using_specific_rounding_mode(T x, int rnd) {
     return x;
 
   StorageType trim_value =
-      bits.get_mantissa() & ((StorageType(1) << trim_size) - 1);
+      bits.get_mantissa() &
+      static_cast<StorageType>(((StorageType(1) << trim_size) - 1));
   StorageType half_value =
       static_cast<StorageType>((StorageType(1) << (trim_size - 1)));
   // If exponent is 0, trimSize will be equal to the mantissa width, and
@@ -282,7 +283,8 @@ fromfp(T x, int rnd, unsigned int width) {
     if (width - 1 > FPBits<T>::EXP_BIAS)
       return rounded_value;
 
-    StorageType range_exp = width - 1U + FPBits<T>::EXP_BIAS;
+    StorageType range_exp =
+        static_cast<StorageType>(width - 1 + FPBits<T>::EXP_BIAS);
     // rounded_value < -2^(width - 1)
     T range_min =
         FPBits<T>::create_value(Sign::NEG, range_exp, EXPLICIT_BIT).get_val();
@@ -311,7 +313,7 @@ fromfp(T x, int rnd, unsigned int width) {
   if (width > FPBits<T>::EXP_BIAS)
     return rounded_value;
 
-  StorageType range_exp = width + FPBits<T>::EXP_BIAS;
+  StorageType range_exp = static_cast<StorageType>(width + FPBits<T>::EXP_BIAS);
   // rounded_value > 2^width - 1
   T range_max =
       FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -

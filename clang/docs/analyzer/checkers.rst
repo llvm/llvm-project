@@ -416,6 +416,60 @@ around, such as ``std::string_view``.
    // note: inner buffer of 'std::string' deallocated by call to destructor
  }
 
+.. _cplusplus-Move:
+
+cplusplus.Move (C++)
+""""""""""""""""""""
+Find use-after-move bugs in C++. This includes method calls on moved-from
+objects, assignment of a moved-from object, and repeated move of a moved-from
+object.
+
+.. code-block:: cpp
+
+ struct A {
+   void foo() {}
+ };
+
+ void f1() {
+   A a;
+   A b = std::move(a); // note: 'a' became 'moved-from' here
+   a.foo();            // warn: method call on a 'moved-from' object 'a'
+ }
+
+ void f2() {
+   A a;
+   A b = std::move(a);
+   A c(std::move(a)); // warn: move of an already moved-from object
+ }
+
+ void f3() {
+   A a;
+   A b = std::move(a);
+   b = a; // warn: copy of moved-from object
+ }
+
+The checker option ``WarnOn`` controls on what objects the use-after-move is
+checked:
+
+* The most strict value is ``KnownsOnly``, in this mode only objects are
+  checked whose type is known to be move-unsafe. These include most STL objects
+  (but excluding move-safe ones) and smart pointers.
+* With option value ``KnownsAndLocals`` local variables (of any type) are
+  additionally checked. The idea behind this is that local variables are
+  usually not tempting to be re-used so an use after move is more likely a bug
+  than with member variables.
+* With option value ``All`` any use-after move condition is checked on all
+  kinds of variables, excluding global variables and known move-safe cases.
+
+Default value is ``KnownsAndLocals``.
+
+Calls of methods named ``empty()`` or ``isEmpty()`` are allowed on moved-from
+objects because these methods are considered as move-safe. Functions called
+``reset()``, ``destroy()``, ``clear()``, ``assign``, ``resize``,  ``shrink`` are
+treated as state-reset functions and are allowed on moved-from objects, these
+make the object valid again. This applies to any type of object (not only STL
+ones).
+
 .. _cplusplus-NewDelete:
 
 cplusplus.NewDelete (C++)
@@ -599,7 +653,7 @@ Warns when a nullable pointer is returned from a function that has _Nonnull retu
 optin
 ^^^^^
 
-Checkers for portability, performance or coding style specific rules.
+Checkers for portability, performance, optional security and coding style specific rules.
 
 .. _optin-core-EnumCastOutOfRange:
 
@@ -938,6 +992,53 @@ optin.portability.UnixAPI
 """""""""""""""""""""""""
 Finds implementation-defined behavior in UNIX/Posix functions.
 
+.. _optin-taint-TaintedAlloc:
+
+optin.taint.TaintedAlloc (C, C++)
+"""""""""""""""""""""""""""""""""
+
+This checker warns for cases when the ``size`` parameter of the ``malloc`` ,
+``calloc``, ``realloc``, ``alloca`` or the size parameter of the
+array new C++ operator is tainted (potentially attacker controlled).
+If an attacker can inject a large value as the size parameter, memory exhaustion
+denial of service attack can be carried out.
+
+The ``alpha.security.taint.TaintPropagation`` checker also needs to be enabled for
+this checker to give warnings.
+
+The analyzer emits warning only if it cannot prove that the size parameter is
+within reasonable bounds (``<= SIZE_MAX/4``). This functionality partially
+covers the SEI Cert coding standard rule `INT04-C
+<https://wiki.sei.cmu.edu/confluence/display/c/INT04-C.+Enforce+limits+on+integer+values+originating+from+tainted+sources>`_.
+
+You can silence this warning either by bound checking the ``size`` parameter, or
+by explicitly marking the ``size`` parameter as sanitized. See the
+:ref:`alpha-security-taint-TaintPropagation` checker for more details.
+
+.. code-block:: c
+
+  void vulnerable(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    int *p = malloc(size); // warn: malloc is called with a tainted (potentially attacker controlled) value
+    free(p);
+  }
+
+  void not_vulnerable(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    if (1024 < size)
+      return;
+    int *p = malloc(size); // No warning expected as the the user input is bound
+    free(p);
+  }
+
+  void vulnerable_cpp(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    int *ptr = new int[size];// warn: Memory allocation function is called with a tainted (potentially attacker controlled) value
+    delete[] ptr;
+  }
 
 .. _security-checkers:
 
@@ -2405,21 +2506,6 @@ Check for pointer subtractions on two pointers pointing to different memory chun
    int d = &y - &x; // warn
  }
 
-.. _alpha-core-SizeofPtr:
-
-alpha.core.SizeofPtr (C)
-""""""""""""""""""""""""
-Warn about unintended use of ``sizeof()`` on pointer expressions.
-
-.. code-block:: c
-
- struct s {};
-
- int test(struct s *p) {
-   return sizeof(p);
-     // warn: sizeof(ptr) can produce an unexpected result
- }
-
 .. _alpha-core-StackAddressAsyncEscape:
 
 alpha.core.StackAddressAsyncEscape (C)
@@ -2550,25 +2636,6 @@ Check for use of iterators of different containers where iterators of the same c
                                                    //       used where the same
                                                    //       container is
                                                    //       expected
- }
-
-.. _alpha-cplusplus-MisusedMovedObject:
-
-alpha.cplusplus.MisusedMovedObject (C++)
-""""""""""""""""""""""""""""""""""""""""
-Method calls on a moved-from object and copying a moved-from object will be reported.
-
-
-.. code-block:: cpp
-
-  struct A {
-   void foo() {}
- };
-
- void f() {
-   A a;
-   A b = std::move(a); // note: 'a' became 'moved-from' here
-   a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
 
 .. _alpha-cplusplus-SmartPtr:

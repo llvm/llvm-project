@@ -31,6 +31,7 @@
 ; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O0-NEXT:    AMDGPU Printf lowering
 ; GCN-O0-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O0-NEXT:    Expand variadic functions
 ; GCN-O0-NEXT:    AMDGPU Inline All Functions
 ; GCN-O0-NEXT:    Inliner for always_inline functions
 ; GCN-O0-NEXT:      FunctionPass Manager
@@ -178,6 +179,7 @@
 ; GCN-O1-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O1-NEXT:    Expand variadic functions
 ; GCN-O1-NEXT:    AMDGPU Inline All Functions
 ; GCN-O1-NEXT:    Inliner for always_inline functions
 ; GCN-O1-NEXT:      FunctionPass Manager
@@ -253,13 +255,13 @@
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Flatten the CFG
 ; GCN-O1-NEXT:        Dominator Tree Construction
-; GCN-O1-NEXT:        Cycle Info Analysis
-; GCN-O1-NEXT:        Uniformity Analysis
-; GCN-O1-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        Code sinking
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
+; GCN-O1-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-NEXT:        Dominator Tree Construction
@@ -454,6 +456,7 @@
 ; GCN-O1-OPTS-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-OPTS-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O1-OPTS-NEXT:    Expand variadic functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Inline All Functions
 ; GCN-O1-OPTS-NEXT:    Inliner for always_inline functions
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
@@ -549,13 +552,13 @@
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Flatten the CFG
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
-; GCN-O1-OPTS-NEXT:        Uniformity Analysis
-; GCN-O1-OPTS-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Code sinking
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
+; GCN-O1-OPTS-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
@@ -760,6 +763,7 @@
 ; GCN-O2-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      AMDGPU Image Intrinsic Optimizer
+; GCN-O2-NEXT:    Expand variadic functions
 ; GCN-O2-NEXT:    AMDGPU Inline All Functions
 ; GCN-O2-NEXT:    Inliner for always_inline functions
 ; GCN-O2-NEXT:      FunctionPass Manager
@@ -857,13 +861,13 @@
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Flatten the CFG
 ; GCN-O2-NEXT:        Dominator Tree Construction
-; GCN-O2-NEXT:        Cycle Info Analysis
-; GCN-O2-NEXT:        Uniformity Analysis
-; GCN-O2-NEXT:        AMDGPU IR late optimizations
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Code sinking
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
+; GCN-O2-NEXT:        AMDGPU IR late optimizations
 ; GCN-O2-NEXT:        Post-Dominator Tree Construction
 ; GCN-O2-NEXT:        Unify divergent function exit nodes
 ; GCN-O2-NEXT:        Dominator Tree Construction
@@ -1070,6 +1074,7 @@
 ; GCN-O3-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      AMDGPU Image Intrinsic Optimizer
+; GCN-O3-NEXT:    Expand variadic functions
 ; GCN-O3-NEXT:    AMDGPU Inline All Functions
 ; GCN-O3-NEXT:    Inliner for always_inline functions
 ; GCN-O3-NEXT:      FunctionPass Manager
@@ -1179,13 +1184,13 @@
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Flatten the CFG
 ; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Cycle Info Analysis
-; GCN-O3-NEXT:        Uniformity Analysis
-; GCN-O3-NEXT:        AMDGPU IR late optimizations
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Code sinking
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
+; GCN-O3-NEXT:        AMDGPU IR late optimizations
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
 ; GCN-O3-NEXT:        Unify divergent function exit nodes
 ; GCN-O3-NEXT:        Dominator Tree Construction

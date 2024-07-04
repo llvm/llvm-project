@@ -195,6 +195,10 @@ public:
     return std::holds_alternative<mcdc::BranchParameters>(MCDCParams);
   }
 
+  const auto &getMCDCBranchParams() const {
+    return mcdc::getParams<const mcdc::BranchParameters>(MCDCParams);
+  }
+
   bool isMCDCDecision() const {
     return std::holds_alternative<mcdc::DecisionParameters>(MCDCParams);
   }
@@ -204,6 +208,8 @@ public:
   }
 
   const mcdc::Parameters &getMCDCParams() const { return MCDCParams; }
+
+  void resetMCDCParams() { MCDCParams = mcdc::Parameters(); }
 };
 
 /// Spelling locations for the start and end of a source region.
@@ -748,6 +754,7 @@ private:
 
   llvm::SmallVector<mcdc::ConditionIDs> DecisionStack;
   MCDC::State &MCDCState;
+  const Stmt *DecisionStmt = nullptr;
   mcdc::ConditionID NextID = 0;
   bool NotMapped = false;
 
@@ -777,7 +784,8 @@ public:
 
   /// Set the given condition's ID.
   void setCondID(const Expr *Cond, mcdc::ConditionID ID) {
-    MCDCState.BranchByStmt[CodeGenFunction::stripCond(Cond)].ID = ID;
+    MCDCState.BranchByStmt[CodeGenFunction::stripCond(Cond)] = {ID,
+                                                                DecisionStmt};
   }
 
   /// Return the ID of a given condition.
@@ -807,6 +815,11 @@ public:
     // Don't go any further if we don't need to map condition IDs.
     if (NotMapped)
       return;
+
+    if (NextID == 0) {
+      DecisionStmt = E;
+      assert(MCDCState.DecisionByStmt.contains(E));
+    }
 
     const mcdc::ConditionIDs &ParentDecision = DecisionStack.back();
 
@@ -2122,18 +2135,68 @@ struct CounterCoverageMappingBuilder
                          subtractCounters(ParentCount, TrueCount));
   }
 
-  void createDecision(const BinaryOperator *E) {
+  void createOrCancelDecision(const BinaryOperator *E, unsigned Since) {
     unsigned NumConds = MCDCBuilder.getTotalConditionsAndReset(E);
     if (NumConds == 0)
       return;
 
+    // Extract [ID, Conds] to construct the graph.
+    llvm::SmallVector<mcdc::ConditionIDs> CondIDs(NumConds);
+    for (const auto &SR : ArrayRef(SourceRegions).slice(Since)) {
+      if (SR.isMCDCBranch()) {
+        auto [ID, Conds] = SR.getMCDCBranchParams();
+        CondIDs[ID] = Conds;
+      }
+    }
+
+    // Construct the graph and calculate `Indices`.
+    mcdc::TVIdxBuilder Builder(CondIDs);
+    unsigned NumTVs = Builder.NumTestVectors;
+    unsigned MaxTVs = CVM.getCodeGenModule().getCodeGenOpts().MCDCMaxTVs;
+    assert(MaxTVs < mcdc::TVIdxBuilder::HardMaxTVs);
+
+    if (NumTVs > MaxTVs) {
+      // NumTVs exceeds MaxTVs -- warn and cancel the Decision.
+      cancelDecision(E, Since, NumTVs, MaxTVs);
+      return;
+    }
+
+    // Update the state for CodeGenPGO
+    assert(MCDCState.DecisionByStmt.contains(E));
+    MCDCState.DecisionByStmt[E] = {
+        MCDCState.BitmapBits, // Top
+        std::move(Builder.Indices),
+    };
+
     auto DecisionParams = mcdc::DecisionParameters{
-        MCDCState.DecisionByStmt[E].BitmapIdx,
+        MCDCState.BitmapBits += NumTVs, // Tail
         NumConds,
     };
 
     // Create MCDC Decision Region.
     createDecisionRegion(E, DecisionParams);
+  }
+
+  // Warn and cancel the Decision.
+  void cancelDecision(const BinaryOperator *E, unsigned Since, int NumTVs,
+                      int MaxTVs) {
+    auto &Diag = CVM.getCodeGenModule().getDiags();
+    unsigned DiagID =
+        Diag.getCustomDiagID(DiagnosticsEngine::Warning,
+                             "unsupported MC/DC boolean expression; "
+                             "number of test vectors (%0) exceeds max (%1). "
+                             "Expression will not be covered");
+    Diag.Report(E->getBeginLoc(), DiagID) << NumTVs << MaxTVs;
+
+    // Restore MCDCBranch to Branch.
+    for (auto &SR : MutableArrayRef(SourceRegions).slice(Since)) {
+      assert(!SR.isMCDCDecision() && "Decision shouldn't be seen here");
+      if (SR.isMCDCBranch())
+        SR.resetMCDCParams();
+    }
+
+    // Tell CodeGenPGO not to instrument.
+    MCDCState.DecisionByStmt.erase(E);
   }
 
   /// Check if E belongs to system headers.
@@ -2151,6 +2214,8 @@ struct CounterCoverageMappingBuilder
     }
 
     bool IsRootNode = MCDCBuilder.isIdle();
+
+    unsigned SourceRegionsSince = SourceRegions.size();
 
     // Keep track of Binary Operator and assign MCDC condition IDs.
     MCDCBuilder.pushAndAssignIDs(E);
@@ -2190,7 +2255,7 @@ struct CounterCoverageMappingBuilder
 
     // Create MCDC Decision Region if at top-level (root).
     if (IsRootNode)
-      createDecision(E);
+      createOrCancelDecision(E, SourceRegionsSince);
   }
 
   // Determine whether the right side of OR operation need to be visited.
@@ -2210,6 +2275,8 @@ struct CounterCoverageMappingBuilder
     }
 
     bool IsRootNode = MCDCBuilder.isIdle();
+
+    unsigned SourceRegionsSince = SourceRegions.size();
 
     // Keep track of Binary Operator and assign MCDC condition IDs.
     MCDCBuilder.pushAndAssignIDs(E);
@@ -2253,7 +2320,7 @@ struct CounterCoverageMappingBuilder
 
     // Create MCDC Decision Region if at top-level (root).
     if (IsRootNode)
-      createDecision(E);
+      createOrCancelDecision(E, SourceRegionsSince);
   }
 
   void VisitLambdaExpr(const LambdaExpr *LE) {

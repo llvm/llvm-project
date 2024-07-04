@@ -90,7 +90,7 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 // Dont' add an inline namespace for `std::filesystem`
-#    define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
+#  define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
 // std::basic_ios uses WEOF to indicate that the fill value is
 // uninitialized. However, on platforms where the size of char_type is
 // equal to or greater than the size of int_type and char_type is unsigned,
@@ -134,8 +134,7 @@
 //
 // Supported containers:
 // - `span`;
-// - `string_view`;
-// - `array`.
+// - `string_view`.
 // #define _LIBCPP_ABI_BOUNDED_ITERATORS
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)

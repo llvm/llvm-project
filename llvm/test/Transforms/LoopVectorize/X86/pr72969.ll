@@ -77,7 +77,6 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    store i64 0, ptr [[TMP26]], align 8
 ; VEC-NEXT:    [[TMP27:%.*]] = add <4 x i16> [[VEC_IND]], <i16 1, i16 1, i16 1, i16 1>
 ; VEC-NEXT:    [[TMP28]] = zext <4 x i16> [[TMP27]] to <4 x i64>
-; VEC-NEXT:    [[TMP29:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VEC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], <i16 4, i16 4, i16 4, i16 4>
 ; VEC-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

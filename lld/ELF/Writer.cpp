@@ -783,13 +783,11 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // __rela_iplt_{start,end} are initially defined relative to dummy section 0.
   // We'll override Out::elfHeader with relaDyn later when we are sure that
   // .rela.dyn will be present in the output.
-  ElfSym::relaIpltStart = addOptionalRegular(
-      config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
-      Out::elfHeader, 0, STV_HIDDEN);
-
-  ElfSym::relaIpltEnd = addOptionalRegular(
-      config->isRela ? "__rela_iplt_end" : "__rel_iplt_end",
-      Out::elfHeader, 0, STV_HIDDEN);
+  std::string name = config->isRela ? "__rela_iplt_start" : "__rel_iplt_start";
+  ElfSym::relaIpltStart =
+      addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
+  name.replace(name.size() - 5, 5, "end");
+  ElfSym::relaIpltEnd = addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -921,7 +919,11 @@ static bool shouldSkip(SectionCommand *cmd) {
 static SmallVectorImpl<SectionCommand *>::iterator
 findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
               SmallVectorImpl<SectionCommand *>::iterator e) {
+  // Place non-alloc orphan sections at the end. This matches how we assign file
+  // offsets to non-alloc sections.
   OutputSection *sec = &cast<OutputDesc>(*e)->osec;
+  if (!(sec->flags & SHF_ALLOC))
+    return e;
 
   // As a special case, place .relro_padding before the SymbolAssignment using
   // DATA_SEGMENT_RELRO_END, if present.
@@ -935,19 +937,23 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
       return i;
   }
 
-  // Find the first element that has as close a rank as possible.
-  if (b == e)
-    return e;
-  int proximity = getRankProximity(sec, *b);
-  auto i = b;
-  for (auto j = b; ++j != e;) {
+  // Find the most similar output section as the anchor. Rank Proximity is a
+  // value in the range [-1, 32] where [0, 32] indicates potential anchors (0:
+  // least similar; 32: identical). -1 means not an anchor.
+  //
+  // In the event of proximity ties, we select the first or last section
+  // depending on whether the orphan's rank is smaller.
+  int maxP = 0;
+  auto i = e;
+  for (auto j = b; j != e; ++j) {
     int p = getRankProximity(sec, *j);
-    if (p > proximity) {
-      proximity = p;
+    if (p > maxP ||
+        (p == maxP && cast<OutputDesc>(*j)->osec.sortRank <= sec->sortRank)) {
+      maxP = p;
       i = j;
     }
   }
-  if (!isa<OutputDesc>(*i))
+  if (i == e)
     return e;
 
   auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
@@ -955,7 +961,8 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     return osd && osd->osec.hasInputSections;
   };
 
-  // If i's rank is larger, the orphan section can be placed before i.
+  // Then, scan backward or forward through the script for a suitable insertion
+  // point. If i's rank is larger, the orphan section can be placed before i.
   //
   // However, don't do this if custom program headers are defined. Otherwise,
   // adding the orphan to a previous segment can change its flags, for example,
@@ -967,7 +974,7 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     for (auto j = ++i; j != e; ++j) {
       if (!isOutputSecWithInputSections(*j))
         continue;
-      if (getRankProximity(sec, *j) != proximity)
+      if (getRankProximity(sec, *j) != maxP)
         break;
       i = j + 1;
     }
@@ -1472,7 +1479,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= (it != part.relrAuthDyn->relocs.end());
         part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
       }
-      changed |= part.relaDyn->updateAllocSize();
+      if (part.relaDyn)
+        changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
       if (part.relrAuthDyn)
@@ -2056,33 +2064,21 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
 // The linker is expected to define SECNAME_start and SECNAME_end
 // symbols for a few sections. This function defines them.
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
-  // If a section does not exist, there's ambiguity as to how we
-  // define _start and _end symbols for an init/fini section. Since
-  // the loader assume that the symbols are always defined, we need to
-  // always define them. But what value? The loader iterates over all
-  // pointers between _start and _end to run global ctors/dtors, so if
-  // the section is empty, their symbol values don't actually matter
-  // as long as _start and _end point to the same location.
-  //
-  // That said, we don't want to set the symbols to 0 (which is
-  // probably the simplest value) because that could cause some
-  // program to fail to link due to relocation overflow, if their
-  // program text is above 2 GiB. We use the address of the .text
-  // section instead to prevent that failure.
-  //
-  // In rare situations, the .text section may not exist. If that's the
-  // case, use the image base address as a last resort.
-  OutputSection *Default = findSection(".text");
-  if (!Default)
-    Default = Out::elfHeader;
-
+  // If the associated output section does not exist, there is ambiguity as to
+  // how we define _start and _end symbols for an init/fini section. Users
+  // expect no "undefined symbol" linker errors and loaders expect equal
+  // st_value but do not particularly care whether the symbols are defined or
+  // not. We retain the output section so that the section indexes will be
+  // correct.
   auto define = [=](StringRef start, StringRef end, OutputSection *os) {
-    if (os && !script->isDiscarded(os)) {
-      addOptionalRegular(start, os, 0);
-      addOptionalRegular(end, os, -1);
+    if (os) {
+      Defined *startSym = addOptionalRegular(start, os, 0);
+      Defined *stopSym = addOptionalRegular(end, os, -1);
+      if (startSym || stopSym)
+        os->usedInExpression = true;
     } else {
-      addOptionalRegular(start, Default, 0);
-      addOptionalRegular(end, Default, 0);
+      addOptionalRegular(start, Out::elfHeader, 0);
+      addOptionalRegular(end, Out::elfHeader, 0);
     }
   };
 
@@ -2090,6 +2086,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   define("__init_array_start", "__init_array_end", Out::initArray);
   define("__fini_array_start", "__fini_array_end", Out::finiArray);
 
+  // As a special case, don't unnecessarily retain .ARM.exidx, which would
+  // create an empty PT_ARM_EXIDX.
   if (OutputSection *sec = findSection(".ARM.exidx"))
     define("__exidx_start", "__exidx_end", sec);
 }
@@ -2104,10 +2102,12 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  addOptionalRegular(saver().save("__start_" + s), &osec, 0,
-                     config->zStartStopVisibility);
-  addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
-                     config->zStartStopVisibility);
+  Defined *startSym = addOptionalRegular(saver().save("__start_" + s), &osec, 0,
+                                         config->zStartStopVisibility);
+  Defined *stopSym = addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
+                                        config->zStartStopVisibility);
+  if (startSym || stopSym)
+    osec.usedInExpression = true;
 }
 
 static bool needsPtLoad(OutputSection *sec) {
@@ -2478,11 +2478,12 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
         lastRX->lastSec == sec)
       off = alignToPowerOf2(off, config->maxPageSize);
   }
-  for (OutputSection *osec : outputSections)
-    if (!(osec->flags & SHF_ALLOC)) {
-      osec->offset = alignToPowerOf2(off, osec->addralign);
-      off = osec->offset + osec->size;
-    }
+  for (OutputSection *osec : outputSections) {
+    if (osec->flags & SHF_ALLOC)
+      continue;
+    osec->offset = alignToPowerOf2(off, osec->addralign);
+    off = osec->offset + osec->size;
+  }
 
   sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);

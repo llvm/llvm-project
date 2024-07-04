@@ -2080,13 +2080,15 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
                       cast<GlobalVariable>(GV)->hasAttribute("toc-data");
 
   // For small code model, generate a simple TOC load.
-  if (CModel == CodeModel::Small)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            IsAIXTocData ? TII.get(PPC::ADDItoc8) : TII.get(PPC::LDtoc),
-            DestReg)
-        .addGlobalAddress(GV)
-        .addReg(PPC::X2);
-  else {
+  if (CModel == CodeModel::Small) {
+    auto MIB = BuildMI(
+        *FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+        IsAIXTocData ? TII.get(PPC::ADDItoc8) : TII.get(PPC::LDtoc), DestReg);
+    if (IsAIXTocData)
+      MIB.addReg(PPC::X2).addGlobalAddress(GV);
+    else
+      MIB.addGlobalAddress(GV).addReg(PPC::X2);
+  } else {
     // If the address is an externally defined symbol, a symbol with common
     // or externally available linkage, a non-local function address, or a
     // jump table address (not yet needed), or if we are generating code

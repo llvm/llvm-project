@@ -88,6 +88,8 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     sameKind,
     operand, // match any kind, with promotion (non-standard)
     typeless, // BOZ literals are INTEGER with this kind
+    ieeeFlagType, // IEEE_FLAG_TYPE from ISO_FORTRAN_EXCEPTION
+    ieeeRoundType, // IEEE_ROUND_TYPE from ISO_FORTRAN_ARITHMETIC
     teamType, // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
     kindArg, // this argument is KIND=
     effectiveKind, // for function results: "kindArg" value, possibly defaulted
@@ -121,6 +123,9 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
+static constexpr TypePattern IeeeFlagType{DerivedType, KindCode::ieeeFlagType};
+static constexpr TypePattern IeeeRoundType{
+    DerivedType, KindCode::ieeeRoundType};
 static constexpr TypePattern TeamType{DerivedType, KindCode::teamType};
 static constexpr TypePattern DoublePrecision{
     RealType, KindCode::doublePrecision};
@@ -332,8 +337,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"associated",
         {{"pointer", AnyPointer, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::In, {ArgFlag::canBeNull}},
-            {"target", Addressable, Rank::known, Optionality::optional,
-                common::Intent::In, {ArgFlag::canBeNull}}},
+            {"target", Addressable, Rank::anyOrAssumedRank,
+                Optionality::optional, common::Intent::In,
+                {ArgFlag::canBeNull}}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"atan", {{"x", SameFloating}}, SameFloating},
     {"atan", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
@@ -513,6 +519,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"gamma", {{"x", SameReal}}, SameReal},
     {"get_team", {{"level", DefaultInt, Rank::scalar, Optionality::optional}},
         TeamType, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"getcwd",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+            common::Intent::Out}},
+        TypePattern{IntType, KindCode::greaterOrEqualToKind, 4}},
     {"getpid", {}, DefaultInt},
     {"huge",
         {{"x", SameIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
@@ -935,6 +945,12 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_support_divide",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
+    {"__builtin_ieee_support_flag",
+        {{"flag", IeeeFlagType, Rank::scalar},
+            {"x", AnyReal, Rank::elemental, Optionality::optional}},
+        DefaultLogical},
+    {"__builtin_ieee_support_halting", {{"flag", IeeeFlagType, Rank::scalar}},
+        DefaultLogical},
     {"__builtin_ieee_support_inf",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
@@ -943,6 +959,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical},
     {"__builtin_ieee_support_nan",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        DefaultLogical},
+    {"__builtin_ieee_support_rounding",
+        {{"round_value", IeeeRoundType, Rank::scalar},
+            {"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
     {"__builtin_ieee_support_sqrt",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
@@ -1093,6 +1113,7 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"ddim", {{"x", DoublePrecision}, {"y", DoublePrecision}},
          DoublePrecision},
         "dim"},
+    {{"derf", {{"x", DoublePrecision}}, DoublePrecision}, "erf"},
     {{"dexp", {{"x", DoublePrecision}}, DoublePrecision}, "exp"},
     {{"dfloat", {{"a", AnyInt}}, DoublePrecision}, "real", true},
     {{"dim", {{"x", DefaultReal}, {"y", DefaultReal}}, DefaultReal}},
@@ -1404,6 +1425,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"trim_name", AnyLogical, Rank::scalar, Optionality::optional},
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"getcwd",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::Out},
+            {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
+                Rank::scalar, Optionality::optional, common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"move_alloc",
         {{"from", SameType, Rank::known, Optionality::required,
@@ -1839,6 +1866,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::none:
     case KindCode::typeless:
       argOk = false;
+      break;
+    case KindCode::ieeeFlagType:
+      argOk = !type->IsUnlimitedPolymorphic() &&
+          type->category() == TypeCategory::Derived &&
+          semantics::IsIeeeFlagType(&type->GetDerivedTypeSpec());
+      break;
+    case KindCode::ieeeRoundType:
+      argOk = !type->IsUnlimitedPolymorphic() &&
+          type->category() == TypeCategory::Derived &&
+          semantics::IsIeeeRoundType(&type->GetDerivedTypeSpec());
       break;
     case KindCode::teamType:
       argOk = !type->IsUnlimitedPolymorphic() &&
@@ -2573,7 +2610,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{{"etime"}};
+  static const std::string dualIntrinsic[]{{"etime"}, {"getcwd"}};
 
   return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
              [&name](const std::string &dualName) {
@@ -2680,6 +2717,10 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
       mold = nullptr;
     }
     if (mold) {
+      if (IsAssumedRank(*arguments[0])) {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "MOLD= argument to NULL() must not be assumed-rank"_err_en_US);
+      }
       bool isProcPtrTarget{
           IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(*mold)};
       if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {
@@ -2921,7 +2962,7 @@ static bool CheckForNonPositiveValues(FoldingContext &context,
   if (arg.Rank() > 0) {
     if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
       if (const auto *intExpr{std::get_if<Expr<SomeInteger>>(&expr->u)}) {
-        std::visit(
+        Fortran::common::visit(
             [&](const auto &kindExpr) {
               using IntType = typename std::decay_t<decltype(kindExpr)>::Result;
               if (const auto *constArray{

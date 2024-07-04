@@ -53,5 +53,10 @@ mlir::Value genGetEnvVariable(fir::FirOpBuilder &, mlir::Location,
                               mlir::Value length, mlir::Value trimName,
                               mlir::Value errmsg);
 
+/// Generate a call to the GetCwd runtime function which implements
+/// the GETCWD intrinsic.
+mlir::Value genGetCwd(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value c);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H
