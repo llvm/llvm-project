@@ -2583,7 +2583,7 @@ LogicalResult PrivateClauseOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void MaskedOp::build(OpBuilder &builder, OperationState &state,
-                              const MaskedClauseOps &clauses) {
+                     const MaskedClauseOps &clauses) {
   MaskedOp::build(builder, state, clauses.filteredThreadIdVar);
 }
 
