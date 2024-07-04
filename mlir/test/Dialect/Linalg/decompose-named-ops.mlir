@@ -104,3 +104,10 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 // GENERALIZECHECK-NEXT:      linalg.yield %[[DIVF]] : f32
 // GENERALIZECHECK-NEXT:    } -> tensor<2x16x32xf32>
 // GENERALIZECHECK:         return %[[DIV]] : tensor<2x16x32xf32>
+
+// COM: decomposition assumes tensors as inputs, this is just to make sure nothing breaks
+func.func @softmax_memref(%arg0: memref<16x64x256xf32>, %arg1: memref<16x64x256xf32>) {
+  linalg.softmax
+    dimension(1) ins(%arg0 : memref<16x64x256xf32>) outs(%arg1 : memref<16x64x256xf32>)
+  return
+}
