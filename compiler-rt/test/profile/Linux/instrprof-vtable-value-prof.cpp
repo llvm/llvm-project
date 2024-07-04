@@ -165,8 +165,9 @@
 //
 // IR: [[MERGE0]]:
 // IR:    [[RES2:%.*]] = phi i32 [ [[RES1]], %[[MERGE1]] ], [ [[RESBB1]], %[[BB1]] ]
-#include <cstdio>
-#include <cstdlib>
+
+#include <stdio.h>
+#include <stdlib.h>
 class Base {
 public:
   virtual int func(int a, int b) = 0;
@@ -195,6 +196,7 @@ __attribute__((noinline)) Base *createType(int a) {
     base = new Derived2();
   return base;
 }
+
 int main(int argc, char **argv) {
   int sum = 0;
   for (int i = 0; i < 1000; i++) {

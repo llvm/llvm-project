@@ -89,8 +89,8 @@ Register LookForIdenticalPHI(MachineBasicBlock *BB,
     return Register();
 
   AvailableValsTy AVals;
-  for (unsigned i = 0, e = PredValues.size(); i != e; ++i)
-    AVals[PredValues[i].first] = PredValues[i].second;
+  for (const auto &[SrcBB, SrcReg] : PredValues)
+    AVals[SrcBB] = SrcReg;
   while (I != BB->end() && I->isPHI()) {
     bool Same = true;
     for (unsigned i = 1, e = I->getNumOperands(); i != e; i += 2) {
@@ -196,8 +196,8 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB,
       InsertNewDef(TargetOpcode::PHI, BB, Loc, RegAttrs, MRI, TII);
 
   // Fill in all the predecessors of the PHI.
-  for (unsigned i = 0, e = PredValues.size(); i != e; ++i)
-    InsertedPHI.addReg(PredValues[i].second).addMBB(PredValues[i].first);
+  for (const auto &[SrcBB, SrcReg] : PredValues)
+    InsertedPHI.addReg(SrcReg).addMBB(SrcBB);
 
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
