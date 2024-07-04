@@ -2622,7 +2622,7 @@ Value createLinalgReduceSumBody(OpBuilder &b, Location loc, ValueRange args,
 ///    softmax = z / l
 ///
 FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
-  if (!isa<RankedTensorType>(getInput().getType())) {
+  if (!hasPureTensorSemantics()) {
     // The decomposition assumes ranked tensors as input
     return failure();
   }
