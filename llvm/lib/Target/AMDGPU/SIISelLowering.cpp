@@ -9591,10 +9591,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // packed in vgpr, but that implies that the ssrc that is normally used for
     // scale needs to be forced to NULL.
 
-    // TODO-GFX13: Use the proper bit for this ensuring it does not clash with
-    // the real aux_mod.
     unsigned AuxMod = Op.getConstantOperandVal(4);
-    bool ScaleNull = AuxMod & (1U << 16);
+    bool ScaleNull = AuxMod & (1U << 26);
 
     return ScaleNull
                ? DAG.getNode(
@@ -9603,7 +9601,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                       DAG.getRegister(AMDGPU::SGPR_NULL,
                                       Op.getOperand(2).getValueType()),
                       Op.getOperand(3),
-                      DAG.getTargetConstant(AuxMod & ~(1U << 16), DL, MVT::i32),
+                      DAG.getTargetConstant(AuxMod & ~(1U << 26), DL, MVT::i32),
                       Op.getOperand(5)})
                : SDValue();
   }
