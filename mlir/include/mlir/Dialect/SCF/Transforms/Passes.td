@@ -125,6 +125,22 @@ def SCFForallToForLoop : Pass<"scf-forall-to-for"> {
   let constructor = "mlir::createForallToForLoopPass()";
 }
 
+def SCFCounter : Pass<"scf-counter"> {
+  let summary = "Count operations for SCF";
+  let constructor = "mlir::createCounterPass()";
+}
+
+def SCFLoopUnroll : Pass<"scf-loop-unroll">{
+  let summary = " Pass to unroll for loops in scf";
+  let constructor = "mlir::createLoopUnroll()";
+   let options = [
+    Option<"unrollFactor", "unroll-factor", "int", /*default=*/"4",
+           "Use this unroll factor for all loops being unrolled">,
+    Option<"unrollFull", "unroll-full", "bool", /*default=*/"false",
+           "Fully unroll loops">,
+  ];
+}
+
 def SCFForallToParallelLoop : Pass<"scf-forall-to-parallel"> {
   let summary = "Convert SCF forall loops to SCF parallel loops";
   let constructor = "mlir::createForallToParallelLoopPass()";
@@ -163,5 +179,6 @@ def SCFForToWhileLoop : Pass<"scf-for-to-while"> {
     ```
   }];
 }
+
 
 #endif // MLIR_DIALECT_SCF_PASSES
