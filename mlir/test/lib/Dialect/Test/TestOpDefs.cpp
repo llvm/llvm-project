@@ -111,6 +111,18 @@ void IsolatedRegionOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// IsolatedOneRegionWithRecursiveMemoryEffectsOp
+//===----------------------------------------------------------------------===//
+
+void IsolatedOneRegionWithRecursiveMemoryEffectsOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.emplace_back((*this)->getResults());
+}
+
+//===----------------------------------------------------------------------===//
 // SSACFGRegionOp
 //===----------------------------------------------------------------------===//
 

@@ -507,6 +507,23 @@ def OneRegionWithRecursiveMemoryEffectsOp
   let regions = (region SizedRegion<1>:$body);
 }
 
+def IsolatedOneRegionWithRecursiveMemoryEffectsOp
+    : TEST_Op<"isolated_one_region_with_recursive_memory_effects", [
+        RecursiveMemoryEffects,
+        IsolatedFromAbove,
+        SingleBlockImplicitTerminator<"RegionYieldOp">,
+        DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+  let description = [{
+    IsolatedFromAbove Op that has one region and recursive side effects.
+  }];
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    attr-dict-with-keyword $operands $body `:` functional-type(operands, results)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
@@ -2147,7 +2164,7 @@ def RegionYieldOp : TEST_Op<"region_yield",
     This operation is used in a region and yields the corresponding type for
     that operation.
   }];
-  let arguments = (ins AnyType:$result);
+  let arguments = (ins Variadic<AnyType>:$result);
   let assemblyFormat = [{
     $result `:` type($result) attr-dict
   }];

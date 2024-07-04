@@ -174,6 +174,11 @@ void BufferViewFlowAnalysis::build(Operation *op) {
         }
       }
 
+      if (op->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+        // Mark the entry block arguments and results as terminal.
+        populateTerminalValues(op);
+      }
+
       return WalkResult::advance();
     }
 
