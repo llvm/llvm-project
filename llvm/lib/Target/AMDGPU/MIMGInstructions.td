@@ -521,7 +521,7 @@ class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
-class VSAMPLE_Sampler_noret_gfx12<mimgopc op, string opcode,
+class VSAMPLE_Sampler_nortn_gfx12<mimgopc op, string opcode,
                             int num_addrs, RegisterClass Addr3RC = VGPR_32,
                             string dns="">
   : VSAMPLE_gfx12<op.GFX12, (outs), num_addrs, dns, Addr3RC> {
@@ -1186,7 +1186,7 @@ class MIMG_Sampler_nsa_gfx10<mimgopc op, string opcode,
   let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " $vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
 }
 
-class MIMG_Sampler_noret_gfx10<mimgopc op, string opcode,
+class MIMG_Sampler_nortn_gfx10<mimgopc op, string opcode,
                          RegisterClass AddrRC,
                          string dns="">
   : MIMG_gfx10<op.GFX10M, (outs), dns> {
@@ -1196,7 +1196,7 @@ class MIMG_Sampler_noret_gfx10<mimgopc op, string opcode,
   let vdata = 0;
 }
 
-class MIMG_Sampler_noret_nsa_gfx10<mimgopc op, string opcode,
+class MIMG_Sampler_nortn_nsa_gfx10<mimgopc op, string opcode,
                          int num_addrs,
                          string dns="">
   : MIMG_nsa_gfx10<op.GFX10M, (outs), num_addrs, dns> {
@@ -1223,7 +1223,7 @@ class MIMG_Sampler_nsa_gfx11<mimgopc op, string opcode,
   let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " $vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
 }
 
-class MIMG_Sampler_noret_gfx11<mimgopc op, string opcode,
+class MIMG_Sampler_nortn_gfx11<mimgopc op, string opcode,
                                   RegisterClass AddrRC,
                                   string dns="">
   : MIMG_gfx11<op.GFX11, (outs), dns> {
@@ -1232,7 +1232,7 @@ class MIMG_Sampler_noret_gfx11<mimgopc op, string opcode,
   let vdata = 0;
 }
 
-class MIMG_Sampler_noret_nsa_gfx11<mimgopc op, string opcode,
+class MIMG_Sampler_nortn_nsa_gfx11<mimgopc op, string opcode,
                                       int num_addrs,
                                       RegisterClass LastVAddrSize, string dns="">
   : MIMG_nsa_gfx11<op.GFX11, (outs), num_addrs, dns, [], LastVAddrSize> {
@@ -1429,11 +1429,11 @@ multiclass MIMG_Sampler_NoReturn <mimgopc op, AMDGPUSampleVariant sample, bit wq
       let VAddrDwords = addr.NumWords in {
         if op.HAS_GFX10M then {
           def _V # addr.NumWords # _gfx10
-            : MIMG_Sampler_noret_gfx10 <op, asm, addr.RegClass>;
+            : MIMG_Sampler_nortn_gfx10 <op, asm, addr.RegClass>;
         }
         if op.HAS_GFX11 then {
           def _V # addr.NumWords # _gfx11
-            : MIMG_Sampler_noret_gfx11 <op, asm, addr.RegClass>;
+            : MIMG_Sampler_nortn_gfx11 <op, asm, addr.RegClass>;
         }
       }
     }
@@ -1442,7 +1442,7 @@ multiclass MIMG_Sampler_NoReturn <mimgopc op, AMDGPUSampleVariant sample, bit wq
       let VAddrDwords = addr.NumWords in {
         if op.HAS_GFX10M then {
           def _V # addr.NumWords # _nsa_gfx10
-            : MIMG_Sampler_noret_nsa_gfx10<op, asm, addr.NumWords>;
+            : MIMG_Sampler_nortn_nsa_gfx10<op, asm, addr.NumWords>;
         }
       }
     }
@@ -1451,7 +1451,7 @@ multiclass MIMG_Sampler_NoReturn <mimgopc op, AMDGPUSampleVariant sample, bit wq
       let VAddrDwords = addr.NumWords in {
         if op.HAS_GFX11 then {
           def _V # addr.NumWords # _nsa_gfx11
-            : MIMG_Sampler_noret_nsa_gfx11<op, asm, addr.NumWords, addr.RegClass>;
+            : MIMG_Sampler_nortn_nsa_gfx11<op, asm, addr.NumWords, addr.RegClass>;
         }
       }
     }
@@ -1460,7 +1460,7 @@ multiclass MIMG_Sampler_NoReturn <mimgopc op, AMDGPUSampleVariant sample, bit wq
       let VAddrDwords = addr.NumWords in {
         if op.HAS_GFX12 then {
           def _V # addr.NumWords # _gfx12
-            : VSAMPLE_Sampler_noret_gfx12<op, asm, addr.NumWords, addr.RegClass>;
+            : VSAMPLE_Sampler_nortn_gfx12<op, asm, addr.NumWords, addr.RegClass>;
         }
       }
     }
@@ -1491,7 +1491,7 @@ multiclass MIMG_Sampler <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
   }
 
   if !not(isGetLod) then
-  defm "_noret" : MIMG_Sampler_NoReturn <op, sample, wqm, isG16, asm>;
+  defm "_nortn" : MIMG_Sampler_NoReturn <op, sample, wqm, isG16, asm>;
 }
 
 multiclass MIMG_Sampler_WQM <mimgopc op, AMDGPUSampleVariant sample>
@@ -1859,10 +1859,10 @@ def : MIMGLZMapping<IMAGE_GATHER4_L, IMAGE_GATHER4_LZ>;
 def : MIMGLZMapping<IMAGE_GATHER4_C_L, IMAGE_GATHER4_C_LZ>;
 def : MIMGLZMapping<IMAGE_GATHER4_L_O, IMAGE_GATHER4_LZ_O>;
 def : MIMGLZMapping<IMAGE_GATHER4_C_L_O, IMAGE_GATHER4_C_LZ_O>;
-def : MIMGLZMapping<IMAGE_SAMPLE_L_noret, IMAGE_SAMPLE_LZ_noret>;
-def : MIMGLZMapping<IMAGE_SAMPLE_C_L_noret, IMAGE_SAMPLE_C_LZ_noret>;
-def : MIMGLZMapping<IMAGE_SAMPLE_L_O_noret, IMAGE_SAMPLE_LZ_O_noret>;
-def : MIMGLZMapping<IMAGE_SAMPLE_C_L_O_noret, IMAGE_SAMPLE_C_LZ_O_noret>;
+def : MIMGLZMapping<IMAGE_SAMPLE_L_nortn, IMAGE_SAMPLE_LZ_nortn>;
+def : MIMGLZMapping<IMAGE_SAMPLE_C_L_nortn, IMAGE_SAMPLE_C_LZ_nortn>;
+def : MIMGLZMapping<IMAGE_SAMPLE_L_O_nortn, IMAGE_SAMPLE_LZ_O_nortn>;
+def : MIMGLZMapping<IMAGE_SAMPLE_C_L_O_nortn, IMAGE_SAMPLE_C_LZ_O_nortn>;
 
 // MIP to NONMIP Optimization Mapping
 def : MIMGMIPMapping<IMAGE_LOAD_MIP, IMAGE_LOAD>;
@@ -1885,14 +1885,14 @@ def : MIMGBiasMapping<IMAGE_GATHER4_B_O, IMAGE_GATHER4_O>;
 def : MIMGBiasMapping<IMAGE_GATHER4_B_CL_O, IMAGE_GATHER4_CL_O>;
 def : MIMGBiasMapping<IMAGE_GATHER4_C_B_O, IMAGE_GATHER4_C_O>;
 def : MIMGBiasMapping<IMAGE_GATHER4_C_B_CL_O, IMAGE_GATHER4_C_CL_O>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_B_noret, IMAGE_SAMPLE_noret>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_B_CL_noret, IMAGE_SAMPLE_CL_noret>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_noret, IMAGE_SAMPLE_C_noret>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_CL_noret, IMAGE_SAMPLE_C_CL_noret>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_B_O_noret, IMAGE_SAMPLE_O_noret>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_B_CL_O_noret, IMAGE_SAMPLE_CL_O_noret>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_O_noret, IMAGE_SAMPLE_C_O_noret>;
-def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_CL_O_noret, IMAGE_SAMPLE_C_CL_O_noret>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_B_nortn, IMAGE_SAMPLE_nortn>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_B_CL_nortn, IMAGE_SAMPLE_CL_nortn>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_nortn, IMAGE_SAMPLE_C_nortn>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_CL_nortn, IMAGE_SAMPLE_C_CL_nortn>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_B_O_nortn, IMAGE_SAMPLE_O_nortn>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_B_CL_O_nortn, IMAGE_SAMPLE_CL_O_nortn>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_O_nortn, IMAGE_SAMPLE_C_O_nortn>;
+def : MIMGBiasMapping<IMAGE_SAMPLE_C_B_CL_O_nortn, IMAGE_SAMPLE_C_CL_O_nortn>;
 
 // Offset to NoOffset Optimization Mapping
 def : MIMGOffsetMapping<IMAGE_SAMPLE_O, IMAGE_SAMPLE>;
@@ -1935,34 +1935,34 @@ def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_O_G16, IMAGE_SAMPLE_CD_G16>;
 def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_CL_O_G16, IMAGE_SAMPLE_CD_CL_G16>;
 def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_O_G16, IMAGE_SAMPLE_C_CD_G16>;
 def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_CL_O_G16, IMAGE_SAMPLE_C_CD_CL_G16>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_O_noret, IMAGE_SAMPLE_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_CL_O_noret, IMAGE_SAMPLE_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_D_O_noret, IMAGE_SAMPLE_D_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_D_CL_O_noret, IMAGE_SAMPLE_D_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_D_O_G16_noret, IMAGE_SAMPLE_D_G16_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_D_CL_O_G16_noret, IMAGE_SAMPLE_D_CL_G16_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_L_O_noret, IMAGE_SAMPLE_L_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_B_O_noret, IMAGE_SAMPLE_B_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_B_CL_O_noret, IMAGE_SAMPLE_B_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_LZ_O_noret, IMAGE_SAMPLE_LZ_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_O_noret, IMAGE_SAMPLE_C_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CL_O_noret, IMAGE_SAMPLE_C_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_O_noret, IMAGE_SAMPLE_C_D_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_CL_O_noret, IMAGE_SAMPLE_C_D_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_O_G16_noret, IMAGE_SAMPLE_C_D_G16_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_CL_O_G16_noret, IMAGE_SAMPLE_C_D_CL_G16_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_L_O_noret, IMAGE_SAMPLE_C_L_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_B_CL_O_noret, IMAGE_SAMPLE_C_B_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_B_O_noret, IMAGE_SAMPLE_C_B_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_LZ_O_noret, IMAGE_SAMPLE_C_LZ_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_O_noret, IMAGE_SAMPLE_CD>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_CL_O_noret, IMAGE_SAMPLE_CD_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_O_noret, IMAGE_SAMPLE_C_CD_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_CL_O_noret, IMAGE_SAMPLE_C_CD_CL_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_O_G16_noret, IMAGE_SAMPLE_CD_G16_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_CL_O_G16_noret, IMAGE_SAMPLE_CD_CL_G16_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_O_G16_noret, IMAGE_SAMPLE_C_CD_G16_noret>;
-def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_CL_O_G16_noret, IMAGE_SAMPLE_C_CD_CL_G16_noret>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_O_nortn, IMAGE_SAMPLE_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CL_O_nortn, IMAGE_SAMPLE_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_O_nortn, IMAGE_SAMPLE_D_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_CL_O_nortn, IMAGE_SAMPLE_D_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_O_G16_nortn, IMAGE_SAMPLE_D_G16_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_CL_O_G16_nortn, IMAGE_SAMPLE_D_CL_G16_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_L_O_nortn, IMAGE_SAMPLE_L_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_B_O_nortn, IMAGE_SAMPLE_B_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_B_CL_O_nortn, IMAGE_SAMPLE_B_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_LZ_O_nortn, IMAGE_SAMPLE_LZ_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_O_nortn, IMAGE_SAMPLE_C_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CL_O_nortn, IMAGE_SAMPLE_C_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_O_nortn, IMAGE_SAMPLE_C_D_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_CL_O_nortn, IMAGE_SAMPLE_C_D_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_O_G16_nortn, IMAGE_SAMPLE_C_D_G16_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_CL_O_G16_nortn, IMAGE_SAMPLE_C_D_CL_G16_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_L_O_nortn, IMAGE_SAMPLE_C_L_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_B_CL_O_nortn, IMAGE_SAMPLE_C_B_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_B_O_nortn, IMAGE_SAMPLE_C_B_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_LZ_O_nortn, IMAGE_SAMPLE_C_LZ_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_O_nortn, IMAGE_SAMPLE_CD>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_CL_O_nortn, IMAGE_SAMPLE_CD_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_O_nortn, IMAGE_SAMPLE_C_CD_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_CL_O_nortn, IMAGE_SAMPLE_C_CD_CL_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_O_G16_nortn, IMAGE_SAMPLE_CD_G16_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_CL_O_G16_nortn, IMAGE_SAMPLE_CD_CL_G16_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_O_G16_nortn, IMAGE_SAMPLE_C_CD_G16_nortn>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_CL_O_G16_nortn, IMAGE_SAMPLE_C_CD_CL_G16_nortn>;
 
 // G to G16 Optimization Mapping
 def : MIMGG16Mapping<IMAGE_SAMPLE_D, IMAGE_SAMPLE_D_G16>;
@@ -1981,19 +1981,19 @@ def : MIMGG16Mapping<IMAGE_SAMPLE_CD_O, IMAGE_SAMPLE_CD_O_G16>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_CD_CL_O, IMAGE_SAMPLE_CD_CL_O_G16>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_O, IMAGE_SAMPLE_C_CD_O_G16>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_O, IMAGE_SAMPLE_C_CD_CL_O_G16>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_D_noret, IMAGE_SAMPLE_D_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_D_CL_noret, IMAGE_SAMPLE_D_CL_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_noret, IMAGE_SAMPLE_C_D_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_CL_noret, IMAGE_SAMPLE_C_D_CL_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_D_O_noret, IMAGE_SAMPLE_D_O_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_D_CL_O_noret, IMAGE_SAMPLE_D_CL_O_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_O_noret, IMAGE_SAMPLE_C_D_O_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_CL_O_noret, IMAGE_SAMPLE_C_D_CL_O_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_CD_noret, IMAGE_SAMPLE_CD_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_CD_CL_noret, IMAGE_SAMPLE_CD_CL_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_noret, IMAGE_SAMPLE_C_CD_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_noret, IMAGE_SAMPLE_C_CD_CL_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_CD_O_noret, IMAGE_SAMPLE_CD_O_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_CD_CL_O_noret, IMAGE_SAMPLE_CD_CL_O_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_O_noret, IMAGE_SAMPLE_C_CD_O_G16_noret>;
-def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_O_noret, IMAGE_SAMPLE_C_CD_CL_O_G16_noret>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_D_nortn, IMAGE_SAMPLE_D_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_D_CL_nortn, IMAGE_SAMPLE_D_CL_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_nortn, IMAGE_SAMPLE_C_D_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_CL_nortn, IMAGE_SAMPLE_C_D_CL_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_D_O_nortn, IMAGE_SAMPLE_D_O_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_D_CL_O_nortn, IMAGE_SAMPLE_D_CL_O_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_O_nortn, IMAGE_SAMPLE_C_D_O_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_D_CL_O_nortn, IMAGE_SAMPLE_C_D_CL_O_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_CD_nortn, IMAGE_SAMPLE_CD_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_CD_CL_nortn, IMAGE_SAMPLE_CD_CL_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_nortn, IMAGE_SAMPLE_C_CD_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_nortn, IMAGE_SAMPLE_C_CD_CL_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_CD_O_nortn, IMAGE_SAMPLE_CD_O_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_CD_CL_O_nortn, IMAGE_SAMPLE_CD_CL_O_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_O_nortn, IMAGE_SAMPLE_C_CD_O_G16_nortn>;
+def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_O_nortn, IMAGE_SAMPLE_C_CD_CL_O_G16_nortn>;
