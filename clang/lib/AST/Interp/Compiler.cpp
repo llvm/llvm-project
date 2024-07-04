@@ -3577,6 +3577,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
     return !Init || (checkDecl() && initGlobal(*GlobalIndex));
   } else {
     VariableScope<Emitter> LocalScope(this, VD);
+    InitLinkScope<Emitter> ILS(this, InitLink::Decl(VD));
 
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
@@ -3911,7 +3912,8 @@ bool Compiler<Emitter>::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
   bool Old = InitStackActive;
-  InitStackActive = !isa<FunctionDecl>(E->getUsedContext());
+  InitStackActive =
+      !(E->getUsedContext()->getDeclKind() == Decl::CXXConstructor);
   bool Result = this->delegate(E->getExpr());
   InitStackActive = Old;
   return Result;
