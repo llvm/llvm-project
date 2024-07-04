@@ -1929,7 +1929,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         // TODO: Handle vector widening/narrowing bitcasts.
         auto *DstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
         auto *SrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
-        if (DstTy && SrcTy && SrcTy->getNumElements() == DstTy->getNumElements()) {
+        if (DstTy && SrcTy &&
+            SrcTy->getNumElements() == DstTy->getNumElements()) {
           Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
           continue;
         }
