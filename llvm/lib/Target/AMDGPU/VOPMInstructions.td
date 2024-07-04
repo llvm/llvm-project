@@ -348,6 +348,13 @@ class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1,
   bit PixelShape4x2 = !or(!eq(Scatter, 2), !eq(ArgTy[0], v4f32));
 }
 
+def KMult {
+  int X1 = 0;
+  int X2 = 1;
+  int X3 = 2;
+  int X4 = 3;
+}
+
 class WMMA_SWMMAC_Profile<list<ValueType> ArgTy, int K>
     : VOPMProfile<ArgTy, 0, 1, 0, 1> {
   int KMultiplier = K;
@@ -359,62 +366,66 @@ class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<ArgT
   dag WmmaInlineInPat;
   dag WmmaInlineOutPat;
   bit isInt;
+
+  let Src0RC64 = getVOP3SrcForVT<ArgVT[1]>.ret; // srcA
+  let Src1RC64 = getVALUDstForVT<ArgVT[2]>.ret; // srcB
+  let Src2RC64 = getVOP3SrcForVT<ArgVT[3]>.ret; // srcC
 }
 
 class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
   let IsWMMA = 1;
   let isInt = 0;
 
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Clamp0:$clamp);
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, Clamp0:$clamp);
 
-  let WmmaInPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, i1:$clamp);
-  let WmmaOutPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, i1:$clamp);
+  let WmmaInPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
+  let WmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
 
-  let WmmaInlineInPat = (ins Src0VT:$src0, Src1VT:$src1, (Src2VT (WMMAVISrc Src2VT:$src2)), i1:$clamp);
-  let WmmaInlineOutPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, i1:$clamp);
+  let WmmaInlineInPat = (ins Src0VT:$srcA, Src1VT:$srcB, (Src2VT (WMMAVISrc Src2VT:$srcC)), i1:$clamp);
+  let WmmaInlineOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
 
-  let Asm64 = "$vdst, $src0, $src1, $src2$clamp";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC$clamp";
 }
 
 class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
   let IsWMMA = 1;
   let isInt = 1;
 
-  let Ins64 = (ins SignedA:$signed_a, Src0RC64:$src0, SignedB:$signed_b, Src1RC64:$src1, Src2RC64:$src2, Clamp0:$clamp);
+  let Ins64 = (ins SignedA:$signed_a, Src0RC64:$srcA, SignedB:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, Clamp0:$clamp);
 
-  let WmmaInPat = (ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, Src2VT:$src2, i1:$clamp);
-  let WmmaOutPat = (ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, Src2VT:$src2, i1:$clamp);
+  let WmmaInPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
+  let WmmaOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
 
-  let WmmaInlineInPat = (ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, (Src2VT (WMMAVISrc Src2VT:$src2)), i1:$clamp);
-  let WmmaInlineOutPat = (ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, Src2VT:$src2, i1:$clamp);
+  let WmmaInlineInPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, (Src2VT (WMMAVISrc Src2VT:$srcC)), i1:$clamp);
+  let WmmaInlineOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
 
-  let Asm64 = "$vdst, $src0, $src1, $src2$signed_a$signed_b$clamp";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC$signed_a$signed_b$clamp";
 }
 
-def VOPM_WMMA_F32_F16_X16     : VOPM_WMMA_Profile_Float<[v8f32, v8f16, v8f16, v8f32], 1>;
-def VOPM_WMMA_F32_BF16_X16    : VOPM_WMMA_Profile_Float<[v8f32, v8bf16, v8bf16, v8f32], 1>;
-def VOPM_WMMA_F16_F16_X16     : VOPM_WMMA_Profile_Float<[v8f16, v8f16, v8f16, v8f16], 1>;
-def VOPM_WMMA_BF16_BF16_X16   : VOPM_WMMA_Profile_Float<[v8bf16, v8bf16, v8bf16, v8bf16], 1>;
-def VOPM_WMMA_F32_F8_X16      : VOPM_WMMA_Profile_Float<[v8f32, v2i32, v2i32, v8f32], 1>;
-def VOPM_WMMA_F16_F8_X16      : VOPM_WMMA_Profile_Float<[v8f16, v2i32, v2i32, v8f16], 1>;
-def VOPM_WMMA_F32_F8_X32      : VOPM_WMMA_Profile_Float<[v8f32, v4i32, v4i32, v8f32], 2>;
-def VOPM_WMMA_F16_F8_X32      : VOPM_WMMA_Profile_Float<[v8f16, v4i32, v4i32, v8f16], 2>;
+def VOPM_WMMA_F32_F16_X16     : VOPM_WMMA_Profile_Float<[v8f32, v8f16, v8f16, v8f32], KMult.X1>;
+def VOPM_WMMA_F32_BF16_X16    : VOPM_WMMA_Profile_Float<[v8f32, v8bf16, v8bf16, v8f32], KMult.X1>;
+def VOPM_WMMA_F16_F16_X16     : VOPM_WMMA_Profile_Float<[v8f16, v8f16, v8f16, v8f16], KMult.X1>;
+def VOPM_WMMA_BF16_BF16_X16   : VOPM_WMMA_Profile_Float<[v8bf16, v8bf16, v8bf16, v8bf16], KMult.X1>;
+def VOPM_WMMA_F32_F8_X16      : VOPM_WMMA_Profile_Float<[v8f32, v2i32, v2i32, v8f32], KMult.X1>;
+def VOPM_WMMA_F16_F8_X16      : VOPM_WMMA_Profile_Float<[v8f16, v2i32, v2i32, v8f16], KMult.X1>;
+def VOPM_WMMA_F32_F8_X32      : VOPM_WMMA_Profile_Float<[v8f32, v4i32, v4i32, v8f32], KMult.X2>;
+def VOPM_WMMA_F16_F8_X32      : VOPM_WMMA_Profile_Float<[v8f16, v4i32, v4i32, v8f16], KMult.X2>;
 
-def VOPM_WMMA_I32_IU8_X16 : VOPM_WMMA_Profile_Int<[v8i32, v2i32, v2i32, v8i32], 1>;
-def VOPM_WMMA_F32_IU8_X16 : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8f32], 1>;
-def VOPM_WMMA_F32I32_IU8_X16 : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8i32], 1>;
-def VOPM_WMMA_I32_IU8_X32 : VOPM_WMMA_Profile_Int<[v8i32, v4i32, v4i32, v8i32], 2>;
-def VOPM_WMMA_F32_IU8_X32 : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8f32], 2>;
-def VOPM_WMMA_F32I32_IU8_X32 : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8i32], 2>;
-def VOPM_WMMA_I32_IU4_X16 : VOPM_WMMA_Profile_Int<[v8i32, i32, i32, v8i32], 1>;
-def VOPM_WMMA_F32_IU4_X16 : VOPM_WMMA_Profile_Int<[v8f32, i32, i32, v8f32], 1>;
-def VOPM_WMMA_F32I32_IU4_X16 : VOPM_WMMA_Profile_Int<[v8f32, i32, i32, v8i32], 1>;
-def VOPM_WMMA_I32_IU4_X32 : VOPM_WMMA_Profile_Int<[v8i32, v2i32, v2i32, v8i32], 2>;
-def VOPM_WMMA_F32_IU4_X32 : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8f32], 2>;
-def VOPM_WMMA_F32I32_IU4_X32 : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8i32], 2>;
-def VOPM_WMMA_I32_IU4_X64 : VOPM_WMMA_Profile_Int<[v8i32, v4i32, v4i32, v8i32], 4>;
-def VOPM_WMMA_F32_IU4_X64 : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8f32], 4>;
-def VOPM_WMMA_F32I32_IU4_X64 : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8i32], 4>;
+def VOPM_WMMA_I32_IU8_X16    : VOPM_WMMA_Profile_Int<[v8i32, v2i32, v2i32, v8i32], KMult.X1>;
+def VOPM_WMMA_F32_IU8_X16    : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8f32], KMult.X1>;
+def VOPM_WMMA_F32I32_IU8_X16 : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8i32], KMult.X1>;
+def VOPM_WMMA_I32_IU8_X32    : VOPM_WMMA_Profile_Int<[v8i32, v4i32, v4i32, v8i32], KMult.X2>;
+def VOPM_WMMA_F32_IU8_X32    : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8f32], KMult.X2>;
+def VOPM_WMMA_F32I32_IU8_X32 : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8i32], KMult.X2>;
+def VOPM_WMMA_I32_IU4_X16    : VOPM_WMMA_Profile_Int<[v8i32, i32, i32, v8i32], KMult.X1>;
+def VOPM_WMMA_F32_IU4_X16    : VOPM_WMMA_Profile_Int<[v8f32, i32, i32, v8f32], KMult.X1>;
+def VOPM_WMMA_F32I32_IU4_X16 : VOPM_WMMA_Profile_Int<[v8f32, i32, i32, v8i32], KMult.X1>;
+def VOPM_WMMA_I32_IU4_X32    : VOPM_WMMA_Profile_Int<[v8i32, v2i32, v2i32, v8i32], KMult.X2>;
+def VOPM_WMMA_F32_IU4_X32    : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8f32], KMult.X2>;
+def VOPM_WMMA_F32I32_IU4_X32 : VOPM_WMMA_Profile_Int<[v8f32, v2i32, v2i32, v8i32], KMult.X2>;
+def VOPM_WMMA_I32_IU4_X64    : VOPM_WMMA_Profile_Int<[v8i32, v4i32, v4i32, v8i32], KMult.X4>;
+def VOPM_WMMA_F32_IU4_X64    : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8f32], KMult.X4>;
+def VOPM_WMMA_F32I32_IU4_X64 : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8i32], KMult.X4>;
 
 class VOPM_SWMMAC_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<ArgTy, K> {
   let IsSWMMAC = 1;
@@ -651,7 +662,7 @@ def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8
 
 multiclass VOPM_WMMA_Pseudo<VOPM_WMMA_Profile P> {
   defvar Instr = !tolower(NAME);
-  defvar WMMAConstraints2Addr = "@earlyclobber $vdst,$vdst = $src2";
+  defvar WMMAConstraints2Addr = "@earlyclobber $vdst,$vdst = $srcC";
   defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
   let Mnemonic = Instr in {
@@ -756,7 +767,15 @@ defm V_SWMMAC_I32_16X16X128_IU4    : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_I32_IU4_X128
 defm V_SWMMAC_F32_16X16X128_IU4    : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_IU4_X128>;
 defm V_SWMMAC_F32I32_16X16X128_IU4 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32I32_IU4_X128>;
 
-class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, bit IsDequant> : VOPMProfile<ArgTy, 1, 1, 0, 0> {
+def FmaFromTensorLayout {
+  int CONV_8X4 = 0;
+  int CONV_4X4 = 1;
+  int CONV_4X2 = 2;
+  int DEQUANT_4X4 = 3;
+  int DEQUANT_4X2 = 4;
+}
+
+class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout> : VOPMProfile<ArgTy, 1, 1, 0, 0> {
   let Outs64 = (outs DstRC64:$vdst);
   let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp);
 
@@ -765,11 +784,10 @@ class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, bit IsDequa
 
   let Asm64 = "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp";
 
-  int PrimTy = PixelShape;
-  bit Dequant = IsDequant;
+  int Layout = OpLayout;
 }
 
-multiclass Fma_From_Tensor_Profile_Reg<int OutAccReg, int ResidualReg, int ScaleReg, string OutAccInBaseTy, string ResidualBaseTy, int PixelShape, bit IsDequant> {
+multiclass Fma_From_Tensor_Profile_Reg<int OutAccReg, int ResidualReg, int ScaleReg, string OutAccInBaseTy, string ResidualBaseTy, int OpLayout> {
 
   defvar OutputBaseTy = OutAccInBaseTy;
   defvar AccBaseTy = OutAccInBaseTy;
@@ -793,7 +811,7 @@ multiclass Fma_From_Tensor_Profile_Reg<int OutAccReg, int ResidualReg, int Scale
   defvar ScaleInFullTy = !cast<ValueType>(ScaleElPrefix # ScaleBaseTy);
   defvar ResidualFullTy = !cast<ValueType>(ResidualElPrefix # ResidualBaseTy);
 
-  def NAME : Fma_From_Tensor_Profile<[OutputFullTy, AccFullTy, ResidualFullTy, ResidualFullTy, ScaleInFullTy], PixelShape, IsDequant>;
+  def NAME : Fma_From_Tensor_Profile<[OutputFullTy, AccFullTy, ResidualFullTy, ResidualFullTy, ScaleInFullTy], OpLayout>;
 }
 
 multiclass Fma_From_Tensor_Profile_Multi<string OutAccBaseTy, string ResidualBaseTy> {
@@ -802,13 +820,15 @@ multiclass Fma_From_Tensor_Profile_Multi<string OutAccBaseTy, string ResidualBas
   defvar OutAcc_Reg_4x2 = !if(!eq(!find(OutAccBaseTy, "16"), -1), 4, 2);
   defvar OutAcc_Reg_Nx4 = !if(!eq(OutAccBaseTy, ResidualBaseTy), 2, 4);
 
-  defm _regular_8x4 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_Nx4, 1, 1, OutAccBaseTy, ResidualBaseTy, 1, 0>;
-  defm _regular_4x4 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_Nx4, 1, 1, OutAccBaseTy, ResidualBaseTy, 0, 0>;
-  defm _regular_4x2 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_4x2, 1, 1, OutAccBaseTy, ResidualBaseTy, 2, 0>;
+  defm _regular_8x4 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_Nx4, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_8X4>;
+  defm _regular_4x4 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_Nx4, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_4X4>;
+  defm _regular_4x2 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_4x2, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_4X2>;
 
-  defm _dequant_8x4 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, 1, 1>;
-  defm _dequant_4x4 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, 0, 1>;
-  defm _dequant_4x2 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, 2, 1>;
+  //TODO remove
+  //defm _dequant_8x4 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X4>;
+
+  defm _dequant_4x4 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X4>;
+  defm _dequant_4x2 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X2>;
 }
 
 defm VOPM_FMA_FROM_TENSOR_F32_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"f32", "i32">;
@@ -824,6 +844,7 @@ defm VOPM_FMA_FROM_TENSOR_F16_BF16 : Fma_From_Tensor_Profile_Multi<"f16", "bf16"
 defm VOPM_FMA_FROM_TENSOR_BF16_BF16 : Fma_From_Tensor_Profile_Multi<"bf16", "bf16">;
 
 multiclass VOPM_Fma_From_Tensor_Shape_Pseudos<string ProfilPrefix> {
+  if !eq(!find(ProfilPrefix, "dequant"), -1) then
   def _8x4 : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_8x4")>;
   def _4x4 : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_4x4")>;
   def _4x2 : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_4x2")>;
@@ -1045,6 +1066,18 @@ multiclass VOP3M_WMMA_Real_Base<GFXGen Gen, bits<8> op,
     VOPM_Real_Gen<ps, Gen, asmName>,
     VOP3Me<op, !cast<VOPMProfile>(ps.Pfl)> {
 
+      bits<11> srcC;
+      bits<11> srcA;
+      bits<10> srcB;
+
+      let Inst{39-32} = srcC{7-0};
+      let Inst{42} = srcC{8};
+
+      let Inst{52-45} = srcA{7-0};
+      let Inst{55} = srcA{8};
+
+      let Inst{71-64} = srcB{7-0};
+
       bit signed_a;
       bit signed_b;
 
@@ -1054,8 +1087,8 @@ multiclass VOP3M_WMMA_Real_Base<GFXGen Gen, bits<8> op,
       defvar KMultiplier = WMMAPfl.KMultiplier;
       let Inst{60-58} = KMultiplier;
 
-      let Inst{61} = !if(WMMAPfl.isInt, signed_a, ?);
-      let Inst{62} = !if(WMMAPfl.isInt, signed_b, ?);
+      let Inst{76} = !if(WMMAPfl.isInt, signed_a, ?);
+      let Inst{79} = !if(WMMAPfl.isInt, signed_b, ?);
   }
 }
 
@@ -1103,10 +1136,8 @@ multiclass VOP5M_Fma_From_Tensor_Real_Base<GFXGen Gen, bits<8> op,
     VOP5Me<op, !cast<VOPMProfile>(ps.Pfl)> {
       let AsmString = asmName # ps.Pfl.Asm64;
 
-      defvar PrimTy = !cast<Fma_From_Tensor_Profile>(ps.Pfl).PrimTy;
-      let Inst{80-79} = PrimTy;
-      defvar Dequant = !cast<Fma_From_Tensor_Profile>(ps.Pfl).Dequant;
-      let Inst{81} = Dequant;
+      defvar Layout = !cast<Fma_From_Tensor_Profile>(ps.Pfl).Layout;
+      let Inst{60-58} = Layout;
 
       let Inst{95-88} = SGPR_NULL_gfx11plus.Index;
   }
@@ -1222,8 +1253,8 @@ defm V_WMMA_I32_16X16_IU8        : VOP3M_WMMA_K1_K2_Real <0x7c>;
 defm V_WMMA_F32_16X16_IU8        : VOP3M_WMMA_K1_K2_Real <0x7d>;
 defm V_WMMA_I32_16X16_IU4        : VOP3M_WMMA_K1_K2_K4_Real <0x7e>;
 defm V_WMMA_F32_16X16_IU4        : VOP3M_WMMA_K1_K2_K4_Real <0x7f>;
-defm V_WMMA_F32I32_16X16_IU8     : VOP3M_WMMA_K1_K2_Real <0x8a>;
-defm V_WMMA_F32I32_16X16_IU4     : VOP3M_WMMA_K1_K2_K4_Real <0x8b>;
+defm V_WMMA_F32I32_16X16_IU8     : VOP3M_WMMA_K1_K2_Real <0x80>;
+defm V_WMMA_F32I32_16X16_IU4     : VOP3M_WMMA_K1_K2_K4_Real <0x81>;
 
 multiclass VOP3M_SWMMAC_K1_K2_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X32_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
@@ -1236,31 +1267,28 @@ multiclass VOP3M_SWMMAC_K1_K2_K4_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X128_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
 }
 
-// TODO-GFX13: Replace invented opcodes (SWMMAC)
-
-defm V_SWMMAC_F16_16X16X32_F16     : VOP3M_SWMMAC_Real_gfx13 <0x52>;
-defm V_SWMMAC_F32_16X16X32_F16     : VOP3M_SWMMAC_Real_gfx13 <0x53>;
-defm V_SWMMAC_F32_16X16X32_BF16    : VOP3M_SWMMAC_Real_gfx13 <0x54>;
-defm V_SWMMAC_BF16_16X16X32_BF16   : VOP3M_SWMMAC_Real_gfx13 <0x55>;
-
-defm V_SWMMAC_F32_16X16_FP8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x56>;
-defm V_SWMMAC_F32_16X16_FP8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x57>;
-defm V_SWMMAC_F32_16X16_BF8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x58>;
-defm V_SWMMAC_F32_16X16_BF8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x59>;
-defm V_SWMMAC_F16_16X16_FP8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x5a>;
-defm V_SWMMAC_F16_16X16_FP8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x5b>;
-defm V_SWMMAC_F16_16X16_BF8_FP8 : VOP3M_SWMMAC_K1_K2_Real <0x5c>;
-defm V_SWMMAC_F16_16X16_BF8_BF8 : VOP3M_SWMMAC_K1_K2_Real <0x5d>;
-
-defm V_SWMMAC_I32_16X16_IU8     : VOP3M_SWMMAC_K1_K2_Real <0x5e>;
-defm V_SWMMAC_F32_16X16_IU8     : VOP3M_SWMMAC_K1_K2_Real <0x5f>;
-defm V_SWMMAC_F32I32_16X16_IU8  : VOP3M_SWMMAC_K1_K2_Real <0x60>;
-defm V_SWMMAC_I32_16X16_IU4     : VOP3M_SWMMAC_K1_K2_K4_Real <0x61>;
-defm V_SWMMAC_F32_16X16_IU4     : VOP3M_SWMMAC_K1_K2_K4_Real <0x62>;
-defm V_SWMMAC_F32I32_16X16_IU4  : VOP3M_SWMMAC_K1_K2_K4_Real <0x63>;
+defm V_SWMMAC_F32_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0x83>;
+defm V_SWMMAC_F16_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0x84>;
+defm V_SWMMAC_F32_16X16X32_BF16  : VOP3M_SWMMAC_Real_gfx13 <0x85>;
+defm V_SWMMAC_BF16_16X16X32_BF16 : VOP3M_SWMMAC_Real_gfx13 <0x86>;
+defm V_SWMMAC_F32_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x87>;
+defm V_SWMMAC_F32_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x88>;
+defm V_SWMMAC_F32_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x89>;
+defm V_SWMMAC_F32_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x8a>;
+defm V_SWMMAC_F16_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x8b>;
+defm V_SWMMAC_F16_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x8c>;
+defm V_SWMMAC_F16_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0x8d>;
+defm V_SWMMAC_F16_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0x8e>;
+defm V_SWMMAC_I32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0x8f>;
+defm V_SWMMAC_F32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0x90>;
+defm V_SWMMAC_I32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0x91>;
+defm V_SWMMAC_F32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0x92>;
+defm V_SWMMAC_F32I32_16X16_IU8   : VOP3M_SWMMAC_K1_K2_Real <0x93>;
+defm V_SWMMAC_F32I32_16X16_IU4   : VOP3M_SWMMAC_K1_K2_K4_Real <0x94>;
 
 // TODO-GFX13: Add support for VOP3 encoding.
 multiclass FMA_Tensor_Real_Shape<bits<8> op, string psName, string mnemo> {
+  if !eq(!find(psName, "dequant"), -1) then
   defm _8x4 : VOP5M_Fma_From_Tensor_Real_Base<GFX13Gen, op, psName # "_8x4", mnemo>;
   defm _4x4 : VOP5M_Fma_From_Tensor_Real_Base<GFX13Gen, op, psName # "_4x4", mnemo>;
   defm _4x2 : VOP5M_Fma_From_Tensor_Real_Base<GFX13Gen, op, psName # "_4x2", mnemo>;
@@ -1433,6 +1461,7 @@ multiclass FmaFromTensorPat_VOPM<string Inst, SDPatternOperator node, string Pro
 }
 
 multiclass FmaFromTensorPatMulti_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
+  if !eq(!find(ProfilePrefix, "dequant"), -1) then
   defm : FmaFromTensorPat_VOPM<Inst # "_8x4", node, ProfilePrefix # "_8x4">;
   defm : FmaFromTensorPat_VOPM<Inst # "_4x4", node, ProfilePrefix # "_4x4">;
   defm : FmaFromTensorPat_VOPM<Inst # "_4x2", node, ProfilePrefix # "_4x2">;
