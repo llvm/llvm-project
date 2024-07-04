@@ -434,13 +434,10 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           static constexpr int64_t GlobalNonSemanticDITy[] = {
               NS::DebugSource, NS::DebugCompilationUnit};
           bool IsGlobalDI = false;
-          for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy);
-               ++Idx) {
+          for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
             IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
-          }
-          if (IsGlobalDI) {
+          if (IsGlobalDI)
             collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
-          }
         } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
