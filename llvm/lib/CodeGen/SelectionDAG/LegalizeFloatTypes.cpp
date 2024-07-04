@@ -326,8 +326,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXNUM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUMNUM(SDNode *N) {
-  if (SDValue SelCC = TLI.createSelectForFMINIMUMNUM_FMAXIMUMNUM(N, DAG))
-    return SoftenFloatRes_SELECT_CC(SelCC.getNode());
   return SoftenFloatRes_Binary(
       N, GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUMNUM_F32,
                       RTLIB::FMINIMUMNUM_F64, RTLIB::FMINIMUMNUM_F80,
@@ -335,8 +333,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUMNUM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXIMUMNUM(SDNode *N) {
-  if (SDValue SelCC = TLI.createSelectForFMINIMUMNUM_FMAXIMUMNUM(N, DAG))
-    return SoftenFloatRes_SELECT_CC(SelCC.getNode());
   return SoftenFloatRes_Binary(
       N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUMNUM_F32,
                       RTLIB::FMAXIMUMNUM_F64, RTLIB::FMAXIMUMNUM_F80,

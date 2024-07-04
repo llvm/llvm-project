@@ -5146,8 +5146,6 @@ public:
   /// through to the default expansion/soften to libcall, we might introduce a
   /// link-time dependency on libm into a file that originally did not have one.
   SDValue createSelectForFMINNUM_FMAXNUM(SDNode *Node, SelectionDAG &DAG) const;
-  SDValue createSelectForFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
-                                                 SelectionDAG &DAG) const;
 
   /// Return a reciprocal estimate value for the input operand.
   /// \p Enabled is a ReciprocalEstimate enum with value either 'Unspecified' or

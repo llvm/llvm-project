@@ -8531,28 +8531,6 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   return MinMax;
 }
 
-SDValue TargetLowering::createSelectForFMINIMUMNUM_FMAXIMUMNUM(
-    SDNode *Node, SelectionDAG &DAG) const {
-  unsigned Opcode = Node->getOpcode();
-  assert((Opcode == ISD::FMINIMUMNUM || Opcode == ISD::FMAXIMUMNUM) &&
-         "Wrong opcode");
-
-  if (Node->getFlags().hasNoNaNs()) {
-    ISD::CondCode Pred = Opcode == ISD::FMINIMUMNUM ? ISD::SETLT : ISD::SETGT;
-    SDValue Op1 = Node->getOperand(0);
-    SDValue Op2 = Node->getOperand(1);
-    SDValue SelCC = DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred);
-    // Copy FMF flags, but always set the no-signed-zeros flag
-    // as this is implied by the FMINNUM/FMAXNUM semantics.
-    SDNodeFlags Flags = Node->getFlags();
-    Flags.setNoSignedZeros(true);
-    SelCC->setFlags(Flags);
-    return SelCC;
-  }
-
-  return SDValue();
-}
-
 SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
                                                       SelectionDAG &DAG) const {
   SDLoc dl(Node);
@@ -8596,7 +8574,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
                          Node->getOperand(1), Node->getFlags());
   }
 
-  // FMINNUM/FMAXIMUM returns qNaN if either operand is sNaN, and it may return
+  // FMINNUM/FMAXMUM returns qNaN if either operand is sNaN, and it may return
   // either one for +0.0 vs -0.0.
   // FIXME: maybe we need hasNoSNaNs().
   if ((Node->getFlags().hasNoNaNs() ||
@@ -8612,9 +8590,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
                          Node->getOperand(1), Node->getFlags());
   }
 
-  if (SDValue SelCC = createSelectForFMINIMUMNUM_FMAXIMUMNUM(Node, DAG))
-    return SelCC;
-
+  // FIXME: we may use setCC/getSELECT to optimize it instead of fallback to libcall.
   return SDValue();
 }
 
