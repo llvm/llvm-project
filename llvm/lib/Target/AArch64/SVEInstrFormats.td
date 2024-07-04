@@ -10358,7 +10358,6 @@ multiclass sve2_luti2_vector_index<string mnemonic> {
                          i32, timm32_0_7, !cast<Instruction>(NAME # _H)>;
   def : SVE_3_Op_Imm_Pat<nxv8bf16, int_aarch64_sve_luti2_lane, nxv8bf16, nxv16i8, 
                          i32, timm32_0_7, !cast<Instruction>(NAME # _H)>;
-
 }
 
 // FP8 Look up table read with 4-bit indices

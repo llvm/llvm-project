@@ -1939,7 +1939,6 @@ def SVTBL2_BF16 : SInst<"svtbl2[_{d}]", "d2u",  "b", MergeNone, "", [VerifyRunti
 def SVTBX_BF16  : SInst<"svtbx[_{d}]",  "dddu", "b", MergeNone, "aarch64_sve_tbx", [VerifyRuntimeMode]>;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Lookup table
 let SVETargetGuard = "sve2,lut", SMETargetGuard = "sme2,lut" in {
