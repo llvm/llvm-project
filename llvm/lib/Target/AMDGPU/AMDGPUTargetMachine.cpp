@@ -1199,10 +1199,10 @@ bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPULateCodeGenPreparePass());
+    addPass(createSinkingPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSinkingPass());
+    addPass(createAMDGPULateCodeGenPreparePass());
 
   addPass(createAMDGPUConditionalDiscardPass());
 

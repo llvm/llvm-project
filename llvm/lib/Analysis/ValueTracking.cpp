@@ -1739,6 +1739,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
+      case Intrinsic::x86_sse2_pmulh_w:
+      case Intrinsic::x86_avx2_pmulh_w:
+      case Intrinsic::x86_avx512_pmulh_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhs(Known, Known2);
+        break;
+      case Intrinsic::x86_sse2_pmulhu_w:
+      case Intrinsic::x86_avx2_pmulhu_w:
+      case Intrinsic::x86_avx512_pmulhu_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhu(Known, Known2);
+        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -6403,9 +6417,10 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
-      V = cast<Operator>(V)->getOperand(0);
-      if (!V->getType()->isPointerTy())
+      Value *NewV = cast<Operator>(V)->getOperand(0);
+      if (!NewV->getType()->isPointerTy())
         return V;
+      V = NewV;
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (GA->isInterposable())
         return V;
@@ -8857,20 +8872,20 @@ isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
   return std::nullopt;
 }
 
-/// Return true if "icmp LPred X, LC" implies "icmp RPred X, RC" is true.
-/// Return false if "icmp LPred X, LC" implies "icmp RPred X, RC" is false.
+/// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
+/// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondCommonOperandWithConstants(
-    CmpInst::Predicate LPred, const APInt &LC, CmpInst::Predicate RPred,
-    const APInt &RC) {
-  ConstantRange DomCR = ConstantRange::makeExactICmpRegion(LPred, LC);
-  ConstantRange CR = ConstantRange::makeExactICmpRegion(RPred, RC);
-  ConstantRange Intersection = DomCR.intersectWith(CR);
-  ConstantRange Difference = DomCR.difference(CR);
-  if (Intersection.isEmptySet())
-    return false;
-  if (Difference.isEmptySet())
+static std::optional<bool> isImpliedCondCommonOperandWithCR(
+    CmpInst::Predicate LPred, const ConstantRange &LCR,
+    CmpInst::Predicate RPred, const ConstantRange &RCR) {
+  ConstantRange DomCR = ConstantRange::makeAllowedICmpRegion(LPred, LCR);
+  // If all true values for lhs and true for rhs, lhs implies rhs
+  if (DomCR.icmp(RPred, RCR))
     return true;
+
+  // If there is no overlap, lhs implies not rhs
+  if (DomCR.icmp(CmpInst::getInversePredicate(RPred), RCR))
+    return false;
   return std::nullopt;
 }
 
@@ -8910,11 +8925,29 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
     }
   }
 
-  // Can we infer anything when the 0-operands match and the 1-operands are
-  // constants (not necessarily matching)?
-  const APInt *LC, *RC;
-  if (L0 == R0 && match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)))
-    return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
+  // See if we can infer anything if operand-0 matches and we have at least one
+  // constant.
+  const APInt *Unused;
+  if (L0 == R0 && (match(L1, m_APInt(Unused)) || match(R1, m_APInt(Unused)))) {
+    // Potential TODO: We could also further use the constant range of L0/R0 to
+    // further constraint the constant ranges. At the moment this leads to
+    // several regressions related to not transforming `multi_use(A + C0) eq/ne
+    // C1` (see discussion: D58633).
+    ConstantRange LCR = computeConstantRange(
+        L1, ICmpInst::isSigned(LPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
+        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    ConstantRange RCR = computeConstantRange(
+        R1, ICmpInst::isSigned(RPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
+        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    // Even if L1/R1 are not both constant, we can still sometimes deduce
+    // relationship from a single constant. For example X u> Y implies X != 0.
+    if (auto R = isImpliedCondCommonOperandWithCR(LPred, LCR, RPred, RCR))
+      return R;
+    // If both L1/R1 were exact constant ranges and we didn't get anything
+    // here, we won't be able to deduce this.
+    if (match(L1, m_APInt(Unused)) && match(R1, m_APInt(Unused)))
+      return std::nullopt;
+  }
 
   // Can we infer anything when the two compares have matching operands?
   if (L0 == R0 && L1 == R1)
@@ -9480,6 +9513,39 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
   }
 }
 
+ConstantRange llvm::getVectorConstantRange(const Constant *C) {
+  assert(C->getType()->isVectorTy() && "Expected vector constant");
+  if (auto *CI = dyn_cast_or_null<ConstantInt>(
+          C->getSplatValue(/*AllowPoison=*/true)))
+    return ConstantRange(CI->getValue());
+
+  unsigned BitWidth = C->getType()->getScalarSizeInBits();
+  if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(CDV->getElementAsAPInt(I));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(C)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = C->getAggregateElement(I);
+      if (!Elem)
+        return ConstantRange::getFull(BitWidth);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CI = dyn_cast<ConstantInt>(Elem);
+      if (!CI)
+        return ConstantRange::getFull(BitWidth);
+      CR = CR.unionWith(CI->getValue());
+    }
+    return CR;
+  }
+
+  return ConstantRange::getFull(BitWidth);
+}
+
 ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
                                          bool UseInstrInfo, AssumptionCache *AC,
                                          const Instruction *CtxI,
@@ -9490,19 +9556,15 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   if (Depth == MaxAnalysisRecursionDepth)
     return ConstantRange::getFull(V->getType()->getScalarSizeInBits());
 
-  const APInt *C;
-  if (match(V, m_APInt(C)))
-    return ConstantRange(*C);
-  unsigned BitWidth = V->getType()->getScalarSizeInBits();
-
-  if (auto *VC = dyn_cast<ConstantDataVector>(V)) {
-    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
-    for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
-         ++ElemIdx)
-      CR = CR.unionWith(VC->getElementAsAPInt(ElemIdx));
-    return CR;
+  if (auto *C = dyn_cast<Constant>(V)) {
+    if (auto *CI = dyn_cast<ConstantInt>(C))
+      return ConstantRange(CI->getValue());
+    if (C->getType()->isVectorTy())
+      return getVectorConstantRange(C);
+    return ConstantRange::getFull(C->getType()->getScalarSizeInBits());
   }
 
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
   InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
