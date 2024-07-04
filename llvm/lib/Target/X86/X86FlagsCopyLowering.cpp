@@ -707,7 +707,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
       }
 #endif
 
-  return !Copies.empty();
+  return true;
 }
 
 /// Collect any conditions that have already been set in registers so that we
