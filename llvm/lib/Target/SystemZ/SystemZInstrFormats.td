@@ -363,7 +363,8 @@ class InstRIEe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 }
 
-class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern, bits<8> I3Or = 0, bits<8> I4Or = 0>
+class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
+               bits<8> I3Or = 0, bits<8> I4Or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
   field bits<48> SoftFail = 0;

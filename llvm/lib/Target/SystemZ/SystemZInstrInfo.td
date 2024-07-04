@@ -116,11 +116,6 @@ let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0
   def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
 def NOPR : NeverCondBranchRR<"nopr", 0x07>;
 def NOPR_bare : InstAlias<"nopr", (NOPR R0D), 0>;
-// def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
-// let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
-//   def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
-// def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
-// def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
 
 // An alias of BRC 0, label
 def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
@@ -469,8 +464,8 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def LLILF : UnaryRIL<"llilf", 0xC0F, bitconvert, GR64, imm64lf32>;
   def LLIHF : UnaryRIL<"llihf", 0xC0E, bitconvert, GR64, imm64hf32>;
 }
-def LLGFI : InstAlias<"llgfi\t$R1, $RI1",(LLILF GR64:$R1, imm64lf32:$RI1)>;
-def LLGHI : InstAlias<"llghi\t$R1, $RI1",(LLILL GR64:$R1, imm64ll16:$RI1)>;
+def LLGFI : InstAlias<"llgfi\t$R1, $RI1", (LLILF GR64:$R1, imm64lf32:$RI1)>;
+def LLGHI : InstAlias<"llghi\t$R1, $RI1", (LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
@@ -980,7 +975,7 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def IILF : UnaryRIL<"iilf", 0xC09, bitconvert, GR32, uimm32>;
   def IIHF : UnaryRIL<"iihf", 0xC08, bitconvert, GRH32, uimm32>;
 }
-def LFI : InstAlias<"lfi\t$R1, $RI1",(IILF GR32:$R1, uimm32:$RI1)>;
+def LFI : InstAlias<"lfi\t$R1, $RI1", (IILF GR32:$R1, uimm32:$RI1)>;
 def IILF64 : BinaryAliasRIL<insertlf, GR64, imm64lf32>;
 def IIHF64 : BinaryAliasRIL<inserthf, GR64, imm64hf32>;
 
