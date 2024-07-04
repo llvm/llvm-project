@@ -25,6 +25,7 @@
 namespace fir {
 
 class StatementContext;
+struct IntrinsicHandlerEntry;
 
 // TODO: Error handling interface ?
 // TODO: Implementation is incomplete. Many intrinsics to tbd.
@@ -34,6 +35,13 @@ class StatementContext;
 /// extra boolean result indicates if the result must be freed after use.
 std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
+                 std::optional<mlir::Type> resultType,
+                 llvm::ArrayRef<fir::ExtendedValue> args,
+                 Fortran::lower::AbstractConverter *converter = nullptr);
+
+std::pair<fir::ExtendedValue, bool>
+genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
+                 const IntrinsicHandlerEntry &,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  Fortran::lower::AbstractConverter *converter = nullptr);
@@ -155,6 +163,11 @@ struct IntrinsicLibrary {
   RuntimeCallGenerator
   getRuntimeCallGenerator(llvm::StringRef name,
                           mlir::FunctionType soughtFuncType);
+
+  /// Helper to generate TODOs for module procedures that must be intercepted in
+  /// lowering and are not yet implemented.
+  template <const char *intrinsicName>
+  void genModuleProcTODO(llvm::ArrayRef<fir::ExtendedValue>);
 
   void genAbort(llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the ABS intrinsic. The ABS intrinsic expects one argument in
@@ -676,6 +689,18 @@ static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
   return mlir::FunctionType::get(context, argTypes, {resType});
 }
 
+/// Entry into the tables describing how an intrinsic must be lowered.
+struct IntrinsicHandlerEntry {
+  using RuntimeGeneratorRange =
+      std::pair<const MathOperation *, const MathOperation *>;
+  IntrinsicHandlerEntry(const IntrinsicHandler *handler) : entry{handler} {
+    assert(handler && "handler must not be nullptr");
+  };
+  IntrinsicHandlerEntry(RuntimeGeneratorRange rt) : entry{rt} {};
+  const IntrinsicArgumentLoweringRules *getArgumentLoweringRules() const;
+  std::variant<const IntrinsicHandler *, RuntimeGeneratorRange> entry;
+};
+
 //===----------------------------------------------------------------------===//
 // Helper functions for argument handling.
 //===----------------------------------------------------------------------===//
@@ -727,6 +752,15 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
                                        const MathOperation &mathOp,
                                        mlir::FunctionType libFuncType,
                                        llvm::ArrayRef<mlir::Value> args);
+
+/// Lookup for a handler or runtime call generator to lower intrinsic
+/// \p intrinsicName.
+std::optional<IntrinsicHandlerEntry>
+lookupIntrinsicHandler(fir::FirOpBuilder &, llvm::StringRef intrinsicName,
+                       std::optional<mlir::Type> resultType);
+
+/// Generate a TODO error message for an as yet unimplemented intrinsic.
+void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name);
 
 /// Return argument lowering rules for an intrinsic.
 /// Returns a nullptr if all the intrinsic arguments should be lowered by value.
