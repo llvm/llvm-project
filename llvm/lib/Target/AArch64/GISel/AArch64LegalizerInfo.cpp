@@ -733,18 +733,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarOrEltToNextPow2OrMinSize(0, /*MinSize=*/HasFP16 ? 16 : 32)
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getScalarSizeInBits() <= 64 &&
-                   Query.Types[0].getScalarSizeInBits() >
-                       Query.Types[1].getScalarSizeInBits();
-          },
-          LegalizeMutations::changeElementSizeTo(1, 0))
-      .widenScalarIf(
-          [=](const LegalityQuery &Query) {
             return Query.Types[1].getScalarSizeInBits() <= 64 &&
                    Query.Types[0].getScalarSizeInBits() <
                        Query.Types[1].getScalarSizeInBits();
           },
           LegalizeMutations::changeElementSizeTo(0, 1))
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getScalarSizeInBits() <= 64 &&
+                   Query.Types[0].getScalarSizeInBits() >
+                       Query.Types[1].getScalarSizeInBits();
+          },
+          LegalizeMutations::changeElementSizeTo(1, 0))
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
