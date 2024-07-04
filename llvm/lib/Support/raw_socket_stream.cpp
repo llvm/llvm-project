@@ -187,9 +187,10 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 // Timeout should be -1 to block indefinitly
 //
 // getActiveFD is a callback to handle ActiveFD's of std::atomic<int> and int
-static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
-                                 std::function<int()> getActiveFD,
-                                 std::optional<int> CancelFD = std::nullopt) {
+static std::error_code
+manageTimeout(std::chrono::milliseconds Timeout,
+              std::function<int()> getActiveFD,
+              std::optional<int> CancelFD = std::nullopt) {
   struct pollfd FD[2];
   FD[0].events = POLLIN;
 #ifdef _WIN32
@@ -211,10 +212,16 @@ static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
   auto RemainingTimeout = Timeout;
   int PollStatus = 0;
   do {
-    if (PollStatus != 0) {
+    // If Timeout is -1 then poll should block and RemainingTimeout does not
+    // need to be recalculated
+    if (PollStatus != 0 && Timeout != std::chrono::milliseconds(-1)) {
       auto TotalElapsedTime =
           std::chrono::duration_cast<std::chrono::milliseconds>(
               std::chrono::steady_clock::now() - Start);
+
+      if (TotalElapsedTime >= Timeout)
+        return std::make_error_code(std::errc::operation_would_block);
+
       RemainingTimeout = Timeout - TotalElapsedTime;
     }
 #ifdef _WIN32
@@ -230,34 +237,26 @@ static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
   // If ActiveFD equals -1 or CancelFD has data to be read then the operation
   // has been canceled by another thread
   if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
-    return llvm::make_error<StringError>(
-        std::make_error_code(std::errc::operation_canceled));
-
+    return std::make_error_code(std::errc::operation_canceled);
 #if _WIN32
   if (PollStatus == SOCKET_ERROR)
 #else
   if (PollStatus == -1)
 #endif
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "poll failed");
-
+    return getLastSocketErrorCode();
   if (PollStatus == 0)
-    return llvm::make_error<StringError>(
-        std::make_error_code(std::errc::timed_out));
-
+    return std::make_error_code(std::errc::timed_out);
   if (FD[0].revents & POLLNVAL)
-    return llvm::make_error<StringError>(
-        std::make_error_code(std::errc::bad_file_descriptor));
-
-  return llvm::Error::success();
+    return std::make_error_code(std::errc::bad_file_descriptor);
+  return std::error_code();
 }
 
 Expected<std::unique_ptr<raw_socket_stream>>
 ListeningSocket::accept(std::chrono::milliseconds Timeout) {
   auto getActiveFD = [this]() -> int { return FD; };
-  llvm::Error TimeoutErr = manageTimeout(Timeout, getActiveFD, PipeFD[0]);
+  std::error_code TimeoutErr = manageTimeout(Timeout, getActiveFD, PipeFD[0]);
   if (TimeoutErr)
-    return TimeoutErr;
+    return llvm::make_error<StringError>(TimeoutErr, "Timeout error");
 
   int AcceptFD;
 #ifdef _WIN32
@@ -332,12 +331,10 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 ssize_t raw_socket_stream::read(char *Ptr, size_t Size,
                                 std::chrono::milliseconds Timeout) {
   auto getActiveFD = [this]() -> int { return this->get_fd(); };
-  llvm::Error Err = manageTimeout(Timeout, getActiveFD);
+  std::error_code Err = manageTimeout(Timeout, getActiveFD);
+  // Mimic raw_fd_stream::read error handling behavior
   if (Err) {
-    llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
-      // Mimic raw_fd_stream::read error handling behavior
-      raw_fd_stream::error_detected(SE.convertToErrorCode());
-    });
+    raw_fd_stream::error_detected(Err);
     return -1;
   }
   return raw_fd_stream::read(Ptr, Size);
