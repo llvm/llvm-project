@@ -1815,7 +1815,7 @@ bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
 
 /// This is called on every byval argument in call sites.
 bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
-  const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
+  const DataLayout &DL = CB.getDataLayout();
   // Find out what feeds this byval argument.
   Value *ByValArg = CB.getArgOperand(ArgNo);
   Type *ByValTy = CB.getParamByValType(ArgNo);
@@ -1902,7 +1902,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   if (!(CB.paramHasAttr(ArgNo, Attribute::NoAlias) &&
         CB.paramHasAttr(ArgNo, Attribute::NoCapture)))
     return false;
-  const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
+  const DataLayout &DL = CB.getDataLayout();
   Value *ImmutArg = CB.getArgOperand(ArgNo);
 
   // 2. Check that arg is alloca

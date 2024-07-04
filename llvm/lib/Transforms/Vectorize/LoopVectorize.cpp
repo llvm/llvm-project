@@ -5044,7 +5044,7 @@ std::pair<unsigned, unsigned>
 LoopVectorizationCostModel::getSmallestAndWidestTypes() {
   unsigned MinWidth = -1U;
   unsigned MaxWidth = 8;
-  const DataLayout &DL = TheFunction->getParent()->getDataLayout();
+  const DataLayout &DL = TheFunction->getDataLayout();
   // For in-loop reductions, no element types are added to ElementTypesInLoop
   // if there are no loads/stores in the loop. In this case, check through the
   // reduction variables to determine the maximum width.
@@ -6741,6 +6741,11 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
 
     // First-order recurrences are replaced by vector shuffles inside the loop.
     if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi)) {
+      // For <vscale x 1 x i64>, if vscale = 1 we are unable to extract the
+      // penultimate value of the recurrence.
+      // TODO: Consider vscale_range info.
+      if (VF.isScalable() && VF.getKnownMinValue() == 1)
+        return InstructionCost::getInvalid();
       SmallVector<int> Mask(VF.getKnownMinValue());
       std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
@@ -9534,7 +9539,7 @@ static bool processLoopInVPlanNativePath(
     bool AddBranchWeights =
         hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
     GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
-                             F->getParent()->getDataLayout(), AddBranchWeights);
+                             F->getDataLayout(), AddBranchWeights);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                            VF.Width, 1, LVL, &CM, BFI, PSI, Checks);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -9878,7 +9883,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool AddBranchWeights =
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
-                           F->getParent()->getDataLayout(), AddBranchWeights);
+                           F->getDataLayout(), AddBranchWeights);
   if (MaybeVF) {
     VF = *MaybeVF;
     // Select the interleave count.

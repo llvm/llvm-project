@@ -993,9 +993,9 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
       });
     });
   };
-  OS << "var JsonIndex = `\n";
+  OS << "async function LoadIndex() {\nreturn";
   IndexToJSON(CDCtx.Idx);
-  OS << "`;\n";
+  OS << ";\n}";
   return llvm::Error::success();
 }
 

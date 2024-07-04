@@ -32,6 +32,12 @@ class ReportingCmd(ParsedCommand):
             )
 
 
+# Use these to make sure that get_repeat_command sends the right
+# command.
+no_args_repeat = None
+one_arg_repeat = None
+two_arg_repeat = None
+
 class NoArgsCommand(ReportingCmd):
     program = "no-args"
 
@@ -96,6 +102,12 @@ class NoArgsCommand(ReportingCmd):
             default="foo",
         )
 
+    def get_repeat_command(self, command):
+        # No auto-repeat
+        global no_args_repeat
+        no_args_repeat = command
+        return ""
+
     def get_short_help(self):
         return "Example command for use in debugging"
 
@@ -117,6 +129,12 @@ class OneArgCommandNoOptions(ReportingCmd):
         self.ov_parser.add_argument_set(
             [self.ov_parser.make_argument_element(lldb.eArgTypeSourceFile, "plain")]
         )
+
+    def get_repeat_command(self, command):
+        # Repeat the current command
+        global one_arg_repeat
+        one_arg_repeat = command
+        return None
 
     def get_short_help(self):
         return "Example command for use in debugging"
@@ -187,8 +205,13 @@ class TwoArgGroupsCommand(ReportingCmd):
             ]
         )
 
+    def get_repeat_command(self, command):
+        global two_arg_repeat
+        two_arg_repeat = command
+        return command + " THIRD_ARG"
+
     def get_short_help(self):
-        return "Example command for use in debugging"
+        return "This is my short help string"
 
     def get_long_help(self):
         return self.help_string

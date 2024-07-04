@@ -205,6 +205,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
+    libc.src.stdio.remove
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout

@@ -511,6 +511,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::JumpTable, MVT::i64, Custom);
   setOperationAction(ISD::SETCCCARRY, MVT::i64, Custom);
 
+  setOperationAction(ISD::PtrAuthGlobalAddress, MVT::i64, Custom);
+
   setOperationAction(ISD::SHL_PARTS, MVT::i64, Custom);
   setOperationAction(ISD::SRA_PARTS, MVT::i64, Custom);
   setOperationAction(ISD::SRL_PARTS, MVT::i64, Custom);
@@ -2984,7 +2986,7 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
   bool HasTile = BaseReg != AArch64::ZA;
   bool HasZPROut = HasTile && MI.getOperand(0).isReg();
   if (HasZPROut) {
-    MIB.add(MI.getOperand(0)); // Output ZPR
+    MIB.add(MI.getOperand(StartIdx)); // Output ZPR
     ++StartIdx;
   }
   if (HasTile) {
@@ -2993,6 +2995,11 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
     MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm()); // Input Za Tile
     StartIdx++;
   } else {
+    // Avoids all instructions with mnemonic za.<sz>[Reg, Imm,
+    if (MI.getOperand(0).isReg() && !MI.getOperand(1).isImm()) {
+      MIB.add(MI.getOperand(StartIdx)); // Output ZPR
+      ++StartIdx;
+    }
     MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
   }
   for (unsigned I = StartIdx; I < MI.getNumOperands(); ++I)
@@ -6667,6 +6674,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGlobalAddress(Op, DAG);
   case ISD::GlobalTLSAddress:
     return LowerGlobalTLSAddress(Op, DAG);
+  case ISD::PtrAuthGlobalAddress:
+    return LowerPtrAuthGlobalAddress(Op, DAG);
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
@@ -9517,6 +9526,133 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
   llvm_unreachable("Unexpected platform trying to use TLS");
 }
 
+//===----------------------------------------------------------------------===//
+//                      PtrAuthGlobalAddress lowering
+//
+// We have 3 lowering alternatives to choose from:
+// - MOVaddrPAC: similar to MOVaddr, with added PAC.
+//   If the GV doesn't need a GOT load (i.e., is locally defined)
+//   materialize the pointer using adrp+add+pac. See LowerMOVaddrPAC.
+//
+// - LOADgotPAC: similar to LOADgot, with added PAC.
+//   If the GV needs a GOT load, materialize the pointer using the usual
+//   GOT adrp+ldr, +pac. Pointers in GOT are assumed to be not signed, the GOT
+//   section is assumed to be read-only (for example, via relro mechanism). See
+//   LowerMOVaddrPAC.
+//
+// - LOADauthptrstatic: similar to LOADgot, but use a
+//   special stub slot instead of a GOT slot.
+//   Load a signed pointer for symbol 'sym' from a stub slot named
+//   'sym$auth_ptr$key$disc' filled by dynamic linker during relocation
+//   resolving. This usually lowers to adrp+ldr, but also emits an entry into
+//   .data with an
+//   @AUTH relocation. See LowerLOADauthptrstatic.
+//
+// All 3 are pseudos that are expand late to longer sequences: this lets us
+// provide integrity guarantees on the to-be-signed intermediate values.
+//
+// LOADauthptrstatic is undesirable because it requires a large section filled
+// with often similarly-signed pointers, making it a good harvesting target.
+// Thus, it's only used for ptrauth references to extern_weak to avoid null
+// checks.
+
+SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressStatically(
+    SDValue TGA, SDLoc DL, EVT VT, AArch64PACKey::ID KeyC,
+    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) const {
+  const auto *TGN = cast<GlobalAddressSDNode>(TGA.getNode());
+  assert(TGN->getGlobal()->hasExternalWeakLinkage());
+
+  // Offsets and extern_weak don't mix well: ptrauth aside, you'd get the
+  // offset alone as a pointer if the symbol wasn't available, which would
+  // probably break null checks in users. Ptrauth complicates things further:
+  // error out.
+  if (TGN->getOffset() != 0)
+    report_fatal_error(
+        "unsupported non-zero offset in weak ptrauth global reference");
+
+  if (!isNullConstant(AddrDiscriminator))
+    report_fatal_error("unsupported weak addr-div ptrauth global");
+
+  SDValue Key = DAG.getTargetConstant(KeyC, DL, MVT::i32);
+  return SDValue(DAG.getMachineNode(AArch64::LOADauthptrstatic, DL, MVT::i64,
+                                    {TGA, Key, Discriminator}),
+                 0);
+}
+
+SDValue
+AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDValue Ptr = Op.getOperand(0);
+  uint64_t KeyC = Op.getConstantOperandVal(1);
+  SDValue AddrDiscriminator = Op.getOperand(2);
+  uint64_t DiscriminatorC = Op.getConstantOperandVal(3);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  if (KeyC > AArch64PACKey::LAST)
+    report_fatal_error("key in ptrauth global out of range [0, " +
+                       Twine((int)AArch64PACKey::LAST) + "]");
+
+  // Blend only works if the integer discriminator is 16-bit wide.
+  if (!isUInt<16>(DiscriminatorC))
+    report_fatal_error(
+        "constant discriminator in ptrauth global out of range [0, 0xffff]");
+
+  // Choosing between 3 lowering alternatives is target-specific.
+  if (!Subtarget->isTargetELF())
+    report_fatal_error("ptrauth global lowering is only implemented for ELF");
+
+  int64_t PtrOffsetC = 0;
+  if (Ptr.getOpcode() == ISD::ADD) {
+    PtrOffsetC = Ptr.getConstantOperandVal(1);
+    Ptr = Ptr.getOperand(0);
+  }
+  const auto *PtrN = cast<GlobalAddressSDNode>(Ptr.getNode());
+  const GlobalValue *PtrGV = PtrN->getGlobal();
+
+  // Classify the reference to determine whether it needs a GOT load.
+  const unsigned OpFlags =
+      Subtarget->ClassifyGlobalReference(PtrGV, getTargetMachine());
+  const bool NeedsGOTLoad = ((OpFlags & AArch64II::MO_GOT) != 0);
+  assert(((OpFlags & (~AArch64II::MO_GOT)) == 0) &&
+         "unsupported non-GOT op flags on ptrauth global reference");
+
+  // Fold any offset into the GV; our pseudos expect it there.
+  PtrOffsetC += PtrN->getOffset();
+  SDValue TPtr = DAG.getTargetGlobalAddress(PtrGV, DL, VT, PtrOffsetC,
+                                            /*TargetFlags=*/0);
+  assert(PtrN->getTargetFlags() == 0 &&
+         "unsupported target flags on ptrauth global");
+
+  SDValue Key = DAG.getTargetConstant(KeyC, DL, MVT::i32);
+  SDValue Discriminator = DAG.getTargetConstant(DiscriminatorC, DL, MVT::i64);
+  SDValue TAddrDiscriminator = !isNullConstant(AddrDiscriminator)
+                                   ? AddrDiscriminator
+                                   : DAG.getRegister(AArch64::XZR, MVT::i64);
+
+  // No GOT load needed -> MOVaddrPAC
+  if (!NeedsGOTLoad) {
+    assert(!PtrGV->hasExternalWeakLinkage() && "extern_weak should use GOT");
+    return SDValue(
+        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, MVT::i64,
+                           {TPtr, Key, TAddrDiscriminator, Discriminator}),
+        0);
+  }
+
+  // GOT load -> LOADgotPAC
+  // Note that we disallow extern_weak refs to avoid null checks later.
+  if (!PtrGV->hasExternalWeakLinkage())
+    return SDValue(
+        DAG.getMachineNode(AArch64::LOADgotPAC, DL, MVT::i64,
+                           {TPtr, Key, TAddrDiscriminator, Discriminator}),
+        0);
+
+  // extern_weak ref -> LOADauthptrstatic
+  return LowerPtrAuthGlobalAddressStatically(
+      TPtr, DL, VT, (AArch64PACKey::ID)KeyC, Discriminator, AddrDiscriminator,
+      DAG);
+}
+
 // Looks through \param Val to determine the bit that can be used to
 // check the sign of the value. It returns the unextended value and
 // the sign bit position.
@@ -9835,6 +9971,26 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   EVT VT8Bit = VT.is64BitVector() ? MVT::v8i8 : MVT::v16i8;
   Val = DAG.getBitcast(VT8Bit, Val);
   Val = DAG.getNode(ISD::CTPOP, DL, VT8Bit, Val);
+
+  if (Subtarget->hasDotProd() && VT.getScalarSizeInBits() != 16 &&
+      VT.getVectorNumElements() >= 2) {
+    EVT DT = VT == MVT::v2i64 ? MVT::v4i32 : VT;
+    SDValue Zeros = DAG.getConstant(0, DL, DT);
+    SDValue Ones = DAG.getConstant(1, DL, VT8Bit);
+
+    if (VT == MVT::v2i64) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+      Val = DAG.getNode(AArch64ISD::UADDLP, DL, VT, Val);
+    } else if (VT == MVT::v2i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else if (VT == MVT::v4i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else {
+      llvm_unreachable("Unexpected type for custom ctpop lowering");
+    }
+
+    return Val;
+  }
 
   // Widen v8i8/v16i8 CTPOP result to VT by repeatedly widening pairwise adds.
   unsigned EltSize = 8;
@@ -15411,7 +15567,7 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
 
   const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
@@ -15901,7 +16057,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
         // the backend to generate a umull.
         unsigned Bitwidth = I->getType()->getScalarSizeInBits();
         APInt UpperMask = APInt::getHighBitsSet(Bitwidth, Bitwidth / 2);
-        const DataLayout &DL = I->getFunction()->getParent()->getDataLayout();
+        const DataLayout &DL = I->getDataLayout();
         if (!MaskedValueIsZero(OperandInstr, UpperMask, DL))
           continue;
         NumZExts++;
@@ -17928,16 +18084,27 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   unsigned ShiftAmt;
 
   auto Shl = [&](SDValue N0, unsigned N1) {
+    if (!N0.getNode())
+      return SDValue();
+    // If shift causes overflow, ignore this combine.
+    if (N1 >= N0.getValueSizeInBits())
+      return SDValue();
     SDValue RHS = DAG.getConstant(N1, DL, MVT::i64);
     return DAG.getNode(ISD::SHL, DL, VT, N0, RHS);
   };
   auto Add = [&](SDValue N0, SDValue N1) {
+    if (!N0.getNode() || !N1.getNode())
+      return SDValue();
     return DAG.getNode(ISD::ADD, DL, VT, N0, N1);
   };
   auto Sub = [&](SDValue N0, SDValue N1) {
+    if (!N0.getNode() || !N1.getNode())
+      return SDValue();
     return DAG.getNode(ISD::SUB, DL, VT, N0, N1);
   };
   auto Negate = [&](SDValue N) {
+    if (!N0.getNode())
+      return SDValue();
     SDValue Zero = DAG.getConstant(0, DL, VT);
     return DAG.getNode(ISD::SUB, DL, VT, Zero, N);
   };
@@ -24012,7 +24179,7 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
   const GlobalValue *GV = GN->getGlobal();
   Type *T = GV->getValueType();
   if (!T->isSized() ||
-      Offset > GV->getParent()->getDataLayout().getTypeAllocSize(T))
+      Offset > GV->getDataLayout().getTypeAllocSize(T))
     return SDValue();
 
   SDLoc DL(GN);

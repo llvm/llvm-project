@@ -18,6 +18,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -408,9 +409,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       WhatToStore.push_back(processNonStringArg(Args[i], Builder));
     }
 
-    for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
-      Value *toStore = WhatToStore[I];
-
+    for (Value *toStore : WhatToStore) {
       StoreInst *StBuff = Builder.CreateStore(toStore, PtrToStore);
       LLVM_DEBUG(dbgs() << "inserting store to printf buffer:" << *StBuff
                         << '\n');

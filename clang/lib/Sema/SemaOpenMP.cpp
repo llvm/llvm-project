@@ -467,7 +467,7 @@ public:
     getTopOfStack().PossiblyLoopCounter = D ? D->getCanonicalDecl() : D;
   }
   /// Gets the possible loop counter decl.
-  const Decl *getPossiblyLoopCunter() const {
+  const Decl *getPossiblyLoopCounter() const {
     return getTopOfStack().PossiblyLoopCounter;
   }
   /// Start new OpenMP region stack in new non-capturing function.
@@ -719,7 +719,7 @@ public:
     TargetLocations.push_back(LocStart);
   }
 
-  /// Add location for the first encountered atomicc directive.
+  /// Add location for the first encountered atomic directive.
   void addAtomicDirectiveLoc(SourceLocation Loc) {
     if (AtomicLocation.isInvalid())
       AtomicLocation = Loc;
@@ -2585,7 +2585,7 @@ OpenMPClauseKind SemaOpenMP::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level,
       DSAStack->loopStart();
       return OMPC_private;
     }
-    if ((DSAStack->getPossiblyLoopCunter() == D->getCanonicalDecl() ||
+    if ((DSAStack->getPossiblyLoopCounter() == D->getCanonicalDecl() ||
          DSAStack->isLoopControlVariable(D).first) &&
         !DSAStack->hasExplicitDSA(
             D, [](OpenMPClauseKind K, bool) { return K != OMPC_private; },
@@ -2695,8 +2695,8 @@ bool SemaOpenMP::isOpenMPGlobalCapturedDecl(ValueDecl *D, unsigned Level,
       unsigned NumLevels =
           getOpenMPCaptureLevels(DSAStack->getDirective(Level));
       if (Level == 0)
-        // non-file scope static variale with default(firstprivate)
-        // should be gloabal captured.
+        // non-file scope static variable with default(firstprivate)
+        // should be global captured.
         return (NumLevels == CaptureLevel + 1 &&
                 (TopDVar.CKind != OMPC_shared ||
                  DSAStack->getDefaultDSA() == DSA_firstprivate));
@@ -2731,11 +2731,11 @@ void SemaOpenMP::finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
   assert(getLangOpts().OpenMP && "Expected OpenMP compilation mode.");
   std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
       OMPDeclareTargetDeclAttr::getDeviceType(Caller->getMostRecentDecl());
-  // Ignore host functions during device analyzis.
+  // Ignore host functions during device analysis.
   if (getLangOpts().OpenMPIsTargetDevice &&
       (!DevTy || *DevTy == OMPDeclareTargetDeclAttr::DT_Host))
     return;
-  // Ignore nohost functions during host analyzis.
+  // Ignore nohost functions during host analysis.
   if (!getLangOpts().OpenMPIsTargetDevice && DevTy &&
       *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
     return;
@@ -3904,7 +3904,7 @@ public:
                   if (SemaRef.LangOpts.OpenMP >= 50)
                     return !StackComponents.empty();
                   // Variable is used if it has been marked as an array, array
-                  // section, array shaping or the variable iself.
+                  // section, array shaping or the variable itself.
                   return StackComponents.size() == 1 ||
                          llvm::all_of(
                              llvm::drop_begin(llvm::reverse(StackComponents)),
@@ -4234,454 +4234,186 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
   Stack->handleConstructTrait(Traits, ScopeEntry);
 }
 
+static SmallVector<SemaOpenMP::CapturedParamNameType>
+getParallelRegionParams(Sema &SemaRef, bool LoopBoundSharing) {
+  ASTContext &Context = SemaRef.getASTContext();
+  QualType KmpInt32Ty =
+      Context.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1).withConst();
+  QualType KmpInt32PtrTy =
+      Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params{
+      std::make_pair(".global_tid.", KmpInt32PtrTy),
+      std::make_pair(".bound_tid.", KmpInt32PtrTy),
+  };
+  if (LoopBoundSharing) {
+    QualType KmpSizeTy = Context.getSizeType().withConst();
+    Params.push_back(std::make_pair(".previous.lb.", KmpSizeTy));
+    Params.push_back(std::make_pair(".previous.ub.", KmpSizeTy));
+  }
+
+  // __context with shared vars
+  Params.push_back(std::make_pair(StringRef(), QualType()));
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
+getTeamsRegionParams(Sema &SemaRef) {
+  return getParallelRegionParams(SemaRef, /*LoopBoundSharing=*/false);
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
+getTaskRegionParams(Sema &SemaRef) {
+  ASTContext &Context = SemaRef.getASTContext();
+  QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
+  QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
+  QualType KmpInt32PtrTy =
+      Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
+  QualType Args[] = {VoidPtrTy};
+  FunctionProtoType::ExtProtoInfo EPI;
+  EPI.Variadic = true;
+  QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params{
+      std::make_pair(".global_tid.", KmpInt32Ty),
+      std::make_pair(".part_id.", KmpInt32PtrTy),
+      std::make_pair(".privates.", VoidPtrTy),
+      std::make_pair(
+          ".copy_fn.",
+          Context.getPointerType(CopyFnType).withConst().withRestrict()),
+      std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
+      std::make_pair(StringRef(), QualType()) // __context with shared vars
+  };
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
+getTargetRegionParams(Sema &SemaRef) {
+  ASTContext &Context = SemaRef.getASTContext();
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params;
+  if (SemaRef.getLangOpts().OpenMPIsTargetDevice) {
+    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
+    Params.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
+  }
+  // __context with shared vars
+  Params.push_back(std::make_pair(StringRef(), QualType()));
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
+getUnknownRegionParams(Sema &SemaRef) {
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params{
+      std::make_pair(StringRef(), QualType()) // __context with shared vars
+  };
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
+getTaskloopRegionParams(Sema &SemaRef) {
+  ASTContext &Context = SemaRef.getASTContext();
+  QualType KmpInt32Ty =
+      Context.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1).withConst();
+  QualType KmpUInt64Ty =
+      Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0).withConst();
+  QualType KmpInt64Ty =
+      Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1).withConst();
+  QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
+  QualType KmpInt32PtrTy =
+      Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
+  QualType Args[] = {VoidPtrTy};
+  FunctionProtoType::ExtProtoInfo EPI;
+  EPI.Variadic = true;
+  QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params{
+      std::make_pair(".global_tid.", KmpInt32Ty),
+      std::make_pair(".part_id.", KmpInt32PtrTy),
+      std::make_pair(".privates.", VoidPtrTy),
+      std::make_pair(
+          ".copy_fn.",
+          Context.getPointerType(CopyFnType).withConst().withRestrict()),
+      std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
+      std::make_pair(".lb.", KmpUInt64Ty),
+      std::make_pair(".ub.", KmpUInt64Ty),
+      std::make_pair(".st.", KmpInt64Ty),
+      std::make_pair(".liter.", KmpInt32Ty),
+      std::make_pair(".reductions.", VoidPtrTy),
+      std::make_pair(StringRef(), QualType()) // __context with shared vars
+  };
+  return Params;
+}
+
+static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
+                                   Scope *CurScope, SourceLocation Loc) {
+  SmallVector<OpenMPDirectiveKind> Regions;
+  getOpenMPCaptureRegions(Regions, DKind);
+
+  bool LoopBoundSharing = isOpenMPLoopBoundSharingDirective(DKind);
+
+  auto MarkAsInlined = [&](CapturedRegionScopeInfo *CSI) {
+    CSI->TheCapturedDecl->addAttr(AlwaysInlineAttr::CreateImplicit(
+        SemaRef.getASTContext(), {}, AlwaysInlineAttr::Keyword_forceinline));
+  };
+
+  for (auto [Level, RKind] : llvm::enumerate(Regions)) {
+    switch (RKind) {
+    // All region kinds that can be returned from `getOpenMPCaptureRegions`
+    // are listed here.
+    case OMPD_parallel:
+      SemaRef.ActOnCapturedRegionStart(
+          Loc, CurScope, CR_OpenMP,
+          getParallelRegionParams(SemaRef, LoopBoundSharing), Level);
+      break;
+    case OMPD_teams:
+      SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                       getTeamsRegionParams(SemaRef), Level);
+      break;
+    case OMPD_task:
+      SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                       getTaskRegionParams(SemaRef), Level);
+      // Mark this captured region as inlined, because we don't use outlined
+      // function directly.
+      MarkAsInlined(SemaRef.getCurCapturedRegion());
+      break;
+    case OMPD_taskloop:
+      SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                       getTaskloopRegionParams(SemaRef), Level);
+      // Mark this captured region as inlined, because we don't use outlined
+      // function directly.
+      MarkAsInlined(SemaRef.getCurCapturedRegion());
+      break;
+    case OMPD_target:
+      SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                       getTargetRegionParams(SemaRef), Level);
+      break;
+    case OMPD_unknown:
+      SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                       getUnknownRegionParams(SemaRef));
+      break;
+    case OMPD_metadirective:
+    case OMPD_nothing:
+    default:
+      llvm_unreachable("Unexpected capture region");
+    }
+  }
+}
+
 void SemaOpenMP::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind,
                                         Scope *CurScope) {
-  ASTContext &Context = getASTContext();
   switch (DKind) {
-  case OMPD_parallel:
-  case OMPD_parallel_for:
-  case OMPD_parallel_for_simd:
-  case OMPD_parallel_sections:
-  case OMPD_parallel_master:
-  case OMPD_parallel_masked:
-  case OMPD_parallel_loop:
-  case OMPD_teams:
-  case OMPD_teams_distribute:
-  case OMPD_teams_distribute_simd: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params);
-    break;
-  }
-  case OMPD_target_teams:
-  case OMPD_target_parallel:
-  case OMPD_target_parallel_for:
-  case OMPD_target_parallel_for_simd:
-  case OMPD_target_parallel_loop:
-  case OMPD_target_teams_distribute:
-  case OMPD_target_teams_distribute_simd: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    QualType Args[] = {VoidPtrTy};
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
-    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32Ty),
-        std::make_pair(".part_id.", KmpInt32PtrTy),
-        std::make_pair(".privates.", VoidPtrTy),
-        std::make_pair(
-            ".copy_fn.",
-            Context.getPointerType(CopyFnType).withConst().withRestrict()),
-        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params,
-                                     /*OpenMPCaptureLevel=*/0);
-    // Mark this captured region as inlined, because we don't use outlined
-    // function directly.
-    SemaRef.getCurCapturedRegion()->TheCapturedDecl->addAttr(
-        AlwaysInlineAttr::CreateImplicit(
-            Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    SmallVector<SemaOpenMP::CapturedParamNameType, 2> ParamsTarget;
-    if (getLangOpts().OpenMPIsTargetDevice)
-      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
-    ParamsTarget.push_back(
-        std::make_pair(StringRef(), QualType())); // __context with shared vars;
-    // Start a captured region for 'target' with no implicit parameters.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsTarget,
-                                     /*OpenMPCaptureLevel=*/1);
-    SemaOpenMP::CapturedParamNameType ParamsTeamsOrParallel[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    // Start a captured region for 'teams' or 'parallel'.  Both regions have
-    // the same implicit parameters.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsTeamsOrParallel,
-                                     /*OpenMPCaptureLevel=*/2);
-    break;
-  }
-  case OMPD_target:
-  case OMPD_target_simd: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    QualType Args[] = {VoidPtrTy};
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
-    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32Ty),
-        std::make_pair(".part_id.", KmpInt32PtrTy),
-        std::make_pair(".privates.", VoidPtrTy),
-        std::make_pair(
-            ".copy_fn.",
-            Context.getPointerType(CopyFnType).withConst().withRestrict()),
-        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params,
-                                     /*OpenMPCaptureLevel=*/0);
-    // Mark this captured region as inlined, because we don't use outlined
-    // function directly.
-    SemaRef.getCurCapturedRegion()->TheCapturedDecl->addAttr(
-        AlwaysInlineAttr::CreateImplicit(
-            Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    SmallVector<SemaOpenMP::CapturedParamNameType, 2> ParamsTarget;
-    if (getLangOpts().OpenMPIsTargetDevice)
-      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
-    ParamsTarget.push_back(
-        std::make_pair(StringRef(), QualType())); // __context with shared vars;
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsTarget,
-                                     /*OpenMPCaptureLevel=*/1);
-    break;
-  }
   case OMPD_atomic:
   case OMPD_critical:
-  case OMPD_section:
-  case OMPD_master:
   case OMPD_masked:
+  case OMPD_master:
+  case OMPD_section:
   case OMPD_tile:
   case OMPD_unroll:
     break;
-  case OMPD_loop:
-    // TODO: 'loop' may require additional parameters depending on the binding.
-    // Treat similar to OMPD_simd/OMPD_for for now.
-  case OMPD_simd:
-  case OMPD_for:
-  case OMPD_for_simd:
-  case OMPD_sections:
-  case OMPD_single:
-  case OMPD_taskgroup:
-  case OMPD_distribute:
-  case OMPD_distribute_simd:
-  case OMPD_ordered:
-  case OMPD_scope:
-  case OMPD_target_data:
-  case OMPD_dispatch: {
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params);
-    break;
-  }
-  case OMPD_task: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    QualType Args[] = {VoidPtrTy};
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
-    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32Ty),
-        std::make_pair(".part_id.", KmpInt32PtrTy),
-        std::make_pair(".privates.", VoidPtrTy),
-        std::make_pair(
-            ".copy_fn.",
-            Context.getPointerType(CopyFnType).withConst().withRestrict()),
-        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params);
-    // Mark this captured region as inlined, because we don't use outlined
-    // function directly.
-    SemaRef.getCurCapturedRegion()->TheCapturedDecl->addAttr(
-        AlwaysInlineAttr::CreateImplicit(
-            Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    break;
-  }
-  case OMPD_taskloop:
-  case OMPD_taskloop_simd:
-  case OMPD_master_taskloop:
-  case OMPD_masked_taskloop:
-  case OMPD_masked_taskloop_simd:
-  case OMPD_master_taskloop_simd: {
-    QualType KmpInt32Ty =
-        Context.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1)
-            .withConst();
-    QualType KmpUInt64Ty =
-        Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0)
-            .withConst();
-    QualType KmpInt64Ty =
-        Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1)
-            .withConst();
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    QualType Args[] = {VoidPtrTy};
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
-    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32Ty),
-        std::make_pair(".part_id.", KmpInt32PtrTy),
-        std::make_pair(".privates.", VoidPtrTy),
-        std::make_pair(
-            ".copy_fn.",
-            Context.getPointerType(CopyFnType).withConst().withRestrict()),
-        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
-        std::make_pair(".lb.", KmpUInt64Ty),
-        std::make_pair(".ub.", KmpUInt64Ty),
-        std::make_pair(".st.", KmpInt64Ty),
-        std::make_pair(".liter.", KmpInt32Ty),
-        std::make_pair(".reductions.", VoidPtrTy),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params);
-    // Mark this captured region as inlined, because we don't use outlined
-    // function directly.
-    SemaRef.getCurCapturedRegion()->TheCapturedDecl->addAttr(
-        AlwaysInlineAttr::CreateImplicit(
-            Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    break;
-  }
-  case OMPD_parallel_masked_taskloop:
-  case OMPD_parallel_masked_taskloop_simd:
-  case OMPD_parallel_master_taskloop:
-  case OMPD_parallel_master_taskloop_simd: {
-    QualType KmpInt32Ty =
-        Context.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1)
-            .withConst();
-    QualType KmpUInt64Ty =
-        Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0)
-            .withConst();
-    QualType KmpInt64Ty =
-        Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1)
-            .withConst();
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    SemaOpenMP::CapturedParamNameType ParamsParallel[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    // Start a captured region for 'parallel'.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsParallel,
-                                     /*OpenMPCaptureLevel=*/0);
-    QualType Args[] = {VoidPtrTy};
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
-    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32Ty),
-        std::make_pair(".part_id.", KmpInt32PtrTy),
-        std::make_pair(".privates.", VoidPtrTy),
-        std::make_pair(
-            ".copy_fn.",
-            Context.getPointerType(CopyFnType).withConst().withRestrict()),
-        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
-        std::make_pair(".lb.", KmpUInt64Ty),
-        std::make_pair(".ub.", KmpUInt64Ty),
-        std::make_pair(".st.", KmpInt64Ty),
-        std::make_pair(".liter.", KmpInt32Ty),
-        std::make_pair(".reductions.", VoidPtrTy),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params,
-                                     /*OpenMPCaptureLevel=*/1);
-    // Mark this captured region as inlined, because we don't use outlined
-    // function directly.
-    SemaRef.getCurCapturedRegion()->TheCapturedDecl->addAttr(
-        AlwaysInlineAttr::CreateImplicit(
-            Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    break;
-  }
-  case OMPD_distribute_parallel_for_simd:
-  case OMPD_distribute_parallel_for: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(".previous.lb.", Context.getSizeType().withConst()),
-        std::make_pair(".previous.ub.", Context.getSizeType().withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params);
-    break;
-  }
-  // For 'target teams loop', collect all captured regions so codegen can
-  // later decide the best IR to emit given the associated loop-nest.
-  case OMPD_target_teams_loop:
-  case OMPD_target_teams_distribute_parallel_for:
-  case OMPD_target_teams_distribute_parallel_for_simd: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-
-    QualType Args[] = {VoidPtrTy};
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
-    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32Ty),
-        std::make_pair(".part_id.", KmpInt32PtrTy),
-        std::make_pair(".privates.", VoidPtrTy),
-        std::make_pair(
-            ".copy_fn.",
-            Context.getPointerType(CopyFnType).withConst().withRestrict()),
-        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params,
-                                     /*OpenMPCaptureLevel=*/0);
-    // Mark this captured region as inlined, because we don't use outlined
-    // function directly.
-    SemaRef.getCurCapturedRegion()->TheCapturedDecl->addAttr(
-        AlwaysInlineAttr::CreateImplicit(
-            Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    SmallVector<SemaOpenMP::CapturedParamNameType, 2> ParamsTarget;
-    if (getLangOpts().OpenMPIsTargetDevice)
-      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
-    ParamsTarget.push_back(
-        std::make_pair(StringRef(), QualType())); // __context with shared vars;
-    // Start a captured region for 'target' with no implicit parameters.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsTarget,
-                                     /*OpenMPCaptureLevel=*/1);
-
-    SemaOpenMP::CapturedParamNameType ParamsTeams[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    // Start a captured region for 'target' with no implicit parameters.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsTeams,
-                                     /*OpenMPCaptureLevel=*/2);
-
-    SemaOpenMP::CapturedParamNameType ParamsParallel[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(".previous.lb.", Context.getSizeType().withConst()),
-        std::make_pair(".previous.ub.", Context.getSizeType().withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    // Start a captured region for 'teams' or 'parallel'.  Both regions have
-    // the same implicit parameters.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsParallel,
-                                     /*OpenMPCaptureLevel=*/3);
-    break;
-  }
-
-  case OMPD_teams_loop:
-  case OMPD_teams_distribute_parallel_for:
-  case OMPD_teams_distribute_parallel_for_simd: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-
-    SemaOpenMP::CapturedParamNameType ParamsTeams[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    // Start a captured region for 'target' with no implicit parameters.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsTeams,
-                                     /*OpenMPCaptureLevel=*/0);
-
-    SemaOpenMP::CapturedParamNameType ParamsParallel[] = {
-        std::make_pair(".global_tid.", KmpInt32PtrTy),
-        std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(".previous.lb.", Context.getSizeType().withConst()),
-        std::make_pair(".previous.ub.", Context.getSizeType().withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    // Start a captured region for 'teams' or 'parallel'.  Both regions have
-    // the same implicit parameters.
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, ParamsParallel,
-                                     /*OpenMPCaptureLevel=*/1);
-    break;
-  }
-  case OMPD_target_update:
-  case OMPD_target_enter_data:
-  case OMPD_target_exit_data: {
-    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    QualType KmpInt32PtrTy =
-        Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    QualType Args[] = {VoidPtrTy};
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
-    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
-    SemaOpenMP::CapturedParamNameType Params[] = {
-        std::make_pair(".global_tid.", KmpInt32Ty),
-        std::make_pair(".part_id.", KmpInt32PtrTy),
-        std::make_pair(".privates.", VoidPtrTy),
-        std::make_pair(
-            ".copy_fn.",
-            Context.getPointerType(CopyFnType).withConst().withRestrict()),
-        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
-    SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
-                                     CR_OpenMP, Params);
-    // Mark this captured region as inlined, because we don't use outlined
-    // function directly.
-    SemaRef.getCurCapturedRegion()->TheCapturedDecl->addAttr(
-        AlwaysInlineAttr::CreateImplicit(
-            Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    break;
-  }
-  case OMPD_threadprivate:
-  case OMPD_allocate:
-  case OMPD_taskyield:
-  case OMPD_error:
-  case OMPD_barrier:
-  case OMPD_taskwait:
-  case OMPD_cancellation_point:
-  case OMPD_cancel:
-  case OMPD_flush:
-  case OMPD_depobj:
-  case OMPD_scan:
-  case OMPD_declare_reduction:
-  case OMPD_declare_mapper:
-  case OMPD_declare_simd:
-  case OMPD_declare_target:
-  case OMPD_end_declare_target:
-  case OMPD_requires:
-  case OMPD_declare_variant:
-  case OMPD_begin_declare_variant:
-  case OMPD_end_declare_variant:
-  case OMPD_metadirective:
-    llvm_unreachable("OpenMP Directive is not allowed");
-  case OMPD_unknown:
   default:
-    llvm_unreachable("Unknown OpenMP directive");
+    processCapturedRegions(SemaRef, DKind, CurScope,
+                           DSAStack->getConstructLoc());
+    break;
   }
+
   DSAStack->setContext(SemaRef.CurContext);
-  handleDeclareVariantConstructTrait(DSAStack, DKind, /* ScopeEntry */ true);
+  handleDeclareVariantConstructTrait(DSAStack, DKind, /*ScopeEntry=*/true);
 }
 
 int SemaOpenMP::getNumberOfConstructScopes(unsigned Level) const {
@@ -4862,11 +4594,7 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
                                             ArrayRef<OMPClause *> Clauses) {
   handleDeclareVariantConstructTrait(DSAStack, DSAStack->getCurrentDirective(),
                                      /* ScopeEntry */ false);
-  if (DSAStack->getCurrentDirective() == OMPD_atomic ||
-      DSAStack->getCurrentDirective() == OMPD_critical ||
-      DSAStack->getCurrentDirective() == OMPD_section ||
-      DSAStack->getCurrentDirective() == OMPD_master ||
-      DSAStack->getCurrentDirective() == OMPD_masked)
+  if (!isOpenMPCapturingDirective(DSAStack->getCurrentDirective()))
     return S;
 
   bool ErrorFound = false;
@@ -4909,10 +4637,6 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
         }
       }
       DSAStack->setForceVarCapturing(/*V=*/false);
-    } else if (isOpenMPLoopTransformationDirective(
-                   DSAStack->getCurrentDirective())) {
-      assert(CaptureRegions.empty() &&
-             "No captured regions in loop transformation directives.");
     } else if (CaptureRegions.size() > 1 ||
                CaptureRegions.back() != OMPD_unknown) {
       if (auto *C = OMPClauseWithPreInit::get(Clause))
@@ -5057,295 +4781,291 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
                                   OpenMPDirectiveKind CancelRegion,
                                   OpenMPBindClauseKind BindKind,
                                   SourceLocation StartLoc) {
-  if (Stack->getCurScope()) {
-    OpenMPDirectiveKind ParentRegion = Stack->getParentDirective();
-    OpenMPDirectiveKind OffendingRegion = ParentRegion;
-    bool NestingProhibited = false;
-    bool CloseNesting = true;
-    bool OrphanSeen = false;
-    enum {
-      NoRecommend,
-      ShouldBeInParallelRegion,
-      ShouldBeInOrderedRegion,
-      ShouldBeInTargetRegion,
-      ShouldBeInTeamsRegion,
-      ShouldBeInLoopSimdRegion,
-    } Recommend = NoRecommend;
-    if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
-        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
-        CurrentRegion != OMPD_parallel &&
-        !isOpenMPCombinedParallelADirective(CurrentRegion)) {
-      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
-          << getOpenMPDirectiveName(CurrentRegion);
+  if (!Stack->getCurScope())
+    return false;
+
+  OpenMPDirectiveKind ParentRegion = Stack->getParentDirective();
+  OpenMPDirectiveKind OffendingRegion = ParentRegion;
+  bool NestingProhibited = false;
+  bool CloseNesting = true;
+  bool OrphanSeen = false;
+  enum {
+    NoRecommend,
+    ShouldBeInParallelRegion,
+    ShouldBeInOrderedRegion,
+    ShouldBeInTargetRegion,
+    ShouldBeInTeamsRegion,
+    ShouldBeInLoopSimdRegion,
+  } Recommend = NoRecommend;
+  if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
+      CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
+      CurrentRegion != OMPD_parallel &&
+      !isOpenMPCombinedParallelADirective(CurrentRegion)) {
+    SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
+        << getOpenMPDirectiveName(CurrentRegion);
+    return true;
+  }
+  if (isOpenMPSimdDirective(ParentRegion) &&
+      ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
+       (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion != OMPD_ordered &&
+        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_atomic &&
+        CurrentRegion != OMPD_scan))) {
+    // OpenMP [2.16, Nesting of Regions]
+    // OpenMP constructs may not be nested inside a simd region.
+    // OpenMP [2.8.1,simd Construct, Restrictions]
+    // An ordered construct with the simd clause is the only OpenMP
+    // construct that can appear in the simd region.
+    // Allowing a SIMD construct nested in another SIMD construct is an
+    // extension. The OpenMP 4.5 spec does not allow it. Issue a warning
+    // message.
+    // OpenMP 5.0 [2.9.3.1, simd Construct, Restrictions]
+    // The only OpenMP constructs that can be encountered during execution of
+    // a simd region are the atomic construct, the loop construct, the simd
+    // construct and the ordered construct with the simd clause.
+    SemaRef.Diag(StartLoc, (CurrentRegion != OMPD_simd)
+                               ? diag::err_omp_prohibited_region_simd
+                               : diag::warn_omp_nesting_simd)
+        << (SemaRef.LangOpts.OpenMP >= 50 ? 1 : 0);
+    return CurrentRegion != OMPD_simd;
+  }
+  if (ParentRegion == OMPD_atomic) {
+    // OpenMP [2.16, Nesting of Regions]
+    // OpenMP constructs may not be nested inside an atomic region.
+    SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_atomic);
+    return true;
+  }
+  if (CurrentRegion == OMPD_section) {
+    // OpenMP [2.7.2, sections Construct, Restrictions]
+    // Orphaned section directives are prohibited. That is, the section
+    // directives must appear within the sections construct and must not be
+    // encountered elsewhere in the sections region.
+    if (ParentRegion != OMPD_sections &&
+        ParentRegion != OMPD_parallel_sections) {
+      SemaRef.Diag(StartLoc, diag::err_omp_orphaned_section_directive)
+          << (ParentRegion != OMPD_unknown)
+          << getOpenMPDirectiveName(ParentRegion);
       return true;
     }
-    if (isOpenMPSimdDirective(ParentRegion) &&
-        ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
-         (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion != OMPD_ordered &&
-          CurrentRegion != OMPD_simd && CurrentRegion != OMPD_atomic &&
-          CurrentRegion != OMPD_scan))) {
-      // OpenMP [2.16, Nesting of Regions]
-      // OpenMP constructs may not be nested inside a simd region.
-      // OpenMP [2.8.1,simd Construct, Restrictions]
-      // An ordered construct with the simd clause is the only OpenMP
-      // construct that can appear in the simd region.
-      // Allowing a SIMD construct nested in another SIMD construct is an
-      // extension. The OpenMP 4.5 spec does not allow it. Issue a warning
-      // message.
-      // OpenMP 5.0 [2.9.3.1, simd Construct, Restrictions]
-      // The only OpenMP constructs that can be encountered during execution of
-      // a simd region are the atomic construct, the loop construct, the simd
-      // construct and the ordered construct with the simd clause.
-      SemaRef.Diag(StartLoc, (CurrentRegion != OMPD_simd)
-                                 ? diag::err_omp_prohibited_region_simd
-                                 : diag::warn_omp_nesting_simd)
-          << (SemaRef.LangOpts.OpenMP >= 50 ? 1 : 0);
-      return CurrentRegion != OMPD_simd;
-    }
-    if (ParentRegion == OMPD_atomic) {
-      // OpenMP [2.16, Nesting of Regions]
-      // OpenMP constructs may not be nested inside an atomic region.
-      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_atomic);
+    return false;
+  }
+  // Allow some constructs (except teams and cancellation constructs) to be
+  // orphaned (they could be used in functions, called from OpenMP regions
+  // with the required preconditions).
+  if (ParentRegion == OMPD_unknown &&
+      !isOpenMPNestingTeamsDirective(CurrentRegion) &&
+      CurrentRegion != OMPD_cancellation_point &&
+      CurrentRegion != OMPD_cancel && CurrentRegion != OMPD_scan)
+    return false;
+  // Checks needed for mapping "loop" construct. Please check mapLoopConstruct
+  // for a detailed explanation
+  if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
+      (BindKind == OMPC_BIND_parallel || BindKind == OMPC_BIND_teams) &&
+      (isOpenMPWorksharingDirective(ParentRegion) ||
+       ParentRegion == OMPD_loop)) {
+    int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
+    SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
+        << true << getOpenMPDirectiveName(ParentRegion) << ErrorMsgNumber
+        << getOpenMPDirectiveName(CurrentRegion);
+    return true;
+  }
+  if (CurrentRegion == OMPD_cancellation_point ||
+      CurrentRegion == OMPD_cancel) {
+    // OpenMP [2.16, Nesting of Regions]
+    // A cancellation point construct for which construct-type-clause is
+    // taskgroup must be nested inside a task construct. A cancellation
+    // point construct for which construct-type-clause is not taskgroup must
+    // be closely nested inside an OpenMP construct that matches the type
+    // specified in construct-type-clause.
+    // A cancel construct for which construct-type-clause is taskgroup must be
+    // nested inside a task construct. A cancel construct for which
+    // construct-type-clause is not taskgroup must be closely nested inside an
+    // OpenMP construct that matches the type specified in
+    // construct-type-clause.
+    NestingProhibited =
+        !((CancelRegion == OMPD_parallel &&
+           (ParentRegion == OMPD_parallel ||
+            ParentRegion == OMPD_target_parallel)) ||
+          (CancelRegion == OMPD_for &&
+           (ParentRegion == OMPD_for || ParentRegion == OMPD_parallel_for ||
+            ParentRegion == OMPD_target_parallel_for ||
+            ParentRegion == OMPD_distribute_parallel_for ||
+            ParentRegion == OMPD_teams_distribute_parallel_for ||
+            ParentRegion == OMPD_target_teams_distribute_parallel_for)) ||
+          (CancelRegion == OMPD_taskgroup &&
+           (ParentRegion == OMPD_task ||
+            (SemaRef.getLangOpts().OpenMP >= 50 &&
+             (ParentRegion == OMPD_taskloop ||
+              ParentRegion == OMPD_master_taskloop ||
+              ParentRegion == OMPD_masked_taskloop ||
+              ParentRegion == OMPD_parallel_masked_taskloop ||
+              ParentRegion == OMPD_parallel_master_taskloop)))) ||
+          (CancelRegion == OMPD_sections &&
+           (ParentRegion == OMPD_section || ParentRegion == OMPD_sections ||
+            ParentRegion == OMPD_parallel_sections)));
+    OrphanSeen = ParentRegion == OMPD_unknown;
+  } else if (CurrentRegion == OMPD_master || CurrentRegion == OMPD_masked) {
+    // OpenMP 5.1 [2.22, Nesting of Regions]
+    // A masked region may not be closely nested inside a worksharing, loop,
+    // atomic, task, or taskloop region.
+    NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
+                        isOpenMPGenericLoopDirective(ParentRegion) ||
+                        isOpenMPTaskingDirective(ParentRegion);
+  } else if (CurrentRegion == OMPD_critical && CurrentName.getName()) {
+    // OpenMP [2.16, Nesting of Regions]
+    // A critical region may not be nested (closely or otherwise) inside a
+    // critical region with the same name. Note that this restriction is not
+    // sufficient to prevent deadlock.
+    SourceLocation PreviousCriticalLoc;
+    bool DeadLock = Stack->hasDirective(
+        [CurrentName, &PreviousCriticalLoc](OpenMPDirectiveKind K,
+                                            const DeclarationNameInfo &DNI,
+                                            SourceLocation Loc) {
+          if (K == OMPD_critical && DNI.getName() == CurrentName.getName()) {
+            PreviousCriticalLoc = Loc;
+            return true;
+          }
+          return false;
+        },
+        false /* skip top directive */);
+    if (DeadLock) {
+      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_critical_same_name)
+          << CurrentName.getName();
+      if (PreviousCriticalLoc.isValid())
+        SemaRef.Diag(PreviousCriticalLoc,
+                     diag::note_omp_previous_critical_region);
       return true;
     }
-    if (CurrentRegion == OMPD_section) {
-      // OpenMP [2.7.2, sections Construct, Restrictions]
-      // Orphaned section directives are prohibited. That is, the section
-      // directives must appear within the sections construct and must not be
-      // encountered elsewhere in the sections region.
-      if (ParentRegion != OMPD_sections &&
-          ParentRegion != OMPD_parallel_sections) {
-        SemaRef.Diag(StartLoc, diag::err_omp_orphaned_section_directive)
-            << (ParentRegion != OMPD_unknown)
-            << getOpenMPDirectiveName(ParentRegion);
-        return true;
-      }
-      return false;
-    }
-    // Allow some constructs (except teams and cancellation constructs) to be
-    // orphaned (they could be used in functions, called from OpenMP regions
-    // with the required preconditions).
-    if (ParentRegion == OMPD_unknown &&
-        !isOpenMPNestingTeamsDirective(CurrentRegion) &&
-        CurrentRegion != OMPD_cancellation_point &&
-        CurrentRegion != OMPD_cancel && CurrentRegion != OMPD_scan)
-      return false;
-    // Checks needed for mapping "loop" construct. Please check mapLoopConstruct
-    // for a detailed explanation
-    if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
-        (BindKind == OMPC_BIND_parallel || BindKind == OMPC_BIND_teams) &&
-        (isOpenMPWorksharingDirective(ParentRegion) ||
-         ParentRegion == OMPD_loop)) {
-      int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
+  } else if (CurrentRegion == OMPD_barrier || CurrentRegion == OMPD_scope) {
+    // OpenMP 5.1 [2.22, Nesting of Regions]
+    // A scope region may not be closely nested inside a worksharing, loop,
+    // task, taskloop, critical, ordered, atomic, or masked region.
+    // OpenMP 5.1 [2.22, Nesting of Regions]
+    // A barrier region may not be closely nested inside a worksharing, loop,
+    // task, taskloop, critical, ordered, atomic, or masked region.
+    NestingProhibited =
+        isOpenMPWorksharingDirective(ParentRegion) ||
+        isOpenMPGenericLoopDirective(ParentRegion) ||
+        isOpenMPTaskingDirective(ParentRegion) || ParentRegion == OMPD_master ||
+        ParentRegion == OMPD_masked || ParentRegion == OMPD_parallel_master ||
+        ParentRegion == OMPD_parallel_masked || ParentRegion == OMPD_critical ||
+        ParentRegion == OMPD_ordered;
+  } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
+             !isOpenMPParallelDirective(CurrentRegion) &&
+             !isOpenMPTeamsDirective(CurrentRegion)) {
+    // OpenMP 5.1 [2.22, Nesting of Regions]
+    // A loop region that binds to a parallel region or a worksharing region
+    // may not be closely nested inside a worksharing, loop, task, taskloop,
+    // critical, ordered, atomic, or masked region.
+    NestingProhibited =
+        isOpenMPWorksharingDirective(ParentRegion) ||
+        isOpenMPGenericLoopDirective(ParentRegion) ||
+        isOpenMPTaskingDirective(ParentRegion) || ParentRegion == OMPD_master ||
+        ParentRegion == OMPD_masked || ParentRegion == OMPD_parallel_master ||
+        ParentRegion == OMPD_parallel_masked || ParentRegion == OMPD_critical ||
+        ParentRegion == OMPD_ordered;
+    Recommend = ShouldBeInParallelRegion;
+  } else if (CurrentRegion == OMPD_ordered) {
+    // OpenMP [2.16, Nesting of Regions]
+    // An ordered region may not be closely nested inside a critical,
+    // atomic, or explicit task region.
+    // An ordered region must be closely nested inside a loop region (or
+    // parallel loop region) with an ordered clause.
+    // OpenMP [2.8.1,simd Construct, Restrictions]
+    // An ordered construct with the simd clause is the only OpenMP construct
+    // that can appear in the simd region.
+    NestingProhibited = ParentRegion == OMPD_critical ||
+                        isOpenMPTaskingDirective(ParentRegion) ||
+                        !(isOpenMPSimdDirective(ParentRegion) ||
+                          Stack->isParentOrderedRegion());
+    Recommend = ShouldBeInOrderedRegion;
+  } else if (isOpenMPNestingTeamsDirective(CurrentRegion)) {
+    // OpenMP [2.16, Nesting of Regions]
+    // If specified, a teams construct must be contained within a target
+    // construct.
+    NestingProhibited =
+        (SemaRef.LangOpts.OpenMP <= 45 && ParentRegion != OMPD_target) ||
+        (SemaRef.LangOpts.OpenMP >= 50 && ParentRegion != OMPD_unknown &&
+         ParentRegion != OMPD_target);
+    OrphanSeen = ParentRegion == OMPD_unknown;
+    Recommend = ShouldBeInTargetRegion;
+  } else if (CurrentRegion == OMPD_scan) {
+    // OpenMP [2.16, Nesting of Regions]
+    // If specified, a teams construct must be contained within a target
+    // construct.
+    NestingProhibited =
+        SemaRef.LangOpts.OpenMP < 50 ||
+        (ParentRegion != OMPD_simd && ParentRegion != OMPD_for &&
+         ParentRegion != OMPD_for_simd && ParentRegion != OMPD_parallel_for &&
+         ParentRegion != OMPD_parallel_for_simd);
+    OrphanSeen = ParentRegion == OMPD_unknown;
+    Recommend = ShouldBeInLoopSimdRegion;
+  }
+  if (!NestingProhibited && !isOpenMPTargetExecutionDirective(CurrentRegion) &&
+      !isOpenMPTargetDataManagementDirective(CurrentRegion) &&
+      (ParentRegion == OMPD_teams || ParentRegion == OMPD_target_teams)) {
+    // OpenMP [5.1, 2.22, Nesting of Regions]
+    // distribute, distribute simd, distribute parallel worksharing-loop,
+    // distribute parallel worksharing-loop SIMD, loop, parallel regions,
+    // including any parallel regions arising from combined constructs,
+    // omp_get_num_teams() regions, and omp_get_team_num() regions are the
+    // only OpenMP regions that may be strictly nested inside the teams
+    // region.
+    //
+    // As an extension, we permit atomic within teams as well.
+    NestingProhibited = !isOpenMPParallelDirective(CurrentRegion) &&
+                        !isOpenMPDistributeDirective(CurrentRegion) &&
+                        CurrentRegion != OMPD_loop &&
+                        !(SemaRef.getLangOpts().OpenMPExtensions &&
+                          CurrentRegion == OMPD_atomic);
+    Recommend = ShouldBeInParallelRegion;
+  }
+  if (!NestingProhibited && CurrentRegion == OMPD_loop) {
+    // OpenMP [5.1, 2.11.7, loop Construct, Restrictions]
+    // If the bind clause is present on the loop construct and binding is
+    // teams then the corresponding loop region must be strictly nested inside
+    // a teams region.
+    NestingProhibited = BindKind == OMPC_BIND_teams &&
+                        ParentRegion != OMPD_teams &&
+                        ParentRegion != OMPD_target_teams;
+    Recommend = ShouldBeInTeamsRegion;
+  }
+  if (!NestingProhibited && isOpenMPNestingDistributeDirective(CurrentRegion)) {
+    // OpenMP 4.5 [2.17 Nesting of Regions]
+    // The region associated with the distribute construct must be strictly
+    // nested inside a teams region
+    NestingProhibited =
+        (ParentRegion != OMPD_teams && ParentRegion != OMPD_target_teams);
+    Recommend = ShouldBeInTeamsRegion;
+  }
+  if (!NestingProhibited &&
+      (isOpenMPTargetExecutionDirective(CurrentRegion) ||
+       isOpenMPTargetDataManagementDirective(CurrentRegion))) {
+    // OpenMP 4.5 [2.17 Nesting of Regions]
+    // If a target, target update, target data, target enter data, or
+    // target exit data construct is encountered during execution of a
+    // target region, the behavior is unspecified.
+    NestingProhibited = Stack->hasDirective(
+        [&OffendingRegion](OpenMPDirectiveKind K, const DeclarationNameInfo &,
+                           SourceLocation) {
+          if (isOpenMPTargetExecutionDirective(K)) {
+            OffendingRegion = K;
+            return true;
+          }
+          return false;
+        },
+        false /* don't skip top directive */);
+    CloseNesting = false;
+  }
+  if (NestingProhibited) {
+    if (OrphanSeen) {
+      SemaRef.Diag(StartLoc, diag::err_omp_orphaned_device_directive)
+          << getOpenMPDirectiveName(CurrentRegion) << Recommend;
+    } else {
       SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
-          << true << getOpenMPDirectiveName(ParentRegion) << ErrorMsgNumber
-          << getOpenMPDirectiveName(CurrentRegion);
-      return true;
+          << CloseNesting << getOpenMPDirectiveName(OffendingRegion)
+          << Recommend << getOpenMPDirectiveName(CurrentRegion);
     }
-    if (CurrentRegion == OMPD_cancellation_point ||
-        CurrentRegion == OMPD_cancel) {
-      // OpenMP [2.16, Nesting of Regions]
-      // A cancellation point construct for which construct-type-clause is
-      // taskgroup must be nested inside a task construct. A cancellation
-      // point construct for which construct-type-clause is not taskgroup must
-      // be closely nested inside an OpenMP construct that matches the type
-      // specified in construct-type-clause.
-      // A cancel construct for which construct-type-clause is taskgroup must be
-      // nested inside a task construct. A cancel construct for which
-      // construct-type-clause is not taskgroup must be closely nested inside an
-      // OpenMP construct that matches the type specified in
-      // construct-type-clause.
-      NestingProhibited =
-          !((CancelRegion == OMPD_parallel &&
-             (ParentRegion == OMPD_parallel ||
-              ParentRegion == OMPD_target_parallel)) ||
-            (CancelRegion == OMPD_for &&
-             (ParentRegion == OMPD_for || ParentRegion == OMPD_parallel_for ||
-              ParentRegion == OMPD_target_parallel_for ||
-              ParentRegion == OMPD_distribute_parallel_for ||
-              ParentRegion == OMPD_teams_distribute_parallel_for ||
-              ParentRegion == OMPD_target_teams_distribute_parallel_for)) ||
-            (CancelRegion == OMPD_taskgroup &&
-             (ParentRegion == OMPD_task ||
-              (SemaRef.getLangOpts().OpenMP >= 50 &&
-               (ParentRegion == OMPD_taskloop ||
-                ParentRegion == OMPD_master_taskloop ||
-                ParentRegion == OMPD_masked_taskloop ||
-                ParentRegion == OMPD_parallel_masked_taskloop ||
-                ParentRegion == OMPD_parallel_master_taskloop)))) ||
-            (CancelRegion == OMPD_sections &&
-             (ParentRegion == OMPD_section || ParentRegion == OMPD_sections ||
-              ParentRegion == OMPD_parallel_sections)));
-      OrphanSeen = ParentRegion == OMPD_unknown;
-    } else if (CurrentRegion == OMPD_master || CurrentRegion == OMPD_masked) {
-      // OpenMP 5.1 [2.22, Nesting of Regions]
-      // A masked region may not be closely nested inside a worksharing, loop,
-      // atomic, task, or taskloop region.
-      NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
-                          isOpenMPGenericLoopDirective(ParentRegion) ||
-                          isOpenMPTaskingDirective(ParentRegion);
-    } else if (CurrentRegion == OMPD_critical && CurrentName.getName()) {
-      // OpenMP [2.16, Nesting of Regions]
-      // A critical region may not be nested (closely or otherwise) inside a
-      // critical region with the same name. Note that this restriction is not
-      // sufficient to prevent deadlock.
-      SourceLocation PreviousCriticalLoc;
-      bool DeadLock = Stack->hasDirective(
-          [CurrentName, &PreviousCriticalLoc](OpenMPDirectiveKind K,
-                                              const DeclarationNameInfo &DNI,
-                                              SourceLocation Loc) {
-            if (K == OMPD_critical && DNI.getName() == CurrentName.getName()) {
-              PreviousCriticalLoc = Loc;
-              return true;
-            }
-            return false;
-          },
-          false /* skip top directive */);
-      if (DeadLock) {
-        SemaRef.Diag(StartLoc,
-                     diag::err_omp_prohibited_region_critical_same_name)
-            << CurrentName.getName();
-        if (PreviousCriticalLoc.isValid())
-          SemaRef.Diag(PreviousCriticalLoc,
-                       diag::note_omp_previous_critical_region);
-        return true;
-      }
-    } else if (CurrentRegion == OMPD_barrier || CurrentRegion == OMPD_scope) {
-      // OpenMP 5.1 [2.22, Nesting of Regions]
-      // A scope region may not be closely nested inside a worksharing, loop,
-      // task, taskloop, critical, ordered, atomic, or masked region.
-      // OpenMP 5.1 [2.22, Nesting of Regions]
-      // A barrier region may not be closely nested inside a worksharing, loop,
-      // task, taskloop, critical, ordered, atomic, or masked region.
-      NestingProhibited =
-          isOpenMPWorksharingDirective(ParentRegion) ||
-          isOpenMPGenericLoopDirective(ParentRegion) ||
-          isOpenMPTaskingDirective(ParentRegion) ||
-          ParentRegion == OMPD_master || ParentRegion == OMPD_masked ||
-          ParentRegion == OMPD_parallel_master ||
-          ParentRegion == OMPD_parallel_masked ||
-          ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered;
-    } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
-               !isOpenMPParallelDirective(CurrentRegion) &&
-               !isOpenMPTeamsDirective(CurrentRegion)) {
-      // OpenMP 5.1 [2.22, Nesting of Regions]
-      // A loop region that binds to a parallel region or a worksharing region
-      // may not be closely nested inside a worksharing, loop, task, taskloop,
-      // critical, ordered, atomic, or masked region.
-      NestingProhibited =
-          isOpenMPWorksharingDirective(ParentRegion) ||
-          isOpenMPGenericLoopDirective(ParentRegion) ||
-          isOpenMPTaskingDirective(ParentRegion) ||
-          ParentRegion == OMPD_master || ParentRegion == OMPD_masked ||
-          ParentRegion == OMPD_parallel_master ||
-          ParentRegion == OMPD_parallel_masked ||
-          ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered;
-      Recommend = ShouldBeInParallelRegion;
-    } else if (CurrentRegion == OMPD_ordered) {
-      // OpenMP [2.16, Nesting of Regions]
-      // An ordered region may not be closely nested inside a critical,
-      // atomic, or explicit task region.
-      // An ordered region must be closely nested inside a loop region (or
-      // parallel loop region) with an ordered clause.
-      // OpenMP [2.8.1,simd Construct, Restrictions]
-      // An ordered construct with the simd clause is the only OpenMP construct
-      // that can appear in the simd region.
-      NestingProhibited = ParentRegion == OMPD_critical ||
-                          isOpenMPTaskingDirective(ParentRegion) ||
-                          !(isOpenMPSimdDirective(ParentRegion) ||
-                            Stack->isParentOrderedRegion());
-      Recommend = ShouldBeInOrderedRegion;
-    } else if (isOpenMPNestingTeamsDirective(CurrentRegion)) {
-      // OpenMP [2.16, Nesting of Regions]
-      // If specified, a teams construct must be contained within a target
-      // construct.
-      NestingProhibited =
-          (SemaRef.LangOpts.OpenMP <= 45 && ParentRegion != OMPD_target) ||
-          (SemaRef.LangOpts.OpenMP >= 50 && ParentRegion != OMPD_unknown &&
-           ParentRegion != OMPD_target);
-      OrphanSeen = ParentRegion == OMPD_unknown;
-      Recommend = ShouldBeInTargetRegion;
-    } else if (CurrentRegion == OMPD_scan) {
-      // OpenMP [2.16, Nesting of Regions]
-      // If specified, a teams construct must be contained within a target
-      // construct.
-      NestingProhibited =
-          SemaRef.LangOpts.OpenMP < 50 ||
-          (ParentRegion != OMPD_simd && ParentRegion != OMPD_for &&
-           ParentRegion != OMPD_for_simd && ParentRegion != OMPD_parallel_for &&
-           ParentRegion != OMPD_parallel_for_simd);
-      OrphanSeen = ParentRegion == OMPD_unknown;
-      Recommend = ShouldBeInLoopSimdRegion;
-    }
-    if (!NestingProhibited &&
-        !isOpenMPTargetExecutionDirective(CurrentRegion) &&
-        !isOpenMPTargetDataManagementDirective(CurrentRegion) &&
-        (ParentRegion == OMPD_teams || ParentRegion == OMPD_target_teams)) {
-      // OpenMP [5.1, 2.22, Nesting of Regions]
-      // distribute, distribute simd, distribute parallel worksharing-loop,
-      // distribute parallel worksharing-loop SIMD, loop, parallel regions,
-      // including any parallel regions arising from combined constructs,
-      // omp_get_num_teams() regions, and omp_get_team_num() regions are the
-      // only OpenMP regions that may be strictly nested inside the teams
-      // region.
-      //
-      // As an extension, we permit atomic within teams as well.
-      NestingProhibited = !isOpenMPParallelDirective(CurrentRegion) &&
-                          !isOpenMPDistributeDirective(CurrentRegion) &&
-                          CurrentRegion != OMPD_loop &&
-                          !(SemaRef.getLangOpts().OpenMPExtensions &&
-                            CurrentRegion == OMPD_atomic);
-      Recommend = ShouldBeInParallelRegion;
-    }
-    if (!NestingProhibited && CurrentRegion == OMPD_loop) {
-      // OpenMP [5.1, 2.11.7, loop Construct, Restrictions]
-      // If the bind clause is present on the loop construct and binding is
-      // teams then the corresponding loop region must be strictly nested inside
-      // a teams region.
-      NestingProhibited = BindKind == OMPC_BIND_teams &&
-                          ParentRegion != OMPD_teams &&
-                          ParentRegion != OMPD_target_teams;
-      Recommend = ShouldBeInTeamsRegion;
-    }
-    if (!NestingProhibited &&
-        isOpenMPNestingDistributeDirective(CurrentRegion)) {
-      // OpenMP 4.5 [2.17 Nesting of Regions]
-      // The region associated with the distribute construct must be strictly
-      // nested inside a teams region
-      NestingProhibited =
-          (ParentRegion != OMPD_teams && ParentRegion != OMPD_target_teams);
-      Recommend = ShouldBeInTeamsRegion;
-    }
-    if (!NestingProhibited &&
-        (isOpenMPTargetExecutionDirective(CurrentRegion) ||
-         isOpenMPTargetDataManagementDirective(CurrentRegion))) {
-      // OpenMP 4.5 [2.17 Nesting of Regions]
-      // If a target, target update, target data, target enter data, or
-      // target exit data construct is encountered during execution of a
-      // target region, the behavior is unspecified.
-      NestingProhibited = Stack->hasDirective(
-          [&OffendingRegion](OpenMPDirectiveKind K, const DeclarationNameInfo &,
-                             SourceLocation) {
-            if (isOpenMPTargetExecutionDirective(K)) {
-              OffendingRegion = K;
-              return true;
-            }
-            return false;
-          },
-          false /* don't skip top directive */);
-      CloseNesting = false;
-    }
-    if (NestingProhibited) {
-      if (OrphanSeen) {
-        SemaRef.Diag(StartLoc, diag::err_omp_orphaned_device_directive)
-            << getOpenMPDirectiveName(CurrentRegion) << Recommend;
-      } else {
-        SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
-            << CloseNesting << getOpenMPDirectiveName(OffendingRegion)
-            << Recommend << getOpenMPDirectiveName(CurrentRegion);
-      }
-      return true;
-    }
+    return true;
   }
   return false;
 }
@@ -5783,7 +5503,7 @@ static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
       // Divide by the absolute step amount. If the range is not a multiple of
       // the step size, rounding-up the effective upper bound ensures that the
       // last iteration is included.
-      // Note that the rounding-up may cause an overflow in a temporry that
+      // Note that the rounding-up may cause an overflow in a temporary that
       // could be avoided, but would have occurred in a C-style for-loop as
       // well.
       Expr *Divisor = BuildVarRef(NewStep);
@@ -6064,7 +5784,7 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
 static void
 processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
                                       SmallVectorImpl<OMPClause *> &Clauses) {
-  // Check for the deault mapper for data members.
+  // Check for the default mapper for data members.
   if (S.getLangOpts().OpenMP < 50)
     return;
   SmallVector<OMPClause *, 4> ImplicitMaps;
@@ -6282,16 +6002,21 @@ bool SemaOpenMP::mapLoopConstruct(
     if (BindKind == OMPC_BIND_unknown) {
       // Setting the enclosing teams or parallel construct for the loop
       // directive without bind clause.
+      // [5.0:129:25-28] If the bind clause is not present on the construct and
+      // the loop construct is closely nested inside a teams or parallel
+      // construct, the binding region is the corresponding teams or parallel
+      // region. If none of those conditions hold, the binding region is not
+      // defined.
       BindKind = OMPC_BIND_thread; // Default bind(thread) if binding is unknown
+      ArrayRef<OpenMPDirectiveKind> ParentLeafs =
+          getLeafConstructsOrSelf(ParentDirective);
 
       if (ParentDirective == OMPD_unknown) {
         Diag(DSAStack->getDefaultDSALocation(),
              diag::err_omp_bind_required_on_loop);
-      } else if (ParentDirective == OMPD_parallel ||
-                 ParentDirective == OMPD_target_parallel) {
+      } else if (ParentLeafs.back() == OMPD_parallel) {
         BindKind = OMPC_BIND_parallel;
-      } else if (ParentDirective == OMPD_teams ||
-                 ParentDirective == OMPD_target_teams) {
+      } else if (ParentLeafs.back() == OMPD_teams) {
         BindKind = OMPC_BIND_teams;
       }
     } else {
@@ -6357,6 +6082,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
     Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
     OpenMPDirectiveKind PrevMappedDirective) {
+  assert(isOpenMPExecutableDirective(Kind) && "Unexpected directive category");
+
   StmtResult Res = StmtError();
   OpenMPBindClauseKind BindKind = OMPC_BIND_unknown;
   llvm::SmallVector<OMPClause *> ClausesWithoutBind;
@@ -6398,9 +6125,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     ClausesWithImplicit.append(Clauses.begin(), Clauses.end());
   }
   if (AStmt && !SemaRef.CurContext->isDependentContext() &&
-      Kind != OMPD_atomic && Kind != OMPD_critical && Kind != OMPD_section &&
-      Kind != OMPD_master && Kind != OMPD_masked &&
-      !isOpenMPLoopTransformationDirective(Kind)) {
+      isOpenMPCapturingDirective(Kind)) {
     assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
 
     // Check default data sharing attributes for referenced variables.
@@ -6549,18 +6274,14 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
                                             ClausesWithImplicit);
   }
 
-  llvm::SmallVector<OpenMPDirectiveKind, 4> AllowedNameModifiers;
   switch (Kind) {
   case OMPD_parallel:
     Res = ActOnOpenMPParallelDirective(ClausesWithImplicit, AStmt, StartLoc,
                                        EndLoc);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_simd:
     Res = ActOnOpenMPSimdDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
                                    VarsWithInheritedDSA);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_tile:
     Res =
@@ -6577,8 +6298,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_for_simd:
     Res = ActOnOpenMPForSimdDirective(ClausesWithImplicit, AStmt, StartLoc,
                                       EndLoc, VarsWithInheritedDSA);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_sections:
     Res = ActOnOpenMPSectionsDirective(ClausesWithImplicit, AStmt, StartLoc,
@@ -6609,14 +6328,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_parallel_for:
     Res = ActOnOpenMPParallelForDirective(ClausesWithImplicit, AStmt, StartLoc,
                                           EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_parallel_for_simd:
     Res = ActOnOpenMPParallelForSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_parallel);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_scope:
     Res =
@@ -6625,22 +6340,18 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_parallel_master:
     Res = ActOnOpenMPParallelMasterDirective(ClausesWithImplicit, AStmt,
                                              StartLoc, EndLoc);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_parallel_masked:
     Res = ActOnOpenMPParallelMaskedDirective(ClausesWithImplicit, AStmt,
                                              StartLoc, EndLoc);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_parallel_sections:
     Res = ActOnOpenMPParallelSectionsDirective(ClausesWithImplicit, AStmt,
                                                StartLoc, EndLoc);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_task:
     Res =
         ActOnOpenMPTaskDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
-    AllowedNameModifiers.push_back(OMPD_task);
     break;
   case OMPD_taskyield:
     assert(ClausesWithImplicit.empty() &&
@@ -6700,19 +6411,14 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_target:
     Res = ActOnOpenMPTargetDirective(ClausesWithImplicit, AStmt, StartLoc,
                                      EndLoc);
-    AllowedNameModifiers.push_back(OMPD_target);
     break;
   case OMPD_target_parallel:
     Res = ActOnOpenMPTargetParallelDirective(ClausesWithImplicit, AStmt,
                                              StartLoc, EndLoc);
-    AllowedNameModifiers.push_back(OMPD_target);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_target_parallel_for:
     Res = ActOnOpenMPTargetParallelForDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_cancellation_point:
     assert(ClausesWithImplicit.empty() &&
@@ -6726,90 +6432,58 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
            "No associated statement allowed for 'omp cancel' directive");
     Res = ActOnOpenMPCancelDirective(ClausesWithImplicit, StartLoc, EndLoc,
                                      CancelRegion);
-    AllowedNameModifiers.push_back(OMPD_cancel);
     break;
   case OMPD_target_data:
     Res = ActOnOpenMPTargetDataDirective(ClausesWithImplicit, AStmt, StartLoc,
                                          EndLoc);
-    AllowedNameModifiers.push_back(OMPD_target_data);
     break;
   case OMPD_target_enter_data:
     Res = ActOnOpenMPTargetEnterDataDirective(ClausesWithImplicit, StartLoc,
                                               EndLoc, AStmt);
-    AllowedNameModifiers.push_back(OMPD_target_enter_data);
     break;
   case OMPD_target_exit_data:
     Res = ActOnOpenMPTargetExitDataDirective(ClausesWithImplicit, StartLoc,
                                              EndLoc, AStmt);
-    AllowedNameModifiers.push_back(OMPD_target_exit_data);
     break;
   case OMPD_taskloop:
     Res = ActOnOpenMPTaskLoopDirective(ClausesWithImplicit, AStmt, StartLoc,
                                        EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_taskloop);
     break;
   case OMPD_taskloop_simd:
     Res = ActOnOpenMPTaskLoopSimdDirective(ClausesWithImplicit, AStmt, StartLoc,
                                            EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_taskloop);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_master_taskloop:
     Res = ActOnOpenMPMasterTaskLoopDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_taskloop);
     break;
   case OMPD_masked_taskloop:
     Res = ActOnOpenMPMaskedTaskLoopDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_taskloop);
     break;
   case OMPD_master_taskloop_simd:
     Res = ActOnOpenMPMasterTaskLoopSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_taskloop);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_masked_taskloop_simd:
     Res = ActOnOpenMPMaskedTaskLoopSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    if (getLangOpts().OpenMP >= 51) {
-      AllowedNameModifiers.push_back(OMPD_taskloop);
-      AllowedNameModifiers.push_back(OMPD_simd);
-    }
     break;
   case OMPD_parallel_master_taskloop:
     Res = ActOnOpenMPParallelMasterTaskLoopDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_taskloop);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_parallel_masked_taskloop:
     Res = ActOnOpenMPParallelMaskedTaskLoopDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    if (getLangOpts().OpenMP >= 51) {
-      AllowedNameModifiers.push_back(OMPD_taskloop);
-      AllowedNameModifiers.push_back(OMPD_parallel);
-    }
     break;
   case OMPD_parallel_master_taskloop_simd:
     Res = ActOnOpenMPParallelMasterTaskLoopSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_taskloop);
-    AllowedNameModifiers.push_back(OMPD_parallel);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_parallel_masked_taskloop_simd:
     Res = ActOnOpenMPParallelMaskedTaskLoopSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    if (getLangOpts().OpenMP >= 51) {
-      AllowedNameModifiers.push_back(OMPD_taskloop);
-      AllowedNameModifiers.push_back(OMPD_parallel);
-      AllowedNameModifiers.push_back(OMPD_simd);
-    }
     break;
   case OMPD_distribute:
     Res = ActOnOpenMPDistributeDirective(ClausesWithImplicit, AStmt, StartLoc,
@@ -6818,40 +6492,26 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_target_update:
     Res = ActOnOpenMPTargetUpdateDirective(ClausesWithImplicit, StartLoc,
                                            EndLoc, AStmt);
-    AllowedNameModifiers.push_back(OMPD_target_update);
     break;
   case OMPD_distribute_parallel_for:
     Res = ActOnOpenMPDistributeParallelForDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_distribute_parallel_for_simd:
     Res = ActOnOpenMPDistributeParallelForSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_parallel);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_distribute_simd:
     Res = ActOnOpenMPDistributeSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_target_parallel_for_simd:
     Res = ActOnOpenMPTargetParallelForSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
-    AllowedNameModifiers.push_back(OMPD_parallel);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_target_simd:
     Res = ActOnOpenMPTargetSimdDirective(ClausesWithImplicit, AStmt, StartLoc,
                                          EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_teams_distribute:
     Res = ActOnOpenMPTeamsDistributeDirective(
@@ -6860,51 +6520,34 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_teams_distribute_simd:
     Res = ActOnOpenMPTeamsDistributeSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_teams_distribute_parallel_for_simd:
     Res = ActOnOpenMPTeamsDistributeParallelForSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_parallel);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_teams_distribute_parallel_for:
     Res = ActOnOpenMPTeamsDistributeParallelForDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_target_teams:
     Res = ActOnOpenMPTargetTeamsDirective(ClausesWithImplicit, AStmt, StartLoc,
                                           EndLoc);
-    AllowedNameModifiers.push_back(OMPD_target);
     break;
   case OMPD_target_teams_distribute:
     Res = ActOnOpenMPTargetTeamsDistributeDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
     break;
   case OMPD_target_teams_distribute_parallel_for:
     Res = ActOnOpenMPTargetTeamsDistributeParallelForDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
-    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_target_teams_distribute_parallel_for_simd:
     Res = ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
-    AllowedNameModifiers.push_back(OMPD_parallel);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_target_teams_distribute_simd:
     Res = ActOnOpenMPTargetTeamsDistributeSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
-    if (getLangOpts().OpenMP >= 50)
-      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_interop:
     assert(AStmt == nullptr &&
@@ -6926,7 +6569,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_target_teams_loop:
     Res = ActOnOpenMPTargetTeamsGenericLoopDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    AllowedNameModifiers.push_back(OMPD_target);
     break;
   case OMPD_parallel_loop:
     Res = ActOnOpenMPParallelGenericLoopDirective(
@@ -6965,7 +6607,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       switch (C->getClauseKind()) {
       case OMPC_num_threads:
       case OMPC_dist_schedule:
-        // Do not analyse if no parent teams directive.
+        // Do not analyze if no parent teams directive.
         if (isOpenMPTeamsDirective(Kind))
           break;
         continue;
@@ -7096,6 +6738,11 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     }
   }
 
+  llvm::SmallVector<OpenMPDirectiveKind, 4> AllowedNameModifiers;
+  for (OpenMPDirectiveKind D : getLeafConstructsOrSelf(Kind)) {
+    if (isAllowedClauseForDirective(D, OMPC_if, getLangOpts().OpenMP))
+      AllowedNameModifiers.push_back(D);
+  }
   if (!AllowedNameModifiers.empty())
     ErrorFound = checkIfClauses(SemaRef, Kind, Clauses, AllowedNameModifiers) ||
                  ErrorFound;
@@ -7781,7 +7428,7 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
       FnPtrType = Context.getMemberPointerType(AdjustedFnType, ClassType);
       ExprResult ER;
       {
-        // Build adrr_of unary op to correctly handle type checks for member
+        // Build addr_of unary op to correctly handle type checks for member
         // functions.
         Sema::TentativeAnalysisScope Trap(SemaRef);
         ER = SemaRef.CreateBuiltinUnaryOp(VariantRef->getBeginLoc(), UO_AddrOf,
@@ -8340,7 +7987,7 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
                    diag::err_omp_loop_incr_not_compatible)
           << LCDecl << *TestIsLessOp << NewStep->getSourceRange();
       SemaRef.Diag(ConditionLoc,
-                   diag::note_omp_loop_cond_requres_compatible_incr)
+                   diag::note_omp_loop_cond_requires_compatible_incr)
           << *TestIsLessOp << ConditionSrcRange;
       return true;
     }
@@ -9423,7 +9070,7 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
           }
         }
         DSAStack->addLoopControlVariable(D, VD);
-        const Decl *LD = DSAStack->getPossiblyLoopCunter();
+        const Decl *LD = DSAStack->getPossiblyLoopCounter();
         if (LD != D->getCanonicalDecl()) {
           DSAStack->resetPossibleLoopCounter();
           if (auto *Var = dyn_cast_or_null<VarDecl>(LD))
@@ -9485,7 +9132,7 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
 }
 
 namespace {
-// Utility for openmp doacross clause kind
+// Utility for OpenMP doacross clause kind
 class OMPDoacrossKind {
 public:
   bool isSource(const OMPDoacrossClause *C) {
@@ -9863,7 +9510,7 @@ static Stmt *buildPreInits(ASTContext &Context,
 /// stored in lieu of using an explicit list. Flattening is necessary because
 /// contained DeclStmts need to be visible after the execution of the list. Used
 /// for OpenMP pre-init declarations/statements.
-static void appendFlattendedStmtList(SmallVectorImpl<Stmt *> &TargetList,
+static void appendFlattenedStmtList(SmallVectorImpl<Stmt *> &TargetList,
                                      Stmt *Item) {
   // nullptr represents an empty list.
   if (!Item)
@@ -9895,7 +9542,7 @@ static Stmt *buildPreInits(ASTContext &Context, ArrayRef<Stmt *> PreInits) {
 
   SmallVector<Stmt *> Stmts;
   for (Stmt *S : PreInits)
-    appendFlattendedStmtList(Stmts, S);
+    appendFlattenedStmtList(Stmts, S);
   return CompoundStmt::Create(Context, PreInits, FPOptionsOverride(), {}, {});
 }
 
@@ -9999,7 +9646,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             // Search for pre-init declared variables that need to be captured
             // to be referenceable inside the directive.
             SmallVector<Stmt *> Constituents;
-            appendFlattendedStmtList(Constituents, DependentPreInits);
+            appendFlattenedStmtList(Constituents, DependentPreInits);
             for (Stmt *S : Constituents) {
               if (auto *DC = dyn_cast<DeclStmt>(S)) {
                 for (Decl *C : DC->decls()) {
@@ -11485,7 +11132,7 @@ StmtResult SemaOpenMP::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
          diag::err_omp_scan_single_clause_expected);
     return StmtError();
   }
-  // Check that scan directive is used in the scopeof the OpenMP loop body.
+  // Check that scan directive is used in the scope of the OpenMP loop body.
   if (Scope *S = DSAStack->getCurScope()) {
     Scope *ParentS = S->getParent();
     if (!ParentS || ParentS->getParent() != ParentS->getBreakParent() ||
@@ -11640,7 +11287,7 @@ class OpenMPAtomicUpdateChecker {
     NotAnAssignmentOp,
     /// RHS part of the binary operation is not a binary expression.
     NotABinaryExpression,
-    /// RHS part is not additive/multiplicative/shift/biwise binary
+    /// RHS part is not additive/multiplicative/shift/bitwise binary
     /// expression.
     NotABinaryOperator,
     /// RHS binary operation does not have reference to the updated LHS
@@ -11918,7 +11565,7 @@ public:
     InvalidAssignment,
     /// Not if statement
     NotIfStmt,
-    /// More than two statements in a compund statement.
+    /// More than two statements in a compound statement.
     MoreThanTwoStmts,
     /// Not a compound statement.
     NotCompoundStmt,
@@ -14405,7 +14052,7 @@ bool SemaOpenMP::checkTransformableLoopNest(
         else
           llvm_unreachable("Unhandled loop transformation");
 
-        appendFlattendedStmtList(OriginalInits.back(), DependentPreInits);
+        appendFlattenedStmtList(OriginalInits.back(), DependentPreInits);
       });
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
