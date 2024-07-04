@@ -401,6 +401,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.dfmal
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -413,6 +414,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.dfmaf128
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -1062,6 +1064,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.expf16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -1098,6 +1101,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp2f16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -1145,6 +1149,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp10f16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -3317,6 +3322,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.fmaf
+    libc.src.__support.macros.properties.types
   FLAGS
     FMA_OPT__ONLY
 )
@@ -3331,6 +3337,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.fma
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -3368,6 +3375,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.expm1f16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -4352,6 +4360,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.f16fma
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -4364,6 +4373,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.f16fmaf
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -4376,6 +4386,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.f16fmal
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -4388,6 +4399,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.f16fmaf128
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -4490,6 +4502,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.ffma
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -4502,6 +4515,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.ffmal
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
@@ -4514,6 +4528,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.ffmaf128
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
