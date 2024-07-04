@@ -166,6 +166,18 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
+bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VID_V &&
+      MI.getOperand(1).isUndef() &&
+      /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl and
+         vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
+         i.e. -riscv-vsetvl-after-rvv-regalloc=true */
+      !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
+    return true;
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+}
+
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
                                         unsigned NumRegs) {
   return DstReg > SrcReg && (DstReg - SrcReg) < NumRegs;
