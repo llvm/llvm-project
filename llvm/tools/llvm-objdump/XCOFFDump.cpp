@@ -41,7 +41,7 @@ public:
 private:
   void printPrivateHeaders() override;
   void printFileHeader();
-  void printAuxiliaryHeader(){};
+  void printAuxiliaryHeader() {};
   void printLoaderSectionHeader();
   FormattedString formatName(StringRef Name);
   void printHex(StringRef Name, uint64_t Value);
