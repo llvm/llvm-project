@@ -1482,3 +1482,15 @@ namespace FloatAPValue {
   ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
 }
 #endif
+
+namespace LocalWithThisPtrInit {
+  struct S {
+    int i;
+    int *p = &i;
+  };
+  constexpr int foo() {
+    S s{2};
+    return *s.p;
+  }
+  static_assert(foo() == 2, "");
+}
