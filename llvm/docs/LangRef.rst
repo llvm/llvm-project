@@ -16182,10 +16182,6 @@ LLVM implements all ISO C flavors as listed in this table.
 Only basic intrinsics list here. The constrained version
 ones may have different behaivor on exception.
 
-Since some architectures implement minNum/maxNum with +0.0>-0.0,
-so we define internal ISD::MINNUM_IEEE and ISD::MAXNUM_IEEE.
-They will be helpful to implement minimumnum/maximumnum.
-
 .. list-table::
    :header-rows: 1
    :widths: 16 28 28 28
