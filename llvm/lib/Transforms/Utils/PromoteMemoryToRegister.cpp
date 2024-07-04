@@ -41,6 +41,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
@@ -392,12 +393,15 @@ struct PromoteMem2Reg {
   /// Lazily compute the number of predecessors a block has.
   DenseMap<const BasicBlock *, unsigned> BBNumPreds;
 
+  /// Whether the function has the no-signed-zeros-fp-math attribute set.
+  bool NoSignedZeros = false;
+
 public:
   PromoteMem2Reg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
                  AssumptionCache *AC)
       : Allocas(Allocas.begin(), Allocas.end()), DT(DT),
         DIB(*DT.getRoot()->getParent()->getParent(), /*AllowUnresolved*/ false),
-        AC(AC), SQ(DT.getRoot()->getParent()->getParent()->getDataLayout(),
+        AC(AC), SQ(DT.getRoot()->getDataLayout(),
                    nullptr, &DT, AC) {}
 
   void run();
@@ -453,6 +457,15 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
 static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
                                      const DataLayout &DL, AssumptionCache *AC,
                                      const DominatorTree *DT) {
+  if (isa<UndefValue>(Val) && LI->hasMetadata(LLVMContext::MD_noundef)) {
+    // Insert non-terminator unreachable.
+    LLVMContext &Ctx = LI->getContext();
+    new StoreInst(ConstantInt::getTrue(Ctx),
+                  PoisonValue::get(PointerType::getUnqual(Ctx)),
+                  /*isVolatile=*/false, Align(1), LI);
+    return;
+  }
+
   // If the load was marked as nonnull we don't want to lose that information
   // when we erase this Load. So we preserve it with an assume. As !nonnull
   // returns poison while assume violations are immediate undefined behavior,
@@ -729,6 +742,8 @@ void PromoteMem2Reg::run() {
   AllocaInfo Info;
   LargeBlockInfo LBI;
   ForwardIDFCalculator IDF(DT);
+
+  NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];
@@ -1112,6 +1127,14 @@ NextIteration:
         // Add N incoming values to the PHI node.
         for (unsigned i = 0; i != NumEdges; ++i)
           APN->addIncoming(IncomingVals[AllocaNo], Pred);
+
+        // For the  sequence `return X > 0.0 ? X : -X`, it is expected that this
+        // results in fabs intrinsic. However, without no-signed-zeros(nsz) flag
+        // on the phi node generated at this stage, fabs folding does not
+        // happen. So, we try to infer nsz flag from the function attributes to
+        // enable this fabs folding.
+        if (isa<FPMathOperator>(APN) && NoSignedZeros)
+          APN->setHasNoSignedZeros(true);
 
         // The currently active variable for this block is now the PHI.
         IncomingVals[AllocaNo] = APN;

@@ -199,7 +199,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   // a GNU compatible linker. As long as an output for the -v option
   // contains "GNU" or "with BFD", they recognize us as GNU-compatible.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    message(getLLDVersion() + " (compatible with GNU linkers)");
+    message(getLLDVersion() + ", compatible with GNU linkers");
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
@@ -223,8 +223,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef s = a->getValue();
     if (args.getLastArgValue(OPT_m) == "i386pe" && s.starts_with("_"))
       add("-entry:" + s.substr(1));
-    else
+    else if (!s.empty())
       add("-entry:" + s);
+    else
+      add("-noentry");
   }
 
   if (args.hasArg(OPT_major_os_version, OPT_minor_os_version,

@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The fix for LWG2381 (https://github.com/llvm/llvm-project/pull/77948) changed
-// behavior of FP parsing, while Apple back-deployment targets remain broken due
-// to the dylib.
-// UNSUPPORTED: using-built-library-before-llvm-19
-
 // <locale>
 
 // class num_get<charT, InputIterator>

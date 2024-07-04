@@ -46,13 +46,13 @@ public:
   void initializeSentinel() { PrevAndSentinel.setInt(true); }
 };
 
-template <class ParentPtrTy> class node_base_parent {
-  ParentPtrTy Parent = nullptr;
+template <class ParentTy> class node_base_parent {
+  ParentTy *Parent = nullptr;
 
 public:
-  void setNodeBaseParent(ParentPtrTy Parent) { this->Parent = Parent; }
-  inline const ParentPtrTy getNodeBaseParent() const { return Parent; }
-  inline ParentPtrTy getNodeBaseParent() { return Parent; }
+  void setNodeBaseParent(ParentTy *Parent) { this->Parent = Parent; }
+  inline const ParentTy *getNodeBaseParent() const { return Parent; }
+  inline ParentTy *getNodeBaseParent() { return Parent; }
 };
 template <> class node_base_parent<void> {};
 
@@ -61,12 +61,11 @@ template <> class node_base_parent<void> {};
 /// Base class for ilist nodes.
 ///
 /// Optionally tracks whether this node is the sentinel.
-template <bool EnableSentinelTracking, class ParentPtrTy>
-class ilist_node_base
-    : public ilist_detail::node_base_prevnext<
-          ilist_node_base<EnableSentinelTracking, ParentPtrTy>,
-          EnableSentinelTracking>,
-      public ilist_detail::node_base_parent<ParentPtrTy> {};
+template <bool EnableSentinelTracking, class ParentTy>
+class ilist_node_base : public ilist_detail::node_base_prevnext<
+                            ilist_node_base<EnableSentinelTracking, ParentTy>,
+                            EnableSentinelTracking>,
+                        public ilist_detail::node_base_parent<ParentTy> {};
 
 } // end namespace llvm
 

@@ -71,12 +71,13 @@ public:
   }
 
   CompilerType
-  MakeEnumType(const std::vector<std::pair<const char *, int>> enumerators) {
-    CompilerType uint_type = m_type_system->GetBuiltinTypeForEncodingAndBitSize(
-        lldb::eEncodingUint, 32);
+  MakeEnumType(const std::vector<std::pair<const char *, int>> enumerators,
+               bool is_signed) {
+    CompilerType int_type = m_type_system->GetBuiltinTypeForEncodingAndBitSize(
+        is_signed ? lldb::eEncodingSint : lldb::eEncodingUint, 32);
     CompilerType enum_type = m_type_system->CreateEnumerationType(
         "TestEnum", m_type_system->GetTranslationUnitDecl(),
-        OptionalClangModuleID(), Declaration(), uint_type, false);
+        OptionalClangModuleID(), Declaration(), int_type, false);
 
     m_type_system->StartTagDeclarationDefinition(enum_type);
     Declaration decl;
@@ -98,9 +99,10 @@ public:
     ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     for (auto [value, options, expected] : tests) {
       DataExtractor data_extractor{&value, sizeof(value), endian, 4};
-      ValueObjectConstResult::Create(exe_scope, enum_type, var_name,
-                                     data_extractor)
-          ->Dump(strm, options);
+      auto valobj_sp = ValueObjectConstResult::Create(exe_scope, enum_type,
+                                                      var_name, data_extractor);
+      if (llvm::Error error = valobj_sp->Dump(strm, options))
+        llvm::consumeError(std::move(error));
       ASSERT_STREQ(strm.GetString().str().c_str(), expected);
       strm.Clear();
     }
@@ -122,12 +124,27 @@ private:
   lldb::ProcessSP m_process_sp;
 };
 
+TEST_F(ValueObjectMockProcessTest, EmptyEnum) {
+  // All values of an empty enum should be shown as plain numbers.
+  TestDumpValueObject(MakeEnumType({}, false),
+                      {{0, {}, "(TestEnum) test_var = 0\n"},
+                       {1, {}, "(TestEnum) test_var = 1\n"},
+                       {2, {}, "(TestEnum) test_var = 2\n"}});
+
+  TestDumpValueObject(MakeEnumType({}, true),
+                      {{-2, {}, "(TestEnum) test_var = -2\n"},
+                       {-1, {}, "(TestEnum) test_var = -1\n"},
+                       {0, {}, "(TestEnum) test_var = 0\n"},
+                       {1, {}, "(TestEnum) test_var = 1\n"},
+                       {2, {}, "(TestEnum) test_var = 2\n"}});
+}
+
 TEST_F(ValueObjectMockProcessTest, Enum) {
   // This is not a bitfield-like enum, so values are printed as decimal by
   // default. Also we only show the enumerator name if the value is an
   // exact match.
   TestDumpValueObject(
-      MakeEnumType({{"test_2", 2}, {"test_3", 3}}),
+      MakeEnumType({{"test_2", 2}, {"test_3", 3}}, false),
       {{0, {}, "(TestEnum) test_var = 0\n"},
        {1, {}, "(TestEnum) test_var = 1\n"},
        {2, {}, "(TestEnum) test_var = test_2\n"},
@@ -148,12 +165,12 @@ TEST_F(ValueObjectMockProcessTest, Enum) {
 TEST_F(ValueObjectMockProcessTest, BitFieldLikeEnum) {
   // These enumerators set individual bits in the value, as if it were a flag
   // set. lldb treats this as a "bitfield like enum". This means we show values
-  // as hex, a value of 0 shows nothing, and values with no exact enumerator are
-  // shown as combinations of the other values.
+  // as hex, and values without exact matches are shown as a combination of
+  // enumerators and any remaining value left over.
   TestDumpValueObject(
-      MakeEnumType({{"test_2", 2}, {"test_4", 4}}),
+      MakeEnumType({{"test_2", 2}, {"test_4", 4}}, false),
       {
-          {0, {}, "(TestEnum) test_var =\n"},
+          {0, {}, "(TestEnum) test_var = 0x0\n"},
           {1, {}, "(TestEnum) test_var = 0x1\n"},
           {2, {}, "(TestEnum) test_var = test_2\n"},
           {4, {}, "(TestEnum) test_var = test_4\n"},

@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -26,9 +27,15 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include <cstdint>
 
 using namespace mlir;
+
+#define DEBUG_TYPE "scf-utils"
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loopNest,
@@ -287,6 +294,25 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return builder.create<arith::DivUIOp>(loc, sum, divisor);
 }
 
+/// Returns the trip count of `forOp` if its' low bound, high bound and step are
+/// constants, or optional otherwise. Trip count is computed as ceilDiv(highBound
+/// - lowBound, step).
+static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
+  std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> stepCstOp = getConstantIntValue(forOp.getStep());
+  if (!lbCstOp.has_value() || !ubCstOp.has_value() || !stepCstOp.has_value())
+    return {};
+
+  // Constant loop bounds computation.
+  int64_t lbCst = lbCstOp.value();
+  int64_t ubCst = ubCstOp.value();
+  int64_t stepCst = stepCstOp.value();
+  assert(lbCst >= 0 && ubCst >= 0 && stepCst > 0 &&
+         "expected positive loop bounds and step");
+  return llvm::divideCeilSigned(ubCst - lbCst, stepCst);
+}
+
 /// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
 /// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
 /// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
@@ -363,25 +389,21 @@ LogicalResult mlir::loopUnrollByFactor(
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
-  std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> stepCstOp = getConstantIntValue(forOp.getStep());
-  if (lbCstOp && ubCstOp && stepCstOp) {
+  std::optional<int64_t> constTripCount = getConstantTripCount(forOp);
+  if (constTripCount) {
     // Constant loop bounds computation.
-    int64_t lbCst = lbCstOp.value();
-    int64_t ubCst = ubCstOp.value();
-    int64_t stepCst = stepCstOp.value();
-    assert(lbCst >= 0 && ubCst >= 0 && stepCst >= 0 &&
-           "expected positive loop bounds and step");
-    int64_t tripCount = llvm::divideCeilSigned(ubCst - lbCst, stepCst);
-
+    int64_t lbCst = getConstantIntValue(forOp.getLowerBound()).value();
+    int64_t ubCst = getConstantIntValue(forOp.getUpperBound()).value();
+    int64_t stepCst = getConstantIntValue(forOp.getStep()).value();
     if (unrollFactor == 1) {
-      if (tripCount == 1 && failed(forOp.promoteIfSingleIteration(rewriter)))
+      if (*constTripCount == 1 &&
+          failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
       return success();
     }
 
-    int64_t tripCountEvenMultiple = tripCount - (tripCount % unrollFactor);
+    int64_t tripCountEvenMultiple =
+        *constTripCount - (*constTripCount % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -459,6 +481,185 @@ LogicalResult mlir::loopUnrollByFactor(
         return b.create<arith::AddIOp>(loc, iv, stride);
       },
       annotateFn, iterArgs, yieldedValues);
+  // Promote the loop body up if this has turned into a single iteration loop.
+  (void)forOp.promoteIfSingleIteration(rewriter);
+  return success();
+}
+
+/// Check if bounds of all inner loops are defined outside of `forOp`
+/// and return false if not.
+static bool areInnerBoundsInvariant(scf::ForOp forOp) {
+  auto walkResult = forOp.walk([&](scf::ForOp innerForOp) {
+    if (!forOp.isDefinedOutsideOfLoop(innerForOp.getLowerBound()) ||
+        !forOp.isDefinedOutsideOfLoop(innerForOp.getUpperBound()) ||
+        !forOp.isDefinedOutsideOfLoop(innerForOp.getStep()))
+      return WalkResult::interrupt();
+
+    return WalkResult::advance();
+  });
+  return !walkResult.wasInterrupted();
+}
+
+/// Unrolls and jams this loop by the specified factor.
+LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
+                                          uint64_t unrollJamFactor) {
+  assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
+
+  if (unrollJamFactor == 1)
+    return success();
+
+  // If any control operand of any inner loop of `forOp` is defined within
+  // `forOp`, no unroll jam.
+  if (!areInnerBoundsInvariant(forOp)) {
+    LDBG("failed to unroll and jam: inner bounds are not invariant");
+    return failure();
+  }
+
+  // Currently, for operations with results are not supported.
+  if (forOp->getNumResults() > 0) {
+    LDBG("failed to unroll and jam: unsupported loop with results");
+    return failure();
+  }
+
+  // Currently, only constant trip count that divided by the unroll factor is
+  // supported.
+  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  if (!tripCount.has_value()) {
+    // If the trip count is dynamic, do not unroll & jam.
+    LDBG("failed to unroll and jam: trip count could not be determined");
+    return failure();
+  }
+  if (unrollJamFactor > *tripCount) {
+    LDBG("unroll and jam factor is greater than trip count, set factor to trip "
+         "count");
+    unrollJamFactor = *tripCount;
+  } else if (*tripCount % unrollJamFactor != 0) {
+    LDBG("failed to unroll and jam: unsupported trip count that is not a "
+         "multiple of unroll jam factor");
+    return failure();
+  }
+
+  // Nothing in the loop body other than the terminator.
+  if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
+    return success();
+
+  // Gather all sub-blocks to jam upon the loop being unrolled.
+  JamBlockGatherer<scf::ForOp> jbg;
+  jbg.walk(forOp);
+  auto &subBlocks = jbg.subBlocks;
+
+  // Collect inner loops.
+  SmallVector<scf::ForOp> innerLoops;
+  forOp.walk([&](scf::ForOp innerForOp) { innerLoops.push_back(innerForOp); });
+
+  // `operandMaps[i - 1]` carries old->new operand mapping for the ith unrolled
+  // iteration. There are (`unrollJamFactor` - 1) iterations.
+  SmallVector<IRMapping> operandMaps(unrollJamFactor - 1);
+
+  // For any loop with iter_args, replace it with a new loop that has
+  // `unrollJamFactor` copies of its iterOperands, iter_args and yield
+  // operands.
+  SmallVector<scf::ForOp> newInnerLoops;
+  IRRewriter rewriter(forOp.getContext());
+  for (scf::ForOp oldForOp : innerLoops) {
+    SmallVector<Value> dupIterOperands, dupYieldOperands;
+    ValueRange oldIterOperands = oldForOp.getInits();
+    ValueRange oldIterArgs = oldForOp.getRegionIterArgs();
+    ValueRange oldYieldOperands =
+        cast<scf::YieldOp>(oldForOp.getBody()->getTerminator()).getOperands();
+    // Get additional iterOperands, iterArgs, and yield operands. We will
+    // fix iterOperands and yield operands after cloning of sub-blocks.
+    for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
+      dupIterOperands.append(oldIterOperands.begin(), oldIterOperands.end());
+      dupYieldOperands.append(oldYieldOperands.begin(), oldYieldOperands.end());
+    }
+    // Create a new loop with additional iterOperands, iter_args and yield
+    // operands. This new loop will take the loop body of the original loop.
+    bool forOpReplaced = oldForOp == forOp;
+    scf::ForOp newForOp =
+        cast<scf::ForOp>(*oldForOp.replaceWithAdditionalYields(
+            rewriter, dupIterOperands, /*replaceInitOperandUsesInLoop=*/false,
+            [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs) {
+              return dupYieldOperands;
+            }));
+    newInnerLoops.push_back(newForOp);
+    // `forOp` has been replaced with a new loop.
+    if (forOpReplaced)
+      forOp = newForOp;
+    // Update `operandMaps` for `newForOp` iterArgs and results.
+    ValueRange newIterArgs = newForOp.getRegionIterArgs();
+    unsigned oldNumIterArgs = oldIterArgs.size();
+    ValueRange newResults = newForOp.getResults();
+    unsigned oldNumResults = newResults.size() / unrollJamFactor;
+    assert(oldNumIterArgs == oldNumResults &&
+           "oldNumIterArgs must be the same as oldNumResults");
+    for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
+      for (unsigned j = 0; j < oldNumIterArgs; ++j) {
+        // `newForOp` has `unrollJamFactor` - 1 new sets of iterArgs and
+        // results. Update `operandMaps[i - 1]` to map old iterArgs and results
+        // to those in the `i`th new set.
+        operandMaps[i - 1].map(newIterArgs[j],
+                               newIterArgs[i * oldNumIterArgs + j]);
+        operandMaps[i - 1].map(newResults[j],
+                               newResults[i * oldNumResults + j]);
+      }
+    }
+  }
+
+  // Scale the step of loop being unroll-jammed by the unroll-jam factor.
+  rewriter.setInsertionPoint(forOp);
+  int64_t step = forOp.getConstantStep()->getSExtValue();
+  auto newStep = rewriter.createOrFold<arith::MulIOp>(
+      forOp.getLoc(), forOp.getStep(),
+      rewriter.createOrFold<arith::ConstantOp>(
+          forOp.getLoc(), rewriter.getIndexAttr(unrollJamFactor)));
+  forOp.setStep(newStep);
+  auto forOpIV = forOp.getInductionVar();
+
+  // Unroll and jam (appends unrollJamFactor - 1 additional copies).
+  for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
+    for (auto &subBlock : subBlocks) {
+      // Builder to insert unroll-jammed bodies. Insert right at the end of
+      // sub-block.
+      OpBuilder builder(subBlock.first->getBlock(), std::next(subBlock.second));
+
+      // If the induction variable is used, create a remapping to the value for
+      // this unrolled instance.
+      if (!forOpIV.use_empty()) {
+        // iv' = iv + i * step, i = 1 to unrollJamFactor-1.
+        auto ivTag = builder.createOrFold<arith::ConstantOp>(
+            forOp.getLoc(), builder.getIndexAttr(step * i));
+        auto ivUnroll =
+            builder.createOrFold<arith::AddIOp>(forOp.getLoc(), forOpIV, ivTag);
+        operandMaps[i - 1].map(forOpIV, ivUnroll);
+      }
+      // Clone the sub-block being unroll-jammed.
+      for (auto it = subBlock.first; it != std::next(subBlock.second); ++it)
+        builder.clone(*it, operandMaps[i - 1]);
+    }
+    // Fix iterOperands and yield op operands of newly created loops.
+    for (auto newForOp : newInnerLoops) {
+      unsigned oldNumIterOperands =
+          newForOp.getNumRegionIterArgs() / unrollJamFactor;
+      unsigned numControlOperands = newForOp.getNumControlOperands();
+      auto yieldOp = cast<scf::YieldOp>(newForOp.getBody()->getTerminator());
+      unsigned oldNumYieldOperands = yieldOp.getNumOperands() / unrollJamFactor;
+      assert(oldNumIterOperands == oldNumYieldOperands &&
+             "oldNumIterOperands must be the same as oldNumYieldOperands");
+      for (unsigned j = 0; j < oldNumIterOperands; ++j) {
+        // The `i`th duplication of an old iterOperand or yield op operand
+        // needs to be replaced with a mapped value from `operandMaps[i - 1]`
+        // if such mapped value exists.
+        newForOp.setOperand(numControlOperands + i * oldNumIterOperands + j,
+                            operandMaps[i - 1].lookupOrDefault(
+                                newForOp.getOperand(numControlOperands + j)));
+        yieldOp.setOperand(
+            i * oldNumYieldOperands + j,
+            operandMaps[i - 1].lookupOrDefault(yieldOp.getOperand(j)));
+      }
+    }
+  }
+
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)forOp.promoteIfSingleIteration(rewriter);
   return success();
@@ -1062,54 +1263,131 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   return tileLoops;
 }
 
+//===----------------------------------------------------------------------===//
+// Fusion related helpers
+//===----------------------------------------------------------------------===//
+
+/// Check if `target` and `source` are siblings, in the context that `target`
+/// is being fused into `source`.
+///
+/// This is a simple check that just checks if both operations are in the same
+/// block and some checks to ensure that the fused IR does not violate
+/// dominance.
+static bool isOpSibling(Operation *target, Operation *source,
+                        Diagnostic &diag) {
+  // Check if both operations are same.
+  if (target == source) {
+    diag << "target and source need to be different loops";
+    return false;
+  }
+
+  // Check if both operations are in the same block.
+  if (target->getBlock() != source->getBlock()) {
+    diag << "target and source are not in the same block";
+    return false;
+  }
+
+  // Check if fusion will violate dominance.
+  DominanceInfo domInfo(source);
+  if (target->isBeforeInBlock(source)) {
+    // Since `target` is before `source`, all users of results of `target`
+    // need to be dominated by `source`.
+    for (Operation *user : target->getUsers()) {
+      if (!domInfo.properlyDominates(source, user, /*enclosingOpOk=*/false)) {
+        diag << "user of results of target should "
+                "be properly dominated by source";
+        return false;
+      }
+    }
+  } else {
+    // Since `target` is after `source`, all values used by `target` need
+    // to dominate `source`.
+
+    // Check if operands of `target` are dominated by `source`.
+    for (Value operand : target->getOperands()) {
+      Operation *operandOp = operand.getDefiningOp();
+      // Operands without defining operations are block arguments. When `target`
+      // and `source` occur in the same block, these operands dominate `source`.
+      if (!operandOp)
+        continue;
+
+      // Operand's defining operation should properly dominate `source`.
+      if (!domInfo.properlyDominates(operandOp, source,
+                                     /*enclosingOpOk=*/false)) {
+        diag << "operands of target should be properly dominated by source";
+        return false;
+      }
+    }
+
+    // Check if values used by `target` are dominated by `source`.
+    bool failed = false;
+    OpOperand *failedValue = nullptr;
+    visitUsedValuesDefinedAbove(target->getRegions(), [&](OpOperand *operand) {
+      Operation *operandOp = operand->get().getDefiningOp();
+      if (operandOp && !domInfo.properlyDominates(operandOp, source,
+                                                  /*enclosingOpOk=*/false)) {
+        // `operand` is not an argument of an enclosing block and the defining
+        // op of `operand` is outside `target` but does not dominate `source`.
+        failed = true;
+        failedValue = operand;
+      }
+    });
+
+    if (failed) {
+      diag << "values used inside regions of target should be properly "
+              "dominated by source";
+      diag.attachNote(failedValue->getOwner()->getLoc()) << "see operation";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface target,
+                                         LoopLikeOpInterface source,
+                                         Diagnostic &diag) {
+  if (target->getName() != source->getName()) {
+    diag << "target and source must be same loop type";
+    return false;
+  }
+
+  bool iterSpaceEq =
+      target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
+      target.getLoopUpperBounds() == source.getLoopUpperBounds() &&
+      target.getLoopSteps() == source.getLoopSteps();
+  // TODO: Decouple checks on concrete loop types and move this function
+  // somewhere for general utility for `LoopLikeOpInterface`
+  if (auto forAllTarget = dyn_cast<scf::ForallOp>(*target))
+    iterSpaceEq = iterSpaceEq && forAllTarget.getMapping() ==
+                                     cast<scf::ForallOp>(*source).getMapping();
+  if (!iterSpaceEq) {
+    diag << "target and source iteration spaces must be equal";
+    return false;
+  }
+  return isOpSibling(target, source, diag);
+}
+
 scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
                                                       scf::ForallOp source,
                                                       RewriterBase &rewriter) {
-  unsigned numTargetOuts = target.getNumResults();
-  unsigned numSourceOuts = source.getNumResults();
-
-  // Create fused shared_outs.
-  SmallVector<Value> fusedOuts;
-  llvm::append_range(fusedOuts, target.getOutputs());
-  llvm::append_range(fusedOuts, source.getOutputs());
-
-  // Create a new scf.forall op after the source loop.
-  rewriter.setInsertionPointAfter(source);
-  scf::ForallOp fusedLoop = rewriter.create<scf::ForallOp>(
-      source.getLoc(), source.getMixedLowerBound(), source.getMixedUpperBound(),
-      source.getMixedStep(), fusedOuts, source.getMapping());
-
-  // Map control operands.
-  IRMapping mapping;
-  mapping.map(target.getInductionVars(), fusedLoop.getInductionVars());
-  mapping.map(source.getInductionVars(), fusedLoop.getInductionVars());
-
-  // Map shared outs.
-  mapping.map(target.getRegionIterArgs(),
-              fusedLoop.getRegionIterArgs().take_front(numTargetOuts));
-  mapping.map(source.getRegionIterArgs(),
-              fusedLoop.getRegionIterArgs().take_back(numSourceOuts));
-
-  // Append everything except the terminator into the fused operation.
-  rewriter.setInsertionPointToStart(fusedLoop.getBody());
-  for (Operation &op : target.getBody()->without_terminator())
-    rewriter.clone(op, mapping);
-  for (Operation &op : source.getBody()->without_terminator())
-    rewriter.clone(op, mapping);
-
-  // Fuse the old terminator in_parallel ops into the new one.
-  scf::InParallelOp targetTerm = target.getTerminator();
-  scf::InParallelOp sourceTerm = source.getTerminator();
-  scf::InParallelOp fusedTerm = fusedLoop.getTerminator();
-  rewriter.setInsertionPointToStart(fusedTerm.getBody());
-  for (Operation &op : targetTerm.getYieldingOps())
-    rewriter.clone(op, mapping);
-  for (Operation &op : sourceTerm.getYieldingOps())
-    rewriter.clone(op, mapping);
-
-  // Replace old loops by substituting their uses by results of the fused loop.
-  rewriter.replaceOp(target, fusedLoop.getResults().take_front(numTargetOuts));
-  rewriter.replaceOp(source, fusedLoop.getResults().take_back(numSourceOuts));
+  scf::ForallOp fusedLoop = cast<scf::ForallOp>(createFused(
+      target, source, rewriter,
+      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+        // `ForallOp` does not have yields, rather an `InParallelOp` terminator.
+        return ValueRange{};
+      },
+      [&](RewriterBase &b, LoopLikeOpInterface source,
+          LoopLikeOpInterface &target, IRMapping mapping) {
+        auto sourceForall = cast<scf::ForallOp>(source);
+        auto targetForall = cast<scf::ForallOp>(target);
+        scf::InParallelOp fusedTerm = targetForall.getTerminator();
+        b.setInsertionPointToEnd(fusedTerm.getBody());
+        for (Operation &op : sourceForall.getTerminator().getYieldingOps())
+          b.clone(op, mapping);
+      }));
+  rewriter.replaceOp(source,
+                     fusedLoop.getResults().take_back(source.getNumResults()));
 
   return fusedLoop;
 }
@@ -1117,49 +1395,74 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
                                                 scf::ForOp source,
                                                 RewriterBase &rewriter) {
-  unsigned numTargetOuts = target.getNumResults();
-  unsigned numSourceOuts = source.getNumResults();
+  scf::ForOp fusedLoop = cast<scf::ForOp>(createFused(
+      target, source, rewriter,
+      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+        return source.getYieldedValues();
+      },
+      [&](RewriterBase &b, LoopLikeOpInterface source,
+          LoopLikeOpInterface &target, IRMapping mapping) {
+        auto targetFor = cast<scf::ForOp>(target);
+        auto newTerm = b.clone(*targetFor.getBody()->getTerminator(), mapping);
+        b.replaceOp(targetFor.getBody()->getTerminator(), newTerm);
+      }));
+  rewriter.replaceOp(source,
+                     fusedLoop.getResults().take_back(source.getNumResults()));
+  return fusedLoop;
+}
 
-  // Create fused init_args, with target's init_args before source's init_args.
-  SmallVector<Value> fusedInitArgs;
-  llvm::append_range(fusedInitArgs, target.getInitArgs());
-  llvm::append_range(fusedInitArgs, source.getInitArgs());
+// TODO: Finish refactoring this a la the above, but likely requires additional
+// interface methods.
+scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
+    scf::ParallelOp target, scf::ParallelOp source, RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block *block1 = target.getBody();
+  Block *block2 = source.getBody();
+  auto term1 = cast<scf::ReduceOp>(block1->getTerminator());
+  auto term2 = cast<scf::ReduceOp>(block2->getTerminator());
 
-  // Create a new scf.for op after the source loop (with scf.yield terminator
-  // (without arguments) only in case its init_args is empty).
-  rewriter.setInsertionPointAfter(source);
-  scf::ForOp fusedLoop = rewriter.create<scf::ForOp>(
-      source.getLoc(), source.getLowerBound(), source.getUpperBound(),
-      source.getStep(), fusedInitArgs);
+  ValueRange inits1 = target.getInitVals();
+  ValueRange inits2 = source.getInitVals();
 
-  // Map original induction variables and operands to those of the fused loop.
-  IRMapping mapping;
-  mapping.map(target.getInductionVar(), fusedLoop.getInductionVar());
-  mapping.map(target.getRegionIterArgs(),
-              fusedLoop.getRegionIterArgs().take_front(numTargetOuts));
-  mapping.map(source.getInductionVar(), fusedLoop.getInductionVar());
-  mapping.map(source.getRegionIterArgs(),
-              fusedLoop.getRegionIterArgs().take_back(numSourceOuts));
+  SmallVector<Value> newInitVars(inits1.begin(), inits1.end());
+  newInitVars.append(inits2.begin(), inits2.end());
 
-  // Merge target's body into the new (fused) for loop and then source's body.
-  rewriter.setInsertionPointToStart(fusedLoop.getBody());
-  for (Operation &op : target.getBody()->without_terminator())
-    rewriter.clone(op, mapping);
-  for (Operation &op : source.getBody()->without_terminator())
-    rewriter.clone(op, mapping);
+  rewriter.setInsertionPoint(source);
+  auto fusedLoop = rewriter.create<scf::ParallelOp>(
+      rewriter.getFusedLoc(target.getLoc(), source.getLoc()),
+      source.getLowerBound(), source.getUpperBound(), source.getStep(),
+      newInitVars);
+  Block *newBlock = fusedLoop.getBody();
+  rewriter.inlineBlockBefore(block2, newBlock, newBlock->begin(),
+                             newBlock->getArguments());
+  rewriter.inlineBlockBefore(block1, newBlock, newBlock->begin(),
+                             newBlock->getArguments());
 
-  // Build fused yield results by appropriately mapping original yield operands.
-  SmallVector<Value> yieldResults;
-  for (Value operand : target.getBody()->getTerminator()->getOperands())
-    yieldResults.push_back(mapping.lookupOrDefault(operand));
-  for (Value operand : source.getBody()->getTerminator()->getOperands())
-    yieldResults.push_back(mapping.lookupOrDefault(operand));
-  if (!yieldResults.empty())
-    rewriter.create<scf::YieldOp>(source.getLoc(), yieldResults);
+  ValueRange results = fusedLoop.getResults();
+  if (!results.empty()) {
+    rewriter.setInsertionPointToEnd(newBlock);
 
-  // Replace old loops by substituting their uses by results of the fused loop.
-  rewriter.replaceOp(target, fusedLoop.getResults().take_front(numTargetOuts));
-  rewriter.replaceOp(source, fusedLoop.getResults().take_back(numSourceOuts));
+    ValueRange reduceArgs1 = term1.getOperands();
+    ValueRange reduceArgs2 = term2.getOperands();
+    SmallVector<Value> newReduceArgs(reduceArgs1.begin(), reduceArgs1.end());
+    newReduceArgs.append(reduceArgs2.begin(), reduceArgs2.end());
+
+    auto newReduceOp = rewriter.create<scf::ReduceOp>(
+        rewriter.getFusedLoc(term1.getLoc(), term2.getLoc()), newReduceArgs);
+
+    for (auto &&[i, reg] : llvm::enumerate(llvm::concat<Region>(
+             term1.getReductions(), term2.getReductions()))) {
+      Block &oldRedBlock = reg.front();
+      Block &newRedBlock = newReduceOp.getReductions()[i].front();
+      rewriter.inlineBlockBefore(&oldRedBlock, &newRedBlock,
+                                 newRedBlock.begin(),
+                                 newRedBlock.getArguments());
+    }
+  }
+  rewriter.replaceOp(target, results.take_front(inits1.size()));
+  rewriter.replaceOp(source, results.take_back(inits2.size()));
+  rewriter.eraseOp(term1);
+  rewriter.eraseOp(term2);
 
   return fusedLoop;
 }

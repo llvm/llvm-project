@@ -54,6 +54,9 @@ protected:
   bool jump(const LabelTy &Label);
   bool fallthrough(const LabelTy &Label);
 
+  /// We're always emitting bytecode.
+  bool isActive() const { return true; }
+
   /// Callback for local registration.
   Local createLocal(Descriptor *D);
 

@@ -101,8 +101,6 @@ def : ReadAdvance<ReadIRem, 0>;
 def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
-def : ReadAdvance<ReadSFBJmp, 0>;
-def : ReadAdvance<ReadSFBALU, 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions

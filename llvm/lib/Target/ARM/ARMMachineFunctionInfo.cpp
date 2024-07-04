@@ -8,6 +8,7 @@
 
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 

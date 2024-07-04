@@ -125,6 +125,9 @@ Improvements to clang-tidy
 - Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
   to exclude headers from analysis via a RegEx.
 
+- Added argument `--allow-no-checks` to suppress "no checks enabled" error
+  when disabling all of the checks by `--checks='-*'`.
+
 New checks
 ^^^^^^^^^^
 
@@ -238,10 +241,10 @@ Changes in existing checks
   false positives resulting from use of optionals in unevaluated context.
 
 - Improved :doc:`bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
-  false positives and adding a new (off-by-default) option
-  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
-  (except for a few that are idiomatic).
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by clarifying the
+  diagnostics, eliminating some false positives and adding a new
+  (off-by-default) option `WarnOnSizeOfPointer` that reports all
+  ``sizeof(pointer)`` expressions (except for a few that are idiomatic).
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
@@ -265,6 +268,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
+
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  with a new option `AllowInternalLinkage` to disable the warning for variables
+  with internal linkage.
 
 - Improved :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
@@ -398,7 +406,7 @@ Changes in existing checks
   analyzed, so the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
   Calls to mutable function where there exists a `const` overload are also
-  handled.
+  handled. Fix crash in the case of a non-member operator call.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
@@ -452,7 +460,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid to emit
-  warning for macro when IgnoreMacro option is enabled.
+  warning for macro when IgnoreMacro option is enabled and improve messages
+  when auto-fix does not work.
 
 - Improved :doc:`readability-static-definition-in-anonymous-namespace
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`

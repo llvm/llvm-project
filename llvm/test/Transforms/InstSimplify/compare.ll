@@ -207,6 +207,61 @@ define i1 @gep13_no_null_opt(ptr %ptr) #0 {
   ret i1 %cmp
 }
 
+; We can prove this GEP is non-null because it is nuw.
+define i1 @gep_nuw_not_null(ptr %ptr) {
+; CHECK-LABEL: @gep_nuw_not_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; Unlike the inbounds case, this holds even if the null pointer is valid.
+define i1 @gep_nuw_null_pointer_valid(ptr %ptr) null_pointer_is_valid {
+; CHECK-LABEL: @gep_nuw_null_pointer_valid(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; If the base pointer is non-null, the offset doesn't matter.
+define i1 @gep_nuw_maybe_zero_offset(ptr nonnull %ptr, i32 %offset) {
+; CHECK-LABEL: @gep_nuw_maybe_zero_offset(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 %offset
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; We can not prove non-null if both the base pointer may be null and the
+; offset zero.
+define i1 @gep13_nuw_maybe_zero_offset(ptr %ptr, i32 %offset) {
+; CHECK-LABEL: @gep13_nuw_maybe_zero_offset(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr nuw i8, ptr [[PTR:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 %offset
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; For gep nusw we don't have any non-null information.
+define i1 @gep_nusw_may_be_null(ptr %ptr) {
+; CHECK-LABEL: @gep_nusw_may_be_null(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr nusw i8, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = getelementptr nusw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
 define i1 @gep14(ptr %ptr) {
 ; CHECK-LABEL: @gep14(
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds { {}, i8 }, ptr [[PTR:%.*]], i32 0, i32 1

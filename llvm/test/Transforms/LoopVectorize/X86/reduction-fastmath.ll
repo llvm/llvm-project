@@ -289,10 +289,10 @@ define float @PR35538(ptr nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp nnan ninf nsz ogt <4 x float> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select nnan ninf nsz <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP8]], <4 x float> [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call nnan ninf nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_LR_PH]] ]
@@ -374,10 +374,10 @@ define float @PR35538_more_FMF(ptr nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp nnan ninf ogt <4 x float> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select nnan ninf <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP8]], <4 x float> [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_LR_PH]] ]

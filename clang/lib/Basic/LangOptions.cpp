@@ -112,6 +112,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.C11 = Std.isC11();
   Opts.C17 = Std.isC17();
   Opts.C23 = Std.isC23();
+  Opts.C2y = Std.isC2y();
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
   Opts.CPlusPlus14 = Std.isCPlusPlus14();

@@ -100,6 +100,12 @@ KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                        const KnownBits &KnownRHS,
                                        unsigned Depth, const SimplifyQuery &SQ);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond, Value *Arm,
+                                 bool Invert, unsigned Depth,
+                                 const SimplifyQuery &Q);
+
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                          const WithCache<const Value *> &RHSCache,
@@ -897,6 +903,9 @@ bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 /// Determine the possible constant range of vscale with the given bit width,
 /// based on the vscale_range function attribute.
 ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
+
+/// Determine the possible constant range of a vector constant.
+ConstantRange getVectorConstantRange(const Constant *C);
 
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.

@@ -17,6 +17,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"

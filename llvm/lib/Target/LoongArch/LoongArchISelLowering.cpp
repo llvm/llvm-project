@@ -785,6 +785,7 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+  SDValue Load;
 
   switch (M) {
   default:
@@ -796,33 +797,49 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     // This is not actually used, but is necessary for successfully matching
     // the PseudoLA_*_LARGE nodes.
     SDValue Tmp = DAG.getConstant(0, DL, Ty);
-    if (IsLocal)
+    if (IsLocal) {
       // This generates the pattern (PseudoLA_PCREL_LARGE tmp sym), that
       // eventually becomes the desired 5-insn code sequence.
-      return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_PCREL_LARGE, DL, Ty,
+      Load = SDValue(DAG.getMachineNode(LoongArch::PseudoLA_PCREL_LARGE, DL, Ty,
                                         Tmp, Addr),
                      0);
-
-    // This generates the pattern (PseudoLA_GOT_LARGE tmp sym), that eventually
-    // becomes the desired 5-insn code sequence.
-    return SDValue(
-        DAG.getMachineNode(LoongArch::PseudoLA_GOT_LARGE, DL, Ty, Tmp, Addr),
-        0);
+    } else {
+      // This generates the pattern (PseudoLA_GOT_LARGE tmp sym), that
+      // eventually becomes the desired 5-insn code sequence.
+      Load = SDValue(
+          DAG.getMachineNode(LoongArch::PseudoLA_GOT_LARGE, DL, Ty, Tmp, Addr),
+          0);
+    }
+    break;
   }
 
   case CodeModel::Small:
   case CodeModel::Medium:
-    if (IsLocal)
+    if (IsLocal) {
       // This generates the pattern (PseudoLA_PCREL sym), which expands to
       // (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
-      return SDValue(
+      Load = SDValue(
           DAG.getMachineNode(LoongArch::PseudoLA_PCREL, DL, Ty, Addr), 0);
-
-    // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
-    // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
-    return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr),
-                   0);
+    } else {
+      // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
+      // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
+      Load =
+          SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr), 0);
+    }
   }
+
+  if (!IsLocal) {
+    // Mark the load instruction as invariant to enable hoisting in MachineLICM.
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Load.getNode()), {MemOp});
+  }
+
+  return Load;
 }
 
 SDValue LoongArchTargetLowering::lowerBlockAddress(SDValue Op,
@@ -860,7 +877,7 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
 
 SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
                                                   SelectionDAG &DAG,
-                                                  unsigned Opc,
+                                                  unsigned Opc, bool UseGOT,
                                                   bool Large) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
@@ -873,6 +890,16 @@ SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
   SDValue Offset = Large
                        ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
                        : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+  if (UseGOT) {
+    // Mark the load instruction as invariant to enable hoisting in MachineLICM.
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Offset.getNode()), {MemOp});
+  }
 
   // Add the thread pointer.
   return DAG.getNode(ISD::ADD, DL, Ty, Offset,
@@ -976,13 +1003,14 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     return getStaticTLSAddr(N, DAG,
                             Large ? LoongArch::PseudoLA_TLS_IE_LARGE
                                   : LoongArch::PseudoLA_TLS_IE,
-                            Large);
+                            /*UseGOT=*/true, Large);
   case TLSModel::LocalExec:
     // This model is used when static linking as the TLS offsets are resolved
     // during program linking.
     //
     // This node doesn't need an extra argument for the large code model.
-    return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
+    return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE,
+                            /*UseGOT=*/false);
   }
 
   return getTLSDescAddr(N, DAG,
@@ -4666,7 +4694,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
   // sign-extend.
   if (AI->getOperation() == AtomicRMWInst::Min ||
       AI->getOperation() == AtomicRMWInst::Max) {
-    const DataLayout &DL = AI->getModule()->getDataLayout();
+    const DataLayout &DL = AI->getDataLayout();
     unsigned ValWidth =
         DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
     Value *SextShamt =

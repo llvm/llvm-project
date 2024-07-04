@@ -513,6 +513,8 @@ public:
   unsigned getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
+    if (isOnePastEnd())
+      return PastEndMark;
     return Offset;
   }
 
@@ -551,8 +553,19 @@ public:
     if (!asBlockPointer().Pointee)
       return false;
 
-    return isElementPastEnd() ||
+    if (isUnknownSizeArray())
+      return false;
+
+    return isElementPastEnd() || isPastEnd() ||
            (getSize() == getOffset() && !isZeroSizeArray());
+  }
+
+  /// Checks if the pointer points past the end of the object.
+  bool isPastEnd() const {
+    if (isIntegralPointer())
+      return false;
+
+    return !isZero() && Offset > PointeeStorage.BS.Pointee->getSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
