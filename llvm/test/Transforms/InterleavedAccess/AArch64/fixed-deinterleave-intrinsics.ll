@@ -6,28 +6,35 @@
 
 target triple = "aarch64-linux-gnu"
 
-define { <16 x i8>, <16 x i8> } @deinterleave_i8_factor2(ptr %ptr) {
-; NEON-LABEL: define { <16 x i8>, <16 x i8> } @deinterleave_i8_factor2
+define void @deinterleave_i8_factor2(ptr %ptr) {
+; NEON-LABEL: define void @deinterleave_i8_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
 ; NEON-NEXT:    [[LDN:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0(ptr [[PTR]])
-; NEON-NEXT:    ret { <16 x i8>, <16 x i8> } [[LDN]]
+; NEON-NEXT:    [[TMP1:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[LDN]], 0
+; NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[LDN]], 1
+; NEON-NEXT:    ret void
 ;
-; SVE-FIXED-LABEL: define { <16 x i8>, <16 x i8> } @deinterleave_i8_factor2
+; SVE-FIXED-LABEL: define void @deinterleave_i8_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SVE-FIXED-NEXT:    [[LOAD:%.*]] = load <32 x i8>, ptr [[PTR]], align 1
 ; SVE-FIXED-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[LOAD]])
-; SVE-FIXED-NEXT:    ret { <16 x i8>, <16 x i8> } [[DEINTERLEAVE]]
+; SVE-FIXED-NEXT:    [[EXTRACT1:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[DEINTERLEAVE]], 0
+; SVE-FIXED-NEXT:    [[EXTRACT2:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[DEINTERLEAVE]], 1
+; SVE-FIXED-NEXT:    ret void
 ;
   %load = load <32 x i8>, ptr %ptr, align 1
   %deinterleave = tail call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> %load)
-  ret { <16 x i8>, <16 x i8> } %deinterleave
+  %extract1 = extractvalue { <16 x i8>, <16 x i8> } %deinterleave, 0
+  %extract2 = extractvalue { <16 x i8>, <16 x i8> } %deinterleave, 1
+  ret void
 }
 
 define { <8 x i16>, <8 x i16> } @deinterleave_i16_factor2(ptr %ptr) {
 ; NEON-LABEL: define { <8 x i16>, <8 x i16> } @deinterleave_i16_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
-; NEON-NEXT:    [[LDN:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld2.v8i16.p0(ptr [[PTR]])
-; NEON-NEXT:    ret { <8 x i16>, <8 x i16> } [[LDN]]
+; NEON-NEXT:    [[LOAD:%.*]] = load <16 x i16>, ptr [[PTR]], align 2
+; NEON-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <8 x i16>, <8 x i16> } @llvm.vector.deinterleave2.v16i16(<16 x i16> [[LOAD]])
+; NEON-NEXT:    ret { <8 x i16>, <8 x i16> } [[DEINTERLEAVE]]
 ;
 ; SVE-FIXED-LABEL: define { <8 x i16>, <8 x i16> } @deinterleave_i16_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -43,8 +50,9 @@ define { <8 x i16>, <8 x i16> } @deinterleave_i16_factor2(ptr %ptr) {
 define { <4 x i32>, <4 x i32> } @deinterleave_8xi32_factor2(ptr %ptr) {
 ; NEON-LABEL: define { <4 x i32>, <4 x i32> } @deinterleave_8xi32_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
-; NEON-NEXT:    [[LDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2.v4i32.p0(ptr [[PTR]])
-; NEON-NEXT:    ret { <4 x i32>, <4 x i32> } [[LDN]]
+; NEON-NEXT:    [[LOAD:%.*]] = load <8 x i32>, ptr [[PTR]], align 4
+; NEON-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[LOAD]])
+; NEON-NEXT:    ret { <4 x i32>, <4 x i32> } [[DEINTERLEAVE]]
 ;
 ; SVE-FIXED-LABEL: define { <4 x i32>, <4 x i32> } @deinterleave_8xi32_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -60,8 +68,9 @@ define { <4 x i32>, <4 x i32> } @deinterleave_8xi32_factor2(ptr %ptr) {
 define { <2 x i64>, <2 x i64> } @deinterleave_i64_factor2(ptr %ptr) {
 ; NEON-LABEL: define { <2 x i64>, <2 x i64> } @deinterleave_i64_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
-; NEON-NEXT:    [[LDN:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld2.v2i64.p0(ptr [[PTR]])
-; NEON-NEXT:    ret { <2 x i64>, <2 x i64> } [[LDN]]
+; NEON-NEXT:    [[LOAD:%.*]] = load <4 x i64>, ptr [[PTR]], align 8
+; NEON-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[LOAD]])
+; NEON-NEXT:    ret { <2 x i64>, <2 x i64> } [[DEINTERLEAVE]]
 ;
 ; SVE-FIXED-LABEL: define { <2 x i64>, <2 x i64> } @deinterleave_i64_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -77,8 +86,9 @@ define { <2 x i64>, <2 x i64> } @deinterleave_i64_factor2(ptr %ptr) {
 define { <4 x float>, <4 x float> } @deinterleave_float_factor2(ptr %ptr) {
 ; NEON-LABEL: define { <4 x float>, <4 x float> } @deinterleave_float_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
-; NEON-NEXT:    [[LDN:%.*]] = call { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2.v4f32.p0(ptr [[PTR]])
-; NEON-NEXT:    ret { <4 x float>, <4 x float> } [[LDN]]
+; NEON-NEXT:    [[LOAD:%.*]] = load <8 x float>, ptr [[PTR]], align 4
+; NEON-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[LOAD]])
+; NEON-NEXT:    ret { <4 x float>, <4 x float> } [[DEINTERLEAVE]]
 ;
 ; SVE-FIXED-LABEL: define { <4 x float>, <4 x float> } @deinterleave_float_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -94,8 +104,9 @@ define { <4 x float>, <4 x float> } @deinterleave_float_factor2(ptr %ptr) {
 define { <2 x double>, <2 x double> } @deinterleave_double_factor2(ptr %ptr) {
 ; NEON-LABEL: define { <2 x double>, <2 x double> } @deinterleave_double_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
-; NEON-NEXT:    [[LDN:%.*]] = call { <2 x double>, <2 x double> } @llvm.aarch64.neon.ld2.v2f64.p0(ptr [[PTR]])
-; NEON-NEXT:    ret { <2 x double>, <2 x double> } [[LDN]]
+; NEON-NEXT:    [[LOAD:%.*]] = load <4 x double>, ptr [[PTR]], align 8
+; NEON-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> [[LOAD]])
+; NEON-NEXT:    ret { <2 x double>, <2 x double> } [[DEINTERLEAVE]]
 ;
 ; SVE-FIXED-LABEL: define { <2 x double>, <2 x double> } @deinterleave_double_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -111,8 +122,9 @@ define { <2 x double>, <2 x double> } @deinterleave_double_factor2(ptr %ptr) {
 define { <2 x ptr>, <2 x ptr> } @deinterleave_ptr_factor2(ptr %ptr) {
 ; NEON-LABEL: define { <2 x ptr>, <2 x ptr> } @deinterleave_ptr_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
-; NEON-NEXT:    [[LDN:%.*]] = call { <2 x ptr>, <2 x ptr> } @llvm.aarch64.neon.ld2.v2p0.p0(ptr [[PTR]])
-; NEON-NEXT:    ret { <2 x ptr>, <2 x ptr> } [[LDN]]
+; NEON-NEXT:    [[LOAD:%.*]] = load <4 x ptr>, ptr [[PTR]], align 8
+; NEON-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <2 x ptr>, <2 x ptr> } @llvm.vector.deinterleave2.v4p0(<4 x ptr> [[LOAD]])
+; NEON-NEXT:    ret { <2 x ptr>, <2 x ptr> } [[DEINTERLEAVE]]
 ;
 ; SVE-FIXED-LABEL: define { <2 x ptr>, <2 x ptr> } @deinterleave_ptr_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {
@@ -247,21 +259,9 @@ define void @interleave_ptr_factor2(ptr %ptr, <2 x ptr> %l, <2 x ptr> %r) {
 define { <16 x i16>, <16 x i16> } @deinterleave_wide_i16_factor2(ptr %ptr) #0 {
 ; NEON-LABEL: define { <16 x i16>, <16 x i16> } @deinterleave_wide_i16_factor2
 ; NEON-SAME: (ptr [[PTR:%.*]]) {
-; NEON-NEXT:    [[TMP1:%.*]] = getelementptr <8 x i16>, ptr [[PTR]], i64 0
-; NEON-NEXT:    [[LDN:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld2.v8i16.p0(ptr [[TMP1]])
-; NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[LDN]], 0
-; NEON-NEXT:    [[TMP3:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v8i16(<16 x i16> poison, <8 x i16> [[TMP2]], i64 0)
-; NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[LDN]], 1
-; NEON-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v8i16(<16 x i16> poison, <8 x i16> [[TMP4]], i64 0)
-; NEON-NEXT:    [[TMP6:%.*]] = getelementptr <8 x i16>, ptr [[PTR]], i64 2
-; NEON-NEXT:    [[LDN1:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld2.v8i16.p0(ptr [[TMP6]])
-; NEON-NEXT:    [[TMP7:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[LDN1]], 0
-; NEON-NEXT:    [[TMP8:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v8i16(<16 x i16> [[TMP3]], <8 x i16> [[TMP7]], i64 8)
-; NEON-NEXT:    [[TMP9:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[LDN1]], 1
-; NEON-NEXT:    [[TMP10:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v8i16(<16 x i16> [[TMP5]], <8 x i16> [[TMP9]], i64 8)
-; NEON-NEXT:    [[TMP11:%.*]] = insertvalue { <16 x i16>, <16 x i16> } poison, <16 x i16> [[TMP8]], 0
-; NEON-NEXT:    [[TMP12:%.*]] = insertvalue { <16 x i16>, <16 x i16> } [[TMP11]], <16 x i16> [[TMP10]], 1
-; NEON-NEXT:    ret { <16 x i16>, <16 x i16> } [[TMP12]]
+; NEON-NEXT:    [[LOAD:%.*]] = load <32 x i16>, ptr [[PTR]], align 2
+; NEON-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <16 x i16>, <16 x i16> } @llvm.vector.deinterleave2.v32i16(<32 x i16> [[LOAD]])
+; NEON-NEXT:    ret { <16 x i16>, <16 x i16> } [[DEINTERLEAVE]]
 ;
 ; SVE-FIXED-LABEL: define { <16 x i16>, <16 x i16> } @deinterleave_wide_i16_factor2
 ; SVE-FIXED-SAME: (ptr [[PTR:%.*]]) #[[ATTR0]] {

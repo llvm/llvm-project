@@ -509,6 +509,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
     return false;
 
   LLVM_DEBUG(dbgs() << "IA: Found an interleave intrinsic: " << *II << "\n");
+
   // Try and match this with target specific intrinsics.
   if (!TLI->lowerInterleaveIntrinsicToStore(II, SI))
     return false;

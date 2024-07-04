@@ -16906,26 +16906,71 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
-bool getDeinterleavedValues(
+bool getDeinterleave2Values(
     Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues) {
-  if (!DI->hasNUsesOrMore(2))
+  if (!DI->hasNUses(2))
     return false;
   auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
   auto *Extr2 = dyn_cast<ExtractValueInst>(*(++DI->user_begin()));
   if (!Extr1 || !Extr2)
     return false;
 
-  if (!Extr1->hasNUsesOrMore(1) || !Extr2->hasNUsesOrMore(1))
+  DeinterleavedValues.resize(2);
+  // Place the values into the vector in the order of extraction:
+  DeinterleavedValues[0x1 & (Extr1->getIndices()[0])] = Extr1;
+  DeinterleavedValues[0x1 & (Extr2->getIndices()[0])] = Extr2;
+  if (!DeinterleavedValues[0] || !DeinterleavedValues[1])
+    return false;
+
+  // Make sure that the extracted values match the deinterleave tree pattern
+  if (!match(DeinterleavedValues[0], m_ExtractValue<0>((m_Specific(DI)))) ||
+      !match(DeinterleavedValues[1], m_ExtractValue<1>((m_Specific(DI))))) {
+    LLVM_DEBUG(dbgs() << "matching deinterleave2 failed\n");
+    return false;
+  }
+  return true;
+}
+
+/*
+Diagram for DI tree.
+                  [LOAD]
+                    |
+                   [DI]
+                /        \
+         [Extr<0>]      [Extr<1>]
+            |                 |
+           [DI]              [DI]
+          /    \            /    \
+    [Extr<0>][Extr<1>] [Extr<0>][Extr<1>]
+        |       |         |         |
+roots:  A       C         B         D
+roots in correct order of DI4: A B C D.
+If there is a pattern matches the deinterleave tree above, then we can construct
+DI4 out of that pattern. This function tries to match the deinterleave tree
+pattern, and fetch the tree roots, so that in further steps they can be replaced
+by the output of DI4.
+*/
+bool getDeinterleave4Values(Value *DI,
+                            SmallVectorImpl<Instruction *> &DeinterleavedValues,
+                            SmallVectorImpl<Instruction *> &DeadInstructions) {
+  if (!DI->hasNUses(2))
+    return false;
+  auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
+  auto *Extr2 = dyn_cast<ExtractValueInst>(*(++DI->user_begin()));
+  if (!Extr1 || !Extr2)
+    return false;
+
+  if (!Extr1->hasNUses(1) || !Extr2->hasNUses(1))
     return false;
   auto *DI1 = *(Extr1->user_begin());
   auto *DI2 = *(Extr2->user_begin());
 
-  if (!DI1->hasNUsesOrMore(2) || !DI2->hasNUsesOrMore(2))
+  if (!DI1->hasNUses(2) || !DI2->hasNUses(2))
     return false;
   // Leaf nodes of the deinterleave tree:
   auto *A = dyn_cast<ExtractValueInst>(*(DI1->user_begin()));
-  auto *B = dyn_cast<ExtractValueInst>(*(++DI1->user_begin()));
-  auto *C = dyn_cast<ExtractValueInst>(*(DI2->user_begin()));
+  auto *C = dyn_cast<ExtractValueInst>(*(++DI1->user_begin()));
+  auto *B = dyn_cast<ExtractValueInst>(*(DI2->user_begin()));
   auto *D = dyn_cast<ExtractValueInst>(*(++DI2->user_begin()));
   // Make sure that the A,B,C,D are instructions of ExtractValue,
   // before getting the extract index
@@ -16933,44 +16978,48 @@ bool getDeinterleavedValues(
     return false;
 
   DeinterleavedValues.resize(4);
-  // Place the values into the vector in the order of extraction:
-  DeinterleavedValues[A->getIndices()[0] + (Extr1->getIndices()[0] * 2)] = A;
-  DeinterleavedValues[B->getIndices()[0] + (Extr1->getIndices()[0] * 2)] = B;
-  DeinterleavedValues[C->getIndices()[0] + (Extr2->getIndices()[0] * 2)] = C;
-  DeinterleavedValues[D->getIndices()[0] + (Extr2->getIndices()[0] * 2)] = D;
+  // Place the values into the vector in the order of deinterleave4:
+  DeinterleavedValues[0x3 &
+                      ((A->getIndices()[0] * 2) + Extr1->getIndices()[0])] = A;
+  DeinterleavedValues[0x3 &
+                      ((B->getIndices()[0] * 2) + Extr2->getIndices()[0])] = B;
+  DeinterleavedValues[0x3 &
+                      ((C->getIndices()[0] * 2) + Extr1->getIndices()[0])] = C;
+  DeinterleavedValues[0x3 &
+                      ((D->getIndices()[0] * 2) + Extr2->getIndices()[0])] = D;
+  if (!DeinterleavedValues[0] || !DeinterleavedValues[1] ||
+      !DeinterleavedValues[2] || !DeinterleavedValues[3])
+    return false;
 
   // Make sure that A,B,C,D match the deinterleave tree pattern
-  if (!match(DeinterleavedValues[0],
-             m_ExtractValue<0>(m_Deinterleave2(
-                 m_ExtractValue<0>(m_Deinterleave2(m_Value()))))) ||
-      !match(DeinterleavedValues[1],
-             m_ExtractValue<1>(m_Deinterleave2(
-                 m_ExtractValue<0>(m_Deinterleave2(m_Value()))))) ||
-      !match(DeinterleavedValues[2],
-             m_ExtractValue<0>(m_Deinterleave2(
-                 m_ExtractValue<1>(m_Deinterleave2(m_Value()))))) ||
-      !match(DeinterleavedValues[3],
-             m_ExtractValue<1>(m_Deinterleave2(
-                 m_ExtractValue<1>(m_Deinterleave2(m_Value())))))) {
+  if (!match(DeinterleavedValues[0], m_ExtractValue<0>(m_Deinterleave2(
+                                         m_ExtractValue<0>(m_Specific(DI))))) ||
+      !match(DeinterleavedValues[1], m_ExtractValue<0>(m_Deinterleave2(
+                                         m_ExtractValue<1>(m_Specific(DI))))) ||
+      !match(DeinterleavedValues[2], m_ExtractValue<1>(m_Deinterleave2(
+                                         m_ExtractValue<0>(m_Specific(DI))))) ||
+      !match(DeinterleavedValues[3], m_ExtractValue<1>(m_Deinterleave2(
+                                         m_ExtractValue<1>(m_Specific(DI)))))) {
     LLVM_DEBUG(dbgs() << "matching deinterleave4 failed\n");
     return false;
   }
-  // Order the values according to the deinterleaving order.
-  std::swap(DeinterleavedValues[1], DeinterleavedValues[2]);
+
+  // These Values will not be used anymre,
+  // DI4 will be created instead of nested DI1 and DI2
+  DeadInstructions.push_back(cast<Instruction>(DI1));
+  DeadInstructions.push_back(cast<Instruction>(Extr1));
+  DeadInstructions.push_back(cast<Instruction>(DI2));
+  DeadInstructions.push_back(cast<Instruction>(Extr2));
+
   return true;
 }
 
-void deleteDeadDeinterleaveInstructions(Instruction *DeadRoot) {
-  Value *DeadDeinterleave = nullptr, *DeadExtract = nullptr;
-  match(DeadRoot, m_ExtractValue(m_Value(DeadDeinterleave)));
-  assert(DeadDeinterleave != nullptr && "Match is expected to succeed");
-  match(DeadDeinterleave, m_Deinterleave2(m_Value(DeadExtract)));
-  assert(DeadExtract != nullptr && "Match is expected to succeed");
-  DeadRoot->eraseFromParent();
-  if (DeadDeinterleave->getNumUses() == 0)
-    cast<Instruction>(DeadDeinterleave)->eraseFromParent();
-  if (DeadExtract->getNumUses() == 0)
-    cast<Instruction>(DeadExtract)->eraseFromParent();
+bool getDeinterleavedValues(Value *DI,
+                            SmallVectorImpl<Instruction *> &DeinterleavedValues,
+                            SmallVectorImpl<Instruction *> &DeadInstructions) {
+  if (getDeinterleave4Values(DI, DeinterleavedValues, DeadInstructions))
+    return true;
+  return getDeinterleave2Values(DI, DeinterleavedValues);
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
@@ -16980,16 +17029,17 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
 
   SmallVector<Instruction *, 4> DeinterleavedValues;
+  SmallVector<Instruction *, 4> DeadInstructions;
   const DataLayout &DL = DI->getModule()->getDataLayout();
-  unsigned Factor = 2;
-  VectorType *VTy = cast<VectorType>(DI->getType()->getContainedType(0));
 
-  if (getDeinterleavedValues(DI, DeinterleavedValues)) {
-    Factor = DeinterleavedValues.size();
-    VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
+  if (!getDeinterleavedValues(DI, DeinterleavedValues, DeadInstructions)) {
+    LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
+    return false;
   }
+  unsigned Factor = DeinterleavedValues.size();
   assert((Factor == 2 || Factor == 4) &&
-         "Currently supported Factors are 2 or 4");
+         "Currently supported Factor is 2 or 4 only");
+  VectorType *VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
 
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
@@ -17050,23 +17100,35 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     else
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
   }
-  if (Factor > 2) {
-    // Itereate over old deinterleaved values to replace it by
-    // the new deinterleaved values.
-    for (unsigned I = 0; I < DeinterleavedValues.size(); I++) {
-      Value *NewExtract = Builder.CreateExtractValue(Result, I);
-      DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
-    }
-    for (unsigned I = 0; I < DeinterleavedValues.size(); I++)
-      deleteDeadDeinterleaveInstructions(DeinterleavedValues[I]);
-    return true;
+  // Itereate over old deinterleaved values to replace it by
+  // the new values.
+  for (unsigned I = 0; I < DeinterleavedValues.size(); I++) {
+    Value *NewExtract = Builder.CreateExtractValue(Result, I);
+    DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
+    cast<Instruction>(DeinterleavedValues[I])->eraseFromParent();
   }
-  DI->replaceAllUsesWith(Result);
+  for (auto &dead : DeadInstructions)
+    dead->eraseFromParent();
   return true;
 }
 
-bool getValuesToInterleaved(Value *II,
-                            SmallVectorImpl<Value *> &ValuesToInterleave) {
+/*
+Diagram for Interleave tree.
+          A    C         B    D
+           \  /           \  /
+       [Interleave]   [Interleave]
+                 \     /
+               [Interleave]
+                    |
+                 [Store]
+values in correct order of interleave4: A B C D.
+If there is a pattern matches the interleave tree above, then we can construct
+Interleave4 out of that pattern. This function tries to match the interleave
+tree pattern, and fetch the values that we want to interleave, so that in
+further steps they can be replaced by the output of Inteleave4.
+*/
+bool getValuesToInterleave(Value *II,
+                           SmallVectorImpl<Value *> &ValuesToInterleave) {
   Value *A, *B, *C, *D;
   // Try to match interleave of Factor 4
   if (match(II, m_Interleave2(m_Interleave2(m_Value(A), m_Value(C)),
@@ -17090,14 +17152,18 @@ bool getValuesToInterleaved(Value *II,
 
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     IntrinsicInst *II, StoreInst *SI) const {
-  LLVM_DEBUG(dbgs() << "lowerInterleaveIntrinsicToStore\n");
+  // Only interleave2 supported at present.
+  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
+    return false;
 
   SmallVector<Value *, 4> ValuesToInterleave;
-  if (!getValuesToInterleaved(II, ValuesToInterleave))
+  if (!getValuesToInterleave(II, ValuesToInterleave)) {
+    LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
     return false;
+  }
   unsigned Factor = ValuesToInterleave.size();
   assert((Factor == 2 || Factor == 4) &&
-         "Currently supported Factors are 2 or 4");
+         "Currently supported Factor is 2 or 4 only");
   VectorType *VTy = cast<VectorType>(ValuesToInterleave[0]->getType());
   const DataLayout &DL = II->getModule()->getDataLayout();
 
