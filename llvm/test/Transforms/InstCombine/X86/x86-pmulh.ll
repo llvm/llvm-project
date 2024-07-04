@@ -240,11 +240,7 @@ define <32 x i16> @elts_pmulh_512(<32 x i16> %a0, <32 x i16> %a1) {
 
 define <8 x i16> @known_pmulh_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2) {
 ; CHECK-LABEL: @known_pmulh_128(
-; CHECK-NEXT:    [[X0:%.*]] = lshr <8 x i16> [[A0:%.*]], <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
-; CHECK-NEXT:    [[X1:%.*]] = and <8 x i16> [[A1:%.*]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[M:%.*]] = tail call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> [[X0]], <8 x i16> [[X1]])
-; CHECK-NEXT:    [[R:%.*]] = add <8 x i16> [[M]], [[A2:%.*]]
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> [[A2:%.*]]
 ;
   %x0 = lshr <8 x i16> %a0, <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %x1 = and <8 x i16> %a1, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -255,11 +251,7 @@ define <8 x i16> @known_pmulh_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2) {
 
 define <16 x i16> @known_pmulh_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2) {
 ; CHECK-LABEL: @known_pmulh_256(
-; CHECK-NEXT:    [[X0:%.*]] = lshr <16 x i16> [[A0:%.*]], <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
-; CHECK-NEXT:    [[X1:%.*]] = and <16 x i16> [[A1:%.*]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[M:%.*]] = tail call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> [[X0]], <16 x i16> [[X1]])
-; CHECK-NEXT:    [[R:%.*]] = add <16 x i16> [[M]], [[A2:%.*]]
-; CHECK-NEXT:    ret <16 x i16> [[R]]
+; CHECK-NEXT:    ret <16 x i16> [[A2:%.*]]
 ;
   %x0 = lshr <16 x i16> %a0, <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %x1 = and <16 x i16> %a1, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -270,11 +262,7 @@ define <16 x i16> @known_pmulh_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a
 
 define <32 x i16> @known_pmulh_512(<32 x i16> %a0, <32 x i16> %a1, <32 x i16> %a2) {
 ; CHECK-LABEL: @known_pmulh_512(
-; CHECK-NEXT:    [[X0:%.*]] = lshr <32 x i16> [[A0:%.*]], <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
-; CHECK-NEXT:    [[X1:%.*]] = and <32 x i16> [[A1:%.*]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[M:%.*]] = tail call <32 x i16> @llvm.x86.avx512.pmulh.w.512(<32 x i16> [[X0]], <32 x i16> [[X1]])
-; CHECK-NEXT:    [[R:%.*]] = add <32 x i16> [[M]], [[A2:%.*]]
-; CHECK-NEXT:    ret <32 x i16> [[R]]
+; CHECK-NEXT:    ret <32 x i16> [[A2:%.*]]
 ;
   %x0 = lshr <32 x i16> %a0, <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %x1 = and <32 x i16> %a1, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
