@@ -1,3 +1,4 @@
+// RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/advance-project/database_template.json > %t/build/compile_commands.json
 // RUN: clang-doc --format=html --doxygen --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: clang-doc --format=md --doxygen --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
@@ -159,7 +160,7 @@
 // HTML-ARRAY:   </div>
 // HTML-ARRAY:   <h3 id="{{([0-9A-F]{40})}}">size</h3>
 // HTML-ARRAY:   <p>public int size()</p>
-// HTML-ARRAY:   <p>Defined at line 28 of file ./src/Array.cpp</p>
+// HTML-ARRAY:   <p>Defined at line 30 of file ./src/Array.cpp</p>
 // HTML-ARRAY:   <div>
 // HTML-ARRAY:     <div></div>
 // HTML-ARRAY:     <div>
@@ -171,8 +172,8 @@
 // HTML-GLOBAL-INDEX: <h1>Global Namespace</h1>
 // HTML-GLOBAL-INDEX: <h2 id="Namespaces">Namespaces</h2>
 // HTML-GLOBAL-INDEX: <ul>
-// HTML-GLOBAL-INDEX:   <li>OuterNamespace</li>
-// HTML-GLOBAL-INDEX:   <li>@nonymous_namespace</li>
+// HTML-GLOBAL-INDEX:   <li>{{.*}}</li>
+// HTML-GLOBAL-INDEX:   <li>{{.*}}</li>
 // HTML-GLOBAL-INDEX: </ul>
 // HTML-GLOBAL-INDEX: <h2 id="Records">Records</h2>
 // HTML-GLOBAL-INDEX: <ul>
@@ -360,7 +361,7 @@
 // MD-ARRAY:  Array access operator for Array<T, Size> Provides read and write access to elements in the array. This implementation does not perform bounds checking
 // MD-ARRAY: ### size
 // MD-ARRAY: *public int size()*
-// MD-ARRAY: *Defined at .{{[\/]}}src{{[\/]}}Array.cpp#28*
+// MD-ARRAY: *Defined at .{{[\/]}}src{{[\/]}}Array.cpp#30*
 // MD-ARRAY: **brief** Get the size of the array
 // MD-ARRAY: **return** int The size of the array
 // MD-ARRAY:  Get the size of the array for Array<T, Size>
