@@ -71,12 +71,11 @@ struct PreISelIntrinsicLowering {
 
 } // namespace
 
-template <class T>
-static bool forEachCall(Function &Intrin, T Callback) {
+template <class T> static bool forEachCall(Function &Intrin, T Callback) {
   // Lowering all intrinsics in a function will delete multiple uses, so we
   // can't use an early-inc-range. In case some remain, we don't want to look
   // at them again. Unfortunately, Value::UseList is private, so we can't use a
-  // simple Use**. If LastUse is null, we the next use to consider is
+  // simple Use**. If LastUse is null, the next use to consider is
   // Intrin.use_begin(), otherwise it's LastUse->getNext().
   Use *LastUse = nullptr;
   bool Changed = false;
