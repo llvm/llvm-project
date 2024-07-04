@@ -73,9 +73,9 @@ void PointerArithmeticOnPolymorphicObjectCheck::check(
   const auto *PointeeDecl = Result.Nodes.getNodeAs<CXXRecordDecl>("pointee");
 
   diag(PointerExpr->getBeginLoc(),
-       "pointer arithmetic on polymorphic object of type '%0' can result in "
+       "pointer arithmetic on polymorphic object of type %0 can result in "
        "undefined behavior if the dynamic type differs from the pointer type")
-      << PointeeDecl->getName() << PointeeDecl->getSourceRange();
+      << PointeeDecl << PointerExpr->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone
