@@ -170,8 +170,8 @@ TEST(AMDGPUDisassembler, UCVersionOverride) {
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, *Ctx));
   std::string Output = testing::internal::GetCapturedStderr();
-  EXPECT_TRUE(Output.find("<unknown>:0: warning: unsupported redefinition of UC_VERSION_GFX10") !=
-              std::string::npos);
+  EXPECT_TRUE(Output.find("<unknown>:0: warning: unsupported redefinition of "
+                          "UC_VERSION_GFX10") != std::string::npos);
 
   SmallVector<char, 64> InsnStr, AnnoStr;
   raw_svector_ostream OS(InsnStr);
