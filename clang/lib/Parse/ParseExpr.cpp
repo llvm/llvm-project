@@ -3449,7 +3449,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
     }
     const auto *LIT = cast<LocInfoType>(ControllingType.get().get());
     SourceLocation Loc = LIT->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-    Diag(Loc, diag::ext_generic_with_type_arg);
+    Diag(Loc, getLangOpts().C2y ? diag::warn_c2y_compat_generic_with_type_arg
+                                : diag::ext_c2y_generic_with_type_arg);
   } else {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."

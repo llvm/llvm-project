@@ -64,7 +64,7 @@ func.func @no_nested_wrapper(%lb : index, %ub : index, %step : index) {
 
 func.func @if_once(%n : i1) {
   // expected-error@+1 {{`if` clause can appear at most once in the expansion of the oilist directive}}
-  omp.parallel if(%n : i1) if(%n : i1) {
+  omp.parallel if(%n) if(%n) {
   }
 
   return
@@ -274,7 +274,7 @@ func.func @unconstrained_order(%lb : index, %ub : index, %step : index) {
 
 func.func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
   // expected-error @below {{expected '{'}}
-  omp.wsloop if(%bool_var: i1) {
+  omp.wsloop if(%bool_var) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -2043,7 +2043,7 @@ func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
-  omp.target_update motion_entries(%mapv : memref<?xi32>)
+  omp.target_update map_entries(%mapv : memref<?xi32>)
   return
 }
 
@@ -2053,7 +2053,7 @@ func.func @omp_target_update_invalid_motion_type_2(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
-  omp.target_update motion_entries(%mapv : memref<?xi32>)
+  omp.target_update map_entries(%mapv : memref<?xi32>)
   return
 }
 
@@ -2063,7 +2063,7 @@ func.func @omp_target_update_invalid_motion_modifier(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
-  omp.target_update motion_entries(%mapv : memref<?xi32>)
+  omp.target_update map_entries(%mapv : memref<?xi32>)
   return
 }
 
@@ -2073,7 +2073,7 @@ func.func @omp_target_update_invalid_motion_modifier_2(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(close, to) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
-  omp.target_update motion_entries(%mapv : memref<?xi32>)
+  omp.target_update map_entries(%mapv : memref<?xi32>)
   return
 }
 
@@ -2083,7 +2083,7 @@ func.func @omp_target_update_invalid_motion_modifier_3(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, to) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
-  omp.target_update motion_entries(%mapv : memref<?xi32>)
+  omp.target_update map_entries(%mapv : memref<?xi32>)
   return
 }
 
@@ -2093,7 +2093,7 @@ func.func @omp_target_update_invalid_motion_modifier_4(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{either to or from map types can be specified, not both}}
-  omp.target_update motion_entries(%mapv : memref<?xi32>)
+  omp.target_update map_entries(%mapv : memref<?xi32>)
   return
 }
 
@@ -2104,7 +2104,7 @@ func.func @omp_target_update_invalid_motion_modifier_5(%map1 : memref<?xi32>) {
   %mapv2 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{either to or from map types can be specified, not both}}
-  omp.target_update motion_entries(%mapv, %mapv2 : memref<?xi32>, memref<?xi32>)
+  omp.target_update map_entries(%mapv, %mapv2 : memref<?xi32>, memref<?xi32>)
   return
 }
 llvm.mlir.global internal @_QFsubEx() : i32
@@ -2114,7 +2114,7 @@ llvm.mlir.global internal @_QFsubEx() : i32
 func.func @omp_target_update_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_update motion_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  omp.target_update map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
   return
 }
 

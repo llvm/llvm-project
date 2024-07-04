@@ -198,7 +198,7 @@ void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
-  if (getAssembler().isSymbolLinkerVisible(*Symbol))
+  if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
     insert(getContext().allocFragment<MCDataFragment>());
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
@@ -507,8 +507,9 @@ void MCMachOStreamer::finishImpl() {
   // defining symbols.
   DenseMap<const MCFragment *, const MCSymbol *> DefiningSymbolMap;
   for (const MCSymbol &Symbol : getAssembler().symbols()) {
-    if (getAssembler().isSymbolLinkerVisible(Symbol) && Symbol.isInSection() &&
-        !Symbol.isVariable()) {
+    auto &Sym = cast<MCSymbolMachO>(Symbol);
+    if (Sym.isSymbolLinkerVisible() && Sym.isInSection() && !Sym.isVariable() &&
+        !Sym.isAltEntry()) {
       // An atom defining symbol should never be internal to a fragment.
       assert(Symbol.getOffset() == 0 &&
              "Invalid offset in atom defining symbol!");
@@ -596,9 +597,7 @@ void MCMachOStreamer::createAddrSigSection() {
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
   changeSection(AddrSigSection);
-  auto *Frag = getContext().allocFragment<MCDataFragment>();
-  Frag->setParent(AddrSigSection);
-  AddrSigSection->addFragment(*Frag);
+  auto *Frag = cast<MCDataFragment>(AddrSigSection->curFragList()->Head);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are

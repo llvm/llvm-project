@@ -22,7 +22,7 @@ public:
     std::string Storage;
     llvm::raw_string_ostream Stream(Storage);
     D->print(Stream);
-    Match(Stream.str(), D->getLocation());
+    Match(Storage, D->getLocation());
     return true;
   }
 

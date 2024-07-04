@@ -1431,29 +1431,40 @@ public:
   /// Returns true if \p I is a memory instruction in an interleaved-group
   /// of memory accesses that can be vectorized with wide vector loads/stores
   /// and shuffles.
-  bool interleavedAccessCanBeWidened(Instruction *I, ElementCount VF);
+  bool interleavedAccessCanBeWidened(Instruction *I, ElementCount VF) const;
 
   /// Check if \p Instr belongs to any interleaved access group.
-  bool isAccessInterleaved(Instruction *Instr) {
+  bool isAccessInterleaved(Instruction *Instr) const {
     return InterleaveInfo.isInterleaved(Instr);
   }
 
   /// Get the interleaved access group that \p Instr belongs to.
   const InterleaveGroup<Instruction> *
-  getInterleavedAccessGroup(Instruction *Instr) {
+  getInterleavedAccessGroup(Instruction *Instr) const {
     return InterleaveInfo.getInterleaveGroup(Instr);
   }
 
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
   bool requiresScalarEpilogue(bool IsVectorizing) const {
-    if (!isScalarEpilogueAllowed())
+    if (!isScalarEpilogueAllowed()) {
+      LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue\n");
       return false;
+    }
     // If we might exit from anywhere but the latch, must run the exiting
     // iteration in scalar form.
-    if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch())
+    if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Loop requires scalar epilogue: multiple exits\n");
       return true;
-    return IsVectorizing && InterleaveInfo.requiresScalarEpilogue();
+    }
+    if (IsVectorizing && InterleaveInfo.requiresScalarEpilogue()) {
+      LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: "
+                           "interleaved group requires scalar epilogue\n");
+      return true;
+    }
+    LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue\n");
+    return false;
   }
 
   /// Returns true if we're required to use a scalar epilogue for at least
@@ -2426,7 +2437,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     VPTransformState &State, VPValue *Addr, ArrayRef<VPValue *> StoredValues,
     VPValue *BlockInMask, bool NeedsMaskForGaps) {
   Instruction *Instr = Group->getInsertPos();
-  const DataLayout &DL = Instr->getModule()->getDataLayout();
+  const DataLayout &DL = Instr->getDataLayout();
 
   // Prepare for the vector type of the interleaved load/store.
   Type *ScalarTy = getLoadStoreType(Instr);
@@ -3919,7 +3930,7 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
 }
 
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
-    Instruction *I, ElementCount VF) {
+    Instruction *I, ElementCount VF) const {
   assert(isAccessInterleaved(I) && "Expecting interleaved access.");
   assert(getWideningDecision(I, VF) == CM_Unknown &&
          "Decision should not be set yet.");
@@ -3928,7 +3939,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
-  auto &DL = I->getModule()->getDataLayout();
+  auto &DL = I->getDataLayout();
   auto *ScalarTy = getLoadStoreType(I);
   if (hasIrregularType(ScalarTy, DL))
     return false;
@@ -4006,7 +4017,7 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
 
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
-  auto &DL = I->getModule()->getDataLayout();
+  auto &DL = I->getDataLayout();
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
@@ -5105,7 +5116,7 @@ std::pair<unsigned, unsigned>
 LoopVectorizationCostModel::getSmallestAndWidestTypes() {
   unsigned MinWidth = -1U;
   unsigned MaxWidth = 8;
-  const DataLayout &DL = TheFunction->getParent()->getDataLayout();
+  const DataLayout &DL = TheFunction->getDataLayout();
   // For in-loop reductions, no element types are added to ElementTypesInLoop
   // if there are no loads/stores in the loop. In this case, check through the
   // reduction variables to determine the maximum width.
@@ -7285,6 +7296,8 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
   LLVM_DEBUG(printPlans(dbgs()));
+  if (VPlans.empty())
+    return std::nullopt;
   if (all_of(VPlans,
              [](std::unique_ptr<VPlan> &P) { return P->hasScalarVFOnly(); }))
     return VectorizationFactor::Disabled();
@@ -9568,7 +9581,7 @@ static bool processLoopInVPlanNativePath(
     bool AddBranchWeights =
         hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
     GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
-                             F->getParent()->getDataLayout(), AddBranchWeights);
+                             F->getDataLayout(), AddBranchWeights);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                            VF.Width, 1, LVL, &CM, BFI, PSI, Checks);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -9912,7 +9925,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool AddBranchWeights =
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
-                           F->getParent()->getDataLayout(), AddBranchWeights);
+                           F->getDataLayout(), AddBranchWeights);
   if (MaybeVF) {
     VF = *MaybeVF;
     // Select the interleave count.
