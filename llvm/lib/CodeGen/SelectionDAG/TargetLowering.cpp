@@ -8590,7 +8590,8 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
                          Node->getOperand(1), Node->getFlags());
   }
 
-  // FIXME: we may use setCC/getSELECT to optimize it instead of fallback to libcall.
+  // FIXME: we may use setCC/getSELECT to optimize it instead of fallback to
+  // libcall.
   return SDValue();
 }
 
