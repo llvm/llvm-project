@@ -332,7 +332,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s64) = COPY $x0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -49
-    ; CHECK-NEXT: %sub:_(s64) = G_SUB %a, [[C]]
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB [[C]], %a
     ; CHECK-NEXT: $x0 = COPY %sub(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0

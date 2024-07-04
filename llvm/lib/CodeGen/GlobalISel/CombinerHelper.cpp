@@ -7548,7 +7548,7 @@ bool CombinerHelper::matchFoldC1Minus2MinusC2(const MachineInstr &MI,
 
   MatchInfo = [=](MachineIRBuilder &B) {
     auto Const = B.buildConstant(DstTy, *MaybeC1 - *MaybeC2);
-    B.buildSub(Dst, Sub2->getRHSReg(), Const);
+    B.buildSub(Dst, Const, Sub2->getRHSReg());
   };
 
   return true;
