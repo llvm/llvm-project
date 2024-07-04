@@ -80,6 +80,7 @@ private:
   bool HasHIPStdParLibrary = false;
   bool HasRocThrustLibrary = false;
   bool HasRocPrimLibrary = false;
+  bool IsHostMSVC = false;
 
   // Default version if not detected or specified.
   const unsigned DefaultVersionMajor = 3;
@@ -110,6 +111,8 @@ private:
   StringRef HIPVersionArg;
   // Wheter -nogpulib is specified.
   bool NoBuiltinLibs = false;
+
+  llvm::Triple TargetTriple;
 
   // Paths
   SmallString<0> InstallPath;
@@ -166,7 +169,7 @@ private:
                                         StringRef PackageName);
 
 public:
-  RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
+  RocmInstallationDetector(const Driver &D, const llvm::Triple &TargetTriple,
                            const llvm::opt::ArgList &Args,
                            bool DetectHIPRuntime = true,
                            bool DetectDeviceLib = false);
@@ -192,6 +195,10 @@ public:
 
   /// Check whether we detected a valid HIP STDPAR Acceleration library.
   bool hasHIPStdParLibrary() const { return HasHIPStdParLibrary; }
+
+  /// Check whether the target triple is for Windows.
+  bool isHostWindows() const { return IsHostMSVC; }
+  void setHostWindows(bool val) { IsHostMSVC=val; }
 
   /// Print information about the detected ROCm installation.
   void print(raw_ostream &OS) const;
