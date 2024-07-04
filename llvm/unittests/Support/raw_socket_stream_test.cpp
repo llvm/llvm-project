@@ -93,7 +93,6 @@ TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
   raw_socket_stream &Server = **MaybeServer;
 
   char Bytes[8];
-  auto Start = std::chrono::steady_clock::now();
   ssize_t BytesRead = Server.read(Bytes, 8, std::chrono::milliseconds(100));
   ASSERT_EQ(BytesRead, -1);
   ASSERT_EQ(Server.has_error(), true);
