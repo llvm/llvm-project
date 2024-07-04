@@ -107,19 +107,6 @@ struct PositiveConstValueConstructor {
   // CHECK-FIXES: PositiveConstValueConstructor(const ExpensiveToCopyType& ConstCopy) {}
 };
 
-template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType S, T V) {
-  // CHECK-MESSAGES: [[@LINE-1]]:90: warning: the const qualified parameter 'S'
-  // CHECK-FIXES-NOT: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, T V) {
-}
-
-void instantiated() {
-  templateWithNonTemplatizedParameter(ExpensiveToCopyType(), ExpensiveToCopyType());
-  templateWithNonTemplatizedParameter(ExpensiveToCopyType(), 5);
-}
-
-template <typename T> void negativeTemplateType(const T V) {
-}
-
 void negativeArray(const ExpensiveToCopyType[]) {
 }
 
@@ -369,36 +356,4 @@ struct NegativeUsingConstructor : public PositiveConstructor {
 void fun() {
   ExpensiveToCopyType E;
   NegativeUsingConstructor S(E);
-}
-
-template<typename T>
-void templateFunction(T) {
-}
-
-template<>
-void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:64: warning: the parameter 'E' is copied
-  // CHECK-FIXES: void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
-  E.constReference();
-}
-
-template <class T>
-T templateSpecializationFunction(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:54: warning: the parameter 'E' is copied
-  // CHECK-FIXES-NOT: T templateSpecializationFunction(const ExpensiveToCopyType& E) {
-  return T();
-}
-
-template <>
-bool templateSpecializationFunction(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:57: warning: the parameter 'E' is copied
-  // CHECK-FIXES-NOT: bool templateSpecializationFunction(const ExpensiveToCopyType& E) {
-  return true;
-}
-
-template <>
-int templateSpecializationFunction(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:56: warning: the parameter 'E' is copied
-  // CHECK-FIXES-NOT: int templateSpecializationFunction(const ExpensiveToCopyType& E) {
-  return 0;
 }
