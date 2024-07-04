@@ -537,7 +537,7 @@ namespace cwg1696 { // cwg1696: 7
 #endif
 }
 
-// cwg1698: yes
+// cwg1698: 2.7
 // This file intentionally does not end in a newline
 // to facilitate the CWG1698 test
 
