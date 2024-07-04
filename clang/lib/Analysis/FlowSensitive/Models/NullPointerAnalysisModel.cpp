@@ -72,8 +72,7 @@ using CR = CompareResult;
 // FIXME: These AST matchers should also be exported via the
 // NullPointerAnalysisModel class, for tests
 auto ptrWithBinding(llvm::StringRef VarName = kVar) {
-  return traverse(TK_IgnoreUnlessSpelledInSource,
-      expr(hasType(isAnyPointer())).bind(VarName));
+  return expr(hasType(isAnyPointer())).bind(VarName);
 }
 
 auto derefMatcher() {
@@ -223,14 +222,6 @@ Value *getValue(const Expr &Var, Environment &Env) {
   }
 
   return nullptr;
-
-  // Value *RootValue = Env.createValue(Var.getType());
-// 
-  // initializeRootValue(*RootValue, Env);
-// 
-  // setUnknownValue(Var, *RootValue, Env);
-// 
-  // return RootValue;
 }
 
 bool hasTopOrNullValue(const Value *Val, const Environment &Env) {
@@ -564,13 +555,6 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-auto buildBranchTransferMatchSwitch() {
-  return ASTMatchSwitchBuilder<Stmt, NullPointerAnalysisModel::TransferArgs>()
-      // .CaseOf<CastExpr>(castExprMatcher(), matchNullCheckExpr)
-      // .CaseOf<BinaryOperator>(equalExprMatcher(), matchEqualExpr)
-      .Build();
-}
-
 auto buildDiagnoseMatchSwitch() {
   return CFGMatchSwitchBuilder<NullCheckAfterDereferenceDiagnoser::DiagnoseArgs,
                                NullCheckAfterDereferenceDiagnoser::ResultType>()
@@ -587,8 +571,7 @@ auto buildDiagnoseMatchSwitch() {
 
 NullPointerAnalysisModel::NullPointerAnalysisModel(ASTContext &Context)
     : DataflowAnalysis<NullPointerAnalysisModel, NoopLattice>(Context),
-      TransferMatchSwitch(buildTransferMatchSwitch()),
-      BranchTransferMatchSwitch(buildBranchTransferMatchSwitch()) {}
+      TransferMatchSwitch(buildTransferMatchSwitch()) {}
 
 ast_matchers::StatementMatcher NullPointerAnalysisModel::ptrValueMatcher() {
   return ptrWithBinding();
@@ -597,16 +580,6 @@ ast_matchers::StatementMatcher NullPointerAnalysisModel::ptrValueMatcher() {
 void NullPointerAnalysisModel::transfer(const CFGElement &E, NoopLattice &State,
                                         Environment &Env) {
   TransferMatchSwitch(E, getASTContext(), Env);
-}
-
-void NullPointerAnalysisModel::transferBranch(bool Branch, const Stmt *E,
-                                              NoopLattice &State,
-                                              Environment &Env) {
-  if (!E)
-    return;
-
-  TransferArgs Args = {Branch, Env};
-  BranchTransferMatchSwitch(*E, getASTContext(), Args);
 }
 
 void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,

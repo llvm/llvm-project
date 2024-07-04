@@ -49,8 +49,6 @@ public:
 
 private:
   CFGMatchSwitch<Environment> TransferMatchSwitch;
-  ASTMatchSwitch<Stmt, TransferArgs> BranchTransferMatchSwitch;
-
 public:
   explicit NullPointerAnalysisModel(ASTContext &Context);
 
@@ -59,9 +57,6 @@ public:
   static ast_matchers::StatementMatcher ptrValueMatcher();
 
   void transfer(const CFGElement &E, NoopLattice &State, Environment &Env);
-
-  void transferBranch(bool Branch, const Stmt *E, NoopLattice &State,
-                      Environment &Env);
 
   void join(QualType Type, const Value &Val1, const Environment &Env1,
             const Value &Val2, const Environment &Env2, Value &MergedVal,
