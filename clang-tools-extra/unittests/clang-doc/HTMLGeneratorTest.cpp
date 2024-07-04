@@ -30,7 +30,7 @@ ClangDocContext
 getClangDocContext(std::vector<std::string> UserStylesheets = {},
                    StringRef RepositoryUrl = "") {
   ClangDocContext CDCtx{
-      {}, "test-project", {}, {}, {}, RepositoryUrl, UserStylesheets};
+      {}, "test-project", {}, {}, {}, {}, {}, RepositoryUrl, UserStylesheets};
   CDCtx.UserStylesheets.insert(
       CDCtx.UserStylesheets.begin(),
       "../share/clang/clang-doc-default-stylesheet.css");
