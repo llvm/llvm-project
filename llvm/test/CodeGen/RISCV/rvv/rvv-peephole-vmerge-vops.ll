@@ -1145,9 +1145,6 @@ define <vscale x 2 x double> @vpmerge_vfwsub.w_tied(<vscale x 2 x double> %passt
   ret <vscale x 2 x double> %b
 }
 
-; FIXME: We don't currently handle vmerge with an implicit passthru if the true
-; operand also has a tied dest. This could be folded into a masked vmacc with ta
-; policy.
 define <vscale x 2 x i32> @true_tied_dest_vmerge_implicit_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %avl) {
 ; CHECK-LABEL: true_tied_dest_vmerge_implicit_passthru:
 ; CHECK:       # %bb.0:
