@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++17 -verify %s
-// expected-no-diagnostics
 
 template<typename T> struct A {
   template<typename U> struct B {
@@ -84,5 +83,8 @@ Outer<char, int>::Inner _6(t6, 42, s);
 Outer<char, int>::Inner _7(t7, 42, s);
 Outer<char, int>::Inner _8(t8, 42, s);
 Outer<char, int>::Inner _9(t9, 42, 24, s);
+
+// Make sure we don't accidentally inject the TypedefNameDecl into the TU.
+Trouble should_not_be_in_the_tu_decl; // expected-error {{unknown type name 'Trouble'}}
 
 } // namespace GH94614

@@ -2222,6 +2222,7 @@ class ExtractTypeForDeductionGuide
   llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs;
   ClassTemplateDecl *NestedPattern;
   const MultiLevelTemplateArgumentList *OuterInstantiationArgs;
+  std::optional<TemplateDeclInstantiator> TypedefNameInstantiator;
 
 public:
   typedef TreeTransform<ExtractTypeForDeductionGuide> Base;
@@ -2232,7 +2233,12 @@ public:
       const MultiLevelTemplateArgumentList *OuterInstantiationArgs)
       : Base(SemaRef), MaterializedTypedefs(MaterializedTypedefs),
         NestedPattern(NestedPattern),
-        OuterInstantiationArgs(OuterInstantiationArgs) {}
+        OuterInstantiationArgs(OuterInstantiationArgs) {
+    if (OuterInstantiationArgs)
+      TypedefNameInstantiator.emplace(
+          SemaRef, SemaRef.getASTContext().getTranslationUnitDecl(),
+          *OuterInstantiationArgs);
+  }
 
   TypeSourceInfo *transform(TypeSourceInfo *TSI) { return TransformType(TSI); }
 
@@ -2277,9 +2283,8 @@ public:
       return Base::RebuildTemplateSpecializationType(Template, TemplateNameLoc,
                                                      TemplateArgs);
 
-    Decl *NewD = SemaRef.SubstDecl(
-        TATD, SemaRef.getASTContext().getTranslationUnitDecl(),
-        *OuterInstantiationArgs);
+    Decl *NewD =
+        TypedefNameInstantiator->InstantiateTypeAliasTemplateDecl(TATD);
     if (!NewD)
       return QualType();
 
@@ -2312,8 +2317,9 @@ public:
     //   };
     if (OuterInstantiationArgs && InDependentContext &&
         TL.getTypePtr()->isInstantiationDependentType()) {
-      Decl = cast_if_present<TypedefNameDecl>(SemaRef.SubstDecl(
-          OrigDecl, Context.getTranslationUnitDecl(), *OuterInstantiationArgs));
+      Decl = cast_if_present<TypedefNameDecl>(
+          TypedefNameInstantiator->InstantiateTypedefNameDecl(
+              OrigDecl, /*IsTypeAlias=*/isa<TypeAliasDecl>(OrigDecl)));
       if (!Decl)
         return QualType();
       MaterializedTypedefs.push_back(Decl);
