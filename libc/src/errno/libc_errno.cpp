@@ -9,44 +9,100 @@
 #include "libc_errno.h"
 #include "src/__support/CPP/atomic.h"
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-// LIBC_THREAD_LOCAL on GPU currently does nothing. So essentially this is just
-// a global errno for gpu to use for now.
+#define LIBC_ERRNO_MODE_NONE 0x01
+#define LIBC_ERRNO_MODE_INTERNAL 0x02
+#define LIBC_ERRNO_MODE_EXTERNAL 0x04
+#define LIBC_ERRNO_MODE_THREAD_LOCAL 0x08
+#define LIBC_ERRNO_MODE_GLOBAL 0x10
+#define LIBC_ERRNO_MODE_LOCATION 0x20
+
+#ifndef LIBC_ERRNO_MODE
+#error LIBC_ERRNO_MODE is not defined
+#endif
+
+#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_NONE && \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_INTERNAL && \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL && \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL && \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL && \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_LOCATION
+#error LIBC_ERRNO_MODE must be one of the following values: \
+LIBC_ERRNO_MODE_NONE, \
+LIBC_ERRNO_MODE_INTERNAL, \
+LIBC_ERRNO_MODE_EXTERNAL, \
+LIBC_ERRNO_MODE_THREAD_LOCAL, \
+LIBC_ERRNO_MODE_GLOBAL, \
+LIBC_ERRNO_MODE_LOCATION
+#endif
+
+namespace LIBC_NAMESPACE {
+
+// Define the global `libc_errno` instance.
+Errno libc_errno;
+
+#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_NONE
+
 extern "C" {
-LIBC_THREAD_LOCAL LIBC_NAMESPACE::cpp::Atomic<int> __llvmlibc_errno;
+const int __llvmlibc_errno = 0;
+int *__errno_location(void) { return &__llvmlibc_errno; }
 }
 
-void LIBC_NAMESPACE::Errno::operator=(int a) {
+void Errno::operator=(int) {}
+Errno::operator int() { return 0; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_INTERNAL
+
+LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
+
+extern "C" {
+int *__errno_location(void) { return &__llvmlibc_internal_errno; }
+}
+
+void Errno::operator=(int a) { __llvmlibc_internal_errno = a; }
+Errno::operator int() { return __llvmlibc_internal_errno; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
+
+extern "C" {
+int *__errno_location(void) { return &errno; }
+}
+
+void Errno::operator=(int a) { errno = a; }
+Errno::operator int() { return errno; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
+
+extern "C" {
+LIBC_THREAD_LOCAL int __llvmlibc_errno;
+int *__errno_location(void) { return &__llvmlibc_errno; }
+}
+
+void Errno::operator=(int a) { __llvmlibc_errno = a; }
+Errno::operator int() { return __llvmlibc_errno; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_GLOBAL
+
+extern "C" {
+LIBC_NAMESPACE::cpp::Atomic<int> __llvmlibc_errno;
+int *__errno_location(void) { return &__llvmlibc_errno; }
+}
+
+void Errno::operator=(int a) {
   __llvmlibc_errno.store(a, cpp::MemoryOrder::RELAXED);
 }
-LIBC_NAMESPACE::Errno::operator int() {
+Errno::operator int() {
   return __llvmlibc_errno.load(cpp::MemoryOrder::RELAXED);
 }
 
-#elif !defined(LIBC_COPT_PUBLIC_PACKAGING)
-// This mode is for unit testing.  We just use our internal errno.
-LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_LOCATION
 
-void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_internal_errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_internal_errno; }
-
-#elif defined(LIBC_FULL_BUILD)
-// This mode is for public libc archive, hermetic, and integration tests.
-// In full build mode, we provide the errno storage ourselves.
 extern "C" {
-LIBC_THREAD_LOCAL int __llvmlibc_errno;
+int *__errno_location(void);
 }
 
-void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_errno; }
+void Errno::operator=(int a) { *__errno_location() = a; }
+Errno::operator int() { return *__errno_location(); }
 
-#else
-void LIBC_NAMESPACE::Errno::operator=(int a) { errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return errno; }
+#endif
 
-#endif // LIBC_FULL_BUILD
-
-namespace LIBC_NAMESPACE {
-// Define the global `libc_errno` instance.
-Errno libc_errno;
 } // namespace LIBC_NAMESPACE
