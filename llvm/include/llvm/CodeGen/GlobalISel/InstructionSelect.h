@@ -20,6 +20,7 @@
 
 namespace llvm {
 
+class InstructionSelector;
 class BlockFrequencyInfo;
 class ProfileSummaryInfo;
 
@@ -55,10 +56,15 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 protected:
+  class MIIteratorMaintainer;
+
+  InstructionSelector *ISel = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
 
   CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
+
+  bool select(MachineInstr &MI);
 };
 } // End namespace llvm.
 
