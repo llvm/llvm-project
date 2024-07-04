@@ -1052,8 +1052,8 @@ MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
-EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
-                                         bool LegalTypes) const {
+EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
+                                         const DataLayout &DL) const {
   assert(LHSTy.isInteger() && "Shift amount is not an integer type!");
   if (LHSTy.isVector())
     return LHSTy;
