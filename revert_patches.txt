@@ -90,6 +90,6 @@ Reverts:
 1488fb415336 [PAC][AArch64] Lower ptrauth constants in code (#96879)  
 Contacts: RonL and Hulk
 ---
-breaks virtunc1 test: flag seems to be needed for offload lib
-* 8bb00cb1 [AMDGPU][OpenMP] Do not attach -fcuda-is-device flag for AMDGPU OpenMP (#96909)
+needs previous SEMA patches
+584e431a4b25 [Clang][Sema] Treat explicit specializations of static data member templates declared without '
 ---
