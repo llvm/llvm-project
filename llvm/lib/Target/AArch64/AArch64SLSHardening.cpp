@@ -184,7 +184,6 @@ namespace {
 struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
   const char *getThunkPrefix() { return SLSBLRNamePrefix; }
   bool mayUseThunk(const MachineFunction &MF) {
-    // FIXME: ComdatThunks is only accumulated until the first thunk is created.
     ComdatThunks &= !MF.getSubtarget<AArch64Subtarget>().hardenSlsNoComdat();
     return MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr();
   }
@@ -211,6 +210,8 @@ bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
+  assert(MF.getFunction().hasComdat() == ComdatThunks &&
+         "ComdatThunks value changed since MF creation");
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
   assert(MF.getName().starts_with(getThunkPrefix()));
