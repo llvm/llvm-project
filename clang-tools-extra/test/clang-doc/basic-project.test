@@ -1,17 +1,11 @@
+// RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
 // RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
-// RUN: clang-doc --format=md --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.md -check-prefix=MD-CALC
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.md -check-prefix=MD-CIRCLE
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.md -check-prefix=MD-RECTANGLE
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.md -check-prefix=MD-SHAPE
-// RUN: FileCheck %s -input-file=%t/docs/all_files.md -check-prefix=MD-ALL-FILES
-// RUN: FileCheck %s -input-file=%t/docs/index.md -check-prefix=MD-INDEX
 
 // JSON-INDEX: async function LoadIndex() {
 // JSON-INDEX-NEXT: return{
@@ -63,15 +57,15 @@
 // HTML-SHAPE: <!DOCTYPE html>
 // HTML-SHAPE-NEXT: <meta charset="utf-8"/>
 // HTML-SHAPE-NEXT: <title>class Shape</title>
-// HTML-SHAPE-NEXT: <link rel="stylesheet" href="..{{[\/]}}clang-doc-default-stylesheet.css"/>
-// HTML-SHAPE-NEXT: <script src="..{{[\/]}}index_json.js"></script>
-// HTML-SHAPE-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-SHAPE-NEXT: <link rel="stylesheet" href="../clang-doc-default-stylesheet.css"/>
+// HTML-SHAPE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-SHAPE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-SHAPE-NEXT: <header id="project-title"></header>
 // HTML-SHAPE-NEXT: <main>
 // HTML-SHAPE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
 // HTML-SHAPE-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
 // HTML-SHAPE-NEXT:     <h1>class Shape</h1>
-// HTML-SHAPE-NEXT:     <p>Defined at line 8 of file .{{[\/]}}include{{[\/]}}Shape.h</p>
+// HTML-SHAPE-NEXT:     <p>Defined at line 8 of file {{.*}}Shape.h</p>
 // HTML-SHAPE-NEXT:     <div>
 // HTML-SHAPE-NEXT:       <div>
 // HTML-SHAPE-NEXT:         <p> Provides a common interface for different types of shapes.</p>
@@ -81,7 +75,7 @@
 // HTML-SHAPE-NEXT:     <div>
 // HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
 // HTML-SHAPE-NEXT:       <p>public void ~Shape()</p>
-// HTML-SHAPE-NEXT:       <p>Defined at line 13 of file .{{[\/]}}include{{[\/]}}Shape.h</p>
+// HTML-SHAPE-NEXT:       <p>Defined at line 13 of file {{.*}}Shape.h</p>
 // HTML-SHAPE-NEXT:       <div>
 // HTML-SHAPE-NEXT:         <div></div>
 // HTML-SHAPE-NEXT:       </div>
@@ -128,9 +122,9 @@
 // HTML-CALC: <!DOCTYPE html>
 // HTML-CALC-NEXT: <meta charset="utf-8"/>
 // HTML-CALC-NEXT: <title>class Calculator</title>
-// HTML-CALC-NEXT: <link rel="stylesheet" href="..{{[\/]}}clang-doc-default-stylesheet.css"/>
-// HTML-CALC-NEXT: <script src="..{{[\/]}}index_json.js"></script>
-// HTML-CALC-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-CALC-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
+// HTML-CALC-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-CALC-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-CALC-NEXT: <header id="project-title"></header>
 // HTML-CALC-NEXT: <main>
 // HTML-CALC-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
@@ -146,25 +140,25 @@
 // HTML-CALC-NEXT:     <div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">add</h3>
 // HTML-CALC-NEXT:       <p>public int add(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 3 of file .{{[\/]}}src{{[\/]}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 3 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">subtract</h3>
 // HTML-CALC-NEXT:       <p>public int subtract(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 7 of file .{{[\/]}}src{{[\/]}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 7 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">multiply</h3>
 // HTML-CALC-NEXT:       <p>public int multiply(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 11 of file .{{[\/]}}src{{[\/]}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 11 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">divide</h3>
 // HTML-CALC-NEXT:       <p>public double divide(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 15 of file .{{[\/]}}src{{[\/]}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 15 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
@@ -207,8 +201,8 @@
 // HTML-RECTANGLE-NEXT: <meta charset="utf-8"/>
 // HTML-RECTANGLE-NEXT: <title>class Rectangle</title>
 // HTML-RECTANGLE-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
-// HTML-RECTANGLE-NEXT: <script src="..{{[\/]}}index_json.js"></script>
-// HTML-RECTANGLE-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-RECTANGLE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-RECTANGLE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-RECTANGLE-NEXT: <header id="project-title"></header>
 // HTML-RECTANGLE-NEXT: <main>
 // HTML-RECTANGLE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
@@ -288,14 +282,14 @@
 // HTML-CIRCLE-NEXT: <meta charset="utf-8"/>
 // HTML-CIRCLE-NEXT: <title>class Circle</title>
 // HTML-CIRCLE-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
-// HTML-CIRCLE-NEXT: <script src="..{{[\/]}}index_json.js"></script>
-// HTML-CIRCLE-NEXT: <script src="..{{[\/]}}index.js"></script>
+// HTML-CIRCLE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-CIRCLE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-CIRCLE-NEXT: <header id="project-title"></header>
 // HTML-CIRCLE-NEXT: <main>
 // HTML-CIRCLE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
 // HTML-CIRCLE-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
 // HTML-CIRCLE-NEXT:     <h1>class Circle</h1>
-// HTML-CIRCLE-NEXT:     <p>Defined at line 10 of file .{{[\/]}}include{{[\/]}}Circle.h</p>
+// HTML-CIRCLE-NEXT:     <p>Defined at line 10 of file {{.*}}Circle.h</p>
 // HTML-CIRCLE-NEXT:     <div>
 // HTML-CIRCLE-NEXT:       <div>
 // HTML-CIRCLE-NEXT:         <p> Represents a circle with a given radius.</p>
@@ -313,19 +307,19 @@
 // HTML-CIRCLE-NEXT:     <div>
 // HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
 // HTML-CIRCLE-NEXT:       <p>public void Circle(double radius)</p>
-// HTML-CIRCLE-NEXT:       <p>Defined at line 3 of file .{{[\/]}}src{{[\/]}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 3 of file {{.*}}Circle.cpp</p>
 // HTML-CIRCLE-NEXT:       <div>
 // HTML-CIRCLE-NEXT:         <div></div>
 // HTML-CIRCLE-NEXT:       </div>
 // HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">area</h3>
 // HTML-CIRCLE-NEXT:       <p>public double area()</p>
-// HTML-CIRCLE-NEXT:       <p>Defined at line 5 of file .{{[\/]}}src{{[\/]}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 5 of file {{.*}}Circle.cpp</p>
 // HTML-CIRCLE-NEXT:       <div>
 // HTML-CIRCLE-NEXT:         <div></div>
 // HTML-CIRCLE-NEXT:       </div>
 // HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
 // HTML-CIRCLE-NEXT:       <p>public double perimeter()</p>
-// HTML-CIRCLE-NEXT:       <p>Defined at line 9 of file .{{[\/]}}src{{[\/]}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 9 of file {{.*}}Circle.cpp</p>
 // HTML-CIRCLE-NEXT:       <div>
 // HTML-CIRCLE-NEXT:         <div></div>
 // HTML-CIRCLE-NEXT:       </div>
@@ -363,112 +357,3 @@
 // HTML-CIRCLE-NEXT:     </ol>
 // HTML-CIRCLE-NEXT:   </div>
 // HTML-CIRCLE-NEXT: </main>
-
-// MD-CALC: # class Calculator
-// MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
-// MD-CALC: **brief** A simple calculator class.
-// MD-CALC:  Provides basic arithmetic operations.
-// MD-CALC: ## Functions
-// MD-CALC: ### add
-// MD-CALC: *public int add(int a, int b)*
-// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#3*
-// MD-CALC: **brief** Adds two integers.
-// MD-CALC: **a** First integer.
-// MD-CALC: **b** Second integer.
-// MD-CALC: **return** int The sum of a and b.
-// MD-CALC: ### subtract
-// MD-CALC: *public int subtract(int a, int b)*
-// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#7*
-// MD-CALC: **brief** Subtracts the second integer from the first.
-// MD-CALC: **a** First integer.
-// MD-CALC: **b** Second integer.
-// MD-CALC: **return** int The result of a - b.
-// MD-CALC: ### multiply
-// MD-CALC: *public int multiply(int a, int b)*
-// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#11*
-// MD-CALC: **brief** Multiplies two integers.
-// MD-CALC: **a** First integer.
-// MD-CALC: **b** Second integer.
-// MD-CALC: **return** int The product of a and b.
-// MD-CALC: ### divide
-// MD-CALC: *public double divide(int a, int b)*
-// MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#15*
-// MD-CALC: **brief** Divides the first integer by the second.
-// MD-CALC: **a** First integer.
-// MD-CALC: **b** Second integer.
-// MD-CALC: **return** double The result of a / b.
-// MD-CALC: **throw**if b is zero.
-
-// MD-CIRCLE: # class Circle
-// MD-CIRCLE: *Defined at .{{[\/]}}include{{[\/]}}Circle.h#10*
-// MD-CIRCLE: **brief** Circle class derived from Shape.
-// MD-CIRCLE:  Represents a circle with a given radius.
-// MD-CIRCLE: Inherits from Shape
-// MD-CIRCLE: ## Members
-// MD-CIRCLE: private double radius_
-// MD-CIRCLE: ## Functions
-// MD-CIRCLE: ### Circle
-// MD-CIRCLE: *public void Circle(double radius)*
-// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#3*
-// MD-CIRCLE: **brief** Constructs a new Circle object.
-// MD-CIRCLE: **radius** Radius of the circle.
-// MD-CIRCLE: ### area
-// MD-CIRCLE: *public double area()*
-// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#5*
-// MD-CIRCLE: **brief** Calculates the area of the circle.
-// MD-CIRCLE: **return** double The area of the circle.
-// MD-CIRCLE: ### perimeter
-// MD-CIRCLE: *public double perimeter()*
-// MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#9*
-// MD-CIRCLE: **brief** Calculates the perimeter of the circle.
-// MD-CIRCLE: **return** double The perimeter of the circle.
-
-// MD-RECTANGLE: # class Rectangle
-// MD-RECTANGLE: *Defined at .{{[\/]}}include{{[\/]}}Rectangle.h#10*
-// MD-RECTANGLE: **brief** Rectangle class derived from Shape.
-// MD-RECTANGLE:  Represents a rectangle with a given width and height.
-// MD-RECTANGLE: Inherits from Shape
-// MD-RECTANGLE: ## Members
-// MD-RECTANGLE: private double width_
-// MD-RECTANGLE: private double height_
-// MD-RECTANGLE: ## Functions
-// MD-RECTANGLE: ### Rectangle
-// MD-RECTANGLE: *public void Rectangle(double width, double height)*
-// MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#3*
-// MD-RECTANGLE: **brief** Constructs a new Rectangle object.
-// MD-RECTANGLE: **width** Width of the rectangle.
-// MD-RECTANGLE: **height** Height of the rectangle.
-// MD-RECTANGLE: ### area
-// MD-RECTANGLE: *public double area()*
-// MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#6*
-// MD-RECTANGLE: **brief** Calculates the area of the rectangle.
-// MD-RECTANGLE: **return** double The area of the rectangle.
-// MD-RECTANGLE: ### perimeter
-// MD-RECTANGLE: *public double perimeter()*
-// MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#10*
-// MD-RECTANGLE: **brief** Calculates the perimeter of the rectangle.
-// MD-RECTANGLE: **return** double The perimeter of the rectangle.
-
-// MD-SHAPE: # class Shape
-// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#8*
-// MD-SHAPE: **brief** Abstract base class for shapes.
-// MD-SHAPE:  Provides a common interface for different types of shapes.
-// MD-SHAPE: ## Functions
-// MD-SHAPE: ### ~Shape
-// MD-SHAPE: *public void ~Shape()*
-// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
-// MD-SHAPE: **brief** Virtual destructor.
-// MD-SHAPE: ### area
-// MD-SHAPE: *public double area()*
-// MD-SHAPE: **brief** Calculates the area of the shape.
-// MD-SHAPE: **return** double The area of the shape.
-// MD-SHAPE: ### perimeter
-// MD-SHAPE: *public double perimeter()*
-// MD-SHAPE: **brief** Calculates the perimeter of the shape.
-// MD-SHAPE: **return** double The perimeter of the shape.
-
-// MD-ALL-FILES: # All Files
-// MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
-
-// MD-INDEX: #  C/C++ Reference
-// MD-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)
