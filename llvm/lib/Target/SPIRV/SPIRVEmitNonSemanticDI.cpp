@@ -111,6 +111,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
 
   SPIRVType *VoidTyMI =
       GR->getOrCreateSPIRVType(Type::getVoidTy(M->getContext()), MIRBuilder);
+  GR->assignSPIRVTypeToVReg(VoidTyMI, GR->getSPIRVTypeID(VoidTyMI), MF);
 
   Register DebugSourceResIdReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
   MRI.setType(DebugSourceResIdReg, LLT::scalar(32));
