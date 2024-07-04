@@ -527,8 +527,6 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   //   the group, though.
   MCDataFragment *DF;
 
-  // When bundling is enabled, we can't just append to the data fragment, as it
-  // might need to be a MCCompactEncodedInstFragment for zero fixups.
   if (Assembler.isBundlingEnabled()) {
     MCSection &Sec = *getCurrentSectionOnly();
     if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst()) {
