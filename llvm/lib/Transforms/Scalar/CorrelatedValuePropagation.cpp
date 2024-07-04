@@ -33,6 +33,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1189,21 +1190,20 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 }
 
 static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
-  if (BinOp->getType()->isVectorTy())
-    return false;
+  using namespace llvm::PatternMatch;
 
   // Pattern match (and lhs, C) where C includes a superset of bits which might
   // be set in lhs.  This is a common truncation idiom created by instcombine.
   const Use &LHS = BinOp->getOperandUse(0);
-  ConstantInt *RHS = dyn_cast<ConstantInt>(BinOp->getOperand(1));
-  if (!RHS || !RHS->getValue().isMask())
+  const APInt *RHS;
+  if (!match(BinOp->getOperand(1), m_LowBitMask(RHS)))
     return false;
 
   // We can only replace the AND with LHS based on range info if the range does
   // not include undef.
   ConstantRange LRange =
       LVI->getConstantRangeAtUse(LHS, /*UndefAllowed=*/false);
-  if (!LRange.getUnsignedMax().ule(RHS->getValue()))
+  if (!LRange.getUnsignedMax().ule(*RHS))
     return false;
 
   BinOp->replaceAllUsesWith(LHS);
