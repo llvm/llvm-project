@@ -476,6 +476,10 @@ Modified Compiler Flags
   evaluating to ``true`` and an empty body such as ``while(1);``)
   are considered infinite, even when the ``-ffinite-loop`` flag is set.
 
+- Diagnostics groups about compatibility with a particular C++ Standard version
+  now include dianostics about C++26 features that are not present in older
+  versions.
+
 Removed Compiler Flags
 -------------------------
 
