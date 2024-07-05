@@ -156,13 +156,16 @@ private:
 
 } // end anonymous namespace
 
-const ThunkKind ThunkKind::BR = {ThunkBR, "", false, false, AArch64::BR};
-const ThunkKind ThunkKind::BRAA = {ThunkBRAA, "aa_", true, true, AArch64::BRAA};
-const ThunkKind ThunkKind::BRAB = {ThunkBRAB, "ab_", true, true, AArch64::BRAB};
-const ThunkKind ThunkKind::BRAAZ = {ThunkBRAAZ, "aaz_", false, true,
-                                    AArch64::BRAAZ};
-const ThunkKind ThunkKind::BRABZ = {ThunkBRABZ, "abz_", false, true,
-                                    AArch64::BRABZ};
+const ThunkKind ThunkKind::BR = {ThunkBR, "", /*HasXmOperand=*/false,
+                                 /*NeedsPAuth=*/false, AArch64::BR};
+const ThunkKind ThunkKind::BRAA = {ThunkBRAA, "aa_", /*HasXmOperand=*/true,
+                                   /*NeedsPAuth=*/true, AArch64::BRAA};
+const ThunkKind ThunkKind::BRAB = {ThunkBRAB, "ab_", /*HasXmOperand=*/true,
+                                   /*NeedsPAuth=*/true, AArch64::BRAB};
+const ThunkKind ThunkKind::BRAAZ = {ThunkBRAAZ, "aaz_", /*HasXmOperand=*/false,
+                                    /*NeedsPAuth=*/true, AArch64::BRAAZ};
+const ThunkKind ThunkKind::BRABZ = {ThunkBRABZ, "abz_", /*HasXmOperand=*/false,
+                                    /*NeedsPAuth=*/true, AArch64::BRABZ};
 
 static const ThunkKind *getThunkKind(unsigned OriginalOpcode) {
   switch (OriginalOpcode) {
@@ -189,7 +192,7 @@ unsigned ThunksSet::indexOfXReg(Register Reg) {
   assert(AArch64::GPR64RegClass.contains(Reg));
   assert(Reg != AArch64::X16 && Reg != AArch64::X17 && Reg != AArch64::LR);
 
-  // Most Xn registers have consequent ids, except for FP and XZR.
+  // Most Xn registers have consecutive ids, except for FP and XZR.
   unsigned Result = (unsigned)Reg - (unsigned)AArch64::X0;
   if (Reg == AArch64::FP)
     Result = 29;

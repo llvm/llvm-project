@@ -7,10 +7,10 @@
 # RUN:     --implicit-check-not=__llvm_slsblr_thunk_aaz_x5 \
 # RUN:     --implicit-check-not=__llvm_slsblr_thunk_abz_x5
 
-# Pointer Authentication extension introduces more branch-with-link instructions
-# for the BLR SLS hardening to handle, namely BLRAA, BLRAB, BLRAAZ and BLRABZ.
-# Unlike the non-authenticating BLR instruction, BLRAA and BLRAB accept two
-# register operands (almost 900 combinations for each instruction).
+# Pointer Authentication extension introduces more branch-with-link-to-register
+# instructions for the BLR SLS hardening to handle, namely BLRAA, BLRAB, BLRAAZ
+# and BLRABZ. Unlike the non-authenticating BLR instruction, BLRAA and BLRAB
+# accept two register operands (almost 900 combinations for each instruction).
 # For that reason, it is not practical to create all possible thunks.
 
 # Check that the BLR SLS hardening transforms BLRA* instructions into
