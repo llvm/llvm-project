@@ -192,6 +192,7 @@ cxx_sources = [
 ]
 if (target_os == "win") {
   cxx_sources += [
+    "support/win32/compiler_rt_shims.cpp",
     "support/win32/locale_win32.cpp",
     "support/win32/support.cpp",
     "support/win32/thread_win32.cpp",
