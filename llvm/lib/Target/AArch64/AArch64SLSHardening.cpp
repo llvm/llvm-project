@@ -299,10 +299,13 @@ parseThunkName(StringRef ThunkName) {
                                .Default(&ThunkKind::BR);
 
   auto ParseRegName = [](StringRef Name) {
-    assert(Name.starts_with("x") && "xN register name expected");
     unsigned N;
+
+    assert(Name.starts_with("x") && "xN register name expected");
     bool Fail = Name.drop_front(1).getAsInteger(/*Radix=*/10, N);
-    assert(!Fail && N < 32 && "Unexpected register");
+    assert(!Fail && N < ThunksSet::NumXRegisters && "Unexpected register");
+    (void)Fail;
+
     return ThunksSet::xRegByIndex(N);
   };
 
