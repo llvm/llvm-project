@@ -2170,14 +2170,14 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     if (RangesBase) {
       if (Unit.getVersion() >= 5) {
         DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                        DIEInteger(*RangesBase));
+                         DIEInteger(*RangesBase));
       } else {
         DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                        DIEInteger(INT_MAX));
+                         DIEInteger(INT_MAX));
         auto RangesWriterIterator =
             LegacyRangesWritersByCU.find(*Unit.getDWOId());
         assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
-              "RangesWriter does not exist for DWOId");
+               "RangesWriter does not exist for DWOId");
         RangesWriterIterator->second->setDie(&Die);
       }
     }
