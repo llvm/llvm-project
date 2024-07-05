@@ -3,6 +3,6 @@
 // When the intel syntax is enabled, to parse an operand, X86AsmParser doesn't use the method parseExpression from AsmParser
 // but ParseIntelExpr which was not processing well an end of statement.
 
-// CHECK: LLVM ERROR: SmallVector unable to grow. Requested capacity (4294967296) is larger than maximum value for size type (4294967295)
+// CHECK: error: unknown token in expression
 test:
 i-
