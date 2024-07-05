@@ -5922,13 +5922,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::BitCast: {
-    const Type *Ty = Op->getType();
-    const Value *Casted = Op->getOperand(0);
-    if (Ty->isVectorTy() || !Casted->getType()->isIntOrIntVectorTy())
+    const Value *Src;
+    if (!match(Op, m_ElementWiseBitCast(m_Value(Src))) ||
+        !Src->getType()->isIntOrIntVectorTy())
       break;
 
+    const Type *Ty = Op->getType()->getScalarType();
     KnownBits Bits(Ty->getScalarSizeInBits());
-    computeKnownBits(Casted, Bits, Depth + 1, Q);
+    computeKnownBits(Src, DemandedElts, Bits, Depth + 1, Q);
 
     // Transfer information from the sign bit.
     if (Bits.isNonNegative())
