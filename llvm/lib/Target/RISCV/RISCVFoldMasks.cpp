@@ -82,9 +82,9 @@ bool RISCVFoldMasks::convertToVLMAX(MachineInstr &MI) const {
   if (!Def)
     return false;
 
-  // Fixed-point value, denumerator=8
+  // Fixed-point value, denominator=8
   unsigned ScaleFixed = 8;
-  // Check if the VLENB was scaled for a possible slli/srli
+  // Check if the VLENB was potentially scaled with slli/srli
   if (Def->getOpcode() == RISCV::SLLI) {
     ScaleFixed <<= Def->getOperand(2).getImm();
     Def = MRI->getVRegDef(Def->getOperand(1).getReg());
@@ -97,7 +97,7 @@ bool RISCVFoldMasks::convertToVLMAX(MachineInstr &MI) const {
     return false;
 
   auto LMUL = RISCVVType::decodeVLMUL(RISCVII::getLMul(MI.getDesc().TSFlags));
-  // Fixed-point value, denumerator=8
+  // Fixed-point value, denominator=8
   unsigned LMULFixed = LMUL.second ? (8 / LMUL.first) : 8 * LMUL.first;
   unsigned SEW =
       1 << MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
