@@ -4869,6 +4869,11 @@ static bool willGenerateVectorInstructions(VPlan &Plan, ElementCount VF,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
+      // Continue early if the recipe is considered to not produce a vector
+      // result. Note that this includes VPInstruction, where some opcodes may
+      // produce a vector to preserve existing behavior originally as
+      // VPInstructions model aspects not directly mapped to existing IR
+      // instructions.
       switch (R.getVPDefID()) {
       case VPDef::VPDerivedIVSC:
       case VPDef::VPScalarIVStepsSC:
@@ -4921,8 +4926,6 @@ static bool willGenerateVectorInstructions(VPlan &Plan, ElementCount VF,
           return NumLegalParts <= VF.getKnownMinValue();
         }
         // Two or more parts that share a register - are vectorized.
-        assert(NumLegalParts <= VF.getKnownMinValue() &&
-               "More parts than elements?");
         return NumLegalParts < VF.getKnownMinValue();
       };
       SmallVector<VPValue *> VPValuesToCheck;
