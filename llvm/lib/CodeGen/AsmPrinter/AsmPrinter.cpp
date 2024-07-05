@@ -2327,12 +2327,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
     // If address is taken from an extern function, we need to emit linkage for
     // its function descriptor symbol.
-    if (F.hasAddressTaken(/*PutOffender=*/nullptr,
-                          /*IgnoreCallbackUses=*/false,
-                          /*IgnoreAssumeLikeCalls=*/true,
-                          /*IgnoreLLVMUsed=*/true,
-                          /*IgnoreARCAttachedCall=*/false,
-                          /*IgnoreCastedDirectCall=*/true))
+    if (F.hasAddressTaken())
       emitLinkage(&F, Name);
   }
 
