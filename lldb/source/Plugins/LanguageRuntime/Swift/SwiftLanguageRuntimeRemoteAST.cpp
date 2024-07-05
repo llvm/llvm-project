@@ -307,10 +307,6 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
     if (target_swift_type->hasArchetype())
       target_swift_type = target_swift_type->mapTypeOutOfContext().getPointer();
 
-    // FIXME: This is wrong, but it doesn't actually matter right now since
-    // all conformances are always visible
-    auto *module_decl = swift_ast_ctx->GetASTContext()->getStdlibModule();
-
     // Replace opaque types with their underlying types when possible.
     swift::Mangle::ASTMangler mangler(true);
 
@@ -406,7 +402,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
 
             return result_type;
           },
-          swift::LookUpConformanceInModule(module_decl),
+          swift::LookUpConformanceInModule(),
           swift::SubstFlags::DesugarMemberTypes |
               swift::SubstFlags::SubstituteOpaqueArchetypes);
 
@@ -434,7 +430,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
                      swift_ast_ctx->GetSwiftType(target_concrete_type))
               .value_or(swift::Type());
         },
-        swift::LookUpConformanceInModule(module_decl),
+        swift::LookUpConformanceInModule(),
         swift::SubstFlags::DesugarMemberTypes);
     assert(target_swift_type);
 
