@@ -1577,4 +1577,21 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
   let hasRegionVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// [Spec 5.2] 10.5 masked Construct
+//===----------------------------------------------------------------------===//
+def MaskedOp : OpenMP_Op<"masked", clauses = [
+    OpenMP_FilterClause
+  ], singleRegion = 1> {
+  let summary = "masked construct";
+  let description = [{
+    Masked construct allows to specify a structured block to be executed by a subset of 
+    threads of the current team.
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const MaskedClauseOps &">:$clauses)>
+  ];
+}
+
 #endif // OPENMP_OPS

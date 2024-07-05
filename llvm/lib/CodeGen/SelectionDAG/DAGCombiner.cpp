@@ -847,7 +847,7 @@ namespace {
     /// legalization these can be huge.
     EVT getShiftAmountTy(EVT LHSTy) {
       assert(LHSTy.isInteger() && "Shift amount is not an integer type!");
-      return TLI.getShiftAmountTy(LHSTy, DAG.getDataLayout(), LegalTypes);
+      return TLI.getShiftAmountTy(LHSTy, DAG.getDataLayout());
     }
 
     /// This method returns true if we are running before type legalization or
