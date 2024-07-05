@@ -13,7 +13,7 @@
 ## FIXME: Absolute paths don't end up relativized in the repro file.
 
 # RUN: %lld %t/main.o %t/unused.a -ObjC --reproduce=%t/repro.tar -o /dev/null
-# RUN: tar xf %t/repro.tar -C %t
+# RUN: cd %t; tar xf repro.tar
 # RUN: cd %t/repro; %lld @response.txt
 
 .text
