@@ -420,6 +420,8 @@ def CXX20CompatPedantic : DiagGroup<"c++20-compat-pedantic",
 def : DiagGroup<"c++2a-compat", [CXX20Compat]>;
 def : DiagGroup<"c++2a-compat-pedantic", [CXX20CompatPedantic]>;
 
+def CXX26Compat : DiagGroup<"c++2c-compat", [DeleteIncomplete]>;
+
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
 def FourByteMultiChar : DiagGroup<"four-char-constants">;
