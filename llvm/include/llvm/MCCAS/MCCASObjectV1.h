@@ -176,7 +176,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MCCAS/MCCASFormatSchemaBase.h"
 #include "llvm/MCCAS/MCCASReader.h"
 #include "llvm/Support/BinaryStreamReader.h"
