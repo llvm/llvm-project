@@ -27,6 +27,9 @@
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/FormattedStream.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
@@ -180,7 +183,7 @@ private:
     uint8ArrayToHex(paletteSymName, paletteAsArray, paletteArraySize);
 
     ModuleOp module = getOperation()->template getParentOfType<ModuleOp>();
-    if ((global = module.lookupSymbol<LLVM::GlobalOp>(paletteSymName)))
+    if (auto global = module.lookupSymbol<LLVM::GlobalOp>(paletteSymName))
       return global;
     // Create a global symbol containing palette config.
     auto ctx = module->getContext();
@@ -194,7 +197,7 @@ private:
         {static_cast<int64_t>(elementVals.size())}, builder.getI8Type());
     auto dataAttr =
         DenseElementsAttr::get(dataAttrType, llvm::ArrayRef(elementVals));
-    auto arrayTy =
+    auto arrayType =
         LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), elementVals.size());
     auto global = builder.create<LLVM::GlobalOp>(
         module.getLoc(), arrayType, /*isConstant*/ true, LLVM::Linkage::Private,
@@ -212,9 +215,9 @@ public:
 
     // 1. Set propagated binding info to AMX Ops.
     RewritePatternSet patterns(&getContext());
-    patterns.add<TileStoreBindingRewriter>(&getContext(), analysis);
-    patterns.add<TileMulFBindingRewriter>(&getContext(), analysis);
-    patterns.add<TileMulIBindingRewriter>(&getContext(), analysis);
+    patterns.add<TileStoreBindingRewriter>(&getContext(), bindingAna);
+    patterns.add<TileMulFBindingRewriter>(&getContext(), bindingAna);
+    patterns.add<TileMulIBindingRewriter>(&getContext(), bindingAna);
     FrozenRewritePatternSet patternSet(std::move(patterns));
 
     if (failed(applyPatternsAndFoldGreedily(getOperation(), patternSet)))
@@ -227,13 +230,13 @@ public:
 
     // 3. Insert tile config/release according to tile scopes.
     OpBuilder builder(getOperation());
-    for (auto &scope : tileScopes) {
+    for (auto &scope : scopeAna.getTileScopes()) {
       assert(!scope.pi.overflow && "Expecting legal AMX palette info");
       auto paletteGlobal = getOrCreateGlobalPalette(scope.pi);
       assert(paletteGlobal && "Failed to create global palette");
 
       Operation *begin = &(*scope.seg.begin());
-      Loc loc = begin->getLoc();
+      Location loc = begin->getLoc();
 
       builder.setInsertionPoint(begin);
       Value paletteGlobalPtr =

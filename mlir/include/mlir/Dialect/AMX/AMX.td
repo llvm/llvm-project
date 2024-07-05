@@ -403,21 +403,21 @@ def LLVM_x86_amx_tdpbssd_plain : AMX_IntrOpBase<"tdpbssd", 0,
 		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
 
 // Dot product of i8 tiles into i32 tile (with sign/zero extension).
-def LLVM_x86_amx_tdpbsud_plain : AMX_IntrOpBase<"tdpbsud", 1,
+def LLVM_x86_amx_tdpbsud_plain : AMX_IntrOpBase<"tdpbsud", 0,
 		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
   Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
                  Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,
 		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
 
 // Dot product of i8 tiles into i32 tile (with zero/sign extension).
-def LLVM_x86_amx_tdpbusd_plain : AMX_IntrOpBase<"tdpbusd", 1,
+def LLVM_x86_amx_tdpbusd_plain : AMX_IntrOpBase<"tdpbusd", 0,
 		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
   Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
                  Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,
 		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
 
 // Dot product of i8 tiles into i32 tile (with zero/zero extension).
-def LLVM_x86_amx_tdpbuud_plain : AMX_IntrOpBase<"tdpbuud", 1,
+def LLVM_x86_amx_tdpbuud_plain : AMX_IntrOpBase<"tdpbuud", 0,
 		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
   Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
                  Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,

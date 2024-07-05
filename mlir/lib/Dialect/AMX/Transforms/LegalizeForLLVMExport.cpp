@@ -75,19 +75,21 @@ Value getStride(ConversionPatternRewriter &rewriter,
 
 struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
 private:
-  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
+      &enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileZeroOp>::ConvertOpToLLVMPattern;
-  TileZeroConversion(const LLVMTypeConverter &typeConverter,
-                     const std::optional<TileScopeAnalysis> &analysis)
+  TileZeroConversion(
+      const LLVMTypeConverter &typeConverter,
+      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
       : ConvertOpToLLVMPattern<TileZeroOp>(typeConverter),
         enablingAnalysis(analysis) {}
 
   LogicalResult
   matchAndRewrite(TileZeroOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (enablingAnalysis && enablingAnalysis->isValid()) {
+    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
       // Routine for lowering tile Ops with binding info.
       auto dstRegIndex = op.getDstRegIndex();
       assert(dstRegIndex && "Incomplete operation attribute for tile binding");
@@ -110,12 +112,14 @@ public:
 
 struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
 private:
-  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
+      &enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileLoadOp>::ConvertOpToLLVMPattern;
-  TileLoadConversion(const LLVMTypeConverter &typeConverter,
-                     const std::optional<TileScopeAnalysis> &analysis)
+  TileLoadConversion(
+      const LLVMTypeConverter &typeConverter,
+      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
       : ConvertOpToLLVMPattern<TileLoadOp>(typeConverter),
         enablingAnalysis(analysis) {}
 
@@ -131,7 +135,7 @@ public:
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
 
-    if (enablingAnalysis && enablingAnalysis->isValid()) {
+    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
       // Routine for lowering tile Ops with binding info.
       auto dstRegIndex = op.getDstRegIndex();
       assert(dstRegIndex && "Incomplete operation attribute for tile binding");
@@ -154,12 +158,14 @@ public:
 
 struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
 private:
-  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
+      &enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileStoreOp>::ConvertOpToLLVMPattern;
-  TileStoreConversion(const LLVMTypeConverter &typeConverter,
-                      const std::optional<TileScopeAnalysis> &analysis)
+  TileStoreConversion(
+      const LLVMTypeConverter &typeConverter,
+      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
       : ConvertOpToLLVMPattern<TileStoreOp>(typeConverter),
         enablingAnalysis(analysis) {}
 
@@ -175,7 +181,7 @@ public:
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
 
-    if (enablingAnalysis && enablingAnalysis->isValid()) {
+    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
       // Routine for lowering tile Ops with binding info.
       auto srcRegIndex = op.getSrcRegIndex();
       assert(srcRegIndex && "Incomplete operation attribute for tile binding");
@@ -197,19 +203,21 @@ public:
 
 struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
 private:
-  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
+      &enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileMulFOp>::ConvertOpToLLVMPattern;
-  TileMulFConversion(const LLVMTypeConverter &typeConverter,
-                     const std::optional<TileScopeAnalysis> &analysis)
+  TileMulFConversion(
+      const LLVMTypeConverter &typeConverter,
+      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
       : ConvertOpToLLVMPattern<TileMulFOp>(typeConverter),
         enablingAnalysis(analysis) {}
 
   LogicalResult
   matchAndRewrite(TileMulFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (enablingAnalysis && enablingAnalysis->isValid()) {
+    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
       // Routine for lowering tile Ops with binding info.
       auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
@@ -241,12 +249,14 @@ public:
 
 struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
 private:
-  const std::optional<TileScopeAnalysis> &enablingAnalysis;
+  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
+      &enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileMulIOp>::ConvertOpToLLVMPattern;
-  TileMulIConversion(const LLVMTypeConverter &typeConverter,
-                     const std::optional<TileScopeAnalysis> &analysis)
+  TileMulIConversion(
+      const LLVMTypeConverter &typeConverter,
+      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
       : ConvertOpToLLVMPattern<TileMulIOp>(typeConverter),
         enablingAnalysis(analysis) {}
 
@@ -256,7 +266,7 @@ public:
     bool zexta = op.getIsZextLhs();
     bool zextb = op.getIsZextRhs();
 
-    if (enablingAnalysis && enablingAnalysis->isValid()) {
+    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
       // Routine for lowering tile Ops with binding info.
       auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
@@ -312,7 +322,8 @@ public:
 } // namespace
 
 void mlir::populateAMXLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, std::optional<TileScopeAnalysis> &analysis,
+    LLVMTypeConverter &converter,
+    std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis,
     RewritePatternSet &patterns) {
   patterns.add<TileZeroConversion, TileLoadConversion, TileStoreConversion,
                TileMulFConversion, TileMulIConversion>(converter, analysis);

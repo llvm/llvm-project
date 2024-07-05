@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/Support/Format.h"
 
 #define DEBUG_TYPE "amx-binding-analysis"
 
@@ -412,7 +413,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
   }
   if (paraOps.size()) {
     assert(blockSegs.size() == paraOps.size());
-    for (int idx = 0; idx < paraOps.size(); idx++) {
+    for (size_t idx = 0; idx < paraOps.size(); idx++) {
       doTileScope(blockSegs[idx]);
       doTileScope(paraOps[idx]);
     }
@@ -509,7 +510,7 @@ void TileScopeAnalysis::doTileScope(Operation *op) {
     auto &defaultBlock = indexOp.getDefaultRegion().front();
     doTileScope(BlockSeg(defaultBlock.begin(), defaultBlock.end()));
     for (auto &caseRegion : indexOp.getCaseRegions()) {
-      auto &caseBlock = indexOp.getDefaultRegion().front();
+      auto &caseBlock = caseRegion.front();
       doTileScope(BlockSeg(caseBlock.begin(), caseBlock.end()));
     }
   } else if (auto whileOp = dyn_cast<scf::WhileOp>(op)) {

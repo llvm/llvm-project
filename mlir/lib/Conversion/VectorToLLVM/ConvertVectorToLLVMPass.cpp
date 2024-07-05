@@ -106,7 +106,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
     populateArmSVELegalizeForLLVMExportPatterns(converter, patterns);
   }
   if (amx) {
-    auto &analysis = getCachedAnalysis<amx::TileScopeAnalysis>();
+    auto analysis = getCachedAnalysis<amx::TileScopeAnalysis>();
     configureAMXLegalizeForExportTarget(target);
     populateAMXLegalizeForLLVMExportPatterns(converter, analysis, patterns);
   }

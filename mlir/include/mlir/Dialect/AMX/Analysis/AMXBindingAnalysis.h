@@ -53,8 +53,7 @@ public:
 
 // A class for analyzing tile configuration domination (a.k.a. tile scope).
 class TileScopeAnalysis {
-private:
-  typedef llvm::iterator_range<Block::iterator> BlockSeg;
+public:
   // A list of 2-dim {rows x colBytes} shapes representing tmm register shape,
   // the length should always be 8.
   struct PaletteInfo {
@@ -72,6 +71,9 @@ private:
     void merge(const PaletteInfo &rhs);
     bool isConflict(const PaletteInfo &rhs) const;
   };
+
+private:
+  typedef llvm::iterator_range<Block::iterator> BlockSeg;
   struct TileScope {
     // The BlockSeg here is inclusive (containing `end` Op).
     BlockSeg seg;
@@ -97,7 +99,7 @@ private:
   }
 
   void setTileUsage(Operation *op, BlockSeg seg) {
-    tileUsage[op] = std::move(seg);
+    tileUsage.insert({op, std::move(seg)});
   }
 
   PaletteInfo collectBlockPalette(Block &block);
@@ -117,6 +119,9 @@ private:
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TileScopeAnalysis)
   explicit TileScopeAnalysis(Operation *);
+  const SmallVector<TileScope, 10> &getTileScopes() const {
+    return tileScopes;
+  };
   bool isValid() const { return isValidAnalysis; }
 };
 
