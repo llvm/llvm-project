@@ -3208,17 +3208,11 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
         }
       }
 
-      // Avoid -Wtrigraph when compiling this by separating the string
-      constexpr llvm::StringLiteral BackslashTrigraph = "??"
-                                                        "/";
-
       if (WithoutLastNewline.ends_with('\\') ||
-          (LangOpts.Trigraphs &&
-           WithoutLastNewline.ends_with(BackslashTrigraph))) {
+          (LangOpts.Trigraphs && WithoutLastNewline.ends_with("?\?/"))) {
         PP->Diag(getSourceLocation(LastNewline.data(), LastNewline.size()),
                  DiagID);
-        std::size_t SpliceSize =
-            WithoutLastNewline.back() == '\\' ? 1 : BackslashTrigraph.size();
+        std::size_t SpliceSize = WithoutLastNewline.back() == '\\' ? 1 : 3;
         SourceLocation LastSpliceLocation =
             getSourceLocation(WithoutLastNewline.data() +
                                   (WithoutLastNewline.size() - SpliceSize),
