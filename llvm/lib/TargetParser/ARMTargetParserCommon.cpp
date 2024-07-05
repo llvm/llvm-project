@@ -190,5 +190,17 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
     return false;
   }
 
+  if (!PBP.HasPauthABI)
+    return true;
+
+  if (PBP.Scope != "none") {
+    Err = "pauthabi+pac-ret";
+    return false;
+  }
+  if (PBP.GuardedControlStack) {
+    Err = "pauthabi+gcs";
+    return false;
+  }
+
   return true;
 }

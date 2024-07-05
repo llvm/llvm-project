@@ -37,3 +37,13 @@
 // RUN: not %clang -### -c --target=x86_64 -mbranch-protection=pauthabi %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=ERR2
 // ERR2: error: unsupported option '-mbranch-protection=' for target 'x86_64'
+
+// RUN: not %clang -### -c --target=aarch64 -mbranch-protection=pauthabi+pac-ret %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR3
+// ERR3: error: unsupported argument 'pauthabi+pac-ret' to option '-mbranch-protection='
+
+// RUN: not %clang -### -c --target=aarch64 -mbranch-protection=gcs+pauthabi %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR4
+// ERR4: error: unsupported argument 'pauthabi+gcs' to option '-mbranch-protection='
+
+// RUN: %clang -### -c --target=aarch64 -mbranch-protection=bti+pauthabi %s 2>&1
