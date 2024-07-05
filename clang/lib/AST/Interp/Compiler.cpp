@@ -3995,7 +3995,7 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
     }
 
     for (unsigned I = StartIndex, N = InitStack.size(); I != N; ++I) {
-      if (!InitStack[I].emit<Emitter>(this, E))
+      if (!InitStack[I].template emit<Emitter>(this, E))
         return false;
     }
     return true;
