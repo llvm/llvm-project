@@ -216,6 +216,7 @@ struct Configuration {
   llvm::StringRef profileGuidedFunctionOrderPath;
   bool functionOrderForCompression = false;
   bool dataOrderForCompression = false;
+  bool verboseBpSectionOrderer = false;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;

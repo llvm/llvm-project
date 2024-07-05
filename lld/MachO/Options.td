@@ -164,6 +164,9 @@ def function_order_for_compression: Flag<["--"], "function-order-for-compression
     HelpText<"Order functions to improve compressed size">, Group<grp_lld>;
 def data_order_for_compression: Flag<["--"], "data-order-for-compression">,
     HelpText<"Order data to improve compressed size">, Group<grp_lld>;
+def verbose_bp_section_orderer : Flag<["--"], "verbose-bp-section-orderer">,
+    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
+    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

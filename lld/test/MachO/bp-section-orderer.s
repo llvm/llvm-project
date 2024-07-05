@@ -1,16 +1,16 @@
-# REQUIRES: aarch64, asserts
+# REQUIRES: aarch64
 
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/a.s -o %t/a.o
 # RUN: llvm-profdata merge %t/a.proftext -o %t/a.profdata
 
-# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --profile-guided-function-order=%t/a.profdata 2>&1 | FileCheck %s --check-prefix=STARTUP
-# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --profile-guided-function-order=%t/a.profdata --icf=all 2>&1 | FileCheck %s --check-prefix=STARTUP
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --profile-guided-function-order=%t/a.profdata --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --profile-guided-function-order=%t/a.profdata --verbose-bp-section-orderer --icf=all 2>&1 | FileCheck %s --check-prefix=STARTUP
 
 # RUN: %lld -arch arm64 -lSystem -e _main -o - %t/a.o --profile-guided-function-order=%t/a.profdata -order_file %t/a.orderfile | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
 
-# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --function-order-for-compression --data-order-for-compression 2>&1 | FileCheck %s --check-prefix=COMPRESSION
-# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --profile-guided-function-order=%t/a.profdata --function-order-for-compression --data-order-for-compression 2>&1 | FileCheck %s --check-prefix=COMPRESSION
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --function-order-for-compression --data-order-for-compression --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=COMPRESSION
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --profile-guided-function-order=%t/a.profdata --function-order-for-compression --data-order-for-compression --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=COMPRESSION
 
 
 # STARTUP: Ordered 3 sections using balanced partitioning

@@ -358,7 +358,8 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
     sectionPriorities = runBalancedPartitioning(
         highestAvailablePriority, config->profileGuidedFunctionOrderPath,
-        config->functionOrderForCompression, config->dataOrderForCompression);
+        config->functionOrderForCompression, config->dataOrderForCompression,
+        config->verboseBpSectionOrderer);
   } else if (config->callGraphProfileSort) {
     // Sort sections by the profile data provided by __LLVM,__cg_profile
     // sections.

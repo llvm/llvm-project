@@ -1740,6 +1740,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->functionOrderForCompression =
       args.hasArg(OPT_function_order_for_compression);
   config->dataOrderForCompression = args.hasArg(OPT_data_order_for_compression);
+  config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(

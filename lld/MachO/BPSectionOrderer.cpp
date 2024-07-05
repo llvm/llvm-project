@@ -159,7 +159,7 @@ static void constructNodesForCompression(
 
 DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     size_t &highestAvailablePriority, StringRef profilePath,
-    bool forFunctionCompression, bool forDataCompression) {
+    bool forFunctionCompression, bool forDataCompression, bool verbose) {
 
   SmallVector<const InputSection *> sections;
   DenseMap<const InputSection *, uint64_t> sectionToIdx;
@@ -351,66 +351,69 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
     }
   }
 
-#ifndef NDEBUG
-  unsigned numTotalOrderedSections =
-      numStartupSections + numCodeCompressionSections +
-      numDuplicateCodeSections + numDataCompressionSections +
-      numDuplicateDataSections;
-  dbgs() << "Ordered " << numTotalOrderedSections
-         << " sections using balanced partitioning:\n  Functions for startup: "
-         << numStartupSections
-         << "\n  Functions for compression: " << numCodeCompressionSections
-         << "\n  Duplicate functions: " << numDuplicateCodeSections
-         << "\n  Data for compression: " << numDataCompressionSections
-         << "\n  Duplicate data: " << numDuplicateDataSections << "\n";
+  if (verbose) {
+    unsigned numTotalOrderedSections =
+        numStartupSections + numCodeCompressionSections +
+        numDuplicateCodeSections + numDataCompressionSections +
+        numDuplicateDataSections;
+    dbgs()
+        << "Ordered " << numTotalOrderedSections
+        << " sections using balanced partitioning:\n  Functions for startup: "
+        << numStartupSections
+        << "\n  Functions for compression: " << numCodeCompressionSections
+        << "\n  Duplicate functions: " << numDuplicateCodeSections
+        << "\n  Data for compression: " << numDataCompressionSections
+        << "\n  Duplicate data: " << numDuplicateDataSections << "\n";
 
-  if (!profilePath.empty()) {
-    // Evaluate this function order for startup
-    StringMap<std::pair<uint64_t, uint64_t>> symbolToPageNumbers;
-    const uint64_t pageSize = (1 << 14);
-    uint64_t currentAddress = 0;
-    for (const auto *isec : orderedSections) {
-      for (Symbol *sym : isec->symbols) {
-        if (auto *d = dyn_cast_or_null<Defined>(sym)) {
-          uint64_t startAddress = currentAddress + d->value;
-          uint64_t endAddress = startAddress + d->size;
-          uint64_t firstPage = startAddress / pageSize;
-          // I think the kernel might pull in a few pages when one it touched,
-          // so it might be more accurate to force lastPage to be aligned by 4?
-          uint64_t lastPage = endAddress / pageSize;
-          StringRef rootSymbol = d->getName();
-          rootSymbol = getRootSymbol(rootSymbol);
-          symbolToPageNumbers.try_emplace(rootSymbol, firstPage, lastPage);
-          if (rootSymbol.consume_front("_") || rootSymbol.consume_front("l_"))
+    if (!profilePath.empty()) {
+      // Evaluate this function order for startup
+      StringMap<std::pair<uint64_t, uint64_t>> symbolToPageNumbers;
+      const uint64_t pageSize = (1 << 14);
+      uint64_t currentAddress = 0;
+      for (const auto *isec : orderedSections) {
+        for (Symbol *sym : isec->symbols) {
+          if (auto *d = dyn_cast_or_null<Defined>(sym)) {
+            uint64_t startAddress = currentAddress + d->value;
+            uint64_t endAddress = startAddress + d->size;
+            uint64_t firstPage = startAddress / pageSize;
+            // I think the kernel might pull in a few pages when one it touched,
+            // so it might be more accurate to force lastPage to be aligned by
+            // 4?
+            uint64_t lastPage = endAddress / pageSize;
+            StringRef rootSymbol = d->getName();
+            rootSymbol = getRootSymbol(rootSymbol);
             symbolToPageNumbers.try_emplace(rootSymbol, firstPage, lastPage);
+            if (rootSymbol.consume_front("_") || rootSymbol.consume_front("l_"))
+              symbolToPageNumbers.try_emplace(rootSymbol, firstPage, lastPage);
+          }
         }
+
+        currentAddress += isec->getSize();
       }
 
-      currentAddress += isec->getSize();
-    }
-
-    // The area under the curve F where F(t) is the total number of page faults
-    // at step t.
-    unsigned area = 0;
-    for (auto &trace : reader->getTemporalProfTraces()) {
-      SmallSet<uint64_t, 0> touchedPages;
-      for (unsigned step = 0; step < trace.FunctionNameRefs.size(); step++) {
-        auto traceId = trace.FunctionNameRefs[step];
-        auto [Filename, ParsedFuncName] =
-            getParsedIRPGOName(reader->getSymtab().getFuncOrVarName(traceId));
-        ParsedFuncName = getRootSymbol(ParsedFuncName);
-        auto it = symbolToPageNumbers.find(ParsedFuncName);
-        if (it != symbolToPageNumbers.end()) {
-          auto &[firstPage, lastPage] = it->getValue();
-          for (uint64_t i = firstPage; i <= lastPage; i++)
-            touchedPages.insert(i);
+      // The area under the curve F where F(t) is the total number of page
+      // faults at step t.
+      unsigned area = 0;
+      for (auto &trace : reader->getTemporalProfTraces()) {
+        SmallSet<uint64_t, 0> touchedPages;
+        for (unsigned step = 0; step < trace.FunctionNameRefs.size(); step++) {
+          auto traceId = trace.FunctionNameRefs[step];
+          auto [Filename, ParsedFuncName] =
+              getParsedIRPGOName(reader->getSymtab().getFuncOrVarName(traceId));
+          ParsedFuncName = getRootSymbol(ParsedFuncName);
+          auto it = symbolToPageNumbers.find(ParsedFuncName);
+          if (it != symbolToPageNumbers.end()) {
+            auto &[firstPage, lastPage] = it->getValue();
+            for (uint64_t i = firstPage; i <= lastPage; i++)
+              touchedPages.insert(i);
+          }
+          area += touchedPages.size();
         }
-        area += touchedPages.size();
       }
+      dbgs() << "Total area under the page fault curve: " << (float)area
+             << "\n";
     }
-    dbgs() << "Total area under the page fault curve: " << (float)area << "\n";
   }
-#endif
 
   DenseMap<const InputSection *, size_t> sectionPriorities;
   for (const auto *isec : orderedSections)

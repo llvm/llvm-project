@@ -15,6 +15,7 @@
 #define LLD_MACHO_BPSECTION_ORDERER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lld::macho {
 
@@ -28,7 +29,8 @@ class InputSection;
 llvm::DenseMap<const lld::macho::InputSection *, size_t>
 runBalancedPartitioning(size_t &highestAvailablePriority,
                         llvm::StringRef profilePath,
-                        bool forFunctionCompression, bool forDataCompression);
+                        bool forFunctionCompression, bool forDataCompression,
+                        bool verbose);
 
 } // namespace lld::macho
 
