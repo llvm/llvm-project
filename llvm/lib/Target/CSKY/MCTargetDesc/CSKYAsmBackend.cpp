@@ -9,7 +9,6 @@
 #include "CSKYAsmBackend.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -171,10 +170,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                                  const MCFixup &Fixup,
                                                   bool Resolved, uint64_t Value,
                                                   const MCRelaxableFragment *DF,
-                                                  const MCAsmLayout &Layout,
                                                   const bool WasForced) const {
   // Return true if the symbol is actually unresolved.
   // Resolved could be always false when shouldForceRelocation return true.
@@ -284,9 +283,8 @@ bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   return false;
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                                          const MCRelaxableFragment *DF,
-                                          const MCAsmLayout &Layout) const {
+bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                          uint64_t Value) const {
   return false;
 }
 

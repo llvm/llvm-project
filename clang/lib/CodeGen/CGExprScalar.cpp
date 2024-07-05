@@ -506,6 +506,7 @@ public:
   }
 
   Value *VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E);
+  Value *VisitEmbedExpr(EmbedExpr *E);
 
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
@@ -1794,6 +1795,12 @@ ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   llvm::Type *ExprTy = ConvertType(E->getType());
   return Builder.CreatePointerBitCastOrAddrSpaceCast(GlobalConstStr, ExprTy,
                                                      "usn_addr_cast");
+}
+
+Value *ScalarExprEmitter::VisitEmbedExpr(EmbedExpr *E) {
+  assert(E->getDataElementCount() == 1);
+  auto It = E->begin();
+  return Builder.getInt((*It)->getValue());
 }
 
 Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {

@@ -623,6 +623,7 @@ HANDLE_LIBCALL(RETURN_ADDRESS, nullptr)
 
 // Clear cache
 HANDLE_LIBCALL(CLEAR_CACHE, "__clear_cache")
+HANDLE_LIBCALL(RISCV_FLUSH_ICACHE, "__riscv_flush_icache")
 
 HANDLE_LIBCALL(UNKNOWN_LIBCALL, nullptr)
 

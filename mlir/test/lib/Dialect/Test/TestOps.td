@@ -232,6 +232,11 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
+def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
+  let arguments = (ins NestedPolynomialAttr:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -457,7 +462,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
-    static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
+    static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
           mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
@@ -1363,7 +1368,7 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
+    ::llvm::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
         SmallVectorImpl<OpFoldResult> &results) {
       return success();
     }
@@ -2105,6 +2110,17 @@ def SideEffectOp : TEST_Op<"side_effect_op",
   let results = (outs AnyType:$result);
 }
 
+def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType:$result);
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    `(` $operand`)` $region attr-dict `:`  type($operand)  `->` type($result)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test CopyOpInterface
 //===----------------------------------------------------------------------===//
@@ -2392,7 +2408,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -3028,7 +3044,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::PropertiesWithCustomPrint &prop);
     static void writeToMlirBytecode(
@@ -3036,7 +3052,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
         const test::PropertiesWithCustomPrint &prop);
   }];
   let extraClassDefinition = [{
-    ::mlir::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
+    ::llvm::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &reader,
         test::PropertiesWithCustomPrint &prop) {
       StringRef label;
@@ -3092,7 +3108,7 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
                          ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
+    static ::llvm::LogicalResult readFromMlirBytecode(
         ::mlir::DialectBytecodeReader &,
         test::VersionedProperties &prop);
     static void writeToMlirBytecode(

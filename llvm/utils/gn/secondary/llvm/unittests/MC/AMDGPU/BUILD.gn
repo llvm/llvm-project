@@ -22,8 +22,5 @@ unittest("AMDGPUMCTests") {
 
   # AMDGPUMCTests heavily reaches into lib/Target/AMDGPU internals.
   include_dirs = [ "//llvm/lib/Target/AMDGPU" ]
-  sources = [
-    "DwarfRegMappings.cpp",
-    "SIProgramInfoMCExprs.cpp",
-  ]
+  sources = [ "DwarfRegMappings.cpp" ]
 }

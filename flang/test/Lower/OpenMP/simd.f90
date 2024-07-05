@@ -148,7 +148,7 @@ subroutine simd_with_simdlen_safelen_clause(n, threshold)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
   ! CHECK: %[[UB:.*]] = fir.load %[[ARG_N]]#0
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
-  ! CHECK: omp.simd simdlen(1) safelen(2) {
+  ! CHECK: omp.simd safelen(2) simdlen(1) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>

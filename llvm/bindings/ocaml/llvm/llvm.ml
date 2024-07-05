@@ -651,7 +651,6 @@ external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
 external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
 external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_shl : llvalue -> llvalue -> llvalue = "llvm_const_shl"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
 external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue

@@ -1312,7 +1312,7 @@ void OpEmitter::genPropertiesSupport() {
   auto &setPropMethod =
       opClass
           .addStaticMethod(
-              "::mlir::LogicalResult", "setPropertiesFromAttr",
+              "::llvm::LogicalResult", "setPropertiesFromAttr",
               MethodParameter("Properties &", "prop"),
               MethodParameter("::mlir::Attribute", "attr"),
               MethodParameter(
@@ -1354,7 +1354,7 @@ void OpEmitter::genPropertiesSupport() {
   auto &verifyInherentAttrsMethod =
       opClass
           .addStaticMethod(
-              "::mlir::LogicalResult", "verifyInherentAttrs",
+              "::llvm::LogicalResult", "verifyInherentAttrs",
               MethodParameter("::mlir::OperationName", "opName"),
               MethodParameter("::mlir::NamedAttrList &", "attrs"),
               MethodParameter(
@@ -1675,7 +1675,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
     ArrayRef<ConstArgument> attrOrProperties) {
   if (op.useCustomPropertiesEncoding()) {
     opClass.declareStaticMethod(
-        "::mlir::LogicalResult", "readProperties",
+        "::llvm::LogicalResult", "readProperties",
         MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
         MethodParameter("::mlir::OperationState &", "state"));
     opClass.declareMethod(
@@ -1687,7 +1687,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
   auto &readPropertiesMethod =
       opClass
           .addStaticMethod(
-              "::mlir::LogicalResult", "readProperties",
+              "::llvm::LogicalResult", "readProperties",
               MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
               MethodParameter("::mlir::OperationState &", "state"))
           ->body();
@@ -3359,7 +3359,7 @@ void OpEmitter::genCanonicalizerDecls() {
     SmallVector<MethodParameter> paramList;
     paramList.emplace_back(op.getCppClassName(), "op");
     paramList.emplace_back("::mlir::PatternRewriter &", "rewriter");
-    auto *m = opClass.declareStaticMethod("::mlir::LogicalResult",
+    auto *m = opClass.declareStaticMethod("::llvm::LogicalResult",
                                           "canonicalize", std::move(paramList));
     ERROR_IF_PRUNED(m, "canonicalize", op);
   }
@@ -3405,7 +3405,7 @@ void OpEmitter::genFolderDecls() {
   } else {
     paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
                            "results");
-    retType = "::mlir::LogicalResult";
+    retType = "::llvm::LogicalResult";
   }
 
   auto *m = opClass.declareMethod(retType, "fold", std::move(paramList));
@@ -3556,12 +3556,18 @@ void OpEmitter::genSideEffectInterfaceMethods() {
         }
       } else {
         // Otherwise this is an operand/result, so we need to attach the Value.
-        body << "  for (::mlir::Value value : getODS"
-             << (location.kind == EffectKind::Operand ? "Operands" : "Results")
-             << "(" << location.index << "))\n  "
-             << llvm::formatv(addEffectCode, effect, "value, ", stage,
-                              effectOnFullRegion, resource)
-                    .str();
+        body << "  {\n    auto valueRange = getODS"
+             << (location.kind == EffectKind::Operand ? "Operand" : "Result")
+             << "IndexAndLength(" << location.index << ");\n"
+             << "    for (unsigned idx = valueRange.first; idx < "
+                "valueRange.first"
+             << " + valueRange.second; idx++) {\n    "
+             << llvm::formatv(addEffectCode, effect,
+                              (location.kind == EffectKind::Operand
+                                   ? "&getOperation()->getOpOperand(idx), "
+                                   : "getOperation()->getOpResult(idx), "),
+                              stage, effectOnFullRegion, resource)
+             << "    }\n  }\n";
       }
     }
   }
@@ -3690,7 +3696,7 @@ void OpEmitter::genPrinter() {
 
 void OpEmitter::genVerifier() {
   auto *implMethod =
-      opClass.addMethod("::mlir::LogicalResult", "verifyInvariantsImpl");
+      opClass.addMethod("::llvm::LogicalResult", "verifyInvariantsImpl");
   ERROR_IF_PRUNED(implMethod, "verifyInvariantsImpl", op);
   auto &implBody = implMethod->body();
   bool useProperties = emitHelper.hasProperties();
@@ -3719,7 +3725,7 @@ void OpEmitter::genVerifier() {
   // This may not act as their expectation because this doesn't call any
   // verifiers of native/interface traits. Needs to review those use cases and
   // see if we should use the mlir::verify() instead.
-  auto *method = opClass.addMethod("::mlir::LogicalResult", "verifyInvariants");
+  auto *method = opClass.addMethod("::llvm::LogicalResult", "verifyInvariants");
   ERROR_IF_PRUNED(method, "verifyInvariants", op);
   auto &body = method->body();
   if (def.getValueAsBit("hasVerifier")) {
@@ -3734,13 +3740,13 @@ void OpEmitter::genVerifier() {
 
 void OpEmitter::genCustomVerifier() {
   if (def.getValueAsBit("hasVerifier")) {
-    auto *method = opClass.declareMethod("::mlir::LogicalResult", "verify");
+    auto *method = opClass.declareMethod("::llvm::LogicalResult", "verify");
     ERROR_IF_PRUNED(method, "verify", op);
   }
 
   if (def.getValueAsBit("hasRegionVerifier")) {
     auto *method =
-        opClass.declareMethod("::mlir::LogicalResult", "verifyRegions");
+        opClass.declareMethod("::llvm::LogicalResult", "verifyRegions");
     ERROR_IF_PRUNED(method, "verifyRegions", op);
   }
 }
@@ -4468,7 +4474,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
 }
 
 void OpOperandAdaptorEmitter::addVerification() {
-  auto *method = adaptor.addMethod("::mlir::LogicalResult", "verify",
+  auto *method = adaptor.addMethod("::llvm::LogicalResult", "verify",
                                    MethodParameter("::mlir::Location", "loc"));
   ERROR_IF_PRUNED(method, "verify", op);
   auto &body = method->body();

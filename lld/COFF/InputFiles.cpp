@@ -152,6 +152,38 @@ void ObjFile::parseLazy() {
   }
 }
 
+struct ECMapEntry {
+  ulittle32_t src;
+  ulittle32_t dst;
+  ulittle32_t type;
+};
+
+void ObjFile::initializeECThunks() {
+  for (SectionChunk *chunk : hybmpChunks) {
+    if (chunk->getContents().size() % sizeof(ECMapEntry)) {
+      error("Invalid .hybmp chunk size " + Twine(chunk->getContents().size()));
+      continue;
+    }
+
+    const uint8_t *end =
+        chunk->getContents().data() + chunk->getContents().size();
+    for (const uint8_t *iter = chunk->getContents().data(); iter != end;
+         iter += sizeof(ECMapEntry)) {
+      auto entry = reinterpret_cast<const ECMapEntry *>(iter);
+      switch (entry->type) {
+      case Arm64ECThunkType::Entry:
+        ctx.symtab.addEntryThunk(getSymbol(entry->src), getSymbol(entry->dst));
+        break;
+      case Arm64ECThunkType::Exit:
+      case Arm64ECThunkType::GuestExit:
+        break;
+      default:
+        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+      }
+    }
+  }
+}
+
 void ObjFile::parse() {
   // Parse a memory buffer as a COFF file.
   std::unique_ptr<Binary> bin = CHECK(createBinary(mb), this);
@@ -168,6 +200,7 @@ void ObjFile::parse() {
   initializeSymbols();
   initializeFlags();
   initializeDependencies();
+  initializeECThunks();
 }
 
 const coff_section *ObjFile::getSection(uint32_t i) {
@@ -242,7 +275,11 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
 
   if (sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
     return nullptr;
-  auto *c = make<SectionChunk>(this, sec);
+  SectionChunk *c;
+  if (isArm64EC(getMachineType()))
+    c = make<SectionChunkEC>(this, sec);
+  else
+    c = make<SectionChunk>(this, sec);
   if (def)
     c->checksum = def->CheckSum;
 
@@ -260,6 +297,8 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     guardEHContChunks.push_back(c);
   else if (name == ".sxdata")
     sxDataChunks.push_back(c);
+  else if (isArm64EC(getMachineType()) && name == ".hybmp$x")
+    hybmpChunks.push_back(c);
   else if (ctx.config.tailMerge && sec->NumberOfRelocations == 0 &&
            name == ".rdata" && leaderName.starts_with("??_C@"))
     // COFF sections that look like string literal sections (i.e. no

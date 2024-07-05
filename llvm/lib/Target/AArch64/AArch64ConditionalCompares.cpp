@@ -794,7 +794,7 @@ char AArch64ConditionalCompares::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
@@ -805,7 +805,7 @@ FunctionPass *llvm::createAArch64ConditionalCompares() {
 }
 
 void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
@@ -935,7 +935,7 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfo>();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
