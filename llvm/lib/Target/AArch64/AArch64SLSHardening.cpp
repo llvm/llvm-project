@@ -91,28 +91,32 @@ public:
   }
 
   bool get(ThunkKind::ThunkKindId Kind, Register Xn, Register Xm) {
-    uint32_t XnBit = 1u << indexOfXReg(Xn);
+    reg_bitmask_t XnBit = reg_bitmask_t(1) << indexOfXReg(Xn);
     return getBitmask(Kind, Xm) & XnBit;
   }
 
   void set(ThunkKind::ThunkKindId Kind, Register Xn, Register Xm) {
-    uint32_t XnBit = 1u << indexOfXReg(Xn);
+    reg_bitmask_t XnBit = reg_bitmask_t(1) << indexOfXReg(Xn);
     getBitmask(Kind, Xm) |= XnBit;
   }
 
 private:
+  typedef uint32_t reg_bitmask_t;
+  static_assert(NumXRegisters <= sizeof(reg_bitmask_t) * CHAR_BIT,
+                "Bitmask is not wide enough to hold all Xn registers");
+
   // Bitmasks representing operands used, with n-th bit corresponding to Xn
   // register operand. If the instruction has a second operand (Xm), an array
   // of bitmasks is used, indexed by m.
   // Indexes corresponding to the forbidden x16, x17 and x30 registers are
   // always unset, for simplicity there are no holes.
-  uint32_t BLRThunks = 0;
-  uint32_t BLRAAZThunks = 0;
-  uint32_t BLRABZThunks = 0;
-  uint32_t BLRAAThunks[NumXRegisters] = {};
-  uint32_t BLRABThunks[NumXRegisters] = {};
+  reg_bitmask_t BLRThunks = 0;
+  reg_bitmask_t BLRAAZThunks = 0;
+  reg_bitmask_t BLRABZThunks = 0;
+  reg_bitmask_t BLRAAThunks[NumXRegisters] = {};
+  reg_bitmask_t BLRABThunks[NumXRegisters] = {};
 
-  uint32_t &getBitmask(ThunkKind::ThunkKindId Kind, Register Xm) {
+  reg_bitmask_t &getBitmask(ThunkKind::ThunkKindId Kind, Register Xm) {
     switch (Kind) {
     case ThunkKind::ThunkBR:
       return BLRThunks;
