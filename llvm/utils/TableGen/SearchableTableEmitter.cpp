@@ -448,10 +448,9 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
   OS << "};\n";
 
-  OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-  OS << "  auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,\n";
-  OS << "    [](const " << IndexTypeName << " &LHS, const KeyType &RHS) {\n";
-
+  OS << "  struct Comp {\n";
+  OS << "    bool operator()(const " << IndexTypeName
+     << " &LHS, const KeyType &RHS) const {\n";
   for (const auto &Field : Index.Fields) {
     if (isa<StringRecTy>(Field.RecType)) {
       OS << "      int Cmp" << Field.Name << " = StringRef(LHS." << Field.Name
@@ -474,9 +473,41 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
       OS << "        return false;\n";
     }
   }
-
   OS << "      return false;\n";
-  OS << "    });\n\n";
+  OS << "    }\n";
+
+  OS << "    bool operator()(const KeyType &LHS, const " << IndexTypeName
+     << " &RHS) const {\n";
+  for (const auto &Field : Index.Fields) {
+    if (isa<StringRecTy>(Field.RecType)) {
+      OS << "      int Cmp" << Field.Name << " = StringRef(LHS." << Field.Name
+         << ").compare(RHS." << Field.Name << ");\n";
+      OS << "      if (Cmp" << Field.Name << " < 0) return true;\n";
+      OS << "      if (Cmp" << Field.Name << " > 0) return false;\n";
+    } else if (Field.Enum) {
+      // Explicitly cast to unsigned, because the signedness of enums is
+      // compiler-dependent.
+      OS << "      if ((unsigned)LHS." << Field.Name << " < (unsigned)RHS."
+         << Field.Name << ")\n";
+      OS << "        return true;\n";
+      OS << "      if ((unsigned)LHS." << Field.Name << " > (unsigned)RHS."
+         << Field.Name << ")\n";
+      OS << "        return false;\n";
+    } else {
+      OS << "      if (LHS." << Field.Name << " < RHS." << Field.Name << ")\n";
+      OS << "        return true;\n";
+      OS << "      if (LHS." << Field.Name << " > RHS." << Field.Name << ")\n";
+      OS << "        return false;\n";
+    }
+  }
+  OS << "      return false;\n";
+  OS << "    }\n";
+
+  OS << "  };\n";
+
+  OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
+  OS << "  auto Idx = std::lower_bound(Table.begin(), Table.end(), Key, "
+        "Comp());\n";
 
   OS << "  if (Idx == Table.end()";
 
