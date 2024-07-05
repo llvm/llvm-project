@@ -7991,7 +7991,7 @@ def err_ambiguous_delete_operand : Error<
 def warn_delete_incomplete : Warning<
   "deleting pointer to incomplete type %0 is incompatible with C++2c"
   " and may cause undefined behavior">,
-  InGroup<CXX26Compat>;
+  InGroup<DeleteIncomplete>;
 def err_delete_incomplete : Error<
   "cannot delete pointer to incomplete type %0">;
 def err_delete_incomplete_class_type : Error<
