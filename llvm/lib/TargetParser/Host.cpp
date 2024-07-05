@@ -707,9 +707,7 @@ static StringRef
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                                 const unsigned *Features,
                                 unsigned *Type, unsigned *Subtype) {
-  auto testFeature = [&](unsigned F) {
-    return (Features[F / 32] & (1U << (F % 32))) != 0;
-  };
+#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
 
   StringRef CPU;
 
@@ -1067,15 +1065,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   return CPU;
 }
 
-static StringRef
-getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                              const unsigned *Features,
-                              unsigned *Type, unsigned *Subtype) {
-  auto testFeature = [&](unsigned F) {
-    return (Features[F / 32] & (1U << (F % 32))) != 0;
-  };
-
-  StringRef CPU;
+static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
+                                                 unsigned Model,
+                                                 const unsigned *Features,
+                                                 unsigned *Type,
+                                                 unsigned *Subtype) {
+  const char *CPU = 0;
 
   switch (Family) {
   case 4:
@@ -1215,7 +1210,7 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::AMDFAM19H_ZNVER4;
       break; //  "znver4"
     }
-    break;
+    break; // family 19h
   default:
     break; // Unknown AMD CPU.
   }
