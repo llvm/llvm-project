@@ -103,6 +103,7 @@ const char *Instruction::getOpcodeName(Opcode Opc) {
 #define DEF_INSTR(ID, OPC, CLASS) OPC
 #include "llvm/SandboxIR/SandboxIRValues.def"
   }
+  llvm_unreachable("Unknown Opcode");
 }
 
 bool Instruction::classof(const sandboxir::Value *From) {

@@ -1477,8 +1477,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
   setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
 
-  PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
-
   setTargetDAGCombine({ISD::INTRINSIC_VOID, ISD::INTRINSIC_W_CHAIN,
                        ISD::INTRINSIC_WO_CHAIN, ISD::ADD, ISD::SUB, ISD::MUL,
                        ISD::AND, ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT});
@@ -1520,6 +1518,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
+
+  // Let the subtarget decide if a predictable select is more expensive than the
+  // corresponding branch. This information is used in CGP/SelectOpt to decide
+  // when to convert selects into branches.
+  PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
 }
 
 EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -7687,7 +7690,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (SDValue NewSel = foldBinOpIntoSelectIfProfitable(*Op->use_begin(),
                                                            DAG, Subtarget)) {
         DAG.ReplaceAllUsesWith(BinOp, &NewSel);
-        return lowerSELECT(NewSel, DAG);
+        // Opcode check is necessary because foldBinOpIntoSelectIfProfitable
+        // may return a constant node and cause crash in lowerSELECT.
+        if (NewSel.getOpcode() == ISD::SELECT)
+          return lowerSELECT(NewSel, DAG);
+        return NewSel;
       }
     }
   }

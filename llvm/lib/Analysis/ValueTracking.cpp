@@ -1739,6 +1739,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
+      case Intrinsic::x86_sse2_pmulh_w:
+      case Intrinsic::x86_avx2_pmulh_w:
+      case Intrinsic::x86_avx512_pmulh_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhs(Known, Known2);
+        break;
+      case Intrinsic::x86_sse2_pmulhu_w:
+      case Intrinsic::x86_avx2_pmulhu_w:
+      case Intrinsic::x86_avx512_pmulhu_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhu(Known, Known2);
+        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -6403,9 +6417,10 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
-      V = cast<Operator>(V)->getOperand(0);
-      if (!V->getType()->isPointerTy())
+      Value *NewV = cast<Operator>(V)->getOperand(0);
+      if (!NewV->getType()->isPointerTy())
         return V;
+      V = NewV;
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (GA->isInterposable())
         return V;

@@ -363,6 +363,10 @@ public:
     return false;
   }
 
+  /// Returns true if this Language supports exception breakpoints via a
+  /// corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpoints() const { return false; }
+
 protected:
   // Classes that inherit from Language can see and modify these
 

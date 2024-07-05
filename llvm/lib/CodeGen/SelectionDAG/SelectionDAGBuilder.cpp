@@ -104,6 +104,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -7974,6 +7975,37 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, sdl, VT, UMin);
 
     setValue(&I, Trunc);
+    return;
+  }
+  case Intrinsic::experimental_vector_partial_reduce_add: {
+    SDValue OpNode = getValue(I.getOperand(1));
+    EVT ReducedTy = EVT::getEVT(I.getType());
+    EVT FullTy = OpNode.getValueType();
+
+    unsigned Stride = ReducedTy.getVectorMinNumElements();
+    unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
+
+    // Collect all of the subvectors
+    std::deque<SDValue> Subvectors;
+    Subvectors.push_back(getValue(I.getOperand(0)));
+    for (unsigned i = 0; i < ScaleFactor; i++) {
+      auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, sdl);
+      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy,
+                                       {OpNode, SourceIndex}));
+    }
+
+    // Flatten the subvector tree
+    while (Subvectors.size() > 1) {
+      Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy,
+                                       {Subvectors[0], Subvectors[1]}));
+      Subvectors.pop_front();
+      Subvectors.pop_front();
+    }
+
+    assert(Subvectors.size() == 1 &&
+           "There should only be one subvector after tree flattening");
+
+    setValue(&I, Subvectors[0]);
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
