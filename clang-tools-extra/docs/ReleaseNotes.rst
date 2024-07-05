@@ -483,6 +483,12 @@ Changes in existing checks
   usages of ``std::string_view::compare``. Added a `StringLikeClasses` option
   to detect usages of ``compare`` method in custom string-like classes.
 
+- Improved :doc:`unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` check
+  detecting more cases for template functions including lambdas with `auto`.
+  E.g., `std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });`
+  will be detected for expensive to copy types.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

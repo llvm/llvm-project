@@ -33,6 +33,7 @@ template <>
 void instantiatedTemplateSpecialization<ExpensiveToCopyType>(
     ExpensiveToCopyType SpecS) {
   // CHECK-MESSAGES: [[@LINE-1]]:25: warning: the parameter 'SpecS'
+  // When updating a template specialization, we also update the main template.
   // CHECK-FIXES: const T& NoSpecS
   // CHECK-FIXES: const ExpensiveToCopyType& SpecS
 }
