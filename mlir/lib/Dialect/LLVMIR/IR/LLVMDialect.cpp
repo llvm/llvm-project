@@ -825,7 +825,7 @@ Type GEPOp::getResultPtrElementType() {
 void LoadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getAddr());
+  effects.emplace_back(MemoryEffects::Read::get(), &getAddrMutable());
   // Volatile operations can have target-specific read-write effects on
   // memory besides the one referred to by the pointer operand.
   // Similarly, atomic operations that are monotonic or stricter cause
@@ -839,25 +839,19 @@ void LoadOp::getEffects(
 }
 
 /// Returns true if the given type is supported by atomic operations. All
-/// integer and float types with limited bit width are supported. Additionally,
-/// depending on the operation pointers may be supported as well.
-static bool isTypeCompatibleWithAtomicOp(Type type, bool isPointerTypeAllowed) {
-  if (llvm::isa<LLVMPointerType>(type))
-    return isPointerTypeAllowed;
-
-  std::optional<unsigned> bitWidth;
-  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+/// integer, float, and pointer types with a power-of-two bitsize and a minimal
+/// size of 8 bits are supported.
+static bool isTypeCompatibleWithAtomicOp(Type type,
+                                         const DataLayout &dataLayout) {
+  if (!isa<IntegerType, LLVMPointerType>(type))
     if (!isCompatibleFloatingPointType(type))
       return false;
-    bitWidth = floatType.getWidth();
-  }
-  if (auto integerType = llvm::dyn_cast<IntegerType>(type))
-    bitWidth = integerType.getWidth();
-  // The type is neither an integer, float, or pointer type.
-  if (!bitWidth)
+
+  llvm::TypeSize bitWidth = dataLayout.getTypeSizeInBits(type);
+  if (bitWidth.isScalable())
     return false;
-  return *bitWidth == 8 || *bitWidth == 16 || *bitWidth == 32 ||
-         *bitWidth == 64;
+  // Needs to be at least 8 bits and a power of two.
+  return bitWidth >= 8 && (bitWidth & (bitWidth - 1)) == 0;
 }
 
 /// Verifies the attributes and the type of atomic memory access operations.
@@ -865,8 +859,8 @@ template <typename OpTy>
 LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
                                 ArrayRef<AtomicOrdering> unsupportedOrderings) {
   if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
-    if (!isTypeCompatibleWithAtomicOp(valueType,
-                                      /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(memOp);
+    if (!isTypeCompatibleWithAtomicOp(valueType, dataLayout))
       return memOp.emitOpError("unsupported type ")
              << valueType << " for atomic access";
     if (llvm::is_contained(unsupportedOrderings, memOp.getOrdering()))
@@ -908,7 +902,7 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
 void StoreOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Write::get(), getAddr());
+  effects.emplace_back(MemoryEffects::Write::get(), &getAddrMutable());
   // Volatile operations can have target-specific read-write effects on
   // memory besides the one referred to by the pointer operand.
   // Similarly, atomic operations that are monotonic or stricter cause
@@ -2498,6 +2492,13 @@ LogicalResult LLVMFuncOp::verify() {
     return success();
   }
 
+  // In LLVM IR, these attributes are composed by convention, not by design.
+  if (isNoInline() && isAlwaysInline())
+    return emitError("no_inline and always_inline attributes are incompatible");
+
+  if (isOptimizeNone() && !isNoInline())
+    return emitOpError("with optimize_none must also be no_inline");
+
   Type landingpadResultTy;
   StringRef diagnosticMessage;
   bool isLandingpadTypeConsistent =
@@ -2562,6 +2563,24 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
+// UndefOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold an undef operation to a dedicated undef attribute.
+OpFoldResult LLVM::UndefOp::fold(FoldAdaptor) {
+  return LLVM::UndefAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// PoisonOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a poison operation to a dedicated poison attribute.
+OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
+  return LLVM::PoisonAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroOp.
 //===----------------------------------------------------------------------===//
 
@@ -2572,6 +2591,15 @@ LogicalResult LLVM::ZeroOp::verify() {
              << "target extension type does not support zero-initializer";
 
   return success();
+}
+
+/// Fold a zero operation to a builtin zero attribute when possible and fall
+/// back to a dedicated zero attribute.
+OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
+  OpFoldResult result = Builder(getContext()).getZeroAttr(getType());
+  if (result)
+    return result;
+  return LLVM::ZeroAttr::get(getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2694,7 +2722,8 @@ LogicalResult AtomicRMWOp::verify() {
     if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
       return emitOpError("expected LLVM IR floating point type");
   } else if (getBinOp() == AtomicBinOp::xchg) {
-    if (!isTypeCompatibleWithAtomicOp(valType, /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(*this);
+    if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
       return emitOpError("unexpected LLVM IR type for 'xchg' bin_op");
   } else {
     auto intType = llvm::dyn_cast<IntegerType>(valType);
@@ -2741,8 +2770,8 @@ LogicalResult AtomicCmpXchgOp::verify() {
   if (!ptrType)
     return emitOpError("expected LLVM IR pointer type for operand #0");
   auto valType = getVal().getType();
-  if (!isTypeCompatibleWithAtomicOp(valType,
-                                    /*isPointerTypeAllowed=*/true))
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
     return emitOpError("unexpected LLVM IR type");
   if (getSuccessOrdering() < AtomicOrdering::monotonic ||
       getFailureOrdering() < AtomicOrdering::monotonic)
@@ -3009,12 +3038,12 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
               DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
               DIGlobalVariableExpressionAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-              DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
-              DISubroutineTypeAttr, LoopAnnotationAttr, LoopVectorizeAttr,
-              LoopInterleaveAttr, LoopUnrollAttr, LoopUnrollAndJamAttr,
-              LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,
-              LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr, TBAATagAttr,
-              TBAATypeDescriptorAttr>([&](auto attr) {
+              DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+              DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
+              LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
+              LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
+              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr,
+              TBAATagAttr, TBAATypeDescriptorAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
         })
@@ -3276,11 +3305,18 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
-  // If this was folded from an llvm.mlir.addressof operation, it should be
-  // materialized as such.
+  // If this was folded from an operation other than llvm.mlir.constant, it
+  // should be materialized as such. Note that an llvm.mlir.zero may fold into
+  // a builtin zero attribute and thus will materialize as a llvm.mlir.constant.
   if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
     if (isa<LLVM::LLVMPointerType>(type))
       return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  if (isa<LLVM::UndefAttr>(value))
+    return builder.create<LLVM::UndefOp>(loc, type);
+  if (isa<LLVM::PoisonAttr>(value))
+    return builder.create<LLVM::PoisonOp>(loc, type);
+  if (isa<LLVM::ZeroAttr>(value))
+    return builder.create<LLVM::ZeroOp>(loc, type);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }

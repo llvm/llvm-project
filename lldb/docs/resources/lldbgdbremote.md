@@ -867,6 +867,22 @@ error replies.
 **Priority To Implement:** Low. Only needed if the remote target wants to
 provide strings that are human readable along with an error code.
 
+## QLaunchArch
+
+Set the architecture to use when launching a process for hosts that can run
+multiple architecture slices that are contained in a single universal program
+file.
+
+```
+send packet: $QLaunchArch:<architecture>
+```
+
+The response is `OK` if the value in `<architecture>` was recognised as valid
+and will be used for the next launch request. `E63` if not.
+
+**Priority To Implement:** Only required for hosts that support program files
+that contain code for multiple architectures.
+
 ## QListThreadsInStopReply
 
 Enable the `threads:` and `thread-pcs:` data in the question-mark packet
@@ -1882,6 +1898,77 @@ some platforms know, or can find out where this information is.
 
 Low if you have a debug target where all object and symbol files
 contain static load addresses.
+
+## qSpeedTest
+
+Test the maximum speed at which packets can be sent and received.
+
+```
+send packet: qSpeedTest:response_size:<response size>;
+read packet: data:<response data>
+```
+
+`<response size>` is a hex encoded unsigned number up to 64 bits in size.
+The remote will respond with `data:` followed by a block of `a` characters
+whose size should match `<response size>`, if the connection is stable.
+
+If there is an error parsing the packet, the response is `E79`.
+
+This packet is used by LLDB to discover how reliable the connection is by
+varying the amount of data requested by `<response size>` and checking whether
+the expected amount and values were received.
+
+**Priority to Implemment:** Not required for debugging on the same host, otherwise
+low unless you know your connection quality is variable.
+
+## qSymbol
+
+Notify the remote that LLDB is ready to do symbol lookups on behalf of the
+debug server. The response is the symbol name the debug server wants to know the
+value of, or `OK` if the debug server does not need to know any more symbol values.
+
+The exchange always begins with:
+```
+send packet: qSymbol::
+```
+
+The `::` are delimiters for fields that may be filled in future responses. These
+delimiters must be included even in the first packet sent.
+
+The debug server can reply one of two ways. If it doesn't need any symbol values:
+```
+read packet: OK
+```
+
+If it does need a symbol value, it includes the ASCII hex encoded name of the
+symbol:
+```
+read packet: qSymbol:6578616D706C65
+```
+
+This should be looked up by LLDB then sent back to the server. Include the name
+again, with the vaue as a hex number:
+```
+read packet: qSymbol:6578616D706C65:CAFEF00D
+```
+
+If LLDB cannot find the value, it should respond with only the name. Note that
+the second `:` is not included here, whereas it is in the initial packet.
+```
+read packet: qSymbol:6578616D706C65
+```
+
+If LLDB is asked for any symbols that it cannot find, it should send the
+initial `qSymbol::` again at any point where new libraries are loaded. In case
+the symbol can now be resolved.
+
+If the debug server has requested all the symbols it wants, the final response
+will be `OK` (whether they were all found or not).
+
+If LLDB did find all the symbols and recieves an `OK` it does not need to send
+`qSymbol::` again during the debug session.
+
+**Priority To Implement:** Low, this is rarely used.
 
 ## qThreadStopInfo\<tid\>
 

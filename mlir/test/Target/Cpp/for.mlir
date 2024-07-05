@@ -40,8 +40,6 @@ func.func @test_for_yield() {
   %s0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
   %p0 = "emitc.constant"() <{value = 1.0 : f32}> : () -> f32
 
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
   %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
   %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
   emitc.assign %s0 : i32 to %2 : i32
@@ -53,8 +51,6 @@ func.func @test_for_yield() {
     emitc.assign %pn : f32 to %3 : f32
     emitc.yield
   }
-  emitc.assign %2 : i32 to %0 : i32
-  emitc.assign %3 : f32 to %1 : f32
 
   return
 }
@@ -64,8 +60,6 @@ func.func @test_for_yield() {
 // CPP-DEFAULT-NEXT: size_t [[STEP:[^ ]*]] = 1;
 // CPP-DEFAULT-NEXT: int32_t [[S0:[^ ]*]] = 0;
 // CPP-DEFAULT-NEXT: float [[P0:[^ ]*]] = 1.000000000e+00f;
-// CPP-DEFAULT-NEXT: int32_t [[SE:[^ ]*]];
-// CPP-DEFAULT-NEXT: float [[PE:[^ ]*]];
 // CPP-DEFAULT-NEXT: int32_t [[SI:[^ ]*]];
 // CPP-DEFAULT-NEXT: float [[PI:[^ ]*]];
 // CPP-DEFAULT-NEXT: [[SI:[^ ]*]] = [[S0]];
@@ -76,8 +70,6 @@ func.func @test_for_yield() {
 // CPP-DEFAULT-NEXT: [[SI]] = [[SN]];
 // CPP-DEFAULT-NEXT: [[PI]] = [[PN]];
 // CPP-DEFAULT-NEXT: }
-// CPP-DEFAULT-NEXT: [[SE]] = [[SI]];
-// CPP-DEFAULT-NEXT: [[PE]] = [[PI]];
 // CPP-DEFAULT-NEXT: return;
 
 // CPP-DECLTOP: void test_for_yield() {
@@ -86,8 +78,6 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: size_t [[STEP:[^ ]*]];
 // CPP-DECLTOP-NEXT: int32_t [[S0:[^ ]*]];
 // CPP-DECLTOP-NEXT: float [[P0:[^ ]*]];
-// CPP-DECLTOP-NEXT: int32_t [[SE:[^ ]*]];
-// CPP-DECLTOP-NEXT: float [[PE:[^ ]*]];
 // CPP-DECLTOP-NEXT: int32_t [[SI:[^ ]*]];
 // CPP-DECLTOP-NEXT: float [[PI:[^ ]*]];
 // CPP-DECLTOP-NEXT: int32_t [[SN:[^ ]*]];
@@ -99,8 +89,6 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: [[P0]] = 1.000000000e+00f;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;
-// CPP-DECLTOP-NEXT: ;
-// CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: [[SI:[^ ]*]] = [[S0]];
 // CPP-DECLTOP-NEXT: [[PI:[^ ]*]] = [[P0]];
 // CPP-DECLTOP-NEXT: for (size_t [[ITER:[^ ]*]] = [[START]]; [[ITER]] < [[STOP]]; [[ITER]] += [[STEP]]) {
@@ -109,8 +97,6 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: [[SI]] = [[SN]];
 // CPP-DECLTOP-NEXT: [[PI]] = [[PN]];
 // CPP-DECLTOP-NEXT: }
-// CPP-DECLTOP-NEXT: [[SE]] = [[SI]];
-// CPP-DECLTOP-NEXT: [[PE]] = [[PI]];
 // CPP-DECLTOP-NEXT: return;
 
 func.func @test_for_yield_2() {
@@ -121,8 +107,6 @@ func.func @test_for_yield_2() {
   %s0 = emitc.literal "0" : i32
   %p0 = emitc.literal "M_PI" : f32
 
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
   %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
   %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
   emitc.assign %s0 : i32 to %2 : i32
@@ -134,8 +118,6 @@ func.func @test_for_yield_2() {
     emitc.assign %pn : f32 to %3 : f32
     emitc.yield
   }
-  emitc.assign %2 : i32 to %0 : i32
-  emitc.assign %3 : f32 to %1 : f32
 
   return
 }

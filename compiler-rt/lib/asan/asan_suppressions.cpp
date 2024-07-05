@@ -39,8 +39,7 @@ void InitializeSuppressions() {
   suppression_ctx = new (suppression_placeholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
-  if (&__asan_default_suppressions)
-    suppression_ctx->Parse(__asan_default_suppressions());
+  suppression_ctx->Parse(__asan_default_suppressions());
 }
 
 bool IsInterceptorSuppressed(const char *interceptor_name) {

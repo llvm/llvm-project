@@ -7,26 +7,19 @@ declare void @llvm.assume(i1)
 
 declare void @use(ptr noundef)
 
-; TODO: %offset is known positive via assume, so we should be able to detect the
+; %offset is known positive via assume, so we should be able to detect the
 ; forward dependence.
 define void @offset_i8_known_positive_via_assume_forward_dep_1(ptr %A, i64 %offset, i64 %N) {
 ; CHECK-LABEL: 'offset_i8_known_positive_via_assume_forward_dep_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l = load i8, ptr %gep.off, align 4 ->
+; CHECK-NEXT:            store i8 %add, ptr %gep, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.off = getelementptr inbounds i8, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: %A High: (%N + %A))
-; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
-; CHECK-NEXT:          (Low: (%offset + %A) High: (%offset + %N + %A))
-; CHECK-NEXT:            Member: {(%offset + %A),+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -62,15 +55,15 @@ define void @offset_i32_known_positive_via_assume_forward_dep_1(ptr %A, i64 %off
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.off = getelementptr inbounds i32, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group [[GRP1]]:
 ; CHECK-NEXT:          (Low: %A High: (-3 + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group [[GRP2]]:
 ; CHECK-NEXT:          (Low: ((4 * %offset)<nsw> + %A) High: (-3 + (4 * %offset)<nsw> + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {((4 * %offset)<nsw> + %A),+,4}<nw><%loop>
 ; CHECK-EMPTY:
@@ -103,26 +96,19 @@ exit:
   ret void
 }
 
-; TODO: %offset is known positive via assume, so we should be able to detect the
+; %offset is known positive via assume, so we should be able to detect the
 ; forward dependence.
 define void @offset_known_positive_via_assume_forward_dep_2(ptr %A, i64 %offset, i64 %N) {
 ; CHECK-LABEL: 'offset_known_positive_via_assume_forward_dep_2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l = load i32, ptr %gep.off, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.off = getelementptr inbounds i32, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
-; CHECK-NEXT:          (Low: %A High: ((4 * %N) + %A))
-; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
-; CHECK-NEXT:          (Low: ((4 * %offset)<nsw> + %A) High: ((4 * %offset)<nsw> + (4 * %N) + %A))
-; CHECK-NEXT:            Member: {((4 * %offset)<nsw> + %A),+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -160,15 +146,15 @@ define void @offset_may_be_negative_via_assume_unknown_dep(ptr %A, i64 %offset, 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group [[GRP3]]:
 ; CHECK-NEXT:          (Low: %A High: ((4 * %N) + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group [[GRP4]]:
 ; CHECK-NEXT:          (Low: ((4 * %offset)<nsw> + %A) High: ((4 * %offset)<nsw> + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {((4 * %offset)<nsw> + %A),+,4}<nw><%loop>
 ; CHECK-EMPTY:
@@ -207,15 +193,15 @@ define void @offset_no_assumes(ptr %A, i64 %offset, i64 %N) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.off = getelementptr inbounds i32, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group [[GRP5]]:
 ; CHECK-NEXT:          (Low: %A High: ((4 * %N) + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group [[GRP6]]:
 ; CHECK-NEXT:          (Low: ((4 * %offset)<nsw> + %A) High: ((4 * %offset)<nsw> + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {((4 * %offset)<nsw> + %A),+,4}<nw><%loop>
 ; CHECK-EMPTY:

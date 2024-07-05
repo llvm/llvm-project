@@ -1339,14 +1339,13 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (SrcIdx && DstIdx)
     return false;
 
-  [[maybe_unused]] const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
+  const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
 
-      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(),
-                                              DefMI->getOperand(0).getSubReg());
+      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(), DefSubIdx);
       if (NewDstIdx)
         NewDstReg = TRI->getSubReg(DstReg, NewDstIdx);
 
@@ -1856,8 +1855,8 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       Reads = DstInt->liveAt(LIS->getInstructionIndex(*UseMI));
 
     // Replace SrcReg with DstReg in all UseMI operands.
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-      MachineOperand &MO = UseMI->getOperand(Ops[i]);
+    for (unsigned Op : Ops) {
+      MachineOperand &MO = UseMI->getOperand(Op);
 
       // Adjust <undef> flags in case of sub-register joins. We don't want to
       // turn a full def into a read-modify-write sub-register def and vice
@@ -4137,9 +4136,9 @@ RegisterCoalescer::copyCoalesceInMBB(MachineBasicBlock *MBB) {
 
 void RegisterCoalescer::coalesceLocals() {
   copyCoalesceWorkList(LocalWorkList);
-  for (unsigned j = 0, je = LocalWorkList.size(); j != je; ++j) {
-    if (LocalWorkList[j])
-      WorkList.push_back(LocalWorkList[j]);
+  for (MachineInstr *MI : LocalWorkList) {
+    if (MI)
+      WorkList.push_back(MI);
   }
   LocalWorkList.clear();
 }
@@ -4249,8 +4248,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   // Removing sub-register operands may allow GR32_ABCD -> GR32 and DPR_VFP2 ->
   // DPR inflation.
   array_pod_sort(InflateRegs.begin(), InflateRegs.end());
-  InflateRegs.erase(std::unique(InflateRegs.begin(), InflateRegs.end()),
-                    InflateRegs.end());
+  InflateRegs.erase(llvm::unique(InflateRegs), InflateRegs.end());
   LLVM_DEBUG(dbgs() << "Trying to inflate " << InflateRegs.size()
                     << " regs.\n");
   for (Register Reg : InflateRegs) {

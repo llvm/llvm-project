@@ -571,11 +571,17 @@ class PR34109_class {
   virtual ~PR34109_class() {}
 };
 
+#if !defined(__cpp_sized_deallocation)
 void operator delete(void *) throw();
 // expected-note@-1 {{previous declaration is here}}
 __declspec(dllexport) void operator delete(void *) throw();
 // expected-error@-1  {{redeclaration of 'operator delete' cannot add 'dllexport' attribute}}
-
+#else
+void operator delete(void *, unsigned int) throw();
+// expected-note@-1 {{previous declaration is here}}
+__declspec(dllexport) void operator delete(void *, unsigned int) throw();
+// expected-error@-1  {{redeclaration of 'operator delete' cannot add 'dllexport' attribute}}
+#endif
 void PR34109(int* a) {
   delete a;
 }

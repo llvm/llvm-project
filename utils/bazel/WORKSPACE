@@ -56,6 +56,19 @@ maybe(
     name = "vulkan_sdk",
 )
 
+http_archive(
+    name = "build_bazel_apple_support",
+    sha256 = "c4bb2b7367c484382300aee75be598b92f847896fb31bbd22f3a2346adf66a80",
+    url = "https://github.com/bazelbuild/apple_support/releases/download/1.15.1/apple_support.1.15.1.tar.gz",
+)
+
+load(
+    "@build_bazel_apple_support//lib:repositories.bzl",
+    "apple_support_dependencies",
+)
+
+apple_support_dependencies()
+
 # llvm libc math tests reply on `mpfr`.
 # The availability of `mpfr` is controlled by a flag and can be either `disable`, `system` or `external`.
 # Continuous integration uses `system` to speed up the build process (see .bazelrc).

@@ -26,9 +26,9 @@ entry:
 }
 
 ; CHECK-LABEL: define void @f(ptr %p)
-; CHECK: call void @llvm.dbg.value(metadata ptr %p, metadata ![[P_VAR:[0-9]+]], metadata !DIExpression())
+; CHECK: #dbg_value(ptr %p, ![[P_VAR:[0-9]+]], !DIExpression(),
 ; CHECK-NOT: bitcast
-; CHECK: call void @llvm.dbg.value(metadata ptr %p, metadata ![[Q_VAR:[0-9]+]], metadata !DIExpression())
+; CHECK: #dbg_value(ptr %p, ![[Q_VAR:[0-9]+]], !DIExpression(),
 ; CHECK-NOT: bitcast
 ; CHECK: ret void
 

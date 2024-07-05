@@ -15,6 +15,7 @@
 #include "R600TargetMachine.h"
 #include "AMDGPUTargetMachine.h"
 #include "R600.h"
+#include "R600CodeGenPassBuilder.h"
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
 #include "llvm/Transforms/Scalar.h"
@@ -143,4 +144,12 @@ void R600PassConfig::addPreEmitPass() {
 
 TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new R600PassConfig(*this, PM);
+}
+
+Error R600TargetMachine::buildCodeGenPipeline(
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC) {
+  R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
