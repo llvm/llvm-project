@@ -1263,7 +1263,7 @@ def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
 def FeaturePredictableSelectIsExpensive
-    : SubtargetFeature<"predictable-select-expensive", "IsPredictableSelectExpensive", "true",
+    : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
 def TuneNoOptimizedZeroStrideLoad

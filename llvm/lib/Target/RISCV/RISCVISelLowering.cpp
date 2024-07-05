@@ -1522,7 +1522,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // Let the subtarget decide if a predictable select is more expensive than the
   // corresponding branch. This information is used in CGP/SelectOpt to decide
   // when to convert selects into branches.
-  PredictableSelectIsExpensive = Subtarget.isPredictableSelectExpensive();
+  PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
 }
 
 EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
