@@ -1375,7 +1375,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     OutStreamer->emitULEB128IntValue(MBBSectionRanges.size());
   }
   // Number of blocks in each MBB section.
-  MapVector<unsigned, unsigned> MBBSectionNumBlocks;
+  MapVector<MBBSectionID, unsigned> MBBSectionNumBlocks;
   const MCSymbol *PrevMBBEndSymbol = nullptr;
   if (!Features.MultiBBRange) {
     OutStreamer->AddComment("function address");
@@ -1389,7 +1389,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       BBCount++;
       if (MBB.isEndSection()) {
         // Store each section's basic block count when it ends.
-        MBBSectionNumBlocks[MBB.getSectionIDNum()] = BBCount;
+        MBBSectionNumBlocks[MBB.getSectionID()] = BBCount;
         // Reset the count for the next section.
         BBCount = 0;
       }
@@ -1405,8 +1405,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->AddComment("base address");
       OutStreamer->emitSymbolValue(MBBSymbol, getPointerSize());
       OutStreamer->AddComment("number of basic blocks");
-      OutStreamer->emitULEB128IntValue(
-          MBBSectionNumBlocks[MBB.getSectionIDNum()]);
+      OutStreamer->emitULEB128IntValue(MBBSectionNumBlocks[MBB.getSectionID()]);
       PrevMBBEndSymbol = MBBSymbol;
     }
     // TODO: Remove this check when version 1 is deprecated.
@@ -1856,7 +1855,9 @@ void AsmPrinter::emitFunctionBody() {
               OutContext);
           OutStreamer->emitELFSize(CurrentSectionBeginSym, SizeExp);
         }
-        MBBSectionRanges[MBB.getSectionIDNum()] =
+        assert(!MBBSectionRanges.contains(MBB.getSectionID()) &&
+               "Overwrite section range");
+        MBBSectionRanges[MBB.getSectionID()] =
             MBBSectionRange{CurrentSectionBeginSym, MBB.getEndSymbol()};
       }
     }
@@ -1973,7 +1974,9 @@ void AsmPrinter::emitFunctionBody() {
   for (auto &Handler : Handlers)
     Handler->markFunctionEnd();
 
-  MBBSectionRanges[MF->front().getSectionIDNum()] =
+  assert(!MBBSectionRanges.contains(MF->front().getSectionID()) &&
+         "Overwrite section range");
+  MBBSectionRanges[MF->front().getSectionID()] =
       MBBSectionRange{CurrentFnBegin, CurrentFnEnd};
 
   // Print out jump tables referenced by the function.
@@ -2561,7 +2564,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 }
 
 MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
-  auto Res = MBBSectionExceptionSyms.try_emplace(MBB.getSectionIDNum());
+  auto Res = MBBSectionExceptionSyms.try_emplace(MBB.getSectionID());
   if (Res.second)
     Res.first->second = createTempSymbol("exception");
   return Res.first->second;
