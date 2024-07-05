@@ -224,6 +224,17 @@ define <2 x i16> @and_with_poison(<2 x i8> %a) {
 
 
 define <4 x i64> @issue_97674_getConstantOnEdge(i1 %cond) {
+; CHECK-LABEL: define <4 x i64> @issue_97674_getConstantOnEdge(
+; CHECK-SAME: i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[FOLDS:%.*]] = add nuw nsw <4 x i64> zeroinitializer, <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    [[R:%.*]] = phi <4 x i64> [ <i64 1, i64 1, i64 1, i64 1>, %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
+; CHECK-NEXT:    ret <4 x i64> [[R]]
+;
 entry:
   br i1 %cond, label %if.then, label %if.end
 
@@ -235,8 +246,13 @@ if.end:
   %r = phi <4 x i64> [ %folds, %if.then ], [ zeroinitializer, %entry ]
   ret <4 x i64> %r
 }
-    
+
 define <4 x i64> @issue_97674_getConstant() {
+; CHECK-LABEL: define <4 x i64> @issue_97674_getConstant() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[FOLDS:%.*]] = add nuw nsw <4 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+;
 entry:
   %folds = add <4 x i64> zeroinitializer, zeroinitializer
   ret <4 x i64> %folds
