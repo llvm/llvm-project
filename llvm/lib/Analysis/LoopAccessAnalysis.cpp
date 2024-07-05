@@ -2426,9 +2426,9 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   return true;
 }
 
-bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
-                                 const TargetLibraryInfo *TLI,
-                                 DominatorTree *DT) {
+LoopAccessInfo::VecMemPossible
+LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
+                            const TargetLibraryInfo *TLI, DominatorTree *DT) {
   // Holds the Load and Store instructions.
   SmallVector<LoadInst *, 16> Loads;
   SmallVector<StoreInst *, 16> Stores;
@@ -2468,7 +2468,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       // With both a non-vectorizable memory instruction and a convergent
       // operation, found in this loop, no reason to continue the search.
       if (HasComplexMemInst && HasConvergentOp)
-        return false;
+        return CantVec;
 
       // Avoid hitting recordAnalysis multiple times.
       if (HasComplexMemInst)
@@ -2544,7 +2544,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   } // Next block.
 
   if (HasComplexMemInst)
-    return false;
+    return CantVec;
 
   // Now we have two lists that hold the loads and the stores.
   // Next, we find the pointers that they use.
@@ -2553,7 +2553,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // care if the pointers are *restrict*.
   if (!Stores.size()) {
     LLVM_DEBUG(dbgs() << "LAA: Found a read-only loop!\n");
-    return true;
+    return NormalVec;
   }
 
   MemoryDepChecker::DepCandidates DependentAccesses;
@@ -2606,7 +2606,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     LLVM_DEBUG(
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
                << "checks.\n");
-    return true;
+    return NormalVec;
   }
 
   for (LoadInst *LD : Loads) {
@@ -2653,7 +2653,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // other reads in this loop then is it safe to vectorize.
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
-    return true;
+    return NormalVec;
   }
 
   // Build dependence sets and check whether we need a runtime pointer bounds
@@ -2675,7 +2675,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");
-    return false;
+    return CantVec;
   }
 
   LLVM_DEBUG(
@@ -2708,7 +2708,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
-        return false;
+        return CantVec;
       }
       DepsAreSafe = true;
     }
@@ -2719,7 +2719,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         << "cannot add control dependency to convergent operation";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because a runtime check "
                          "would be needed with a convergent operation\n");
-    return false;
+    return CantVec;
   }
 
   if (DepsAreSafe) {
@@ -2727,11 +2727,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         dbgs() << "LAA: No unsafe dependent memory operations in loop.  We"
                << (PtrRtChecking->Need ? "" : " don't")
                << " need runtime memory checks.\n");
-    return true;
+    return Histograms.empty() ? NormalVec : HistogramVec;
   }
 
   emitUnsafeDependenceRemark();
-  return false;
+  return CantVec;
 }
 
 void LoopAccessInfo::emitUnsafeDependenceRemark() {
@@ -3065,7 +3065,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
-  if (CanVecMem) {
+  if (CanVecMem != CantVec) {
     OS.indent(Depth) << "Memory dependences are safe";
     const MemoryDepChecker &DC = getDepChecker();
     if (!DC.isSafeForAnyVectorWidth())

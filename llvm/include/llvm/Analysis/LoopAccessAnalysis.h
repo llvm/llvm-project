@@ -639,6 +639,13 @@ private:
 /// Checks for both memory dependences and the SCEV predicates contained in the
 /// PSE must be emitted in order for the results of this analysis to be valid.
 class LoopAccessInfo {
+  /// Represents whether the memory access dependencies in the loop:
+  ///   * Prohibit vectorization
+  ///   * Allow for vectorization (possibly with runtime checks)
+  ///   * Allow for vectorization (possibly with runtime checks),
+  ///     as long as histogram operations are supported.
+  enum VecMemPossible { CantVec = 0, NormalVec = 1, HistogramVec = 2 };
+
 public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetTransformInfo *TTI,
                  const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
@@ -650,7 +657,11 @@ public:
   /// hasStoreStoreDependenceInvolvingLoopInvariantAddress and
   /// hasLoadStoreDependenceInvolvingLoopInvariantAddress also need to be
   /// checked.
-  bool canVectorizeMemory() const { return CanVecMem; }
+  bool canVectorizeMemory() const { return CanVecMem == NormalVec; }
+
+  bool canVectorizeMemoryWithHistogram() const {
+    return CanVecMem == NormalVec || CanVecMem == HistogramVec;
+  }
 
   /// Return true if there is a convergent operation in the loop. There may
   /// still be reported runtime pointer checks that would be required, but it is
@@ -733,8 +744,8 @@ public:
 private:
   /// Analyze the loop. Returns true if all memory access in the loop can be
   /// vectorized.
-  bool analyzeLoop(AAResults *AA, LoopInfo *LI, const TargetLibraryInfo *TLI,
-                   DominatorTree *DT);
+  VecMemPossible analyzeLoop(AAResults *AA, LoopInfo *LI,
+                             const TargetLibraryInfo *TLI, DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -775,7 +786,7 @@ private:
   unsigned NumStores = 0;
 
   /// Cache the result of analyzeLoop.
-  bool CanVecMem = false;
+  VecMemPossible CanVecMem = CantVec;
   bool HasConvergentOp = false;
 
   /// Indicator that there are two non vectorizable stores to the same uniform
