@@ -335,7 +335,7 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::profileMatches(
-    const yaml::bolt::BinaryFunctionProfile &Profile, BinaryFunction &BF) {
+    const yaml::bolt::BinaryFunctionProfile &Profile, const BinaryFunction &BF) {
   if (opts::IgnoreHash)
     return Profile.NumBasicBlocks == BF.size();
   return Profile.Hash == static_cast<uint64_t>(BF.getHash());
