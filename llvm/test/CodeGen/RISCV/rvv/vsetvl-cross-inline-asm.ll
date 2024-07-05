@@ -13,10 +13,10 @@ define void @foo(<vscale x 8 x half> %0, <vscale x 8 x half> %1) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vfmadd.vv v16, v12, v12
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vfmadd.vv v16, v12, v12
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (zero)
 ; CHECK-NEXT:    ret
 entry:
