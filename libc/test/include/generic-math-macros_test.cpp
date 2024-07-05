@@ -13,22 +13,25 @@
  * intended
  */
 
-#include "stdbit_stub.h"
+// #include "stdbit_stub.h"
 
 #include "include/llvm-libc-macros/generic-math-macros.h"
 
-TEST(LlvmLibcIsfinite, TypeGenericMacroMathIsfinite) {
+TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsfinite) {
+  EXPECT_EQ(isfinite(3.14), 0);
+  EXPECT_EQ(isfinite(3.14 / 0.0), 1);
+}
+
+/*
+TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsinf) {
 
 }
 
-TEST(LlvmLibcIsinf, TypeGenericMacroMathIsinf) {
+TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsnan) {
 
 }
 
-TEST(LlvmLibcIsnan, TypeGenericMacroMathIsnan) {
 
-}
+TEST(LlvmLibcGenericMath, TypeGenericMacroMathSignbit) {
 
-TEST(LlvmLibcSignbit, TypeGenericMacroMathSignbit) {
-
-}
+}*/
