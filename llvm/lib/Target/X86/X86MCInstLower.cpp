@@ -55,7 +55,7 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableBranchHint("branch-hint",
+static cl::opt<bool> EnableBranchHint("enable-branch-hint",
                                       cl::desc("Enable branch hint."),
                                       cl::init(false), cl::Hidden);
 static cl::opt<unsigned> BranchHintProbabilityThreshold(
