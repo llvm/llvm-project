@@ -45,6 +45,12 @@ static cl::opt<bool>
 EnableBasePointer("x86-use-base-pointer", cl::Hidden, cl::init(true),
           cl::desc("Enable use of a base pointer for complex stack frames"));
 
+static cl::opt<bool>
+    DisableRegAllocHints("x86-disable-regalloc-hints", cl::Hidden,
+                         cl::init(false),
+                         cl::desc("Disable two address hints for register "
+                                  "allocation"));
+
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
@@ -1082,6 +1088,42 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
   unsigned ID = RC.getID();
+
+  if (!VRM || DisableRegAllocHints)
+    return BaseImplRetVal;
+
+  // Add any two address hints after any copy hints.
+  SmallSet<unsigned, 4> TwoAddrHints;
+
+  auto tryAddHint = [&](const MachineOperand &VRRegMO,
+                        const MachineOperand &MO) -> void {
+    Register Reg = MO.getReg();
+    Register PhysReg =
+        Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+    if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+      TwoAddrHints.insert(PhysReg);
+  };
+
+  for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
+    const MachineInstr &MI = *MO.getParent();
+    if (X86::getNonNDVariant(MI.getOpcode())) {
+      unsigned OpIdx = MI.getOperandNo(&MO);
+      if (OpIdx == 0 && MI.getOperand(1).isReg()) {
+        tryAddHint(MO, MI.getOperand(1));
+        if (MI.isCommutable() && MI.getOperand(2).isReg())
+          tryAddHint(MO, MI.getOperand(2));
+      } else if (OpIdx == 1) {
+        tryAddHint(MO, MI.getOperand(0));
+      } else if (MI.isCommutable() && OpIdx == 2) {
+        tryAddHint(MO, MI.getOperand(0));
+      }
+    }
+  }
+
+  for (MCPhysReg OrderReg : Order)
+    if (TwoAddrHints.count(OrderReg))
+      Hints.push_back(OrderReg);
+
   if (ID != X86::TILERegClassID)
     return BaseImplRetVal;
 
