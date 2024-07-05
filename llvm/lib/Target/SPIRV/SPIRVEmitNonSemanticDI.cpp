@@ -1,4 +1,5 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
@@ -60,14 +61,14 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     IsGlobalDIEmitted = false;
     return false;
   }
-  MachineModuleInfo &MMI = MF.getMMI();
+  const MachineModuleInfo &MMI = MF.getMMI();
   const Module *M = MMI.getModule();
-  NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
+  const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
   if (!DbgCu)
     return false;
   std::string FilePath;
   unsigned SourceLanguage = 0;
-  for (auto *Op : DbgCu->operands()) {
+  for (const auto *Op : DbgCu->operands()) {
     if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
       DIFile *File = CompileUnit->getFile();
       FilePath = ((File->getDirectory() + sys::path::get_separator() +
@@ -77,10 +78,10 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       break;
     }
   }
-  NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
+  const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
-  for (auto *Op : ModuleFlags->operands()) {
+  for (const auto *Op : ModuleFlags->operands()) {
     const MDOperand &MaybeStrOp = Op->getOperand(1);
     if (MaybeStrOp.equalsStr("Dwarf Version"))
       DwarfVersion =
@@ -101,19 +102,18 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   MachineBasicBlock &MBB = *MF.begin();
   MachineIRBuilder MIRBuilder(MBB, MBB.begin());
 
-  MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
-  Register StrReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  const Register StrReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
   MRI.setType(StrReg, LLT::scalar(32));
-
-  MachineOperand StrRegOp = MachineOperand::CreateReg(StrReg, true);
-  MIB.add(StrRegOp);
+  MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
+  MIB.addDef(StrReg);
   addStringImm(FilePath, MIB);
 
-  SPIRVType *VoidTyMI =
+  const SPIRVType *VoidTyMI =
       GR->getOrCreateSPIRVType(Type::getVoidTy(M->getContext()), MIRBuilder);
   GR->assignSPIRVTypeToVReg(VoidTyMI, GR->getSPIRVTypeID(VoidTyMI), MF);
 
-  Register DebugSourceResIdReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  const Register DebugSourceResIdReg =
+      MRI.createVirtualRegister(&SPIRV::IDRegClass);
   MRI.setType(DebugSourceResIdReg, LLT::scalar(32));
   MIB = MIRBuilder.buildInstr(SPIRV::OpExtInst)
             .addDef(DebugSourceResIdReg)
@@ -124,12 +124,35 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
             .addUse(StrReg);
   MIB.constrainAllUses(*TII, *TRI, *RBI);
 
-  Register DwarfVersionReg = GR->buildConstantInt(DwarfVersion, MIRBuilder);
-  Register DebugInfoVersionReg =
-      GR->buildConstantInt(DebugInfoVersion, MIRBuilder);
-  Register SourceLanguageReg = GR->buildConstantInt(SourceLanguage, MIRBuilder);
+  const SPIRVType *I32Ty =
+      GR->getOrCreateSPIRVType(Type::getInt32Ty(M->getContext()), MIRBuilder);
+  GR->assignSPIRVTypeToVReg(I32Ty, GR->getSPIRVTypeID(I32Ty), MF);
 
-  Register DebugCompUnitResIdReg =
+  const Register DwarfVersionReg =
+      MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  MRI.setType(DwarfVersionReg, LLT::scalar(32));
+  MIRBuilder.buildInstr(SPIRV::OpConstantI)
+      .addDef(DwarfVersionReg)
+      .addUse(GR->getSPIRVTypeID(I32Ty))
+      .addImm(DwarfVersion);
+
+  const Register DebugInfoVersionReg =
+      MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  MRI.setType(DebugInfoVersionReg, LLT::scalar(32));
+  MIRBuilder.buildInstr(SPIRV::OpConstantI)
+      .addDef(DebugInfoVersionReg)
+      .addUse(GR->getSPIRVTypeID(I32Ty))
+      .addImm(DebugInfoVersion);
+
+  const Register SourceLanguageReg =
+      MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  MRI.setType(SourceLanguageReg, LLT::scalar(32));
+  MIRBuilder.buildInstr(SPIRV::OpConstantI)
+      .addDef(SourceLanguageReg)
+      .addUse(GR->getSPIRVTypeID(I32Ty))
+      .addImm(SourceLanguage);
+
+  const Register DebugCompUnitResIdReg =
       MRI.createVirtualRegister(&SPIRV::IDRegClass);
   MRI.setType(DebugCompUnitResIdReg, LLT::scalar(32));
   MIB = MIRBuilder.buildInstr(SPIRV::OpExtInst)

@@ -115,6 +115,7 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+  void addMachinePasses() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -199,7 +200,6 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 bool SPIRVPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   addPass(createSPIRVPostLegalizerPass());
-  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
   return false;
 }
 
@@ -207,6 +207,11 @@ bool SPIRVPassConfig::addLegalizeMachineIR() {
 bool SPIRVPassConfig::addRegBankSelect() {
   disablePass(&RegBankSelect::ID);
   return false;
+}
+
+void SPIRVPassConfig::addMachinePasses() {
+  TargetPassConfig::addMachinePasses();
+  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
 }
 
 namespace {
