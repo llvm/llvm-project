@@ -126,7 +126,7 @@ static constexpr inline unsigned_count_t GetHUGE(int kind) {
 // Function converts a std::timespec_t into the desired count to
 // be returned by the timing functions in accordance with the requested
 // kind at the call site.
-count_t ConvertTimeSpecToCount(int kind, const std::timespec &tspec) {
+count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
   const unsigned_count_t huge{GetHUGE(kind)};
   unsigned_count_t sec{static_cast<unsigned_count_t>(tspec.tv_sec)};
   unsigned_count_t nsec{static_cast<unsigned_count_t>(tspec.tv_nsec)};
@@ -142,9 +142,9 @@ count_t ConvertTimeSpecToCount(int kind, const std::timespec &tspec) {
 // This is the fallback implementation, which should work everywhere.
 template <typename Unused = void>
 count_t GetSystemClockCount(int kind, fallback_implementation) {
-  std::timespec tspec;
+  struct timespec tspec;
 
-  if (std::timespec_get(&tspec, TIME_UTC) < 0) {
+  if (timespec_get(&tspec, TIME_UTC) < 0) {
     // Return -HUGE(COUNT) to represent failure.
     return -static_cast<count_t>(GetHUGE(kind));
   }
