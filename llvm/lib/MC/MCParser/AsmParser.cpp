@@ -2528,6 +2528,8 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       while (I != End && isIdentifierChar(Body[I]))
         ++I;
       StringRef Argument(Body.data() + Pos, I - Pos);
+      if (AltMacroMode && I != End && Body[I] == '&')
+        ++I;
       unsigned Index = 0;
       for (; Index < NParameters; ++Index)
         if (Parameters[Index].Name == Argument)
