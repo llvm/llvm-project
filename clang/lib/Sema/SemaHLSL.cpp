@@ -680,16 +680,36 @@ register_binding_flags HLSLFillRegisterBindingFlags(Sema &S, Decl *D) {
 
 static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *D,
                                                 StringRef &Slot) {
-  std::set<std::string> s; // store unique register type + numbers
+  // make sure that there are no register annotations applied to the decl
+  // with the same register type but different numbers
+  std::unordered_map<char, std::set<char>>
+      s; // store unique register type + numbers
+  std::set<char> starting_set = {Slot[1]};
+  s.insert(std::make_pair(Slot[0], starting_set));
   for (auto it = D->attr_begin(); it != D->attr_end(); ++it) {
     if (HLSLResourceBindingAttr *attr =
             dyn_cast<HLSLResourceBindingAttr>(*it)) {
-      std::string regInfo(Slot);
-      auto p = s.insert(regInfo);
-      if (!p.second) {
-        S.Diag(attr->getLoc(), diag::err_hlsl_conflicting_register_annotations)
-            << Slot.substr(0, 1);
+      std::string otherSlot(attr->getSlot().data());
+
+      // insert into hash map
+      if (s.find(otherSlot[0]) != s.end()) {
+        // if the register type is already in the map, insert the number
+        // into the set (if it's not already there
+        s[otherSlot[0]].insert(otherSlot[1]);
+      } else {
+        // if the register type is not in the map, insert it with the number
+        std::set<char> otherSet;
+        otherSet.insert(otherSlot[1]);
+        s.insert(std::make_pair(otherSlot[0], otherSet));
       }
+    }
+  }
+
+  for (auto regType : s) {
+    if (regType.second.size() > 1) {
+      std::string regTypeStr(1, regType.first);
+      S.Diag(D->getLocation(), diag::err_hlsl_conflicting_register_annotations)
+          << regTypeStr;
     }
   }
 }
@@ -727,6 +747,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   if (f.other) {
     S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
         << Slot << typestr;
+    return;
   }
 
   // next, if multiple register annotations exist, check that none conflict.
@@ -776,6 +797,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       break;
     }
     }
+    return;
   }
 
   // next, handle diagnostics for when the "basic" flag is set,
@@ -807,6 +829,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
           << Slot[0] << typestr;
     }
+    return;
   }
 
   // finally, we handle the udt case
@@ -855,6 +878,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
           << Slot.front() << typestr;
     }
     }
+    return;
   }
 }
 
@@ -905,7 +929,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *D, const ParsedAttr &AL) {
     case 'i':
       break;
     default:
-      Diag(ArgLoc, diag::err_hlsl_unsupported_register_prefix)
+      Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_resource_type)
           << Slot.substr(0, 1);
       return;
     }
