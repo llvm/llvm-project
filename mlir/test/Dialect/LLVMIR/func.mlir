@@ -287,6 +287,12 @@ module {
     // CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
     llvm.return
   }
+
+  llvm.func @convergent_function() attributes {convergent} {
+    // CHECK: @convergent_function
+    // CHECK-SAME: attributes {convergent}
+    llvm.return
+  }
 }
 
 // -----

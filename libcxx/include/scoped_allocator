@@ -313,7 +313,7 @@ false_type __has_outer_allocator_test(const volatile _Alloc& __a);
 
 template <class _Alloc>
 struct __has_outer_allocator
-    : public common_type< decltype(std::__has_outer_allocator_test(std::declval<_Alloc&>())) >::type {};
+    : public common_type< decltype(std::__has_outer_allocator_test(std::declval<_Alloc&>()))>::type {};
 
 template <class _Alloc, bool = __has_outer_allocator<_Alloc>::value>
 struct __outermost {

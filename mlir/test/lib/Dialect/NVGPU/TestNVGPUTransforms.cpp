@@ -68,7 +68,7 @@ struct TestMmaSyncF32ToTF32Patterns
 
 namespace mlir {
 namespace test {
-void registerTestNvgpuLowerings() {
+void registerTestNVGPULowerings() {
   PassRegistration<TestMmaSyncF32ToTF32Patterns>();
 }
 

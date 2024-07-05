@@ -20,7 +20,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -96,12 +95,14 @@ Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
       });
 }
 
-void memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
-                                               Value defaultValue,
-                                               OpBuilder &builder) {
+std::optional<PromotableAllocationOpInterface>
+memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
+                                          Value defaultValue,
+                                          OpBuilder &builder) {
   if (defaultValue.use_empty())
     defaultValue.getDefiningOp()->erase();
   this->erase();
+  return std::nullopt;
 }
 
 void memref::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -124,10 +125,10 @@ memref::AllocaOp::getDestructurableSlots() {
       DestructurableMemorySlot{{getMemref(), memrefType}, *destructuredType}};
 }
 
-DenseMap<Attribute, MemorySlot>
-memref::AllocaOp::destructure(const DestructurableMemorySlot &slot,
-                              const SmallPtrSetImpl<Attribute> &usedIndices,
-                              OpBuilder &builder) {
+DenseMap<Attribute, MemorySlot> memref::AllocaOp::destructure(
+    const DestructurableMemorySlot &slot,
+    const SmallPtrSetImpl<Attribute> &usedIndices, OpBuilder &builder,
+    SmallVectorImpl<DestructurableAllocationOpInterface> &newAllocators) {
   builder.setInsertionPointAfter(*this);
 
   DenseMap<Attribute, MemorySlot> slotMap;
@@ -137,6 +138,7 @@ memref::AllocaOp::destructure(const DestructurableMemorySlot &slot,
     Type elemType = memrefType.getTypeAtIndex(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
     auto subAlloca = builder.create<memref::AllocaOp>(getLoc(), elemPtr);
+    newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(usedIndex,
                                     {subAlloca.getResult(), elemType});
   }
@@ -144,10 +146,12 @@ memref::AllocaOp::destructure(const DestructurableMemorySlot &slot,
   return slotMap;
 }
 
-void memref::AllocaOp::handleDestructuringComplete(
+std::optional<DestructurableAllocationOpInterface>
+memref::AllocaOp::handleDestructuringComplete(
     const DestructurableMemorySlot &slot, OpBuilder &builder) {
   assert(slot.ptr == getResult());
   this->erase();
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -272,7 +276,7 @@ bool memref::StoreOp::canRewire(const DestructurableMemorySlot &slot,
     return false;
   Attribute index = getAttributeIndexFromIndexOperands(
       getContext(), getIndices(), getMemRefType());
-  if (!index || !slot.elementPtrs.contains(index))
+  if (!index || !slot.subelementTypes.contains(index))
     return false;
   usedIndices.insert(index);
   return true;

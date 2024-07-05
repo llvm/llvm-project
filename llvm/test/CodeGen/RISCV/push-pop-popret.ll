@@ -3225,6 +3225,7 @@ define void @spill_x10() {
 ; RV32IZCMP-NEXT:    cm.push {ra, s0-s11}, -64
 ; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 64
 ; RV32IZCMP-NEXT:    .cfi_offset s10, -8
+; RV32IZCMP-NEXT:    .cfi_offset s11, -4
 ; RV32IZCMP-NEXT:    #APP
 ; RV32IZCMP-NEXT:    li s10, 0
 ; RV32IZCMP-NEXT:    #NO_APP
@@ -3235,6 +3236,7 @@ define void @spill_x10() {
 ; RV64IZCMP-NEXT:    cm.push {ra, s0-s11}, -112
 ; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 112
 ; RV64IZCMP-NEXT:    .cfi_offset s10, -16
+; RV64IZCMP-NEXT:    .cfi_offset s11, -8
 ; RV64IZCMP-NEXT:    #APP
 ; RV64IZCMP-NEXT:    li s10, 0
 ; RV64IZCMP-NEXT:    #NO_APP
@@ -3245,6 +3247,7 @@ define void @spill_x10() {
 ; RV32IZCMP-SR-NEXT:    cm.push {ra, s0-s11}, -64
 ; RV32IZCMP-SR-NEXT:    .cfi_def_cfa_offset 64
 ; RV32IZCMP-SR-NEXT:    .cfi_offset s10, -8
+; RV32IZCMP-SR-NEXT:    .cfi_offset s11, -4
 ; RV32IZCMP-SR-NEXT:    #APP
 ; RV32IZCMP-SR-NEXT:    li s10, 0
 ; RV32IZCMP-SR-NEXT:    #NO_APP
@@ -3255,6 +3258,7 @@ define void @spill_x10() {
 ; RV64IZCMP-SR-NEXT:    cm.push {ra, s0-s11}, -112
 ; RV64IZCMP-SR-NEXT:    .cfi_def_cfa_offset 112
 ; RV64IZCMP-SR-NEXT:    .cfi_offset s10, -16
+; RV64IZCMP-SR-NEXT:    .cfi_offset s11, -8
 ; RV64IZCMP-SR-NEXT:    #APP
 ; RV64IZCMP-SR-NEXT:    li s10, 0
 ; RV64IZCMP-SR-NEXT:    #NO_APP

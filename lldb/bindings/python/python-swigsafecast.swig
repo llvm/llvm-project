@@ -37,10 +37,6 @@ PythonObject SWIGBridge::ToSWIGWrapper(const Status& status) {
   return ToSWIGHelper(new lldb::SBError(status), SWIGTYPE_p_lldb__SBError);
 }
 
-PythonObject SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb) {
-  return ToSWIGHelper(stream_sb.release(), SWIGTYPE_p_lldb__SBStream);
-}
-
 PythonObject SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb) {
   return ToSWIGHelper(data_sb.release(), SWIGTYPE_p_lldb__SBStructuredData);
 }
@@ -115,9 +111,16 @@ SWIGBridge::ToSWIGWrapper(CommandReturnObject &cmd_retobj) {
       SWIGTYPE_p_lldb__SBCommandReturnObject);
 }
 
-ScopedPythonObject<lldb::SBEvent> SWIGBridge::ToSWIGWrapper(Event *event) {
-  return ScopedPythonObject<lldb::SBEvent>(new lldb::SBEvent(event),
-                                           SWIGTYPE_p_lldb__SBEvent);
+PythonObject SWIGBridge::ToSWIGWrapper(const Stream *s) {
+  return ToSWIGHelper(new lldb::SBStream(), SWIGTYPE_p_lldb__SBStream);
+}
+
+PythonObject SWIGBridge::ToSWIGWrapper(std::shared_ptr<lldb::SBStream> stream_sb) {
+  return ToSWIGHelper(stream_sb.get(), SWIGTYPE_p_lldb__SBStream);
+}
+
+PythonObject SWIGBridge::ToSWIGWrapper(Event *event) {
+  return ToSWIGHelper(new lldb::SBEvent(event), SWIGTYPE_p_lldb__SBEvent);
 }
 
 PythonObject SWIGBridge::ToSWIGWrapper(

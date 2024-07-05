@@ -192,6 +192,7 @@ cxx_sources = [
 ]
 if (target_os == "win") {
   cxx_sources += [
+    "support/win32/compiler_rt_shims.cpp",
     "support/win32/locale_win32.cpp",
     "support/win32/support.cpp",
     "support/win32/thread_win32.cpp",
@@ -291,7 +292,7 @@ if (libcxx_enable_static) {
     if (libcxx_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
       if (libcxx_enable_new_delete_definitions) {
-        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
+        cflags_cc = [ "-fvisibility-global-new-delete=force-hidden" ]
       }
       defines = [ "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS" ]
     }
@@ -320,6 +321,9 @@ if (libcxx_enable_experimental) {
         "include/tzdb/types_private.h",
         "include/tzdb/tzdb_list_private.h",
         "include/tzdb/tzdb_private.h",
+        # TODO TZDB The exception could be moved in chrono once the TZDB library
+        # is no longer experimental.
+        "chrono_exception.cpp",
         "time_zone.cpp",
         "tzdb.cpp",
         "tzdb_list.cpp",

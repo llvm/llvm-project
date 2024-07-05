@@ -1,9 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c89 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c23 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c23 -ffreestanding -ffinite-math-only %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++11 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++14 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++17 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++23 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++23 -ffreestanding -ffinite-math-only %s
 // expected-no-diagnostics
 
 /* Basic floating point conformance checks against:
@@ -207,6 +211,21 @@
     #error "Mandatory macros {FLT,DBL,LDBL}_MAX_10_EXP are invalid."
 #endif
 
+#if __STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)
+  #ifndef INFINITY
+    #error "Mandatory macro INFINITY is missing."
+  #endif
+  #ifndef NAN
+    #error "Mandatory macro NAN is missing."
+  #endif
+#else
+  #ifdef INFINITY
+    #error "Macro INFINITY should not be defined."
+  #endif
+  #ifdef NAN
+    #error "Macro NAN should not be defined."
+  #endif
+#endif
 
 /* Internal consistency checks */
 _Static_assert(FLT_RADIX == __FLT_RADIX__, "");
@@ -244,3 +263,9 @@ _Static_assert(LDBL_MAX_EXP == __LDBL_MAX_EXP__, "");
 _Static_assert(FLT_MAX_10_EXP == __FLT_MAX_10_EXP__, "");
 _Static_assert(DBL_MAX_10_EXP == __DBL_MAX_10_EXP__, "");
 _Static_assert(LDBL_MAX_10_EXP == __LDBL_MAX_10_EXP__, "");
+
+#if (__STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)) && __FINITE_MATH_ONLY__ == 0
+// Ensure INFINITY and NAN are suitable for use in a constant expression.
+float f1 = INFINITY;
+float f2 = NAN;
+#endif

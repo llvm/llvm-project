@@ -83,5 +83,80 @@ void foo() {
   // CHECK: #pragma acc kernels async
 #pragma acc kernels async
   while(true);
+
+// CHECK: #pragma acc parallel wait
+#pragma acc parallel wait
+  while(true);
+
+// CHECK: #pragma acc parallel wait()
+#pragma acc parallel wait()
+  while(true);
+
+// CHECK: #pragma acc parallel wait(*iPtr, i)
+#pragma acc parallel wait(*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(queues: *iPtr, i)
+#pragma acc parallel wait(queues:*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(devnum: i : *iPtr, i)
+#pragma acc parallel wait(devnum:i:*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(devnum: i : queues: *iPtr, i)
+#pragma acc parallel wait(devnum:i:queues:*iPtr, i)
+  while(true);
+
+  bool SomeB;
+  struct SomeStruct{} SomeStructImpl;
+
+//CHECK: #pragma acc parallel dtype(SomeB)
+#pragma acc parallel dtype(SomeB)
+  while(true);
+
+//CHECK: #pragma acc parallel device_type(SomeStruct)
+#pragma acc parallel device_type(SomeStruct)
+  while(true);
+
+//CHECK: #pragma acc parallel device_type(int)
+#pragma acc parallel device_type(int)
+  while(true);
+
+//CHECK: #pragma acc parallel dtype(bool)
+#pragma acc parallel dtype(bool)
+  while(true);
+
+//CHECK: #pragma acc parallel device_type(SomeStructImpl)
+#pragma acc parallel device_type (SomeStructImpl)
+  while(true);
+
+//CHECK: #pragma acc parallel reduction(+: iPtr)
+#pragma acc parallel reduction(+: iPtr)
+  while(true);
+//CHECK: #pragma acc parallel reduction(*: i)
+#pragma acc parallel reduction(*: i)
+  while(true);
+//CHECK: #pragma acc parallel reduction(max: SomeB)
+#pragma acc parallel reduction(max: SomeB)
+  while(true);
+//CHECK: #pragma acc parallel reduction(min: iPtr)
+#pragma acc parallel reduction(min: iPtr)
+  while(true);
+//CHECK: #pragma acc parallel reduction(&: i)
+#pragma acc parallel reduction(&: i)
+  while(true);
+//CHECK: #pragma acc parallel reduction(|: SomeB)
+#pragma acc parallel reduction(|: SomeB)
+  while(true);
+//CHECK: #pragma acc parallel reduction(^: iPtr)
+#pragma acc parallel reduction(^: iPtr)
+  while(true);
+//CHECK: #pragma acc parallel reduction(&&: i)
+#pragma acc parallel reduction(&&: i)
+  while(true);
+//CHECK: #pragma acc parallel reduction(||: SomeB)
+#pragma acc parallel reduction(||: SomeB)
+  while(true);
 }
 

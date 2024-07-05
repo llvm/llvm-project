@@ -15,6 +15,7 @@
 
 #include "FunctionPointer.h"
 #include "IntegralAP.h"
+#include "MemberPointer.h"
 #include "PrimType.h"
 #include <memory>
 #include <vector>
@@ -47,7 +48,6 @@ public:
 #endif
     T *Ptr = &peekInternal<T>();
     T Value = std::move(*Ptr);
-    Ptr->~T();
     shrink(aligned_size<T>());
     return Value;
   }
@@ -188,6 +188,8 @@ private:
       return PT_IntAP;
     else if constexpr (std::is_same_v<T, IntegralAP<false>>)
       return PT_IntAP;
+    else if constexpr (std::is_same_v<T, MemberPointer>)
+      return PT_MemberPtr;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }

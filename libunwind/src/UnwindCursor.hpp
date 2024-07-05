@@ -36,7 +36,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
-#include <sys/uio.h>
 #include <unistd.h>
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
@@ -2416,7 +2415,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     }
 
     // Reset LR in the current context.
-    newRegisters.setLR(NULL);
+    newRegisters.setLR(static_cast<uintptr_t>(NULL));
 
     _LIBUNWIND_TRACE_UNWINDING(
         "Extract info from lastStack=%p, returnAddress=%p",

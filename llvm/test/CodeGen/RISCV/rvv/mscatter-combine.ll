@@ -80,13 +80,15 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
 ;
 ; RV64-LABEL: strided_store_offset_start:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a2, 56
-; RV64-NEXT:    mul a0, a0, a2
+; RV64-NEXT:    slli a2, a0, 3
+; RV64-NEXT:    slli a0, a0, 6
+; RV64-NEXT:    sub a0, a0, a2
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    addi a0, a0, 36
 ; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vsse64.v v8, (a0), a2
+; RV64-NEXT:    li a1, 56
+; RV64-NEXT:    vsse64.v v8, (a0), a1
 ; RV64-NEXT:    ret
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
   %.splatinsert = insertelement <vscale x 1 x i64> poison, i64 %n, i64 0

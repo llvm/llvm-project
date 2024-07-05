@@ -1,6 +1,6 @@
-# This reproduces a bug where profile collected from perf without LBRs and
-# converted into fdata-no-lbr format is reported to not contain profile for any
-# functions.
+## This reproduces a bug where profile collected from perf without LBRs and
+## converted into fdata-no-lbr format is reported to not contain profile for any
+## functions.
 
 # REQUIRES: system-linux
 
