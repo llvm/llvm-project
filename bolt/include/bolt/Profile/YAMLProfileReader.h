@@ -93,6 +93,9 @@ private:
   /// Matches functions using exact hash.
   size_t matchWithHash(BinaryContext &BC);
 
+  /// Matches functions with similarly named profiled functions.
+  size_t matchWithNameSimilarity(BinaryContext &BC);
+
   /// Update matched YAML -> BinaryFunction pair.
   void matchProfileToFunction(yaml::bolt::BinaryFunctionProfile &YamlBF,
                               BinaryFunction &BF) {

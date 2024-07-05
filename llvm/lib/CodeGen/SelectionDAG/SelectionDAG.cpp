@@ -1239,6 +1239,7 @@ SelectionDAG::AddModifiedNodeToCSEMaps(SDNode *N) {
       // If there was already an existing matching node, use ReplaceAllUsesWith
       // to replace the dead one with the existing one.  This can cause
       // recursive merging of other unrelated nodes down the line.
+      Existing->intersectFlagsWith(N->getFlags());
       ReplaceAllUsesWith(N, Existing);
 
       // N is now dead. Inform the listeners and delete it.
@@ -1751,16 +1752,16 @@ SDValue SelectionDAG::getIntPtrConstant(uint64_t Val, const SDLoc &DL,
 }
 
 SDValue SelectionDAG::getShiftAmountConstant(uint64_t Val, EVT VT,
-                                             const SDLoc &DL, bool LegalTypes) {
+                                             const SDLoc &DL) {
   assert(VT.isInteger() && "Shift amount is not an integer type!");
-  EVT ShiftVT = TLI->getShiftAmountTy(VT, getDataLayout(), LegalTypes);
+  EVT ShiftVT = TLI->getShiftAmountTy(VT, getDataLayout());
   return getConstant(Val, DL, ShiftVT);
 }
 
 SDValue SelectionDAG::getShiftAmountConstant(const APInt &Val, EVT VT,
-                                             const SDLoc &DL, bool LegalTypes) {
+                                             const SDLoc &DL) {
   assert(Val.ult(VT.getScalarSizeInBits()) && "Out of range shift");
-  return getShiftAmountConstant(Val.getZExtValue(), VT, DL, LegalTypes);
+  return getShiftAmountConstant(Val.getZExtValue(), VT, DL);
 }
 
 SDValue SelectionDAG::getVectorIdxConstant(uint64_t Val, const SDLoc &DL,
@@ -5622,6 +5623,15 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
     return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+  case ISD::VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = Op.getConstantOperandAPInt(0);
+    ConstantRange CR =
+        getVScaleRange(&F, Op.getScalarValueSizeInBits()).multiply(Multiplier);
+    if (!CR.getUnsignedMin().isZero())
+      return true;
+    break;
+  }
   }
 
   return computeKnownBits(Op, Depth).isNonZero();
