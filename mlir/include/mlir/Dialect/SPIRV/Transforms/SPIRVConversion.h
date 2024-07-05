@@ -17,8 +17,10 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
+#include "mlir/Transforms/OneToNTypeConversion.h"
 
 namespace mlir {
 
@@ -133,6 +135,8 @@ private:
 /// types.
 void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                         RewritePatternSet &patterns);
+
+void populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns);
 
 namespace spirv {
 class AccessChainOp;

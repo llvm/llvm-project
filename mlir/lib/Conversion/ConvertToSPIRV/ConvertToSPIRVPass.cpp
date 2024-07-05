@@ -23,6 +23,7 @@
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/OneToNTypeConversion.h"
 #include <memory>
 
 #define DEBUG_TYPE "convert-to-spirv"
@@ -105,22 +106,22 @@ struct ConvertToSPIRVPass final
     Operation *op = getOperation();
 
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
-    SPIRVTypeConverter typeConverter(targetAttr);
+    std::unique_ptr<ConversionTarget> target =
+        SPIRVConversionTarget::get(targetAttr);
 
-    // Unroll vectors in function signature to native vector size.
+    // Unroll vectors in function inputs to native vector size.
     {
-      llvm::errs() << "Start unrolling function signature\n";
+      llvm::errs() << "Start unrolling function inputs\n";
       RewritePatternSet patterns(context);
-      // TODO: This is hardcoded to unroll with size 1. Change this later
-      SmallVector<int64_t> nativeShape(1, 1);
-      auto options = vector::UnrollVectorOptions().setNativeShape(nativeShape);
-      populateVectorUnrollFuncSignaturePatterns(patterns, options);
+      populateFuncOpVectorRewritePatterns(patterns);
       GreedyRewriteConfig config;
       config.strictMode = GreedyRewriteStrictness::ExistingOps;
       if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
         return signalPassFailure();
-      llvm::errs() << "Finish unrolling function signature\n";
+      llvm::errs() << "Finish unrolling function inputs\n";
     }
+
+    SPIRVTypeConverter typeConverter(targetAttr);
 
     // Unroll vectors to native vector size.
     {
@@ -131,6 +132,9 @@ struct ConvertToSPIRVPass final
       if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
         return signalPassFailure();
     }
+
+    llvm::errs() << "After unrolling vectors to native vector size\n";
+    op->dump();
 
     // Next run canonicalization to cast away leading size-1 dimensions.
     {
@@ -159,6 +163,9 @@ struct ConvertToSPIRVPass final
         return signalPassFailure();
     }
 
+    llvm::errs() << "After running canonicalization to cast away leading size-1 dimensions\n";
+    op->dump();
+
     // Convert vector.extract_strided_slice into a chain of vector.extract and
     // then a chain of vector.insert ops. This helps to cancel with previous
     // vector.insert/extract ops, especially for fP16 cases where we have
@@ -175,6 +182,9 @@ struct ConvertToSPIRVPass final
         return signalPassFailure();
     }
 
+    llvm::errs() << "After converting vector.extract_strided_slice into a chain of vector.extract and then a chain of vector.insert ops\n";
+    op->dump();
+
     // Run all sorts of canonicalization patterns to clean up again.
     {
       RewritePatternSet patterns(context);
@@ -188,21 +198,21 @@ struct ConvertToSPIRVPass final
         return signalPassFailure();
     }
 
+    llvm::errs() << "After running canonicalization patterns to clean up again\n";
+    op->dump();
+
     RewritePatternSet patterns(context);
     ScfToSPIRVContext scfToSPIRVContext;
 
     // Populate patterns for each dialect.
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);
-    // populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
+    populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
     populateFuncToSPIRVPatterns(typeConverter, patterns);
     index::populateIndexToSPIRVPatterns(typeConverter, patterns);
     populateVectorToSPIRVPatterns(typeConverter, patterns);
     populateSCFToSPIRVPatterns(typeConverter, scfToSPIRVContext, patterns);
     ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
-
-    std::unique_ptr<ConversionTarget> target =
-        SPIRVConversionTarget::get(targetAttr);
 
     if (failed(applyPartialConversion(op, *target, std::move(patterns))))
       return signalPassFailure();

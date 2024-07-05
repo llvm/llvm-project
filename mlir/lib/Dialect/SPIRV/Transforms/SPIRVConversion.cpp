@@ -17,8 +17,15 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/OneToNTypeConversion.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -811,6 +818,160 @@ FuncOpConversion::matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
 void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                               RewritePatternSet &patterns) {
   patterns.add<FuncOpConversion>(typeConverter, patterns.getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// func::FuncOp Conversion Patterns
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A pattern for rewriting function signature to convert vector arguments of
+/// functions to be of valid types
+class FuncOpVectorTypesConversion : public OpRewritePattern<func::FuncOp> {
+public:
+  using OpRewritePattern<func::FuncOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(func::FuncOp funcOp,
+                                PatternRewriter &rewriter) const override;
+};
+} // namespace
+
+static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
+  llvm::errs() << "Get target shape\n";
+  SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
+  // TODO: This is hardcoded to unroll with size 1. Change this later
+  std::optional<SmallVector<int64_t>> targetShape = SmallVector<int64_t>(1, 1);
+  if (!targetShape) {
+    llvm::errs() << "--no unrolling target shape defined\n";
+    return std::nullopt;
+  }
+  auto maybeShapeRatio = computeShapeRatio(unrollShape, *targetShape);
+  if (!maybeShapeRatio) {
+    llvm::errs() << "--could not compute integral shape ratio -> BAIL\n";
+    return std::nullopt;
+  }
+  if (llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; })) {
+    llvm::errs() << "--no unrolling needed -> SKIP\n";
+    return std::nullopt;
+  }
+  llvm::errs() << "--found an integral shape ratio to unroll to -> SUCCESS\n";
+  return targetShape;
+}
+
+LogicalResult
+FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
+                                             PatternRewriter &rewriter) const {
+  auto fnType = funcOp.getFunctionType();
+
+  auto newFuncOp =
+      rewriter.create<func::FuncOp>(funcOp.getLoc(), funcOp.getName(), fnType);
+
+  rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+                              newFuncOp.end());
+
+  newFuncOp.dump();
+
+  OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
+  Location loc = newFuncOp.getBody().getLoc();
+  rewriter.setInsertionPointToStart(&newFuncOp.getBody().getBlocks().front());
+  SmallVector<size_t> unrolledInputNums;
+  size_t newInputNo = 0;
+
+  // Enumerate through the arguments.
+  for (const auto &argType : enumerate(fnType.getInputs())) {
+    size_t origInputNo = argType.index();
+    Type origType = argType.value();
+    auto origVecType = llvm::dyn_cast<VectorType>(origType);
+    if (!origVecType) {
+      oneToNTypeMapping.addInputs(origInputNo, origType);
+      newInputNo++;
+      continue;
+    }
+    llvm::errs() << "Try vector unrolling\n";
+    SmallVector<int64_t> nativeShape(1, 1);
+    auto options = vector::UnrollVectorOptions().setNativeShape(nativeShape);
+    auto targetShape = getTargetShape(origVecType);
+    if (!targetShape) {
+      llvm::errs() << "No target shape\n";
+      oneToNTypeMapping.addInputs(origInputNo, origType);
+      newInputNo++;
+      continue;
+    }
+    llvm::errs() << "Got target shape\n";
+    VectorType unrolledType =
+        VectorType::get(*targetShape, origVecType.getElementType());
+    llvm::errs() << "Unrolled type is ";
+    unrolledType.dump();
+    SmallVector<int64_t> originalShape =
+        llvm::to_vector<4>(origVecType.getShape());
+    SmallVector<Type> newTypes;
+    // Prepare the result vector
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, origVecType, rewriter.getZeroAttr(origVecType));
+    result.dump();
+    // Prepare the placeholder
+    Value dummy = rewriter.create<arith::ConstantOp>(
+        loc, unrolledType, rewriter.getZeroAttr(unrolledType));
+    dummy.dump();
+    SmallVector<int64_t> strides(targetShape->size(), 1);
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(originalShape, *targetShape)) {
+      result = rewriter.create<vector::InsertStridedSliceOp>(loc, dummy, result,
+                                                             offsets, strides);
+      result.dump();
+      newTypes.push_back(unrolledType);
+      unrolledInputNums.push_back(newInputNo);
+      newInputNo++;
+    }
+    rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
+    oneToNTypeMapping.addInputs(origInputNo, newTypes);
+  }
+
+  llvm::errs() << "After enumerating through the arguments\n";
+  newFuncOp->dump();
+
+  // Assume there is a single result for now.
+  Type originalResultType = fnType.getResult(0);
+
+  // Change function signature
+  auto newFnType = FunctionType::get(
+      rewriter.getContext(), TypeRange(oneToNTypeMapping.getConvertedTypes()),
+      TypeRange(originalResultType));
+  rewriter.modifyOpInPlace(newFuncOp,
+                           [&] { newFuncOp.setFunctionType(newFnType); });
+  llvm::errs() << "After changing function signature\n";
+  newFuncOp->dump();
+
+  Block &entryBlock = newFuncOp.getBlocks().front();
+
+  // Update the arguments in the entry block.
+  entryBlock.eraseArguments(0, fnType.getNumInputs());
+  SmallVector<Location> locs(oneToNTypeMapping.getConvertedTypes().size(),
+                             newFuncOp.getLoc());
+  entryBlock.addArguments(oneToNTypeMapping.getConvertedTypes(), locs);
+
+  llvm::errs() << "After modifying the entry block\n";
+  newFuncOp->dump();
+
+  size_t i = 0;
+  // Relace the dummy values with actual arguments.
+  for (auto &op : entryBlock.getOperations()) {
+    op.dump();
+    auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op);
+    if (vecOp) {
+      size_t unrolledInputNo = unrolledInputNums[i];
+      rewriter.modifyOpInPlace(
+          &op, [&] { op.setOperand(0, newFuncOp.getArgument(unrolledInputNo)); });
+      i++;
+    }
+  }
+
+  rewriter.eraseOp(funcOp);
+  return success();
+}
+
+void mlir::populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns) {
+  patterns.add<FuncOpVectorTypesConversion>(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

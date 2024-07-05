@@ -19,6 +19,7 @@ add_mlir_dialect_library(MLIRSPIRVConversion
   MLIRFuncDialect
   MLIRSPIRVDialect
   MLIRTransformUtils
+  MLIRVectorTransforms
 )
 
 add_mlir_dialect_library(MLIRSPIRVTransforms
