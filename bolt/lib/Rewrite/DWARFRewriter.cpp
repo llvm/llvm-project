@@ -1638,14 +1638,14 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
            "RangesWriter does not exist for DWOId");
     std::unique_ptr<DebugRangesSectionWriter> &LegacyRangesWriter =
         RangesWriterIterator->second;
-    std::optional<DIE *> Die = LegacyRangesWriter->getDie();
-    if (!Die || !Die.value())
+    DIE *Die = LegacyRangesWriter->getDie();
+    if (!Die)
       continue;
     DIEValue DvalGNUBase =
-        Die.value()->findAttribute(dwarf::DW_AT_GNU_ranges_base);
+        Die->findAttribute(dwarf::DW_AT_GNU_ranges_base);
     assert(DvalGNUBase && "GNU_ranges_base attribute does not exist for DWOId");
     DIEBlder.replaceValue(
-        Die.value(), dwarf::DW_AT_GNU_ranges_base, DvalGNUBase.getForm(),
+        Die, dwarf::DW_AT_GNU_ranges_base, DvalGNUBase.getForm(),
         DIEInteger(LegacyRangesSectionWriter->getSectionOffset()));
     std::unique_ptr<DebugBufferVector> RangesWritersContents =
         LegacyRangesWriter->releaseBuffer();
