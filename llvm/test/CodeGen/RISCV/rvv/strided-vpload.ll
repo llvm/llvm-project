@@ -804,28 +804,42 @@ define <vscale x 1 x i64> @zero_strided_not_known_notzero_evl(ptr %ptr, <vscale 
 }
 
 define <vscale x 1 x i64> @zero_strided_known_notzero_avl(ptr %ptr, <vscale x 1 x i64> %v) {
-; CHECK-LABEL: zero_strided_known_notzero_avl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vlse64.v v9, (a0), zero
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
+; CHECK-RV32-LABEL: zero_strided_known_notzero_avl:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v9, (a0), zero
+; CHECK-RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-RV32-NEXT:    vadd.vv v8, v8, v9
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: zero_strided_known_notzero_avl:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
+; CHECK-RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-RV64-NEXT:    vadd.vx v8, v8, a0
+; CHECK-RV64-NEXT:    ret
   %load = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i32(ptr %ptr, i32 0, <vscale x 1 x i1> splat (i1 true), i32 1)
   %res = add <vscale x 1 x i64> %v, %load
   ret <vscale x 1 x i64> %res
 }
 
 define <vscale x 2 x i64> @zero_strided_vec_length_avl(ptr %ptr, <vscale x 2 x i64> %v) vscale_range(2, 1024) {
-; CHECK-LABEL: zero_strided_vec_length_avl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a1, a1, 2
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
-; CHECK-NEXT:    vlse64.v v10, (a0), zero
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    ret
+; CHECK-RV32-LABEL: zero_strided_vec_length_avl:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    csrr a1, vlenb
+; CHECK-RV32-NEXT:    srli a1, a1, 2
+; CHECK-RV32-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v10, (a0), zero
+; CHECK-RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-RV32-NEXT:    vadd.vv v8, v8, v10
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: zero_strided_vec_length_avl:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
+; CHECK-RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV64-NEXT:    vadd.vx v8, v8, a0
+; CHECK-RV64-NEXT:    ret
   %vscale = call i32 @llvm.vscale()
   %veclen = mul i32 %vscale, 2
   %load = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i32(ptr %ptr, i32 0, <vscale x 2 x i1> splat (i1 true), i32 %veclen)

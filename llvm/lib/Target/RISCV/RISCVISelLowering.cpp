@@ -1502,7 +1502,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
     setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
-                         ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
+                         ISD::VP_GATHER, ISD::VP_SCATTER,
+                         ISD::EXPERIMENTAL_VP_STRIDED_LOAD, ISD::SRA, ISD::SRL,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
@@ -17106,6 +17107,35 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                VPSN->getBasePtr(), Index, ScaleOp,
                                VPSN->getMask(), VPSN->getVectorLength()},
                               VPSN->getMemOperand(), IndexType);
+    break;
+  }
+  case ISD::EXPERIMENTAL_VP_STRIDED_LOAD: {
+    if (DCI.isBeforeLegalize())
+      break;
+    auto *Load = cast<VPStridedLoadSDNode>(N);
+    MVT VT = N->getSimpleValueType(0);
+
+    // Combine a zero strided load -> scalar load + splat
+    // The mask must be all ones and the EVL must be known to not be zero
+    if (!DAG.isKnownNeverZero(Load->getVectorLength()) ||
+        !Load->getOffset().isUndef() || !Load->isSimple() ||
+        !ISD::isConstantSplatVectorAllOnes(Load->getMask().getNode()) ||
+        !isNullConstant(Load->getStride()) ||
+        !isTypeLegal(VT.getVectorElementType()))
+      break;
+
+    SDValue ScalarLoad;
+    if (VT.isInteger())
+      ScalarLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, XLenVT, Load->getChain(),
+                                  Load->getBasePtr(), VT.getVectorElementType(),
+                                  Load->getMemOperand());
+    else
+      ScalarLoad = DAG.getLoad(VT.getVectorElementType(), DL, Load->getChain(),
+                               Load->getBasePtr(), Load->getMemOperand());
+    SDValue Splat = VT.isFixedLengthVector()
+                        ? DAG.getSplatBuildVector(VT, DL, ScalarLoad)
+                        : DAG.getSplatVector(VT, DL, ScalarLoad);
+    return DAG.getMergeValues({Splat, SDValue(ScalarLoad.getNode(), 1)}, DL);
     break;
   }
   case RISCVISD::SHL_VL:
