@@ -212,8 +212,11 @@ public:
   friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
 
   void static_assert_layout() { // NOLINT
-    static_assert(offsetof(DynamicAPInt, ValSmall) !=
-                  offsetof(DynamicAPInt, ValLarge.Val.BitWidth));
+    constexpr size_t ValLargeOff =
+        offsetof(DynamicAPInt, ValLarge.Val.BitWidth);
+    constexpr size_t ValSmallOff = offsetof(DynamicAPInt, ValSmall);
+    constexpr size_t ValSmallSz = sizeof(ValSmall);
+    static_assert(ValLargeOff >= ValSmallOff + ValSmallSz);
   }
 
   raw_ostream &print(raw_ostream &OS) const;
