@@ -521,6 +521,16 @@ static Value *simplifyX86pmulh(IntrinsicInst &II,
   if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
     return ConstantAggregateZero::get(ResTy);
 
+  // Multiply by one.
+  if (!IsRounding) {
+    if (match(Arg0, PatternMatch::m_One()))
+      return IsSigned ? Builder.CreateAShr(Arg1, 15)
+                      : ConstantAggregateZero::get(ResTy);
+    if (match(Arg1, PatternMatch::m_One()))
+      return IsSigned ? Builder.CreateAShr(Arg0, 15)
+                      : ConstantAggregateZero::get(ResTy);
+  }
+
   // Constant folding.
   if (!isa<Constant>(Arg0) || !isa<Constant>(Arg1))
     return nullptr;
