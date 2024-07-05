@@ -844,8 +844,8 @@ static ConstantRange toConstantRange(const ValueLatticeElement &Val,
   unsigned BW = Ty->getScalarSizeInBits();
   if (Val.isUnknown())
     return ConstantRange::getEmpty(BW);
-  if (Val.isConstant() && Ty->isVectorTy())
-    return getVectorConstantRange(Val.getConstant());
+  if (Val.isConstant())
+    return Val.getConstant()->toConstantRange();
   return ConstantRange::getFull(BW);
 }
 
@@ -1784,12 +1784,8 @@ static Constant *getPredicateResult(CmpInst::Predicate Pred, Constant *C,
 
   Type *ResTy = CmpInst::makeCmpResultType(C->getType());
   if (Val.isConstantRange()) {
-    ConstantInt *CI = dyn_cast<ConstantInt>(C);
-    if (!CI)
-      return nullptr;
-
     const ConstantRange &CR = Val.getConstantRange();
-    ConstantRange RHS(CI->getValue());
+    ConstantRange RHS = C->toConstantRange();
     if (CR.icmp(Pred, RHS))
       return ConstantInt::getTrue(ResTy);
     if (CR.icmp(CmpInst::getInversePredicate(Pred), RHS))

@@ -3098,7 +3098,7 @@ public:
   TentativeDefinitionsType TentativeDefinitions;
 
   /// All the external declarations encoutered and used in the TU.
-  SmallVector<VarDecl *, 4> ExternalDeclarations;
+  SmallVector<DeclaratorDecl *, 4> ExternalDeclarations;
 
   /// Generally null except when we temporarily switch decl contexts,
   /// like in \see SemaObjC::ActOnObjCTemporaryExitContainerContext.
