@@ -68,18 +68,6 @@ if(LLVM_LIBC_FULL_BUILD AND libc.include.stdbit IN_LIST TARGET_PUBLIC_HEADERS)
       # of the underlying functions which the type generic macros may dispatch
       # to.
   )
-  add_libc_test(
-    generic_math_test
-    SUITE
-      libc_include_tests
-    # HRDS
-    SRCS
-      generic-math-macros_test.cpp
-    DEPENDS
-      libc.include.llvm-libc-macros.generic_math_macros
-      libc.include.llvm-libc-macros.stdbit_macros
-      libc.include.llvm_libc_common_h
-  )
 endif()
 
 add_libc_test(
@@ -91,3 +79,14 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.stdckdint_macros
 )
+
+add_libc_test(
+  generic_math_macros_test
+  SUITE
+    libc_include_tests
+  SRCS
+    generic-math-macros_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.generic_math_macros
+)
+

@@ -277,3 +277,9 @@ add_macro_header(
   HDR
     stdckdint-macros.h
 )
+
+add_macro_header(
+  generic_math_macros
+  HDR
+    generic-math-macros.h
+)
