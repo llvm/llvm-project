@@ -485,8 +485,8 @@ Changes in existing checks
 
 - Improved :doc:`unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check
-  detecting more cases for template functions including lambdas with `auto`.
-  E.g., `std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });`
+  detecting more cases for template functions including lambdas with ``auto``.
+  E.g., ``std::sort(a.begin(), a.end(), [](auto x, auto y) { return a > b; });``
   will be detected for expensive to copy types.
 
 Removed checks
