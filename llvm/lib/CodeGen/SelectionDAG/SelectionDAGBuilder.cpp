@@ -4792,10 +4792,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
       TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
   SDValue StoreNode =
       !IsCompressing &&
-              cast<FixedVectorType>(I.getArgOperand(0)->getType())
-                      ->getNumElements() == 1 &&
-              TTI.hasConditionalLoadStoreForType(
-                  I.getArgOperand(0)->getType()->getScalarType())
+              TTI.hasConditionalLoadStoreForType(I.getArgOperand(0)->getType())
           ? TLI.visitMaskedStore(DAG, sdl, getMemoryRoot(), MMO, Ptr, Src0,
                                  Mask)
           : DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask,
@@ -4981,9 +4978,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDValue Load;
   SDValue Res;
   if (!IsExpanding &&
-      cast<FixedVectorType>(Src0Operand->getType())->getNumElements() == 1 &&
-      TTI.hasConditionalLoadStoreForType(
-          Src0Operand->getType()->getScalarType()))
+      TTI.hasConditionalLoadStoreForType(Src0Operand->getType()))
     Res = TLI.visitMaskedLoad(DAG, sdl, InChain, MMO, Load, Ptr, Src0, Mask);
   else
     Res = Load =

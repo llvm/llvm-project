@@ -5623,6 +5623,15 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
     return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+  case ISD::VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = Op.getConstantOperandAPInt(0);
+    ConstantRange CR =
+        getVScaleRange(&F, Op.getScalarValueSizeInBits()).multiply(Multiplier);
+    if (!CR.getUnsignedMin().isZero())
+      return true;
+    break;
+  }
   }
 
   return computeKnownBits(Op, Depth).isNonZero();

@@ -5889,14 +5889,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX())
       return EmitNVPTXDevicePrintfCallExpr(E, ReturnValue);
-    if (getTarget().getTriple().isAMDGCN()) {
-      if (getLangOpts().HIP)
+    if (getTarget().getTriple().isAMDGCN() ||
+       (getTarget().getTriple().isSPIRV() &&
+        getTarget().getTriple().getVendor() == Triple::VendorType::AMD)) {
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+         getLangOpts().HIP)
         return EmitAMDGPUDevicePrintfCallExpr(E, ReturnValue);
       else if (getLangOpts().OpenMP && !getLangOpts().OpenMPKernelIO)
         return EmitOpenMPDevicePrintfCallExpr(E);
       else if (getLangOpts().OpenMP)
         return EmitHostexecAllocAndExecFns(E, "printf_allocate",
-                                           "printf_execute");
+                                              "printf_execute");
     }
     break;
   case Builtin::BI__builtin_canonicalize:
