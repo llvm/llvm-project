@@ -643,8 +643,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Clearwaterforest:
     case 0xdd:
       CPU = "clearwaterforest";
-      *Type = INTEL_COREI7;
-      *Subtype = INTEL_CLEARWATERFOREST;
+      *Type = INTEL_CLEARWATERFOREST;
       break;
 
     // Xeon Phi (Knights Landing + Knights Mill):
