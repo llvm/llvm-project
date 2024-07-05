@@ -240,6 +240,23 @@ define void @test7() {
 }
 
 define void @test5() {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> poison, <2 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP0]], <2 x float> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP1]], <2 x float> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP2]], <2 x float> zeroinitializer, i64 6)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP4]], <2 x float> zeroinitializer, i64 2)
+; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x float> [ [[TMP3]], [[ENTRY:%.*]] ], [ [[TMP8:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[TMP7]], [[FOR_BODY]] ], [ [[TMP5]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP8]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
+;
 entry:
   br i1 false, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body
 
