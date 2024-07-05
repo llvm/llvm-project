@@ -523,6 +523,8 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Alderlake:
     case 0x97:
     case 0x9a:
+    // Gracemont:
+    case 0xbe:
     // Raptorlake:
     case 0xb7:
     case 0xba:
@@ -530,8 +532,6 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Meteorlake:
     case 0xaa:
     case 0xac:
-    // Gracemont:
-    case 0xbe:
       CPU = "alderlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;
