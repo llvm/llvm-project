@@ -110,6 +110,13 @@ Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
   return Ty;
 }
 
+bool Type::isRISCVVectorTupleTy() const {
+  if (!isTargetExtTy())
+    return false;
+
+  return cast<TargetExtType>(this)->getName() == "riscv_vec_tuple";
+}
+
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // Identity cast means no change so return true
   if (this == Ty)
@@ -832,6 +839,18 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   if (Name == "aarch64.svcount")
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
                           TargetExtType::HasZeroInit);
+
+  // RISCV vector tuple type. The layout is represented as the type that needs
+  // the same number of vector registers(VREGS) as this tuple type, represented
+  // as <vscale x (VREGS * 8) x i8>.
+  if (Name == "riscv_vec_tuple") {
+    unsigned TotalNumElts =
+        std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
+                     ->getMinNumElements(),
+                 8UL) *
+        Ty->getIntParameter(0);
+    return TargetTypeInfo(ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
+  }
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }
