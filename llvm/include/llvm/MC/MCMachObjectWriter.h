@@ -92,6 +92,11 @@ class MachObjectWriter : public MCObjectWriter {
     bool operator<(const MachSymbolData &RHS) const;
   };
 
+  struct IndirectSymbolData {
+    MCSymbol *Symbol;
+    MCSection *Section;
+  };
+
   /// The target specific Mach-O writer instance.
   std::unique_ptr<MCMachObjectTargetWriter> TargetObjectWriter;
 
@@ -112,6 +117,7 @@ public:
 
 private:
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
+  std::vector<IndirectSymbolData> IndirectSymbols;
   DenseMap<const MCSection *, unsigned> IndirectSymBase;
 
   SectionAddrMap SectionAddress;
@@ -168,6 +174,9 @@ public:
 
   bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
+  std::vector<IndirectSymbolData> &getIndirectSymbols() {
+    return IndirectSymbols;
+  }
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
