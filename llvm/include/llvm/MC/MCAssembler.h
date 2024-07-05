@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -56,17 +57,9 @@ class MCValue;
 class MCAssembler {
 public:
   using SectionListType = std::vector<MCSection *>;
-  using SymbolDataListType = std::vector<const MCSymbol *>;
 
   using const_iterator = pointee_iterator<SectionListType::const_iterator>;
   using iterator = pointee_iterator<SectionListType::iterator>;
-
-  using const_symbol_iterator =
-      pointee_iterator<SymbolDataListType::const_iterator>;
-  using symbol_iterator = pointee_iterator<SymbolDataListType::iterator>;
-
-  using symbol_range = iterator_range<symbol_iterator>;
-  using const_symbol_range = iterator_range<const_symbol_iterator>;
 
   /// MachO specific deployment target version info.
   // A Major version of 0 indicates that no version information was supplied
@@ -98,7 +91,7 @@ private:
 
   SectionListType Sections;
 
-  SymbolDataListType Symbols;
+  SmallVector<const MCSymbol *, 0> Symbols;
 
   /// The list of linker options to propagate into the object file.
   std::vector<std::vector<std::string>> LinkerOptions;
@@ -344,21 +337,11 @@ public:
 
   size_t size() const { return Sections.size(); }
 
-  /// @}
-  /// \name Symbol List Access
-  /// @{
-  symbol_iterator symbol_begin() { return Symbols.begin(); }
-  const_symbol_iterator symbol_begin() const { return Symbols.begin(); }
-
-  symbol_iterator symbol_end() { return Symbols.end(); }
-  const_symbol_iterator symbol_end() const { return Symbols.end(); }
-
-  symbol_range symbols() { return make_range(symbol_begin(), symbol_end()); }
-  const_symbol_range symbols() const {
-    return make_range(symbol_begin(), symbol_end());
+  iterator_range<pointee_iterator<
+      typename SmallVector<const MCSymbol *, 0>::const_iterator>>
+  symbols() const {
+    return make_pointee_range(Symbols);
   }
-
-  size_t symbol_size() const { return Symbols.size(); }
 
   /// @}
   /// \name Linker Option List Access
