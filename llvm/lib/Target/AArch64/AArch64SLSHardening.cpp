@@ -167,6 +167,7 @@ const ThunkKind ThunkKind::BRAAZ = {ThunkBRAAZ, "aaz_", /*HasXmOperand=*/false,
 const ThunkKind ThunkKind::BRABZ = {ThunkBRABZ, "abz_", /*HasXmOperand=*/false,
                                     /*NeedsPAuth=*/true, AArch64::BRABZ};
 
+// Returns thunk kind to emit, or nullptr if not a BLR* instruction.
 static const ThunkKind *getThunkKind(unsigned OriginalOpcode) {
   switch (OriginalOpcode) {
   case AArch64::BLR:
@@ -278,8 +279,8 @@ static SmallString<32> createThunkName(const ThunkKind &Kind, Register Xn,
   return formatv("{0}{1}x{2}_x{3}", CommonNamePrefix, Kind.NameInfix, N, M);
 }
 
-static const ThunkKind &parseThunkName(StringRef ThunkName, Register &Xn,
-                                       Register &Xm) {
+static std::tuple<const ThunkKind &, Register, Register>
+parseThunkName(StringRef ThunkName) {
   assert(ThunkName.starts_with(CommonNamePrefix) &&
          "Should be filtered out by ThunkInserter");
   // Thunk name suffix, such as "x1" or "aa_x2_x3".
@@ -307,17 +308,19 @@ static const ThunkKind &parseThunkName(StringRef ThunkName, Register &Xn,
   std::tie(XnStr, XmStr) = RegsStr.split('_');
 
   // Parse register operands.
-  Xn = ParseRegName(XnStr);
-  Xm = Kind.HasXmOperand ? ParseRegName(XmStr) : AArch64::NoRegister;
+  Register Xn = ParseRegName(XnStr);
+  Register Xm = Kind.HasXmOperand ? ParseRegName(XmStr) : AArch64::NoRegister;
 
-  return Kind;
+  return std::make_tuple(Kind, Xn, Xm);
 }
 
 void SLSHardeningInserter::populateThunk(MachineFunction &MF) {
   assert(MF.getFunction().hasComdat() == ComdatThunks &&
          "ComdatThunks value changed since MF creation");
   Register Xn, Xm;
-  const ThunkKind &Kind = parseThunkName(MF.getName(), Xn, Xm);
+  auto KindAndRegs = parseThunkName(MF.getName());
+  const ThunkKind &Kind = std::get<0>(KindAndRegs);
+  std::tie(std::ignore, Xn, Xm) = KindAndRegs;
 
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
@@ -339,8 +342,12 @@ void SLSHardeningInserter::populateThunk(MachineFunction &MF) {
   Entry->clear();
 
   //  These thunks need to consist of the following instructions:
-  //  __llvm_slsblr_thunk_xN:
-  //      BR xN
+  //  __llvm_slsblr_thunk_...:
+  //      MOV x16, xN     ; BR* instructions are not compatible with "BTI c"
+  //                      ; branch target unless xN is x16 or x17.
+  //      BR* ...         ; One of: BR        x16
+  //                      ;         BRA(A|B)  x16, xM
+  //                      ;         BRA(A|B)Z x16
   //      barrierInsts
   Entry->addLiveIn(Xn);
   // MOV X16, Reg == ORR X16, XZR, Reg, LSL #0
@@ -366,12 +373,14 @@ void SLSHardeningInserter::populateThunk(MachineFunction &MF) {
 void SLSHardeningInserter::convertBLRToBL(
     MachineModuleInfo &MMI, MachineBasicBlock &MBB,
     MachineBasicBlock::instr_iterator MBBI, ThunksSet &Thunks) {
-  // Transform a BLR to a BL as follows:
+  // Transform a BLR* instruction (one of BLR, BLRAA/BLRAB or BLRAAZ/BLRABZ) to
+  // a BL to the thunk containing BR, BRAA/BRAB or BRAAZ/BRABZ, respectively.
+  //
   // Before:
   //   |-----------------------------|
   //   |      ...                    |
   //   |  instI                      |
-  //   |  BLR xN                     |
+  //   |  BLR* xN or BLR* xN, xM     |
   //   |  instJ                      |
   //   |      ...                    |
   //   |-----------------------------|
@@ -380,24 +389,25 @@ void SLSHardeningInserter::convertBLRToBL(
   //   |-----------------------------|
   //   |      ...                    |
   //   |  instI                      |
-  //   |  BL __llvm_slsblr_thunk_xN  |
+  //   |  BL __llvm_slsblr_thunk_... |
   //   |  instJ                      |
   //   |      ...                    |
   //   |-----------------------------|
   //
-  //   __llvm_slsblr_thunk_xN:
+  //   __llvm_slsblr_thunk_...:
   //   |-----------------------------|
-  //   |  BR xN                      |
+  //   |  MOV x16, xN                |
+  //   |  BR* x16 or BR* x16, xM     |
   //   |  barrierInsts               |
   //   |-----------------------------|
   //
-  // This function merely needs to transform BLR xN into BL
-  // __llvm_slsblr_thunk_xN.
+  // This function needs to transform BLR* instruction into BL with the correct
+  // thunk name and lazily create the thunk if it does not exist yet.
   //
   // Since linkers are allowed to clobber X16 and X17 on function calls, the
-  // above mitigation only works if the original BLR instruction was not
-  // BLR X16 nor BLR X17. Code generation before must make sure that no BLR
-  // X16|X17 was produced if the mitigation is enabled.
+  // above mitigation only works if the original BLR* instruction had neither
+  // X16 nor X17 as one of its operands. Code generation before must make sure
+  // that no such BLR* instruction was produced if the mitigation is enabled.
 
   MachineInstr &BLR = *MBBI;
   assert(isBLR(BLR));
