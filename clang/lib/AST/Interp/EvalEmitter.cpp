@@ -156,7 +156,8 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     if (!Ptr.isConst() && Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
-    if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
+    if (std::optional<APValue> V =
+            Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
       EvalResult.setValue(*V);
     } else {
       return false;
@@ -186,7 +187,8 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
-  if (std::optional<APValue> APV = Ptr.toRValue(S.getCtx())) {
+  if (std::optional<APValue> APV =
+          Ptr.toRValue(S.getCtx(), EvalResult.getSourceType())) {
     EvalResult.setValue(*APV);
     return true;
   }
@@ -257,7 +259,8 @@ void EvalEmitter::updateGlobalTemporaries() {
       if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
         TYPE_SWITCH(*T, { *Cached = Ptr.deref<T>().toAPValue(); });
       } else {
-        if (std::optional<APValue> APV = Ptr.toRValue(Ctx))
+        if (std::optional<APValue> APV =
+                Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
           *Cached = *APV;
       }
     }
