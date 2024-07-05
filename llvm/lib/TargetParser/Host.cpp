@@ -1096,10 +1096,10 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
   return CPU;
 }
 
-static StringRef
-getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                              const unsigned *Features,
-                              unsigned *Type, unsigned *Subtype) {
+static StringRef getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                                               const unsigned *Features,
+                                               unsigned *Type,
+                                               unsigned *Subtype) {
   StringRef CPU;
 
   switch (Family) {
