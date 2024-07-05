@@ -7989,24 +7989,29 @@ static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
-  ListScope L(W, "Notes");
+  ListScope L(W, "NoteSections");
 
-  std::unique_ptr<DictScope> NoteScope;
+  std::unique_ptr<DictScope> NoteSectionScope;
+  std::unique_ptr<ListScope> NotesScope;
   size_t Align = 0;
   auto StartNotes = [&](std::optional<StringRef> SecName,
                         const typename ELFT::Off Offset,
                         const typename ELFT::Addr Size, size_t Al) {
     Align = std::max<size_t>(Al, 4);
-    NoteScope = std::make_unique<DictScope>(W, "NoteSection");
+    NoteSectionScope = std::make_unique<DictScope>(W, "NoteSection");
     W.printString("Name", SecName ? *SecName : "<?>");
     W.printHex("Offset", Offset);
     W.printHex("Size", Size);
+    NotesScope = std::make_unique<ListScope>(W, "Notes");
   };
 
-  auto EndNotes = [&] { NoteScope.reset(); };
+  auto EndNotes = [&] {
+    NotesScope.reset();
+    NoteSectionScope.reset();
+  };
 
   auto ProcessNote = [&](const Elf_Note &Note, bool IsCore) -> Error {
-    DictScope D2(W, "Note");
+    DictScope D2(W);
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc(Align);
     Elf_Word Type = Note.getType();

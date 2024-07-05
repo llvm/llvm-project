@@ -284,11 +284,14 @@
 # CHECK-GNU-NEXT: CORE  0x00000000 [[DESC]]
 # CHECK-GNU-EMPTY:
 
-# CHECK-LLVM:      Note {
+# CHECK-LLVM:       Size: 0x14
+# CHECK-LLVM-NEXT:  Notes [
+# CHECK-LLVM-NEXT:  {
 # CHECK-LLVM-NEXT:   Owner: CORE
 # CHECK-LLVM-NEXT:   Data size: 0x0
 # CHECK-LLVM-NEXT:   Type: [[DESC]]
-# CHECK-LLVM-NEXT: }
+# CHECK-LLVM-NEXT:  }
+# CHECK-LLVM-NEXT:  ]
 
 --- !ELF
 FileHeader:
