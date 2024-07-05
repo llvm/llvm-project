@@ -7,7 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 //    ClassID, Class
-DEF_USER(User, sandboxir::User)
+#ifndef DEF_VALUE
+#define DEF_VALUE(ID, CLASS)
+#endif
+DEF_VALUE(Function, Function)
+DEF_VALUE(Argument, Argument)
+
+#ifndef DEF_USER
+#define DEF_USER(ID, CLASS)
+#endif
+DEF_USER(User, User)
+DEF_USER(Constant, Constant)
+
+#ifndef DEF_INSTR
+#define DEF_INSTR(ID, OPCODE, CLASS)
+#endif
+//       ClassID, Opcode(s),  Class
+DEF_INSTR(Opaque, OP(Opaque), OpaqueInst)
 
 #ifdef DEF_VALUE
 #undef DEF_VALUE
@@ -17,9 +33,6 @@ DEF_USER(User, sandboxir::User)
 #endif
 #ifdef DEF_INSTR
 #undef DEF_INSTR
-#endif
-#ifdef OPCODES
-#undef OPCODES
 #endif
 #ifdef OP
 #undef OP

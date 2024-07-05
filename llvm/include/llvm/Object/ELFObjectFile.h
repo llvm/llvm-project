@@ -1159,7 +1159,7 @@ ELFObjectFile<ELFT>::getRelocationAddend(DataRefImpl Rel) const {
     return (int64_t)getRela(Rel)->r_addend;
   if (getRelSection(Rel)->sh_type == ELF::SHT_CREL)
     return (int64_t)getCrel(Rel).r_addend;
-  return createError("Section is not SHT_RELA");
+  return createError("Relocation section does not have addends");
 }
 
 template <class ELFT>

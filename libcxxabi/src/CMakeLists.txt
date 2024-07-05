@@ -182,7 +182,7 @@ set_target_properties(cxxabi_shared_objects
 if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
   set_target_properties(cxxabi_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
-target_compile_options(cxxabi_shared_objects PUBLIC "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED)
@@ -262,7 +262,7 @@ set_target_properties(cxxabi_static_objects
     CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
-target_compile_options(cxxabi_static_objects PUBLIC "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
