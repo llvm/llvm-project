@@ -2618,6 +2618,13 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool Unsupported(InterpState &S, CodePtr OpPC) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
+      << S.Current->getRange(OpPC);
+  return false;
+}
+
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 

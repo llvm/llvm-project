@@ -3541,11 +3541,13 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
     return;
 
   // We may be able to ignore unreachable behind a noreturn call.
-  if (DAG.getTarget().Options.NoTrapAfterNoreturn) {
-    if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode())) {
-      if (Call->doesNotReturn())
-        return;
-    }
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (DAG.getTarget().Options.NoTrapAfterNoreturn)
+      return;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return;
   }
 
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
@@ -10236,8 +10238,8 @@ void SelectionDAGBuilder::emitInlineAsmError(const CallBase &Call,
     return;
 
   SmallVector<SDValue, 1> Ops;
-  for (unsigned i = 0, e = ValueVTs.size(); i != e; ++i)
-    Ops.push_back(DAG.getUNDEF(ValueVTs[i]));
+  for (const EVT &VT : ValueVTs)
+    Ops.push_back(DAG.getUNDEF(VT));
 
   setValue(&Call, DAG.getMergeValues(Ops, getCurSDLoc()));
 }
@@ -12514,12 +12516,12 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
 
       // getRegistersForValue may produce 1 to many registers based on whether
       // the OpInfo.ConstraintVT is legal on the target or not.
-      for (size_t i = 0, e = OpInfo.AssignedRegs.Regs.size(); i != e; ++i) {
+      for (unsigned &Reg : OpInfo.AssignedRegs.Regs) {
         Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
         if (Register::isPhysicalRegister(OriginalDef))
           FuncInfo.MBB->addLiveIn(OriginalDef);
         // Update the assigned registers to use the original defs.
-        OpInfo.AssignedRegs.Regs[i] = OriginalDef;
+        Reg = OriginalDef;
       }
 
       SDValue V = OpInfo.AssignedRegs.getCopyFromRegs(

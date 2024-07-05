@@ -465,9 +465,9 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     }
   }
 
-  size_t MatchedWithExactName = matchWithExactName();
-  size_t MatchedWithHash = matchWithHash(BC);
-  size_t MatchedWithLTOCommonName = matchWithLTOCommonName();
+  const size_t MatchedWithExactName = matchWithExactName();
+  const size_t MatchedWithHash = matchWithHash(BC);
+  const size_t MatchedWithLTOCommonName = matchWithLTOCommonName();
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))

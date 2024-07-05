@@ -36,8 +36,7 @@ public:
   /// default version will be used (as ignoring the base is not possible).
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   parseArchString(StringRef Arch, bool EnableExperimentalExtension,
-                  bool ExperimentalExtensionVersionCheck = true,
-                  bool IgnoreUnknown = false);
+                  bool ExperimentalExtensionVersionCheck = true);
 
   /// Parse RISC-V ISA info from an arch string that is already in normalized
   /// form (as defined in the psABI). Unlike parseArchString, this function
