@@ -14,6 +14,12 @@
 // ->
 // PseudoVMV_V_V %false, %true, %vl, %sew
 //
+// It also converts AVLs to VLMAX where possible
+// %vl = VLENB * something
+// PseudoVADD_V_V %a, %b, %vl
+// ->
+// PseudoVADD_V_V %a, %b, -1
+//
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
@@ -47,6 +53,7 @@ public:
   StringRef getPassName() const override { return "RISC-V Fold Masks"; }
 
 private:
+  bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertVMergeToVMv(MachineInstr &MI) const;
 
@@ -61,6 +68,54 @@ private:
 char RISCVFoldMasks::ID = 0;
 
 INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
+
+// If an AVL is a VLENB that's possibly scaled to be equal to VLMAX, convert it
+// to the VLMAX sentinel value.
+bool RISCVFoldMasks::convertToVLMAX(MachineInstr &MI) const {
+  if (!RISCVII::hasVLOp(MI.getDesc().TSFlags) ||
+      !RISCVII::hasSEWOp(MI.getDesc().TSFlags))
+    return false;
+  MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  if (!VL.isReg())
+    return false;
+  MachineInstr *Def = MRI->getVRegDef(VL.getReg());
+  if (!Def)
+    return false;
+
+  // Fixed-point value, denumerator=8
+  unsigned ScaleFixed = 8;
+  // Check if the VLENB was scaled for a possible slli/srli
+  if (Def->getOpcode() == RISCV::SLLI) {
+    ScaleFixed <<= Def->getOperand(2).getImm();
+    Def = MRI->getVRegDef(Def->getOperand(1).getReg());
+  } else if (Def->getOpcode() == RISCV::SRLI) {
+    ScaleFixed >>= Def->getOperand(2).getImm();
+    Def = MRI->getVRegDef(Def->getOperand(1).getReg());
+  }
+
+  if (!Def || Def->getOpcode() != RISCV::PseudoReadVLENB)
+    return false;
+
+  auto LMUL = RISCVVType::decodeVLMUL(RISCVII::getLMul(MI.getDesc().TSFlags));
+  // Fixed-point value, denumerator=8
+  unsigned LMULFixed = LMUL.second ? (8 / LMUL.first) : 8 * LMUL.first;
+  unsigned SEW =
+      1 << MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+
+  // AVL = (VLENB * Scale)
+  //
+  // VLMAX = (VLENB * 8 * LMUL) / SEW
+  //
+  // AVL == VLMAX
+  // -> VLENB * Scale == (VLENB * 8 * LMUL) / SEW
+  // -> Scale == (8 * LMUL) / SEW
+  if (ScaleFixed != 8 * LMULFixed / SEW)
+    return false;
+
+  VL.ChangeToImmediate(RISCV::VLMaxSentinel);
+
+  return true;
+}
 
 bool RISCVFoldMasks::isAllOnesMask(const MachineInstr *MaskDef) const {
   assert(MaskDef && MaskDef->isCopy() &&
@@ -213,6 +268,7 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      Changed |= convertToVLMAX(MI);
       Changed |= convertToUnmasked(MI);
       Changed |= convertVMergeToVMv(MI);
     }

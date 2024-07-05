@@ -17,9 +17,7 @@ define <vscale x 1 x i1> @sew1_srli(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) 
 define <vscale x 1 x i64> @sew64_srli(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b) {
 ; CHECK-LABEL: sew64_srli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vlmax = call i32 @llvm.vscale()
@@ -30,8 +28,7 @@ define <vscale x 1 x i64> @sew64_srli(<vscale x 1 x i64> %a, <vscale x 1 x i64> 
 define <vscale x 8 x i64> @sew64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b) {
 ; CHECK-LABEL: sew64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale()
@@ -43,9 +40,7 @@ define <vscale x 8 x i64> @sew64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b) {
 define <vscale x 16 x i32> @sew32_sll(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b) {
 ; CHECK-LABEL: sew32_sll:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale()
