@@ -9513,39 +9513,6 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
   }
 }
 
-ConstantRange llvm::getVectorConstantRange(const Constant *C) {
-  assert(C->getType()->isVectorTy() && "Expected vector constant");
-  if (auto *CI = dyn_cast_or_null<ConstantInt>(
-          C->getSplatValue(/*AllowPoison=*/true)))
-    return ConstantRange(CI->getValue());
-
-  unsigned BitWidth = C->getType()->getScalarSizeInBits();
-  if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
-    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
-      CR = CR.unionWith(CDV->getElementAsAPInt(I));
-    return CR;
-  }
-
-  if (auto *CV = dyn_cast<ConstantVector>(C)) {
-    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
-    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
-      Constant *Elem = C->getAggregateElement(I);
-      if (!Elem)
-        return ConstantRange::getFull(BitWidth);
-      if (isa<PoisonValue>(Elem))
-        continue;
-      auto *CI = dyn_cast<ConstantInt>(Elem);
-      if (!CI)
-        return ConstantRange::getFull(BitWidth);
-      CR = CR.unionWith(CI->getValue());
-    }
-    return CR;
-  }
-
-  return ConstantRange::getFull(BitWidth);
-}
-
 ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
                                          bool UseInstrInfo, AssumptionCache *AC,
                                          const Instruction *CtxI,
@@ -9556,13 +9523,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   if (Depth == MaxAnalysisRecursionDepth)
     return ConstantRange::getFull(V->getType()->getScalarSizeInBits());
 
-  if (auto *C = dyn_cast<Constant>(V)) {
-    if (auto *CI = dyn_cast<ConstantInt>(C))
-      return ConstantRange(CI->getValue());
-    if (C->getType()->isVectorTy())
-      return getVectorConstantRange(C);
-    return ConstantRange::getFull(C->getType()->getScalarSizeInBits());
-  }
+  if (auto *C = dyn_cast<Constant>(V))
+    return C->toConstantRange();
 
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
   InstrInfoQuery IIQ(UseInstrInfo);
