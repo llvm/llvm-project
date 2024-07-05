@@ -318,7 +318,7 @@ parseThunkName(StringRef ThunkName) {
   Register Xn = ParseRegName(XnStr);
   Register Xm = Kind.HasXmOperand ? ParseRegName(XmStr) : AArch64::NoRegister;
 
-  return std::make_tuple(Kind, Xn, Xm);
+  return std::make_tuple(std::ref(Kind), Xn, Xm);
 }
 
 void SLSHardeningInserter::populateThunk(MachineFunction &MF) {
