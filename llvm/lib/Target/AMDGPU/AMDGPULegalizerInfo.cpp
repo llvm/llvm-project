@@ -3050,6 +3050,12 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
                                                    *cast<GlobalVariable>(GV)));
     MI.eraseFromParent();
     return true;
+  } else if (AS == AMDGPUAS::LANE_SHARED) {
+    B.buildConstant(DstReg, MFI->allocateLaneSharedGlobal(
+                                B.getDataLayout(), *cast<GlobalVariable>(GV)));
+
+    MI.eraseFromParent();
+    return true;
   }
 
   if (ST.isAmdPalOS() || ST.isMesa3DOS()) {
