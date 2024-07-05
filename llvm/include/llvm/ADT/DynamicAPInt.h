@@ -36,8 +36,11 @@ namespace llvm {
 /// performance slowdown.
 ///
 /// When isLarge returns true, a SlowMPInt is held in the union. If isSmall
-/// returns true, the int64_t is held. Using std::variant instead would lead to
-/// significantly worse performance.
+/// returns true, the int64_t is held. We don't have a separate field for
+/// indicating this, and instead "steal" memory from ValLarge when it is not in
+/// use because we know that the memory layout of APInt is such that BitWidth
+/// doesn't overlap with ValSmall (see static_assert_layout). Using std::variant
+/// instead would lead to significantly worse performance.
 class DynamicAPInt {
   union {
     int64_t ValSmall;
@@ -70,8 +73,12 @@ class DynamicAPInt {
   LLVM_ATTRIBUTE_ALWAYS_INLINE explicit DynamicAPInt(
       const detail::SlowDynamicAPInt &Val)
       : ValLarge(Val) {}
-  constexpr bool isSmall() const { return ValLarge.Val.BitWidth == 0; }
-  constexpr bool isLarge() const { return !isSmall(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr bool isSmall() const {
+    return ValLarge.Val.BitWidth == 0;
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr bool isLarge() const {
+    return !isSmall();
+  }
   /// Get the stored value. For getSmall/Large,
   /// the stored value should be small/large.
   LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t getSmall() const {
@@ -203,6 +210,11 @@ public:
   friend DynamicAPInt operator%(int64_t A, const DynamicAPInt &B);
 
   friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
+
+  void static_assert_layout() { // NOLINT
+    static_assert(offsetof(DynamicAPInt, ValSmall) !=
+                  offsetof(DynamicAPInt, ValLarge.Val.BitWidth));
+  }
 
   raw_ostream &print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
