@@ -2634,12 +2634,21 @@ FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   ShapedType inputType = getInputOperandType();
   Type elementType = inputType.getElementType();
   int64_t reductionDim = getDimension();
-  SmallVector<OpFoldResult> dims = tensor::getMixedSizes(b, loc, input);
   Value output = getOutput();
-  dims.erase(dims.begin() + reductionDim);
+
+  SmallVector<int64_t> reduceShape;
+  SmallVector<Value> dynReduceDims;
+  for (unsigned i = 0; i < inputType.getRank(); i++) {
+    if (reductionDim != i) {
+      reduceShape.push_back(inputType.getDimSize(i));
+      if (inputType.isDynamicDim(i))
+        dynReduceDims.push_back(b.create<tensor::DimOp>(loc, input, i));
+    }
+  }
 
   // Step 1: Compute max along dim.
-  Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
+  Value outputReduce =
+      b.create<tensor::EmptyOp>(loc, reduceShape, elementType, dynReduceDims);
   auto maxFillValAttr = createInitValueForReduceMaxOp(elementType, b);
   auto maxFillValue = b.create<arith::ConstantOp>(loc, maxFillValAttr);
   auto neutralMaxInitOp = b.create<linalg::FillOp>(
@@ -2678,8 +2687,13 @@ FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
       });
 
   // Step 4: Compute softmax.
+  SmallVector<Value> dynDims;
+  for (unsigned i = 0; i < inputType.getRank(); i++) {
+    if (inputType.isDynamicDim(i))
+      dynDims.push_back(b.create<tensor::DimOp>(loc, input, i));
+  }
   auto sumBcastOutput = b.create<tensor::EmptyOp>(
-      loc, getOutputOperandType().getShape(), elementType);
+      loc, getOutputOperandType().getShape(), elementType, dynDims);
   auto sumBroadcastOp = b.create<linalg::BroadcastOp>(
       loc, reduceSumOp.getResult(0), sumBcastOutput,
       reduceSumOp.getDimensionsAttr());
