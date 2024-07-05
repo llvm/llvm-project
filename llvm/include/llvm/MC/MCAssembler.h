@@ -53,12 +53,6 @@ class MCObjectWriter;
 class MCSection;
 class MCValue;
 
-// FIXME: This really doesn't belong here. See comments below.
-struct IndirectSymbolData {
-  MCSymbol *Symbol;
-  MCSection *Section;
-};
-
 // FIXME: Ditto this. Purely so the Streamer and the ObjectWriter can talk
 // to one another.
 struct DataRegionData {
@@ -83,10 +77,6 @@ public:
 
   using symbol_range = iterator_range<symbol_iterator>;
   using const_symbol_range = iterator_range<const_symbol_iterator>;
-
-  using const_indirect_symbol_iterator =
-      std::vector<IndirectSymbolData>::const_iterator;
-  using indirect_symbol_iterator = std::vector<IndirectSymbolData>::iterator;
 
   using const_data_region_iterator =
       std::vector<DataRegionData>::const_iterator;
@@ -123,8 +113,6 @@ private:
   SectionListType Sections;
 
   SymbolDataListType Symbols;
-
-  std::vector<IndirectSymbolData> IndirectSymbols;
 
   std::vector<DataRegionData> DataRegions;
 
@@ -387,17 +375,6 @@ public:
   }
 
   size_t symbol_size() const { return Symbols.size(); }
-
-  /// @}
-  /// \name Indirect Symbol List Access
-  /// @{
-
-  // FIXME: This is a total hack, this should not be here. Once things are
-  // factored so that the streamer has direct access to the .o writer, it can
-  // disappear.
-  std::vector<IndirectSymbolData> &getIndirectSymbols() {
-    return IndirectSymbols;
-  }
 
   /// @}
   /// \name Linker Option List Access

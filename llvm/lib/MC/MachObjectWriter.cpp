@@ -47,6 +47,7 @@ using namespace llvm;
 void MachObjectWriter::reset() {
   Relocations.clear();
   IndirectSymBase.clear();
+  IndirectSymbols.clear();
   SectionAddress.clear();
   SectionOrder.clear();
   StringTable.clear();
@@ -516,7 +517,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
 
   // Report errors for use of .indirect_symbol not in a symbol pointer section
   // or stub section.
-  for (IndirectSymbolData &ISD : Asm.getIndirectSymbols()) {
+  for (IndirectSymbolData &ISD : IndirectSymbols) {
     const MCSectionMachO &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
@@ -530,7 +531,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
   }
 
   // Bind non-lazy symbol pointers first.
-  for (auto [IndirectIndex, ISD] : enumerate(Asm.getIndirectSymbols())) {
+  for (auto [IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
     const auto &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
@@ -544,7 +545,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
   }
 
   // Then lazy symbol pointers and symbol stubs.
-  for (auto [IndirectIndex, ISD] : enumerate(Asm.getIndirectSymbols())) {
+  for (auto [IndirectIndex, ISD] : enumerate(IndirectSymbols)) {
     const auto &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_LAZY_SYMBOL_POINTERS &&
@@ -970,7 +971,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
     unsigned NumExternalSymbols = ExternalSymbolData.size();
     unsigned FirstUndefinedSymbol = FirstExternalSymbol + NumExternalSymbols;
     unsigned NumUndefinedSymbols = UndefinedSymbolData.size();
-    unsigned NumIndirectSymbols = Asm.getIndirectSymbols().size();
+    unsigned NumIndirectSymbols = IndirectSymbols.size();
     unsigned NumSymTabSymbols =
       NumLocalSymbols + NumExternalSymbols + NumUndefinedSymbols;
     uint64_t IndirectSymbolSize = NumIndirectSymbols * 4;
@@ -1060,7 +1061,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   // Write the symbol table data, if used.
   if (NumSymbols) {
     // Write the indirect symbol entries.
-    for (auto &ISD : Asm.getIndirectSymbols()) {
+    for (auto &ISD : IndirectSymbols) {
       // Indirect symbols in the non-lazy symbol pointer section have some
       // special handling.
       const MCSectionMachO &Section =
