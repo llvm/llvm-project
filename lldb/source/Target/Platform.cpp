@@ -161,40 +161,6 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
   return FileSpecList();
 }
 
-// PlatformSP
-// Platform::FindPlugin (Process *process, ConstString plugin_name)
-//{
-//    PlatformCreateInstance create_callback = nullptr;
-//    if (plugin_name)
-//    {
-//        create_callback  =
-//        PluginManager::GetPlatformCreateCallbackForPluginName (plugin_name);
-//        if (create_callback)
-//        {
-//            ArchSpec arch;
-//            if (process)
-//            {
-//                arch = process->GetTarget().GetArchitecture();
-//            }
-//            PlatformSP platform_sp(create_callback(process, &arch));
-//            if (platform_sp)
-//                return platform_sp;
-//        }
-//    }
-//    else
-//    {
-//        for (uint32_t idx = 0; (create_callback =
-//        PluginManager::GetPlatformCreateCallbackAtIndex(idx)) != nullptr;
-//        ++idx)
-//        {
-//            PlatformSP platform_sp(create_callback(process, nullptr));
-//            if (platform_sp)
-//                return platform_sp;
-//        }
-//    }
-//    return PlatformSP();
-//}
-
 Status Platform::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr,
