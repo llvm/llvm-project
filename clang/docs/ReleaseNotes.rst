@@ -106,6 +106,13 @@ ABI Changes in This Version
   earlier versions of Clang unless such code is built with the compiler option
   `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
 
+- Fixed Microsoft name mangling for auto non-type template arguments of pointer
+  to member type for MSVC 1920+. This change resolves incompatibilities with code
+  compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by
+  earlier versions of Clang unless such code is built with the compiler option
+  `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
+  (GH#70899).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -960,6 +967,8 @@ Bug Fixes to C++ Support
   forward-declared class. (#GH93512).
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
+- Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
+  of the address of operator. (#GH97483).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

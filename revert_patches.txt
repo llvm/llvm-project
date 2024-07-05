@@ -93,3 +93,6 @@ Contacts: RonL and Hulk
 needs previous SEMA patches
 584e431a4b25 [Clang][Sema] Treat explicit specializations of static data member templates declared without '
 ---
+reverts: breaks hipBlender*
+4eecf3c6 [SLP]Reorder buildvector/reduction vectorization and fuse
+---

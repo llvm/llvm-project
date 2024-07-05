@@ -142,8 +142,15 @@ int ompt_initialize(
         return 1; // activate tool
 }
 
-void ompt_finalize(ompt_data_t *tool_data)
-{
+static void ompt_finalize(ompt_data_t *tool_data) {}
+
+// "This func will be invoked by OpenMP implementation, refer spec: 4.2.1"
+// NOLINTNEXTLINE
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version) {
+  static ompt_start_tool_result_t ompt_start_tool_result = {
+      &ompt_initialize, &ompt_finalize, {0}};
+  return &ompt_start_tool_result;
 }
 
 ompt_start_tool_result_t *ompt_start_tool(
