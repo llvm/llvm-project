@@ -109,14 +109,8 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (!Op1)
     return nullptr;
 
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
-  if (Result == LazyValueInfo::Unknown)
-    return nullptr;
-
-  return (Result == LazyValueInfo::True)
-             ? ConstantInt::getTrue(C->getContext())
-             : ConstantInt::getFalse(C->getContext());
+  return LVI->getPredicateAt(C->getPredicate(), Op0, Op1, At,
+                             /*UseBlockValue=*/false);
 }
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
@@ -243,15 +237,17 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
 
   // The "false" case
   if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
-    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
-        LazyValueInfo::False)
+    if (auto *Res = dyn_cast_or_null<ConstantInt>(
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+        Res && Res->isZero())
       return SI->getTrueValue();
 
   // The "true" case,
   // similar to the select "false" case, but try the select "true" value
   if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
-    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
-        LazyValueInfo::False)
+    if (auto *Res = dyn_cast_or_null<ConstantInt>(
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+        Res && Res->isZero())
       return SI->getFalseValue();
 
   return nullptr;
@@ -320,16 +316,13 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
 static bool constantFoldCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   Value *Op0 = Cmp->getOperand(0);
   Value *Op1 = Cmp->getOperand(1);
-  LazyValueInfo::Tristate Result =
-      LVI->getPredicateAt(Cmp->getPredicate(), Op0, Op1, Cmp,
-                          /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::Unknown)
+  Constant *Res = LVI->getPredicateAt(Cmp->getPredicate(), Op0, Op1, Cmp,
+                                      /*UseBlockValue=*/true);
+  if (!Res)
     return false;
 
   ++NumCmps;
-  Constant *TorF =
-      ConstantInt::get(CmpInst::makeCmpResultType(Op0->getType()), Result);
-  Cmp->replaceAllUsesWith(TorF);
+  Cmp->replaceAllUsesWith(Res);
   Cmp->eraseFromParent();
   return true;
 }
@@ -371,11 +364,11 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
-      LazyValueInfo::Tristate State =
+      auto *Res = dyn_cast_or_null<ConstantInt>(
           LVI->getPredicateAt(CmpInst::ICMP_EQ, Cond, Case, I,
-                              /* UseBlockValue */ true);
+                              /* UseBlockValue */ true));
 
-      if (State == LazyValueInfo::False) {
+      if (Res && Res->isZero()) {
         // This case never fires - remove it.
         BasicBlock *Succ = CI->getCaseSuccessor();
         Succ->removePredecessor(BB);
@@ -392,7 +385,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
           DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB, Succ}});
         continue;
       }
-      if (State == LazyValueInfo::True) {
+      if (Res && Res->isOne()) {
         // This case always fires.  Arrange for the switch to be turned into an
         // unconditional branch by replacing the switch condition with the case
         // value.
@@ -716,11 +709,12 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     // relatively expensive analysis for constants which are obviously either
     // null or non-null to start with.
     if (Type && !CB.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        !isa<Constant>(V) &&
-        LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
-                            ConstantPointerNull::get(Type), &CB,
-                            /*UseBlockValue=*/false) == LazyValueInfo::False)
-      ArgNos.push_back(ArgNo);
+        !isa<Constant>(V))
+      if (auto *Res = dyn_cast_or_null<ConstantInt>(LVI->getPredicateAt(
+              ICmpInst::ICMP_EQ, V, ConstantPointerNull::get(Type), &CB,
+              /*UseBlockValue=*/false));
+          Res && Res->isZero())
+        ArgNos.push_back(ArgNo);
     ArgNo++;
   }
 
