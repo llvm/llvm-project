@@ -2358,3 +2358,21 @@ func.func @byref_in_private(%arg0: index) {
 
   return
 }
+
+// -----
+func.func @masked_arg_type_mismatch(%arg0: f32) {
+  // expected-error @below {{'omp.masked' op operand #0 must be integer or index, but got 'f32'}}
+  "omp.masked"(%arg0) ({
+      omp.terminator
+    }) : (f32) -> ()
+  return
+}
+
+// -----
+func.func @masked_arg_count_mismatch(%arg0: i32, %arg1: i32) {
+  // expected-error @below {{'omp.masked' op operand group starting at #0 requires 0 or 1 element, but found 2}}
+  "omp.masked"(%arg0, %arg1) ({
+      omp.terminator
+    }) : (i32, i32) -> ()
+  return
+}
