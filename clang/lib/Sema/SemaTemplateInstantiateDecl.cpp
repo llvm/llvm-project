@@ -6300,7 +6300,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
                   getTrivialTemplateArgumentLoc(UnpackedArg, QualType(), Loc));
           }
           QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
-          if (T.isNull() || T->containsErrors())
+          if (T.isNull())
             return nullptr;
           CXXRecordDecl *SubstRecord = T->getAsCXXRecordDecl();
 

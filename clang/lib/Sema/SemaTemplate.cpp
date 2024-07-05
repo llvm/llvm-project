@@ -4700,7 +4700,8 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     //   template<typename T, typename U = T> struct A;
     CanonType = Context.getCanonicalTemplateSpecializationType(
         Name, CanonicalConverted);
-
+    if (CanonType->containsErrors())
+      return QualType();
     // This might work out to be a current instantiation, in which
     // case the canonical type needs to be the InjectedClassNameType.
     //
