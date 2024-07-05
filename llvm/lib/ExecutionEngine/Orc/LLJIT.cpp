@@ -655,6 +655,7 @@ Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
       return make_error<StringError>("dlclose failed",
                                      inconvertibleErrorCode());
     DSOHandles.erase(&JD);
+    InitializedDylib.erase(&JD);
   } else
     return WrapperAddr.takeError();
   return Error::success();
