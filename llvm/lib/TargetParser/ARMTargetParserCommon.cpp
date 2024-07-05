@@ -134,10 +134,11 @@ ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
 }
 
 // Parse a branch protection specification, which has the form
-//   standard | none | [bti,pac-ret[+b-key,+leaf,+pc]*]
-// Returns true on success, with individual elements of the specification
-// returned in `PBP`. Returns false in error, with `Err` containing
-// an erroneous part of the spec.
+//   standard | none | [bti,pac-ret[+b-key,+leaf,+pc]*,gcs,pauthabi]
+// Note: pauthabi is allowed with bti and disallowed with pac-ret and gcs.
+// Returns true on success, with individual elements of the
+// specification returned in `PBP`. Returns false in error, with `Err`
+// containing an erroneous part of the spec.
 bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
                                 StringRef &Err, bool EnablePAuthLR) {
   PBP = {"none", "a_key", false, false, false, false};
