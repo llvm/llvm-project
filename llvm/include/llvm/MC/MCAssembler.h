@@ -56,10 +56,8 @@ class MCValue;
 
 class MCAssembler {
 public:
-  using SectionListType = std::vector<MCSection *>;
-
+  using SectionListType = SmallVector<MCSection *, 0>;
   using const_iterator = pointee_iterator<SectionListType::const_iterator>;
-  using iterator = pointee_iterator<SectionListType::iterator>;
 
   /// MachO specific deployment target version info.
   // A Major version of 0 indicates that no version information was supplied
@@ -326,16 +324,8 @@ public:
     BundleAlignSize = Size;
   }
 
-  /// \name Section List Access
-  /// @{
-
-  iterator begin() { return Sections.begin(); }
   const_iterator begin() const { return Sections.begin(); }
-
-  iterator end() { return Sections.end(); }
   const_iterator end() const { return Sections.end(); }
-
-  size_t size() const { return Sections.size(); }
 
   iterator_range<pointee_iterator<
       typename SmallVector<const MCSymbol *, 0>::const_iterator>>

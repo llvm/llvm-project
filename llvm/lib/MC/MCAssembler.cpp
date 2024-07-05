@@ -1339,14 +1339,18 @@ LLVM_DUMP_METHOD void MCAssembler::dump() const{
 
   OS << "<MCAssembler\n";
   OS << "  Sections:[\n    ";
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if (it != begin()) OS << ",\n    ";
-    it->dump();
+  bool First = true;
+  for (const MCSection &Sec : *this) {
+    if (First)
+      First = false;
+    else
+      OS << ",\n    ";
+    Sec.dump();
   }
   OS << "],\n";
   OS << "  Symbols:[";
 
-  bool First = true;
+  First = true;
   for (const MCSymbol &Sym : symbols()) {
     if (First)
       First = false;
