@@ -796,9 +796,8 @@ void MachObjectWriter::populateAddrSigSection(MCAssembler &Asm) {
 }
 
 // BEGIN MCCAS
-void MachObjectWriter::prepareObject(MCAssembler &Asm,
-                                     const MCAsmLayout &Layout) {
-// END MCCAS
+void MachObjectWriter::prepareObject(MCAssembler &Asm) {
+  // END MCCAS
   populateAddrSigSection(Asm);
   // Compute symbol table information and bind symbol indices.
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
@@ -820,9 +819,8 @@ void MachObjectWriter::prepareObject(MCAssembler &Asm,
   }
 }
 // BEGIN MCCAS
-void MachObjectWriter::writeMachOHeader(MCAssembler &Asm,
-                                      const MCAsmLayout &Layout) {
-// END MCCAS
+void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
+  // END MCCAS
   unsigned NumSections = Asm.size();
   const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
@@ -1043,9 +1041,8 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm,
 // BEGIN MCCAS
 }
 
-void MachObjectWriter::writeSectionData(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) {
-// END MCCAS
+void MachObjectWriter::writeSectionData(MCAssembler &Asm) {
+  // END MCCAS
   // Write the actual section data.
   for (const MCSection &Sec : Asm) {
     Asm.writeSectionData(W.OS, &Sec);
@@ -1059,9 +1056,8 @@ void MachObjectWriter::writeSectionData(MCAssembler &Asm,
 // BEGIN MCCAS
 }
 
-void MachObjectWriter::writeRelocations(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) {
-// END MCCAS
+void MachObjectWriter::writeRelocations(MCAssembler &Asm) {
+  // END MCCAS
   // Write the relocation entries.
   for (const MCSection &Sec : Asm) {
     // Write the section relocation entries, in reverse order to match 'as'
@@ -1075,9 +1071,8 @@ void MachObjectWriter::writeRelocations(MCAssembler &Asm,
 // BEGIN MCCAS
 }
 
-void MachObjectWriter::writeDataInCodeRegion(MCAssembler &Asm,
-                                             const MCAsmLayout &Layout) {
-// END MCCAS
+void MachObjectWriter::writeDataInCodeRegion(MCAssembler &Asm) {
+  // END MCCAS
   // Write out the data-in-code region payload, if there is one.
   for (MCAssembler::const_data_region_iterator
          it = Asm.data_region_begin(), ie = Asm.data_region_end();
@@ -1147,8 +1142,7 @@ void MachObjectWriter::writeDataInCodeRegion(MCAssembler &Asm,
   }
 }
 
-void MachObjectWriter::writeSymbolTable(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) {
+void MachObjectWriter::writeSymbolTable(MCAssembler &Asm) {
   if (NumSymbols)
 // END MCCAS
     // Write the string table.
@@ -1157,15 +1151,14 @@ void MachObjectWriter::writeSymbolTable(MCAssembler &Asm,
 }
 
 uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
-  auto &Layout = *Asm.getLayout();
   uint64_t StartOffset = W.OS.tell();
 
-  prepareObject(Asm, Layout);
-  writeMachOHeader(Asm, Layout);
-  writeSectionData(Asm, Layout);
-  writeRelocations(Asm, Layout);
-  writeDataInCodeRegion(Asm, Layout);
-  writeSymbolTable(Asm, Layout);
+  prepareObject(Asm);
+  writeMachOHeader(Asm);
+  writeSectionData(Asm);
+  writeRelocations(Asm);
+  writeDataInCodeRegion(Asm);
+  writeSymbolTable(Asm);
 
   return W.OS.tell() - StartOffset;
 }

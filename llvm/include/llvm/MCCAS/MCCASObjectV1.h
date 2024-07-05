@@ -267,9 +267,10 @@ public:
   /// before calling this.
   bool isNode(const cas::ObjectProxy &Node) const override;
 
-  Expected<cas::ObjectProxy> createFromMCAssemblerImpl(
-      llvm::MachOCASWriter &ObjectWriter, llvm::MCAssembler &Asm,
-      const llvm::MCAsmLayout &Layout, raw_ostream *DebugOS) const override;
+  Expected<cas::ObjectProxy>
+  createFromMCAssemblerImpl(llvm::MachOCASWriter &ObjectWriter,
+                            llvm::MCAssembler &Asm,
+                            raw_ostream *DebugOS) const override;
 
   Error serializeObjectFile(cas::ObjectProxy RootNode,
                             raw_ostream &OS) const override;
@@ -457,9 +458,10 @@ public:
     return get(Schema.get(ID));
   }
 
-  static Expected<MCAssemblerRef>
-  create(const MCSchema &Schema, MachOCASWriter &ObjectWriter, MCAssembler &Asm,
-         const MCAsmLayout &Layout, raw_ostream *DebugOS = nullptr);
+  static Expected<MCAssemblerRef> create(const MCSchema &Schema,
+                                         MachOCASWriter &ObjectWriter,
+                                         MCAssembler &Asm,
+                                         raw_ostream *DebugOS = nullptr);
 
   Error materialize(raw_ostream &OS) const;
 
@@ -507,15 +509,13 @@ public:
   MachOCASWriter &ObjectWriter;
   const MCSchema &Schema;
   MCAssembler &Asm;
-  const MCAsmLayout &Layout;
   raw_ostream *DebugOS;
 
   MCCASBuilder(const MCSchema &Schema, MachOCASWriter &ObjectWriter,
-               MCAssembler &Asm, const MCAsmLayout &Layout,
-               raw_ostream *DebugOS)
+               MCAssembler &Asm, raw_ostream *DebugOS)
       : CAS(Schema.CAS), ObjectWriter(ObjectWriter), Schema(Schema), Asm(Asm),
-        Layout(Layout), DebugOS(DebugOS), FragmentOS(FragmentData),
-        CurrentContext(&Sections), DwarfSections(getDwarfSections(Asm)) {}
+        DebugOS(DebugOS), FragmentOS(FragmentData), CurrentContext(&Sections),
+        DwarfSections(getDwarfSections(Asm)) {}
 
   Error prepare();
   Error buildMachOHeader();

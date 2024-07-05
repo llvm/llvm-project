@@ -46,9 +46,9 @@ MachOCASWriter::MachOCASWriter(
     std::unique_ptr<MCMachObjectTargetWriter> MOTW, const Triple &TT,
     cas::ObjectStore &CAS, CASBackendMode Mode, raw_pwrite_stream &OS,
     bool IsLittleEndian,
-    std::function<const cas::ObjectProxy(
-        llvm::MachOCASWriter &, llvm::MCAssembler &, const llvm::MCAsmLayout &,
-        cas::ObjectStore &, raw_ostream *)>
+    std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
+                                         llvm::MCAssembler &,
+                                         cas::ObjectStore &, raw_ostream *)>
         CreateFromMcAssembler,
     std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
         SerializeObjectFile,
@@ -63,9 +63,8 @@ MachOCASWriter::MachOCASWriter(
 }
 
 uint64_t MachOCASWriter::writeObject(MCAssembler &Asm) {
-  auto &Layout = *Asm.getLayout();
   uint64_t StartOffset = OS.tell();
-  auto CASObj = CreateFromMcAssembler(*this, Asm, Layout, CAS, nullptr);
+  auto CASObj = CreateFromMcAssembler(*this, Asm, CAS, nullptr);
 
   auto VerifyObject = [&]() -> Error {
     SmallString<512> ObjectBuffer;
@@ -126,9 +125,9 @@ std::unique_ptr<MCObjectWriter> llvm::createMachOCASWriter(
     std::unique_ptr<MCMachObjectTargetWriter> MOTW, const Triple &TT,
     cas::ObjectStore &CAS, CASBackendMode Mode, raw_pwrite_stream &OS,
     bool IsLittleEndian,
-    std::function<const cas::ObjectProxy(
-        llvm::MachOCASWriter &, llvm::MCAssembler &, const llvm::MCAsmLayout &,
-        cas::ObjectStore &, raw_ostream *)>
+    std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
+                                         llvm::MCAssembler &,
+                                         cas::ObjectStore &, raw_ostream *)>
         CreateFromMcAssembler,
     std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
         SerializeObjectFile,

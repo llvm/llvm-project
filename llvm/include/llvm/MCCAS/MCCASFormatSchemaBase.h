@@ -28,18 +28,19 @@ public:
 
   Expected<cas::ObjectProxy>
   createFromMCAssembler(llvm::MachOCASWriter &ObjectWriter,
-                        llvm::MCAssembler &Asm, const llvm::MCAsmLayout &Layout,
+                        llvm::MCAssembler &Asm,
                         raw_ostream *DebugOS = nullptr) const {
-    return createFromMCAssemblerImpl(ObjectWriter, Asm, Layout, DebugOS);
+    return createFromMCAssemblerImpl(ObjectWriter, Asm, DebugOS);
   }
 
   virtual Error serializeObjectFile(cas::ObjectProxy RootNode,
                                     llvm::raw_ostream &OS) const = 0;
 
 protected:
-  virtual Expected<cas::ObjectProxy> createFromMCAssemblerImpl(
-      llvm::MachOCASWriter &ObjectWriter, llvm::MCAssembler &Asm,
-      const llvm::MCAsmLayout &Layout, raw_ostream *DebugOS) const = 0;
+  virtual Expected<cas::ObjectProxy>
+  createFromMCAssemblerImpl(llvm::MachOCASWriter &ObjectWriter,
+                            llvm::MCAssembler &Asm,
+                            raw_ostream *DebugOS) const = 0;
 
   MCFormatSchemaBase(cas::ObjectStore &CAS)
       : MCFormatSchemaBase::RTTIExtends(CAS) {}

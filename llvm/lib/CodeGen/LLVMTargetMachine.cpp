@@ -207,16 +207,15 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
     // BEGIN MCCAS
     std::unique_ptr<MCObjectWriter> CASBackendWriter;
     if (Options.UseCASBackend) {
-      std::function<const cas::ObjectProxy(
-          llvm::MachOCASWriter &, llvm::MCAssembler &,
-          const llvm::MCAsmLayout &, cas::ObjectStore &, raw_ostream *)>
+      std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
+                                           llvm::MCAssembler &,
+                                           cas::ObjectStore &, raw_ostream *)>
           CreateFromMcAssembler =
               [](llvm::MachOCASWriter &Writer, llvm::MCAssembler &Asm,
-                 const llvm::MCAsmLayout &Layout, cas::ObjectStore &CAS,
+                 cas::ObjectStore &CAS,
                  raw_ostream *DebugOS = nullptr) -> const cas::ObjectProxy {
         auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
-        return cantFail(
-            Schema->createFromMCAssembler(Writer, Asm, Layout, DebugOS));
+        return cantFail(Schema->createFromMCAssembler(Writer, Asm, DebugOS));
       };
       std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
           SerializeObjectFile = [](cas::ObjectProxy RootNode,

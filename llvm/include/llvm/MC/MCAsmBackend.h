@@ -77,9 +77,9 @@ public:
   std::unique_ptr<MCObjectWriter> createCASObjectWriter(
       raw_pwrite_stream &OS, const Triple &TT, cas::ObjectStore &CAS,
       const MCTargetOptions &MCOpts, CASBackendMode Mode,
-      std::function<const cas::ObjectProxy(
-          llvm::MachOCASWriter &, llvm::MCAssembler &,
-          const llvm::MCAsmLayout &, cas::ObjectStore &, raw_ostream *)>
+      std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
+                                           llvm::MCAssembler &,
+                                           cas::ObjectStore &, raw_ostream *)>
           CreateFromMcAssembler,
       std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
           SerializeObjectFile,

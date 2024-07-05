@@ -128,9 +128,9 @@ static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
     std::optional<uint32_t> NewOffset, uint8_t AddressSize);
 Expected<cas::ObjectProxy>
 MCSchema::createFromMCAssemblerImpl(MachOCASWriter &ObjectWriter,
-                                    MCAssembler &Asm, const MCAsmLayout &Layout,
+                                    MCAssembler &Asm,
                                     raw_ostream *DebugOS) const {
-  return MCAssemblerRef::create(*this, ObjectWriter, Asm, Layout, DebugOS);
+  return MCAssemblerRef::create(*this, ObjectWriter, Asm, DebugOS);
 }
 
 Error MCSchema::serializeObjectFile(cas::ObjectProxy RootNode,
@@ -1840,7 +1840,7 @@ DwarfSectionsCache mccasformats::v1::getDwarfSections(MCAssembler &Asm) {
 
 Error MCCASBuilder::prepare() {
   ObjectWriter.resetBuffer();
-  ObjectWriter.prepareObject(Asm, Layout);
+  ObjectWriter.prepareObject(Asm);
   assert(ObjectWriter.getContent().empty() &&
          "prepare stage writes no content");
   return Error::success();
@@ -1848,7 +1848,7 @@ Error MCCASBuilder::prepare() {
 
 Error MCCASBuilder::buildMachOHeader() {
   ObjectWriter.resetBuffer();
-  ObjectWriter.writeMachOHeader(Asm, Layout);
+  ObjectWriter.writeMachOHeader(Asm);
   auto Header = HeaderRef::create(*this, ObjectWriter.getContent());
   if (!Header)
     return Header.takeError();
@@ -2925,7 +2925,7 @@ static uint32_t getRelocationOffset(const MachO::any_relocation_info &RE) {
 /// parameter and is the index into the \p RelocationBuffer, which is used to
 /// access the current relocation that has to be partitioned.
 static void
-partitionFragment(const MCAsmLayout &Layout, SmallVector<char, 0> &Addends,
+partitionFragment(MCAssembler &Asm, SmallVector<char, 0> &Addends,
                   SmallVector<char, 0> &FinalFragmentContents,
                   ArrayRef<MachO::any_relocation_info> RelocationBuffer,
                   const MCFragment &Fragment, uint64_t &RelocationBufferIndex,
@@ -2946,7 +2946,7 @@ partitionFragment(const MCAsmLayout &Layout, SmallVector<char, 0> &Addends,
     uint32_t RelocOffset = getRelocationOffset(Reloc);
     if (PrevOffset == RelocOffset)
       continue;
-    uint64_t FragmentOffset = Layout.getAssembler().getFragmentOffset(Fragment);
+    uint64_t FragmentOffset = Asm.getFragmentOffset(Fragment);
     if (RelocOffset < FragmentOffset + FragmentContents.size()) {
       /// RelocOffsetInFragment: This is used to denote the offset of the
       /// relocation in the current Fragment. Relocation offsets are always from
@@ -3137,8 +3137,8 @@ Error MCCASBuilder::buildFragments() {
         RelocationBuffer = ArrayRef<MachO::any_relocation_info>();
         RelocationBufferIndex = 0;
       }
-      partitionFragment(Layout, Addends, FinalFragmentContents,
-                        RelocationBuffer, F, RelocationBufferIndex,
+      partitionFragment(Asm, Addends, FinalFragmentContents, RelocationBuffer,
+                        F, RelocationBufferIndex,
                         ObjectWriter.Target.isLittleEndian());
 
       if (auto E = Merger.tryMerge(F, Size, FinalFragmentContents))
@@ -3172,7 +3172,7 @@ Error MCCASBuilder::buildRelocations() {
   ObjectWriter.resetBuffer();
   if (ObjectWriter.Mode == CASBackendMode::Verify ||
       RelocLocation == CompileUnit)
-    ObjectWriter.writeRelocations(Asm, Layout);
+    ObjectWriter.writeRelocations(Asm);
 
   if (RelocLocation == CompileUnit) {
     auto Relocs = RelocationsRef::create(*this, ObjectWriter.getContent());
@@ -3187,7 +3187,7 @@ Error MCCASBuilder::buildRelocations() {
 
 Error MCCASBuilder::buildDataInCodeRegion() {
   ObjectWriter.resetBuffer();
-  ObjectWriter.writeDataInCodeRegion(Asm, Layout);
+  ObjectWriter.writeDataInCodeRegion(Asm);
   auto Data = DataInCodeRef::create(*this, ObjectWriter.getContent());
   if (!Data)
     return Data.takeError();
@@ -3198,7 +3198,7 @@ Error MCCASBuilder::buildDataInCodeRegion() {
 
 Error MCCASBuilder::buildSymbolTable() {
   ObjectWriter.resetBuffer();
-  ObjectWriter.writeSymbolTable(Asm, Layout);
+  ObjectWriter.writeSymbolTable(Asm);
   StringRef S = ObjectWriter.getContent();
   std::vector<cas::ObjectRef> CStrings;
   if (auto E = createStringSection(S, [&](StringRef S) -> Error {
@@ -3312,9 +3312,8 @@ void MCCASBuilder::addNode(cas::ObjectProxy Node) {
 Expected<MCAssemblerRef> MCAssemblerRef::create(const MCSchema &Schema,
                                                 MachOCASWriter &ObjectWriter,
                                                 MCAssembler &Asm,
-                                                const MCAsmLayout &Layout,
                                                 raw_ostream *DebugOS) {
-  MCCASBuilder Builder(Schema, ObjectWriter, Asm, Layout, DebugOS);
+  MCCASBuilder Builder(Schema, ObjectWriter, Asm, DebugOS);
 
   if (auto E = Builder.prepare())
     return std::move(E);
@@ -3328,7 +3327,7 @@ Expected<MCAssemblerRef> MCAssemblerRef::create(const MCSchema &Schema,
   // Only need to do this for verify mode so we compare the output byte by
   // byte.
   if (ObjectWriter.Mode == CASBackendMode::Verify) {
-    ObjectWriter.writeSectionData(Asm, Layout);
+    ObjectWriter.writeSectionData(Asm);
   }
 
   if (auto E = Builder.buildRelocations())

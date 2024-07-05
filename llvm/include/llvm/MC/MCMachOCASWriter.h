@@ -46,9 +46,9 @@ public:
       std::unique_ptr<MCMachObjectTargetWriter> MOTW, const Triple &TT,
       cas::ObjectStore &CAS, CASBackendMode Mode, raw_pwrite_stream &OS,
       bool IsLittleEndian,
-      std::function<const cas::ObjectProxy(
-          llvm::MachOCASWriter &, llvm::MCAssembler &,
-          const llvm::MCAsmLayout &, cas::ObjectStore &, raw_ostream *)>
+      std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
+                                           llvm::MCAssembler &,
+                                           cas::ObjectStore &, raw_ostream *)>
           CreateFromMcAssembler,
       std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
           SerializeObjectFile,
@@ -79,29 +79,19 @@ public:
     return MOW.getPaddingSize(Asm, SD);
   }
 
-  void prepareObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
-    MOW.prepareObject(Asm, Layout);
+  void prepareObject(MCAssembler &Asm) { MOW.prepareObject(Asm); }
+
+  void writeMachOHeader(MCAssembler &Asm) { MOW.writeMachOHeader(Asm); }
+
+  void writeSectionData(MCAssembler &Asm) { MOW.writeSectionData(Asm); }
+
+  void writeRelocations(MCAssembler &Asm) { MOW.writeRelocations(Asm); }
+
+  void writeDataInCodeRegion(MCAssembler &Asm) {
+    MOW.writeDataInCodeRegion(Asm);
   }
 
-  void writeMachOHeader(MCAssembler &Asm, const MCAsmLayout &Layout) {
-    MOW.writeMachOHeader(Asm, Layout);
-  }
-
-  void writeSectionData(MCAssembler &Asm, const MCAsmLayout &Layout) {
-    MOW.writeSectionData(Asm, Layout);
-  }
-
-  void writeRelocations(MCAssembler &Asm, const MCAsmLayout &Layout) {
-    MOW.writeRelocations(Asm, Layout);
-  }
-
-  void writeDataInCodeRegion(MCAssembler &Asm, const MCAsmLayout &Layout) {
-    MOW.writeDataInCodeRegion(Asm, Layout);
-  }
-
-  void writeSymbolTable(MCAssembler &Asm, const MCAsmLayout &Layout) {
-    MOW.writeSymbolTable(Asm, Layout);
-  }
+  void writeSymbolTable(MCAssembler &Asm) { MOW.writeSymbolTable(Asm); }
 
   uint64_t writeObject(MCAssembler &Asm) override;
 
@@ -125,9 +115,9 @@ private:
 
   uint64_t OSOffset = 0;
 
-  std::function<const cas::ObjectProxy(
-      llvm::MachOCASWriter &, llvm::MCAssembler &, const llvm::MCAsmLayout &,
-      cas::ObjectStore &, raw_ostream *)>
+  std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
+                                       llvm::MCAssembler &, cas::ObjectStore &,
+                                       raw_ostream *)>
       CreateFromMcAssembler;
   std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
       SerializeObjectFile;
@@ -146,9 +136,9 @@ std::unique_ptr<MCObjectWriter> createMachOCASWriter(
     std::unique_ptr<MCMachObjectTargetWriter> MOTW, const Triple &TT,
     cas::ObjectStore &CAS, CASBackendMode Mode, raw_pwrite_stream &OS,
     bool IsLittleEndian,
-    std::function<const cas::ObjectProxy(
-        llvm::MachOCASWriter &, llvm::MCAssembler &, const llvm::MCAsmLayout &,
-        cas::ObjectStore &, raw_ostream *)>
+    std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
+                                         llvm::MCAssembler &,
+                                         cas::ObjectStore &, raw_ostream *)>
         CreateFromMcAssembler,
     std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
         SerializeObjectFile,

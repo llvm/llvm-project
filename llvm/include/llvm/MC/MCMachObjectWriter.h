@@ -302,12 +302,12 @@ public:
   // BEGIN MCCAS
   // FIXME: Break down writeObject into following stages for slicing the output.
   // This is a very rough slicing and need to be improved.
-  void prepareObject(MCAssembler &Asm, const MCAsmLayout &Layout);
-  void writeMachOHeader(MCAssembler &Asm, const MCAsmLayout &Layout);
-  void writeSectionData(MCAssembler &Asm, const MCAsmLayout &Layout);
-  void writeRelocations(MCAssembler &Asm, const MCAsmLayout &Layout);
-  void writeDataInCodeRegion(MCAssembler &Asm, const MCAsmLayout &Layout);
-  void writeSymbolTable(MCAssembler &Asm, const MCAsmLayout &Layout);
+  void prepareObject(MCAssembler &Asm);
+  void writeMachOHeader(MCAssembler &Asm);
+  void writeSectionData(MCAssembler &Asm);
+  void writeRelocations(MCAssembler &Asm);
+  void writeDataInCodeRegion(MCAssembler &Asm);
+  void writeSymbolTable(MCAssembler &Asm);
   // END MCCAS
 
   uint64_t writeObject(MCAssembler &Asm) override;
