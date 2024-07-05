@@ -239,6 +239,7 @@ static Type *typeFromFTValueType(FTValueType VT, LLVMContext &Context) {
   case kNumValueTypes:
     return nullptr;
   }
+  llvm_unreachable("Unhandled FTValueType enum");
 }
 
 // Returns the type name for an FTValueType.
@@ -253,6 +254,7 @@ static const char *typeNameFromFTValueType(FTValueType VT) {
   case kNumValueTypes:
     return nullptr;
   }
+  llvm_unreachable("Unhandled FTValueType enum");
 }
 
 // A specific mapping configuration of application type to shadow type for nsan
@@ -395,6 +397,7 @@ public:
     case kStore:
       return Builder.CreatePtrToInt(Address, IntptrTy);
     }
+    llvm_unreachable("Unhandled CheckType enum");
   }
 
 private:
@@ -1305,7 +1308,8 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     // This is hard because we have to model the semantics of the intrinsics,
     // e.g. llvm.x86.sse2.min.sd means extract first element, min, insert back.
     // Intrinsics that take any non-vector FT types:
-    // NOTE: Right now because of https://github.com/llvm/llvm-project/issues/44744
+    // NOTE: Right now because of
+    // https://github.com/llvm/llvm-project/issues/44744
     // for f128 we need to use makeX86FP80X86FP80 (go to a lower precision and
     // come back).
     {"llvm.sqrt.f32", Intrinsic::sqrt, makeDoubleDouble},
@@ -1526,10 +1530,10 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   getIntrinsicInfoTableEntries(WidenedId, Table);
   SmallVector<Type *, 4> ArgTys;
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-  assert(Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys) ==
-             Intrinsic::MatchIntrinsicTypes_Match &&
+  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult MatchResult =
+      Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys);
+  assert(MatchResult == Intrinsic::MatchIntrinsicTypes_Match &&
          "invalid widened intrinsic");
-  (void)TableRef;
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
   SmallVector<Value *, 4> Args;
@@ -1823,7 +1827,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
   }
   // ClPropagateNonFTConstStoresAsFT is by default false.
   if (Constant *C; ClPropagateNonFTConstStoresAsFT &&
-                    (C = dyn_cast<Constant>(StoredValue))) {
+                   (C = dyn_cast<Constant>(StoredValue))) {
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
     Type *BitcastTy = nullptr; // The FT type to bitcast to.

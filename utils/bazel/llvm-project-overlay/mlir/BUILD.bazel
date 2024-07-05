@@ -10320,6 +10320,7 @@ td_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
         "include/mlir/Dialect/OpenMP/OpenMPAttrDefs.td",
+        "include/mlir/Dialect/OpenMP/OpenMPClauses.td",
         "include/mlir/Dialect/OpenMP/OpenMPDialect.td",
         "include/mlir/Dialect/OpenMP/OpenMPEnums.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpBase.td",

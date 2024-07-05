@@ -63,6 +63,7 @@ def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
 def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 def ArgDecl : ArgType { let Name = "const Decl*"; }
+def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -381,6 +382,10 @@ class BitFieldOpcode : Opcode {
 def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
+
+def CheckDecl : Opcode {
+  let Args = [ArgVarDecl];
+}
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
@@ -709,6 +714,7 @@ def Dup : Opcode {
 
 // [] -> []
 def Invalid : Opcode {}
+def Unsupported : Opcode {}
 def Error : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind];
