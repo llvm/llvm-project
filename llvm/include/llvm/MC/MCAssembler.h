@@ -399,22 +399,6 @@ public:
     return IndirectSymbols;
   }
 
-  indirect_symbol_iterator indirect_symbol_begin() {
-    return IndirectSymbols.begin();
-  }
-  const_indirect_symbol_iterator indirect_symbol_begin() const {
-    return IndirectSymbols.begin();
-  }
-
-  indirect_symbol_iterator indirect_symbol_end() {
-    return IndirectSymbols.end();
-  }
-  const_indirect_symbol_iterator indirect_symbol_end() const {
-    return IndirectSymbols.end();
-  }
-
-  size_t indirect_symbol_size() const { return IndirectSymbols.size(); }
-
   /// @}
   /// \name Linker Option List Access
   /// @{
