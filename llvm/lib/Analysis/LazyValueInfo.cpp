@@ -836,24 +836,6 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 }
 
-static ConstantRange getConstantRangeFromFixedVector(Constant *C,
-                                                     FixedVectorType *Ty) {
-  unsigned BW = Ty->getScalarSizeInBits();
-  ConstantRange CR = ConstantRange::getEmpty(BW);
-  for (unsigned I = 0; I < Ty->getNumElements(); ++I) {
-    Constant *Elem = C->getAggregateElement(I);
-    if (!Elem)
-      return ConstantRange::getFull(BW);
-    if (isa<PoisonValue>(Elem))
-      continue;
-    auto *CI = dyn_cast<ConstantInt>(Elem);
-    if (!CI)
-      return ConstantRange::getFull(BW);
-    CR = CR.unionWith(CI->getValue());
-  }
-  return CR;
-}
-
 static ConstantRange toConstantRange(const ValueLatticeElement &Val,
                                      Type *Ty, bool UndefAllowed = false) {
   assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
@@ -862,13 +844,8 @@ static ConstantRange toConstantRange(const ValueLatticeElement &Val,
   unsigned BW = Ty->getScalarSizeInBits();
   if (Val.isUnknown())
     return ConstantRange::getEmpty(BW);
-  if (Val.isConstant() && Ty->isVectorTy()) {
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(
-            Val.getConstant()->getSplatValue(/*AllowPoison=*/true)))
-      return ConstantRange(CI->getValue());
-    if (auto *VTy = dyn_cast<FixedVectorType>(Ty))
-      return getConstantRangeFromFixedVector(Val.getConstant(), VTy);
-  }
+  if (Val.isConstant() && Ty->isVectorTy())
+    return getVectorConstantRange(Val.getConstant());
   return ConstantRange::getFull(BW);
 }
 
