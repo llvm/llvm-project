@@ -66,8 +66,6 @@ using namespace llvm;
 
 namespace {
 
-using SectionIndexMapTy = DenseMap<const MCSectionELF *, uint32_t>;
-
 class ELFObjectWriter;
 struct ELFWriter;
 
@@ -136,8 +134,8 @@ struct ELFWriter {
   unsigned SymbolTableIndex = ~0u;
 
   // Sections in the order they are to be output in the section table.
-  std::vector<const MCSectionELF *> SectionTable;
-  unsigned addToSectionTable(const MCSectionELF *Sec);
+  std::vector<MCSectionELF *> SectionTable;
+  unsigned addToSectionTable(MCSectionELF *Sec);
 
   // TargetObjectWriter wrappers.
   bool is64Bit() const;
@@ -171,31 +169,21 @@ public:
   void writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
                    uint32_t StringIndex, ELFSymbolData &MSD);
 
-  // Start and end offset of each section
-  using SectionOffsetsTy =
-      std::map<const MCSectionELF *, std::pair<uint64_t, uint64_t>>;
-
   // Map from a signature symbol to the group section index
   using RevGroupMapTy = DenseMap<const MCSymbol *, unsigned>;
 
   /// Compute the symbol table data
   ///
   /// \param Asm - The assembler.
-  /// \param SectionIndexMap - Maps a section to its index.
   /// \param RevGroupMap - Maps a signature symbol to the group section.
-  void computeSymbolTable(MCAssembler &Asm,
-                          const SectionIndexMapTy &SectionIndexMap,
-                          const RevGroupMapTy &RevGroupMap,
-                          SectionOffsetsTy &SectionOffsets);
+  void computeSymbolTable(MCAssembler &Asm, const RevGroupMapTy &RevGroupMap);
 
   void writeAddrsigSection();
 
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
 
-  void writeSectionHeader(const MCAssembler &Asm,
-                          const SectionIndexMapTy &SectionIndexMap,
-                          const SectionOffsetsTy &SectionOffsets);
+  void writeSectionHeader(const MCAssembler &Asm);
 
   void writeSectionData(const MCAssembler &Asm, MCSection &Sec);
 
@@ -207,8 +195,7 @@ public:
   void writeRelocations(const MCAssembler &Asm, const MCSectionELF &Sec);
 
   uint64_t writeObject(MCAssembler &Asm);
-  void writeSection(const SectionIndexMapTy &SectionIndexMap,
-                    uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
+  void writeSection(uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
                     const MCSectionELF &Section);
 };
 
@@ -330,7 +317,7 @@ uint64_t ELFWriter::align(Align Alignment) {
   return NewOffset;
 }
 
-unsigned ELFWriter::addToSectionTable(const MCSectionELF *Sec) {
+unsigned ELFWriter::addToSectionTable(MCSectionELF *Sec) {
   SectionTable.push_back(Sec);
   StrTabBuilder.add(Sec->getName());
   return SectionTable.size();
@@ -612,9 +599,7 @@ bool ELFWriter::isInSymtab(const MCAssembler &Asm, const MCSymbolELF &Symbol,
 }
 
 void ELFWriter::computeSymbolTable(MCAssembler &Asm,
-                                   const SectionIndexMapTy &SectionIndexMap,
-                                   const RevGroupMapTy &RevGroupMap,
-                                   SectionOffsetsTy &SectionOffsets) {
+                                   const RevGroupMapTy &RevGroupMap) {
   MCContext &Ctx = Asm.getContext();
   SymbolTableWriter Writer(*this, is64Bit());
 
@@ -697,7 +682,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
 
       if (Mode == NonDwoOnly && isDwoSection(Section))
         continue;
-      MSD.SectionIndex = SectionIndexMap.lookup(&Section);
+      MSD.SectionIndex = Section.getOrdinal();
       assert(MSD.SectionIndex && "Invalid section index!");
       if (MSD.SectionIndex >= ELF::SHN_LORESERVE)
         HasLargeSectionIndex = true;
@@ -775,7 +760,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
   }
 
   uint64_t SecEnd = W.OS.tell();
-  SectionOffsets[SymtabSection] = std::make_pair(SecStart, SecEnd);
+  SymtabSection->setOffsets(SecStart, SecEnd);
 
   ArrayRef<uint32_t> ShndxIndexes = Writer.getShndxIndexes();
   if (ShndxIndexes.empty()) {
@@ -785,12 +770,11 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
   assert(SymtabShndxSectionIndex != 0);
 
   SecStart = W.OS.tell();
-  const MCSectionELF *SymtabShndxSection =
-      SectionTable[SymtabShndxSectionIndex - 1];
+  MCSectionELF *SymtabShndxSection = SectionTable[SymtabShndxSectionIndex - 1];
   for (uint32_t Index : ShndxIndexes)
     write(Index);
   SecEnd = W.OS.tell();
-  SectionOffsets[SymtabShndxSection] = std::make_pair(SecStart, SecEnd);
+  SymtabShndxSection->setOffsets(SecStart, SecEnd);
 }
 
 void ELFWriter::writeAddrsigSection() {
@@ -1030,8 +1014,7 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
   }
 }
 
-void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
-                             uint32_t GroupSymbolIndex, uint64_t Offset,
+void ELFWriter::writeSection(uint32_t GroupSymbolIndex, uint64_t Offset,
                              uint64_t Size, const MCSectionELF &Section) {
   uint64_t sh_link = 0;
   uint64_t sh_info = 0;
@@ -1050,7 +1033,7 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
     sh_link = SymbolTableIndex;
     assert(sh_link && ".symtab not found");
     const MCSection *InfoSection = Section.getLinkedToSection();
-    sh_info = SectionIndexMap.lookup(cast<MCSectionELF>(InfoSection));
+    sh_info = InfoSection->getOrdinal();
     break;
   }
 
@@ -1075,10 +1058,8 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
     // If the value in the associated metadata is not a definition, Sym will be
     // undefined. Represent this with sh_link=0.
     const MCSymbol *Sym = Section.getLinkedToSymbol();
-    if (Sym && Sym->isInSection()) {
-      const MCSectionELF *Sec = cast<MCSectionELF>(&Sym->getSection());
-      sh_link = SectionIndexMap.lookup(Sec);
-    }
+    if (Sym && Sym->isInSection())
+      sh_link = Sym->getSection().getOrdinal();
   }
 
   WriteSecHdrEntry(StrTabBuilder.getOffset(Section.getName()),
@@ -1087,9 +1068,7 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
                    Section.getEntrySize());
 }
 
-void ELFWriter::writeSectionHeader(const MCAssembler &Asm,
-                                   const SectionIndexMapTy &SectionIndexMap,
-                                   const SectionOffsetsTy &SectionOffsets) {
+void ELFWriter::writeSectionHeader(const MCAssembler &Asm) {
   const unsigned NumSections = SectionTable.size();
 
   // Null section first.
@@ -1105,16 +1084,14 @@ void ELFWriter::writeSectionHeader(const MCAssembler &Asm,
     else
       GroupSymbolIndex = Section->getGroup()->getIndex();
 
-    const std::pair<uint64_t, uint64_t> &Offsets =
-        SectionOffsets.find(Section)->second;
+    std::pair<uint64_t, uint64_t> Offsets = Section->getOffsets();
     uint64_t Size;
     if (Type == ELF::SHT_NOBITS)
       Size = Asm.getSectionAddressSize(*Section);
     else
       Size = Offsets.second - Offsets.first;
 
-    writeSection(SectionIndexMap, GroupSymbolIndex, Offsets.first, Size,
-                 *Section);
+    writeSection(GroupSymbolIndex, Offsets.first, Size, *Section);
   }
 }
 
@@ -1127,17 +1104,15 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
   StringTableIndex = addToSectionTable(StrtabSection);
 
   RevGroupMapTy RevGroupMap;
-  SectionIndexMapTy SectionIndexMap;
-
-  DenseMap<const MCSymbol *, SmallVector<const MCSectionELF *, 0>> GroupMembers;
 
   // Write out the ELF header ...
   writeHeader(Asm);
 
   // ... then the sections ...
-  SectionOffsetsTy SectionOffsets;
-  std::vector<MCSectionELF *> Groups;
-  std::vector<MCSectionELF *> Relocations;
+  SmallVector<std::pair<MCSectionELF *, SmallVector<unsigned>>, 0> Groups;
+  // Map from group section index to group
+  SmallVector<unsigned, 0> GroupMap;
+  SmallVector<MCSectionELF *> Relocations;
   for (MCSection &Sec : Asm) {
     MCSectionELF &Section = static_cast<MCSectionELF &>(Sec);
     if (Mode == NonDwoOnly && isDwoSection(Section))
@@ -1152,49 +1127,50 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
     writeSectionData(Asm, Section);
 
     uint64_t SecEnd = W.OS.tell();
-    SectionOffsets[&Section] = std::make_pair(SecStart, SecEnd);
+    Section.setOffsets(SecStart, SecEnd);
 
     MCSectionELF *RelSection = createRelocationSection(Ctx, Section);
 
+    unsigned *GroupIdxEntry = nullptr;
     if (SignatureSymbol) {
-      unsigned &GroupIdx = RevGroupMap[SignatureSymbol];
-      if (!GroupIdx) {
+      GroupIdxEntry = &RevGroupMap[SignatureSymbol];
+      if (!*GroupIdxEntry) {
         MCSectionELF *Group =
             Ctx.createELFGroupSection(SignatureSymbol, Section.isComdat());
-        GroupIdx = addToSectionTable(Group);
+        *GroupIdxEntry = addToSectionTable(Group);
         Group->setAlignment(Align(4));
-        Groups.push_back(Group);
+
+        GroupMap.resize(*GroupIdxEntry + 1);
+        GroupMap[*GroupIdxEntry] = Groups.size();
+        Groups.emplace_back(Group, SmallVector<unsigned>{});
       }
-      SmallVector<const MCSectionELF *, 0> &Members =
-          GroupMembers[SignatureSymbol];
-      Members.push_back(&Section);
-      if (RelSection)
-        Members.push_back(RelSection);
     }
 
-    SectionIndexMap[&Section] = addToSectionTable(&Section);
+    Section.setOrdinal(addToSectionTable(&Section));
     if (RelSection) {
-      SectionIndexMap[RelSection] = addToSectionTable(RelSection);
+      RelSection->setOrdinal(addToSectionTable(RelSection));
       Relocations.push_back(RelSection);
+    }
+
+    if (GroupIdxEntry) {
+      auto &Members = Groups[GroupMap[*GroupIdxEntry]];
+      Members.second.push_back(Section.getOrdinal());
+      if (RelSection)
+        Members.second.push_back(RelSection->getOrdinal());
     }
 
     OWriter.TargetObjectWriter->addTargetSectionFlags(Ctx, Section);
   }
 
-  for (MCSectionELF *Group : Groups) {
+  for (auto &[Group, Members] : Groups) {
     // Remember the offset into the file for this section.
     const uint64_t SecStart = align(Group->getAlign());
 
-    const MCSymbol *SignatureSymbol = Group->getGroup();
-    assert(SignatureSymbol);
     write(uint32_t(Group->isComdat() ? unsigned(ELF::GRP_COMDAT) : 0));
-    for (const MCSectionELF *Member : GroupMembers[SignatureSymbol]) {
-      uint32_t SecIndex = SectionIndexMap.lookup(Member);
-      write(SecIndex);
-    }
+    W.write<unsigned>(Members);
 
     uint64_t SecEnd = W.OS.tell();
-    SectionOffsets[Group] = std::make_pair(SecStart, SecEnd);
+    Group->setOffsets(SecStart, SecEnd);
   }
 
   if (Mode == DwoOnly) {
@@ -1210,7 +1186,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
     }
 
     // Compute symbol table information.
-    computeSymbolTable(Asm, SectionIndexMap, RevGroupMap, SectionOffsets);
+    computeSymbolTable(Asm, RevGroupMap);
 
     for (MCSectionELF *RelSection : Relocations) {
       // Remember the offset into the file for this section.
@@ -1220,27 +1196,27 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
                        cast<MCSectionELF>(*RelSection->getLinkedToSection()));
 
       uint64_t SecEnd = W.OS.tell();
-      SectionOffsets[RelSection] = std::make_pair(SecStart, SecEnd);
+      RelSection->setOffsets(SecStart, SecEnd);
     }
 
     if (OWriter.EmitAddrsigSection) {
       uint64_t SecStart = W.OS.tell();
       writeAddrsigSection();
       uint64_t SecEnd = W.OS.tell();
-      SectionOffsets[AddrsigSection] = std::make_pair(SecStart, SecEnd);
+      AddrsigSection->setOffsets(SecStart, SecEnd);
     }
   }
 
   {
     uint64_t SecStart = W.OS.tell();
     StrTabBuilder.write(W.OS);
-    SectionOffsets[StrtabSection] = std::make_pair(SecStart, W.OS.tell());
+    StrtabSection->setOffsets(SecStart, W.OS.tell());
   }
 
   const uint64_t SectionHeaderOffset = align(is64Bit() ? Align(8) : Align(4));
 
   // ... then the section header table ...
-  writeSectionHeader(Asm, SectionIndexMap, SectionOffsets);
+  writeSectionHeader(Asm);
 
   uint16_t NumSections = support::endian::byte_swap<uint16_t>(
       (SectionTable.size() + 1 >= ELF::SHN_LORESERVE) ? (uint16_t)ELF::SHN_UNDEF
