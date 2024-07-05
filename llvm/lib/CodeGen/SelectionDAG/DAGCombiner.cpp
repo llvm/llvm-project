@@ -843,10 +843,8 @@ namespace {
 
     SelectionDAG &getDAG() const { return DAG; }
 
-    /// Returns a type large enough to hold any valid shift amount - before type
-    /// legalization these can be huge.
+    /// Convenience wrapper around TargetLowering::getShiftAmountTy.
     EVT getShiftAmountTy(EVT LHSTy) {
-      assert(LHSTy.isInteger() && "Shift amount is not an integer type!");
       return TLI.getShiftAmountTy(LHSTy, DAG.getDataLayout());
     }
 
