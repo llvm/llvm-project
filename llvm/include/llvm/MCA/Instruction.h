@@ -643,6 +643,9 @@ class Instruction : public InstructionBase {
   // True if this instruction has been optimized at register renaming stage.
   bool IsEliminated;
 
+  // Client-dependent identifier for this instruction.
+  std::optional<uint64_t> Identifier;
+
 public:
   Instruction(const InstrDesc &D, const unsigned Opcode)
       : InstructionBase(D, Opcode), Stage(IS_INVALID),
@@ -689,6 +692,9 @@ public:
   bool isExecuted() const { return Stage == IS_EXECUTED; }
   bool isRetired() const { return Stage == IS_RETIRED; }
   bool isEliminated() const { return IsEliminated; }
+
+  std::optional<uint64_t> getIdentifier() const { return Identifier; }
+  void setIdentifier(uint64_t Id) { Identifier = Id; }
 
   // Forces a transition from state IS_DISPATCHED to state IS_EXECUTED.
   void forceExecuted();
