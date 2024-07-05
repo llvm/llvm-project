@@ -14,5 +14,6 @@ configure_file(lit.site.cfg.in lit.site.cfg @ONLY)
 
 add_openmp_testsuite(check-ompd "Running OMPD tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS omp ompd ompd_gdb_plugin)
+  DEPENDS omp ompd ompdModule ompd_gdb_plugin)
+
 endif()
