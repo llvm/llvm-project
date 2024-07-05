@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_MACHINEBASICBLOCK_H
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
@@ -72,6 +73,25 @@ struct MBBSectionID {
 private:
   // This is only used to construct the special cold and exception sections.
   MBBSectionID(SectionType T) : Type(T), Number(0) {}
+};
+
+template <> struct DenseMapInfo<MBBSectionID> {
+  using TypeInfo = DenseMapInfo<MBBSectionID::SectionType>;
+  using NumberInfo = DenseMapInfo<unsigned>;
+
+  static inline MBBSectionID getEmptyKey() {
+    return MBBSectionID(NumberInfo::getEmptyKey());
+  }
+  static inline MBBSectionID getTombstoneKey() {
+    return MBBSectionID(NumberInfo::getTombstoneKey());
+  }
+  static unsigned getHashValue(const MBBSectionID &SecID) {
+    return detail::combineHashValue(TypeInfo::getHashValue(SecID.Type),
+                                    NumberInfo::getHashValue(SecID.Number));
+  }
+  static bool isEqual(const MBBSectionID &LHS, const MBBSectionID &RHS) {
+    return LHS == RHS;
+  }
 };
 
 // This structure represents the information for a basic block pertaining to
@@ -657,12 +677,6 @@ public:
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
-
-  /// Returns the unique section ID number of this basic block.
-  unsigned getSectionIDNum() const {
-    return ((unsigned)MBBSectionID::SectionType::Cold) -
-           ((unsigned)SectionID.Type) + SectionID.Number;
-  }
 
   /// Sets the fixed BBID of this basic block.
   void setBBID(const UniqueBBID &V) {

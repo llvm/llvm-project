@@ -11,8 +11,11 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/MCF.h"
 #include "bolt/Profile/ProfileYAMLMapping.h"
+#include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/edit_distance.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -23,6 +26,11 @@ extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
 extern cl::opt<bool> Lite;
+
+cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
+    "name-similarity-function-matching-threshold",
+    cl::desc("Match functions using namespace and edit distance"), cl::init(0),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
@@ -350,6 +358,111 @@ bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
   return false;
 }
 
+uint64_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
+  uint64_t MatchedWithNameSimilarity = 0;
+  ItaniumPartialDemangler Demangler;
+
+  // Demangle and derive namespace from function name.
+  auto DemangleName = [&](std::string &FunctionName) {
+    StringRef RestoredName = NameResolver::restore(FunctionName);
+    return demangle(RestoredName);
+  };
+  auto DeriveNameSpace = [&](std::string &DemangledName) {
+    if (Demangler.partialDemangle(DemangledName.c_str()))
+      return std::string("");
+    std::vector<char> Buffer(DemangledName.begin(), DemangledName.end());
+    size_t BufferSize;
+    char *NameSpace =
+        Demangler.getFunctionDeclContextName(&Buffer[0], &BufferSize);
+    return std::string(NameSpace, BufferSize);
+  };
+
+  // Maps namespaces to associated function block counts and gets profile
+  // function names and namespaces to minimize the number of BFs to process and
+  // avoid repeated name demangling/namespace derivation.
+  StringMap<std::set<uint32_t>> NamespaceToProfiledBFSizes;
+  std::vector<std::string> ProfileBFDemangledNames;
+  ProfileBFDemangledNames.reserve(YamlBP.Functions.size());
+  std::vector<std::string> ProfiledBFNamespaces;
+  ProfiledBFNamespaces.reserve(YamlBP.Functions.size());
+
+  for (auto &YamlBF : YamlBP.Functions) {
+    std::string YamlBFDemangledName = DemangleName(YamlBF.Name);
+    ProfileBFDemangledNames.push_back(YamlBFDemangledName);
+    std::string YamlBFNamespace = DeriveNameSpace(YamlBFDemangledName);
+    ProfiledBFNamespaces.push_back(YamlBFNamespace);
+    NamespaceToProfiledBFSizes[YamlBFNamespace].insert(YamlBF.NumBasicBlocks);
+  }
+
+  StringMap<std::vector<BinaryFunction *>> NamespaceToBFs;
+
+  // Maps namespaces to BFs excluding binary functions with no equal sized
+  // profiled functions belonging to the same namespace.
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    std::string DemangledName = BF->getDemangledName();
+    std::string Namespace = DeriveNameSpace(DemangledName);
+
+    auto NamespaceToProfiledBFSizesIt =
+        NamespaceToProfiledBFSizes.find(Namespace);
+    // Skip if there are no ProfileBFs with a given \p Namespace.
+    if (NamespaceToProfiledBFSizesIt == NamespaceToProfiledBFSizes.end())
+      continue;
+    // Skip if there are no ProfileBFs in a given \p Namespace with
+    // equal number of blocks.
+    if (NamespaceToProfiledBFSizesIt->second.count(BF->size()) == 0)
+      continue;
+    auto NamespaceToBFsIt = NamespaceToBFs.find(Namespace);
+    if (NamespaceToBFsIt == NamespaceToBFs.end())
+      NamespaceToBFs[Namespace] = {BF};
+    else
+      NamespaceToBFsIt->second.push_back(BF);
+  }
+
+  // Iterates through all profiled functions and binary functions belonging to
+  // the same namespace and matches based on edit distance threshold.
+  assert(YamlBP.Functions.size() == ProfiledBFNamespaces.size() &&
+         ProfiledBFNamespaces.size() == ProfileBFDemangledNames.size());
+  for (size_t I = 0; I < YamlBP.Functions.size(); ++I) {
+    yaml::bolt::BinaryFunctionProfile &YamlBF = YamlBP.Functions[I];
+    std::string &YamlBFNamespace = ProfiledBFNamespaces[I];
+    if (YamlBF.Used)
+      continue;
+    // Skip if there are no BFs in a given \p Namespace.
+    auto It = NamespaceToBFs.find(YamlBFNamespace);
+    if (It == NamespaceToBFs.end())
+      continue;
+
+    std::string &YamlBFDemangledName = ProfileBFDemangledNames[I];
+    std::vector<BinaryFunction *> BFs = It->second;
+    unsigned MinEditDistance = UINT_MAX;
+    BinaryFunction *ClosestNameBF = nullptr;
+
+    // Determines BF the closest to the profiled function, in the
+    // same namespace.
+    for (BinaryFunction *BF : BFs) {
+      if (ProfiledFunctions.count(BF))
+        continue;
+      if (BF->size() != YamlBF.NumBasicBlocks)
+        continue;
+      std::string BFDemangledName = BF->getDemangledName();
+      unsigned BFEditDistance =
+          StringRef(BFDemangledName).edit_distance(YamlBFDemangledName);
+      if (BFEditDistance < MinEditDistance) {
+        MinEditDistance = BFEditDistance;
+        ClosestNameBF = BF;
+      }
+    }
+
+    if (ClosestNameBF &&
+        MinEditDistance <= opts::NameSimilarityFunctionMatchingThreshold) {
+      matchProfileToFunction(YamlBF, *ClosestNameBF);
+      ++MatchedWithNameSimilarity;
+    }
+  }
+
+  return MatchedWithNameSimilarity;
+}
+
 Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   if (opts::Verbosity >= 1) {
     outs() << "BOLT-INFO: YAML profile with hash: ";
@@ -461,6 +574,12 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
       matchProfileToFunction(YamlBF, *BF);
 
+  // Uses name similarity to match functions that were not matched by name.
+  uint64_t MatchedWithNameSimilarity =
+      opts::NameSimilarityFunctionMatchingThreshold > 0
+          ? matchWithNameSimilarity(BC)
+          : 0;
+
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
@@ -473,6 +592,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
            << " functions with hash\n";
     outs() << "BOLT-INFO: matched " << MatchedWithLTOCommonName
            << " functions with matching LTO common names\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
+           << " functions with similar names\n";
   }
 
   // Set for parseFunctionProfile().

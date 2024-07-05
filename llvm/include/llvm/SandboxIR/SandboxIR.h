@@ -58,6 +58,7 @@
 #ifndef LLVM_TRANSFORMS_SANDBOXIR_SANDBOXIR_H
 #define LLVM_TRANSFORMS_SANDBOXIR_SANDBOXIR_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
@@ -129,6 +130,35 @@ public:
   void dumpCommonPrefix(raw_ostream &OS) const;
   void dumpCommonSuffix(raw_ostream &OS) const;
   void printAsOperandCommon(raw_ostream &OS) const;
+  friend raw_ostream &operator<<(raw_ostream &OS, const sandboxir::Value &V) {
+    V.dump(OS);
+    return OS;
+  }
+  virtual void dump(raw_ostream &OS) const = 0;
+  LLVM_DUMP_METHOD virtual void dump() const = 0;
+#endif
+};
+
+/// Argument of a sandboxir::Function.
+class Argument : public sandboxir::Value {
+public:
+  Argument(llvm::Argument *Arg, sandboxir::Context &Ctx)
+      : sandboxir::Value(ClassID::Argument, Arg, Ctx) {}
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Argument;
+  }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::Argument>(Val) && "Expected Argument!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::Argument &TArg) {
+    TArg.dump(OS);
+    return OS;
+  }
+  void printAsOperand(raw_ostream &OS) const;
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
@@ -142,16 +172,136 @@ public:
     assert(isa<llvm::User>(Val) && "Expected User!");
   }
   void dumpCommonHeader(raw_ostream &OS) const final;
+  void dump(raw_ostream &OS) const override {
+    // TODO: Remove this tmp implementation once we get the Instruction classes.
+  }
+  LLVM_DUMP_METHOD void dump() const override {
+    // TODO: Remove this tmp implementation once we get the Instruction classes.
+  }
+#endif
+};
+
+class Constant : public sandboxir::User {
+public:
+  Constant(llvm::Constant *C, sandboxir::Context &SBCtx)
+      : sandboxir::User(ClassID::Constant, C, SBCtx) {}
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Constant ||
+           From->getSubclassID() == ClassID::Function;
+  }
+  sandboxir::Context &getParent() const { return getContext(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::Constant>(Val) && "Expected Constant!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::Constant &SBC) {
+    SBC.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+/// A sandboxir::User with operands and opcode.
+class Instruction : public sandboxir::User {
+public:
+  enum class Opcode {
+#define DEF_VALUE(ID, CLASS)
+#define DEF_USER(ID, CLASS)
+#define OP(OPC) OPC,
+#define DEF_INSTR(ID, OPC, CLASS) OPC
+#include "llvm/SandboxIR/SandboxIRValues.def"
+  };
+
+  Instruction(ClassID ID, Opcode Opc, llvm::Instruction *I,
+              sandboxir::Context &SBCtx)
+      : sandboxir::User(ID, I, SBCtx), Opc(Opc) {}
+
+protected:
+  Opcode Opc;
+
+public:
+  static const char *getOpcodeName(Opcode Opc);
+#ifndef NDEBUG
+  friend raw_ostream &operator<<(raw_ostream &OS, Opcode Opc) {
+    OS << getOpcodeName(Opc);
+    return OS;
+  }
+#endif
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From);
+
+#ifndef NDEBUG
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::Instruction &SBI) {
+    SBI.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+/// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
+/// an OpaqueInstr.
+class OpaqueInst : public sandboxir::Instruction {
+public:
+  OpaqueInst(llvm::Instruction *I, sandboxir::Context &Ctx)
+      : sandboxir::Instruction(ClassID::Opaque, Opcode::Opaque, I, Ctx) {}
+  OpaqueInst(ClassID SubclassID, llvm::Instruction *I, sandboxir::Context &Ctx)
+      : sandboxir::Instruction(SubclassID, Opcode::Opaque, I, Ctx) {}
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Opaque;
+  }
+#ifndef NDEBUG
+  void verify() const final {
+    // Nothing to do
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::OpaqueInst &OI) {
+    OI.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
 #endif
 };
 
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
+  /// SandboxIR objects.
+  DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
+      LLVMValueToValueMap;
 
 public:
   Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx) {}
+  sandboxir::Value *getValue(llvm::Value *V) const;
 };
+
+class Function : public sandboxir::Value {
+public:
+  Function(llvm::Function *F, sandboxir::Context &Ctx)
+      : sandboxir::Value(ClassID::Function, F, Ctx) {}
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Function;
+  }
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::Function>(Val) && "Expected Function!");
+  }
+  void dumpNameAndArgs(raw_ostream &OS) const;
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 } // namespace sandboxir
 } // namespace llvm
 
