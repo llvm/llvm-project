@@ -35,6 +35,11 @@
 using namespace toy;
 namespace cl = llvm::cl;
 
+/**
+ * @brief 解析option inputFilename
+ * 该option没有前缀，然后为其指定desc，init以及value_desc
+ *
+ */
 static cl::opt<std::string> inputFilename(cl::Positional,
                                           cl::desc("<input toy file>"),
                                           cl::init("-"),

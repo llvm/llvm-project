@@ -20,16 +20,22 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
 // can define our operations.
+
+// 定义一个名为toy的dialect并在其中定义自己的operation。
 def Toy_Dialect : Dialect {
   let name = "toy";
   let cppNamespace = "::mlir::toy";
 }
 
+
 // Base class for toy dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
-//   * The parent dialect of the operation.
-//   * The mnemonic for the operation, or the name without the dialect prefix.
-//   * A list of traits for the operation.
+//   * The parent dialect of the operation.========================================父类所在的dialect：Toy_Dialect
+//   * The mnemonic for the operation, or the name without the dialect prefix.=====mnemonic：助记符，或者不带dialect前缀的名字
+//   * A list of traits for the operation.=========================================该operation的特征值列表
+
+// 定义toy dialect的Operation基类，这个operation从基类Op继承而来。
+//
 class Toy_Op<string mnemonic, list<Trait> traits = []> :
     Op<Toy_Dialect, mnemonic, traits>;
 
@@ -42,6 +48,7 @@ class Toy_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 // We define a toy operation by inheriting from our base 'Toy_Op' class above.
+// 通过继承Toy_Op来定义一个operation ConstantOp，用来表示常量。
 // Here we provide the mnemonic and a list of traits for the operation. The
 // constant operation is marked as 'Pure' as it is a pure operation
 // and may be removed if dead.
@@ -59,10 +66,17 @@ def ConstantOp : Toy_Op<"constant", [Pure]> {
     ```
   }];
 
+  // ins代表op的输入值列表。outs代表op的输出列表
+  // op是用来进行转换的，所谓转换就是将来源Source转为目标值Target。ins就是指这里的Source来源，outs就是输出
+  //
+  //
   // The constant operation takes an attribute as the only input.
+  // 常量必须有值，这个op的唯一属性就是常量值。
+  // F64ElementsAttr为attribute的类型，参数名称为value
   let arguments = (ins F64ElementsAttr:$value);
 
   // The constant operation returns a single value of TensorType.
+  // 输出类型为F64Tensor，即元素类型为F64的tensar类型
   let results = (outs F64Tensor);
 
   // Indicate that the operation has a custom parser and printer method.

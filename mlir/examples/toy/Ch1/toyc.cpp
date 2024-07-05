@@ -30,6 +30,10 @@ static cl::opt<std::string> inputFilename(cl::Positional,
                                           cl::desc("<input toy file>"),
                                           cl::init("-"),
                                           cl::value_desc("filename"));
+
+// static cl::opt<std::string> userName("name", cl::desc("User name"),
+//                                      cl::init("-"),
+//                                      cl::value_desc("user name"));
 namespace {
 enum Action { None, DumpAST };
 } // namespace
@@ -46,6 +50,7 @@ std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
     llvm::errs() << "Could not open input file: " << ec.message() << "\n";
     return nullptr;
   }
+
   auto buffer = fileOrErr.get()->getBuffer();
   LexerBuffer lexer(buffer.begin(), buffer.end(), std::string(filename));
   Parser parser(lexer);
@@ -54,6 +59,12 @@ std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
 
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "toy compiler\n");
+
+  llvm::outs() << inputFilename << "\n";
+
+  // if (userName != "Cratels") {
+  //   return -1;
+  // }
 
   auto moduleAST = parseInputFile(inputFilename);
   if (!moduleAST)
