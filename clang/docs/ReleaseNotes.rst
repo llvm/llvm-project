@@ -963,6 +963,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 - Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
   of the address of operator. (#GH97483).
+- Fix a crash when checking destructor reference with an invalid initializer. (#GH97230).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
