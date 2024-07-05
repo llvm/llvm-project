@@ -262,6 +262,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.src.errno.errno
     libc.src.unistd.readlink
+    libc.src.string.string_utils
     libc.src.unistd.symlink
     libc.src.unistd.unlink
     libc.src.__support.CPP.string_view
@@ -278,6 +279,7 @@ add_libc_unittest(
     libc.include.fcntl
     libc.include.unistd
     libc.src.errno.errno
+    libc.src.string.string_utils
     libc.src.unistd.readlinkat
     libc.src.unistd.symlink
     libc.src.unistd.unlink
