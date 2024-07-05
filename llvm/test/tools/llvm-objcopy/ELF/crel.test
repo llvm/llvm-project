@@ -23,7 +23,7 @@
 # CHECK-NEXT: 0000000000000030  {{.*}}           R_X86_64_64                       0
 
 --- !ELF
-FileHeader: !FileHeader
+FileHeader:
   Class: ELFCLASS64
   Data: ELFDATA2LSB
   Type: ET_REL
