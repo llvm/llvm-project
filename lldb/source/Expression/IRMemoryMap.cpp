@@ -126,6 +126,10 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
           } else {
             ret = region_info.GetRange().GetRangeEnd();
           }
+        } else if (ret == 0x0) {
+          // Get other region if zero address. Should't map zero address to
+          // get an error in cases when user tries to dereference nullptr
+          ret = region_info.GetRange().GetRangeEnd();
         } else if (ret + size < region_info.GetRange().GetRangeEnd()) {
           return ret;
         } else {
