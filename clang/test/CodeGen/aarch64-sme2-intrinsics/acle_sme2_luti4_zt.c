@@ -61,7 +61,7 @@ svuint8x4_t test_luti4_zt_u8_x4(svuint8x2_t op)  __arm_streaming __arm_in("zt0")
 // CHECK-NEXT:    [[TMP10:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP8]], <vscale x 16 x i8> [[TMP9]], i64 48)
 // CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP10]]
 //
-// CHECK-CXX-LABEL: define dso_local <vscale x 64 x i8> @_Z19test_luti4_zt_s8_x410svint8x2_t(
+// CHECK-CXX-LABEL: define dso_local <vscale x 64 x i8> @_Z19test_luti4_zt_s8_x411svuint8x2_t(
 // CHECK-CXX-SAME: <vscale x 32 x i8> [[OP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[OP]], i64 0)
@@ -77,6 +77,6 @@ svuint8x4_t test_luti4_zt_u8_x4(svuint8x2_t op)  __arm_streaming __arm_in("zt0")
 // CHECK-CXX-NEXT:    [[TMP10:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP8]], <vscale x 16 x i8> [[TMP9]], i64 48)
 // CHECK-CXX-NEXT:    ret <vscale x 64 x i8> [[TMP10]]
 //
-svint8x4_t test_luti4_zt_s8_x4(svint8x2_t op)  __arm_streaming __arm_in("zt0") {
+svint8x4_t test_luti4_zt_s8_x4(svuint8x2_t op)  __arm_streaming __arm_in("zt0") {
   return svluti4_zt_s8_x4(0, op);
 }
