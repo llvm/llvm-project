@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=cxx98 %s -E | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=since-cxx11 %s -E | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=since-cxx11 %s -E | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=since-cxx11 %s -E | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=since-cxx11 %s -E | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=since-cxx11 %s -E | FileCheck %s --strict-whitespace
