@@ -18108,7 +18108,8 @@ bool SLPVectorizerPass::tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
 }
 
 bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
-                                                 BasicBlock *BB, BoUpSLP &R) {
+                                                 BasicBlock *BB, BoUpSLP &R,
+                                                 bool MaxVFOnly) {
   if (!R.canMapToVector(IVI->getType()))
     return false;
 
@@ -18119,11 +18120,12 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
-  return tryToVectorizeList(BuildVectorOpds, R);
+  return tryToVectorizeList(BuildVectorOpds, R, MaxVFOnly);
 }
 
 bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
-                                                   BasicBlock *BB, BoUpSLP &R) {
+                                                   BasicBlock *BB, BoUpSLP &R,
+                                                   bool MaxVFOnly) {
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
@@ -18133,7 +18135,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
-  return tryToVectorizeList(BuildVectorInsts, R);
+  return tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly);
 }
 
 template <typename T>
@@ -18353,20 +18355,30 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
          "This function only accepts Insert instructions");
   bool OpsChanged = false;
   SmallVector<WeakTrackingVH> PostponedInsts;
-  // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
-    if (R.isDeleted(I))
-      continue;
-    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
-  }
-  // pass2 - try to match and vectorize a buildvector sequence.
-  for (auto *I : reverse(Instructions)) {
+    // pass1 - try to match and vectorize a buildvector sequence for MaxVF only.
     if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
-      OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/true);
     } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
-      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
+      OpsChanged |=
+          vectorizeInsertElementInst(LastInsertElem, BB, R, /*MaxVFOnly=*/true);
+    }
+    // pass2 - try to vectorize reductions only
+    if (R.isDeleted(I))
+      continue;
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+    if (R.isDeleted(I) || isa<CmpInst>(I))
+      continue;
+    // pass3 - try to match and vectorize a buildvector sequence.
+    if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
+      OpsChanged |=
+          vectorizeInsertValueInst(LastInsertValue, BB, R, /*MaxVFOnly=*/false);
+    } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
+      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R,
+                                               /*MaxVFOnly=*/false);
     }
   }
   // Now try to vectorize postponed instructions.
