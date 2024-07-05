@@ -1,0 +1,23 @@
+{
+    "root": "/home/thebesttv/vul/packages/FFmpeg_c773ad",
+    "compile_commands": "/home/thebesttv/vul/packages/FFmpeg_c773ad/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_c773ad/libavformat/nsvdec.c",
+                    "line": 256,
+                    "column": 9
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_c773ad/libavformat/nsvdec.c",
+                    "line": 259,
+                    "column": 5
+                }
+            ]
+        }
+    ]
+}

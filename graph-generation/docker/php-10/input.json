@@ -1,0 +1,52 @@
+{
+  "type": "npe",
+  "locations": [
+    {
+      "type": "source",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 3142,
+      "column": 2,
+      "var": "tmp"
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 3128,
+      "column": 1
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 3130,
+      "column": 2
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 3131,
+      "column": 6
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 3132,
+      "column": 3
+    },
+    {
+      "type": "exit",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 3135,
+      "column": 1
+    },
+    {
+      "type": "sink",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 3143,
+      "column": 2,
+      "var": "tmp"
+    }
+  ],
+  "analyzer": [
+    "infer"
+  ]
+}

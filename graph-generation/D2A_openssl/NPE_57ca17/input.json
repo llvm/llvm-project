@@ -1,0 +1,23 @@
+{
+    "root": "/home/thebesttv/vul/packages/openssl_57ca17",
+    "compile_commands": "/home/thebesttv/vul/packages/openssl_57ca17/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_57ca17/crypto/ex_data.c",
+                    "line": 38,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_57ca17/crypto/ex_data.c",
+                    "line": 39,
+                    "column": 9
+                }
+            ]
+        }
+    ]
+}

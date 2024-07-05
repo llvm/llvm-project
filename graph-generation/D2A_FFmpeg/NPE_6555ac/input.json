@@ -1,0 +1,74 @@
+{
+    "root": "/home/thebesttv/vul/packages/FFmpeg_6555ac",
+    "compile_commands": "/home/thebesttv/vul/packages/FFmpeg_6555ac/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 282,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 136,
+                    "column": 13
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 282,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 198,
+                    "column": 17
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 283,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 248,
+                    "column": 9
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 283,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_6555ac/libavcodec/faxcompr.c",
+                    "line": 248,
+                    "column": 9
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,2 @@
+分配内存时，nullcheck出现错误
+这个函数被调用的地方过多，所以仅从最近的调用处作为source，以该函数return stmt作为sink

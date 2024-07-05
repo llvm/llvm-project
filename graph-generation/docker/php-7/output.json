@@ -1,0 +1,162 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 7,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2870,
+            "beginColumn": 17,
+            "endLine": 2870,
+            "endColumn": 47,
+            "content": "tracked_get_size_zv(heap, ptr)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "entry",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2817,
+            "beginColumn": 1,
+            "endLine": 2822,
+            "endColumn": 2,
+            "content": "static zend_always_inline zval *tracked_get_size_zv(zend_mm_heap *heap, void *pt ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2818,
+            "beginColumn": 2,
+            "endLine": 2818,
+            "endColumn": 61,
+            "content": "zend_ulong h = ((uintptr_t) ptr) >> ZEND_MM_ALIGNMENT_LOG2;",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2819,
+            "beginColumn": 18,
+            "endLine": 2819,
+            "endColumn": 63,
+            "content": "zend_hash_index_find(heap->tracked_allocs, h)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "entry",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+            "beginLine": 2699,
+            "beginColumn": 1,
+            "endLine": 2718,
+            "endColumn": 2,
+            "content": "ZEND_API zval* ZEND_FASTCALL zend_hash_index_find(const HashTable *ht, zend_ulon ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+            "beginLine": 2701,
+            "beginColumn": 2,
+            "endLine": 2701,
+            "endColumn": 12,
+            "content": "Bucket *p;",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+            "beginLine": 2705,
+            "beginColumn": 6,
+            "endLine": 2705,
+            "endColumn": 22,
+            "content": "HT_IS_PACKED(ht)",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+            "beginLine": 2706,
+            "beginColumn": 7,
+            "endLine": 2706,
+            "endColumn": 23,
+            "content": "h < ht->nNumUsed",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+            "beginLine": 2713,
+            "beginColumn": 3,
+            "endLine": 2713,
+            "endColumn": 14,
+            "content": "return NULL",
+            "stmtKind": "ReturnStmt"
+        },
+        {
+            "type": "exit",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+            "beginLine": 2699,
+            "beginColumn": 1,
+            "endLine": 2718,
+            "endColumn": 2,
+            "content": "ZEND_API zval* ZEND_FASTCALL zend_hash_index_find(const HashTable *ht, zend_ulon ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2819,
+            "beginColumn": 2,
+            "endLine": 2819,
+            "endColumn": 64,
+            "content": "zval *size_zv = zend_hash_index_find(heap->tracked_allocs, h);",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2820,
+            "beginColumn": 2,
+            "endLine": 2820,
+            "endColumn": 79,
+            "content": "ZEND_ASSERT(size_zv && \"Trying to free pointer not allocated through ZendMM\")",
+            "stmtKind": "ImplicitCastExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2821,
+            "beginColumn": 2,
+            "endLine": 2821,
+            "endColumn": 16,
+            "content": "return size_zv",
+            "stmtKind": "ReturnStmt"
+        },
+        {
+            "type": "exit",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2817,
+            "beginColumn": 1,
+            "endLine": 2822,
+            "endColumn": 2,
+            "content": "static zend_always_inline zval *tracked_get_size_zv(zend_mm_heap *heap, void *pt ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2870,
+            "beginColumn": 3,
+            "endLine": 2870,
+            "endColumn": 47,
+            "content": "old_size_zv = tracked_get_size_zv(heap, ptr)",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2871,
+            "beginColumn": 3,
+            "endLine": 2871,
+            "endColumn": 35,
+            "content": "old_size = Z_LVAL_P(old_size_zv)",
+            "stmtKind": "BinaryOperator"
+        }
+    ]
+}

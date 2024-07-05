@@ -1,0 +1,23 @@
+{
+    "root": "/home/thebesttv/vul/packages/FFmpeg_568381",
+    "compile_commands": "/home/thebesttv/vul/packages/FFmpeg_568381/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_568381/libavformat/oggdec.c",
+                    "line": 276,
+                    "column": 14
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_568381/libavformat/oggdec.c",
+                    "line": 280,
+                    "column": 9
+                }
+            ]
+        }
+    ]
+}

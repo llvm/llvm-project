@@ -1,0 +1,36 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 9,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2907,
+            "beginColumn": 3,
+            "endLine": 2907,
+            "endColumn": 81,
+            "content": "zend_mm_heap *mm_heap = alloc_globals->mm_heap = malloc(sizeof(zend_mm_heap));",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2908,
+            "beginColumn": 3,
+            "endLine": 2908,
+            "endColumn": 43,
+            "content": "memset(mm_heap, 0, sizeof(zend_mm_heap))",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 2909,
+            "beginColumn": 3,
+            "endLine": 2909,
+            "endColumn": 53,
+            "content": "mm_heap->use_custom_heap = ZEND_MM_CUSTOM_HEAP_STD",
+            "stmtKind": "BinaryOperator"
+        }
+    ]
+}

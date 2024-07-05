@@ -1,0 +1,122 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 2,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 618,
+            "beginColumn": 21,
+            "endLine": 618,
+            "endColumn": 59,
+            "content": "zend_print_zval_r_to_str(expr, indent)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "entry",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 607,
+            "beginColumn": 1,
+            "endLine": 613,
+            "endColumn": 2,
+            "content": "ZEND_API zend_string *zend_print_zval_r_to_str(zval *expr, int indent) /* {{{ */ ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 609,
+            "beginColumn": 2,
+            "endLine": 609,
+            "endColumn": 22,
+            "content": "smart_str buf = {0};",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 610,
+            "beginColumn": 2,
+            "endLine": 610,
+            "endColumn": 46,
+            "content": "zend_print_zval_r_to_buf(&buf, expr, indent)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 611,
+            "beginColumn": 2,
+            "endLine": 611,
+            "endColumn": 19,
+            "content": "smart_str_0(&buf)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "entry",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_smart_str.h",
+            "beginLine": 81,
+            "beginColumn": 1,
+            "endLine": 85,
+            "endColumn": 2,
+            "content": "static zend_always_inline void smart_str_0(smart_str *str) {\n\tif (str->s) {\n\t\tZS ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_smart_str.h",
+            "beginLine": 82,
+            "beginColumn": 6,
+            "endLine": 82,
+            "endColumn": 12,
+            "content": "str->s",
+            "stmtKind": "ImplicitCastExpr"
+        },
+        {
+            "type": "exit",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_smart_str.h",
+            "beginLine": 81,
+            "beginColumn": 1,
+            "endLine": 85,
+            "endColumn": 2,
+            "content": "static zend_always_inline void smart_str_0(smart_str *str) {\n\tif (str->s) {\n\t\tZS ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 612,
+            "beginColumn": 2,
+            "endLine": 612,
+            "endColumn": 14,
+            "content": "return buf.s",
+            "stmtKind": "ReturnStmt"
+        },
+        {
+            "type": "exit",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 607,
+            "beginColumn": 1,
+            "endLine": 613,
+            "endColumn": 2,
+            "content": "ZEND_API zend_string *zend_print_zval_r_to_str(zval *expr, int indent) /* {{{ */ ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 618,
+            "beginColumn": 2,
+            "endLine": 618,
+            "endColumn": 60,
+            "content": "zend_string *str = zend_print_zval_r_to_str(expr, indent);",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+            "beginLine": 619,
+            "beginColumn": 2,
+            "endLine": 619,
+            "endColumn": 42,
+            "content": "zend_write(ZSTR_VAL(str), ZSTR_LEN(str))",
+            "stmtKind": "CallExpr"
+        }
+    ]
+}

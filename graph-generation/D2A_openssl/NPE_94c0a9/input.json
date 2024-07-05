@@ -1,0 +1,91 @@
+{
+    "root": "/home/thebesttv/vul/packages/openssl_94c0a9",
+    "compile_commands": "/home/thebesttv/vul/packages/openssl_94c0a9/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 626,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 629,
+                    "column": 9
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 657,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 657,
+                    "column": 30
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 697,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 700,
+                    "column": 9
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 767,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 768,
+                    "column": 12
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 775,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_94c0a9/engines/ccgost/gost_ameth.c",
+                    "line": 776,
+                    "column": 21
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,57 @@
+{
+    "root": "/home/thebesttv/vul/packages/openssl_98c033",
+    "compile_commands": "/home/thebesttv/vul/packages/openssl_98c033/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_98c033/crypto/bio/bss_acpt.c",
+                    "line": 130,
+                    "column": 17
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_98c033/crypto/bio/bss_acpt.c",
+                    "line": 104,
+                    "column": 18
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_98c033/crypto/bio/bss_conn.c",
+                    "line": 273,
+                    "column": 18
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_98c033/crypto/bio/bss_conn.c",
+                    "line": 235,
+                    "column": 18
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_98c033/crypto/bn/bn_blind.c",
+                    "line": 222,
+                    "column": 18
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_98c033/crypto/bn/bn_blind.c",
+                    "line": 83,
+                    "column": 13
+                }
+            ]
+        }
+    ]
+}

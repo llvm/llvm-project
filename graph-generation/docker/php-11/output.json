@@ -1,0 +1,46 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 11,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_attributes.c",
+            "beginLine": 87,
+            "beginColumn": 2,
+            "endLine": 87,
+            "endColumn": 35,
+            "content": "ZEND_PARSE_PARAMETERS_START(0, 1)",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_attributes.c",
+            "beginLine": 88,
+            "beginColumn": 3,
+            "endLine": 88,
+            "endColumn": 19,
+            "content": "Z_PARAM_OPTIONAL",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_attributes.c",
+            "beginLine": 89,
+            "beginColumn": 3,
+            "endLine": 89,
+            "endColumn": 22,
+            "content": "Z_PARAM_LONG(flags)",
+            "stmtKind": "UnaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_attributes.c",
+            "beginLine": 90,
+            "beginColumn": 2,
+            "endLine": 90,
+            "endColumn": 29,
+            "content": "ZEND_PARSE_PARAMETERS_END()",
+            "stmtKind": "CallExpr"
+        }
+    ]
+}

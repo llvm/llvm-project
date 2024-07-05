@@ -1,0 +1,40 @@
+{
+    "root": "/home/thebesttv/vul/packages/FFmpeg_069cee",
+    "compile_commands": "/home/thebesttv/vul/packages/FFmpeg_069cee/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_069cee/libavcodec/h264.c",
+                    "line": 1673,
+                    "column": 13
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_069cee/libavcodec/h264.c",
+                    "line": 1676,
+                    "column": 13
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_069cee/libavcodec/h264.c",
+                    "line": 3266,
+                    "column": 13
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_069cee/libavcodec/h264.c",
+                    "line": 3267,
+                    "column": 13
+                }
+            ]
+        }
+    ]
+}

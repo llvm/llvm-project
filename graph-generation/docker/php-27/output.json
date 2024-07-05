@@ -1,0 +1,84 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 27,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_language_scanner.c",
+            "beginLine": 1276,
+            "beginColumn": 33,
+            "endLine": 1276,
+            "endColumn": 75,
+            "content": "zend_stack_top(&SCNG(nest_location_stack))",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "entry",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+            "beginLine": 45,
+            "beginColumn": 1,
+            "endLine": 52,
+            "endColumn": 2,
+            "content": "ZEND_API void *zend_stack_top(const zend_stack *stack)\n{\n\tif (stack->top > 0) {\n ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+            "beginLine": 47,
+            "beginColumn": 6,
+            "endLine": 47,
+            "endColumn": 20,
+            "content": "stack->top > 0",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+            "beginLine": 50,
+            "beginColumn": 10,
+            "endLine": 50,
+            "endColumn": 14,
+            "content": "NULL",
+            "stmtKind": "CStyleCastExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+            "beginLine": 50,
+            "beginColumn": 3,
+            "endLine": 50,
+            "endColumn": 14,
+            "content": "return NULL",
+            "stmtKind": "ReturnStmt"
+        },
+        {
+            "type": "exit",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+            "beginLine": 45,
+            "beginColumn": 1,
+            "endLine": 52,
+            "endColumn": 2,
+            "content": "ZEND_API void *zend_stack_top(const zend_stack *stack)\n{\n\tif (stack->top > 0) {\n ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_language_scanner.c",
+            "beginLine": 1276,
+            "beginColumn": 2,
+            "endLine": 1276,
+            "endColumn": 76,
+            "content": "zend_nest_location *nest_loc = zend_stack_top(&SCNG(nest_location_stack));",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_language_scanner.c",
+            "beginLine": 1277,
+            "beginColumn": 2,
+            "endLine": 1277,
+            "endColumn": 32,
+            "content": "char opening = nest_loc->text;",
+            "stmtKind": "DeclStmt"
+        }
+    ]
+}

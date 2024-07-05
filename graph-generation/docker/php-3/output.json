@@ -1,0 +1,36 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 3,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_API.c",
+            "beginLine": 3281,
+            "beginColumn": 2,
+            "endLine": 3281,
+            "endColumn": 67,
+            "content": "zend_class_entry *class_entry = malloc(sizeof(zend_class_entry));",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_API.c",
+            "beginLine": 3282,
+            "beginColumn": 2,
+            "endLine": 3282,
+            "endColumn": 30,
+            "content": "zend_string *lowercase_name;",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_API.c",
+            "beginLine": 3283,
+            "beginColumn": 2,
+            "endLine": 3283,
+            "endColumn": 34,
+            "content": "*class_entry = *orig_class_entry",
+            "stmtKind": "BinaryOperator"
+        }
+    ]
+}

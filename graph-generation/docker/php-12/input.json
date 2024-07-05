@@ -1,0 +1,20 @@
+{
+  "type": "npe",
+  "locations": [
+    {
+      "type": "source",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_attributes.c",
+      "line": 114,
+      "column": 2
+    },
+    {
+      "type": "sink",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_attributes.c",
+      "line": 116,
+      "column": 2
+    }
+  ],
+  "analyzer": [
+    "infer"
+  ]
+}

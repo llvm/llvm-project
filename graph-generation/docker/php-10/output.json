@@ -1,0 +1,94 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 10,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3142,
+            "beginColumn": 8,
+            "endLine": 3142,
+            "endColumn": 26,
+            "content": "__zend_malloc(len)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "entry",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3128,
+            "beginColumn": 1,
+            "endLine": 3135,
+            "endColumn": 2,
+            "content": "ZEND_API void * __zend_malloc(size_t len)\n{\n\tvoid *tmp = malloc(len);\n\tif (EXPEC ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3130,
+            "beginColumn": 14,
+            "endLine": 3130,
+            "endColumn": 25,
+            "content": "malloc(len)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3130,
+            "beginColumn": 2,
+            "endLine": 3130,
+            "endColumn": 26,
+            "content": "void *tmp = malloc(len);",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3131,
+            "beginColumn": 6,
+            "endLine": 3131,
+            "endColumn": 27,
+            "content": "EXPECTED(tmp || !len)",
+            "stmtKind": "ImplicitCastExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3132,
+            "beginColumn": 3,
+            "endLine": 3132,
+            "endColumn": 13,
+            "content": "return tmp",
+            "stmtKind": "ReturnStmt"
+        },
+        {
+            "type": "exit",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3128,
+            "beginColumn": 1,
+            "endLine": 3135,
+            "endColumn": 2,
+            "content": "ZEND_API void * __zend_malloc(size_t len)\n{\n\tvoid *tmp = malloc(len);\n\tif (EXPEC ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3142,
+            "beginColumn": 2,
+            "endLine": 3142,
+            "endColumn": 26,
+            "content": "tmp = __zend_malloc(len)",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+            "beginLine": 3143,
+            "beginColumn": 2,
+            "endLine": 3143,
+            "endColumn": 21,
+            "content": "memset(tmp, 0, len)",
+            "stmtKind": "CallExpr"
+        }
+    ]
+}

@@ -1,0 +1,57 @@
+{
+    "root": "/home/thebesttv/vul/packages/openssl_6ce84e",
+    "compile_commands": "/home/thebesttv/vul/packages/openssl_6ce84e/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_6ce84e/crypto/conf/conf_lib.c",
+                    "line": 357,
+                    "column": 28
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_6ce84e/crypto/conf/conf_lib.c",
+                    "line": 361,
+                    "column": 5
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_6ce84e/crypto/ex_data.c",
+                    "line": 382,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_6ce84e/crypto/ex_data.c",
+                    "line": 383,
+                    "column": 20
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_6ce84e/crypto/ex_data.c",
+                    "line": 383,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_6ce84e/crypto/ex_data.c",
+                    "line": 390,
+                    "column": 5
+                }
+            ]
+        }
+    ]
+}

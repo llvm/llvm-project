@@ -1,0 +1,88 @@
+{
+  "type": "npe",
+  "locations": [
+    {
+      "type": "source",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2859,
+      "column": 8,
+      "var": "size_zv"
+    },
+    {
+      "type": "entry",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2817,
+      "column": 1
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2818,
+      "column": 2
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2819,
+      "column": 2
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+      "line": 2699,
+      "column": 1
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+      "line": 2705,
+      "column": 6
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+      "line": 2706,
+      "column": 3
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+      "line": 2713,
+      "column": 3
+    },
+    {
+      "type": "exit",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+      "line": 2718,
+      "column": 1
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2820,
+      "column": 2
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2821,
+      "column": 2
+    },
+    {
+      "type": "exit",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2822,
+      "column": 1
+    },
+    {
+      "type": "sink",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2860,
+      "column": 16,
+      "var": "size_zv"
+    }
+  ],
+  "analyzer": [
+    "infer"
+  ]
+}

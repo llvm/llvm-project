@@ -1,0 +1,94 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 20,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 3402,
+            "beginColumn": 19,
+            "endLine": 3402,
+            "endColumn": 78,
+            "content": "get_zval_ptr_undef(opline->op1_type, opline->op1, BP_VAR_R)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "entry",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 488,
+            "beginColumn": 1,
+            "endLine": 506,
+            "endColumn": 2,
+            "content": "static zend_always_inline zval *_get_zval_ptr_undef(int op_type, znode_op node,  ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 490,
+            "beginColumn": 6,
+            "endLine": 490,
+            "endColumn": 35,
+            "content": "op_type & (IS_TMP_VAR|IS_VAR)",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 498,
+            "beginColumn": 7,
+            "endLine": 498,
+            "endColumn": 26,
+            "content": "op_type == IS_CONST",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 500,
+            "beginColumn": 14,
+            "endLine": 500,
+            "endColumn": 30,
+            "content": "op_type == IS_CV",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 503,
+            "beginColumn": 4,
+            "endLine": 503,
+            "endColumn": 15,
+            "content": "return NULL",
+            "stmtKind": "ReturnStmt"
+        },
+        {
+            "type": "exit",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 488,
+            "beginColumn": 1,
+            "endLine": 506,
+            "endColumn": 2,
+            "content": "static zend_always_inline zval *_get_zval_ptr_undef(int op_type, znode_op node,  ..."
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 3402,
+            "beginColumn": 3,
+            "endLine": 3402,
+            "endColumn": 79,
+            "content": "zval *varname = get_zval_ptr_undef(opline->op1_type, opline->op1, BP_VAR_R);",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+            "beginLine": 3403,
+            "beginColumn": 7,
+            "endLine": 3403,
+            "endColumn": 47,
+            "content": "EXPECTED(Z_TYPE_P(varname) == IS_STRING)",
+            "stmtKind": "CallExpr"
+        }
+    ]
+}

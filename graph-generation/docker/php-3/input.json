@@ -1,0 +1,22 @@
+{
+  "type": "npe",
+  "locations": [
+    {
+      "type": "source",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_API.c",
+      "line": 3281,
+      "column": 20,
+      "var": "class_entry"
+    },
+    {
+      "type": "sink",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_API.c",
+      "line": 3283,
+      "column": 2,
+      "var": "class_entry"
+    }
+  ],
+  "analyzer": [
+    "infer"
+  ]
+}

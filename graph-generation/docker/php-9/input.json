@@ -1,0 +1,22 @@
+{
+  "type": "npe",
+  "locations": [
+    {
+      "type": "source",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2907,
+      "column": 17,
+      "var": "mm_heap"
+    },
+    {
+      "type": "sink",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_alloc.c",
+      "line": 2909,
+      "column": 3,
+      "var": "mm_heap"
+    }
+  ],
+  "analyzer": [
+    "infer"
+  ]
+}

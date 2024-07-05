@@ -1,0 +1,36 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 21,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_generators.c",
+            "beginLine": 925,
+            "beginColumn": 2,
+            "endLine": 925,
+            "endColumn": 35,
+            "content": "ZEND_PARSE_PARAMETERS_START(1, 1)",
+            "stmtKind": "BinaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_generators.c",
+            "beginLine": 926,
+            "beginColumn": 3,
+            "endLine": 926,
+            "endColumn": 22,
+            "content": "Z_PARAM_ZVAL(value)",
+            "stmtKind": "UnaryOperator"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_generators.c",
+            "beginLine": 927,
+            "beginColumn": 2,
+            "endLine": 927,
+            "endColumn": 29,
+            "content": "ZEND_PARSE_PARAMETERS_END()",
+            "stmtKind": "CallExpr"
+        }
+    ]
+}

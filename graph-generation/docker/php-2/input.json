@@ -1,0 +1,76 @@
+{
+    "type": "npe",
+    "locations": [
+      {
+        "type": "source",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 618,
+        "column": 15,
+        "var": "str"
+      },
+      {
+        "type": "stmt",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 607,
+        "column": 1
+      },
+      {
+        "type": "stmt",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 609,
+        "column": 2
+      },
+      {
+        "type": "stmt",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 610,
+        "column": 2
+      },
+      {
+        "type": "stmt",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 611,
+        "column": 2
+      },
+      {
+        "type": "entry",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_smart_str.h",
+        "line": 81,
+        "column": 1
+      },
+      {
+        "type": "stmt",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_smart_str.h",
+        "line": 82,
+        "column": 2
+      },
+      {
+        "type": "exit",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_smart_str.h",
+        "line": 85,
+        "column": 1
+      },
+      {
+        "type": "stmt",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 612,
+        "column": 2
+      },
+      {
+        "type": "exit",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 613,
+        "column": 1
+      },
+      {
+        "type": "sink",
+        "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend.c",
+        "line": 619,
+        "column": 28,
+        "var": "str"
+      }
+    ],
+    "analyzer": [
+      "infer"
+    ]
+  }

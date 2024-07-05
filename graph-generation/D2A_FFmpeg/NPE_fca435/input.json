@@ -1,0 +1,23 @@
+{
+    "root": "/home/thebesttv/vul/packages/FFmpeg_fca435",
+    "compile_commands": "/home/thebesttv/vul/packages/FFmpeg_fca435/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_fca435/ffserver.c",
+                    "line": 3971,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_fca435/ffserver.c",
+                    "line": 3979,
+                    "column": 5
+                }
+            ]
+        }
+    ]
+}

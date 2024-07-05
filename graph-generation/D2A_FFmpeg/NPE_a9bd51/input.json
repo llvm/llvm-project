@@ -1,0 +1,40 @@
+{
+    "root": "/home/thebesttv/vul/packages/FFmpeg_a9bd51",
+    "compile_commands": "/home/thebesttv/vul/packages/FFmpeg_a9bd51/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_a9bd51/libavformat/yop.c",
+                    "line": 65,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_a9bd51/libavformat/yop.c",
+                    "line": 78,
+                    "column": 5
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_a9bd51/libavformat/yop.c",
+                    "line": 66,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/FFmpeg_a9bd51/libavformat/yop.c",
+                    "line": 69,
+                    "column": 5
+                }
+            ]
+        }
+    ]
+}

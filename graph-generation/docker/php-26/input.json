@@ -1,0 +1,45 @@
+{
+  "type": "npe",
+  "locations": [
+    {
+      "type": "source",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_language_scanner.c",
+      "line": 176,
+      "column": 7,
+      "var": "stack_state"
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+      "line": 45,
+      "column": 1
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+      "line": 47,
+      "column": 2
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+      "line": 50,
+      "column": 3
+    },
+    {
+      "type": "exit",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_stack.c",
+      "line": 52,
+      "column": 1
+    },
+    {
+      "type": "sink",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_language_scanner.c",
+      "line": 177,
+      "column": 2
+    }
+  ],
+  "analyzer": [
+    "infer"
+  ]
+}

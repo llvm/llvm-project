@@ -1,0 +1,76 @@
+{
+    "type": "npe-bug",
+    "sourceIndex": 16,
+    "locations": [
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+            "beginLine": 1334,
+            "beginColumn": 2,
+            "endLine": 1334,
+            "endColumn": 39,
+            "content": "zend_string *intersection_str = NULL;",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+            "beginLine": 1336,
+            "beginColumn": 2,
+            "endLine": 1336,
+            "endColumn": 61,
+            "content": "ZEND_TYPE_LIST_FOREACH(intersection_type_list, single_type)",
+            "stmtKind": "DeclStmt"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+            "beginLine": 1343,
+            "beginColumn": 4,
+            "endLine": 1343,
+            "endColumn": 32,
+            "content": "ZEND_TYPE_LIST_FOREACH_END()",
+            "stmtKind": "IntegerLiteral"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+            "beginLine": 1345,
+            "beginColumn": 2,
+            "endLine": 1345,
+            "endColumn": 31,
+            "content": "ZEND_ASSERT(intersection_str)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+            "beginLine": 1347,
+            "beginColumn": 6,
+            "endLine": 1347,
+            "endColumn": 18,
+            "content": "is_bracketed",
+            "stmtKind": "ImplicitCastExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+            "beginLine": 1352,
+            "beginColumn": 8,
+            "endLine": 1352,
+            "endColumn": 75,
+            "content": "add_type_string(str, intersection_str, /* is_intersection */ false)",
+            "stmtKind": "CallExpr"
+        },
+        {
+            "type": "stmt",
+            "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+            "beginLine": 1352,
+            "beginColumn": 2,
+            "endLine": 1352,
+            "endColumn": 75,
+            "content": "str = add_type_string(str, intersection_str, /* is_intersection */ false)",
+            "stmtKind": "BinaryOperator"
+        }
+    ]
+}

@@ -1,0 +1,57 @@
+{
+    "root": "/home/thebesttv/vul/packages/openssl_5c8e91",
+    "compile_commands": "/home/thebesttv/vul/packages/openssl_5c8e91/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_5c8e91/crypto/ocsp/ocsp_cl.c",
+                    "line": 103,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_357739/crypto/conf/conf_lib.c",
+                    "line": 104,
+                    "column": 25
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_5c8e91/crypto/ui/ui_lib.c",
+                    "line": 620,
+                    "column": 16
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_5c8e91/crypto/ui/ui_lib.c",
+                    "line": 624,
+                    "column": 5
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/openssl_5c8e91/ssl/ssl_txt.c",
+                    "line": 156,
+                    "column": 19
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/openssl_5c8e91/ssl/ssl_txt.c",
+                    "line": 156,
+                    "column": 60
+                }
+            ]
+        }
+    ]
+}

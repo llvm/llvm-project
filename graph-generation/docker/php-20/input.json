@@ -1,0 +1,57 @@
+{
+  "type": "npe",
+  "locations": [
+    {
+      "type": "source",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 3402,
+      "column": 9,
+      "var": "varname"
+    },
+    {
+      "type": "entry",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 488,
+      "column": 1
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 490,
+      "column": 2
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 498,
+      "column": 3
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 500,
+      "column": 3
+    },
+    {
+      "type": "stmt",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 503,
+      "column": 4
+    },
+    {
+      "type": "exit",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 506,
+      "column": 1
+    },
+    {
+      "type": "sink",
+      "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_execute.c",
+      "line": 3403,
+      "column": 7
+    }
+  ],
+  "analyzer": [
+    "infer"
+  ]
+}
