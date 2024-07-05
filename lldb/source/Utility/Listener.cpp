@@ -356,11 +356,10 @@ Listener::StartListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
   };
   // The BroadcasterManager mutex must be locked before m_broadcasters_mutex to
   // avoid violating the lock hierarchy (manager before broadcasters).
-  std::lock_guard<std::recursive_mutex> manager_guard(
-      manager_sp->m_manager_mutex);
+  std::lock_guard<std::mutex> manager_guard(manager_sp->m_manager_mutex);
   std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
 
-  uint32_t bits_acquired = manager_sp->RegisterListenerForEvents(
+  uint32_t bits_acquired = manager_sp->RegisterListenerForEventsNoLock(
       this->shared_from_this(), event_spec);
   if (bits_acquired) {
     BroadcasterManagerWP manager_wp(manager_sp);
@@ -377,9 +376,12 @@ bool Listener::StopListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
   if (!manager_sp)
     return false;
 
+  // The BroadcasterManager mutex must be locked before m_broadcasters_mutex to
+  // avoid violating the lock hierarchy (manager before broadcasters).
+  std::lock_guard<std::mutex> manager_guard(manager_sp->m_manager_mutex);
   std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
-  return manager_sp->UnregisterListenerForEvents(this->shared_from_this(),
-                                                 event_spec);
+  return manager_sp->UnregisterListenerForEventsNoLock(this->shared_from_this(),
+                                                       event_spec);
 }
 
 ListenerSP Listener::MakeListener(const char *name) {
