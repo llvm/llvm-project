@@ -844,8 +844,8 @@ static ConstantRange toConstantRange(const ValueLatticeElement &Val,
   unsigned BW = Ty->getScalarSizeInBits();
   if (Val.isUnknown())
     return ConstantRange::getEmpty(BW);
-  if (Val.isConstant() && Ty->isVectorTy())
-    return getVectorConstantRange(Val.getConstant());
+  if (Val.isConstant())
+    return Val.getConstant()->toConstantRange();
   return ConstantRange::getFull(BW);
 }
 
