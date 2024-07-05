@@ -51,8 +51,16 @@ function(_get_common_compile_options output_var flags)
       if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
         list(APPEND compile_options "-nostdlibinc")
       elseif(COMPILER_RESOURCE_DIR)
+        # TODO: We should require COMPILER_RESOURCE_DIR to be set.
         list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
         list(APPEND compile_options "-nostdinc")
+      endif()
+      # TODO: We should set this unconditionally on Linux.
+      if(LIBC_TARGET_OS_IS_LINUX AND
+         (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
+        # We use -idirafter to avoid preempting libc's own headers in case the
+        # directory (e.g. /usr/include) contains other headers.
+        list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
       endif()
     endif()
 
