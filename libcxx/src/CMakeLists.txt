@@ -99,6 +99,7 @@ endif()
 
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
+    support/win32/compiler_rt_shims.cpp
     support/win32/locale_win32.cpp
     support/win32/support.cpp
     )
