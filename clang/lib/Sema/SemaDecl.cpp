@@ -11201,6 +11201,10 @@ static bool CheckMultiVersionFirstFunction(Sema &S, FunctionDecl *FD) {
   // otherwise it is treated as a normal function.
   if (TA && !TA->isDefaultVersion())
     return false;
+  // The target_version attribute only causes Multiversioning if this
+  // declaration is NOT the default version.
+  if (TVA && TVA->isDefaultVersion())
+    return false;
 
   if ((TA || TVA) && CheckMultiVersionValue(S, FD)) {
     FD->setInvalidDecl();
@@ -11234,18 +11238,16 @@ static void patchDefaultTargetVersion(FunctionDecl *From, FunctionDecl *To) {
 
   if (MVKindTo == MultiVersionKind::None &&
       (MVKindFrom == MultiVersionKind::TargetVersion ||
-       MVKindFrom == MultiVersionKind::TargetClones)) {
-    To->setIsMultiVersion();
+       MVKindFrom == MultiVersionKind::TargetClones))
     To->addAttr(TargetVersionAttr::CreateImplicit(
         To->getASTContext(), "default", To->getSourceRange()));
-  }
 }
 
-static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
-                                             FunctionDecl *NewFD,
-                                             bool &Redeclaration,
-                                             NamedDecl *&OldDecl,
-                                             LookupResult &Previous) {
+static bool CheckDeclarationCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
+                                                  FunctionDecl *NewFD,
+                                                  bool &Redeclaration,
+                                                  NamedDecl *&OldDecl,
+                                                  LookupResult &Previous) {
   assert(!OldFD->isMultiVersion() && "Unexpected MultiVersion");
 
   // The definitions should be allowed in any order. If we have discovered
@@ -11256,13 +11258,16 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
   const auto *NewTA = NewFD->getAttr<TargetAttr>();
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
-  const auto *OldTVA = OldFD->getAttr<TargetVersionAttr>();
+
   // If the old decl is NOT MultiVersioned yet, and we don't cause that
   // to change, this is a simple redeclaration.
-  if ((NewTA && !NewTA->isDefaultVersion() &&
-       (!OldTA || OldTA->getFeaturesStr() == NewTA->getFeaturesStr())) ||
-      (NewTVA && !NewTVA->isDefaultVersion() &&
-       (!OldTVA || OldTVA->getName() == NewTVA->getName())))
+  if (NewTA && !NewTA->isDefaultVersion() &&
+      (!OldTA || OldTA->getFeaturesStr() == NewTA->getFeaturesStr()))
+    return false;
+
+  // The target_version attribute only causes Multiversioning if this
+  // declaration is NOT the default version.
+  if (NewTVA && NewTVA->isDefaultVersion())
     return false;
 
   // Otherwise, this decl causes MultiVersioning.
@@ -11279,8 +11284,7 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
   }
 
   // If this is 'default', permit the forward declaration.
-  if ((NewTA && NewTA->isDefaultVersion() && !OldTA) ||
-      (NewTVA && NewTVA->isDefaultVersion() && !OldTVA)) {
+  if (NewTA && NewTA->isDefaultVersion() && !OldTA) {
     Redeclaration = true;
     OldDecl = OldFD;
     OldFD->setIsMultiVersion();
@@ -11305,22 +11309,6 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
     // Sort order doesn't matter, it just needs to be consistent.
     llvm::sort(NewParsed.Features);
     if (OldParsed == NewParsed) {
-      S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
-      S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
-      NewFD->setInvalidDecl();
-      return true;
-    }
-  }
-
-  if (NewTVA) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    OldTVA->getFeatures(Feats);
-    llvm::sort(Feats);
-    llvm::SmallVector<StringRef, 8> NewFeats;
-    NewTVA->getFeatures(NewFeats);
-    llvm::sort(NewFeats);
-
-    if (Feats == NewFeats) {
       S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
       S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
       NewFD->setInvalidDecl();
@@ -11683,24 +11671,8 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
 
   FunctionDecl *OldFD = OldDecl->getAsFunction();
 
-  if (!OldFD->isMultiVersion() && MVKind == MultiVersionKind::None) {
-    if (NewTVA || !OldFD->getAttr<TargetVersionAttr>())
-      return false;
-    if (!NewFD->getType()->getAs<FunctionProtoType>()) {
-      // Multiversion declaration doesn't have prototype.
-      S.Diag(NewFD->getLocation(), diag::err_multiversion_noproto);
-      NewFD->setInvalidDecl();
-    } else {
-      // No "target_version" attribute is equivalent to "default" attribute.
-      NewFD->addAttr(TargetVersionAttr::CreateImplicit(
-          S.Context, "default", NewFD->getSourceRange()));
-      NewFD->setIsMultiVersion();
-      OldFD->setIsMultiVersion();
-      OldDecl = OldFD;
-      Redeclaration = true;
-    }
-    return true;
-  }
+  if (!OldFD->isMultiVersion() && MVKind == MultiVersionKind::None)
+    return false;
 
   // Multiversioned redeclarations aren't allowed to omit the attribute, except
   // for target_clones and target_version.
@@ -11717,8 +11689,8 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     switch (MVKind) {
     case MultiVersionKind::Target:
     case MultiVersionKind::TargetVersion:
-      return CheckTargetCausesMultiVersioning(S, OldFD, NewFD, Redeclaration,
-                                              OldDecl, Previous);
+      return CheckDeclarationCausesMultiVersioning(
+          S, OldFD, NewFD, Redeclaration, OldDecl, Previous);
     case MultiVersionKind::TargetClones:
       if (OldFD->isUsed(false)) {
         NewFD->setInvalidDecl();
