@@ -9,7 +9,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/errno/libc_errno.h"
 #include "src/unistd/readlink.h"
-#include "src/string/string_utils.h"
 #include "src/unistd/symlink.h"
 #include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -31,9 +30,8 @@ TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
   //   3. Cleanup the symlink created in step #1.
   ASSERT_THAT(LIBC_NAMESPACE::symlink(LINK_VAL, LINK), Succeeds(0));
 
-  char buf[sizeof(FILENAME)];
-  ssize_t len = LIBC_NAMESPACE::readlink(
-      LINK, buf, LIBC_NAMESPACE::internal::string_length(FILENAME));
+  char buf[sizeof(LINK_VAL)];
+  ssize_t len = LIBC_NAMESPACE::readlink(LINK, buf, sizeof(buf));
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cpp::string_view(buf, len), cpp::string_view(LINK_VAL));
 
@@ -42,8 +40,7 @@ TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
 
 TEST(LlvmLibcReadlinkTest, ReadlinkInNonExistentPath) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  constexpr auto len = 8;
-  char buf[len];
-  ASSERT_THAT(LIBC_NAMESPACE::readlink("non-existent-link", buf, len),
+  char buf[8];
+  ASSERT_THAT(LIBC_NAMESPACE::readlink("non-existent-link", buf, sizeof(buf)),
               Fails(ENOENT));
 }
