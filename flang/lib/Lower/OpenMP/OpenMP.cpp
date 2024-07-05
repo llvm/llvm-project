@@ -244,7 +244,8 @@ createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
 //  clause. Support for such list items in a use_device_ptr clause
 //  is deprecated."
 static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
-    mlir::omp::UseDeviceClauseOps &clauseOps,
+    llvm::SmallVectorImpl<mlir::Value> &useDeviceAddrVars,
+    llvm::SmallVectorImpl<mlir::Value> &useDevicePtrVars,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSymbols) {
@@ -256,10 +257,9 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
 
   // Iterate over our use_device_ptr list and shift all non-cptr arguments into
   // use_device_addr.
-  for (auto *it = clauseOps.useDevicePtrVars.begin();
-       it != clauseOps.useDevicePtrVars.end();) {
+  for (auto *it = useDevicePtrVars.begin(); it != useDevicePtrVars.end();) {
     if (!fir::isa_builtin_cptr_type(fir::unwrapRefType(it->getType()))) {
-      clauseOps.useDeviceAddrVars.push_back(*it);
+      useDeviceAddrVars.push_back(*it);
       // We have to shuffle the symbols around as well, to maintain
       // the correct Input -> BlockArg for use_device_ptr/use_device_addr.
       // NOTE: However, as map's do not seem to be included currently
@@ -267,11 +267,11 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
       // future alterations. I believe the reason they are not currently
       // is that the BlockArg assign/lowering needs to be extended
       // to a greater set of types.
-      auto idx = std::distance(clauseOps.useDevicePtrVars.begin(), it);
+      auto idx = std::distance(useDevicePtrVars.begin(), it);
       moveElementToBack(idx, useDeviceTypes);
       moveElementToBack(idx, useDeviceLocs);
       moveElementToBack(idx, useDeviceSymbols);
-      it = clauseOps.useDevicePtrVars.erase(it);
+      it = useDevicePtrVars.erase(it);
       continue;
     }
     ++it;
@@ -296,7 +296,9 @@ static void getDeclareTargetInfo(
   } else if (const auto *clauseList{
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     List<Clause> clauses = makeClauses(*clauseList, semaCtx);
-    if (clauses.empty()) {
+    if (clauses.empty() &&
+        (!eval.getOwningProcedure()->isMainProgram() ||
+         eval.getOwningProcedure()->getMainProgramSymbol())) {
       // Case: declare target, implicit capture of function
       symbolAndClause.emplace_back(
           mlir::omp::DeclareTargetCaptureClause::to,
@@ -1024,7 +1026,7 @@ static void genCriticalDeclareClauses(lower::AbstractConverter &converter,
                                       llvm::StringRef name) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processHint(clauseOps);
-  clauseOps.nameAttr =
+  clauseOps.criticalNameAttr =
       mlir::StringAttr::get(converter.getFirOpBuilder().getContext(), name);
 }
 
@@ -1134,7 +1136,7 @@ static void genSingleClauses(lower::AbstractConverter &converter,
 static void genTargetClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::StatementContext &stmtCtx, const List<Clause> &clauses,
-    mlir::Location loc, bool processHostOnlyClauses, bool processReduction,
+    mlir::Location loc, bool processHostOnlyClauses,
     mlir::omp::TargetClauseOps &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::SmallVectorImpl<mlir::Location> &mapLocs,
@@ -1196,8 +1198,9 @@ static void genTargetDataClauses(
   // ordering.
   // TODO: Perhaps create a user provideable compiler option that will
   // re-introduce a hard-error rather than a warning in these cases.
-  promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(clauseOps, useDeviceTypes,
-                                                useDeviceLocs, useDeviceSyms);
+  promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
+      clauseOps.useDeviceAddrVars, clauseOps.useDevicePtrVars, useDeviceTypes,
+      useDeviceLocs, useDeviceSyms);
 }
 
 static void genTargetEnterExitUpdateDataClauses(
@@ -1675,7 +1678,7 @@ static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
             mlir::Location loc, const ConstructQueue &queue,
-            ConstructQueue::iterator item, bool outerCombined = false) {
+            ConstructQueue::iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   lower::StatementContext stmtCtx;
 
@@ -1689,10 +1692,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<mlir::Location> mapLocs, devicePtrLocs, deviceAddrLocs;
   llvm::SmallVector<mlir::Type> mapTypes, devicePtrTypes, deviceAddrTypes;
   genTargetClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
-                   processHostOnlyClauses, /*processReduction=*/outerCombined,
-                   clauseOps, mapSyms, mapLocs, mapTypes, deviceAddrSyms,
-                   deviceAddrLocs, deviceAddrTypes, devicePtrSyms,
-                   devicePtrLocs, devicePtrTypes);
+                   processHostOnlyClauses, clauseOps, mapSyms, mapLocs,
+                   mapTypes, deviceAddrSyms, deviceAddrLocs, deviceAddrTypes,
+                   devicePtrSyms, devicePtrLocs, devicePtrTypes);
 
   llvm::SmallVector<const semantics::Symbol *> privateSyms;
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
@@ -2098,8 +2100,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genSingleOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_target:
-    genTargetOp(converter, symTable, semaCtx, eval, loc, queue, item,
-                /*outerCombined=*/false);
+    genTargetOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_target_data:
     genTargetDataOp(converter, symTable, semaCtx, eval, loc, queue, item);

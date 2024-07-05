@@ -3429,8 +3429,6 @@ void InitListChecker::UpdateStructuredListElement(InitListExpr *StructuredList,
   ++StructuredIndex;
 }
 
-/// Determine whether we can perform aggregate initialization for the purposes
-/// of overload resolution.
 bool Sema::CanPerformAggregateInitializationForOverloadResolution(
     const InitializedEntity &Entity, InitListExpr *From) {
   QualType Type = Entity.getType();
