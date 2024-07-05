@@ -4094,6 +4094,20 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
+bool X86InstrInfo::isProfitableToIfCvt(MachineBasicBlock &MBB,
+                                       unsigned NumCycles,
+                                       unsigned ExtraPredCycles,
+                                       BranchProbability Probability) const {
+  return MBB.getParent()->getSubtarget().enableEarlyIfConversion();
+}
+
+bool X86InstrInfo::isProfitableToIfCvt(
+    MachineBasicBlock &TMBB, unsigned NumTCycles, unsigned ExtraTCycles,
+    MachineBasicBlock &FMBB, unsigned NumFCycles, unsigned ExtraFCycles,
+    BranchProbability Probability) const {
+  return TMBB.getParent()->getSubtarget().enableEarlyIfConversion();
+}
+
 bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                    ArrayRef<MachineOperand> Cond,
                                    Register DstReg, Register TrueReg,

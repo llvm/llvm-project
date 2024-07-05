@@ -180,6 +180,9 @@ public:
   /// speculatively execute it.
   bool canConvertIf(MachineBasicBlock *MBB, bool Predicate = false);
 
+  bool isProfitable(const MachineBranchProbabilityInfo *MBPI,
+                    TargetSchedModel SchedModel);
+
   /// convertIf - If-convert the last block passed to canConvertIf(), assuming
   /// it is possible. Add any erased blocks to RemovedBlocks.
   void convertIf(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks,
@@ -561,6 +564,45 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
   return true;
 }
 
+/// Apply the target heuristic to decide if the transformation is profitable.
+bool SSAIfConv::isProfitable(const MachineBranchProbabilityInfo *MBPI,
+                             TargetSchedModel SchedModel) {
+  auto TrueProbability = MBPI->getEdgeProbability(Head, TBB);
+  if (isTriangle()) {
+    MachineBasicBlock &IfBlock = (TBB == Tail) ? *FBB : *TBB;
+
+    unsigned ExtraPredCost = 0;
+    unsigned Cycles = 0;
+    for (MachineInstr &I : IfBlock) {
+      unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
+      if (NumCycles > 1)
+        Cycles += NumCycles - 1;
+      ExtraPredCost += TII->getPredicationCost(I);
+    }
+
+    return TII->isProfitableToIfCvt(IfBlock, Cycles, ExtraPredCost,
+                                    TrueProbability);
+  }
+  unsigned TExtra = 0;
+  unsigned FExtra = 0;
+  unsigned TCycle = 0;
+  unsigned FCycle = 0;
+  for (MachineInstr &I : *TBB) {
+    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
+    if (NumCycles > 1)
+      TCycle += NumCycles - 1;
+    TExtra += TII->getPredicationCost(I);
+  }
+  for (MachineInstr &I : *FBB) {
+    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
+    if (NumCycles > 1)
+      FCycle += NumCycles - 1;
+    FExtra += TII->getPredicationCost(I);
+  }
+  return TII->isProfitableToIfCvt(*TBB, TCycle, TExtra, *FBB, FCycle, FExtra,
+                                  TrueProbability);
+}
+
 /// \return true iff the two registers are known to have the same value.
 static bool hasSameValue(const MachineRegisterInfo &MRI,
                          const TargetInstrInfo *TII, Register TReg,
@@ -760,9 +802,11 @@ namespace {
 class EarlyIfConverter : public MachineFunctionPass {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  MCSchedModel SchedModel;
+  MCSchedModel MCSchedModel;
+  TargetSchedModel TargetSchedModel;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
+  MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
@@ -871,6 +915,9 @@ bool EarlyIfConverter::shouldConvertIf() {
 
   // Do not try to if-convert if the condition has a high chance of being
   // predictable.
+  if (!IfConv.isProfitable(MBPI, TargetSchedModel))
+    return false;
+
   MachineLoop *CurrentLoop = Loops->getLoopFor(IfConv.Head);
   // If the condition is in a loop, consider it predictable if the condition
   // itself or all its operands are loop-invariant. E.g. this considers a load
@@ -911,7 +958,7 @@ bool EarlyIfConverter::shouldConvertIf() {
                               FBBTrace.getCriticalPath());
 
   // Set a somewhat arbitrary limit on the critical path extension we accept.
-  unsigned CritLimit = SchedModel.MispredictPenalty/2;
+  unsigned CritLimit = MCSchedModel.MispredictPenalty / 2;
 
   MachineBasicBlock &MBB = *IfConv.Head;
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
@@ -1084,9 +1131,11 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
 
   TII = STI.getInstrInfo();
   TRI = STI.getRegisterInfo();
-  SchedModel = STI.getSchedModel();
+  MCSchedModel = STI.getSchedModel();
+  TargetSchedModel.init(&STI);
   MRI = &MF.getRegInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   Loops = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
@@ -1155,43 +1204,8 @@ void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-/// Apply the target heuristic to decide if the transformation is profitable.
 bool EarlyIfPredicator::shouldConvertIf() {
-  auto TrueProbability = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
-  if (IfConv.isTriangle()) {
-    MachineBasicBlock &IfBlock =
-        (IfConv.TBB == IfConv.Tail) ? *IfConv.FBB : *IfConv.TBB;
-
-    unsigned ExtraPredCost = 0;
-    unsigned Cycles = 0;
-    for (MachineInstr &I : IfBlock) {
-      unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
-      if (NumCycles > 1)
-        Cycles += NumCycles - 1;
-      ExtraPredCost += TII->getPredicationCost(I);
-    }
-
-    return TII->isProfitableToIfCvt(IfBlock, Cycles, ExtraPredCost,
-                                    TrueProbability);
-  }
-  unsigned TExtra = 0;
-  unsigned FExtra = 0;
-  unsigned TCycle = 0;
-  unsigned FCycle = 0;
-  for (MachineInstr &I : *IfConv.TBB) {
-    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
-    if (NumCycles > 1)
-      TCycle += NumCycles - 1;
-    TExtra += TII->getPredicationCost(I);
-  }
-  for (MachineInstr &I : *IfConv.FBB) {
-    unsigned NumCycles = SchedModel.computeInstrLatency(&I, false);
-    if (NumCycles > 1)
-      FCycle += NumCycles - 1;
-    FExtra += TII->getPredicationCost(I);
-  }
-  return TII->isProfitableToIfCvt(*IfConv.TBB, TCycle, TExtra, *IfConv.FBB,
-                                  FCycle, FExtra, TrueProbability);
+  return IfConv.isProfitable(MBPI, SchedModel);
 }
 
 /// Attempt repeated if-conversion on MBB, return true if successful.
