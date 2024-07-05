@@ -30,6 +30,15 @@
 # INVALID-MAJOR-NUMBER: 'foo' is not a valid subsystem major version
 # INVALID-MINOR-NUMBER: 'bar' is not a valid subsystem minor version
 
+# RUN: llvm-objcopy --subsystem=efi_application %t.in.exe
+# RUN: llvm-objcopy --subsystem=efi-app %t.in.exe
+
+# RUN: llvm-objcopy --subsystem=efi_boot_service_driver %t.in.exe
+# RUN: llvm-objcopy --subsystem=efi-bsd %t.in.exe
+
+# RUN: llvm-objcopy --subsystem=efi_runtime_driver %t.in.exe
+# RUN: llvm-objcopy --subsystem=efi-rtd %t.in.exe
+
 --- !COFF
 OptionalHeader:
   AddressOfEntryPoint: 4096
