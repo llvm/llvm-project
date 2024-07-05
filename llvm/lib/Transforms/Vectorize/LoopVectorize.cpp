@@ -1446,24 +1446,42 @@ public:
 
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
-  bool requiresScalarEpilogue(bool IsVectorizing) const {
+  bool requiresScalarEpilogue(ElementCount VF) const {
     if (!isScalarEpilogueAllowed()) {
-      LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue\n");
+      LLVM_DEBUG(dbgs() << "LV: Loop with VF = " << VF
+                        << " does not require scalar epilogue\n");
       return false;
     }
     // If we might exit from anywhere but the latch, must run the exiting
     // iteration in scalar form.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
-      LLVM_DEBUG(
-          dbgs() << "LV: Loop requires scalar epilogue: multiple exits\n");
+      LLVM_DEBUG(dbgs() << "LV: Loop with VF = " << VF
+                        << " requires scalar epilogue: multiple exits\n");
       return true;
     }
-    if (IsVectorizing && InterleaveInfo.requiresScalarEpilogue()) {
-      LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: "
-                           "interleaved group requires scalar epilogue\n");
-      return true;
+    if (VF.isVector()) {
+      if (InterleaveInfo.requiresScalarEpilogue()) {
+        // Make sure interleaved groups that require scalar epilogue will be
+        // widened.
+        if (any_of(InterleaveInfo.getInterleaveGroups(), [&](auto *Group) {
+              if (!Group->requiresScalarEpilogue())
+                return false;
+
+              Instruction *I = Group->getMember(0);
+              InstWidening Decision = getWideningDecision(I, VF);
+              return Decision == CM_Interleave ||
+                     (Decision == CM_Unknown &&
+                      interleavedAccessCanBeWidened(I, VF));
+            })) {
+          LLVM_DEBUG(dbgs() << "LV: Loop with VF = " << VF
+                            << " requires scalar epilogue: interleaved group "
+                               "requires scalar epilogue\n");
+          return true;
+        }
+      }
     }
-    LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue\n");
+    LLVM_DEBUG(dbgs() << "LV: Loop with VF = " << VF
+                      << " does not require scalar epilogue\n");
     return false;
   }
 
@@ -1473,7 +1491,7 @@ public:
   /// none.
   bool requiresScalarEpilogue(VFRange Range) const {
     auto RequiresScalarEpilogue = [this](ElementCount VF) {
-      return requiresScalarEpilogue(VF.isVector());
+      return requiresScalarEpilogue(VF);
     };
     bool IsRequired = all_of(Range, RequiresScalarEpilogue);
     assert(
@@ -2770,7 +2788,7 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   // the step does not evenly divide the trip count, no adjustment is necessary
   // since there will already be scalar iterations. Note that the minimum
   // iterations check ensures that N >= Step.
-  if (Cost->requiresScalarEpilogue(VF.isVector())) {
+  if (Cost->requiresScalarEpilogue(VF)) {
     auto *IsZero = Builder.CreateICmpEQ(R, ConstantInt::get(R->getType(), 0));
     R = Builder.CreateSelect(IsZero, Step, R);
   }
@@ -2823,8 +2841,8 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   // vector trip count is zero. This check also covers the case where adding one
   // to the backedge-taken count overflowed leading to an incorrect trip count
   // of zero. In this case we will also jump to the scalar loop.
-  auto P = Cost->requiresScalarEpilogue(VF.isVector()) ? ICmpInst::ICMP_ULE
-                                                       : ICmpInst::ICMP_ULT;
+  auto P = Cost->requiresScalarEpilogue(VF) ? ICmpInst::ICMP_ULE
+                                            : ICmpInst::ICMP_ULT;
 
   // If tail is to be folded, vector loop takes care of all iterations.
   Type *CountTy = Count->getType();
@@ -2873,7 +2891,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
 
   // Update dominator for Bypass & LoopExit (if needed).
   DT->changeImmediateDominator(Bypass, TCCheckBlock);
-  if (!Cost->requiresScalarEpilogue(VF.isVector()))
+  if (!Cost->requiresScalarEpilogue(VF))
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
     // dominator of the exit blocks.
@@ -2902,7 +2920,7 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   // Update dominator only if this is first RT check.
   if (LoopBypassBlocks.empty()) {
     DT->changeImmediateDominator(Bypass, SCEVCheckBlock);
-    if (!Cost->requiresScalarEpilogue(VF.isVector()))
+    if (!Cost->requiresScalarEpilogue(VF))
       // If there is an epilogue which must run, there's no edge from the
       // middle block to exit blocks  and thus no need to update the immediate
       // dominator of the exit blocks.
@@ -2955,7 +2973,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
   assert(LoopVectorPreHeader && "Invalid loop structure");
   LoopExitBlock = OrigLoop->getUniqueExitBlock(); // may be nullptr
-  assert((LoopExitBlock || Cost->requiresScalarEpilogue(VF.isVector())) &&
+  assert((LoopExitBlock || Cost->requiresScalarEpilogue(VF)) &&
          "multiple exit loop without required epilogue?");
 
   LoopMiddleBlock =
@@ -2970,7 +2988,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   // unconditional branch from the middle block to the scalar preheader. In that
   // case, there's no edge from the middle block to exit blocks  and thus no
   // need to update the immediate dominator of the exit blocks.
-  if (Cost->requiresScalarEpilogue(VF.isVector())) {
+  if (Cost->requiresScalarEpilogue(VF)) {
     assert(
         LoopMiddleBlock->getSingleSuccessor() == LoopScalarPreHeader &&
         " middle block should have the scalar preheader as single successor");
@@ -3103,7 +3121,7 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton() {
   //    Thus if tail is to be folded, we know we don't need to run the
   //    remainder and we can use the previous value for the condition (true).
   // 3) Otherwise, construct a runtime check.
-  if (!Cost->requiresScalarEpilogue(VF.isVector()) &&
+  if (!Cost->requiresScalarEpilogue(VF) &&
       !Cost->foldTailByMasking()) {
     // Here we use the same DebugLoc as the scalar loop latch terminator instead
     // of the corresponding compare because they may have ended up with
@@ -3413,7 +3431,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
   VPBasicBlock *LatchVPBB = VectorRegion->getExitingBasicBlock();
   Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[LatchVPBB]);
-  if (Cost->requiresScalarEpilogue(VF.isVector())) {
+  if (Cost->requiresScalarEpilogue(VF)) {
     // No edge from the middle block to the unique exit block has been inserted
     // and there is nothing to fix from vector loop; phis should have incoming
     // from scalar loop only.
@@ -4664,7 +4682,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   // When a scalar epilogue is required, at least one iteration of the scalar
   // loop has to execute. Adjust MaxTripCount accordingly to avoid picking a
   // max VF that results in a dead vector loop.
-  if (MaxTripCount > 0 && requiresScalarEpilogue(true))
+  if (MaxTripCount > 0 && requiresScalarEpilogue(MaxVectorElementCount))
     MaxTripCount -= 1;
 
   if (MaxTripCount && MaxTripCount <= WidestRegisterMinEC &&
@@ -5304,7 +5322,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
     unsigned AvailableTC =
-        requiresScalarEpilogue(VF.isVector()) ? KnownTC - 1 : KnownTC;
+        requiresScalarEpilogue(VF) ? KnownTC - 1 : KnownTC;
 
     // If trip count is known we select between two prospective ICs, where
     // 1) the aggressive IC is capped by the trip count divided by VF
@@ -5333,7 +5351,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   } else if (BestKnownTC && *BestKnownTC > 0) {
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
-    unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
+    unsigned AvailableTC = requiresScalarEpilogue(VF)
                                ? (*BestKnownTC) - 1
                                : *BestKnownTC;
 
@@ -7647,8 +7665,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
   // Generate code to check if the loop's trip count is less than VF * UF of the
   // main vector loop.
-  auto P = Cost->requiresScalarEpilogue(ForEpilogue ? EPI.EpilogueVF.isVector()
-                                                    : VF.isVector())
+  auto P = Cost->requiresScalarEpilogue(ForEpilogue ? EPI.EpilogueVF : VF)
                ? ICmpInst::ICMP_ULE
                : ICmpInst::ICMP_ULT;
 
@@ -7670,7 +7687,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
     // Update dominator for Bypass & LoopExit.
     DT->changeImmediateDominator(Bypass, TCCheckBlock);
-    if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF.isVector()))
+    if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF))
       // For loops with multiple exits, there's no edge from the middle block
       // to exit blocks (as the epilogue must run) and thus no need to update
       // the immediate dominator of the exit blocks.
@@ -7739,7 +7756,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
                                EPI.EpilogueIterationCountCheck);
-  if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF.isVector()))
+  if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF))
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
     // dominator of the exit blocks.
@@ -7821,9 +7838,8 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   // Generate code to check if the loop's trip count is less than VF * UF of the
   // vector epilogue loop.
-  auto P = Cost->requiresScalarEpilogue(EPI.EpilogueVF.isVector())
-               ? ICmpInst::ICMP_ULE
-               : ICmpInst::ICMP_ULT;
+  auto P = Cost->requiresScalarEpilogue(EPI.EpilogueVF) ? ICmpInst::ICMP_ULE
+                                                        : ICmpInst::ICMP_ULT;
 
   Value *CheckMinIters =
       Builder.CreateICmp(P, Count,
