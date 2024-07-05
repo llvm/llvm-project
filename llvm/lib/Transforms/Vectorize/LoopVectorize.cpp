@@ -6796,9 +6796,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
                                   {PtrTy, ScalarTy, MaskTy});
 
       // Add the costs together with the add/sub operation.
-      return TTI.getIntrinsicInstrCost(ICA,
-               TargetTransformInfo::TCK_RecipThroughput) + MulCost +
-             TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy);
+      return TTI.getIntrinsicInstrCost(
+                 ICA, TargetTransformInfo::TCK_RecipThroughput) +
+             MulCost + TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy);
     }
     [[fallthrough]];
   }
