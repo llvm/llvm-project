@@ -2623,7 +2623,7 @@ Value createLinalgReduceSumBody(OpBuilder &b, Location loc, ValueRange args,
 ///
 FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   if (!hasPureTensorSemantics()) {
-    // The decomposition assumes ranked tensors as input
+    // The decomposition assumes ranked tensors as input.
     return failure();
   }
 
@@ -2638,18 +2638,18 @@ FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
 
   SmallVector<int64_t> reduceShape;
   SmallVector<Value> dynReduceDims;
-  for (unsigned i = 0; i < inputType.getRank(); i++) {
-    if (reductionDim != i) {
-      reduceShape.push_back(inputType.getDimSize(i));
-      if (inputType.isDynamicDim(i))
-        dynReduceDims.push_back(b.create<tensor::DimOp>(loc, input, i));
-    }
+  for (unsigned i = 0, e = inputType.getRank(); i < e; i++) {
+    if (reductionDim == i)
+      continue;
+    reduceShape.push_back(inputType.getDimSize(i));
+    if (inputType.isDynamicDim(i))
+      dynReduceDims.push_back(b.create<tensor::DimOp>(loc, input, i));
   }
 
   // Step 1: Compute max along dim.
   Value outputReduce =
       b.create<tensor::EmptyOp>(loc, reduceShape, elementType, dynReduceDims);
-  auto maxFillValAttr = createInitValueForReduceMaxOp(elementType, b);
+  TypedAttr maxFillValAttr = createInitValueForReduceMaxOp(elementType, b);
   auto maxFillValue = b.create<arith::ConstantOp>(loc, maxFillValAttr);
   auto neutralMaxInitOp = b.create<linalg::FillOp>(
       loc, ValueRange{maxFillValue}, ValueRange{outputReduce});
@@ -2657,7 +2657,7 @@ FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   auto reduceMaxOp = b.create<linalg::ReduceOp>(
       loc, input, neutralMaxInitOp.result(), reductionDim,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        auto result =
+        Value result =
             createLinalgReduceMaxBody(b, nestedLoc, args, elementType);
         nestedBuilder.create<linalg::YieldOp>(nestedLoc, result);
       });
@@ -2673,13 +2673,12 @@ FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
                                        ValueRange{output});
 
   // Step 3: Compute sum along dim.
-  auto sumFillValAttr = createInitValueForReduceSumOp(elementType, b);
+  TypedAttr sumFillValAttr = createInitValueForReduceSumOp(elementType, b);
   auto sumFillValue = b.create<arith::ConstantOp>(loc, sumFillValAttr);
   auto neutralSumInitOp = b.create<linalg::FillOp>(
       loc, ValueRange{sumFillValue}, ValueRange{outputReduce});
-  auto sumFilledTensor = neutralSumInitOp.result();
   auto reduceSumOp = b.create<linalg::ReduceOp>(
-      loc, expOp.getResults(), sumFilledTensor, reductionDim,
+      loc, expOp.getResults(), neutralSumInitOp.result(), reductionDim,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
         auto result =
             createLinalgReduceSumBody(b, nestedLoc, args, elementType);
@@ -2688,7 +2687,7 @@ FailureOr<DecompositionResult> SoftmaxOp::decomposeOperation(OpBuilder &b) {
 
   // Step 4: Compute softmax.
   SmallVector<Value> dynDims;
-  for (unsigned i = 0; i < inputType.getRank(); i++) {
+  for (unsigned i = 0, e = inputType.getRank(); i < e; i++) {
     if (inputType.isDynamicDim(i))
       dynDims.push_back(b.create<tensor::DimOp>(loc, input, i));
   }
