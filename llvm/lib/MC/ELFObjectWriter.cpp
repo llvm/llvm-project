@@ -21,7 +21,6 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -567,7 +566,7 @@ void ELFWriter::writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
 
   if (ESize) {
     int64_t Res;
-    if (!ESize->evaluateKnownAbsolute(Res, *Asm.getLayout()))
+    if (!ESize->evaluateKnownAbsolute(Res, Asm))
       report_fatal_error("Size expression must be absolute.");
     Size = Res;
   }

@@ -105,7 +105,8 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   // At this point module should have the proper mix of globals and locals.
   // As we attempt to partition this module, we must not change any
   // locals to globals.
-  LLVM_DEBUG(dbgs() << "Partition module with (" << M.size() << ")functions\n");
+  LLVM_DEBUG(dbgs() << "Partition module with (" << M.size()
+                    << ") functions\n");
   ClusterMapType GVtoClusterMap;
   ComdatMembersType ComdatMembers;
 
@@ -164,10 +165,10 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   std::priority_queue<std::pair<unsigned, unsigned>,
                       std::vector<std::pair<unsigned, unsigned>>,
                       decltype(CompareClusters)>
-      BalancinQueue(CompareClusters);
+      BalancingQueue(CompareClusters);
   // Pre-populate priority queue with N slot blanks.
   for (unsigned i = 0; i < N; ++i)
-    BalancinQueue.push(std::make_pair(i, 0));
+    BalancingQueue.push(std::make_pair(i, 0));
 
   using SortType = std::pair<unsigned, ClusterMapType::iterator>;
 
@@ -177,11 +178,13 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   // To guarantee determinism, we have to sort SCC according to size.
   // When size is the same, use leader's name.
   for (ClusterMapType::iterator I = GVtoClusterMap.begin(),
-                                E = GVtoClusterMap.end(); I != E; ++I)
+                                E = GVtoClusterMap.end();
+       I != E; ++I)
     if (I->isLeader())
       Sets.push_back(
           std::make_pair(std::distance(GVtoClusterMap.member_begin(I),
-                                       GVtoClusterMap.member_end()), I));
+                                       GVtoClusterMap.member_end()),
+                         I));
 
   llvm::sort(Sets, [](const SortType &a, const SortType &b) {
     if (a.first == b.first)
@@ -191,9 +194,9 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   });
 
   for (auto &I : Sets) {
-    unsigned CurrentClusterID = BalancinQueue.top().first;
-    unsigned CurrentClusterSize = BalancinQueue.top().second;
-    BalancinQueue.pop();
+    unsigned CurrentClusterID = BalancingQueue.top().first;
+    unsigned CurrentClusterSize = BalancingQueue.top().second;
+    BalancingQueue.pop();
 
     LLVM_DEBUG(dbgs() << "Root[" << CurrentClusterID << "] cluster_size("
                       << I.first << ") ----> " << I.second->getData()->getName()
@@ -211,7 +214,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
       CurrentClusterSize++;
     }
     // Add this set size to the number of entries in this cluster.
-    BalancinQueue.push(std::make_pair(CurrentClusterID, CurrentClusterSize));
+    BalancingQueue.push(std::make_pair(CurrentClusterID, CurrentClusterSize));
   }
 }
 
@@ -275,8 +278,8 @@ void llvm::SplitModule(
     ValueToValueMapTy VMap;
     std::unique_ptr<Module> MPart(
         CloneModule(M, VMap, [&](const GlobalValue *GV) {
-          if (ClusterIDMap.count(GV))
-            return (ClusterIDMap[GV] == I);
+          if (auto It = ClusterIDMap.find(GV); It != ClusterIDMap.end())
+            return It->second == I;
           else
             return isInPartition(GV, I, N);
         }));

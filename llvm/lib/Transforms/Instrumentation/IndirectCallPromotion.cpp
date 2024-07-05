@@ -547,18 +547,17 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
   for (size_t I = 0; I < Candidates.size(); I++)
     CalleeIndexMap[Candidates[I].TargetFunction] = I;
 
-  uint32_t ActualNumValueData = 0;
   uint64_t TotalVTableCount = 0;
-  auto VTableValueDataArray = getValueProfDataFromInst(
-      *VirtualCallInfo.VPtr, IPVK_VTableTarget, MaxNumVTableAnnotations,
-      ActualNumValueData, TotalVTableCount);
-  if (VTableValueDataArray.get() == nullptr)
+  auto VTableValueDataArray =
+      getValueProfDataFromInst(*VirtualCallInfo.VPtr, IPVK_VTableTarget,
+                               MaxNumVTableAnnotations, TotalVTableCount);
+  if (VTableValueDataArray.empty())
     return VPtr;
 
   // Compute the functions and counts from by each vtable.
-  for (size_t j = 0; j < ActualNumValueData; j++) {
-    uint64_t VTableVal = VTableValueDataArray[j].Value;
-    GUIDCountsMap[VTableVal] = VTableValueDataArray[j].Count;
+  for (const auto &V : VTableValueDataArray) {
+    uint64_t VTableVal = V.Value;
+    GUIDCountsMap[VTableVal] = V.Count;
     GlobalVariable *VTableVar = Symtab->getGlobalVariable(VTableVal);
     if (!VTableVar) {
       LLVM_DEBUG(dbgs() << "  Cannot find vtable definition for " << VTableVal
@@ -586,7 +585,7 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
     // There shouldn't be duplicate GUIDs in one !prof metadata (except
     // duplicated zeros), so assign counters directly won't cause overwrite or
     // counter loss.
-    Candidate.VTableGUIDAndCounts[VTableVal] = VTableValueDataArray[j].Count;
+    Candidate.VTableGUIDAndCounts[VTableVal] = V.Count;
     Candidate.AddressPoints.push_back(
         getOrCreateVTableAddressPointVar(VTableVar, AddressPointOffset));
   }

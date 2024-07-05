@@ -1062,3 +1062,36 @@ exit:
   %c = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> %a, <vscale x 2 x i32> %d, i64 %vl)
   ret <vscale x 2 x i32> %c
 }
+
+define void @vlmax_avl_phi(i1 %cmp, ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: vlmax_avl_phi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    beqz a0, .LBB25_2
+; CHECK-NEXT:  # %bb.1: # %foo
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
+; CHECK-NEXT:    j .LBB25_3
+; CHECK-NEXT:  .LBB25_2: # %bar
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; CHECK-NEXT:  .LBB25_3: # %exit
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    ret
+entry:
+  br i1 %cmp, label %foo, label %bar
+
+foo:
+  %vl.foo = tail call i64 @llvm.riscv.vsetvli.i64(i64 %a, i64 0, i64 0)
+  br label %exit
+
+bar:
+  %vl.bar = tail call i64 @llvm.riscv.vsetvli.i64(i64 %b, i64 0, i64 0)
+  br label %exit
+
+exit:
+  %phivl = phi i64 [ %vl.foo, %foo ], [ %vl.bar, %bar ]
+  %1 = tail call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> poison, i8 0, i64 %phivl)
+  call void @llvm.riscv.vse.nxv8i8(<vscale x 8 x i8> %1, ptr %p, i64 1)
+  ret void
+}

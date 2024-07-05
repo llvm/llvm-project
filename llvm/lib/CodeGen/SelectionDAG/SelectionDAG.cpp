@@ -11749,7 +11749,7 @@ SDValue SelectionDAG::getSymbolFunctionGlobalAddress(SDValue Op,
   raw_string_ostream ErrorFormatter(ErrorStr);
   ErrorFormatter << "Undefined external symbol ";
   ErrorFormatter << '"' << Symbol << '"';
-  report_fatal_error(Twine(ErrorFormatter.str()));
+  report_fatal_error(Twine(ErrorStr));
 }
 
 //===----------------------------------------------------------------------===//

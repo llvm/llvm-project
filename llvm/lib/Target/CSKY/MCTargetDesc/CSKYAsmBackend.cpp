@@ -9,7 +9,6 @@
 #include "CSKYAsmBackend.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"

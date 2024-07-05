@@ -29,7 +29,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
@@ -1352,7 +1351,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
   }
 }
 
-void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
+void DWARFRewriter::updateLineTableOffsets(const MCAssembler &Asm) {
   ErrorOr<BinarySection &> DbgInfoSection =
       BC.getUniqueSectionByName(".debug_info");
   ErrorOr<BinarySection &> TypeInfoSection =
@@ -1394,7 +1393,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
       continue;
 
     const uint64_t LineTableOffset =
-        Layout.getAssembler().getSymbolOffset(*Label);
+        Asm.getSymbolOffset(*Label);
     DebugLineOffsetMap[*StmtOffset] = LineTableOffset;
     assert(DbgInfoSection && ".debug_info section must exist");
     LineTablePatchMap[CU.get()] = LineTableOffset;
