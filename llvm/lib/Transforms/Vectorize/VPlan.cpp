@@ -449,7 +449,8 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPIRBasicBlock::execute(VPTransformState *State) {
-  assert(getHierarchicalSuccessors().size() <= 2);
+  assert(getHierarchicalSuccessors().size() <= 2 &&
+         "VPIRBasicBlock can have at most two successors at the moment!");
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
   if (getSingleSuccessor()) {
@@ -814,7 +815,7 @@ VPlan::~VPlan() {
 VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
-  VPIRBasicBlock *Entry= new VPIRBasicBlock(TheLoop->getLoopPreheader());
+  VPIRBasicBlock *Entry = new VPIRBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
   Plan->TripCount =

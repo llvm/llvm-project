@@ -165,7 +165,8 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
   if (IRBB != IRBB->getPlan()->getPreheader() &&
       IRBB->getSinglePredecessor() != MiddleBB) {
-    errs() << "VPIRBasicBlock can only be used as pre-header at the moment!\n";
+    errs() << "VPIRBasicBlock can only be used as pre-header or a successor of "
+              "middle-block at the moment!\n";
     return false;
   }
   return true;
