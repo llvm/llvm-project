@@ -181,12 +181,6 @@ void DebugRangesSectionWriter::appendToRangeBuffer(
   *RangesStream << CUBuffer;
 }
 
-void DebugRangesSectionWriter::appendToRangeBuffer(
-    const DebugBufferVector &CUBuffer) {
-  *RangesStream << CUBuffer;
-  SectionOffset = RangesBuffer->size();
-}
-
 DebugAddrWriter *DebugRangeListsSectionWriter::AddrWriter = nullptr;
 
 uint64_t DebugRangeListsSectionWriter::addRanges(
