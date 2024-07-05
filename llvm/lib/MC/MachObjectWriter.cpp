@@ -516,8 +516,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
 
   // Report errors for use of .indirect_symbol not in a symbol pointer section
   // or stub section.
-  for (IndirectSymbolData &ISD : llvm::make_range(Asm.indirect_symbol_begin(),
-                                                  Asm.indirect_symbol_end())) {
+  for (IndirectSymbolData &ISD : Asm.getIndirectSymbols()) {
     const MCSectionMachO &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
@@ -531,39 +530,35 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
   }
 
   // Bind non-lazy symbol pointers first.
-  unsigned IndirectIndex = 0;
-  for (MCAssembler::indirect_symbol_iterator it = Asm.indirect_symbol_begin(),
-         ie = Asm.indirect_symbol_end(); it != ie; ++it, ++IndirectIndex) {
-    const MCSectionMachO &Section = cast<MCSectionMachO>(*it->Section);
+  for (auto [IndirectIndex, ISD] : enumerate(Asm.getIndirectSymbols())) {
+    const auto &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
         Section.getType() !=  MachO::S_THREAD_LOCAL_VARIABLE_POINTERS)
       continue;
 
     // Initialize the section indirect symbol base, if necessary.
-    IndirectSymBase.insert(std::make_pair(it->Section, IndirectIndex));
+    IndirectSymBase.insert(std::make_pair(ISD.Section, IndirectIndex));
 
-    Asm.registerSymbol(*it->Symbol);
+    Asm.registerSymbol(*ISD.Symbol);
   }
 
   // Then lazy symbol pointers and symbol stubs.
-  IndirectIndex = 0;
-  for (MCAssembler::indirect_symbol_iterator it = Asm.indirect_symbol_begin(),
-         ie = Asm.indirect_symbol_end(); it != ie; ++it, ++IndirectIndex) {
-    const MCSectionMachO &Section = cast<MCSectionMachO>(*it->Section);
+  for (auto [IndirectIndex, ISD] : enumerate(Asm.getIndirectSymbols())) {
+    const auto &Section = cast<MCSectionMachO>(*ISD.Section);
 
     if (Section.getType() != MachO::S_LAZY_SYMBOL_POINTERS &&
         Section.getType() != MachO::S_SYMBOL_STUBS)
       continue;
 
     // Initialize the section indirect symbol base, if necessary.
-    IndirectSymBase.insert(std::make_pair(it->Section, IndirectIndex));
+    IndirectSymBase.insert(std::make_pair(ISD.Section, IndirectIndex));
 
     // Set the symbol type to undefined lazy, but only on construction.
     //
     // FIXME: Do not hardcode.
-    if (Asm.registerSymbol(*it->Symbol))
-      cast<MCSymbolMachO>(it->Symbol)->setReferenceTypeUndefinedLazy(true);
+    if (Asm.registerSymbol(*ISD.Symbol))
+      cast<MCSymbolMachO>(ISD.Symbol)->setReferenceTypeUndefinedLazy(true);
   }
 }
 
@@ -975,7 +970,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
     unsigned NumExternalSymbols = ExternalSymbolData.size();
     unsigned FirstUndefinedSymbol = FirstExternalSymbol + NumExternalSymbols;
     unsigned NumUndefinedSymbols = UndefinedSymbolData.size();
-    unsigned NumIndirectSymbols = Asm.indirect_symbol_size();
+    unsigned NumIndirectSymbols = Asm.getIndirectSymbols().size();
     unsigned NumSymTabSymbols =
       NumLocalSymbols + NumExternalSymbols + NumUndefinedSymbols;
     uint64_t IndirectSymbolSize = NumIndirectSymbols * 4;
@@ -1065,25 +1060,23 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   // Write the symbol table data, if used.
   if (NumSymbols) {
     // Write the indirect symbol entries.
-    for (MCAssembler::const_indirect_symbol_iterator
-           it = Asm.indirect_symbol_begin(),
-           ie = Asm.indirect_symbol_end(); it != ie; ++it) {
+    for (auto &ISD : Asm.getIndirectSymbols()) {
       // Indirect symbols in the non-lazy symbol pointer section have some
       // special handling.
       const MCSectionMachO &Section =
-          static_cast<const MCSectionMachO &>(*it->Section);
+          static_cast<const MCSectionMachO &>(*ISD.Section);
       if (Section.getType() == MachO::S_NON_LAZY_SYMBOL_POINTERS) {
         // If this symbol is defined and internal, mark it as such.
-        if (it->Symbol->isDefined() && !it->Symbol->isExternal()) {
+        if (ISD.Symbol->isDefined() && !ISD.Symbol->isExternal()) {
           uint32_t Flags = MachO::INDIRECT_SYMBOL_LOCAL;
-          if (it->Symbol->isAbsolute())
+          if (ISD.Symbol->isAbsolute())
             Flags |= MachO::INDIRECT_SYMBOL_ABS;
           W.write<uint32_t>(Flags);
           continue;
         }
       }
 
-      W.write<uint32_t>(it->Symbol->getIndex());
+      W.write<uint32_t>(ISD.Symbol->getIndex());
     }
 
     // FIXME: Check that offsets match computed ones.
