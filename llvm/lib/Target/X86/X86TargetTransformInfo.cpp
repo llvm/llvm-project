@@ -185,9 +185,11 @@ bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
   // 16/32/64-bit operands.
   // TODO: Support f32/f64 with VMOVSS/VMOVSD with zero mask when it's
   // profitable.
-  if (!Ty->isIntegerTy())
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!Ty->isIntegerTy() && (!VTy || VTy->getNumElements() != 1))
     return false;
-  switch (cast<IntegerType>(Ty)->getBitWidth()) {
+  auto *ScalarTy = Ty->getScalarType();
+  switch (cast<IntegerType>(ScalarTy)->getBitWidth()) {
   default:
     return false;
   case 16:
