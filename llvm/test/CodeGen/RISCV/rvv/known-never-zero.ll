@@ -12,29 +12,20 @@ define i32 @vscale_known_nonzero() {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli s0, a0, 3
-; CHECK-NEXT:    neg a0, s0
-; CHECK-NEXT:    and a0, s0, a0
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    neg a1, a0
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    lui a1, 30667
 ; CHECK-NEXT:    addiw a1, a1, 1329
 ; CHECK-NEXT:    call __muldi3
-; CHECK-NEXT:    bnez s0, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    j .LBB0_3
-; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    srliw a0, a0, 27
 ; CHECK-NEXT:    lui a1, %hi(.LCPI0_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI0_0)
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    lbu a0, 0(a0)
-; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %x = call i32 @llvm.vscale()
