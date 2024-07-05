@@ -590,9 +590,8 @@ void MachObjectWriter::computeSymbolTable(
   // Build section lookup table.
   DenseMap<const MCSection*, uint8_t> SectionIndexMap;
   unsigned Index = 1;
-  for (MCAssembler::iterator it = Asm.begin(),
-         ie = Asm.end(); it != ie; ++it, ++Index)
-    SectionIndexMap[&*it] = Index;
+  for (MCSection &Sec : Asm)
+    SectionIndexMap[&Sec] = Index++;
   assert(Index <= 256 && "Too many sections!");
 
   // Build the string table.
@@ -818,7 +817,7 @@ void MachObjectWriter::prepareObject(MCAssembler &Asm) {
 // BEGIN MCCAS
 void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
   // END MCCAS
-  unsigned NumSections = Asm.size();
+  unsigned NumSections = Asm.end() - Asm.begin();
   const MCAssembler::VersionInfoType &VersionInfo = Asm.getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
