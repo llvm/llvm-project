@@ -1108,8 +1108,9 @@ define void @indices_convert() {
 ; SSE3-NEXT:    movaps %xmm0, -56(%rsp)
 ; SSE3-NEXT:    movaps %xmm0, -72(%rsp)
 ; SSE3-NEXT:    andl $3, %eax
-; SSE3-NEXT:    movsd -72(%rsp,%rax,8), %xmm0 # xmm0 = mem[0],zero
-; SSE3-NEXT:    movsd -40(%rsp,%rax,8), %xmm1 # xmm1 = mem[0],zero
+; SSE3-NEXT:    shll $3, %eax
+; SSE3-NEXT:    movsd -72(%rsp,%rax), %xmm0 # xmm0 = mem[0],zero
+; SSE3-NEXT:    movsd -40(%rsp,%rax), %xmm1 # xmm1 = mem[0],zero
 ; SSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE3-NEXT:    movups %xmm1, (%rax)
 ; SSE3-NEXT:    retq
@@ -1123,8 +1124,9 @@ define void @indices_convert() {
 ; SSSE3-NEXT:    movaps %xmm0, -56(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, -72(%rsp)
 ; SSSE3-NEXT:    andl $3, %eax
-; SSSE3-NEXT:    movsd -72(%rsp,%rax,8), %xmm0 # xmm0 = mem[0],zero
-; SSSE3-NEXT:    movsd -40(%rsp,%rax,8), %xmm1 # xmm1 = mem[0],zero
+; SSSE3-NEXT:    shll $3, %eax
+; SSSE3-NEXT:    movsd -72(%rsp,%rax), %xmm0 # xmm0 = mem[0],zero
+; SSSE3-NEXT:    movsd -40(%rsp,%rax), %xmm1 # xmm1 = mem[0],zero
 ; SSSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSSE3-NEXT:    movups %xmm1, (%rax)
 ; SSSE3-NEXT:    retq
