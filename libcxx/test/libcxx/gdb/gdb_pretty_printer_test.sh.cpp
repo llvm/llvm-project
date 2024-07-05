@@ -158,6 +158,11 @@ void framework_self_test() {
 template <typename T> class UncompressibleAllocator : public std::allocator<T> {
  public:
   char X;
+
+  template <class U>
+  struct rebind {
+    using other = UncompressibleAllocator<U>;
+  };
 };
 
 void string_test() {

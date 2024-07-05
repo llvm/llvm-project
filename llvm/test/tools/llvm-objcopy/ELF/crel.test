@@ -105,7 +105,7 @@ Symbols:
 # CHECK2-NEXT: ]
 
 --- !ELF
-FileHeader: !FileHeader
+FileHeader:
   Class: ELFCLASS32
   Data: ELFDATA2LSB
   Type: ET_REL

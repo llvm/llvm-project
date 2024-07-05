@@ -369,10 +369,6 @@ Changes to the LLVM tools
   jumping in reverse direction with shift+L/R/B). (`#95662
   <https://github.com/llvm/llvm-project/pull/95662>`_).
 
-* llvm-config now quotes and escapes paths emitted in stdout, to account for
-  spaces or other special characters in path.
-  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
-
 Changes to LLDB
 ---------------------------------
 

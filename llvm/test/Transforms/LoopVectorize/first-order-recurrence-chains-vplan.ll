@@ -33,9 +33,17 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
-; CHECK-NEXT: No successors
+; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph
+; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>
 ; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2]]>
@@ -94,9 +102,17 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[RESUME_3:%.+]]> = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_3:%.+]]> = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>

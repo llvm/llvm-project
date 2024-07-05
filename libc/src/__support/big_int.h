@@ -731,6 +731,10 @@ public:
     return *result.div(other);
   }
 
+  LIBC_INLINE constexpr BigInt operator%=(const BigInt &other) {
+    return *this->div(other);
+  }
+
   LIBC_INLINE constexpr BigInt &operator*=(const BigInt &other) {
     *this = *this * other;
     return *this;

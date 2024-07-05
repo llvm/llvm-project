@@ -1466,8 +1466,10 @@ void jitLinkForORC(
     return;
   }
 
-  if (auto Err = OnLoaded(*O.getBinary(), *Info, RTDyld.getSymbolTable()))
+  if (auto Err = OnLoaded(*O.getBinary(), *Info, RTDyld.getSymbolTable())) {
     OnEmitted(std::move(O), std::move(Info), std::move(Err));
+    return;
+  }
 
   RuntimeDyldImpl::finalizeAsync(std::move(RTDyld.Dyld), std::move(OnEmitted),
                                  std::move(O), std::move(Info));
