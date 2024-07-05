@@ -446,6 +446,7 @@ mark_as_advanced(LLVM_EXAMPLES_INSTALL_DIR)
 # They are used as destination of target generators.
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+set(LLVM_SHARE_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/share)
 if(WIN32 OR CYGWIN)
   # DLL platform -- put DLLs into bin.
   set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
@@ -708,10 +709,6 @@ set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
 
 option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
-
-# Facebook T92898286
-option(LLVM_TEST_BOLT "Enable BOLT testing in non-BOLT tests that use clang" OFF)
-# End Facebook T92898286
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
