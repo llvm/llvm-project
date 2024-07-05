@@ -2505,129 +2505,96 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
   // A macro without parameters is handled differently on Darwin:
   // gas accepts no arguments and does no substitutions
   StringRef Body = Macro.Body;
-  while (!Body.empty()) {
-    // Scan for the next substitution.
-    std::size_t End = Body.size(), Pos = 0;
-    for (; Pos != End; ++Pos) {
-      // Check for a substitution or escape.
-      if (IsDarwin && !NParameters) {
-        // This macro has no parameters, look for $0, $1, etc.
-        if (Body[Pos] != '$' || Pos + 1 == End)
-          continue;
-
-        char Next = Body[Pos + 1];
-        if (Next == '$' || Next == 'n' ||
-            isdigit(static_cast<unsigned char>(Next)))
-          break;
-      } else {
-        // This macro has parameters, look for \foo, \bar, etc.
-        if (Body[Pos] == '\\' && Pos + 1 != End)
-          break;
+  size_t I = 0, End = Body.size();
+  while (I != End) {
+    if (Body[I] == '\\' && I + 1 != End) {
+      // Check for \@ and \+ pseudo variables.
+      if (EnableAtPseudoVariable && Body[I + 1] == '@') {
+        OS << NumOfMacroInstantiations;
+        I += 2;
+        continue;
       }
+      if (Body[I + 1] == '+') {
+        OS << Macro.Count;
+        I += 2;
+        continue;
+      }
+      if (Body[I + 1] == '(' && Body[I + 2] == ')') {
+        I += 3;
+        continue;
+      }
+
+      size_t Pos = ++I;
+      while (I != End && isIdentifierChar(Body[I]))
+        ++I;
+      StringRef Argument(Body.data() + Pos, I - Pos);
+      unsigned Index = 0;
+      for (; Index < NParameters; ++Index)
+        if (Parameters[Index].Name == Argument)
+          break;
+      if (Index == NParameters) {
+        OS << '\\' << Argument;
+      } else {
+        bool VarargParameter = HasVararg && Index == (NParameters - 1);
+        for (const AsmToken &Token : A[Index]) {
+          // For altmacro mode, you can write '%expr'.
+          // The prefix '%' evaluates the expression 'expr'
+          // and uses the result as a string (e.g. replace %(1+2) with the
+          // string "3").
+          // Here, we identify the integer token which is the result of the
+          // absolute expression evaluation and replace it with its string
+          // representation.
+          if (AltMacroMode && Token.getString().front() == '%' &&
+              Token.is(AsmToken::Integer))
+            // Emit an integer value to the buffer.
+            OS << Token.getIntVal();
+          // Only Token that was validated as a string and begins with '<'
+          // is considered altMacroString!!!
+          else if (AltMacroMode && Token.getString().front() == '<' &&
+                   Token.is(AsmToken::String)) {
+            OS << angleBracketString(Token.getStringContents());
+          }
+          // We expect no quotes around the string's contents when
+          // parsing for varargs.
+          else if (Token.isNot(AsmToken::String) || VarargParameter)
+            OS << Token.getString();
+          else
+            OS << Token.getStringContents();
+        }
+      }
+      continue;
     }
 
-    // Add the prefix.
-    OS << Body.slice(0, Pos);
-
-    // Check if we reached the end.
-    if (Pos == End)
-      break;
-
-    if (IsDarwin && !NParameters) {
-      switch (Body[Pos + 1]) {
+    if (Body[I] == '$' && I + 1 != End && IsDarwin && !NParameters) {
+      // This macro has no parameters, look for $0, $1, etc.
+      switch (Body[I + 1]) {
       // $$ => $
       case '$':
         OS << '$';
-        break;
-
+        I += 2;
+        continue;
       // $n => number of arguments
       case 'n':
         OS << A.size();
-        break;
-
-      // $[0-9] => argument
+        I += 2;
+        continue;
       default: {
-        // Missing arguments are ignored.
-        unsigned Index = Body[Pos + 1] - '0';
-        if (Index >= A.size())
+        if (!isDigit(Body[I + 1]))
           break;
-
-        // Otherwise substitute with the token values, with spaces eliminated.
-        for (const AsmToken &Token : A[Index])
-          OS << Token.getString();
-        break;
-      }
-      }
-      Pos += 2;
-    } else {
-      // Check for \@ and \+ pseudo variables.
-      unsigned I = Pos + 1;
-      if (I + 1 != End) {
-        if (EnableAtPseudoVariable && Body[I] == '@') {
-          ++I;
-        } else if (Body[I] == '+') {
-          ++I;
-        } else {
-          while (isIdentifierChar(Body[I]) && I + 1 != End)
-            ++I;
-        }
-      }
-
-      const char *Begin = Body.data() + Pos + 1;
-      StringRef Argument(Begin, I - (Pos + 1));
-      unsigned Index = 0;
-
-      if (Argument == "@") {
-        OS << NumOfMacroInstantiations;
-        Pos += 2;
-      } else if (Argument == "+") {
-        OS << Macro.Count;
-        Pos += 2;
-      } else {
-        for (; Index < NParameters; ++Index)
-          if (Parameters[Index].Name == Argument)
-            break;
-
-        if (Index == NParameters) {
-          if (Body[Pos + 1] == '(' && Body[Pos + 2] == ')')
-            Pos += 3;
-          else {
-            OS << '\\' << Argument;
-            Pos = I;
-          }
-        } else {
-          bool VarargParameter = HasVararg && Index == (NParameters - 1);
+        // $[0-9] => argument
+        // Missing arguments are ignored.
+        unsigned Index = Body[I + 1] - '0';
+        if (Index < A.size())
           for (const AsmToken &Token : A[Index])
-            // For altmacro mode, you can write '%expr'.
-            // The prefix '%' evaluates the expression 'expr'
-            // and uses the result as a string (e.g. replace %(1+2) with the
-            // string "3").
-            // Here, we identify the integer token which is the result of the
-            // absolute expression evaluation and replace it with its string
-            // representation.
-            if (AltMacroMode && Token.getString().front() == '%' &&
-                Token.is(AsmToken::Integer))
-              // Emit an integer value to the buffer.
-              OS << Token.getIntVal();
-            // Only Token that was validated as a string and begins with '<'
-            // is considered altMacroString!!!
-            else if (AltMacroMode && Token.getString().front() == '<' &&
-                     Token.is(AsmToken::String)) {
-              OS << angleBracketString(Token.getStringContents());
-            }
-            // We expect no quotes around the string's contents when
-            // parsing for varargs.
-            else if (Token.isNot(AsmToken::String) || VarargParameter)
-              OS << Token.getString();
-            else
-              OS << Token.getStringContents();
-
-          Pos += 1 + Argument.size();
-        }
+            OS << Token.getString();
+        I += 2;
+        continue;
+      }
       }
     }
-    // Update the scan point.
-    Body = Body.substr(Pos);
+
+    OS << Body[I];
+    ++I;
   }
 
   ++Macro.Count;
