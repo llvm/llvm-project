@@ -4786,7 +4786,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // Write out the declaration merging check logic.
   OS << "static bool DiagnoseMutualExclusions(Sema &S, const NamedDecl *D, "
      << "const Attr *A) {\n";
-  OS << MergeDeclOS.str();
+  OS << DeclMergeChecks;
   OS << "  return true;\n";
   OS << "}\n\n";
 
@@ -4796,7 +4796,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "static bool DiagnoseMutualExclusions(Sema &S, "
      << "const SmallVectorImpl<const Attr *> &C) {\n";
   OS << "  for (const Attr *A : C) {\n";
-  OS << MergeStmtOS.str();
+  OS << StmtMergeChecks;
   OS << "  }\n";
   OS << "  return true;\n";
   OS << "}\n\n";
@@ -4939,7 +4939,7 @@ void EmitClangAttrTextNodeDump(RecordKeeper &Records, raw_ostream &OS) {
       if (!Args.empty())
         OS << "    const auto *SA = cast<" << R.getName()
            << "Attr>(A); (void)SA;\n";
-      OS << SS.str();
+      OS << FunctionContent;
       OS << "  }\n";
     }
   }
@@ -4968,7 +4968,7 @@ void EmitClangAttrNodeTraverse(RecordKeeper &Records, raw_ostream &OS) {
       if (!Args.empty())
         OS << "    const auto *SA = cast<" << R.getName()
            << "Attr>(A); (void)SA;\n";
-      OS << SS.str();
+      OS << FunctionContent;
       OS << "  }\n";
     }
   }
