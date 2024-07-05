@@ -587,11 +587,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
       handleDie(Out, CUI, Die);
-      // Release the line table, once we're done.
-      DICtx.clearLineTableForUnit(CU.get());
-      // Free any DIEs that were allocated by the DWARF parser.
-      // If/when they're needed by other CU's, they'll be recreated.
-      CU->clearDIEs(/*KeepCUDie=*/false);
     }
   } else {
     // LLVM Dwarf parser is not thread-safe and we need to parse all DWARF up
@@ -617,16 +612,11 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &CU, &LogMutex, &Out, Die]() mutable {
+        pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
           handleDie(ThreadOut, CUI, Die);
-          // Release the line table once we're done.
-          DICtx.clearLineTableForUnit(CU.get());
-          // Free any DIEs that were allocated by the DWARF parser.
-          // If/when they're needed by other CU's, they'll be recreated.
-          CU->clearDIEs(/*KeepCUDie=*/false);
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
           if (Out.GetOS()) {
@@ -639,9 +629,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
     }
     pool.wait();
   }
-  // Now get rid of all the DIEs that may have been recreated
-  for (const auto &CU : DICtx.compile_units())
-    CU->clearDIEs(/*KeepCUDie=*/false);
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
   Out << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
   return Error::success();
