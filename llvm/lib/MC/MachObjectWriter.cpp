@@ -48,6 +48,7 @@ void MachObjectWriter::reset() {
   Relocations.clear();
   IndirectSymBase.clear();
   IndirectSymbols.clear();
+  DataRegions.clear();
   SectionAddress.clear();
   SectionOrder.clear();
   StringTable.clear();
@@ -828,7 +829,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the data-in-code load command size, if used.
-  unsigned NumDataRegions = Asm.getDataRegions().size();
+  unsigned NumDataRegions = DataRegions.size();
   if (NumDataRegions) {
     ++NumLoadCommands;
     LoadCommandsSize += sizeof(MachO::linkedit_data_command);
@@ -1025,25 +1026,21 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Write out the data-in-code region payload, if there is one.
-  for (MCAssembler::const_data_region_iterator
-         it = Asm.data_region_begin(), ie = Asm.data_region_end();
-         it != ie; ++it) {
-    const DataRegionData *Data = &(*it);
-    uint64_t Start = getSymbolAddress(*Data->Start, Asm);
+  for (DataRegionData Data : DataRegions) {
+    uint64_t Start = getSymbolAddress(*Data.Start, Asm);
     uint64_t End;
-    if (Data->End)
-      End = getSymbolAddress(*Data->End, Asm);
+    if (Data.End)
+      End = getSymbolAddress(*Data.End, Asm);
     else
       report_fatal_error("Data region not terminated");
 
-    LLVM_DEBUG(dbgs() << "data in code region-- kind: " << Data->Kind
-                      << "  start: " << Start << "(" << Data->Start->getName()
-                      << ")"
-                      << "  end: " << End << "(" << Data->End->getName() << ")"
-                      << "  size: " << End - Start << "\n");
+    LLVM_DEBUG(dbgs() << "data in code region-- kind: " << Data.Kind
+                      << "  start: " << Start << "(" << Data.Start->getName()
+                      << ")" << "  end: " << End << "(" << Data.End->getName()
+                      << ")" << "  size: " << End - Start << "\n");
     W.write<uint32_t>(Start);
     W.write<uint16_t>(End - Start);
-    W.write<uint16_t>(Data->Kind);
+    W.write<uint16_t>(Data.Kind);
   }
 
   // Write out the loh commands, if there is one.
