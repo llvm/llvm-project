@@ -2074,8 +2074,6 @@ static void AddOverrideResults(ResultBuilder &Results,
         // Generates a new CodeCompletionResult by taking this function and
         // converting it into an override declaration with only one chunk in the
         // final CodeCompletionString as a TypedTextChunk.
-        std::string OverrideSignature;
-        llvm::raw_string_ostream OS(OverrideSignature);
         CodeCompletionResult CCR(Method, 0);
         PrintingPolicy Policy =
             getCompletionPrintingPolicy(S.getASTContext(), S.getPreprocessor());
@@ -3143,7 +3141,6 @@ static void AddTemplateParameterChunks(
       else if (const auto *TC = TTP->getTypeConstraint()) {
         llvm::raw_string_ostream OS(PlaceholderStr);
         TC->print(OS, Policy);
-        OS.flush();
       } else
         PlaceholderStr = "class";
 
@@ -3982,7 +3979,7 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     FDecl->getDeclName().print(OS, Policy);
-    Result.AddTextChunk(Result.getAllocator().CopyString(OS.str()));
+    Result.AddTextChunk(Result.getAllocator().CopyString(Name));
   } else {
     // Function without a declaration. Just give the return type.
     Result.AddResultTypeChunk(Result.getAllocator().CopyString(
@@ -4300,7 +4297,7 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
         std::string Str;
         llvm::raw_string_ostream OS(Str);
         NNS->print(OS, Policy);
-        Builder.AddTextChunk(Results.getAllocator().CopyString(OS.str()));
+        Builder.AddTextChunk(Results.getAllocator().CopyString(Str));
       }
     } else if (!InContext->Equals(Overridden->getDeclContext()))
       continue;

@@ -3208,7 +3208,7 @@ void Darwin::addClangCC1ASTargetOptions(
       std::string Arg;
       llvm::raw_string_ostream OS(Arg);
       OS << "-target-sdk-version=" << V;
-      CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+      CC1ASArgs.push_back(Args.MakeArgString(Arg));
     };
 
     if (isTargetMacCatalyst()) {
@@ -3231,7 +3231,7 @@ void Darwin::addClangCC1ASTargetOptions(
         std::string Arg;
         llvm::raw_string_ostream OS(Arg);
         OS << "-darwin-target-variant-sdk-version=" << SDKInfo->getVersion();
-        CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+        CC1ASArgs.push_back(Args.MakeArgString(Arg));
       } else if (const auto *MacOStoMacCatalystMapping =
                      SDKInfo->getVersionMapping(
                          DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
@@ -3242,7 +3242,7 @@ void Darwin::addClangCC1ASTargetOptions(
           std::string Arg;
           llvm::raw_string_ostream OS(Arg);
           OS << "-darwin-target-variant-sdk-version=" << *SDKVersion;
-          CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+          CC1ASArgs.push_back(Args.MakeArgString(Arg));
         }
       }
     }
