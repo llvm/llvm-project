@@ -95,8 +95,8 @@ func.func @transfer_2D(%mem : memref<8x8xf32>, %i : index) -> vector<2x4xf32> {
 
 func.func @transfer_vector_element(%mem : memref<8x8xvector<2x4xf32>>, %i : index) -> vector<2x4xf32> {
   %cf0 = arith.constant dense<0.0> : vector<2x4xf32>
-  %res = vector.transfer_read %mem[%i, %i], %cf0 {in_bounds = []} : memref<8x8xvector<2x4xf32>>, vector<2x4xf32>
-  vector.transfer_write %res, %mem[%i, %i] {in_bounds = []} : vector<2x4xf32>, memref<8x8xvector<2x4xf32>>
+  %res = vector.transfer_read %mem[%i, %i], %cf0 : memref<8x8xvector<2x4xf32>>, vector<2x4xf32>
+  vector.transfer_write %res, %mem[%i, %i] : vector<2x4xf32>, memref<8x8xvector<2x4xf32>>
   return %res : vector<2x4xf32>
 }
 
