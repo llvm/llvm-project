@@ -9293,11 +9293,10 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     return NewLoad;
 
   SDValue ShiftedLoad =
-      NeedsZext
-          ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
-                        DAG.getShiftAmountConstant(ZeroExtendedBytes * 8, VT,
-                                                   SDLoc(N), LegalOperations))
-          : NewLoad;
+      NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
+                              DAG.getShiftAmountConstant(ZeroExtendedBytes * 8,
+                                                         VT, SDLoc(N)))
+                : NewLoad;
   return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
 }
 
