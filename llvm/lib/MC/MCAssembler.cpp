@@ -1346,11 +1346,15 @@ LLVM_DUMP_METHOD void MCAssembler::dump() const{
   OS << "],\n";
   OS << "  Symbols:[";
 
-  for (const_symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
-    if (it != symbol_begin()) OS << ",\n           ";
+  bool First = true;
+  for (const MCSymbol &Sym : symbols()) {
+    if (First)
+      First = false;
+    else
+      OS << ",\n           ";
     OS << "(";
-    it->dump();
-    OS << ", Index:" << it->getIndex() << ", ";
+    Sym.dump();
+    OS << ", Index:" << Sym.getIndex() << ", ";
     OS << ")";
   }
   OS << "]>\n";
