@@ -1,10 +1,13 @@
-// Tests that AArch64 is able to instrument static binaries in relocation mode.
+// Tests that AArch64 is able to instrument static binaries in relocation mode,
+// by checking that '__bolt_fini_trampoline' is generated and contains a 'ret'
+// instruction.
 
 REQUIRES: system-linux
 
 RUN: %clang %p/../Inputs/main.c -o %t -Wl,-q -static
 RUN: llvm-bolt -instrument -instrumentation-sleep-time=1 %t -o %t.instr 2>&1 | FileCheck %s
-RUN: llvm-nm -n %t.instr | FileCheck %s -check-prefix=CHECK-SYM
+RUN: llvm-objdump --disassemble-symbols=__bolt_fini_trampoline %t.instr -D | FileCheck %s -check-prefix=CHECK-ASM
 
 CHECK: BOLT-INFO: output linked against instrumentation runtime library
-CHECK-SYM: __bolt_fini_trampoline
+CHECK-ASM: <__bolt_fini_trampoline>:
+CHECK-ASM-NEXT: ret
