@@ -1125,3 +1125,39 @@ exit:
   call void @llvm.riscv.vse.nxv8i8(<vscale x 8 x i8> %1, ptr %p, i64 1)
   ret void
 }
+
+; Check that we don't forward an AVL if we wouldn't be able to extend its
+; LiveInterval without clobbering other val nos.
+define <vscale x 4 x i32> @unforwardable_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
+; CHECK-LABEL: unforwardable_avl:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a0, e32, m2, ta, ma
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:  .LBB27_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    bnez a1, .LBB27_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vv v10, v8, v8
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v8
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 2, i64 1)
+  br label %for.body
+
+for.body:
+  ; Use %n in a PHI here so its virtual register is assigned to a second time here.
+  %1 = phi i64 [ %3, %for.body ], [ %n, %entry ]
+  %2 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %1, i64 0, i64 0)
+  %3 = add i64 %1, 1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  %4 = tail call <vscale x 4 x i32> @llvm.riscv.vadd.nxv2f32.nxv2f32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> %v, <vscale x 4 x i32> %v, i64 -1)
+  ; VL toggle needed here: If the %n AVL was forwarded here we wouldn't be able
+  ; to extend it's LiveInterval because it would clobber the assignment at %1.
+  %5 = tail call <vscale x 4 x i32> @llvm.riscv.vadd.nxv2f32.nxv2f32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> %4, <vscale x 4 x i32> %v, i64 %0)
+  ret <vscale x 4 x i32> %5
+}
