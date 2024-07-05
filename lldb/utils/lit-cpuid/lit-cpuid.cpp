@@ -15,22 +15,23 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 
+#include <optional>
+
 using namespace llvm;
 
 int main(int argc, char **argv) {
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
-  StringMap<bool> features;
-
-  if (!sys::getHostCPUFeatures(features))
+  if (std::optional<StringMap<bool>> features =
+          sys::getHostCPUFeatures(features)) {
+    if ((*features)["sse"])
+      outs() << "sse\n";
+    if ((*features)["avx"])
+      outs() << "avx\n";
+    if ((*features)["avx512f"])
+      outs() << "avx512f\n";
+  } else
     return 1;
-
-  if (features["sse"])
-    outs() << "sse\n";
-  if (features["avx"])
-    outs() << "avx\n";
-  if (features["avx512f"])
-    outs() << "avx512f\n";
 #endif
 
   return 0;

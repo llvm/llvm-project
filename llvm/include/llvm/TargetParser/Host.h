@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGETPARSER_HOST_H
 #define LLVM_TARGETPARSER_HOST_H
 
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -47,13 +48,12 @@ namespace sys {
   /// The particular format of the names are target dependent, and suitable for
   /// passing as -mattr to the target which matches the host.
   ///
-  /// \param Features - A string mapping feature names to either
-  /// true (if enabled) or false (if disabled). This routine makes no guarantees
-  /// about exactly which features may appear in this map, except that they are
-  /// all valid LLVM feature names.
-  ///
-  /// \return - True on success.
-  bool getHostCPUFeatures(StringMap<bool, MallocAllocator> &Features);
+  /// \return - If feature detection succeeds, a string map mapping feature
+  /// names to either true (if enabled) or false (if disabled). This routine
+  /// makes no guarantees about exactly which features may appear in this map,
+  /// except that they are all valid LLVM feature names. If feature detection
+  /// fails, an empty optional is returned.
+  std::optional<StringMap<bool, MallocAllocator>> getHostCPUFeatures();
 
   /// This is a function compatible with cl::AddExtraVersionPrinter, which adds
   /// info about the current target triple and detected CPU.

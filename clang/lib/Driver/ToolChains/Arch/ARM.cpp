@@ -591,9 +591,9 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
 
   // Add CPU features for generic CPUs
   if (CPUName == "native") {
-    llvm::StringMap<bool> HostFeatures;
-    if (llvm::sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
+    if (std::optional<llvm::StringMap<bool>> HostFeatures =
+            llvm::sys::getHostCPUFeatures())
+      for (auto &F : *HostFeatures)
         Features.push_back(
             Args.MakeArgString((F.second ? "+" : "-") + F.first()));
   } else if (!CPUName.empty()) {

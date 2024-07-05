@@ -624,12 +624,10 @@ std::string codegen::getFeaturesStr() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
+  if (getMCPU() == "native")
+    if (std::optional<StringMap<bool>> HostFeatures = sys::getHostCPUFeatures())
+      for (const auto &[Feature, IsEnabled] : *HostFeatures)
         Features.AddFeature(Feature, IsEnabled);
-  }
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -644,12 +642,10 @@ std::vector<std::string> codegen::getFeatureList() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
+  if (getMCPU() == "native")
+    if (std::optional<StringMap<bool>> HostFeatures = sys::getHostCPUFeatures())
+      for (const auto &[Feature, IsEnabled] : *HostFeatures)
         Features.AddFeature(Feature, IsEnabled);
-  }
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);

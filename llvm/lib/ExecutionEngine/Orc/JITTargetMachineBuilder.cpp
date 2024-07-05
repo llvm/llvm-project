@@ -28,10 +28,10 @@ Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
   // Retrieve host CPU name and sub-target features and add them to builder.
   // Relocation model, code model and codegen opt level are kept to default
   // values.
-  llvm::StringMap<bool> FeatureMap;
-  llvm::sys::getHostCPUFeatures(FeatureMap);
-  for (auto &Feature : FeatureMap)
-    TMBuilder.getFeatures().AddFeature(Feature.first(), Feature.second);
+  if (std::optional<StringMap<bool>> FeatureMap =
+          llvm::sys::getHostCPUFeatures())
+    for (auto &Feature : *FeatureMap)
+      TMBuilder.getFeatures().AddFeature(Feature.first(), Feature.second);
 
   TMBuilder.setCPU(std::string(llvm::sys::getHostCPUName()));
 

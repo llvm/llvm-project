@@ -363,10 +363,9 @@ char *LLVMGetHostCPUName(void) {
 
 char *LLVMGetHostCPUFeatures(void) {
   SubtargetFeatures Features;
-  StringMap<bool> HostFeatures;
 
-  if (sys::getHostCPUFeatures(HostFeatures))
-    for (const auto &[Feature, IsEnabled] : HostFeatures)
+  if (std::optional<StringMap<bool>> HostFeatures = sys::getHostCPUFeatures())
+    for (const auto &[Feature, IsEnabled] : *HostFeatures)
       Features.AddFeature(Feature, IsEnabled);
 
   return strdup(Features.getString().c_str());
