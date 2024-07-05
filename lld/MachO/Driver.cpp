@@ -350,6 +350,8 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
           if (!mb) {
+            // Thin archives from repro tarballs can contain missing members
+            // if the member was not loaded later during the initial link.
             llvm::consumeError(mb.takeError());
             continue;
           }
