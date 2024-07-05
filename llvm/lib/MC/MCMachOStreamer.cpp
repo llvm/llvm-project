@@ -19,6 +19,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -321,10 +322,9 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   if (Attribute == MCSA_IndirectSymbol) {
     // Note that we intentionally cannot use the symbol data here; this is
     // important for matching the string table that 'as' generates.
-    IndirectSymbolData ISD;
-    ISD.Symbol = Symbol;
-    ISD.Section = getCurrentSectionOnly();
-    getAssembler().getIndirectSymbols().push_back(ISD);
+    static_cast<MachObjectWriter &>(getAssembler().getWriter())
+        .getIndirectSymbols()
+        .push_back({Symbol, getCurrentSectionOnly()});
     return true;
   }
 
