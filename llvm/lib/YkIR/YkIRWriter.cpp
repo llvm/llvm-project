@@ -4,6 +4,7 @@
 //
 //===-------------------------------------------------------------------===//
 
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -18,6 +19,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Yk/ControlPoint.h"
 
 using namespace llvm;
 using namespace std;
@@ -693,7 +695,9 @@ private:
     for (unsigned OI = 0; OI < I->arg_size(); OI++) {
       serialiseOperand(I, FLCtxt, I->getOperand(OI));
     }
-    if (!I->getCalledFunction()->isDeclaration()) {
+    bool IsCtrlPointCall =
+        I->getCalledFunction()->getName() == YK_NEW_CONTROL_POINT;
+    if (!I->getCalledFunction()->isDeclaration() || IsCtrlPointCall) {
       // The next instruction will be the stackmap entry
       // has_safepoint = 1:
       OutStreamer.emitInt8(1);
