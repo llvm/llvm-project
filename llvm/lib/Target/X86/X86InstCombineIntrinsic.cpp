@@ -2810,7 +2810,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                         PatternMatch::m_Mask(ShuffleMask))))) {
       // Bail if the shuffle was irregular or contains undefs.
       int NumElts = cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
-      if (NumElts < ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
+      if (NumElts < (int)ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
           any_of(ShuffleMask,
                  [NumElts](int M) { return M < 0 || M >= NumElts; }))
         break;
