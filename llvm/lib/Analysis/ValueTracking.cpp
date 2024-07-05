@@ -5933,7 +5933,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Transfer information from the sign bit.
     if (Bits.isNonNegative())
       Known.signBitMustBeZero();
-    else if (Bits.One.isSignBitSet())
+    else if (Bits.isNegative())
       Known.signBitMustBeOne();
 
     if (Ty->isIEEE()) {
