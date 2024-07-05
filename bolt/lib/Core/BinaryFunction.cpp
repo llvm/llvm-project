@@ -899,17 +899,9 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
     TargetAddress = ArrayStart + *Value;
 
-    // Remove spurious JumpTable at EntryAddress caused by PIC reference from
-    // the load instruction.
-    JumpTable *JT = BC.getJumpTableContainingAddress(EntryAddress);
-    assert(JT && "Must have a jump table at fixed entry address");
-    BC.deregisterJumpTable(EntryAddress);
-    JumpTables.erase(EntryAddress);
-    delete JT;
-
     // Replace FixedEntryDispExpr used in target address calculation with outer
     // jump table reference.
-    JT = BC.getJumpTableContainingAddress(ArrayStart);
+    JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart);
     assert(JT && "Must have a containing jump table for PIC fixed branch");
     BC.MIB->replaceMemOperandDisp(*FixedEntryLoadInstr, JT->getFirstLabel(),
                                   EntryAddress - ArrayStart, &*BC.Ctx);
