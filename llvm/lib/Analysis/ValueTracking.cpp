@@ -5931,7 +5931,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     computeKnownBits(Casted, Bits, Depth + 1, Q);
 
     // Transfer information from the sign bit.
-    if (Bits.Zero.isSignBitSet())
+    if (Bits.isNonNegative())
       Known.signBitMustBeZero();
     else if (Bits.One.isSignBitSet())
       Known.signBitMustBeOne();
