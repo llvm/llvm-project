@@ -915,22 +915,16 @@ _OMP_EXTERN void ompt_libomp_connect(ompt_start_tool_result_t *result) {
   // Ensure libomp callbacks have been added if not already
   __ompt_force_initialization();
 
-  if (ompt_enabled.enabled &&
-      // Callbacks are initiated only if the device initialize callback
-      // has been registered by the tool
-      ompt_callbacks.ompt_callback(ompt_callback_device_initialize)) {
-    if (result) {
-      OMPT_VERBOSE_INIT_PRINT(
-          "libomp --> OMPT: Connecting with libomptarget\n");
-      // Pass in the libomp lookup function so that the already registered
-      // functions can be extracted and assigned to the callbacks in
-      // libomptarget
-      result->initialize(ompt_libomp_target_fn_lookup,
-                         /* initial_device_num */ 0, /* tool_data */ nullptr);
-      // Track the object provided by libomptarget so that the finalizer can be
-      // called during OMPT finalization
-      libomptarget_ompt_result = result;
-    }
+  if (ompt_enabled.enabled && result) {
+    OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Connecting with libomptarget\n");
+    // Pass in the libomp lookup function so that the already registered
+    // functions can be extracted and assigned to the callbacks in
+    // libomptarget
+    result->initialize(ompt_libomp_target_fn_lookup,
+                       /* initial_device_num */ 0, /* tool_data */ nullptr);
+    // Track the object provided by libomptarget so that the finalizer can be
+    // called during OMPT finalization
+    libomptarget_ompt_result = result;
   }
   OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Exit ompt_libomp_connect\n");
 }

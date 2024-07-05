@@ -661,40 +661,6 @@ public:
     return (Desc.TSFlags & X86II::EncodingMask) == X86II::EVEX;
   }
 
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    const auto *I = Insts.begin();
-    while (I != Insts.end() && isPrefix(*I))
-      ++I;
-    if (I == Insts.end())
-      return false;
-
-    const MCInst &FirstInst = *I;
-    ++I;
-    while (I != Insts.end() && isPrefix(*I))
-      ++I;
-    if (I == Insts.end())
-      return false;
-    const MCInst &SecondInst = *I;
-
-    if (!isConditionalBranch(SecondInst))
-      return false;
-    // Cannot fuse if the first instruction uses RIP-relative memory.
-    if (hasPCRelOperand(FirstInst))
-      return false;
-
-    const X86::FirstMacroFusionInstKind CmpKind =
-        X86::classifyFirstOpcodeInMacroFusion(FirstInst.getOpcode());
-    if (CmpKind == X86::FirstMacroFusionInstKind::Invalid)
-      return false;
-
-    X86::CondCode CC = static_cast<X86::CondCode>(getCondCode(SecondInst));
-    X86::SecondMacroFusionInstKind BranchKind =
-        X86::classifySecondCondCodeInMacroFusion(CC);
-    if (BranchKind == X86::SecondMacroFusionInstKind::Invalid)
-      return false;
-    return X86::isMacroFused(CmpKind, BranchKind);
-  }
-
   std::optional<X86MemOperand>
   evaluateX86MemoryOperand(const MCInst &Inst) const override {
     int MemOpNo = getMemoryOperandNo(Inst);

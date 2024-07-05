@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWP/DWP.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
@@ -89,6 +88,10 @@ private:
                          std::unique_ptr<DebugRangeListsSectionWriter>>;
   /// Store Rangelists writer for each DWO CU.
   RangeListsDWOWriers RangeListsWritersByCU;
+
+  /// Stores ranges writer for each DWO CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugRangesSectionWriter>>
+      LegacyRangesWritersByCU;
 
   std::mutex LocListDebugInfoPatchesMutex;
 
@@ -183,7 +186,7 @@ public:
   void updateDebugInfo();
 
   /// Update stmt_list for CUs based on the new .debug_line \p Layout.
-  void updateLineTableOffsets(const MCAsmLayout &Layout);
+  void updateLineTableOffsets(const MCAssembler &Asm);
 
   uint64_t getDwoRangesBase(uint64_t DWOId) { return DwoRangesBase[DWOId]; }
 
