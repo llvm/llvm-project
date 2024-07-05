@@ -403,9 +403,7 @@ public:
   /// returns the input type. For scalars, calls getScalarShiftAmountTy.
   /// If getScalarShiftAmountTy type cannot represent all possible shift
   /// amounts, returns MVT::i32.
-  /// \p LegalTypes is no longer used and will be removed from the interface.
-  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
-                       bool LegalTypes = true) const;
+  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL) const;
 
   /// Return the preferred type to use for a shift opcode, given the shifted
   /// amount type is \p ShiftValueTy.
