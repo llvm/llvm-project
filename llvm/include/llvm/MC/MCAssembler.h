@@ -53,22 +53,6 @@ class MCObjectWriter;
 class MCSection;
 class MCValue;
 
-// FIXME: This really doesn't belong here. See comments below.
-struct IndirectSymbolData {
-  MCSymbol *Symbol;
-  MCSection *Section;
-};
-
-// FIXME: Ditto this. Purely so the Streamer and the ObjectWriter can talk
-// to one another.
-struct DataRegionData {
-  // This enum should be kept in sync w/ the mach-o definition in
-  // llvm/Object/MachOFormat.h.
-  enum KindTy { Data = 1, JumpTable8, JumpTable16, JumpTable32 } Kind;
-  MCSymbol *Start;
-  MCSymbol *End;
-};
-
 class MCAssembler {
 public:
   using SectionListType = std::vector<MCSection *>;
@@ -83,14 +67,6 @@ public:
 
   using symbol_range = iterator_range<symbol_iterator>;
   using const_symbol_range = iterator_range<const_symbol_iterator>;
-
-  using const_indirect_symbol_iterator =
-      std::vector<IndirectSymbolData>::const_iterator;
-  using indirect_symbol_iterator = std::vector<IndirectSymbolData>::iterator;
-
-  using const_data_region_iterator =
-      std::vector<DataRegionData>::const_iterator;
-  using data_region_iterator = std::vector<DataRegionData>::iterator;
 
   /// MachO specific deployment target version info.
   // A Major version of 0 indicates that no version information was supplied
@@ -123,10 +99,6 @@ private:
   SectionListType Sections;
 
   SymbolDataListType Symbols;
-
-  std::vector<IndirectSymbolData> IndirectSymbols;
-
-  std::vector<DataRegionData> DataRegions;
 
   /// The list of linker options to propagate into the object file.
   std::vector<std::vector<std::string>> LinkerOptions;
@@ -389,64 +361,12 @@ public:
   size_t symbol_size() const { return Symbols.size(); }
 
   /// @}
-  /// \name Indirect Symbol List Access
-  /// @{
-
-  // FIXME: This is a total hack, this should not be here. Once things are
-  // factored so that the streamer has direct access to the .o writer, it can
-  // disappear.
-  std::vector<IndirectSymbolData> &getIndirectSymbols() {
-    return IndirectSymbols;
-  }
-
-  indirect_symbol_iterator indirect_symbol_begin() {
-    return IndirectSymbols.begin();
-  }
-  const_indirect_symbol_iterator indirect_symbol_begin() const {
-    return IndirectSymbols.begin();
-  }
-
-  indirect_symbol_iterator indirect_symbol_end() {
-    return IndirectSymbols.end();
-  }
-  const_indirect_symbol_iterator indirect_symbol_end() const {
-    return IndirectSymbols.end();
-  }
-
-  size_t indirect_symbol_size() const { return IndirectSymbols.size(); }
-
-  /// @}
   /// \name Linker Option List Access
   /// @{
 
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;
   }
-
-  /// @}
-  /// \name Data Region List Access
-  /// @{
-
-  // FIXME: This is a total hack, this should not be here. Once things are
-  // factored so that the streamer has direct access to the .o writer, it can
-  // disappear.
-  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
-
-  data_region_iterator data_region_begin() { return DataRegions.begin(); }
-  const_data_region_iterator data_region_begin() const {
-    return DataRegions.begin();
-  }
-
-  data_region_iterator data_region_end() { return DataRegions.end(); }
-  const_data_region_iterator data_region_end() const {
-    return DataRegions.end();
-  }
-
-  size_t data_region_size() const { return DataRegions.size(); }
-
-  /// @}
-  /// \name Data Region List Access
-  /// @{
 
   // FIXME: This is a total hack, this should not be here. Once things are
   // factored so that the streamer has direct access to the .o writer, it can
