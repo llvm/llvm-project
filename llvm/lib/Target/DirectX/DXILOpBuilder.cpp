@@ -197,7 +197,7 @@ static int getValidConstraintIndex(const OpCodeProperty *Prop,
   // Overloads of highest SM version that is not greater than SMVer
   // are the ones that are valid for SMVer.
   auto Size = Prop->SMConstraints.size();
-  for (unsigned I = Size - 1; I >= 0; I--) {
+  for (int I = Size - 1; I >= 0; I--) {
     auto OL = Prop->SMConstraints[I];
     if (VersionTuple(OL.ShaderModelVer.Major, OL.ShaderModelVer.Minor) <=
         SMVer) {
@@ -205,7 +205,7 @@ static int getValidConstraintIndex(const OpCodeProperty *Prop,
     }
   }
   report_fatal_error(
-      StringRef(SMVer.getAsString().append(": Unhandled Shader Model Version")),
+      StringRef(SMVer.getAsString().append(": Unknown Shader Model Version")),
       /*gen_crash_diag*/ false);
 
   return -1;
@@ -229,19 +229,31 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode,
   }
 
   // Ensure Opcode is valid in the targetted shader kind
-
   uint16_t ValidShaderKindMask = Prop->SMConstraints[Index].ValidShaderKinds;
+  ShaderKind ModuleStagekind = getShaderkKindEnum(StageKind);
 
+  // Ensure valid shader stage constraints are specified
   if (ValidShaderKindMask == ShaderKind::Unknown) {
     report_fatal_error(
-        StringRef(SMVer.getAsString().append(": Unhandled Shader Kind")),
+        StringRef(SMVer.getAsString().append(": Unhandled Target Shader Stage")),
         /*gen_crash_diag*/ false);
   }
 
-  if (!(ValidShaderKindMask | getShaderkKindEnum(StageKind))) {
-    report_fatal_error(StringRef(std::string(StageKind).append(
-                           " : Invalid stage for operation")),
+  // Validate the shader stage specified in target triple to be known
+  if (ModuleStagekind == ShaderKind::Unknown) {
+    report_fatal_error(StringRef(SMVer.getAsString().append(
+                           ": DXIL Module created with Unspecifed or Unknown "
+                           "Target Shader Stage")),
                        /*gen_crash_diag*/ false);
+  }
+
+  // Verify the target shader stage is valid for the DXIL operation
+  if (!(ValidShaderKindMask & ModuleStagekind)) {
+    report_fatal_error(
+        StringRef(std::string(StageKind)
+                      .append(" : Invalid Shader Stage for DXIL operation - ")
+                      .append(getOpCodeName((OpCode)))),
+        /*gen_crash_diag*/ false);
   }
 
   std::string DXILFnName = constructOverloadName(Kind, OverloadTy, *Prop);

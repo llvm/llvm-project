@@ -25,8 +25,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
-
-#include "iostream"
+#include <string>
 
 #define DEBUG_TYPE "dxil-op-lower"
 
@@ -75,38 +74,10 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
   return NewOperands;
 }
 
-static VersionTuple getShaderModelVer(Module &M) {
-  std::string TTStr = M.getTargetTriple();
-  std::string Error;
-  auto Target = TargetRegistry::lookupTarget(TTStr, Error);
-  if (!Target) {
-    if (TTStr.empty()) {
-      report_fatal_error(StringRef(Error), /*gen_crash_diag*/ false);
-    }
-  }
-  auto Major = Triple(TTStr).getOSVersion().getMajor();
-  auto MinorOrErr = Triple(TTStr).getOSVersion().getMinor();
-  uint32_t Minor = MinorOrErr.has_value() ? *MinorOrErr : 0;
-  return VersionTuple(Major, Minor);
-}
-
-static StringRef getShaderKind(Module &M) {
-  std::string TTStr = M.getTargetTriple();
-  std::string Error;
-  auto Target = TargetRegistry::lookupTarget(TTStr, Error);
-  if (!Target) {
-    if (TTStr.empty()) {
-      report_fatal_error(StringRef(Error), /*gen_crash_diag*/ false);
-    }
-  }
-  return Triple(TTStr).getEnvironmentName();
-}
-
-static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
+static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M,
+                           VersionTuple SMVer, StringRef StageKind) {
   IRBuilder<> B(M.getContext());
   DXILOpBuilder DXILB(M, B);
-  VersionTuple SMVer = getShaderModelVer(M);
-  StringRef Stagekind = getShaderKind(M);
   Type *OverloadTy = DXILB.getOverloadTy(DXILOp, SMVer, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
     CallInst *CI = dyn_cast<CallInst>(U);
@@ -124,7 +95,7 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
       Args.append(CI->arg_begin(), CI->arg_end());
 
     CallInst *DXILCI = DXILB.createDXILOpCall(
-        DXILOp, SMVer, Stagekind, F.getReturnType(), OverloadTy, Args);
+        DXILOp, SMVer, StageKind, F.getReturnType(), OverloadTy, Args);
 
     CI->replaceAllUsesWith(DXILCI);
     CI->eraseFromParent();
@@ -140,6 +111,19 @@ static bool lowerIntrinsics(Module &M) {
 #include "DXILOperation.inc"
 #undef DXIL_OP_INTRINSIC_MAP
 
+  // Get Shader Model version
+  std::string TTStr = M.getTargetTriple();
+  // No extra checks need be performed to verify that the Triple is
+  // well-formed or the target is supported since these checks would have
+  // been done at the time the module M is constructed in the earlier stages of
+  // compilation.
+  auto Major = Triple(TTStr).getOSVersion().getMajor();
+  auto MinorOrErr = Triple(TTStr).getOSVersion().getMinor();
+  uint32_t Minor = MinorOrErr.has_value() ? *MinorOrErr : 0;
+  VersionTuple SMVer(Major, Minor);
+  // Get Shader Kind
+  std::string StageKind = Triple(TTStr).getEnvironmentName().str();
+
   for (Function &F : make_early_inc_range(M.functions())) {
     if (!F.isDeclaration())
       continue;
@@ -149,7 +133,7 @@ static bool lowerIntrinsics(Module &M) {
     auto LowerIt = LowerMap.find(ID);
     if (LowerIt == LowerMap.end())
       continue;
-    lowerIntrinsic(LowerIt->second, F, M);
+    lowerIntrinsic(LowerIt->second, F, M, SMVer, StageKind);
     Updated = true;
   }
   return Updated;

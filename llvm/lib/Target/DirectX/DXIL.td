@@ -308,11 +308,6 @@ class DXILOp {
   // LLVM Intrinsic DXIL Operation maps to
   Intrinsic LLVMIntrinsic = ?;
 
-  // TODO : DELETE THIS once support in DXILEmitter is added to consume
-  // overload_types and generate appropriate code.
-  // Valid overload type of DXIL Operation
-  list<LLVMType> OpOverloadTypes = ?;
-
   // Dag containing the arguments of the op. Default to 0 arguments.
   dag arguments = (ins);
 
@@ -342,7 +337,6 @@ def IsInf : DXILOp {
   let OpCode = 9;
   let OpClass = isSpecialFloat;
   let LLVMIntrinsic = int_dx_isinf;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins llvm_anyfloat_ty);
   let result = (out llvm_i1_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -355,7 +349,6 @@ def Abs : DXILOp {
   let OpCode = 6;
   let OpClass = unary;
   let LLVMIntrinsic = int_fabs;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty, llvm_double_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -368,7 +361,6 @@ def Cos  : DXILOp {
   let OpCode = 12;
   let OpClass = unary;
   let LLVMIntrinsic = int_cos;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -381,7 +373,6 @@ def Sin  : DXILOp {
   let OpCode = 13;
   let OpClass = unary;
   let LLVMIntrinsic = int_sin;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -396,7 +387,6 @@ def Tan  : DXILOp {
   let OpCode = 14;
   let OpClass = unary;
   let LLVMIntrinsic = int_tan;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -409,7 +399,6 @@ def ACos  : DXILOp {
   let OpCode = 15;
   let OpClass = unary;
   let LLVMIntrinsic = int_acos;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -422,7 +411,6 @@ def ASin  : DXILOp {
   let OpCode = 16;
   let OpClass = unary;
   let LLVMIntrinsic = int_asin;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -435,7 +423,6 @@ def ATan  : DXILOp {
   let OpCode = 17;
   let OpClass = unary;
   let LLVMIntrinsic = int_atan;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -448,7 +435,6 @@ def HCos  : DXILOp {
   let OpCode = 18;
   let OpClass = unary;
   let LLVMIntrinsic = int_cosh;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -461,7 +447,6 @@ def HSin  : DXILOp {
   let OpCode = 19;
   let OpClass = unary;
   let LLVMIntrinsic = int_sinh;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -474,7 +459,6 @@ def HTan  : DXILOp {
   let OpCode = 20;
   let OpClass = unary;
   let LLVMIntrinsic = int_tanh;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -487,7 +471,6 @@ def Exp2 : DXILOp {
   let OpCode = 21;
   let OpClass = unary;
   let LLVMIntrinsic = int_exp2;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -500,7 +483,6 @@ def Frac : DXILOp {
   let OpCode = 22;
   let OpClass = unary;
   let LLVMIntrinsic = int_dx_frac;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -513,7 +495,6 @@ def Log2 : DXILOp {
   let OpCode = 23;
   let OpClass = unary;
   let LLVMIntrinsic = int_log2;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -526,7 +507,6 @@ def Sqrt : DXILOp {
   let OpCode = 24;
   let OpClass = unary;
   let LLVMIntrinsic = int_sqrt;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -539,7 +519,6 @@ def RSqrt : DXILOp {
   let OpCode = 25;
   let OpClass = unary;
   let LLVMIntrinsic = int_dx_rsqrt;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -552,7 +531,6 @@ def Round : DXILOp {
   let OpCode = 26;
   let OpClass = unary;
   let LLVMIntrinsic = int_roundeven;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -565,7 +543,6 @@ def Floor : DXILOp {
   let OpCode = 27;
   let OpClass = unary;
   let LLVMIntrinsic = int_floor;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -578,7 +555,6 @@ def Ceil  : DXILOp {
   let OpCode = 28;
   let OpClass = unary;
   let LLVMIntrinsic = int_ceil;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -591,7 +567,6 @@ def Trunc : DXILOp {
   let OpCode = 29;
   let OpClass = unary;
   let LLVMIntrinsic = int_trunc;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -604,7 +579,6 @@ def Rbits : DXILOp {
   let OpCode = 30;
   let OpClass = unary;
   let LLVMIntrinsic = int_bitreverse;
-  let OpOverloadTypes = [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty];
   let arguments = (ins LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -617,7 +591,6 @@ def FMax : DXILOp {
   let OpCode = 35;
   let OpClass = binary;
   let LLVMIntrinsic = int_maxnum;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty, llvm_double_ty];
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -630,7 +603,6 @@ def FMin : DXILOp {
   let OpCode = 36;
   let OpClass = binary;
   let LLVMIntrinsic = int_minnum;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty, llvm_double_ty];
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -643,7 +615,6 @@ def SMax : DXILOp {
   let OpCode = 37;
   let OpClass = binary;
   let LLVMIntrinsic = int_smax;
-  let OpOverloadTypes = [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty];
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -656,7 +627,6 @@ def SMin : DXILOp {
   let OpCode = 38;
   let OpClass = binary;
   let LLVMIntrinsic = int_smin;
-  let OpOverloadTypes = [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty];
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -669,7 +639,6 @@ def UMax : DXILOp {
   let OpCode = 39;
   let OpClass = binary;
   let LLVMIntrinsic = int_umax;
-  let OpOverloadTypes = [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty];
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -682,7 +651,6 @@ def UMin : DXILOp {
   let OpCode = 40;
   let OpClass = binary;
   let LLVMIntrinsic = int_umin;
-  let OpOverloadTypes = [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty];
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -695,7 +663,6 @@ def FMad : DXILOp {
   let OpCode = 46;
   let OpClass = tertiary;
   let LLVMIntrinsic = int_fmuladd;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty, llvm_double_ty];
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -707,7 +674,6 @@ def IMad : DXILOp {
   let OpCode = 48;
   let OpClass = tertiary;
   let LLVMIntrinsic = int_dx_imad;
-  let OpOverloadTypes = [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty];
   let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m * a + b.";
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
@@ -720,7 +686,6 @@ def UMad : DXILOp {
   let OpCode = 49;
   let OpClass = tertiary;
   let LLVMIntrinsic = int_dx_umad;
-  let OpOverloadTypes = [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty];
   let Doc = "Unsigned integer arithmetic multiply/add operation. umad(m,a, = m * a + b.";
   let arguments = (ins LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>);
   let result = (out dxil_overload_ty);
@@ -734,7 +699,6 @@ def Dot2 : DXILOp {
   let OpCode = 54;
   let OpClass = dot2;
   let LLVMIntrinsic = int_dx_dot2;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = !dag(ins, !listsplat(llvm_anyfloat_ty, 4), !listsplat("", 4));
   let result = (out llvm_anyfloat_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -747,7 +711,6 @@ def Dot3 : DXILOp {
   let OpCode = 55;
   let OpClass = dot3;
   let LLVMIntrinsic = int_dx_dot3;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = !dag(ins, !listsplat(llvm_anyfloat_ty, 6), !listsplat("", 6));
   let result = (out llvm_anyfloat_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -760,7 +723,6 @@ def Dot4 : DXILOp {
   let OpCode = 56;
   let OpClass = dot4;
   let LLVMIntrinsic = int_dx_dot4;
-  let OpOverloadTypes = [llvm_half_ty, llvm_float_ty];
   let arguments = !dag(ins, !listsplat(llvm_anyfloat_ty, 8), !listsplat("", 8));
   let result = (out llvm_anyfloat_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0,
@@ -773,7 +735,6 @@ def ThreadId : DXILOp {
   let OpCode = 93;
   let OpClass = threadId;
   let LLVMIntrinsic = int_dx_thread_id;
-  let OpOverloadTypes = [llvm_i32_ty];
   let arguments = (ins llvm_i32_ty);
   let result = (out llvm_i32_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
@@ -785,7 +746,6 @@ def GroupId  : DXILOp {
   let OpCode = 94;
   let OpClass = groupId;
   let LLVMIntrinsic = int_dx_group_id;
-  let OpOverloadTypes = [llvm_i32_ty];
   let arguments = (ins llvm_i32_ty);
   let result = (out llvm_i32_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
@@ -797,7 +757,6 @@ def ThreadIdInGroup : DXILOp {
   let OpCode = 95;
   let OpClass = threadIdInGroup;
   let LLVMIntrinsic = int_dx_thread_id_in_group;
-  let OpOverloadTypes = [llvm_i32_ty];
   let arguments = (ins llvm_i32_ty);
   let result = (out llvm_i32_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
@@ -809,7 +768,6 @@ def FlattenedThreadIdInGroup : DXILOp {
   let OpCode = 96;
   let OpClass = flattenedThreadIdInGroup;
   let LLVMIntrinsic = int_dx_flattened_thread_id_in_group;
-  let OpOverloadTypes =[llvm_i32_ty];
   let arguments = (ins llvm_i32_ty);
   let result = (out);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
