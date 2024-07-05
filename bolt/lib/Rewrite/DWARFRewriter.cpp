@@ -1641,8 +1641,7 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
     DIE *Die = LegacyRangesWriter->getDie();
     if (!Die)
       continue;
-    DIEValue DvalGNUBase =
-        Die->findAttribute(dwarf::DW_AT_GNU_ranges_base);
+    DIEValue DvalGNUBase = Die->findAttribute(dwarf::DW_AT_GNU_ranges_base);
     assert(DvalGNUBase && "GNU_ranges_base attribute does not exist for DWOId");
     DIEBlder.replaceValue(
         Die, dwarf::DW_AT_GNU_ranges_base, DvalGNUBase.getForm(),
