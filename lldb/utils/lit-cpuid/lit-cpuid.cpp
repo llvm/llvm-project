@@ -24,11 +24,11 @@ int main(int argc, char **argv) {
     defined(__x86_64__) || defined(_M_X64)
   if (const std::optional<StringMap<bool>> features =
           sys::getHostCPUFeatures(features)) {
-    if (features->contains("sse"))
+    if (features->lookup("sse"))
       outs() << "sse\n";
-    if (features->contains("avx"))
+    if (features->lookup("avx"))
       outs() << "avx\n";
-    if (features->contains("avx512f"))
+    if (features->lookup("avx512f"))
       outs() << "avx512f\n";
   } else
     return 1;
