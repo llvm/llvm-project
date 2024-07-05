@@ -6,17 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -36,10 +32,9 @@ using namespace mlir::linalg;
 namespace {
 
 static bool hasGatherSemantics(linalg::GenericOp genericOp) {
-  for (Operation &op : genericOp.getBody()->getOperations())
-    if (isa<tensor::ExtractOp, linalg::IndexOp>(op))
-      return true;
-  return false;
+  return llvm::any_of(genericOp.getBody()->getOperations(), [](Operation &op) {
+    return isa<tensor::ExtractOp, linalg::IndexOp>(op);
+  });
 }
 
 // The struct contains the infomation about mapping packing information to
@@ -912,10 +907,16 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
   // new permutation after pushing. This is because moving a source dim is
   // equivalent to moving the associated expanded dims together.
   SmallVector<int64_t> newOuterDimsPerm;
-  for (auto outerPos : outerDimsPerm) {
-    newOuterDimsPerm.insert(newOuterDimsPerm.end(),
-                            reassocIndices[outerPos].begin(),
-                            reassocIndices[outerPos].end());
+  if (!outerDimsPerm.empty()) {
+    for (auto outerPos : outerDimsPerm) {
+      newOuterDimsPerm.insert(newOuterDimsPerm.end(),
+                              reassocIndices[outerPos].begin(),
+                              reassocIndices[outerPos].end());
+    }
+  } else {
+    // If 'outerDimsPerm' is empty, it denotes the identity permutation. If
+    // 'outerDimsPerm' is the identity permutation, then so is the replacement
+    // permutation: leaving 'newOuterDimsPerm' empty denotes this.
   }
 
   SmallVector<ReassociationIndices> newReassocIndices = reassocIndices;
