@@ -239,6 +239,39 @@ public:
     return result;
   }
 
+  MPFRNumber cospi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+    mpfr_cospi(result.value, value, mpfr_rounding);
+    return result;
+#else
+    MPFRNumber value_frac(*this);
+    mpfr_frac(value_frac.value, value, MPFR_RNDN);
+
+    if (mpfr_cmp_si(value_frac.value, 0.0) == 0) {
+      mpz_t integer_part;
+      mpz_init(integer_part);
+      mpfr_get_z(integer_part, value, MPFR_RNDN);
+
+      if (mpz_tstbit(integer_part, 0)) {
+        mpfr_set_si(result.value, -1.0, MPFR_RNDN); // odd
+      } else {
+        mpfr_set_si(result.value, 1.0, MPFR_RNDN); // even
+      }
+      return result;
+    }
+
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_cos(result.value, value_pi.value, mpfr_rounding);
+
+    return result;
+#endif
+  }
+
   MPFRNumber erf() const {
     MPFRNumber result(*this);
     mpfr_erf(result.value, value, mpfr_rounding);
@@ -675,6 +708,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.cos();
   case Operation::Cosh:
     return mpfrInput.cosh();
+  case Operation::Cospi:
+    return mpfrInput.cospi();
   case Operation::Erf:
     return mpfrInput.erf();
   case Operation::Exp:
