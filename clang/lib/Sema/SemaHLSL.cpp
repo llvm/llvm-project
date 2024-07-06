@@ -810,7 +810,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
     }
 
-    else if (Slot[0] == 'c') {
+    if (Slot[0] == 'c') {
       if (!f.default_globals) {
         S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_not_in_global_scope);
       }
@@ -825,9 +825,9 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
           << 3 << typestr;
       // any other register type should emit
       // err_hlsl_unsupported_register_type_and_variable_type
-    } else {
+    } else if (!f.default_globals){
       S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
-          << Slot[0] << typestr;
+          << registerType << typestr;
     }
     return;
   }
