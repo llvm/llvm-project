@@ -89,4 +89,3 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.generic_math_macros
 )
-

@@ -62,6 +62,7 @@ TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsinf) {
 
 TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsnan) {
   EXPECT_EQ(isnan(PI), 0);
+  EXPECT_EQ(isnan(CASE_DIV_BY_ZERO), 0);
   EXPECT_EQ(isnan(CASE_DIV_BY_POS_INF), 0);
   EXPECT_EQ(isnan(CASE_DIV_BY_NEG_INF), 0);
   EXPECT_EQ(isnan(pos_nan), 1);
@@ -71,10 +72,16 @@ TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsnan) {
   EXPECT_EQ(isnan(pos_inf / neg_inf), 1);
 }
 
-/*
 TEST(LlvmLibcGenericMath, TypeGenericMacroMathSignbit) {
-  // float
+  EXPECT_EQ(signbit(static_cast<float>(PI)), 0);
+  EXPECT_EQ(signbit(static_cast<double>(PI)), 0);
+  EXPECT_EQ(signbit(static_cast<long double>(PI)), 0);
+  EXPECT_EQ(signbit(pos_inf), 0);
+  EXPECT_EQ(signbit(pos_nan), 0);
 
-  // double
-
-}*/
+  EXPECT_EQ(signbit(static_cast<float>(-PI)), 1);
+  EXPECT_EQ(signbit(static_cast<double>(-PI)), 1);
+  EXPECT_EQ(signbit(static_cast<long double>(-PI)), 1);
+  EXPECT_EQ(signbit(neg_inf), 1);
+  EXPECT_EQ(signbit(neg_nan), 1);
+}
