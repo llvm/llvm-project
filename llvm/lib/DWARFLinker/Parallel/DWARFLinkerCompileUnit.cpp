@@ -1833,7 +1833,7 @@ TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(
     bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
-  if (!Dependencies.get())
+  if (!Dependencies)
     Dependencies.reset(new DependencyTracker(*this));
 
   return Dependencies->resolveDependenciesAndMarkLiveness(
