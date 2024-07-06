@@ -801,6 +801,10 @@ def warn_drv_missing_multilib : Warning<
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
 
+def err_drv_experimental_crel : Error<
+  "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
+  "CREL is experimental and uses a non-standard section type code">;
+
 def warn_android_unversioned_fallback : Warning<
   "using unversioned Android target directory %0 for target %1; unversioned "
   "directories will not be used in Clang 19 -- provide a versioned directory "
@@ -809,4 +813,7 @@ def warn_android_unversioned_fallback : Warning<
 
 def err_drv_triple_version_invalid : Error<
   "version '%0' in target triple '%1' is invalid">;
+
+def warn_missing_include_dirs : Warning<
+  "no such include directory: '%0'">, InGroup<MissingIncludeDirs>, DefaultIgnore;
 }

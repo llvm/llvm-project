@@ -87,31 +87,6 @@ bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
 bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
 
-class LibCxxMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
-public:
-  LibCxxMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  llvm::Expected<uint32_t> CalculateNumChildren() override;
-
-  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
-
-  lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
-  ~LibCxxMapIteratorSyntheticFrontEnd() override;
-
-private:
-  ValueObject *m_pair_ptr;
-  lldb::ValueObjectSP m_pair_sp;
-};
-
-SyntheticChildrenFrontEnd *
-LibCxxMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                          lldb::ValueObjectSP);
-
 /// Formats libcxx's std::unordered_map iterators
 ///
 /// In raw form a std::unordered_map::iterator is represented as follows:
@@ -246,6 +221,10 @@ LibcxxStdForwardListSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibcxxStdMapSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibCxxMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                          lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibcxxStdUnorderedMapSyntheticFrontEndCreator(CXXSyntheticChildren *,

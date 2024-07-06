@@ -15,6 +15,6 @@ RWBuffer<> BufferErr2;
 
 [numthreads(1,1,1)]
 void main() {
-  (void)Buffer.h; // expected-error {{'h' is a private member of 'hlsl::RWBuffer<float __attribute__((ext_vector_type(3)))>'}}
+  (void)Buffer.h; // expected-error {{'h' is a private member of 'hlsl::RWBuffer<vector<float, 3> >'}}
   // expected-note@* {{implicitly declared private here}}
 }

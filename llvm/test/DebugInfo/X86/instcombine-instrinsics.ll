@@ -3,8 +3,8 @@
 ; Verify that we emit the same intrinsic at most once.
 ; rdar://problem/13056109
 ;
-; CHECK: call void @llvm.dbg.value(metadata ptr %p
-; CHECK-NOT: call void @llvm.dbg.value(metadata ptr %p
+; CHECK: #dbg_value(ptr %p
+; CHECK-NOT: #dbg_value(ptr %p
 ; CHECK-NEXT: call i32 @foo
 ; CHECK: ret
 ;

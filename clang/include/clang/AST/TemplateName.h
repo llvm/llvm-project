@@ -198,7 +198,8 @@ public:
 ///
 /// Here, "apply" is treated as a template name within the typename
 /// specifier in the typedef. "apply" is a nested template, and can
-/// only be understood in the context of
+/// only be understood in the context of a template instantiation,
+/// hence is represented as a dependent template name.
 class TemplateName {
   // NameDecl is either a TemplateDecl or a UsingShadowDecl depending on the
   // NameKind.
@@ -346,7 +347,9 @@ public:
   /// error.
   void dump() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID);
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    ID.AddPointer(Storage.getOpaqueValue());
+  }
 
   /// Retrieve the template name as a void pointer.
   void *getAsVoidPointer() const { return Storage.getOpaqueValue(); }

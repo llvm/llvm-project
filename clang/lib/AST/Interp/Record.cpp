@@ -49,11 +49,11 @@ const Record::Base *Record::getBase(const RecordDecl *FD) const {
 }
 
 const Record::Base *Record::getBase(QualType T) const {
-  if (!T->isRecordType())
-    return nullptr;
-
-  const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
-  return BaseMap.lookup(RD);
+  if (auto *RT = T->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    return BaseMap.lookup(RD);
+  }
+  return nullptr;
 }
 
 const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {

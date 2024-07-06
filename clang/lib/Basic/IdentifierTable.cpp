@@ -425,8 +425,8 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   // collisions (if there were, the switch below would complain about duplicate
   // case values).  Note that this depends on 'if' being null terminated.
 
-#define HASH(LEN, FIRST, THIRD) \
-  (LEN << 5) + (((FIRST-'a') + (THIRD-'a')) & 31)
+#define HASH(LEN, FIRST, THIRD)                                                \
+  (LEN << 6) + (((FIRST - 'a') - (THIRD - 'a')) & 63)
 #define CASE(LEN, FIRST, THIRD, NAME) \
   case HASH(LEN, FIRST, THIRD): \
     return memcmp(Name, #NAME, LEN) ? tok::pp_not_keyword : tok::pp_ ## NAME
@@ -441,6 +441,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 4, 'e', 's', else);
   CASE( 4, 'l', 'n', line);
   CASE( 4, 's', 'c', sccs);
+  CASE( 5, 'e', 'b', embed);
   CASE( 5, 'e', 'd', endif);
   CASE( 5, 'e', 'r', error);
   CASE( 5, 'i', 'e', ident);

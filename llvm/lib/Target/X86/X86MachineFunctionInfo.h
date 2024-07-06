@@ -149,10 +149,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// True if this function has tile virtual register. This is used to
-  /// determine if we should insert tilerelease in frame lowering.
-  bool HasVirtualTileReg = false;
-
   /// Ajust stack for push2/pop2
   bool PadForPush2Pop2 = false;
 
@@ -281,9 +277,6 @@ public:
 
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
   void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
-
-  bool hasVirtualTileReg() const { return HasVirtualTileReg; }
-  void setHasVirtualTileReg(bool v) { HasVirtualTileReg = v; }
 
   bool padForPush2Pop2() const { return PadForPush2Pop2; }
   void setPadForPush2Pop2(bool V) { PadForPush2Pop2 = V; }
