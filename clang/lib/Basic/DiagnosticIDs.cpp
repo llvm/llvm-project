@@ -268,7 +268,6 @@ CATEGORY(INSTALLAPI, REFACTORING)
   return Found;
 }
 
-
 //===----------------------------------------------------------------------===//
 // Custom Diagnostic information
 //===----------------------------------------------------------------------===//
@@ -543,10 +542,12 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // as well as disabling all messages which are currently mapped to Warning
   // (whether by default or downgraded from Error via e.g. -Wno-error or #pragma
   // diagnostic.)
+  // FIXME: Should -w be ignored for custom warnings without a group?
   if (State->IgnoreAllWarnings) {
-    if (Result == diag::Severity::Warning ||
-        (Result >= diag::Severity::Error &&
-         (IsCustomDiag || !isDefaultMappingAsError((diag::kind)DiagID))))
+    if ((!IsCustomDiag || CustomDiagInfo->getDescription(DiagID).GetGroup()) &&
+        (Result == diag::Severity::Warning ||
+         (Result >= diag::Severity::Error &&
+          !isDefaultMappingAsError((diag::kind)DiagID))))
       return diag::Severity::Ignored;
   }
 

@@ -7389,10 +7389,10 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
 
   auto ToSeverity = [](DiagnoseIfAttr::DefaultSeverity Sev) {
     switch (Sev) {
-      case DiagnoseIfAttr::DS_warning:
-        return diag::Severity::Warning;
-      case DiagnoseIfAttr::DS_error:
-        return diag::Severity::Error;
+    case DiagnoseIfAttr::DS_warning:
+      return diag::Severity::Warning;
+    case DiagnoseIfAttr::DS_error:
+      return diag::Severity::Error;
     }
   };
 

@@ -206,8 +206,9 @@ public:
     std::string Description;
 
     auto get_as_tuple() const {
-      return std::tuple(Class, ShowInSystemHeader, ShowInSystemMacro, HasGroup,
-                        Group, std::string_view{Description});
+      return std::tuple(DefaultSeverity, Class, ShowInSystemHeader,
+                        ShowInSystemMacro, HasGroup, Group,
+                        std::string_view{Description});
     }
 
   public:
@@ -280,17 +281,23 @@ public:
     return getCustomDiagID([&]() -> CustomDiagDesc {
       switch (Level) {
       case DiagnosticIDs::Level::Ignored:
-        return {diag::Severity::Ignored, std::string(Message), CLASS_WARNING};
+        return {diag::Severity::Ignored, std::string(Message), CLASS_WARNING,
+                /*ShowInSystemHeader*/ true};
       case DiagnosticIDs::Level::Note:
-        return {diag::Severity::Fatal, std::string(Message), CLASS_NOTE};
+        return {diag::Severity::Fatal, std::string(Message), CLASS_NOTE,
+                /*ShowInSystemHeader*/ true};
       case DiagnosticIDs::Level::Remark:
-        return {diag::Severity::Remark, std::string(Message), CLASS_REMARK};
+        return {diag::Severity::Remark, std::string(Message), CLASS_REMARK,
+                /*ShowInSystemHeader*/ true};
       case DiagnosticIDs::Level::Warning:
-        return {diag::Severity::Warning, std::string(Message), CLASS_WARNING};
+        return {diag::Severity::Warning, std::string(Message), CLASS_WARNING,
+                /*ShowInSystemHeader*/ true};
       case DiagnosticIDs::Level::Error:
-        return {diag::Severity::Error, std::string(Message), CLASS_ERROR};
+        return {diag::Severity::Error, std::string(Message), CLASS_ERROR,
+                /*ShowInSystemHeader*/ true};
       case DiagnosticIDs::Level::Fatal:
-        return {diag::Severity::Fatal, std::string(Message), CLASS_ERROR};
+        return {diag::Severity::Fatal, std::string(Message), CLASS_ERROR,
+                /*ShowInSystemHeader*/ true};
       }
     }());
   }
