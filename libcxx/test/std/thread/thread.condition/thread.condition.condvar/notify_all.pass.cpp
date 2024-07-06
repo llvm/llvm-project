@@ -30,13 +30,13 @@ int test0 = 0;
 int test1 = 0;
 int test2 = 0;
 
-std::atomic<int> ready_count = 0;
+std::atomic<int> ready_count(0);
 
 void f1()
 {
     std::unique_lock<std::mutex> lk(mut);
     assert(test1 == 0);
-    ready_count.fetch_add(1);
+    ready_count += 1;
     while (test1 == 0)
         cv.wait(lk);
     assert(test1 == 1);
@@ -47,7 +47,7 @@ void f2()
 {
     std::unique_lock<std::mutex> lk(mut);
     assert(test2 == 0);
-    ready_count.fetch_add(1);
+    ready_count += 1;
     while (test2 == 0)
         cv.wait(lk);
     assert(test2 == 1);
