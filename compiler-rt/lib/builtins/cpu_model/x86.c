@@ -144,8 +144,8 @@ enum ProcessorFeatures {
   FEATURE_3DNOW,
   // FEATURE_3DNOWA,
   FEATURE_ADX = 40,
-  // FEATURE_ABM,
-  FEATURE_CLDEMOTE = 42,
+  FEATURE_64BIT,
+  FEATURE_CLDEMOTE,
   FEATURE_CLFLUSHOPT,
   FEATURE_CLWB,
   FEATURE_CLZERO,
@@ -157,7 +157,7 @@ enum ProcessorFeatures {
   FEATURE_ENQCMD = 48,
   FEATURE_F16C,
   FEATURE_FSGSBASE,
-  // FEATURE_FXSAVE,
+  FEATURE_CRC32,
   // FEATURE_HLE,
   // FEATURE_IBT,
   FEATURE_LAHF_LM = 54,
@@ -805,8 +805,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_CMPXCHG16B);
   if ((ECX >> 19) & 1)
     setFeature(FEATURE_SSE4_1);
-  if ((ECX >> 20) & 1)
+  if ((ECX >> 20) & 1) {
     setFeature(FEATURE_SSE4_2);
+    setFeature(FEATURE_CRC32);
+  }
   if ((ECX >> 22) & 1)
     setFeature(FEATURE_MOVBE);
   if ((ECX >> 23) & 1)
@@ -859,8 +861,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 11) & 1))
     setFeature(FEATURE_RTM);
-  if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save)
+  if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(FEATURE_AVX512F);
+    setFeature(FEATURE_EVEX512);
+  }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512DQ);
   if (HasLeaf7 && ((EBX >> 18) & 1))
@@ -869,6 +873,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_ADX);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512IFMA);
+  if (HasLeaf7 && ((EBX >> 23) & 1))
+    setFeature(FEATURE_CLFLUSHOPT);
   if (HasLeaf7 && ((EBX >> 24) & 1))
     setFeature(FEATURE_CLWB);
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
@@ -1023,7 +1029,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
       setFeature(FEATURE_MWAITX);
 
     if (((EDX >> 29) & 1))
-      setFeature(FEATURE_LM);
+      setFeature(FEATURE_64BIT);
   }
 
   bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
@@ -1043,7 +1049,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1))
     setFeature(FEATURE_WIDEKL);
 
-  if (hasFeature(FEATURE_LM) && hasFeature(FEATURE_SSE2)) {
+  if (hasFeature(FEATURE_64BIT) && hasFeature(FEATURE_SSE2)) {
     setFeature(FEATURE_X86_64_BASELINE);
     if (hasFeature(FEATURE_CMPXCHG16B) && hasFeature(FEATURE_POPCNT) &&
         hasFeature(FEATURE_LAHF_LM) && hasFeature(FEATURE_SSE4_2)) {
