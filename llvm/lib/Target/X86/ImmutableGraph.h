@@ -294,11 +294,10 @@ private:
 template <typename GraphT> class ImmutableGraphBuilder {
   using node_value_type = typename GraphT::node_value_type;
   using edge_value_type = typename GraphT::edge_value_type;
-  static_assert(
-      std::is_base_of<ImmutableGraph<node_value_type, edge_value_type>,
-                      GraphT>::value,
-      "Template argument to ImmutableGraphBuilder must derive from "
-      "ImmutableGraph<>");
+  static_assert(std::is_base_of_v<
+                    ImmutableGraph<node_value_type, edge_value_type>, GraphT>,
+                "Template argument to ImmutableGraphBuilder must derive from "
+                "ImmutableGraph<>");
   using size_type = typename GraphT::size_type;
   using NodeSet = typename GraphT::NodeSet;
   using Node = typename GraphT::Node;

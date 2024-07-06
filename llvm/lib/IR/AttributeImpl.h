@@ -145,7 +145,7 @@ public:
   }
 };
 
-static_assert(std::is_trivially_destructible<AttributeImpl>::value,
+static_assert(std::is_trivially_destructible_v<AttributeImpl>,
               "AttributeImpl should be trivially destructible");
 
 //===----------------------------------------------------------------------===//
@@ -412,7 +412,7 @@ public:
   void dump() const;
 };
 
-static_assert(std::is_trivially_destructible<AttributeListImpl>::value,
+static_assert(std::is_trivially_destructible_v<AttributeListImpl>,
               "AttributeListImpl should be trivially destructible");
 
 } // end namespace llvm
