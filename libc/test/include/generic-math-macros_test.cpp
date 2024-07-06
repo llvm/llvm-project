@@ -16,16 +16,16 @@
 
 // INF can be defined as a number with zeroed out mantissa and 1s in the 
 // exponent
-static uint32_t positive_infinity = 0x7F800000;
-static uint32_t negative_infinity = 0xFF800000;
-static const float pos_inf = *(float *) &positive_infinity;
-static const float neg_inf = *(float *) &negative_infinity;
+static uint32_t pos_inf_bits = 0x7F800000;
+static uint32_t neg_inf_bits = 0xFF800000;
+static const float pos_inf = *(float *) &pos_inf_bits;
+static const float neg_inf = *(float *) &neg_inf_bits;
 
 // NaN can be defined as a number with all 1s in the exponent
-static uint32_t positive_nan = 0x7F800001;
-static uint32_t negative_nan = 0xFF800001;
-static const float pos_nan = *(float *) &positive_nan;
-static const float neg_nan = *(float *) &negative_nan;
+static uint32_t pos_nan_bits = 0x7F800001;
+static uint32_t neg_nan_bits = 0xFF800001;
+static const float pos_nan = *(float *) &pos_nan_bits;
+static const float neg_nan = *(float *) &neg_nan_bits;
 
 #define PI 3.14159265358979323846
 #define CASE_DIV_BY_ZERO            PI / 0.0
