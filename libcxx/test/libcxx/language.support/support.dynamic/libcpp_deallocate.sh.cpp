@@ -21,8 +21,8 @@
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
 
-// TODO(mordante) fix this test after updating clang in Docker
-// UNSUPPORTED: clang-15, clang-16, clang-17, clang-18, clang-19
+// These compiler versions do not have proper sized deallocation support.
+// UNSUPPORTED: clang-17, clang-18
 
 // RUN: %{build} -faligned-allocation -fsized-deallocation
 // RUN: %{run}
