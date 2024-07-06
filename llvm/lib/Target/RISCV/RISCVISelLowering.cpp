@@ -1306,11 +1306,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // expansion to a build_vector of 0s.
         setOperationAction(ISD::UNDEF, VT, Custom);
 
+        setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                            ISD::EXTRACT_SUBVECTOR},
+                           VT, Custom);
+
+        // FIXME: mload, mstore, mgather, mscatter, vp_load/store,
+        // vp_stride_load/store, vp_gather/scatter can be hoisted to here.
+        setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+
+        setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+        setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
+                           Custom);
+
         if (VT.getVectorElementType() == MVT::f16 &&
             !Subtarget.hasVInstructionsF16()) {
-          setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
-          setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
-                             Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
@@ -1318,10 +1327,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP,
                               ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
                              VT, Custom);
-          setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                              ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_SHUFFLE},
-                             VT, Custom);
-          setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+          setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+          // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
           setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           // Don't promote f16 vector operations to f32 if f32 vector type is
@@ -1335,16 +1342,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         if (VT.getVectorElementType() == MVT::bf16) {
-          setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
-          setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
-                             Custom);
-          setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                              ISD::EXTRACT_SUBVECTOR},
-                             VT, Custom);
-          setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
-          if (Subtarget.hasStdExtZfbfmin())
-            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          // FIXME: We should prefer BUILD_VECTOR over SPLAT_VECTOR.
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
@@ -1352,18 +1352,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         }
 
-        // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
-        setOperationAction({ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR}, VT,
-                           Custom);
-
-        setOperationAction({ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
-                            ISD::VECTOR_SHUFFLE, ISD::INSERT_VECTOR_ELT,
-                            ISD::EXTRACT_VECTOR_ELT},
+        setOperationAction({ISD::BUILD_VECTOR, ISD::VECTOR_SHUFFLE,
+                            ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                            VT, Custom);
 
-        setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
-                            ISD::MGATHER, ISD::MSCATTER},
-                           VT, Custom);
+        setOperationAction(
+            {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
 
         setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
                             ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
@@ -1376,8 +1370,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::FMA, ISD::FMINNUM, ISD::FMAXNUM,
                             ISD::IS_FPCLASS, ISD::FMAXIMUM, ISD::FMINIMUM},
                            VT, Custom);
-
-        setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
 
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                             ISD::FROUNDEVEN, ISD::FRINT, ISD::FNEARBYINT},
@@ -1395,8 +1387,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(FloatingPointVPOps, VT, Custom);
 
-        setOperationAction({ISD::STRICT_FP_EXTEND, ISD::STRICT_FP_ROUND}, VT,
-                           Custom);
         setOperationAction(
             {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
              ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA,
