@@ -35,11 +35,10 @@ enum {
   PCREL_WRAPPER,
   RET,
 
-  // Selects between operand 0 and operand 1.  Operand 2 is the
-  // mask of condition-code values for which operand 0 should be
-  // chosen over operand 1; it has the same form as BR_CCMASK.
-  // Operand 3 is the flag operand.
-  SELECT,
+  // Select with condition operator - This selects between a true value and
+  // a false value (ops #2 and #3) based on the boolean result of comparing
+  // the lhs and rhs (ops #0 and #1) of a conditional expression with the
+  // condition code in op #4
   SELECT_CC
 };
 }
@@ -103,8 +102,6 @@ private:
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
-
-  SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 

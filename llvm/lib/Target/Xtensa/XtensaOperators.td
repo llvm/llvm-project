@@ -44,6 +44,5 @@ def Xtensa_callseq_end  : SDNode<"ISD::CALLSEQ_END",   SDT_XtensaCallSeqEnd,
 
 def Xtensa_brjt: SDNode<"XtensaISD::BR_JT", SDT_XtensaBrJT, [SDNPHasChain]>;
 
-def Xtensa_select : SDNode<"XtensaISD::SELECT", SDTSelect>;
 def Xtensa_select_cc: SDNode<"XtensaISD::SELECT_CC", SDT_XtensaSelectCC,
                             [SDNPInGlue]>;

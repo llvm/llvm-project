@@ -85,26 +85,13 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // indirect jump.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
-  setOperationPromotedToType(ISD::BR_CC, MVT::i1, MVT::i32);
   setOperationAction(ISD::BR_CC, MVT::i32, Legal);
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
 
-  // Used by legalize types to correctly generate the setcc result.
-  setOperationPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
-  setOperationPromotedToType(ISD::BR_CC, MVT::i1, MVT::i32);
-
-  setOperationAction(ISD::BR_CC, MVT::i32, Legal);
-  setOperationAction(ISD::BR_CC, MVT::i64, Expand);
-
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
-  setOperationAction(ISD::SELECT, MVT::i64, Expand);
-
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
-  setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
-
-  setOperationAction(ISD::SETCC, MVT::i32, Custom);
-  setOperationAction(ISD::SETCC, MVT::i64, Expand);
+  setOperationAction(ISD::SETCC, MVT::i32, Expand);
 
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
@@ -546,22 +533,6 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
                      FalseValue, TargetCC);
 }
 
-SDValue XtensaTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT Ty = Op.getOperand(0).getValueType();
-  SDValue LHS = Op.getOperand(0);
-  SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-  SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
-
-  // Expand to target SELECT_CC
-  SDValue TrueValue = DAG.getConstant(1, DL, Op.getValueType());
-  SDValue FalseValue = DAG.getConstant(0, DL, Op.getValueType());
-
-  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
-                     FalseValue, TargetCC);
-}
-
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
                                              SelectionDAG &DAG) const {
   const ConstantSDNode *CN = cast<ConstantSDNode>(Op);
@@ -724,8 +695,6 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
-  case ISD::SETCC:
-    return LowerSETCC(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
   case ISD::STACKSAVE:
@@ -749,8 +718,6 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::PCREL_WRAPPER";
   case XtensaISD::RET:
     return "XtensaISD::RET";
-  case XtensaISD::SELECT:
-    return "XtensaISD::SELECT";
   case XtensaISD::SELECT_CC:
     return "XtensaISD::SELECT_CC";
   }
@@ -764,26 +731,18 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
 static int GetBranchKind(int Cond, bool &BrInv) {
   switch (Cond) {
   case ISD::SETEQ:
-  case ISD::SETOEQ:
-  case ISD::SETUEQ:
     return Xtensa::BEQ;
   case ISD::SETNE:
-  case ISD::SETONE:
-  case ISD::SETUNE:
     return Xtensa::BNE;
   case ISD::SETLT:
-  case ISD::SETOLT:
     return Xtensa::BLT;
   case ISD::SETLE:
-  case ISD::SETOLE:
     BrInv = true;
     return Xtensa::BGE;
   case ISD::SETGT:
-  case ISD::SETOGT:
     BrInv = true;
     return Xtensa::BLT;
   case ISD::SETGE:
-  case ISD::SETOGE:
     return Xtensa::BGE;
   case ISD::SETULT:
     return Xtensa::BLTU;
