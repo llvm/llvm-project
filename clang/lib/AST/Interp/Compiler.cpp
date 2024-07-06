@@ -2447,6 +2447,12 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
 
+    // Trivial copy/move constructor. Avoid copy.
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
+                                        T->getAsCXXRecordDecl()))
+      return this->visitInitializer(E->getArg(0));
+
     // If we're discarding a construct expression, we still need
     // to allocate a variable and call the constructor and destructor.
     if (DiscardResult) {
