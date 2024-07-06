@@ -17,6 +17,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # ctype.h localized entrypoints
+    libc.src.ctype.isdigit_l
+    libc.src.ctype.isxdigit_l
+    libc.src.ctype.islower_l
+    libc.src.ctype.isupper_l
+    libc.src.ctype.tolower_l
+    libc.src.ctype.toupper_l
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -86,6 +94,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
     libc.src.string.strxfrm
+
+    # string.h localized entrypoints
+    libc.src.string.strxfrm_l
+    libc.src.string.strcoll_l
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -198,6 +210,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
     libc.src.stdlib.malloc
     libc.src.stdlib.realloc
+
+    # stdlib.h localized entrypoints
+    libc.src.stdlib.strtof_l
+    libc.src.stdlib.strtod_l
+    libc.src.stdlib.strtold_l
+    libc.src.stdlib.strtoull_l
+    libc.src.stdlib.strtoll_l
 
     # stdio.h entrypoints
     libc.src.stdio.fdopen
@@ -330,6 +349,14 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.wctob
+
+    # locale.h entrypoints
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

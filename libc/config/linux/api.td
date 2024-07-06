@@ -308,3 +308,10 @@ def SearchAPI : PublicAPI<"search.h"> {
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
   let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
 }
+
+def LocaleAPI : PublicAPI<"locale.h"> {
+  let Types = [
+    "struct lconv",
+    "locale_t"
+  ];
+}
