@@ -288,11 +288,25 @@ static inline RT_API_ATTRS void DoMatmul(
   }
   SubscriptValue n{x.GetDimension(xRank - 1).Extent()};
   if (n != y.GetDimension(0).Extent()) {
-    terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
-        static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
-        static_cast<std::intmax_t>(n),
-        static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
-        static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    // At this point, we know that there's a shape error.  There are three
+    // possibilities, x is rank 1, y is rank 1, or both are rank 2.
+    if (xRank == 1) {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jd, %jdx%jd)",
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    } else if (yRank == 1) {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jd)",
+          static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()));
+    } else {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
+          static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    }
   }
   using WriteResult =
       CppTypeFor<RCAT == TypeCategory::Logical ? TypeCategory::Integer : RCAT,

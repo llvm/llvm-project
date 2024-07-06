@@ -104,7 +104,7 @@ ABI Changes in This Version
   ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
   suffix got removed from the name mangling. The alias interacts badly with
   GlobalOpt (see the issue #96197).
-  
+
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
@@ -740,6 +740,9 @@ Bug Fixes in This Version
   negatives where the analysis failed to detect unchecked access to guarded
   data.
 
+- ``__is_trivially_equality_comparable`` no longer returns true for types which
+  have a constrained defaulted comparison operator (#GH89293).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -935,6 +938,7 @@ Bug Fixes to C++ Support
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
+- Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -12,8 +12,6 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -755,18 +753,18 @@ private:
   ///     \___\|/            \_____/
   ///
   ///
-  LogicalResult coalescePairCutCase(unsigned i, unsigned j);
+  bool coalescePairCutCase(unsigned i, unsigned j);
 
   /// Types the inequality `ineq` according to its `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeInequality(ArrayRef<DynamicAPInt> ineq, Simplex &simp);
+  bool typeInequality(ArrayRef<DynamicAPInt> ineq, Simplex &simp);
 
   /// Types the equality `eq`, i.e. for `eq` == 0, types both `eq` >= 0 and
   /// -`eq` >= 0 according to their `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeEquality(ArrayRef<DynamicAPInt> eq, Simplex &simp);
+  bool typeEquality(ArrayRef<DynamicAPInt> eq, Simplex &simp);
 
   /// Replaces the element at position `i` with the last element and erases
   /// the last element for both `disjuncts` and `simplices`.
@@ -777,7 +775,7 @@ private:
   /// successfully coalesced. The simplices in `simplices` need to be the ones
   /// constructed from `disjuncts`. At this point, there are no empty
   /// disjuncts in `disjuncts` left.
-  LogicalResult coalescePair(unsigned i, unsigned j);
+  bool coalescePair(unsigned i, unsigned j);
 };
 
 /// Constructs a `SetCoalescer` from a `PresburgerRelation`. Only adds non-empty
@@ -820,7 +818,7 @@ PresburgerRelation SetCoalescer::coalesce() {
       cuttingIneqsB.clear();
       if (i == j)
         continue;
-      if (coalescePair(i, j).succeeded()) {
+      if (coalescePair(i, j)) {
         broken = true;
         break;
       }
@@ -904,7 +902,7 @@ void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,
 ///     \___\|/            \_____/
 ///
 ///
-LogicalResult SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
+bool SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
   /// All inequalities of `b` need to be redundant. We already know that the
   /// redundant ones are, so only the cutting ones remain to be checked.
   Simplex &simp = simplices[i];
@@ -912,7 +910,7 @@ LogicalResult SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
   if (llvm::any_of(cuttingIneqsA, [this, &simp](ArrayRef<DynamicAPInt> curr) {
         return !isFacetContained(curr, simp);
       }))
-    return failure();
+    return false;
   IntegerRelation newSet(disjunct.getSpace());
 
   for (ArrayRef<DynamicAPInt> curr : redundantIneqsA)
@@ -922,30 +920,26 @@ LogicalResult SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
     newSet.addInequality(curr);
 
   addCoalescedDisjunct(i, j, newSet);
-  return success();
+  return true;
 }
 
-LogicalResult SetCoalescer::typeInequality(ArrayRef<DynamicAPInt> ineq,
-                                           Simplex &simp) {
+bool SetCoalescer::typeInequality(ArrayRef<DynamicAPInt> ineq, Simplex &simp) {
   Simplex::IneqType type = simp.findIneqType(ineq);
   if (type == Simplex::IneqType::Redundant)
     redundantIneqsB.push_back(ineq);
   else if (type == Simplex::IneqType::Cut)
     cuttingIneqsB.push_back(ineq);
   else
-    return failure();
-  return success();
+    return false;
+  return true;
 }
 
-LogicalResult SetCoalescer::typeEquality(ArrayRef<DynamicAPInt> eq,
-                                         Simplex &simp) {
-  if (typeInequality(eq, simp).failed())
-    return failure();
+bool SetCoalescer::typeEquality(ArrayRef<DynamicAPInt> eq, Simplex &simp) {
+  if (!typeInequality(eq, simp))
+    return false;
   negEqs.push_back(getNegatedCoeffs(eq));
   ArrayRef<DynamicAPInt> inv(negEqs.back());
-  if (typeInequality(inv, simp).failed())
-    return failure();
-  return success();
+  return typeInequality(inv, simp);
 }
 
 void SetCoalescer::eraseDisjunct(unsigned i) {
@@ -957,7 +951,7 @@ void SetCoalescer::eraseDisjunct(unsigned i) {
   simplices.pop_back();
 }
 
-LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
+bool SetCoalescer::coalescePair(unsigned i, unsigned j) {
 
   IntegerRelation &a = disjuncts[i];
   IntegerRelation &b = disjuncts[j];
@@ -965,7 +959,7 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   /// skipped.
   /// TODO: implement local id support.
   if (a.getNumLocalVars() != 0 || b.getNumLocalVars() != 0)
-    return failure();
+    return false;
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
 
@@ -975,34 +969,34 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   // inequality is encountered during typing, the two IntegerRelations
   // cannot be coalesced.
   for (int k = 0, e = a.getNumInequalities(); k < e; ++k)
-    if (typeInequality(a.getInequality(k), simpB).failed())
-      return failure();
+    if (!typeInequality(a.getInequality(k), simpB))
+      return false;
 
   for (int k = 0, e = a.getNumEqualities(); k < e; ++k)
-    if (typeEquality(a.getEquality(k), simpB).failed())
-      return failure();
+    if (!typeEquality(a.getEquality(k), simpB))
+      return false;
 
   std::swap(redundantIneqsA, redundantIneqsB);
   std::swap(cuttingIneqsA, cuttingIneqsB);
 
   for (int k = 0, e = b.getNumInequalities(); k < e; ++k)
-    if (typeInequality(b.getInequality(k), simpA).failed())
-      return failure();
+    if (!typeInequality(b.getInequality(k), simpA))
+      return false;
 
   for (int k = 0, e = b.getNumEqualities(); k < e; ++k)
-    if (typeEquality(b.getEquality(k), simpA).failed())
-      return failure();
+    if (!typeEquality(b.getEquality(k), simpA))
+      return false;
 
   // If there are no cutting inequalities of `a`, `b` is contained
   // within `a`.
   if (cuttingIneqsA.empty()) {
     eraseDisjunct(j);
-    return success();
+    return true;
   }
 
   // Try to apply the cut case
-  if (coalescePairCutCase(i, j).succeeded())
-    return success();
+  if (coalescePairCutCase(i, j))
+    return true;
 
   // Swap the vectors to compare the pair (j,i) instead of (i,j).
   std::swap(redundantIneqsA, redundantIneqsB);
@@ -1012,14 +1006,11 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   // within `a`.
   if (cuttingIneqsA.empty()) {
     eraseDisjunct(i);
-    return success();
+    return true;
   }
 
   // Try to apply the cut case
-  if (coalescePairCutCase(j, i).succeeded())
-    return success();
-
-  return failure();
+  return coalescePairCutCase(j, i);
 }
 
 PresburgerRelation PresburgerRelation::coalesce() const {

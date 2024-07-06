@@ -1179,7 +1179,7 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
   if (DisableSeparateConstOffsetFromGEP)
     return false;
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   bool Changed = false;
   for (BasicBlock &B : F) {
     if (!DT->isReachableFromEntry(&B))

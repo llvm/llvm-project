@@ -26,6 +26,7 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
+class MCObjectStreamer;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -35,6 +36,7 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
+  friend MCObjectStreamer;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -207,8 +209,6 @@ public:
     }
     CurFragList->Tail = &F;
   }
-
-  void switchSubsection(unsigned Subsection);
 
   void dump() const;
 

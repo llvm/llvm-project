@@ -19,6 +19,7 @@
 
 namespace llvm {
   class AssumptionCache;
+  class BasicBlock;
   class Constant;
   class ConstantRange;
   class DataLayout;
@@ -26,6 +27,7 @@ namespace llvm {
   class Instruction;
   class TargetLibraryInfo;
   class Value;
+  class Use;
   class LazyValueInfoImpl;
   /// This pass computes, caches, and vends lazy value constraint information.
   class LazyValueInfo {

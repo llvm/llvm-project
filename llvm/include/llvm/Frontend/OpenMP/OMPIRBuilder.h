@@ -19,6 +19,7 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>

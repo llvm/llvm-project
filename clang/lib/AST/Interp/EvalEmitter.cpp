@@ -71,6 +71,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
     EvalResult.setInvalid();
 
   S.EvaluatingDecl = nullptr;
+  updateGlobalTemporaries();
   return std::move(this->EvalResult);
 }
 
@@ -235,6 +236,28 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
   }
 
   return true;
+}
+
+/// Global temporaries (LifetimeExtendedTemporary) carry their value
+/// around as an APValue, which codegen accesses.
+/// We set their value once when creating them, but we don't update it
+/// afterwards when code changes it later.
+/// This is what we do here.
+void EvalEmitter::updateGlobalTemporaries() {
+  for (const auto &[E, Temp] : S.SeenGlobalTemporaries) {
+    if (std::optional<unsigned> GlobalIndex = P.getGlobal(E)) {
+      const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
+      APValue *Cached = Temp->getOrCreateValue(true);
+
+      if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
+        TYPE_SWITCH(*T, { *Cached = Ptr.deref<T>().toAPValue(); });
+      } else {
+        if (std::optional<APValue> APV = Ptr.toRValue(Ctx))
+          *Cached = *APV;
+      }
+    }
+  }
+  S.SeenGlobalTemporaries.clear();
 }
 
 //===----------------------------------------------------------------------===//

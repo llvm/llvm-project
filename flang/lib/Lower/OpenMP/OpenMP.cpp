@@ -1738,15 +1738,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 fir::unwrapRefType(info.addr.getType())))
           bounds = lower::genBoundsOpsFromBox<mlir::omp::MapBoundsOp,
                                               mlir::omp::MapBoundsType>(
-              firOpBuilder, converter.getCurrentLocation(), converter, dataExv,
-              info);
+              firOpBuilder, converter.getCurrentLocation(), dataExv, info);
         if (mlir::isa<fir::SequenceType>(
                 fir::unwrapRefType(info.addr.getType()))) {
           bool dataExvIsAssumedSize =
               semantics::IsAssumedSizeArray(sym.GetUltimate());
           bounds = lower::genBaseBoundsOps<mlir::omp::MapBoundsOp,
                                            mlir::omp::MapBoundsType>(
-              firOpBuilder, converter.getCurrentLocation(), converter, dataExv,
+              firOpBuilder, converter.getCurrentLocation(), dataExv,
               dataExvIsAssumedSize);
         }
 

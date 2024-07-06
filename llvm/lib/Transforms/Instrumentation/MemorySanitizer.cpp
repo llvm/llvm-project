@@ -1218,7 +1218,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   Value *originToIntptr(IRBuilder<> &IRB, Value *Origin) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     if (IntptrSize == kOriginSize)
       return Origin;
@@ -1230,7 +1230,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Fill memory range with the given origin value.
   void paintOrigin(IRBuilder<> &IRB, Value *Origin, Value *OriginPtr,
                    TypeSize TS, Align Alignment) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     const Align IntptrAlignment = DL.getABITypeAlign(MS.IntptrTy);
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     assert(IntptrAlignment >= kMinOriginAlignment);
@@ -1280,7 +1280,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void storeOrigin(IRBuilder<> &IRB, Value *Addr, Value *Shadow, Value *Origin,
                    Value *OriginPtr, Align Alignment) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     const Align OriginAlignment = std::max(kMinOriginAlignment, Alignment);
     TypeSize StoreSize = DL.getTypeStoreSize(Shadow->getType());
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
@@ -1392,7 +1392,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void materializeOneCheck(IRBuilder<> &IRB, Value *ConvertedShadow,
                            Value *Origin) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     TypeSize TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
     if (instrumentWithCalls(ConvertedShadow) &&
@@ -1419,7 +1419,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void materializeInstructionChecks(
       ArrayRef<ShadowOriginAndInsertPoint> InstructionChecks) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     // Disable combining in some cases. TrackOrigins checks each shadow to pick
     // correct origin.
     bool Combine = !MS.TrackOrigins;
@@ -1579,7 +1579,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // This may return weird-sized types like i1.
     if (IntegerType *IT = dyn_cast<IntegerType>(OrigTy))
       return IT;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     if (VectorType *VT = dyn_cast<VectorType>(OrigTy)) {
       uint32_t EltSize = DL.getTypeSizeInBits(VT->getElementType());
       return VectorType::get(IntegerType::get(*MS.C, EltSize),
@@ -1775,7 +1775,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                                             Type *ShadowTy,
                                                             bool isStore) {
     Value *ShadowOriginPtrs;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     TypeSize Size = DL.getTypeStoreSize(ShadowTy);
 
     FunctionCallee Getter = MS.getKmsanShadowOriginAccessFn(isStore, Size);
@@ -1963,7 +1963,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Function *F = A->getParent();
       IRBuilder<> EntryIRB(FnPrologueEnd);
       unsigned ArgOffset = 0;
-      const DataLayout &DL = F->getParent()->getDataLayout();
+      const DataLayout &DL = F->getDataLayout();
       for (auto &FArg : F->args()) {
         if (!FArg.getType()->isSized() || FArg.getType()->isScalableTy()) {
           LLVM_DEBUG(dbgs() << (FArg.getType()->isScalableTy()
@@ -3676,7 +3676,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!MS.TrackOrigins)
       return;
 
-    auto &DL = F.getParent()->getDataLayout();
+    auto &DL = F.getDataLayout();
     paintOrigin(IRB, getOrigin(V), OriginPtr,
                 DL.getTypeStoreSize(Shadow->getType()),
                 std::max(Alignment, kMinOriginAlignment));
@@ -4340,7 +4340,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
 
       unsigned Size = 0;
-      const DataLayout &DL = F.getParent()->getDataLayout();
+      const DataLayout &DL = F.getDataLayout();
 
       bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
       bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
@@ -4576,7 +4576,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!InsPoint)
       InsPoint = &I;
     NextNodeIRBuilder IRB(InsPoint);
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     TypeSize TS = DL.getTypeAllocSize(I.getAllocatedType());
     Value *Len = IRB.CreateTypeSize(MS.IntptrTy, TS);
     if (I.isArrayAllocation())
@@ -4798,7 +4798,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The total number of asm() arguments in the source is nR+nO+nI, and the
     // corresponding CallInst has nO+nI+1 operands (the last operand is the
     // function to be called).
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     CallBase *CB = cast<CallBase>(&I);
     IRBuilder<> IRB(&I);
     InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
@@ -4986,7 +4986,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
     unsigned GpOffset = 0;
     unsigned FpOffset = AMD64GpEndOffset;
     unsigned OverflowOffset = AMD64FpEndOffset;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
 
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
@@ -5173,7 +5173,7 @@ struct VarArgMIPS64Helper : public VarArgHelperBase {
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgOffset = 0;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (Value *A :
          llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
       Triple TargetTriple(F.getParent()->getTargetTriple());
@@ -5304,7 +5304,7 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
     unsigned VrOffset = AArch64VrBegOffset;
     unsigned OverflowOffset = AArch64VAEndOffset;
 
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       auto [AK, RegNum] = classifyArgument(A->getType());
@@ -5515,7 +5515,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
     else
       VAArgBase = 32;
     unsigned VAArgOffset = VAArgBase;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
@@ -5706,7 +5706,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     unsigned FpOffset = SystemZFpOffset;
     unsigned VrIndex = 0;
     unsigned OverflowOffset = SystemZOverflowOffset;
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       // SystemZABIInfo does not produce ByVal parameters.

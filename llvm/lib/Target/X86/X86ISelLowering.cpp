@@ -37139,6 +37139,52 @@ static void computeKnownBitsForPSADBW(SDValue LHS, SDValue RHS,
   Known = Known.zext(64);
 }
 
+static void computeKnownBitsForPMADDWD(SDValue LHS, SDValue RHS,
+                                       KnownBits &Known,
+                                       const APInt &DemandedElts,
+                                       const SelectionDAG &DAG,
+                                       unsigned Depth) {
+  unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
+
+  // Multiply signed i16 elements to create i32 values and add Lo/Hi pairs.
+  APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+  APInt DemandedLoElts =
+      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
+  APInt DemandedHiElts =
+      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
+  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
+  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
+  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
+  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
+  KnownBits Lo = KnownBits::mul(LHSLo.sext(32), RHSLo.sext(32));
+  KnownBits Hi = KnownBits::mul(LHSHi.sext(32), RHSHi.sext(32));
+  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
+                                      /*NUW=*/false, Lo, Hi);
+}
+
+static void computeKnownBitsForPMADDUBSW(SDValue LHS, SDValue RHS,
+                                         KnownBits &Known,
+                                         const APInt &DemandedElts,
+                                         const SelectionDAG &DAG,
+                                         unsigned Depth) {
+  unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
+
+  // Multiply unsigned/signed i8 elements to create i16 values and add_sat Lo/Hi
+  // pairs.
+  APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+  APInt DemandedLoElts =
+      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
+  APInt DemandedHiElts =
+      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
+  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
+  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
+  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
+  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
+  KnownBits Lo = KnownBits::mul(LHSLo.zext(16), RHSLo.sext(16));
+  KnownBits Hi = KnownBits::mul(LHSHi.zext(16), RHSHi.sext(16));
+  Known = KnownBits::sadd_sat(Lo, Hi);
+}
+
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       KnownBits &Known,
                                                       const APInt &DemandedElts,
@@ -37314,6 +37360,26 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::VPMADDWD: {
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    assert(VT.getVectorElementType() == MVT::i32 &&
+           LHS.getValueType() == RHS.getValueType() &&
+           LHS.getValueType().getVectorElementType() == MVT::i16 &&
+           "Unexpected PMADDWD types");
+    computeKnownBitsForPMADDWD(LHS, RHS, Known, DemandedElts, DAG, Depth);
+    break;
+  }
+  case X86ISD::VPMADDUBSW: {
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    assert(VT.getVectorElementType() == MVT::i16 &&
+           LHS.getValueType() == RHS.getValueType() &&
+           LHS.getValueType().getVectorElementType() == MVT::i8 &&
+           "Unexpected PMADDUBSW types");
+    computeKnownBitsForPMADDUBSW(LHS, RHS, Known, DemandedElts, DAG, Depth);
+    break;
+  }
   case X86ISD::PMULUDQ: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -37450,6 +37516,30 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     switch (Op->getConstantOperandVal(0)) {
+    case Intrinsic::x86_sse2_pmadd_wd:
+    case Intrinsic::x86_avx2_pmadd_wd:
+    case Intrinsic::x86_avx512_pmaddw_d_512: {
+      SDValue LHS = Op.getOperand(1);
+      SDValue RHS = Op.getOperand(2);
+      assert(VT.getScalarType() == MVT::i32 &&
+             LHS.getValueType() == RHS.getValueType() &&
+             LHS.getValueType().getScalarType() == MVT::i16 &&
+             "Unexpected PMADDWD types");
+      computeKnownBitsForPMADDWD(LHS, RHS, Known, DemandedElts, DAG, Depth);
+      break;
+    }
+    case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+    case Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_avx512_pmaddubs_w_512: {
+      SDValue LHS = Op.getOperand(1);
+      SDValue RHS = Op.getOperand(2);
+      assert(VT.getScalarType() == MVT::i16 &&
+             LHS.getValueType() == RHS.getValueType() &&
+             LHS.getValueType().getScalarType() == MVT::i8 &&
+             "Unexpected PMADDUBSW types");
+      computeKnownBitsForPMADDUBSW(LHS, RHS, Known, DemandedElts, DAG, Depth);
+      break;
+    }
     case Intrinsic::x86_sse2_psad_bw:
     case Intrinsic::x86_avx2_psad_bw:
     case Intrinsic::x86_avx512_psad_bw_512: {
@@ -55692,17 +55782,68 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == X86ISD::PCMPEQ || Opcode == X86ISD::PCMPGT) &&
+         "Unknown PCMP opcode");
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
   SDLoc DL(N);
 
-  if (N->getOperand(0) == N->getOperand(1)) {
-    if (N->getOpcode() == X86ISD::PCMPEQ)
-      return DAG.getConstant(-1, DL, VT);
-    if (N->getOpcode() == X86ISD::PCMPGT)
-      return DAG.getConstant(0, DL, VT);
+  if (LHS == RHS)
+    return (Opcode == X86ISD::PCMPEQ) ? DAG.getAllOnesConstant(DL, VT)
+                                      : DAG.getConstant(0, DL, VT);
+
+  // Constant Folding.
+  // PCMPEQ(X,UNDEF) -> UNDEF
+  // PCMPGT(X,UNDEF) -> 0
+  // PCMPGT(UNDEF,X) -> 0
+  APInt LHSUndefs, RHSUndefs;
+  SmallVector<APInt> LHSBits, RHSBits;
+  if (getTargetConstantBitsFromNode(LHS, EltBits, LHSUndefs, LHSBits) &&
+      getTargetConstantBitsFromNode(RHS, EltBits, RHSUndefs, RHSBits)) {
+    APInt Ones = APInt::getAllOnes(EltBits);
+    APInt Zero = APInt::getZero(EltBits);
+    SmallVector<APInt> Results(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Opcode == X86ISD::PCMPEQ) {
+        Results[I] = (LHSBits[I] == RHSBits[I]) ? Ones : Zero;
+      } else {
+        bool AnyUndef = LHSUndefs[I] || RHSUndefs[I];
+        Results[I] = (!AnyUndef && LHSBits[I].sgt(RHSBits[I])) ? Ones : Zero;
+      }
+    }
+    if (Opcode == X86ISD::PCMPEQ)
+      return getConstVector(Results, LHSUndefs | RHSUndefs, VT, DAG, DL);
+    return getConstVector(Results, VT, DAG, DL);
   }
 
   return SDValue();
+}
+
+// Helper to determine if we can convert an integer comparison to a float
+// comparison byt casting the operands.
+static std::optional<unsigned>
+CastIntSETCCtoFP(MVT VT, ISD::CondCode CC, unsigned NumSignificantBitsLHS,
+                 unsigned NumSignificantBitsRHS) {
+  MVT SVT = VT.getScalarType();
+  assert(SVT == MVT::f32 && "Only tested for float so far");
+  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(SVT);
+  assert((CC == ISD::SETEQ || CC == ISD::SETGT) &&
+         "Only PCMPEQ/PCMPGT currently supported");
+
+  // TODO: Handle bitcastable integers.
+
+  // For cvt + signed compare we need lhs and rhs to be exactly representable as
+  // a fp value.
+  unsigned FPPrec = APFloat::semanticsPrecision(Sem);
+  if (FPPrec >= NumSignificantBitsLHS && FPPrec >= NumSignificantBitsRHS)
+    return ISD::SINT_TO_FP;
+
+  return std::nullopt;
 }
 
 /// Helper that combines an array of subvector ops as if they were the operands
@@ -56097,11 +56238,50 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PCMPEQ:
     case X86ISD::PCMPGT:
-      if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256() &&
+      if (!IsSplat && VT.is256BitVector() &&
+          (Subtarget.hasInt256() || VT == MVT::v8i32) &&
           (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(VT, Ops, 0),
-                           ConcatSubOperand(VT, Ops, 1));
+        if (Subtarget.hasInt256())
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             ConcatSubOperand(VT, Ops, 0),
+                             ConcatSubOperand(VT, Ops, 1));
+
+        // Without AVX2, see if we can cast the values to v8f32 and use fcmp.
+        // TODO: Handle v4f64 as well?
+        unsigned MaxSigBitsLHS = 0, MaxSigBitsRHS = 0;
+        for (unsigned I = 0; I != NumOps; ++I) {
+          MaxSigBitsLHS =
+              std::max(MaxSigBitsLHS,
+                       DAG.ComputeMaxSignificantBits(Ops[I].getOperand(0)));
+          MaxSigBitsRHS =
+              std::max(MaxSigBitsRHS,
+                       DAG.ComputeMaxSignificantBits(Ops[I].getOperand(1)));
+          if (MaxSigBitsLHS == EltSizeInBits && MaxSigBitsRHS == EltSizeInBits)
+            break;
+        }
+
+        ISD::CondCode ICC =
+            Op0.getOpcode() == X86ISD::PCMPEQ ? ISD::SETEQ : ISD::SETGT;
+        ISD::CondCode FCC =
+            Op0.getOpcode() == X86ISD::PCMPEQ ? ISD::SETOEQ : ISD::SETOGT;
+
+        MVT FpSVT = MVT::getFloatingPointVT(EltSizeInBits);
+        MVT FpVT = VT.changeVectorElementType(FpSVT);
+
+        if (std::optional<unsigned> CastOpc =
+                CastIntSETCCtoFP(FpVT, ICC, MaxSigBitsLHS, MaxSigBitsRHS)) {
+          SDValue LHS = ConcatSubOperand(VT, Ops, 0);
+          SDValue RHS = ConcatSubOperand(VT, Ops, 1);
+          LHS = DAG.getNode(*CastOpc, DL, FpVT, LHS);
+          RHS = DAG.getNode(*CastOpc, DL, FpVT, RHS);
+
+          bool IsAlwaysSignaling;
+          unsigned FSETCC =
+              translateX86FSETCC(FCC, LHS, RHS, IsAlwaysSignaling);
+          return DAG.getBitcast(
+              VT, DAG.getNode(X86ISD::CMPP, DL, FpVT, LHS, RHS,
+                              DAG.getTargetConstant(FSETCC, DL, MVT::i8)));
+        }
       }
       break;
     case ISD::CTPOP:
@@ -56922,15 +57102,40 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
 // Simplify VPMADDUBSW/VPMADDWD operations.
 static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
-  EVT VT = N->getValueType(0);
+  MVT VT = N->getSimpleValueType(0);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+  unsigned Opc = N->getOpcode();
+  bool IsPMADDWD = Opc == X86ISD::VPMADDWD;
+  assert((Opc == X86ISD::VPMADDWD || Opc == X86ISD::VPMADDUBSW) &&
+         "Unexpected PMADD opcode");
 
   // Multiply by zero.
   // Don't return LHS/RHS as it may contain UNDEFs.
   if (ISD::isBuildVectorAllZeros(LHS.getNode()) ||
       ISD::isBuildVectorAllZeros(RHS.getNode()))
     return DAG.getConstant(0, SDLoc(N), VT);
+
+  // Constant folding.
+  APInt LHSUndefs, RHSUndefs;
+  SmallVector<APInt> LHSBits, RHSBits;
+  unsigned SrcEltBits = LHS.getScalarValueSizeInBits();
+  unsigned DstEltBits = VT.getScalarSizeInBits();
+  if (getTargetConstantBitsFromNode(LHS, SrcEltBits, LHSUndefs, LHSBits) &&
+      getTargetConstantBitsFromNode(RHS, SrcEltBits, RHSUndefs, RHSBits)) {
+    SmallVector<APInt> Result;
+    for (unsigned I = 0, E = LHSBits.size(); I != E; I += 2) {
+      APInt LHSLo = LHSBits[I + 0], LHSHi = LHSBits[I + 1];
+      APInt RHSLo = RHSBits[I + 0], RHSHi = RHSBits[I + 1];
+      LHSLo = IsPMADDWD ? LHSLo.sext(DstEltBits) : LHSLo.zext(DstEltBits);
+      LHSHi = IsPMADDWD ? LHSHi.sext(DstEltBits) : LHSHi.zext(DstEltBits);
+      APInt Lo = LHSLo * RHSLo.sext(DstEltBits);
+      APInt Hi = LHSHi * RHSHi.sext(DstEltBits);
+      APInt Res = IsPMADDWD ? (Lo + Hi) : Lo.sadd_sat(Hi);
+      Result.push_back(Res);
+    }
+    return getConstVector(Result, VT, DAG, SDLoc(N));
+  }
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   APInt DemandedElts = APInt::getAllOnes(VT.getVectorNumElements());

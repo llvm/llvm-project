@@ -821,7 +821,7 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
 }
 
 bool InferAddressSpacesImpl::run(Function &F) {
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   if (AssumeDefaultIsFlatAddressSpace)
     FlatAddrSpace = 0;

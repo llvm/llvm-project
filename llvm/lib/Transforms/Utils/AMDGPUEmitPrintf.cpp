@@ -18,6 +18,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"

@@ -78,6 +78,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
@@ -755,16 +756,16 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       // that COPY instructions also need DBG_VALUE, if it is the only
       // user of LDI->second.
       MachineInstr *CopyUseMI = nullptr;
-      for (MachineRegisterInfo::use_instr_iterator
-           UI = RegInfo->use_instr_begin(LDI->second),
-           E = RegInfo->use_instr_end(); UI != E; ) {
-        MachineInstr *UseMI = &*(UI++);
-        if (UseMI->isDebugValue()) continue;
-        if (UseMI->isCopy() && !CopyUseMI && UseMI->getParent() == EntryMBB) {
-          CopyUseMI = UseMI; continue;
+      for (MachineInstr &UseMI : RegInfo->use_instructions(LDI->second)) {
+        if (UseMI.isDebugValue())
+          continue;
+        if (UseMI.isCopy() && !CopyUseMI && UseMI.getParent() == EntryMBB) {
+          CopyUseMI = &UseMI;
+          continue;
         }
         // Otherwise this is another use or second copy use.
-        CopyUseMI = nullptr; break;
+        CopyUseMI = nullptr;
+        break;
       }
       if (CopyUseMI &&
           TRI.getRegSizeInBits(LDI->second, MRI) ==

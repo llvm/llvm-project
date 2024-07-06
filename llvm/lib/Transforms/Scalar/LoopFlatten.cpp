@@ -644,7 +644,7 @@ static bool checkIVUsers(FlattenInfo &FI) {
 static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
                                     AssumptionCache *AC) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // For debugging/testing.
   if (AssumeNoOverflow)

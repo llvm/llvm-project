@@ -641,7 +641,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the
     // alignment of the global!
-    Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
+    Align Alignment = GO->getDataLayout().getPreferredAlign(
         cast<GlobalVariable>(GO));
 
     Name += ".str";
@@ -1359,7 +1359,7 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
 
   // FIXME: Alignment check should be handled by section classifier.
   if (Kind.isMergeable1ByteCString() &&
-      GO->getParent()->getDataLayout().getPreferredAlign(
+      GO->getDataLayout().getPreferredAlign(
           cast<GlobalVariable>(GO)) < Align(32))
     return CStringSection;
 
@@ -1367,7 +1367,7 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
   // externally visible label, this runs into issues with certain linker
   // versions.
   if (Kind.isMergeable2ByteCString() && !GO->hasExternalLinkage() &&
-      GO->getParent()->getDataLayout().getPreferredAlign(
+      GO->getDataLayout().getPreferredAlign(
           cast<GlobalVariable>(GO)) < Align(32))
     return UStringSection;
 

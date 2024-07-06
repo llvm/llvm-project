@@ -5965,7 +5965,7 @@ RedeclarationKind Sema::forRedeclarationInCurContext() const {
   // anything that is not visible. We don't need to check linkage here; if
   // the context has internal linkage, redeclaration lookup won't find things
   // from other TUs, and we can't safely compute linkage yet in general.
-  if (cast<Decl>(CurContext)->getOwningModuleForLinkage(/*IgnoreLinkage*/ true))
+  if (cast<Decl>(CurContext)->getOwningModuleForLinkage())
     return RedeclarationKind::ForVisibleRedeclaration;
   return RedeclarationKind::ForExternalRedeclaration;
 }

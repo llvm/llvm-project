@@ -455,7 +455,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid to emit
-  warning for macro when IgnoreMacro option is enabled.
+  warning for macro when IgnoreMacro option is enabled and improve messages
+  when auto-fix does not work.
 
 - Improved :doc:`readability-static-definition-in-anonymous-namespace
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`

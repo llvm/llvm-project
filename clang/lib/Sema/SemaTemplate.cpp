@@ -2513,6 +2513,9 @@ struct ConvertConstructorToDeductionGuideTransform {
       TSI = SemaRef.SubstType(TSI, OuterInstantiationArgs, Loc,
                               DeductionGuideName);
 
+    if (!TSI)
+      return nullptr;
+
     FunctionProtoTypeLoc FPTL =
         TSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
 
@@ -2523,6 +2526,9 @@ struct ConvertConstructorToDeductionGuideTransform {
       if (NestedPattern)
         TSI = SemaRef.SubstType(TSI, OuterInstantiationArgs, Loc,
                                 DeclarationName());
+      if (!TSI)
+        return nullptr;
+
       ParmVarDecl *NewParam =
           ParmVarDecl::Create(SemaRef.Context, DC, Loc, Loc, nullptr,
                               TSI->getType(), TSI, SC_None, nullptr);
