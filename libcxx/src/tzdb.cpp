@@ -677,9 +677,9 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
 
   __tzdb.version = chrono::__parse_version(__tzdata);
   chrono::__parse_tzdata(__tzdb, __rules, __tzdata);
-  std::ranges::sort(__tzdb.zones);
-  std::ranges::sort(__tzdb.links);
-  std::ranges::sort(__rules, {}, [](const auto& p) { return p.first; });
+  ranges::sort(__tzdb.zones);
+  ranges::sort(__tzdb.links);
+  ranges::sort(__rules, {}, [](const auto& p) { return p.first; });
 
   // There are two files with the leap second information
   // - leapseconds as specified by zic
@@ -724,10 +724,10 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
       return __result;
 
   filesystem::path __path = "/etc/localtime";
-  if (!std::filesystem::exists(__path))
+  if (!filesystem::exists(__path))
     std::__throw_runtime_error("tzdb: the symlink '/etc/localtime' does not exist");
 
-  if (!std::filesystem::is_symlink(__path))
+  if (!filesystem::is_symlink(__path))
     std::__throw_runtime_error("tzdb: the path '/etc/localtime' is not a symlink");
 
   filesystem::path __tz = filesystem::read_symlink(__path);

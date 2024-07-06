@@ -96,3 +96,7 @@ needs previous SEMA patches
 reverts: breaks hipBlender*
 4eecf3c6 [SLP]Reorder buildvector/reduction vectorization and fuse
 ---
+Revert: breaking MIOpen test 2
+f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
+812f9e81d2f7 [MCParser] .altmacro: ignore & after a token
+---

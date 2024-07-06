@@ -236,9 +236,6 @@ C++20 Feature Support
   ``<expected>`` from libstdc++ to work correctly with Clang.
 
 - User defined constructors are allowed for copy-list-initialization with CTAD.
-  The example code for deduction guides for std::map in
-  (`cppreference <https://en.cppreference.com/w/cpp/container/map/deduction_guides>`_)
-  will now work.
   (#GH62925).
 
 C++23 Feature Support
@@ -444,8 +441,11 @@ New Compiler Flags
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
 
+- ``-Wc++23-compat`` group was added to help migrating existing codebases
+  to C++23.
+
 - ``-Wc++2c-compat`` group was added to help migrating existing codebases
-  to C++26.
+  to upcoming C++26.
 
 Deprecated Compiler Flags
 -------------------------
@@ -484,6 +484,10 @@ Modified Compiler Flags
 - Trivial infinite loops (i.e loops with a constant controlling expresion
   evaluating to ``true`` and an empty body such as ``while(1);``)
   are considered infinite, even when the ``-ffinite-loop`` flag is set.
+
+- Diagnostics groups about compatibility with a particular C++ Standard version
+  now include dianostics about C++26 features that are not present in older
+  versions.
 
 Removed Compiler Flags
 -------------------------
@@ -973,6 +977,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 - Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
   of the address of operator. (#GH97483).
+- Fixed an assertion failure about a constant expression which is a known integer but is not
+  evaluated to an integer. (#GH96670).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
