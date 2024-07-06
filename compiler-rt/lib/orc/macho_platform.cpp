@@ -385,8 +385,7 @@ private:
   Error dlupdateFull(std::unique_lock<std::mutex> &JDStatesLock,
                      JITDylibState &JDS);
   Error dlupdateInitialize(std::unique_lock<std::mutex> &JDStatesLock,
-                           JITDylibState &JDS,
-                           MachOJITDylibDepInfoMap &DepInfo);
+                           JITDylibState &JDS);
 
   Error dlcloseImpl(void *DSOHandle);
   Error dlcloseDeinitialize(std::unique_lock<std::mutex> &JDStatesLock,
@@ -1307,15 +1306,14 @@ Error MachOPlatformRuntimeState::dlupdateFull(
   if (!DepInfo)
     return DepInfo.takeError();
 
-  if (auto Err = dlupdateInitialize(JDStatesLock, JDS, *DepInfo))
+  if (auto Err = dlupdateInitialize(JDStatesLock, JDS))
     return Err;
 
   return Error::success();
 }
 
 Error MachOPlatformRuntimeState::dlupdateInitialize(
-    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS,
-    MachOJITDylibDepInfoMap &DepInfo) {
+    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS) {
   ORC_RT_DEBUG({
     printdbg("MachOPlatformRuntimeState::dlupdateInitialize(\"%s\")\n",
              JDS.Name.c_str());
