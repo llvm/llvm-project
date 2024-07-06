@@ -12,6 +12,7 @@
 
 namespace LIBC_NAMESPACE {
 
+// TODO(@izaakschroeder): https://github.com/llvm/llvm-project/issues/97919
 LLVM_LIBC_FUNCTION(void *, dlopen, (const char *, int)) { return nullptr; }
 
 } // namespace LIBC_NAMESPACE

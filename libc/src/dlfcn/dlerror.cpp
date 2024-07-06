@@ -12,6 +12,7 @@
 
 namespace LIBC_NAMESPACE {
 
+// TODO(@izaakschroeder): https://github.com/llvm/llvm-project/issues/97918
 LLVM_LIBC_FUNCTION(char *, dlerror, ()) {
   return const_cast<char *>("unsupported");
 }
