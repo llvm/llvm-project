@@ -206,9 +206,13 @@ struct s12 {int x[0];};
 // CHECK-C-SAME: () #[[ATTR0]] {
 // CHECK-C:  entry:
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z8test_s123s12
-// CHECK-CXX-SAME: () #[[ATTR0]] {
-// CHECK-CXX:  entry:
+// CHECK32-CXX-LABEL: define dso_local i32 @_Z8test_s123s12
+// CHECK32-CXX-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK32-CXX:  entry:
+//
+// CHECK64-CXX-LABEL: define dso_local i64 @_Z8test_s123s12
+// CHECK64-CXX-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK64-CXX:  entry:
 //
 struct s12 test_s12(struct s12 a) {
   return a;
