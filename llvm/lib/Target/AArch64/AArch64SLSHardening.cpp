@@ -27,6 +27,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
+#include <climits>
+#include <tuple>
 
 using namespace llvm;
 
