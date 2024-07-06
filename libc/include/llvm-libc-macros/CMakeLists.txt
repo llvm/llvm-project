@@ -279,7 +279,13 @@ add_macro_header(
 )
 
 add_macro_header(
-  generic_math_macros
+  dlfcn_macros
   HDR
+    dlfcn-macros.h
+)
+
+add_macro_header(
+  generic_math_macros
+  HDR 
     generic-math-macros.h
 )
