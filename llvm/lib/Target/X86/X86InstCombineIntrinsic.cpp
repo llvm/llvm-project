@@ -21,6 +21,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "x86tti"
 
@@ -44,8 +45,7 @@ static Value *getBoolVecFromMask(Value *Mask, const DataLayout &DL) {
 
   // Mask was extended from a boolean vector.
   Value *ExtMask;
-  if (PatternMatch::match(
-          Mask, PatternMatch::m_SExt(PatternMatch::m_Value(ExtMask))) &&
+  if (match(Mask, m_SExt(m_Value(ExtMask))) &&
       ExtMask->getType()->isIntOrIntVectorTy(1))
     return ExtMask;
 
@@ -523,10 +523,10 @@ static Value *simplifyX86pmulh(IntrinsicInst &II,
 
   // Multiply by one.
   if (!IsRounding) {
-    if (match(Arg0, PatternMatch::m_One()))
+    if (match(Arg0, m_One()))
       return IsSigned ? Builder.CreateAShr(Arg1, 15)
                       : ConstantAggregateZero::get(ResTy);
-    if (match(Arg1, PatternMatch::m_One()))
+    if (match(Arg1, m_One()))
       return IsSigned ? Builder.CreateAShr(Arg0, 15)
                       : ConstantAggregateZero::get(ResTy);
   }
@@ -655,7 +655,7 @@ static Value *simplifyX86addcarry(const IntrinsicInst &II,
          "Unexpected types for x86 addcarry");
 
   // If carry-in is zero, this is just an unsigned add with overflow.
-  if (match(CarryIn, PatternMatch::m_ZeroInt())) {
+  if (match(CarryIn, m_ZeroInt())) {
     Value *UAdd = Builder.CreateIntrinsic(Intrinsic::uadd_with_overflow, OpTy,
                                           {Op1, Op2});
     // The types have to be adjusted to match the x86 call types.
@@ -699,9 +699,9 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
   auto Xnor = [&](auto Lhs, auto Rhs) { return Not(Xor(Lhs, Rhs)); };
   auto Nand = [&](auto Lhs, auto Rhs) { return Not(And(Lhs, Rhs)); };
 
-  bool AIsConst = match(ArgA, PatternMatch::m_ImmConstant());
-  bool BIsConst = match(ArgB, PatternMatch::m_ImmConstant());
-  bool CIsConst = match(ArgC, PatternMatch::m_ImmConstant());
+  bool AIsConst = match(ArgA, m_ImmConstant());
+  bool BIsConst = match(ArgB, m_ImmConstant());
+  bool CIsConst = match(ArgC, m_ImmConstant());
 
   bool ABIsConst = AIsConst && BIsConst;
   bool ACIsConst = AIsConst && CIsConst;
@@ -2887,9 +2887,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // intrinsics.
     Value *MaskSrc = nullptr;
     ArrayRef<int> ShuffleMask;
-    if (match(Mask, PatternMatch::m_OneUse(PatternMatch::m_Shuffle(
-                        PatternMatch::m_Value(MaskSrc), PatternMatch::m_Undef(),
-                        PatternMatch::m_Mask(ShuffleMask))))) {
+    if (match(Mask, m_OneUse(m_Shuffle(m_Value(MaskSrc), m_Undef(),
+                                       m_Mask(ShuffleMask))))) {
       // Bail if the shuffle was irregular or contains undefs.
       int NumElts = cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
       if (NumElts < (int)ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
@@ -2903,7 +2902,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // vector condition value.
     Value *BoolVec;
     Mask = InstCombiner::peekThroughBitcast(Mask);
-    if (match(Mask, PatternMatch::m_SExt(PatternMatch::m_Value(BoolVec))) &&
+    if (match(Mask, m_SExt(m_Value(BoolVec))) &&
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
       auto *MaskTy = cast<FixedVectorType>(Mask->getType());
