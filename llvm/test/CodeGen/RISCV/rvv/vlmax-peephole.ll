@@ -4,9 +4,7 @@
 define <vscale x 1 x i1> @sew1_srli(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: sew1_srli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %vlmax = call i32 @llvm.vscale()

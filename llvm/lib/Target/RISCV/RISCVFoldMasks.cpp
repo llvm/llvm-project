@@ -99,8 +99,10 @@ bool RISCVFoldMasks::convertToVLMAX(MachineInstr &MI) const {
   auto LMUL = RISCVVType::decodeVLMUL(RISCVII::getLMul(MI.getDesc().TSFlags));
   // Fixed-point value, denominator=8
   unsigned LMULFixed = LMUL.second ? (8 / LMUL.first) : 8 * LMUL.first;
-  unsigned SEW =
-      1 << MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  // A Log2SEW of 0 is an operation on mask registers only
+  unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
+  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
 
   // AVL = (VLENB * Scale)
   //
