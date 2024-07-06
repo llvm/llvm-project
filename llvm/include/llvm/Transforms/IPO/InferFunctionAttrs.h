@@ -23,7 +23,11 @@ class Module;
 /// A pass which infers function attributes from the names and signatures of
 /// function declarations in a module.
 struct InferFunctionAttrsPass : PassInfoMixin<InferFunctionAttrsPass> {
+  InferFunctionAttrsPass(bool O0 = false) : O0(O0) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  bool O0;
 };
 
 }

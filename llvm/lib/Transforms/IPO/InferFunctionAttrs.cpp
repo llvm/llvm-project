@@ -17,8 +17,20 @@ using namespace llvm;
 #define DEBUG_TYPE "inferattrs"
 
 static bool inferAllPrototypeAttributes(
-    Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+    Module &M, bool O0, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   bool Changed = false;
+  // Infer nonlazybind if "RtLibUseGOT" (-fno-plt) is set. This is performed
+  // even at -O0.
+  if (M.getRtLibUseGOT()) {
+    for (Function &F : M.functions()) {
+      if (F.isDeclaration() && !F.hasFnAttribute(Attribute::NonLazyBind)) {
+        F.addFnAttr(Attribute::NonLazyBind);
+        Changed = true;
+      }
+    }
+  }
+  if (O0)
+    return Changed;
 
   for (Function &F : M.functions())
     // We only infer things using the prototype and the name; we don't need
@@ -43,7 +55,7 @@ PreservedAnalyses InferFunctionAttrsPass::run(Module &M,
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
 
-  if (!inferAllPrototypeAttributes(M, GetTLI))
+  if (!inferAllPrototypeAttributes(M, O0, GetTLI))
     // If we didn't infer anything, preserve all analyses.
     return PreservedAnalyses::all();
 

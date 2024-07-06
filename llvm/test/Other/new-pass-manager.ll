@@ -292,6 +292,7 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O0 --check-prefix=%llvmcheckext
 ; CHECK-O0: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-O0-NEXT: Running pass: EntryExitInstrumenterPass
+; CHECK-O0-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O0-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O0-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-EXT-NEXT: Running pass: {{.*}}Bye
