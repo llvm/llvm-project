@@ -387,7 +387,7 @@ void BackendConsumer::CompleteTentativeDefinition(VarDecl *D) {
   Gen->CompleteTentativeDefinition(D);
 }
 
-void BackendConsumer::CompleteExternalDeclaration(VarDecl *D) {
+void BackendConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   Gen->CompleteExternalDeclaration(D);
 }
 
