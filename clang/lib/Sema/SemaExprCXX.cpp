@@ -4607,8 +4607,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
     // We may not have been able to figure out what this member pointer resolved
     // to up until this exact point.  Attempt to lock-in it's inheritance model.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-        getLangOpts().CompleteMemberPointers) {
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
       (void)isCompleteType(From->getExprLoc(), From->getType());
       (void)isCompleteType(From->getExprLoc(), ToType);
     }

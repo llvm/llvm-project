@@ -710,8 +710,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
 
   // Under the MS ABI, lock down the inheritance model now.
   if (T->isMemberPointerType() &&
-      (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-       getLangOpts().CompleteMemberPointers))
+      Context.getTargetInfo().getCXXABI().isMicrosoft())
     (void)isCompleteType(E->getExprLoc(), T);
 
   ExprResult Res = CheckLValueToRValueConversionOperand(E);
@@ -14066,8 +14065,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     }
 
     // Under the MS ABI, lock down the inheritance model now.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-        getLangOpts().CompleteMemberPointers)
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       (void)isCompleteType(OpLoc, MPTy);
     return MPTy;
   } else if (lval != Expr::LV_Valid && lval != Expr::LV_IncompleteVoidType) {
@@ -14147,8 +14145,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
               op->getType(),
               Context.getTypeDeclType(cast<RecordDecl>(Ctx)).getTypePtr());
           // Under the MS ABI, lock down the inheritance model now.
-          if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-              getLangOpts().CompleteMemberPointers)
+          if (Context.getTargetInfo().getCXXABI().isMicrosoft())
             (void)isCompleteType(OpLoc, MPTy);
           return MPTy;
         }

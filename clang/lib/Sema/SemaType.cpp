@@ -2056,8 +2056,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
 
     // Mentioning a member pointer type for an array type causes us to lock in
     // an inheritance model, even if it's inside an unused typedef.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-        getLangOpts().CompleteMemberPointers)
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>())
         if (!MPTy->getClass()->isDependentType())
           (void)isCompleteType(Loc, T);
