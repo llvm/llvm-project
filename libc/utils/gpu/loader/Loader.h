@@ -51,6 +51,9 @@ struct end_args_t {
   int argc;
 };
 
+/// Generic interface to print resources for all kernels in a GPU binary.
+void print_resources(void *image);
+
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.

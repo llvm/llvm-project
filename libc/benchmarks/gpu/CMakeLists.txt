@@ -15,15 +15,29 @@ function(add_benchmark benchmark_name)
   endif()
   add_libc_hermetic(
     ${benchmark_name}
-    IS_BENCHMARK
+    IS_GPU_BENCHMARK
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
-    LOADER_ARGS
-      "--print-resource-usage"
     ${BENCHMARK_UNPARSED_ARGUMENTS}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)
+  set(fq_build_target_name ${fq_target_name}.__build__)
+
+  # We want to dump kernel resource usage for GPU benchmarks
+  get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
+  set(res_usage_cmd $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
+    ${CMAKE_CROSSCOMPILING_EMULATOR}
+    --print-resource-usage
+    $<TARGET_FILE:${fq_build_target_name}>
+  )
+  add_custom_command(
+    OUTPUT ${fq_target_name}-cmd APPEND
+    COMMAND ${CMAKE_COMMAND} -E echo "Reading resource usage for ${benchmark_name}:"
+    COMMAND ${res_usage_cmd}
+    COMMAND_EXPAND_LISTS
+    ${LIBC_HERMETIC_TEST_JOB_POOL}
+  )
 
   add_dependencies(gpu-benchmark ${fq_target_name})
 endfunction(add_benchmark)

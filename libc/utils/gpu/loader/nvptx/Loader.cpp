@@ -229,7 +229,7 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
   return CUDA_SUCCESS;
 }
 
-void print_resource_usage(CUmodule binary, const char *kernel_name) {
+void print_kernel_resources(CUmodule binary, const char *kernel_name) {
   CUfunction function;
   if (CUresult err = cuModuleGetFunction(&function, binary, kernel_name))
     handle_error(err);
@@ -237,7 +237,33 @@ void print_resource_usage(CUmodule binary, const char *kernel_name) {
   if (CUresult err =
           cuFuncGetAttribute(&num_regs, CU_FUNC_ATTRIBUTE_NUM_REGS, function))
     handle_error(err);
-  fprintf(stderr, "%6s registers: %d\n", kernel_name, num_regs);
+  printf("%6s registers: %d\n", kernel_name, num_regs);
+}
+
+void print_resources(void *image) {
+  if (CUresult err = cuInit(0))
+    handle_error(err);
+
+  // Obtain the first device found on the system.
+  uint32_t device_id = 0;
+  CUdevice device;
+  if (CUresult err = cuDeviceGet(&device, device_id))
+    handle_error(err);
+
+  // Initialize the CUDA context and claim it.
+  CUcontext context;
+  if (CUresult err = cuDevicePrimaryCtxRetain(&context, device))
+    handle_error(err);
+  if (CUresult err = cuCtxSetCurrent(context))
+    handle_error(err);
+
+  CUmodule binary;
+  if (CUresult err = cuModuleLoadDataEx(&binary, image, 0, nullptr, nullptr))
+    handle_error(err);
+
+  print_kernel_resources(binary, "_begin");
+  print_kernel_resources(binary, "_start");
+  print_kernel_resources(binary, "_end");
 }
 
 int load(int argc, char **argv, char **envp, void *image, size_t size,
@@ -351,13 +377,6 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
 
   if (CUresult err = cuStreamSynchronize(stream))
     handle_error(err);
-
-  // Print resource usage if requested.
-  if (params.print_resource_usage) {
-    print_resource_usage(binary, "_begin");
-    print_resource_usage(binary, "_start");
-    print_resource_usage(binary, "_end");
-  }
 
   end_args_t fini_args = {host_ret};
   if (CUresult err = launch_kernel(binary, stream, rpc_device,

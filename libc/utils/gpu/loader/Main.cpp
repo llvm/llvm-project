@@ -30,6 +30,7 @@ int main(int argc, char **argv, char **envp) {
   FILE *file = nullptr;
   char *ptr;
   LaunchParameters params = {1, 1, 1, 1, 1, 1};
+  bool print_resource_usage = false;
   while (!file && ++offset < argc) {
     if (argv[offset] == std::string("--threads") ||
         argv[offset] == std::string("--threads-x")) {
@@ -64,7 +65,7 @@ int main(int argc, char **argv, char **envp) {
       offset++;
       continue;
     } else if (argv[offset] == std::string("--print-resource-usage")) {
-      params.print_resource_usage = true;
+      print_resource_usage = true;
       continue;
     } else {
       file = fopen(argv[offset], "r");
@@ -89,6 +90,11 @@ int main(int argc, char **argv, char **envp) {
   void *image = malloc(size * sizeof(char));
   fread(image, sizeof(char), size, file);
   fclose(file);
+
+  if (print_resource_usage) {
+    print_resources(image);
+    return 0;
+  }
 
   // Drop the loader from the program arguments.
   int ret = load(argc - offset, &argv[offset], envp, image, size, params);

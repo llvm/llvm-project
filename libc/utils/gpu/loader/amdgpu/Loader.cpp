@@ -326,6 +326,11 @@ static hsa_status_t hsa_memcpy(void *dst, hsa_agent_t dst_agent,
   return HSA_STATUS_SUCCESS;
 }
 
+void print_resources(void *image) {
+  fprintf(stderr, "Printing resource usage on AMDGPU is not supported yet.\n");
+  exit(EXIT_FAILURE);
+}
+
 int load(int argc, char **argv, char **envp, void *image, size_t size,
          const LaunchParameters &params) {
   // Initialize the HSA runtime used to communicate with the device.

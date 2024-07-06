@@ -553,7 +553,7 @@ function(add_libc_hermetic test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_BENCHMARK" # Optional arguments
+    "IS_GPU_BENCHMARK" # Optional arguments
     "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
@@ -726,7 +726,7 @@ function(add_libc_hermetic test_name)
   )
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
-  if(NOT ${HERMETIC_TEST_IS_BENCHMARK})
+  if(NOT ${HERMETIC_TEST_IS_GPU_BENCHMARK})
     # If it is a benchmark, it will already have been added to the
     # gpu-benchmark target
     add_dependencies(libc-hermetic-tests ${fq_target_name})
