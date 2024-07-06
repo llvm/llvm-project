@@ -482,8 +482,17 @@ static RTL_OSVERSIONINFOEXW GetWindowsVer() {
     HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
     assert(hMod);
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#endif
+
     auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
     assert(getVer);
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
     RTL_OSVERSIONINFOEXW info{};
     info.dwOSVersionInfoSize = sizeof(info);
