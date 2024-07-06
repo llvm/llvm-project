@@ -2390,21 +2390,26 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
 
   llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
       ParentInstantiations;
-  std::pair<FunctionDecl *, FunctionDecl *> Current = {FDPattern, FD};
   while (true) {
-    Current.first = dyn_cast<FunctionDecl>(
-        getLambdaAwareParentOfDeclContext(Current.first));
-    Current.second = dyn_cast<FunctionDecl>(
-        getLambdaAwareParentOfDeclContext(Current.second));
+    FDPattern =
+        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
+    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
 
-    if (!Current.first || !Current.second)
+    if (!FDPattern || !FD)
       break;
 
-    ParentInstantiations.push_back(Current);
+    ParentInstantiations.emplace_back(FDPattern, FD);
   }
 
-  for (const auto &[Pattern, Inst] : llvm::reverse(ParentInstantiations)) {
-    SemaRef.addInstantiatedParametersToScope(Inst, Pattern, Scope, MLTAL);
-    SemaRef.addInstantiatedLocalVarsToScope(Inst, Pattern, Scope);
+  // Add instantiated parameters and local vars to scopes, starting from the
+  // outermost lambda to the innermost lambda. This ordering ensures that
+  // parameters in inner lambdas can correctly depend on those defined
+  // in outer lambdas, e.g. auto L = [](auto... x) {
+  //   return [](decltype(x)... y) { }; // `y` depends on `x`
+  // };
+
+  for (const auto &[FDPattern, FD] : llvm::reverse(ParentInstantiations)) {
+    SemaRef.addInstantiatedParametersToScope(FD, FDPattern, Scope, MLTAL);
+    SemaRef.addInstantiatedLocalVarsToScope(FD, FDPattern, Scope);
   }
 }
