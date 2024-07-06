@@ -6734,8 +6734,12 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
   QualType Result = TL.getType();
   if (Result->isDependentType()) {
     const UnaryTransformType *T = TL.getTypePtr();
-    QualType NewBase =
-      getDerived().TransformType(TL.getUnderlyingTInfo())->getType();
+
+    QualType NewBaseType = getDerived().TransformType(TL.getUnderlyingTInfo());
+    if (!NewBaseType)
+      return QualType();
+    QualType NewBase = NewBaseType->getType();
+
     Result = getDerived().RebuildUnaryTransformType(NewBase,
                                                     T->getUTTKind(),
                                                     TL.getKWLoc());
