@@ -614,6 +614,15 @@ public:
       appendPredecessor(Pred);
   }
 
+  /// Set each VPBasicBlock in \p NewSuccss as successor of this VPBlockBase.
+  /// This VPBlockBase must have no successors. This VPBlockBase is not added
+  /// as predecessor of any VPBasicBlock in \p NewSuccs.
+  void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
+    assert(Successors.empty() && "Block successors already set.");
+    for (auto *Succ : NewSuccs)
+      appendSuccessor(Succ);
+  }
+
   /// Remove all the predecessor of this block.
   void clearPredecessors() { Predecessors.clear(); }
 
@@ -3188,13 +3197,17 @@ public:
 
   ~VPlan();
 
-  /// Create initial VPlan skeleton, having an "entry" VPBasicBlock (wrapping
-  /// original scalar pre-header \p PH) which contains SCEV expansions that need
+  /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
+  /// original scalar pre-header ) which contains SCEV expansions that need
   /// to happen before the CFG is modified; a VPBasicBlock for the vector
   /// pre-header, followed by a region for the vector loop, followed by the
-  /// middle VPBasicBlock.
+  /// middle VPBasicBlock. If a check is needed to guard executing the scalar
+  /// epilogue loop, it will be added to the middle block, together with
+  /// VPBasicBlocks for the scalar preheader and exit blocks.
   static VPlanPtr createInitialVPlan(const SCEV *TripCount,
-                                     ScalarEvolution &PSE, BasicBlock *PH);
+                                     ScalarEvolution &PSE,
+                                     bool RequiresScalarEpilogueCheck,
+                                     bool TailFolded, Loop *TheLoop);
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
@@ -3244,6 +3257,12 @@ public:
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
   bool hasScalableVF() {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
+  }
+
+  /// Returns an iterator range over all VFs of the plan.
+  iterator_range<SmallSetVector<ElementCount, 2>::iterator>
+  vectorFactors() const {
+    return {VFs.begin(), VFs.end()};
   }
 
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
@@ -3665,6 +3684,10 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return VPI->isVectorToScalar();
   return false;
 }
+
+/// Return true if \p V is a header mask in \p Plan.
+bool isHeaderMask(VPValue *V, VPlan &Plan);
+
 } // end namespace vputils
 
 } // end namespace llvm

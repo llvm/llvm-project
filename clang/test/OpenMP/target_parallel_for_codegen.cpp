@@ -825,6 +825,7 @@ int bar(int n){
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
 // CHECK1-NEXT:    br i1 [[TMP13]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
@@ -2488,6 +2489,7 @@ int bar(int n){
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK3-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK3-NEXT:    br i1 [[TMP14]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
@@ -5715,6 +5717,7 @@ int bar(int n){
 // CHECK17:       omp.dispatch.inc:
 // CHECK17-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK17:       omp.dispatch.end:
+// CHECK17-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK17-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK17-NEXT:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
 // CHECK17-NEXT:    br i1 [[TMP13]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
@@ -7378,6 +7381,7 @@ int bar(int n){
 // CHECK19:       omp.dispatch.inc:
 // CHECK19-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK19:       omp.dispatch.end:
+// CHECK19-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK19-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK19-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK19-NEXT:    br i1 [[TMP14]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]

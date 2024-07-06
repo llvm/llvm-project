@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERP_H
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
+#include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
@@ -91,7 +92,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if a value can be loaded from a block.
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK = AK_Read);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
@@ -368,6 +370,134 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status);
 }
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool Mulc(InterpState &S, CodePtr OpPC) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+
+    APFloat ResR(A.getSemantics());
+    APFloat ResI(A.getSemantics());
+    HandleComplexComplexMul(A, B, C, D, ResR, ResI);
+
+    // Copy into the result.
+    Result.atIndex(0).deref<Floating>() = Floating(ResR);
+    Result.atIndex(0).initialize();
+    Result.atIndex(1).deref<Floating>() = Floating(ResI);
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  } else {
+    // Integer element type.
+    const T &LHSR = LHS.atIndex(0).deref<T>();
+    const T &LHSI = LHS.atIndex(1).deref<T>();
+    const T &RHSR = RHS.atIndex(0).deref<T>();
+    const T &RHSI = RHS.atIndex(1).deref<T>();
+    unsigned Bits = LHSR.bitWidth();
+
+    // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
+    T A;
+    if (T::mul(LHSR, RHSR, Bits, &A))
+      return false;
+    T B;
+    if (T::mul(LHSI, RHSI, Bits, &B))
+      return false;
+    if (T::sub(A, B, Bits, &Result.atIndex(0).deref<T>()))
+      return false;
+    Result.atIndex(0).initialize();
+
+    // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
+    if (T::mul(LHSR, RHSI, Bits, &A))
+      return false;
+    if (T::mul(LHSI, RHSR, Bits, &B))
+      return false;
+    if (T::add(A, B, Bits, &Result.atIndex(1).deref<T>()))
+      return false;
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  }
+
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool Divc(InterpState &S, CodePtr OpPC) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+
+    APFloat ResR(A.getSemantics());
+    APFloat ResI(A.getSemantics());
+    HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
+
+    // Copy into the result.
+    Result.atIndex(0).deref<Floating>() = Floating(ResR);
+    Result.atIndex(0).initialize();
+    Result.atIndex(1).deref<Floating>() = Floating(ResI);
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  } else {
+    // Integer element type.
+    const T &LHSR = LHS.atIndex(0).deref<T>();
+    const T &LHSI = LHS.atIndex(1).deref<T>();
+    const T &RHSR = RHS.atIndex(0).deref<T>();
+    const T &RHSI = RHS.atIndex(1).deref<T>();
+    unsigned Bits = LHSR.bitWidth();
+    const T Zero = T::from(0, Bits);
+
+    if (Compare(RHSR, Zero) == ComparisonCategoryResult::Equal &&
+        Compare(RHSI, Zero) == ComparisonCategoryResult::Equal) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_expr_divide_by_zero);
+      return false;
+    }
+
+    // Den = real(RHS)² + imag(RHS)²
+    T A, B;
+    if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B))
+      return false;
+    T Den;
+    if (T::add(A, B, Bits, &Den))
+      return false;
+
+    // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
+    T &ResultR = Result.atIndex(0).deref<T>();
+    T &ResultI = Result.atIndex(1).deref<T>();
+
+    if (T::mul(LHSR, RHSR, Bits, &A) || T::mul(LHSI, RHSI, Bits, &B))
+      return false;
+    if (T::add(A, B, Bits, &ResultR))
+      return false;
+    if (T::div(ResultR, Den, Bits, &ResultR))
+      return false;
+    Result.atIndex(0).initialize();
+
+    // imag(Result) = ((imag(LHS) * real(RHS)) - (real(LHS) * imag(RHS))) / Den
+    if (T::mul(LHSI, RHSR, Bits, &A) || T::mul(LHSR, RHSI, Bits, &B))
+      return false;
+    if (T::sub(A, B, Bits, &ResultI))
+      return false;
+    if (T::div(ResultI, Den, Bits, &ResultI))
+      return false;
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  }
+
+  return true;
+}
+
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS & RHS' on the stack
@@ -595,9 +725,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
@@ -609,9 +737,7 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
@@ -624,9 +750,7 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
@@ -638,9 +762,7 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
@@ -668,9 +790,7 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -678,9 +798,7 @@ inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, RM);
@@ -688,11 +806,7 @@ inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, RM);
@@ -700,10 +814,7 @@ inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 
 inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, RM);
@@ -811,6 +922,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
+  // Reject comparisons to weak pointers.
   for (const auto &P : {LHS, RHS}) {
     if (P.isZero())
       continue;
@@ -823,6 +935,20 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (!Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
+        RHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << LHS.toDiagnosticString(S.getCtx());
+      return false;
+    } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+               LHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << RHS.toDiagnosticString(S.getCtx());
+      return false;
+    }
+
     S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
     return true;
   } else {
@@ -1126,7 +1252,10 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 /// Same as GetGlobal, but without the checks.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
+  const Pointer &Ptr = S.P.getPtrGlobal(I);
+  if (!Ptr.isInitialized())
+    return false;
+  const Block *B = S.P.getGlobal(I);
   S.Stk.push<T>(B->deref<T>());
   return true;
 }
@@ -1151,16 +1280,20 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
-  assert(Temp);
+  const Pointer &Ptr = S.P.getGlobal(I);
+
   const T Value = S.Stk.peek<T>();
   APValue APV = Value.toAPValue();
   APValue *Cached = Temp->getOrCreateValue(true);
   *Cached = APV;
 
-  const Pointer &P = S.P.getGlobal(I);
-  P.deref<T>() = S.Stk.pop<T>();
-  P.initialize();
+  assert(Ptr.getDeclDesc()->asExpr());
 
+  S.SeenGlobalTemporaries.push_back(
+      std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
+
+  Ptr.deref<T>() = S.Stk.pop<T>();
+  Ptr.initialize();
   return true;
 }
 
@@ -1173,7 +1306,11 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   const Pointer &P = S.Stk.peek<Pointer>();
   APValue *Cached = Temp->getOrCreateValue(true);
 
-  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+  S.SeenGlobalTemporaries.push_back(
+      std::make_pair(P.getDeclDesc()->asExpr(), Temp));
+
+  if (std::optional<APValue> APV =
+          P.toRValue(S.getCtx(), Temp->getTemporaryExpr()->getType())) {
     *Cached = *APV;
     return true;
   }
@@ -1303,7 +1440,6 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
-
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -2498,6 +2634,13 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool Unsupported(InterpState &S, CodePtr OpPC) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
+      << S.Current->getRange(OpPC);
+  return false;
+}
+
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 
@@ -2566,6 +2709,25 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
 
   const FromT &OldPtr = S.Stk.pop<FromT>();
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
+  return true;
+}
+
+inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
+  // An expression E is a core constant expression unless the evaluation of E
+  // would evaluate one of the following: [C++23] - a control flow that passes
+  // through a declaration of a variable with static or thread storage duration
+  // unless that variable is usable in constant expressions.
+  assert(VD->isLocalVarDecl() &&
+         VD->isStaticLocal()); // Checked before emitting this.
+
+  if (VD == S.EvaluatingDecl)
+    return true;
+
+  if (!VD->isUsableInConstantExpressions(S.getCtx())) {
+    S.CCEDiag(VD->getLocation(), diag::note_constexpr_static_local)
+        << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
+    return false;
+  }
   return true;
 }
 

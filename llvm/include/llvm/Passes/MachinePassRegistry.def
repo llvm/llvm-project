@@ -89,6 +89,11 @@ LOOP_PASS("loop-reduce", LoopStrengthReducePass())
 #ifndef MACHINE_FUNCTION_ANALYSIS
 #define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
+                          MachineBranchProbabilityAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-dom-tree", MachineDominatorTreeAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
+                          MachinePostDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 // LiveVariables currently requires pure SSA form.
 // FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
@@ -106,7 +111,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PI
 // MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopInfoAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-dom-frontier",
 // MachineDominanceFrontierAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("machine-dom-tree", MachineDominatorTreeAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-ore",
 // MachineOptimizationRemarkEmitterPassAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
@@ -128,6 +132,12 @@ MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
+MACHINE_FUNCTION_PASS("print<machine-branch-prob>",
+                      MachineBranchProbabilityPrinterPass(dbgs()))
+MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
+                      MachineDominatorTreePrinterPass(dbgs()))
+MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
+                      MachinePostDominatorTreePrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
                       RequireAllMachineFunctionPropertiesPass())
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
