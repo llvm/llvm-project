@@ -197,6 +197,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
   else()
     string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+    # TODO(#97876): Report an error.
     message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
   endif()
 endif()
