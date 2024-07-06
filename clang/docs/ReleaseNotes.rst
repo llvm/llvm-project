@@ -272,6 +272,7 @@ C++2c Feature Support
 
 - Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
 
+- Implemented `P3144R2 Deleting a Pointer to an Incomplete Type Should be Ill-formed <https://wg21.link/P3144R2>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -437,6 +438,9 @@ New Compiler Flags
 - ``-fms-define-stdc`` and its clang-cl counterpart ``/Zc:__STDC__``.
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
+
+- ``-Wc++2c-compat`` group was added to help migrating existing codebases
+  to C++26.
 
 Deprecated Compiler Flags
 -------------------------
@@ -963,6 +967,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 - Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
   of the address of operator. (#GH97483).
+- Fixed an assertion failure about a constant expression which is a known integer but is not
+  evaluated to an integer. (#GH96670).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
