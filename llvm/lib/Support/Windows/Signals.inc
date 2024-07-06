@@ -168,25 +168,27 @@ static bool isDebugHelpInitialized() {
 }
 
 static bool load64BitDebugHelp(void) {
+  using namespace llvm::sys::windows;
+
   HMODULE hLib =
       ::LoadLibraryExA("Dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
   if (hLib) {
     fMiniDumpWriteDump =
-        (fpMiniDumpWriteDump)::GetProcAddress(hLib, "MiniDumpWriteDump");
-    fStackWalk64 = (fpStackWalk64)::GetProcAddress(hLib, "StackWalk64");
+        funcFromModule<fpMiniDumpWriteDump>(hLib, "MiniDumpWriteDump");
+    fStackWalk64 = funcFromModule<fpStackWalk64>(hLib, "StackWalk64");
     fSymGetModuleBase64 =
-        (fpSymGetModuleBase64)::GetProcAddress(hLib, "SymGetModuleBase64");
+        funcFromModule<fpSymGetModuleBase64>(hLib, "SymGetModuleBase64");
     fSymGetSymFromAddr64 =
-        (fpSymGetSymFromAddr64)::GetProcAddress(hLib, "SymGetSymFromAddr64");
+        funcFromModule<fpSymGetSymFromAddr64>(hLib, "SymGetSymFromAddr64");
     fSymGetLineFromAddr64 =
-        (fpSymGetLineFromAddr64)::GetProcAddress(hLib, "SymGetLineFromAddr64");
+        funcFromModule<fpSymGetLineFromAddr64>(hLib, "SymGetLineFromAddr64");
     fSymGetModuleInfo64 =
-        (fpSymGetModuleInfo64)::GetProcAddress(hLib, "SymGetModuleInfo64");
-    fSymFunctionTableAccess64 = (fpSymFunctionTableAccess64)::GetProcAddress(
+        funcFromModule<fpSymGetModuleInfo64>(hLib, "SymGetModuleInfo64");
+    fSymFunctionTableAccess64 = funcFromModule<fpSymFunctionTableAccess64>(
         hLib, "SymFunctionTableAccess64");
-    fSymSetOptions = (fpSymSetOptions)::GetProcAddress(hLib, "SymSetOptions");
-    fSymInitialize = (fpSymInitialize)::GetProcAddress(hLib, "SymInitialize");
-    fEnumerateLoadedModules = (fpEnumerateLoadedModules)::GetProcAddress(
+    fSymSetOptions = funcFromModule<fpSymSetOptions>(hLib, "SymSetOptions");
+    fSymInitialize = funcFromModule<fpSymInitialize>(hLib, "SymInitialize");
+    fEnumerateLoadedModules = funcFromModule<fpEnumerateLoadedModules>(
         hLib, "EnumerateLoadedModules64");
   }
   return isDebugHelpInitialized();
