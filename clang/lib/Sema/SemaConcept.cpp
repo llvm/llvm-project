@@ -636,6 +636,9 @@ bool Sema::SetupConstraintScope(
             ? FD->getInstantiatedFromMemberFunction()
             : FD->getInstantiatedFromDecl();
 
+    if (!InstantiatedFrom)
+      return true;
+
     InstantiatingTemplate Inst(
         *this, FD->getPointOfInstantiation(),
         Sema::InstantiatingTemplate::ConstraintsCheck{}, InstantiatedFrom,
