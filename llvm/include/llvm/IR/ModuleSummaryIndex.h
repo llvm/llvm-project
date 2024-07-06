@@ -1326,7 +1326,7 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+  std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
@@ -1826,7 +1826,7 @@ public:
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[std::string(TypeId)];
+    return TypeIdCompatibleVtableMap[TypeId];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
