@@ -508,6 +508,7 @@ constexpr FeatureBitset ImpliedFeaturesRDRND = {};
 constexpr FeatureBitset ImpliedFeaturesRDSEED = {};
 constexpr FeatureBitset ImpliedFeaturesRTM = {};
 constexpr FeatureBitset ImpliedFeaturesLAHF_LM = {};
+constexpr FeatureBitset ImpliedFeaturesLM = {};
 constexpr FeatureBitset ImpliedFeaturesSERIALIZE = {};
 constexpr FeatureBitset ImpliedFeaturesSGX = {};
 constexpr FeatureBitset ImpliedFeaturesSHSTK = {};
@@ -517,7 +518,6 @@ constexpr FeatureBitset ImpliedFeaturesUINTR = {};
 constexpr FeatureBitset ImpliedFeaturesUSERMSR = {};
 constexpr FeatureBitset ImpliedFeaturesWAITPKG = {};
 constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
-constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
 
