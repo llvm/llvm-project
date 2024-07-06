@@ -1,7 +1,3 @@
-// Tests arith operations on i1 type.
-// These tests are intended to be target agnostic: they should yield the same results 
-// regardless of the target platform.
-
 // RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
@@ -35,7 +31,7 @@ func.func @addi() {
   func.call @addi_i1(%false, %true_based_on_non_zero_val) : (i1, i1) -> ()
 
   // ------------------------------------------------
-  // Test i8, i16 etc.. TODO
+  // TODO: Test i8, i16 etc..
   // ------------------------------------------------
 
   return
@@ -80,7 +76,7 @@ func.func @addi_extended() {
   func.call @addui_extended_i1(%false, %false) : (i1, i1) -> ()
 
   // ------------------------------------------------
-  // Test i8, i16 etc.. TODO
+  // TODO: Test i8, i16 etc.. 
   // ------------------------------------------------
   return
 }
