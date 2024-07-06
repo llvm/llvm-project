@@ -863,7 +863,7 @@ public:
 
   const LoopAccessInfo &getInfo(Loop &L);
 
-  void clear() { LoopAccessInfoMap.clear(); }
+  void clear();
 
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
