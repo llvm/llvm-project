@@ -29,10 +29,8 @@ define <vscale x 1 x i8> @vpload_nxv1i8_allones_mask(ptr %ptr, i32 zeroext %evl)
 define <vscale x 1 x i8> @vpload_nxv1i8_passthru(ptr %ptr, <vscale x 1 x i1> %m, <vscale x 1 x i8> %passthru, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_nxv1i8_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0), v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, tu, mu
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 1 x i8> @llvm.vp.load.nxv1i8.p0(ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
   %merge = call <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1> %m, <vscale x 1 x i8> %load, <vscale x 1 x i8> %passthru, i32 %evl)
