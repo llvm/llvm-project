@@ -17,6 +17,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # dlfcn.h entrypoints
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+
     # errno.h entrypoints
     libc.src.errno.errno
 
