@@ -524,8 +524,8 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #endif
 }
 
-#if defined(__i386__) || defined(_M_IX86) || \
-    defined(__x86_64__) || defined(_M_X64) 
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
+    defined(_M_X64)
 
 /// getX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
 /// the specified arguments.  If we can't run cpuid on the host, return true.
