@@ -6735,10 +6735,11 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
   if (Result->isDependentType()) {
     const UnaryTransformType *T = TL.getTypePtr();
 
-    QualType NewBaseType = getDerived().TransformType(TL.getUnderlyingTInfo());
-    if (!NewBaseType)
+    TypeSourceInfo *NewBaseTSI =
+      getDerived().TransformType(TL.getUnderlyingTInfo());
+    if (!NewBaseTSI)
       return QualType();
-    QualType NewBase = NewBaseType->getType();
+    QualType NewBaseTSI = NewBaseType->getType();
 
     Result = getDerived().RebuildUnaryTransformType(NewBase,
                                                     T->getUTTKind(),
