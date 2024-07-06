@@ -317,7 +317,8 @@ public:
           break;
         default:
           if (Language *languagePlugin = Language::FindPlugin(language)) {
-            if (languagePlugin->SupportsExceptionBreakpoints()) {
+            if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
+                languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
               m_exception_language = language;
               break;
             }
