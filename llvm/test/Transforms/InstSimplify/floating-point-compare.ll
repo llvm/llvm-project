@@ -678,8 +678,7 @@ define i1 @assume_nan_x2_uno(float %x, float %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
 ; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %uno.x = fcmp uno float %x, 0.0
   call void @llvm.assume(i1 %uno.x)
@@ -695,8 +694,7 @@ define i1 @assume_nan_x2_ord(float %x, float %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_X]])
 ; CHECK-NEXT:    [[UNO_Y:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO_Y]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %uno.x = fcmp uno float %x, 0.0
   call void @llvm.assume(i1 %uno.x)
