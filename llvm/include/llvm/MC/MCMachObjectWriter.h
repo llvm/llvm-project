@@ -82,6 +82,14 @@ public:
 };
 
 class MachObjectWriter : public MCObjectWriter {
+public:
+  struct DataRegionData {
+    MachO::DataRegionType Kind;
+    MCSymbol *Start;
+    MCSymbol *End;
+  };
+
+private:
   /// Helper struct for containing some precomputed information on symbols.
   struct MachSymbolData {
     const MCSymbol *Symbol;
@@ -119,6 +127,8 @@ private:
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
   std::vector<IndirectSymbolData> IndirectSymbols;
   DenseMap<const MCSection *, unsigned> IndirectSymBase;
+
+  std::vector<DataRegionData> DataRegions;
 
   SectionAddrMap SectionAddress;
 
@@ -177,6 +187,7 @@ public:
   std::vector<IndirectSymbolData> &getIndirectSymbols() {
     return IndirectSymbols;
   }
+  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }

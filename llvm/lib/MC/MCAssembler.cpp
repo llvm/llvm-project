@@ -99,7 +99,6 @@ void MCAssembler::reset() {
   IncrementalLinkerCompatible = false;
   Sections.clear();
   Symbols.clear();
-  DataRegions.clear();
   LinkerOptions.clear();
   FileNames.clear();
   ThumbFuncs.clear();
