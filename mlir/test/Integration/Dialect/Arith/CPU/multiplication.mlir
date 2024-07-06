@@ -1,7 +1,3 @@
-// Tests mul operations and their variants (e.g. extended).
-// These tests are intended to be target agnostic: they should yield the same results 
-// regardless of the target platform.
-
 // RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
@@ -67,7 +63,7 @@ func.func @mulsi_extended() {
   func.call @mulsi_extended_i8(%c_100_i8, %c_100_i8) : (i8, i8) -> ()
 
   // ------------------------------------------------
-  // Test i16, i32 etc.. TODO
+  // TODO: Test i16, i32 etc.. 
   // ------------------------------------------------
   return
 }
@@ -81,10 +77,6 @@ func.func @mului_extended_i8(%v1 : i8, %v2 : i8) {
 }
 
 func.func @mului_extended() {
-  // ------------------------------------------------
-  // Test i1, i16, i32 etc.. TODO
-  // ------------------------------------------------
-
   // ------------------------------------------------
   // Test i8
   // ------------------------------------------------
@@ -113,6 +105,10 @@ func.func @mului_extended() {
   // CHECK-NEXT:  16
   // CHECK-NEXT:  95
   func.call @mului_extended_i8(%c_156_i8, %c_156_i8) : (i8, i8) -> ()
+
+  // ------------------------------------------------
+  // TODO: Test i1, i16, i32 etc.. 
+  // ------------------------------------------------
   return
 }
 
