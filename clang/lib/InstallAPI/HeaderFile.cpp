@@ -51,13 +51,14 @@ llvm::Expected<PathSeq> enumerateFiles(FileManager &FM, StringRef Directory) {
     if (EC)
       return errorCodeToError(EC);
 
-    Ensure the iterator is valid before dereferencing.
+    // Ensure the iterator is valid before dereferencing.
     if (i == ie || !i->isValid())
       break;
 
     // Skip files that do not exist. This usually happens for broken symlinks.
     auto StatusOrErr = FS.status(i->path());
-    if (!StatusOrErr || StatusOrErr.getError() == std::errc::no_such_file_or_directory)
+    if (!StatusOrErr ||
+        StatusOrErr.getError() == std::errc::no_such_file_or_directory)
       continue;
 
     StringRef Path = i->path();
