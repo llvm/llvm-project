@@ -623,27 +623,16 @@ public:
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags = 0) {
-    return getWasmSection(Section, K, Flags, nullptr);
-  }
-
-  MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                unsigned Flags, const char *BeginSymName) {
-    return getWasmSection(Section, K, Flags, "", ~0, BeginSymName);
+    return getWasmSection(Section, K, Flags, "", ~0);
   }
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const Twine &Group,
-                                unsigned UniqueID) {
-    return getWasmSection(Section, K, Flags, Group, UniqueID, nullptr);
-  }
-
-  MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                unsigned Flags, const Twine &Group,
-                                unsigned UniqueID, const char *BeginSymName);
+                                unsigned UniqueID);
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const MCSymbolWasm *Group,
-                                unsigned UniqueID, const char *BeginSymName);
+                                unsigned UniqueID);
 
   /// Get the section for the provided Section name
   MCSectionDXContainer *getDXContainerSection(StringRef Section, SectionKind K);

@@ -37,6 +37,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -65,7 +66,11 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
     if (!C)
       return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
-    Size *= C->getZExtValue();
+    auto CheckedProd =
+        checkedMulUnsigned(Size.getKnownMinValue(), C->getZExtValue());
+    if (!CheckedProd)
+      return std::nullopt;
+    return TypeSize::getFixed(*CheckedProd);
   }
   return Size;
 }
@@ -73,9 +78,13 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
 std::optional<TypeSize>
 AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
   std::optional<TypeSize> Size = getAllocationSize(DL);
-  if (Size)
-    return *Size * 8;
-  return std::nullopt;
+  if (!Size)
+    return std::nullopt;
+  auto CheckedProd = checkedMulUnsigned(Size->getKnownMinValue(),
+                                        static_cast<TypeSize::ScalarTy>(8));
+  if (!CheckedProd)
+    return std::nullopt;
+  return TypeSize::get(*CheckedProd, Size->isScalable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1190,7 +1199,7 @@ static Align computeAllocaDefaultAlign(Type *Ty, InsertPosition Pos) {
   BasicBlock *BB = Pos.getBasicBlock();
   assert(BB->getParent() &&
          "BB must be in a Function when alignment not provided!");
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
   return DL.getPrefTypeAlign(Ty);
 }
 
@@ -1248,7 +1257,7 @@ static Align computeLoadStoreDefaultAlign(Type *Ty, InsertPosition Pos) {
   BasicBlock *BB = Pos.getBasicBlock();
   assert(BB->getParent() &&
          "BB must be in a Function when alignment not provided!");
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
   return DL.getABITypeAlign(Ty);
 }
 

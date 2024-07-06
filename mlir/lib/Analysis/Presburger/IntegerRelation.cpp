@@ -20,14 +20,13 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -1569,7 +1568,7 @@ LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
 
 void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
   for (unsigned s = pos, t = pos, e = pos + num; s < e; s++) {
-    if (failed(constantFoldVar(t)))
+    if (constantFoldVar(t).failed())
       t++;
   }
 }
@@ -1948,7 +1947,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
       // Use Gaussian elimination here (since we have an equality).
       LogicalResult ret = gaussianEliminateVar(pos);
       (void)ret;
-      assert(succeeded(ret) && "Gaussian elimination guaranteed to succeed");
+      assert(ret.succeeded() && "Gaussian elimination guaranteed to succeed");
       LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
       LLVM_DEBUG(dump());
       return;

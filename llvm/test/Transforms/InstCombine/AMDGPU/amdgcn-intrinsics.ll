@@ -1023,6 +1023,60 @@ define float @cos_fabs_unary_fneg_f32(float %x) {
   ret float %cos
 }
 
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.sin
+; --------------------------------------------------------------------
+declare float @llvm.amdgcn.sin.f32(float) nounwind readnone
+
+define float @sin_fneg_f32(float %x) {
+; CHECK-LABEL: @sin_fneg_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fneg = fneg float %x
+  %sin = call float @llvm.amdgcn.sin.f32(float %x.fneg)
+  ret float %sin
+}
+
+define float @sin_fabs_f32(float %x) {
+; CHECK-LABEL: @sin_fabs_f32(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %sin = call float @llvm.amdgcn.sin.f32(float %x.fabs)
+  ret float %sin
+}
+
+define float @sin_fabs_fneg_f32(float %x) {
+; CHECK-LABEL: @sin_fabs_fneg_f32(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %x.fabs.fneg = fneg float %x.fabs
+  %sin = call float @llvm.amdgcn.sin.f32(float %x.fabs.fneg)
+  ret float %sin
+}
+
+define float @sin_fabs_fneg_fast_f32(float %x) {
+; CHECK-LABEL: @sin_fabs_fneg_fast_f32(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg fast float [[TMP1]]
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fabs = call fast float @llvm.fabs.f32(float %x)
+  %x.fabs.fneg = fneg float %x.fabs
+  %sin = call fast float @llvm.amdgcn.sin.f32(float %x.fabs.fneg)
+  ret float %sin
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cvt.pkrtz
 ; --------------------------------------------------------------------
@@ -2933,37 +2987,37 @@ define amdgpu_kernel void @update_dpp_undef_old(ptr addrspace(1) %out, i32 %in1)
 ; llvm.amdgcn.permlane16
 ; --------------------------------------------------------------------
 
-declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1 immarg, i1 immarg)
 
 define amdgpu_kernel void @permlane16(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  %res = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlane16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  %res = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  %res = call i32 @llvm.amdgcn.permlane16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
@@ -2972,37 +3026,37 @@ define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(ptr addrspace(1) 
 ; llvm.amdgcn.permlanex16
 ; --------------------------------------------------------------------
 
-declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1 immarg, i1 immarg)
 
 define amdgpu_kernel void @permlanex16(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  %res = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlanex16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  %res = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  %res = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }

@@ -7,16 +7,16 @@ define amdgpu_kernel void @ds_swizzle(ptr addrspace(1) %out, i32 %src) #0 {
   ret void
 }
 
-; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlane16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
 define amdgpu_kernel void @v_permlane16_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #0 {
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+  %v = call i32 @llvm.amdgcn.permlane16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
-; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlanex16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
 define amdgpu_kernel void @v_permlanex16_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #0 {
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+  %v = call i32 @llvm.amdgcn.permlanex16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -230,8 +230,8 @@ bb:
 }
 
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
-declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1
-declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1) #1
+declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
+declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlane16.var(i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16.var(i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #1
