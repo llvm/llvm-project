@@ -6517,10 +6517,9 @@ collectViableConversionCandidates(Sema &SemaRef, Expr *From, QualType ToType,
       continue;
     }
     CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
-    SemaRef.AddConversionCandidate(Conv, FoundDecl, ActingContext, From, ToType,
-                                   CandidateSet,
-                                   /*AllowObjCConversionOnExplicit=*/false,
-                                   /*AllowExplicit=*/true);
+    SemaRef.AddConversionCandidate(
+        Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
+        /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit=*/true);
   }
 }
 
