@@ -35,7 +35,7 @@ extern "C" {
 
 #define ATOMIC_BOOL_LOCK_FREE       __CLANG_ATOMIC_BOOL_LOCK_FREE
 #define ATOMIC_CHAR_LOCK_FREE       __CLANG_ATOMIC_CHAR_LOCK_FREE
-#ifdef __CLANG_ATOMIC_CHAR8_T_LOCK_FREE
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ > 202311L
 #define ATOMIC_CHAR8_T_LOCK_FREE    __CLANG_ATOMIC_CHAR8_T_LOCK_FREE
 #endif
 #define ATOMIC_CHAR16_T_LOCK_FREE   __CLANG_ATOMIC_CHAR16_T_LOCK_FREE
@@ -107,7 +107,7 @@ typedef _Atomic(long)               atomic_long;
 typedef _Atomic(unsigned long)      atomic_ulong;
 typedef _Atomic(long long)          atomic_llong;
 typedef _Atomic(unsigned long long) atomic_ullong;
-#ifdef __CLANG_ATOMIC_CHAR8_T_LOCK_FREE
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ > 202311L
 typedef _Atomic(unsigned char)      atomic_char8_t;
 #endif
 typedef _Atomic(uint_least16_t)     atomic_char16_t;
