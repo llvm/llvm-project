@@ -439,8 +439,11 @@ New Compiler Flags
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
 
+- ``-Wc++23-compat`` group was added to help migrating existing codebases
+  to C++23.
+
 - ``-Wc++2c-compat`` group was added to help migrating existing codebases
-  to C++26.
+  to upcoming C++26.
 
 Deprecated Compiler Flags
 -------------------------
@@ -479,6 +482,10 @@ Modified Compiler Flags
 - Trivial infinite loops (i.e loops with a constant controlling expresion
   evaluating to ``true`` and an empty body such as ``while(1);``)
   are considered infinite, even when the ``-ffinite-loop`` flag is set.
+
+- Diagnostics groups about compatibility with a particular C++ Standard version
+  now include dianostics about C++26 features that are not present in older
+  versions.
 
 Removed Compiler Flags
 -------------------------
