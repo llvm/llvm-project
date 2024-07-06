@@ -526,6 +526,8 @@ TEST(MathExtras, DivideCeil) {
 
   // Overflow.
   EXPECT_TRUE(
+      divideSignedWouldOverflow(std::numeric_limits<int8_t>::min(), -1));
+  EXPECT_TRUE(
       divideSignedWouldOverflow(std::numeric_limits<int64_t>::min(), -1));
 }
 
@@ -549,9 +551,7 @@ TEST(MathExtras, DivideFloorSigned) {
   EXPECT_EQ(divideFloorSigned(std::numeric_limits<int64_t>::min(), 1),
             std::numeric_limits<int64_t>::min());
 
-  // Overflow.
-  EXPECT_TRUE(
-      divideSignedWouldOverflow(std::numeric_limits<int64_t>::min(), -1));
+  // Same overflow condition, divideSignedWouldOverflow, applies.
 }
 
 TEST(MathExtras, Mod) {
