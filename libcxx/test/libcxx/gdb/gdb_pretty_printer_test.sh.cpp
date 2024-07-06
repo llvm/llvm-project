@@ -14,9 +14,6 @@
 // TODO: Investigate these failures which break the CI.
 // UNSUPPORTED: clang-17, clang-18, clang-19
 
-// TODO: Investigate this failure on GCC 13 (in Ubuntu Jammy)
-// UNSUPPORTED: gcc-13
-
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb. gdb needs special support to make this work (e.g.
 // gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
