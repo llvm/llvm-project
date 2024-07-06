@@ -2377,23 +2377,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
 namespace {
 struct ParsingBaseSpecifiersGuard {
-  CXXRecordDecl *RD = nullptr;
-  ParsingBaseSpecifiersGuard(Sema &S, Decl *D) {
-    if (D) {
-      S.AdjustDeclIfTemplate(D);
-      RD = cast<CXXRecordDecl>(D);
-      assert(!RD->isParsingBaseSpecifiers() &&
-             "Recursively parsing base specifiers of the same class?");
-      RD->setIsParsingBaseSpecifiers(true);
-    }
+  Sema &Actions;
+  Decl *D = nullptr;
+  ParsingBaseSpecifiersGuard(Sema &Actions, Decl *D) : Actions(Actions), D(D) {
+    Actions.SetParsingBaseSpecifiers(D, true);
   }
-  ~ParsingBaseSpecifiersGuard() {
-    if (RD) {
-      assert(RD->isParsingBaseSpecifiers() &&
-             "Stopped parsing base specifiers before exiting ParseBaseClause?");
-      RD->setIsParsingBaseSpecifiers(false);
-    }
-  }
+  ~ParsingBaseSpecifiersGuard() { Actions.SetParsingBaseSpecifiers(D, false); }
 };
 } // namespace
 

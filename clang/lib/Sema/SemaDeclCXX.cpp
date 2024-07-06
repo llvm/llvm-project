@@ -2826,6 +2826,16 @@ NoteIndirectBases(ASTContext &Context, IndirectBaseSet &Set,
   }
 }
 
+void Sema::SetParsingBaseSpecifiers(Decl *ClassDecl, bool To) {
+  if (ClassDecl) {
+    AdjustDeclIfTemplate(ClassDecl);
+    auto *RD = cast<CXXRecordDecl>(ClassDecl);
+    assert(RD->isParsingBaseSpecifiers() != To &&
+           "Unexpected state for isParsingBaseSpecifiers()");
+    RD->setIsParsingBaseSpecifiers(To);
+  }
+}
+
 bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
                                 MutableArrayRef<CXXBaseSpecifier *> Bases) {
  if (Bases.empty())

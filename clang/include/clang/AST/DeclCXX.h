@@ -599,8 +599,8 @@ public:
     return !hasDefinition() || !isDynamicClass() || hasAnyDependentBases();
   }
 
-  void setIsParsingBaseSpecifiers(bool to = true) {
-    data().IsParsingBaseSpecifiers = to;
+  void setIsParsingBaseSpecifiers(bool To) {
+    data().IsParsingBaseSpecifiers = To;
   }
 
   bool isParsingBaseSpecifiers() const {
