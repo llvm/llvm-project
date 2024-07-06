@@ -55,6 +55,11 @@ bool TrySymInitialize() {
 
 }  // namespace
 
+#  if defined(__clang__)
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#  endif
+
 // Initializes DbgHelp library, if it's not yet initialized. Calls to this
 // function should be synchronized with respect to other calls to DbgHelp API
 // (e.g. from WinSymbolizerTool).
@@ -132,6 +137,10 @@ void InitializeDbgHelpIfNeeded() {
     return;
   }
 }
+
+#  if defined(__clang__)
+#    pragma clang diagnostic pop
+#  endif
 
 bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   InitializeDbgHelpIfNeeded();
