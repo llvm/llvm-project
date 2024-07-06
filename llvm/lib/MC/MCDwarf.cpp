@@ -1241,66 +1241,38 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
 }
 
 void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
+  auto ReplaceReg = [=](unsigned &Reg) {
+    if (Reg == FromReg)
+      Reg = ToReg;
+  };
+
   // Replace registers in the shared fields.
-  switch (Operation) {
-  case OpRegister:
-  case OpLLVMVectorOffset:
-    if (Register2 == FromReg)
-      Register2 = ToReg;
-
-    [[fallthrough]];
-  case OpDefCfa:
-  case OpOffset:
-  case OpRestore:
-  case OpUndefined:
-  case OpSameValue:
-  case OpDefCfaRegister:
-  case OpRelOffset:
-  case OpLLVMDefAspaceCfa:
-  case OpLLVMVectorRegisters:
-  case OpLLVMRegisterPair:
-    if (Register == FromReg)
-      Register = ToReg;
-    break;
-
-  case OpRememberState:
-  case OpRestoreState:
-  case OpDefCfaOffset:
-  case OpAdjustCfaOffset:
-  case OpEscape:
-  case OpWindowSave:
-  case OpNegateRAState:
-  case OpGnuArgsSize:
-    // No registers are used for these operations.
-    break;
+  if (Operation == OpRegister) {
+    ReplaceReg(U.RR.Register);
+    ReplaceReg(U.RR.Register2);
+  } else if (Operation == OpLLVMDefAspaceCfa) {
+    ReplaceReg(U.RIA.Register);
+  } else if (Operation == OpDefCfa || Operation == OpOffset ||
+             Operation == OpRestore || Operation == OpUndefined ||
+             Operation == OpSameValue || Operation == OpDefCfaRegister ||
+             Operation == OpRelOffset || Operation == OpLLVMVectorRegisters ||
+             Operation == OpLLVMRegisterPair ||
+             Operation == OpLLVMVectorOffset) {
+    ReplaceReg(U.RI.Register);
   }
 
   // Replace registers in the "ExtraFields" structures.
-  switch (Operation) {
-  case OpLLVMRegisterPair: {
+  if (Operation == OpLLVMRegisterPair) {
     auto &Fields = getExtraFields<RegisterPairExtraFields>();
-    if (Fields.Reg1 == FromReg)
-      Fields.Reg1 = ToReg;
-    if (Fields.Reg2 == FromReg)
-      Fields.Reg2 = FromReg;
-    break;
-  }
-  case OpLLVMVectorRegisters: {
+    ReplaceReg(Fields.Reg1);
+    ReplaceReg(Fields.Reg2);
+  } else if (Operation == OpLLVMVectorRegisters) {
     auto &Fields = getExtraFields<VectorRegistersExtraFields>();
-    for (auto &VR : Fields.VectorRegisters) {
-      if (VR.Register == FromReg)
-        VR.Register = ToReg;
-    }
-    break;
-  }
-  case OpLLVMVectorOffset: {
+    for (auto &VR : Fields.VectorRegisters)
+      ReplaceReg(VR.Register);
+  } else if (Operation == OpLLVMVectorOffset) {
     auto &Fields = getExtraFields<VectorOffsetExtraFields>();
-    if (Fields.MaskRegister == FromReg)
-      Fields.MaskRegister = ToReg;
-    break;
-  }
-  default:
-    break;
+    ReplaceReg(Fields.MaskRegister);
   }
 }
 
