@@ -413,9 +413,15 @@ constexpr uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
   return (Numerator - Bias) / Denominator + Bias;
 }
 
+// Check whether divideCeilSigned or divideFloorSigned would overflow. This
+// happens only when trying to negate the minimal signed value.
+constexpr bool divideSignedWouldOverflow(int64_t Numerator,
+                                         int64_t Denominator) {
+  return Numerator == std::numeric_limits<int64_t>::min() && Denominator == -1;
+}
+
 /// Returns the integer ceil(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
-/// is -1.
+/// Overflows when divideSignedWouldOverflow returns true.
 template <typename U, typename V, typename T = common_sint<U, V>>
 constexpr T divideCeilSigned(U Numerator, V Denominator) {
   assert(Denominator && "Division by zero");
@@ -429,8 +435,7 @@ constexpr T divideCeilSigned(U Numerator, V Denominator) {
 }
 
 /// Returns the integer floor(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
-/// is -1.
+/// Overflows when divideSignedWouldOverflow returns true.
 template <typename U, typename V, typename T = common_sint<U, V>>
 constexpr T divideFloorSigned(U Numerator, V Denominator) {
   assert(Denominator && "Division by zero");
