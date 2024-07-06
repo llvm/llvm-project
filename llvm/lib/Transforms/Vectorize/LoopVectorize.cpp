@@ -4858,15 +4858,19 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
         }
         return Iter->second;
       };
-      if (R.getNumDefinedValues() >= 1 && WillWiden(R.getVPValue(0)))
+      if (R.getNumDefinedValues() >= 1) {
+        // For multi-def recipes, currently only interleaved loads, suffice to
+        // check first def only.
+        if (WillWiden(R.getVPValue(0)))
+          return true;
+      } else if (isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe,
+                     VPInterleaveRecipe>(&R) &&
+                 WillWiden(R.getOperand(1))) {
+        // For stores check their stored value; for interleaved stores, suffice
+        // the check first stored value only. In all cases this is the second
+        // operand.
         return true;
-      // For stores check their stored value; for interleaved stores, suffice
-      // the check first stored value only. In all cases this is the second
-      // operand.
-      if (isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveRecipe>(
-              &R) &&
-          WillWiden(R.getOperand(1)))
-        return true;
+      }
     }
   }
 
