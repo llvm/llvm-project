@@ -4783,11 +4783,14 @@ static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
   } while (!Tail.empty());
 }
 
-static bool willGenerateVectorInstructions(VPlan &Plan, ElementCount VF,
-                                           const TargetTransformInfo &TTI) {
+/// Check if any recipe of \p Plan will generate a vector value, which will be
+/// assigned a vector register.
+static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
+                                const TargetTransformInfo &TTI) {
   assert(VF.isVector() && "Checking a scalar VF?");
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
                           Plan.getCanonicalIV()->getScalarType()->getContext());
+  DenseMap<Type *, bool> GeneratesVector;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
@@ -4833,33 +4836,36 @@ static bool willGenerateVectorInstructions(VPlan &Plan, ElementCount VF,
         llvm_unreachable("unhandled recipe");
       }
 
-      auto WillWiden = [&TypeInfo, &TTI, VF](VPValue *VPV) {
+      auto WillWiden = [&TypeInfo, &TTI, &GeneratesVector, VF](VPValue *VPV) {
         Type *ScalarTy = TypeInfo.inferScalarType(VPV);
-        Type *VectorTy = ToVectorTy(ScalarTy, VF);
-        unsigned NumLegalParts = TTI.getNumberOfParts(VectorTy);
-        if (!NumLegalParts)
-          return false;
-        if (VF.isScalable()) {
-          // <vscale x 1 x iN> is assumed to be profitable over iN because
-          // scalable registers are a distinct register class from scalar ones.
-          // If we ever find a target which wants to lower scalable vectors
-          // back to scalars, we'll need to update this code to explicitly
-          // ask TTI about the register class uses for each part.
-          return NumLegalParts <= VF.getKnownMinValue();
+        const auto &[Iter, Ins] = GeneratesVector.insert({ScalarTy, false});
+        if (Ins) {
+          Type *VectorTy = ToVectorTy(ScalarTy, VF);
+          unsigned NumLegalParts = TTI.getNumberOfParts(VectorTy);
+          if (!NumLegalParts)
+            return false;
+          if (VF.isScalable()) {
+            // <vscale x 1 x iN> is assumed to be profitable over iN because
+            // scalable registers are a distinct register class from scalar
+            // ones. If we ever find a target which wants to lower scalable
+            // vectors back to scalars, we'll need to update this code to
+            // explicitly ask TTI about the register class uses for each part.
+            Iter->second = NumLegalParts <= VF.getKnownMinValue();
+          } else {
+            // Two or more parts that share a register - are vectorized.
+            Iter->second = NumLegalParts < VF.getKnownMinValue();
+          }
         }
-        // Two or more parts that share a register - are vectorized.
-        return NumLegalParts < VF.getKnownMinValue();
+        return Iter->second;
       };
-      SmallVector<VPValue *> VPValuesToCheck;
-      if (auto *WidenStore = dyn_cast<VPWidenStoreRecipe>(&R)) {
-        VPValuesToCheck.push_back(WidenStore->getOperand(1));
-      } else if (auto *IG = dyn_cast<VPInterleaveRecipe>(&R)) {
-        append_range(VPValuesToCheck, IG->getStoredValues());
-      } else {
-        append_range(VPValuesToCheck, R.definedValues());
-      }
-      if (any_of(VPValuesToCheck,
-                 [&WillWiden](VPValue *VPV) { return WillWiden(VPV); }))
+      if (R.getNumDefinedValues() >= 1 && WillWiden(R.getVPValue(0)))
+        return true;
+      // For stores check their stored value; for interleaved stores, suffice
+      // the check first stored value only. In all cases this is the second
+      // operand.
+      if (isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveRecipe>(
+              &R) &&
+          WillWiden(R.getOperand(1)))
         return true;
     }
   }
@@ -4915,7 +4921,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       LLVM_DEBUG(dbgs() << ".\n");
 #endif
 
-      if (!ForceVectorization && !willGenerateVectorInstructions(*P, VF, TTI)) {
+      if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
         LLVM_DEBUG(
             dbgs()
             << "LV: Not considering vector loop of width " << VF
