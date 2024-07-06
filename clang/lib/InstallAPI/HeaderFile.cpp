@@ -52,7 +52,7 @@ llvm::Expected<PathSeq> enumerateFiles(FileManager &FM, StringRef Directory) {
       return errorCodeToError(EC);
 
     // Ensure the iterator is valid before dereferencing.
-    if (i == ie || !i->isValid())
+    if (i == ie)
       break;
 
     // Skip files that do not exist. This usually happens for broken symlinks.
