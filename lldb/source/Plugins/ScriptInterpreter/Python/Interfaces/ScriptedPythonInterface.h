@@ -86,17 +86,14 @@ public:
     bool has_interpreter_dict =
         !(llvm::StringRef(m_interpreter.GetDictionaryName()).empty());
 
-    if (!has_class_name) {
+    if (!has_class_name)
       return create_error("Missing script class name.");
-    }
 
-    if (!has_interpreter_dict) {
+    if (!has_interpreter_dict)
       return create_error("Invalid script interpreter dictionary.");
-    }
 
-    if (!script_obj) {
+    if (!script_obj)
       return create_error("Missing scripting object.");
-    }
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
