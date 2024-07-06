@@ -236,9 +236,6 @@ C++20 Feature Support
   ``<expected>`` from libstdc++ to work correctly with Clang.
 
 - User defined constructors are allowed for copy-list-initialization with CTAD.
-  The example code for deduction guides for std::map in
-  (`cppreference <https://en.cppreference.com/w/cpp/container/map/deduction_guides>`_)
-  will now work.
   (#GH62925).
 
 C++23 Feature Support
