@@ -31,10 +31,8 @@ struct AtExitUnit {
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
 using ExitCallbackList = FixedVector<AtExitUnit, 64>;
-#elif defined(LIBC_COPT_PUBLIC_PACKAGING)
-using ExitCallbackList = ReverseOrderBlockStore<AtExitUnit, 32>;
 #else
-using ExitCallbackList = FixedVector<AtExitUnit, CALLBACK_LIST_SIZE_FOR_TESTS>;
+using ExitCallbackList = ReverseOrderBlockStore<AtExitUnit, 32>;
 #endif
 
 extern ExitCallbackList atexit_callbacks;

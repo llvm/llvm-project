@@ -844,7 +844,7 @@ typedef __char32_t char32_t;
         defined(__EMSCRIPTEN__)
 // clang-format on
 #      define _LIBCPP_HAS_THREAD_API_PTHREAD
-#    elif defined(__Fuchsia__)
+#    elif defined(__LLVM_LIBC__)
 // TODO(44575): Switch to C11 thread API when possible.
 #      define _LIBCPP_HAS_THREAD_API_PTHREAD
 #    elif defined(_LIBCPP_WIN32API)
@@ -895,7 +895,7 @@ typedef __char32_t char32_t;
 //               respective stakeholders.
 // clang-format off
 #  if (defined(_LIBCPP_HAS_THREAD_API_PTHREAD) && defined(__GLIBC__)) ||                                               \
-      (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__Fuchsia__)) ||                                                 \
+      (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__LLVM_LIBC__)) ||                                                 \
        defined(_LIBCPP_HAS_THREAD_API_WIN32)
 // clang-format on
 #    define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION
@@ -909,11 +909,11 @@ typedef __char32_t char32_t;
 //
 // TODO(EricWF): This is potentially true for some pthread implementations
 // as well.
-#  if (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__Fuchsia__)) || defined(_LIBCPP_HAS_THREAD_API_WIN32)
+#  if (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__LLVM_LIBC__)) || defined(_LIBCPP_HAS_THREAD_API_WIN32)
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
 #  endif
 
-#  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
+#  if defined(__BIONIC__) || defined(__NuttX__) || defined(__LLVM_LIBC__) || defined(__wasi__) ||                        \
       defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif

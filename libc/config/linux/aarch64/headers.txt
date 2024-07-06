@@ -31,4 +31,19 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_ioctl
     # Disabled due to epoll_wait syscalls not being available on this platform.
     # libc.include.sys_epoll
+
+    # XXX
+    libc.include.sys_auxv
+    libc.include.sys_statvfs
+    libc.include.fcntl
+    libc.include.sched
+    libc.include.sys_stat
+    libc.include.dlfcn
+    libc.include.link
+    libc.include.elf
+    libc.include.dirent
+    libc.include.sys_resource
+    libc.include.sys_types
+    libc.include.sys_prctl
+    libc.include.locale
 )

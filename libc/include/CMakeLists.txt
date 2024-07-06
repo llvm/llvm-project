@@ -52,6 +52,16 @@ add_gen_header(
 )
 
 add_gen_header(
+  dlfcn
+  DEF_FILE dlfcn.h.def
+  GEN_HDR dlfcn.h
+  DEPENDS
+    .llvm-libc-types.Dl_info
+    .llvm-libc-macros.dlfcn_macros
+    .llvm_libc_common_h
+)
+
+add_gen_header(
   features
   DEF_FILE features.h.def
   GEN_HDR features.h
@@ -199,6 +209,8 @@ add_gen_header(
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.locale_t
 )
 
 add_gen_header(
@@ -358,6 +370,36 @@ add_gen_header(
     .llvm-libc-types.posix_spawn_file_actions_t
 )
 
+add_gen_header(
+  link
+  DEF_FILE link.h.def
+  GEN_HDR link.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_dl_phdr_info
+    .llvm-libc-types.__dl_iterate_phdr_callback_t
+    .llvm-libc-macros.link_macros
+)
+
+add_gen_header(
+  locale
+  DEF_FILE locale.h.def
+  GEN_HDR locale.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_lconv
+    .llvm-libc-types.locale_t
+    .llvm-libc-macros.locale_macros
+)
+
+add_gen_header(
+  elf
+  DEF_FILE elf.h.def
+  GEN_HDR elf.h
+  DEPENDS
+    .llvm-libc-macros.elf_macros
+)
+
 # TODO: Not all platforms will have a include/sys directory. Add the sys
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.
@@ -441,6 +483,7 @@ add_gen_header(
     .llvm-libc-macros.sys_resource_macros
     .llvm-libc-types.rlim_t
     .llvm-libc-types.struct_rlimit
+    .llvm-libc-types.struct_rusage
 )
 
 add_gen_header(

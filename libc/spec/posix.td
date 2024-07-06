@@ -21,6 +21,13 @@ def PThreadOnceT : NamedType<"pthread_once_t">;
 def PThreadOnceTPtr : PtrType<PThreadOnceT>;
 def PThreadOnceCallback : NamedType<"__pthread_once_func_t">;
 
+def DlInfo : NamedType<"Dl_info">;
+def DlInfoPtr : PtrType<DlInfo>;
+
+def StructLconv : NamedType<"struct lconv">;
+def StructLconvPtr : PtrType<StructLconv>;
+def LocaleT : NamedType<"locale_t">;
+
 def InoT : NamedType<"ino_t">;
 def UidT : NamedType<"uid_t">;
 def GidT : NamedType<"gid_t">;
@@ -135,6 +142,9 @@ def POSIX : StandardSpec<"POSIX"> {
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 
+  NamedType FsFilCntTType = NamedType<"fsfilcnt_t">;
+  NamedType FsBlkCntTType = NamedType<"fsblkcnt_t">;
+
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
       [
@@ -220,6 +230,45 @@ def POSIX : StandardSpec<"POSIX"> {
       [], // Types
       [], // Enumerations
       []  // Functions
+  >;
+
+  HeaderSpec DlFcn = HeaderSpec<
+    "dlfcn.h",
+    [
+      Macro<"RTLD_LAZY">,
+      Macro<"RTLD_NOW">,
+      Macro<"RTLD_GLOBAL">,
+      Macro<"RTLD_LOCAL">,
+    ],
+    [DlInfo],  // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+          "dladdr",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstVoidPtr>, ArgSpec<DlInfoPtr>]
+      >,
+      FunctionSpec<
+          "dlclose",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>]
+      >,
+      FunctionSpec<
+          "dlerror",
+          RetValSpec<CharPtr>,
+          []
+      >,
+      FunctionSpec<
+          "dlopen",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "dlsym",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<VoidRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]
+      >,
+    ]
   >;
 
   HeaderSpec FCntl = HeaderSpec<
@@ -844,16 +893,23 @@ def POSIX : StandardSpec<"POSIX"> {
   NamedType StructRLimitType = NamedType<"struct rlimit">;
   PtrType StructRLimitPtr = PtrType<StructRLimitType>;
   ConstType ConstStructRLimitPtr = ConstType<StructRLimitType>;
+  NamedType StructRUsageType = NamedType<"struct rusage">;
+  PtrType StructRUsagePtr = PtrType<StructRUsageType>;
   HeaderSpec SysResource = HeaderSpec<
     "sys/resource.h",
     [], // Macros
-    [RLimTType, StructRLimitType], // Types
+    [RLimTType, StructRLimitType, StructRUsageType], // Types
     [], // Enumerations
     [
         FunctionSpec<
           "getrlimit",
           RetValSpec<IntType>,
           [ArgSpec<StructRLimitPtr>]
+        >,
+        FunctionSpec<
+          "getrusage",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<StructRUsagePtr>]
         >,
         FunctionSpec<
           "setrlimit",
@@ -928,7 +984,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysStatvfs = HeaderSpec<
       "sys/statvfs.h",
       [], // Macros
-      [StructStatvfs], // Types
+      [StructStatvfs, FsFilCntTType, FsBlkCntTType], // Types
       [], // Enumerations
       [
         FunctionSpec<
@@ -1442,7 +1498,13 @@ def POSIX : StandardSpec<"POSIX"> {
     ],  // Macros
     [], // Types
     [], // Enumerations
-    []  // Functions
+    [
+      FunctionSpec<
+        "ioctl",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<VarArgType>]
+      >
+    ]  // Functions
   >;
 
   HeaderSpec Spawn = HeaderSpec<
@@ -1686,12 +1748,66 @@ def POSIX : StandardSpec<"POSIX"> {
     []  // Functions
   >;
 
+  HeaderSpec Locale = HeaderSpec<
+     "locale.h",
+      [], // Macros
+      [LocaleT, StructLconv], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "duplocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "freelocale",
+          RetValSpec<VoidType>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "localeconv",
+          RetValSpec<StructLconvPtr>,
+          []
+        >,
+        FunctionSpec<
+          "newlocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>,
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "setlocale",
+          RetValSpec<CharPtr>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>
+          ]
+        >,
+        FunctionSpec<
+          "uselocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >
+      ]  // Functions
+  >;
+
   let Headers = [
     ArpaInet,
     CType,
     Dirent,
+    DlFcn,
     Errno,
     FCntl,
+    Locale,
     PThread,
     Sched,
     Signal,

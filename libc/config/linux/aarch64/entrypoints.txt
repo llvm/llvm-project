@@ -308,6 +308,54 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
     libc.src.unistd.write
+
+    # XXX
+    libc.src.string.strxfrm
+    libc.src.string.strcoll
+    libc.src.stdio.ungetc
+    libc.src.stdio.getc
+    libc.src.assert.__assert_fail
+    libc.src.sys.time.utimes
+    libc.src.sys.statvfs.fstatvfs
+    libc.src.sys.statvfs.statvfs
+    libc.src.sys.ioctl.ioctl
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dladdr
+    libc.src.link.dl_iterate_phdr
+    libc.src.dirent.closedir
+    libc.src.dirent.dirfd
+    libc.src.dirent.opendir
+    libc.src.dirent.readdir
+    libc.src.sys.resource.getrusage
+    libc.src.wchar.wctob
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
+    libc.src.stdio.scanf
+    libc.src.stdio.sscanf
+    libc.src.stdlib.strtof_l
+    libc.src.stdlib.strtod_l
+    libc.src.stdlib.strtold_l
+    libc.src.stdlib.strtoull_l
+    libc.src.stdlib.strtoll_l
+    libc.src.ctype.isdigit_l
+    libc.src.ctype.isxdigit_l
+    libc.src.ctype.islower_l
+    libc.src.ctype.isupper_l
+    libc.src.ctype.tolower_l
+    libc.src.ctype.toupper_l
+    libc.src.string.strxfrm_l
+    libc.src.string.strcoll_l
+    libc.src.stdio.vsscanf
+    libc.src.stdio.vasprintf
+    libc.src.time.strftime
+    libc.src.time.strftime_l
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
