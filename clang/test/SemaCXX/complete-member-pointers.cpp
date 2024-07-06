@@ -16,22 +16,17 @@ struct S3 {
   int T::*foo;
 };
 
-struct __single_inheritance S4;
-int S4::* baz;
-
 template<int I> struct Base {};
-struct __single_inheritance S5 : Base<sizeof(int S5::*)> {};
 struct
-S6  // #S6
+S5 // #S5
 :
-Base<sizeof(int S6::*)>
-// expected-error@-1 {{member pointer has incomplete base type 'S6'}}
-//   expected-note@#S6 {{this will affect the ABI of the member pointer until the bases have been specified}}
+Base<sizeof(int S5::*)>
+// expected-error@-1 {{member pointer has incomplete base type 'S5'}}
 {
 };
 
-template<typename T> struct S7 {};
-int S7<void>::* qux;  // #qux
-template<> struct S7<void> {};
-// expected-error@-1 {{explicit specialization of 'S7<void>' after instantiation}}
+template<typename T> struct S6 {};
+int S6<void>::* qux;  // #qux
+template<> struct S6<void> {};
+// expected-error@-1 {{explicit specialization of 'S6<void>' after instantiation}}
 //   expected-note@#qux {{implicit instantiation first required here}}
