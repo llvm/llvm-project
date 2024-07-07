@@ -13,7 +13,7 @@ Overview
 ========
 
 This document contains the status of the C++17 mathematical special functions implementation in libc++.
-It is used to track both the status of the sub-projects of the effort and who is assigned to these sub-projects. 
+It is used to track both the status of the sub-projects of the effort and who is assigned to these sub-projects.
 This avoids duplicating effort.
 
 If you are interested in contributing to this effort, please send a message
@@ -31,7 +31,5 @@ Sub-projects in the Implementation Effort
 Paper and Issue Status
 ======================
 
-.. csv-table::
-   :file: SpecialMathPapers.csv
-   :header-rows: 1
-   :widths: auto
+The underlying paper is `Mathematical Special Functions for C++17 (P0226) <https://wg21.link/P0226>`_ and is included in C++17.
+Implementation is *In Progress*.
