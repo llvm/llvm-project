@@ -49,14 +49,14 @@ void testHermiteAnalytic(const T x, const T AbsTolerance,
       };
 
   const auto h0 = [](T) { return T(1); };
-  const auto h1 = [](T x) { return T(2) * x; };
-  const auto h2 = [](T x) { return T(4) * x * x - T(2); };
-  const auto h3 = [](T x) { return x * (T(8) * x * x - T(12)); };
-  const auto h4 = [](T x) {
-    return (T(16) * x * x * x * x - T(48) * x * x + T(12));
+  const auto h1 = [](T y) { return T(2) * y; };
+  const auto h2 = [](T y) { return T(4) * y * y - T(2); };
+  const auto h3 = [](T y) { return y * (T(8) * y * y - T(12)); };
+  const auto h4 = [](T y) {
+    return (T(16) * y * y * y * y - T(48) * y * y + T(12));
   };
-  const auto h5 = [](T x) {
-    return x * (T(32) * x * x * x * x - T(160) * x * x + T(120));
+  const auto h5 = [](T y) {
+    return y * (T(32) * y * y * y * y - T(160) * y * y + T(120));
   };
 
   assert(compareFloatingPoint(std::experimental::hermite(0, x), h0(x)));
