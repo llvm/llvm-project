@@ -47,6 +47,7 @@ inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type hypot(_A1 __x, _
 }
 
 #if _LIBCPP_STD_VER >= 17
+// Factors needed to determine if over-/underflow might happen for `std::hypot(x,y,z)`.
 template <class _Real>
 struct __hypot_factors {
   _Real __threshold;
@@ -54,7 +55,8 @@ struct __hypot_factors {
   _Real __scale_M;
 };
 
-// returns [underflow_factors, overflow_factors]
+// Computes `__hypot_factors` needed to determine if over-/underflow might happen for `std::hypot(x,y,z)`.
+// Returns: [underflow_factors, overflow_factors]
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI std::array<__math::__hypot_factors<_Real>, 2> __create_factors() {
   static_assert(std::numeric_limits<_Real>::is_iec559);
@@ -84,6 +86,10 @@ _LIBCPP_HIDE_FROM_ABI std::array<__math::__hypot_factors<_Real>, 2> __create_fac
   return {__underflow, __overflow};
 }
 
+// Computes the three-dimensional hypotenuse: `std::hypot(x,y,z)`.
+// The naive implementation might over-/underflow which is why this implementation is more involved:
+//    If the square of an argument might run into issues, we scale the arguments appropriately.
+// See https://github.com/llvm/llvm-project/issues/92782 for a detailed discussion and summary.
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
   const auto [__underflow, __overflow] = __math::__create_factors<_Real>();
