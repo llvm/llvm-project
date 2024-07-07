@@ -1226,13 +1226,29 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     return V;
 
   // (X << Y) % X -> 0
-  if (Q.IIQ.UseInstrInfo &&
-      ((Opcode == Instruction::SRem &&
-        match(Op0, m_NSWShl(m_Specific(Op1), m_Value()))) ||
-       (Opcode == Instruction::URem &&
-        match(Op0, m_NUWShl(m_Specific(Op1), m_Value())))))
-    return Constant::getNullValue(Op0->getType());
+  if (Q.IIQ.UseInstrInfo) {
+    if ((Opcode == Instruction::SRem &&
+         match(Op0, m_NSWShl(m_Specific(Op1), m_Value()))) ||
+        (Opcode == Instruction::URem &&
+         match(Op0, m_NUWShl(m_Specific(Op1), m_Value()))))
+      return Constant::getNullValue(Op0->getType());
 
+    const APInt *C0;
+    if (match(Op1, m_APInt(C0))) {
+      // (srem (mul nsw X, C1), C0) -> 0 if C1 s% C0 == 0
+      // (urem (mul nuw X, C1), C0) -> 0 if C1 u% C0 == 0
+      if (Opcode == Instruction::SRem
+              ? match(Op0,
+                      m_NSWMul(m_Value(), m_CheckedInt([C0](const APInt &C) {
+                                 return C.srem(*C0).isZero();
+                               })))
+              : match(Op0,
+                      m_NUWMul(m_Value(), m_CheckedInt([C0](const APInt &C) {
+                                 return C.urem(*C0).isZero();
+                               }))))
+        return Constant::getNullValue(Op0->getType());
+    }
+  }
   return nullptr;
 }
 
@@ -7183,7 +7199,7 @@ static bool replaceAndRecursivelySimplifyImpl(
     SmallSetVector<Instruction *, 8> *UnsimplifiedUsers = nullptr) {
   bool Simplified = false;
   SmallSetVector<Instruction *, 8> Worklist;
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
 
   // If we have an explicit value to collapse to, do that round of the
   // simplification loop by hand initially.
@@ -7248,7 +7264,7 @@ const SimplifyQuery getBestSimplifyQuery(Pass &P, Function &F) {
   auto *TLI = TLIWP ? &TLIWP->getTLI(F) : nullptr;
   auto *ACWP = P.getAnalysisIfAvailable<AssumptionCacheTracker>();
   auto *AC = ACWP ? &ACWP->getAssumptionCache(F) : nullptr;
-  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+  return {F.getDataLayout(), TLI, DT, AC};
 }
 
 const SimplifyQuery getBestSimplifyQuery(LoopStandardAnalysisResults &AR,
@@ -7262,7 +7278,7 @@ const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &AM,
   auto *DT = AM.template getCachedResult<DominatorTreeAnalysis>(F);
   auto *TLI = AM.template getCachedResult<TargetLibraryAnalysis>(F);
   auto *AC = AM.template getCachedResult<AssumptionAnalysis>(F);
-  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+  return {F.getDataLayout(), TLI, DT, AC};
 }
 template const SimplifyQuery getBestSimplifyQuery(AnalysisManager<Function> &,
                                                   Function &);

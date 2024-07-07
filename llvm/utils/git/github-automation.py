@@ -11,6 +11,7 @@
 import argparse
 from git import Repo  # type: ignore
 import html
+import json
 import github
 import os
 import re
@@ -653,7 +654,13 @@ def request_release_note(token: str, repo_name: str, pr_number: int):
         mention = f"@{submitter}"
 
     comment = f"{mention} (or anyone else). If you would like to add a note about this fix in the release notes (completely optional). Please reply to this comment with a one or two sentence description of the fix.  When you are done, please add the release:note label to this PR. "
-    pr.as_issue().create_comment(comment)
+    try:
+        pr.as_issue().create_comment(comment)
+    except:
+        # Failed to create comment so emit file instead
+        with open("comments", "w") as file:
+            data = [{"body": comment}]
+            json.dump(data, file)
 
 
 parser = argparse.ArgumentParser()

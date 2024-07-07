@@ -81,6 +81,7 @@ add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
+add_math_entrypoint_object(cospif)
 
 add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
@@ -99,11 +100,30 @@ add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
 
+add_math_entrypoint_object(f16add)
+add_math_entrypoint_object(f16addf)
+add_math_entrypoint_object(f16addl)
+add_math_entrypoint_object(f16addf128)
+
+add_math_entrypoint_object(f16div)
 add_math_entrypoint_object(f16divf)
+add_math_entrypoint_object(f16divl)
+add_math_entrypoint_object(f16divf128)
 
+add_math_entrypoint_object(f16fma)
 add_math_entrypoint_object(f16fmaf)
+add_math_entrypoint_object(f16fmal)
+add_math_entrypoint_object(f16fmaf128)
 
+add_math_entrypoint_object(f16sqrt)
 add_math_entrypoint_object(f16sqrtf)
+add_math_entrypoint_object(f16sqrtl)
+add_math_entrypoint_object(f16sqrtf128)
+
+add_math_entrypoint_object(f16sub)
+add_math_entrypoint_object(f16subf)
+add_math_entrypoint_object(f16subl)
+add_math_entrypoint_object(f16subf128)
 
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
@@ -367,6 +387,7 @@ add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
+add_math_entrypoint_object(sinpif)
 
 add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)

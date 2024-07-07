@@ -435,7 +435,7 @@ private:
 
   // Store deferred function annotations so they can be emitted at the end with
   // most up to date ValueDecl that will have all the inherited annotations.
-  llvm::DenseMap<StringRef, const ValueDecl *> DeferredAnnotations;
+  llvm::MapVector<StringRef, const ValueDecl *> DeferredAnnotations;
 
   /// Map used to get unique annotation strings.
   llvm::StringMap<llvm::Constant*> AnnotationStrings;
@@ -1338,7 +1338,7 @@ public:
 
   void EmitTentativeDefinition(const VarDecl *D);
 
-  void EmitExternalDeclaration(const VarDecl *D);
+  void EmitExternalDeclaration(const DeclaratorDecl *D);
 
   void EmitVTable(CXXRecordDecl *Class);
 
@@ -1690,6 +1690,7 @@ private:
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitExternalVarDeclaration(const VarDecl *D);
+  void EmitExternalFunctionDeclaration(const FunctionDecl *D);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
   void emitCPUDispatchDefinition(GlobalDecl GD);
