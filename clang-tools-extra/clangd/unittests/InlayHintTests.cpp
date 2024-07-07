@@ -1312,13 +1312,7 @@ TEST(TypeHints, NoQualifiers) {
     }
   )cpp",
                   ExpectedHint{": S1", "x"},
-                  // FIXME: We want to suppress scope specifiers
-                  //        here because we are into the whole
-                  //        brevity thing, but the ElaboratedType
-                  //        printer does not honor the SuppressScope
-                  //        flag by design, so we need to extend the
-                  //        PrintingPolicy to support this use case.
-                  ExpectedHint{": S2::Inner<int>", "y"});
+                  ExpectedHint{": Inner<int>", "y"});
 }
 
 TEST(TypeHints, Lambda) {
@@ -1784,10 +1778,6 @@ TEST(TypeHints, Links) {
                       ExpectedHintLabelPiece{"<D, E, ScopedEnum::X, Enum::E>"});
 
   assertTypeLinkHints(Source, "5", ExpectedHintLabelPiece{": "},
-                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
-                      ExpectedHintLabelPiece{"<"},
-                      ExpectedHintLabelPiece{"Container", "Container"},
-                      ExpectedHintLabelPiece{"<int>>::"},
                       ExpectedHintLabelPiece{"Class", "NestedClass"},
                       ExpectedHintLabelPiece{"<"},
                       ExpectedHintLabelPiece{"Package", "Package"},
@@ -1796,24 +1786,18 @@ TEST(TypeHints, Links) {
   assertTypeLinkHints(Source, "6", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<"},
-                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
-                      ExpectedHintLabelPiece{"<int>::"},
                       ExpectedHintLabelPiece{"Class", "NestedClass"},
                       ExpectedHintLabelPiece{"<float> &>"});
 
   assertTypeLinkHints(Source, "7", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<"},
-                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
-                      ExpectedHintLabelPiece{"<int>::"},
                       ExpectedHintLabelPiece{"Class", "NestedClass"},
                       ExpectedHintLabelPiece{"<float> &&>"});
 
   assertTypeLinkHints(Source, "8", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<"},
-                      ExpectedHintLabelPiece{"ns::Nested", "Nested"},
-                      ExpectedHintLabelPiece{"<int>::"},
                       ExpectedHintLabelPiece{"Class", "NestedClass"},
                       ExpectedHintLabelPiece{"<const "},
                       ExpectedHintLabelPiece{"Container", "Container"},
@@ -1827,7 +1811,7 @@ TEST(TypeHints, Links) {
 
   assertTypeLinkHints(Source, "10", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"Container", "Container"},
-                      ExpectedHintLabelPiece{"<ns::"},
+                      ExpectedHintLabelPiece{"<"},
                       ExpectedHintLabelPiece{"NestedInt", "NestedInt"},
                       ExpectedHintLabelPiece{">"});
 

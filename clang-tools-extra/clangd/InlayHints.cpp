@@ -566,6 +566,8 @@ public:
       case NestedNameSpecifier::NamespaceAlias:
       case NestedNameSpecifier::Global:
       case NestedNameSpecifier::Super: {
+        if (PP.SuppressScope)
+          break;
         std::string Label;
         llvm::raw_string_ostream OS(Label);
         NNS->print(OS, PP);
@@ -574,6 +576,8 @@ public:
       }
       case NestedNameSpecifier::TypeSpec:
       case NestedNameSpecifier::TypeSpecWithTemplate:
+        if (PP.SuppressScope)
+          break;
         CurrentTypeRAII Guard(
             *this,
             QualType(
