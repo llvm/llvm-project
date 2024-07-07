@@ -10,10 +10,6 @@
 #ifndef _LIBCPP_EXPERIMENTAL_MATH
 #define _LIBCPP_EXPERIMENTAL_MATH
 
-// The following macro name shall be conditionally defined by the implementation
-// to indicate conformance to the International Standard ISO/IEC JTC 1/SC 22/WG 21 N3060
-// #define __STDCPP_MATH_SPEC_FUNCS__ 201003L
-
 #include <experimental/__config>
 
 #if _LIBCPP_STD_VER >= 17
