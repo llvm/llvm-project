@@ -535,10 +535,6 @@ public:
 
   void VisitTagType(const TagType *TT) {
     auto *D = TT->getDecl();
-    if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(D))
-      return handleTemplateSpecialization(
-          TemplateName(Specialization->getSpecializedTemplate()),
-          Specialization->getTemplateArgs().asArray());
     if (auto *RD = dyn_cast<CXXRecordDecl>(D);
         RD && !RD->getTemplateInstantiationPattern())
       return addLabel(
