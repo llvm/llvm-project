@@ -22,10 +22,10 @@
 /// \return the hermite polynomial \f$ H_{n}(x) \f$
 /// \note The implementation is based on the recurrence formula
 /// \f[
-/// nH_{n+1}(x) = 2x H_{n}(x) - 2 n H_{n-1}
+/// H_{n+1}(x) = 2x H_{n}(x) - 2 n H_{n-1}
 /// \f]
 /// Press, William H., et al. Numerical recipes 3rd edition: The art of
-/// scientific computing. Cambridge university press, 2007, p. 182.
+/// scientific computing. Cambridge university press, 2007, p. 183.
 template <class _Real>
 _Real __libcpp_hermite_recurrence(unsigned __n, _Real __x) {
   if (__n == 0u)
