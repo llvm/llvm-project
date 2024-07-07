@@ -49,12 +49,12 @@ define double @fast_cabs_zero_real(double %imag) {
   ret double %call
 }
 
-define double @fast_cabs_zero_real(double %real) {
-; CHECK-LABEL: @fast_cabs_zero_real(
+define double @fast_cabs_zero_imag(double %real) {
+; CHECK-LABEL: @fast_cabs_zero_imag(
 ; CHECK-NEXT:    [[CABS:%.*]] = tail call double @llvm.fabs.f64(double [[REAL:%.*]])
 ; CHECK-NEXT:    ret double [[CABS]]
 ;
-  %call = tail call double @cabs(double %real, 0.0)
+  %call = tail call double @cabs(double %real, double 0.0)
   ret double %call
 }
 
@@ -79,12 +79,12 @@ define float @fast_cabsf_zero_real(float %imag) {
   ret float %call
 }
 
-define float @fast_cabsf_zero_real(float %real) {
-; CHECK-LABEL: @fast_cabsf_zero_real(
+define float @fast_cabsf_zero_imag(float %real) {
+; CHECK-LABEL: @fast_cabsf_zero_imag(
 ; CHECK-NEXT:    [[CABS:%.*]] = tail call float @llvm.fabs.f64(float [[REAL:%.*]])
 ; CHECK-NEXT:    ret float [[CABS]]
 ;
-  %call = tail call float @cabsf(float %real, 0.0)
+  %call = tail call float @cabsf(float %real, float 0.0)
   ret float %call
 }
 
@@ -109,12 +109,12 @@ define fp128 @fast_cabsl_zero_real(fp128 %imag) {
   ret fp128 %call
 }
 
-define fp128 @fast_cabsl_zero_real(fp128 %real) {
-; CHECK-LABEL: @fast_cabsl_zero_real(
+define fp128 @fast_cabsl_zero_imag(fp128 %real) {
+; CHECK-LABEL: @fast_cabsl_zero_imag(
 ; CHECK-NEXT:    [[CABS:%.*]] = tail call fp128 @llvm.fabs.f128(fp128 [[REAL:%.*]])
 ; CHECK-NEXT:    ret fp128 [[CABS]]
 ;
-  %call = tail call fp128 @cabsl(fp128 %real, 0.0)
+  %call = tail call fp128 @cabsl(fp128 %real, fp128 0.0)
   ret fp128 %call
 }
 
