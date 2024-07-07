@@ -402,13 +402,13 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   };
 
   void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
-                llvm::function_ref<SourceLocation()> SourceLocationGetter) {
+                SourceLocation Location) {
     std::string Label;
     llvm::raw_string_ostream OS(Label);
     NamePrinter(OS);
     auto &Name = LabelChunks.emplace_back();
     Name.value = std::move(Label);
-    Name.location = makeLocation(Context, SourceLocationGetter(), MainFilePath);
+    Name.location = makeLocation(Context, Location, MainFilePath);
   }
 
   void addLabel(std::string Label) {
@@ -497,7 +497,7 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
                if (TemplateNameLocation.isValid())
                  return TemplateNameLocation;
                return Location;
-             });
+             }());
 
     addLabel("<");
     printTemplateArgumentList(Args);
@@ -544,14 +544,14 @@ public:
         RD && !RD->getTemplateInstantiationPattern())
       return addLabel(
           [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
-          [&] { return nameLocation(*RD, SM); });
+          [&] { return nameLocation(*RD, SM); }());
     return VisitType(TT);
   }
 
   void VisitEnumType(const EnumType *ET) {
     return addLabel(
         [&](llvm::raw_ostream &OS) { return ET->getDecl()->printName(OS, PP); },
-        [&] { return nameLocation(*ET->getDecl(), SM); });
+        [&] { return nameLocation(*ET->getDecl(), SM); }());
   }
 
   void VisitAutoType(const AutoType *AT) {
@@ -625,21 +625,37 @@ public:
                if (auto *UD = dyn_cast<UsingDecl>(Introducer))
                  return nameLocation(*UD, SM);
                return nameLocation(*Introducer, SM);
-             });
+             }());
   }
 
   void VisitTypedefType(const TypedefType *TT) {
     addLabel([&](llvm::raw_ostream &OS) { TT->getDecl()->printName(OS); },
-             [&] { return nameLocation(*TT->getDecl(), SM); });
+             [&] { return nameLocation(*TT->getDecl(), SM); }());
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
     maybeAddQualifiers();
     SourceLocation Location;
+    // Special case the ClassTemplateSpecializationDecl:
+    // 1) We want the location of an explicit specialization, if present.
+    // 2) For implicit specializations, the associated CXXRecordDecl might be
+    // pointing to a *declaration*. We want to find out the definition if
+    // possible. Unfortunately, RecordDecl::getDefinition() doesn't work
+    // straightforwardly in this case.
     if (auto *Specialization =
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-                TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
+                TST->desugar().getCanonicalType()->getAsCXXRecordDecl())) {
       Location = nameLocation(*Specialization, SM);
+      // The template argument might be associated to a Decl whose
+      // specialization kind is TSK_Undeclared.
+      if (!Specialization->isExplicitInstantiationOrSpecialization()) {
+        auto Pattern = Specialization->getSpecializedTemplateOrPartial();
+        if (auto *Template = Pattern.dyn_cast<ClassTemplateDecl *>())
+          if (CXXRecordDecl *Definition =
+                  Template->getTemplatedDecl()->getDefinition())
+            Location = nameLocation(*Definition, SM);
+      }
+    }
     return handleTemplateSpecialization(TST->getTemplateName(),
                                         TST->template_arguments(), Location);
   }

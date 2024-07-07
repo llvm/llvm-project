@@ -1840,6 +1840,35 @@ TEST(TypeHints, Links) {
                       ExpectedHintLabelPiece{">"});
 }
 
+TEST(TypeHints, LinksForForwardDeclarations) {
+  StringRef Source(R"cpp(
+    template <class... T>
+    struct $Container[[Container]] {};
+
+    // Test that we always prefer the location of the definition in the
+    // presence of a forward declaration.
+    template <class... T>
+    struct Container;
+
+    struct $S[[S]] {};
+
+    struct S;
+
+    struct $W[[W]];
+
+    auto $1[[Use]] = Container<Container<S>, W>();
+  )cpp");
+
+  assertTypeLinkHints(
+      Source, "1", ExpectedHintLabelPiece{": "},
+      ExpectedHintLabelPiece{"Container", "Container"},
+      ExpectedHintLabelPiece{"<"},
+      ExpectedHintLabelPiece{"Container", "Container"},
+      ExpectedHintLabelPiece{"<"}, ExpectedHintLabelPiece{"S", "S"},
+      ExpectedHintLabelPiece{">, "}, ExpectedHintLabelPiece{"W", "W"},
+      ExpectedHintLabelPiece{">"});
+}
+
 TEST(DesignatorHints, Basic) {
   assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };
