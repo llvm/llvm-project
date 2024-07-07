@@ -56,7 +56,7 @@ struct __hypot_factors {
 
 // returns [underflow_factors, overflow_factors]
 template <class _Real>
-std::array<__hypot_factors<_Real>, 2> __create_factors() {
+_LIBCPP_HIDE_FROM_ABI std::array<__hypot_factors<_Real>, 2> __create_factors() {
   static_assert(std::numeric_limits<_Real>::is_iec559);
 
   __hypot_factors<_Real> __underflow, __overflow;
@@ -85,7 +85,7 @@ std::array<__hypot_factors<_Real>, 2> __create_factors() {
 }
 
 template <class _Real>
-_Real __hypot(_Real __x, _Real __y, _Real __z) {
+_LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
   const auto [__underflow, __overflow] = __create_factors<_Real>();
   _Real __M                            = std::max({__math::fabs(__x), __math::fabs(__y), __math::fabs(__z)});
   if (__M > __overflow.__threshold) { // x*x + y*y + z*z might overflow
