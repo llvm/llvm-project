@@ -13,7 +13,7 @@ Section,Description,Assignee,Complete
 | `[sf.cmath.ellint.2] <https://wg21.link/sf.cmath.ellint.2>`_, std::ellint_2, None, |Not Started|
 | `[sf.cmath.ellint.3] <https://wg21.link/sf.cmath.ellint.3>`_, std::ellint_3, None, |Not Started|
 | `[sf.cmath.expint] <https://wg21.link/sf.cmath.expint>`_, std::expint, None, |Not Started|
-| `[sf.cmath.hermite] <https://wg21.link/sf.cmath.hermite>`_, std::hermite, None, |Complete|
+| `[sf.cmath.hermite] <https://wg21.link/sf.cmath.hermite>`_, std::hermite, Paul Xi Cao, |Complete|
 | `[sf.cmath.laguerre] <https://wg21.link/sf.cmath.laguerre>`_, std::laguerre, None, |Not Started|
 | `[sf.cmath.legendre] <https://wg21.link/sf.cmath.legendre>`_, std::legendre, None, |Not Started|
 | `[sf.cmath.riemann.zeta] <https://wg21.link/sf.cmath.riemann.zeta>`_, std::riemann_zeta, None, |Not Started|
