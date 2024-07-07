@@ -42,10 +42,9 @@ _Real __libcpp_hermite_recurrence(const unsigned __n, const _Real __x) {
 }
 
 template <class _Real> _Real __libcpp_hermite(const unsigned __n, const _Real __x) {
-  if (std::isnan(__x))
-    return std::numeric_limits<_Real>::quiet_NaN();
-
-  return __libcpp_hermite_recurrence(__n, __x);
+  return std::isnan(__x)
+    ? std::numeric_limits<_Real>::quiet_NaN()
+    :  __libcpp_hermite_recurrence(__n, __x);
 }
 
 #endif // _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
