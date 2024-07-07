@@ -29,8 +29,8 @@
 inline constexpr unsigned MAX_N = 128;
 
 template <class T>
-std::array<T, 7> sample_points() {
-  return {-1.0, -0.5, -0.1, 0.0, 0.1, 0.5, 1.0};
+std::array<T, 11> sample_points() {
+  return {-12.34, -7.42, -1.0, -0.5, -0.1, 0.0, 0.1, 0.5, 1.0, 5.67, 15.67};
 }
 
 template <class Real>
