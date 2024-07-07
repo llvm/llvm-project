@@ -776,7 +776,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp __constexpr_scalbn(_Tp _
 /// Press, William H., et al. Numerical recipes 3rd edition: The art of
 /// scientific computing. Cambridge university press, 2007, p. 183.
 template <class _Real>
-_LIBCPP_HIDE_FROM_ABI _Real __libcpp_hermite(unsigned __n, _Real __x) {
+_LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
   if (isnan(__x))
     return numeric_limits<_Real>::quiet_NaN();
 
@@ -794,14 +794,14 @@ _LIBCPP_HIDE_FROM_ABI _Real __libcpp_hermite(unsigned __n, _Real __x) {
   return __H_n;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, double __x) { return __libcpp_hermite(__n, __x); }
+inline _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, double __x) { return __hermite(__n, __x); }
 
 inline _LIBCPP_HIDE_FROM_ABI float hermite(unsigned __n, float __x) {
   // use double internally -- float is too prone to overflow!
   return static_cast<float>(hermite(__n, static_cast<double>(__x)));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double hermite(unsigned __n, long double __x) { return __libcpp_hermite(__n, __x); }
+inline _LIBCPP_HIDE_FROM_ABI long double hermite(unsigned __n, long double __x) { return __hermite(__n, __x); }
 
 inline _LIBCPP_HIDE_FROM_ABI float hermitef(unsigned __n, float __x) { return hermite(__n, __x); }
 
