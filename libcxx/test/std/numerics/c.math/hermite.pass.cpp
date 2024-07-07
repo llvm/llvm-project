@@ -329,7 +329,7 @@ struct TestInt {
   void operator()() {
     // checks that std::hermite(unsigned, Integer) actually wraps std::hermite(unsigned, double)
     for (unsigned n = 0; n < g_max_n; ++n)
-      for (Integer x : {-1, 0, 1})
+      for (Integer x : {-42, -7, -5, -1, 0, 1, 5, 7, 42})
         assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
   }
 };
