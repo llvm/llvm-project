@@ -4790,8 +4790,8 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
   assert(VF.isVector() && "Checking a scalar VF?");
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
                           Plan.getCanonicalIV()->getScalarType()->getContext());
-  // Set of types known to not generate vector values.
-  DenseSet<Type *> WillNotWiden;
+  // Set of already visited types.
+  DenseSet<Type *> Visited;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
@@ -4866,7 +4866,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       VPValue *ToCheck =
           R.getNumDefinedValues() >= 1 ? R.getVPValue(0) : R.getOperand(1);
       Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
-      if (!WillNotWiden.insert({ScalarTy}).second)
+      if (!Visited.insert({ScalarTy}).second)
         continue;
       if (WillWiden(ScalarTy))
         return true;
