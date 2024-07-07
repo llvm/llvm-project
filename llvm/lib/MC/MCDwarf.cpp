@@ -1512,6 +1512,10 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.emitBytes(Instr.getValues());
     return;
 
+  case MCCFIInstruction::OpLabel:
+    Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
+    return;
+
   case MCCFIInstruction::OpLLVMRegisterPair: {
     // CFI for a register spilled to a pair of SGPRs is implemented as an
     // expression(E) rule where E is a composite location description with

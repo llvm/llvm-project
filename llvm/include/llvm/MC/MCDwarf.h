@@ -501,6 +501,7 @@ public:
     OpWindowSave,
     OpNegateRAState,
     OpGnuArgsSize,
+    OpLabel,
     OpLLVMRegisterPair,
     OpLLVMVectorRegisters,
     OpLLVMVectorOffset,
@@ -546,6 +547,7 @@ private:
       unsigned Register;
       unsigned Register2;
     } RR;
+    MCSymbol *CfiLabel;
   } U;
   OpType Operation;
   SMLoc Loc;
@@ -584,6 +586,12 @@ private:
       : Label(L), Operation(Op), Loc(Loc),
         ExtraFields(std::forward<ExtraFieldsTy>(ExtraFields)) {
     U.RI = {R, O};
+  }
+
+  MCCFIInstruction(OpType Op, MCSymbol *L, MCSymbol *CfiLabel, SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
+    assert(Op == OpLabel);
+    U.CfiLabel = CfiLabel;
   }
 
 public:
@@ -706,6 +714,11 @@ public:
     return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
   }
 
+  static MCCFIInstruction createLabel(MCSymbol *L, MCSymbol *CfiLabel,
+                                      SMLoc Loc) {
+    return MCCFIInstruction(OpLabel, L, CfiLabel, Loc);
+  }
+
   /// .cfi_llvm_register_pair Previous value of Register is saved in R1:R2.
   static MCCFIInstruction
   createLLVMRegisterPair(MCSymbol *L, unsigned Register, unsigned R1,
@@ -781,6 +794,11 @@ public:
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
            Operation == OpLLVMVectorOffset);
     return U.RI.Offset;
+  }
+
+  MCSymbol *getCfiLabel() const {
+    assert(Operation == OpLabel);
+    return U.CfiLabel;
   }
 
   StringRef getValues() const {

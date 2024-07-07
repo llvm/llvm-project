@@ -1,4 +1,3 @@
-# XFAIL: *
 # RUN: llvm-mc -triple x86_64 %s | FileCheck %s --check-prefix=ASM
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-readelf -sX %t | FileCheck %s --check-prefix=SYMTAB

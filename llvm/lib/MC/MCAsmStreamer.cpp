@@ -365,6 +365,7 @@ public:
   void emitCFILLVMVectorOffset(int64_t Register, int64_t RegisterSize,
                                int64_t MaskRegister, int64_t MaskRegisterSize,
                                int64_t Offset, SMLoc Loc) override;
+  void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
 
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
@@ -2175,6 +2176,12 @@ void MCAsmStreamer::emitCFIReturnColumn(int64_t Register) {
   MCStreamer::emitCFIReturnColumn(Register);
   OS << "\t.cfi_return_column ";
   EmitRegisterName(Register);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
+  MCStreamer::emitCFILabelDirective(Loc, Name);
+  OS << "\t.cfi_label " << Name;
   EmitEOL();
 }
 

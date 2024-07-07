@@ -100,7 +100,3 @@ Revert: breaking MIOpen test 2
 f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
 812f9e81d2f7 [MCParser] .altmacro: ignore & after a token
 ---
-revert: needs downstream merging from Emma
-9abb574f9a68 [MC] Make MCCFIInstruction smaller    
-2718654c542c [MC] Support .cfi_label
----
