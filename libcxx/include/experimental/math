@@ -24,12 +24,16 @@ _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
 
 inline _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, double __x) { return __libcpp_hermite(__n, __x); }
 
-inline _LIBCPP_HIDE_FROM_ABI float hermitef(unsigned __n, float __x) {
+inline _LIBCPP_HIDE_FROM_ABI float hermite(unsigned __n, float __x) {
   // use double internally -- float is too prone to overflow!
   return static_cast<float>(__libcpp_hermite(__n, static_cast<double>(__x)));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x) { return __libcpp_hermite(__n, __x); }
+inline _LIBCPP_HIDE_FROM_ABI long double hermite(unsigned __n, long double __x) { return __libcpp_hermite(__n, __x); }
+
+inline _LIBCPP_HIDE_FROM_ABI float hermitef(unsigned __n, float __x) { return hermite(__n, __x); }
+
+inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x) { return hermite(__n, __x); }
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
