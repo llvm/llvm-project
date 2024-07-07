@@ -24,8 +24,6 @@
 #include <vector>
 #include <array>
 
-#include <assert_macros.h>
-
 inline constexpr unsigned MAX_N = 128;
 
 template <class T>
