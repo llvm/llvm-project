@@ -59,7 +59,7 @@ int main(int, char**)
     std::thread t1 = support::make_test_thread(f1);
     std::thread t2 = support::make_test_thread(f2);
     while (ready_count.load() != 2) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     {
         std::unique_lock<std::mutex>lk(mut);
