@@ -1761,8 +1761,8 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
 }
 
 bool DIExpression::extractLeadingOffset(
-    int64_t &Offset, SmallVectorImpl<uint64_t> &RemainingOps) const {
-  Offset = 0;
+    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+  OffsetInBytes = 0;
   RemainingOps.clear();
 
   auto SingleLocEltsOpt = getSingleLocationExpressionElements();
@@ -1779,14 +1779,14 @@ bool DIExpression::extractLeadingOffset(
         Op == dwarf::DW_OP_LLVM_extract_bits_sext) {
       break;
     } else if (Op == dwarf::DW_OP_plus_uconst) {
-      Offset += ExprOpIt->getArg(0);
+      OffsetInBytes += ExprOpIt->getArg(0);
     } else if (Op == dwarf::DW_OP_constu) {
       uint64_t Value = ExprOpIt->getArg(0);
       ++ExprOpIt;
       if (ExprOpIt->getOp() == dwarf::DW_OP_plus)
-        Offset += Value;
+        OffsetInBytes += Value;
       else if (ExprOpIt->getOp() == dwarf::DW_OP_minus)
-        Offset -= Value;
+        OffsetInBytes -= Value;
       else
         return false;
     } else {

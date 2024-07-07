@@ -2989,7 +2989,7 @@ public:
   ///
   /// We don't try very hard to interpret the expression because we assume that
   /// foldConstantMath has canonicalized the expression.
-  bool extractLeadingOffset(int64_t &Offset,
+  bool extractLeadingOffset(int64_t &OffsetInBytes,
                             SmallVectorImpl<uint64_t> &RemainingOps) const;
 
   /// Returns true iff this DIExpression contains at least one instance of
