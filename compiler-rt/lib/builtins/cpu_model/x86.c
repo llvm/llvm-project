@@ -367,13 +367,13 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
   }
 }
 
+#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
+
 static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
                                                    unsigned Model,
                                                    const unsigned *Features,
                                                    unsigned *Type,
                                                    unsigned *Subtype) {
-#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
-
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
   const char *CPU = 0;
@@ -809,6 +809,8 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
 
   return CPU;
 }
+
+#undef testFeature
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
