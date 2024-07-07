@@ -13,7 +13,7 @@
 // inline constexpr ignore-type ignore;
 
 // std::ignore should be provided by the headers <tuple> and <utility>.
-// This tests validates its presence in <tuple>.
+// This test validates its presence in <tuple>.
 
 #include <tuple>
 
