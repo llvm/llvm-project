@@ -10,86 +10,95 @@
 
 #include <cassert>
 #include <cmath>
-#include <iostream>
 #include <limits>
 #include <vector>
 #include <array>
 
 #include <assert_macros.h>
 
-
 namespace {
+
+inline constexpr unsigned MAX_N = 128;
+
 template <class T>
-void testHermiteNaNPropagation() {
-  const unsigned MaxN = 127;
-  const T x           = std::numeric_limits<T>::quiet_NaN();
-  for (unsigned n = 0; n <= MaxN; ++n) {
-    assert(std::isnan(std::hermite(n, x)));
-  }
+std::array<T, 7> sample_points() {
+  return {-1.0, -0.5, -0.1, 0.0, 0.1, 0.5, 1.0};
 }
 
 template <class T>
-void testHermiteNotNaN(const T x) {
+void test_NaN_propagation() {
+  T NaN = std::numeric_limits<T>::quiet_NaN();
+  for (unsigned n = 0; n < MAX_N; ++n)
+    assert(std::isnan(std::hermite(n, NaN)));
+}
+
+template <class T>
+void test_not_NaN(T x) {
   assert(!std::isnan(x));
-  const unsigned MaxN = 127;
-  for (unsigned n = 0; n <= MaxN; ++n) {
+  for (unsigned n = 0; n < MAX_N; ++n)
     assert(!std::isnan(std::hermite(n, x)));
-  }
 }
 
 template <class T>
-void testHermiteAnalytic(const T x, const T AbsTolerance, const T RelTolerance) {
-  assert(!std::isnan(x));
-  const auto compareFloatingPoint = [AbsTolerance, RelTolerance](const T Result, const T Expected) {
-    if (std::isinf(Expected) && std::isinf(Result))
+struct CompareFloatingValues {
+  T abs_tol;
+  T rel_tol;
+
+  bool operator()(T result, T expected) const {
+    if (std::isinf(expected) && std::isinf(result))
       return true;
 
-    if (std::isnan(Expected) || std::isnan(Result))
+    if (std::isnan(expected) || std::isnan(result))
       return false;
 
-    const T Tolerance = AbsTolerance + std::abs(Expected) * RelTolerance;
-    return std::abs(Result - Expected) < Tolerance;
-  };
+    T tol = abs_tol + std::abs(expected) * rel_tol;
+    return std::abs(result - expected) < tol;
+  }
+};
 
-  const auto h0 = [](T) { return T(1); };
-  const auto h1 = [](T y) { return T(2) * y; };
-  const auto h2 = [](T y) { return T(4) * y * y - T(2); };
-  const auto h3 = [](T y) { return y * (T(8) * y * y - T(12)); };
-  const auto h4 = [](T y) { return (T(16) * y * y * y * y - T(48) * y * y + T(12)); };
-  const auto h5 = [](T y) { return y * (T(32) * y * y * y * y - T(160) * y * y + T(120)); };
+template <class T>
+void test_analytic_solution(T x, T abs_tol, T rel_tol) {
+  assert(!std::isnan(x));
 
-  assert(compareFloatingPoint(std::hermite(0, x), h0(x)));
-  assert(compareFloatingPoint(std::hermite(1, x), h1(x)));
-  assert(compareFloatingPoint(std::hermite(2, x), h2(x)));
-  assert(compareFloatingPoint(std::hermite(3, x), h3(x)));
-  assert(compareFloatingPoint(std::hermite(4, x), h4(x)));
-  assert(compareFloatingPoint(std::hermite(5, x), h5(x)));
+  const auto h0 = [](T) -> T { return 1; };
+  const auto h1 = [](T y) -> T { return 2 * y; };
+  const auto h2 = [](T y) -> T { return 4 * y * y - 2; };
+  const auto h3 = [](T y) -> T { return y * (8 * y * y - 12); };
+  const auto h4 = [](T y) -> T { return (16 * std::pow(y, 4) - 48 * y * y + 12); };
+  const auto h5 = [](T y) -> T { return y * (32 * std::pow(y, 4) - 160 * y * y + 120); };
+
+  const CompareFloatingValues<T> compare{.abs_tol = abs_tol, .rel_tol = rel_tol};
+  assert(compare(std::hermite(0, x), h0(x)));
+  assert(compare(std::hermite(1, x), h1(x)));
+  assert(compare(std::hermite(2, x), h2(x)));
+  assert(compare(std::hermite(3, x), h3(x)));
+  assert(compare(std::hermite(4, x), h4(x)));
+  assert(compare(std::hermite(5, x), h5(x)));
 }
 
 /// \details This method checks if the following recurrence relation holds:
 /// \f[
-/// H_{n+1}(x) = 2x H_{n}(x) - 2n H_{n-1}(x)
+///   H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}(x)
 /// \f]
 template <class T>
-void testRecurrenceRelation(T x, T AbsTolerance, T RelTolerance) {
-  const unsigned MaxN = 127;
-  for (unsigned n = 1; n < MaxN; ++n) {
-    const T HermiteNext           = std::hermite(n + 1, x);
-    const T HermiteNextRecurrence = T(2) * (x * std::hermite(n, x) - T(n) * std::hermite(n - 1, x));
-    const T Tolerance             = AbsTolerance + std::abs(HermiteNext) * RelTolerance;
-    const T Error                 = std::abs(HermiteNextRecurrence - HermiteNext);
+void test_recurrence_relation(T x, T abs_tol, T rel_tol) {
+  assert(!std::isnan(x));
 
-    if (std::isinf(HermiteNext))
+  const CompareFloatingValues<T> compare{.abs_tol = abs_tol, .rel_tol = rel_tol};
+  for (unsigned n = 1; n < MAX_N - 1; ++n) {
+    T H_next            = std::hermite(n + 1, x);
+    T H_next_recurrence = 2 * (x * std::hermite(n, x) - n * std::hermite(n - 1, x));
+
+    if (std::isinf(H_next))
       break;
-    assert(Error < Tolerance);
+    assert(compare(H_next, H_next_recurrence));
   }
 }
 
 template <class T>
-void testRecurrenceRelation(T AbsTolerance, T RelTolerance) {
-  const T Samples[] = {T(-1.0), T(-0.5), T(-0.1), T(0.0), T(0.1), T(0.5), T(1.0)};
-  for (T x : Samples)
-    testRecurrenceRelation(x, AbsTolerance, RelTolerance);
+void test_recurrence_relation(T abs_tol, T rel_tol) {
+  for (T x : sample_points<T>())
+    test_recurrence_relation(x, abs_tol, rel_tol);
 }
 
 /// \note Roots are taken from
@@ -97,31 +106,32 @@ void testRecurrenceRelation(T AbsTolerance, T RelTolerance) {
 /// Table of the zeros and weight factors of the first twenty Hermite
 /// polynomials. US Government Printing Office, 1952.
 template <class T>
-std::vector<T> getHermiteRoots(unsigned n) {
-  if (n == 0u)
+std::vector<T> get_roots(unsigned n) {
+  switch (n) {
+  case 0:
     return {};
-  if (n == 1u)
+  case 1:
     return {T(0)};
-  if (n == 2u)
+  case 2:
     return {T(0.707106781186548)};
-  if (n == 3u)
+  case 3:
     return {T(0), T(1.224744871391589)};
-  if (n == 4u)
+  case 4:
     return {T(0.524647623275290), T(1.650680123885785)};
-  if (n == 5u)
+  case 5:
     return {T(0), T(0.958572464613819), T(2.020182870456086)};
-  if (n == 6u)
+  case 6:
     return {T(0.436077411927617), T(1.335849074013697), T(2.350604973674492)};
-  if (n == 7u)
+  case 7:
     return {T(0), T(0.816287882858965), T(1.673551628767471), T(2.651961356835233)};
-  if (n == 8u)
+  case 8:
     return {T(0.381186990207322), T(1.157193712446780), T(1.981656756695843), T(2.930637420257244)};
-  if (n == 9u)
+  case 9:
     return {T(0), T(0.723551018752838), T(1.468553289216668), T(2.266580584531843), T(3.190993201781528)};
-  if (n == 10u)
+  case 10:
     return {
         T(0.342901327223705), T(1.036610829789514), T(1.756683649299882), T(2.532731674232790), T(3.436159118837738)};
-  if (n == 11u)
+  case 11:
     return {T(0),
             T(0.65680956682100),
             T(1.326557084494933),
@@ -129,7 +139,7 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(2.783290099781652),
             T(3.668470846559583)};
 
-  if (n == 12u)
+  case 12:
     return {T(0.314240376254359),
             T(0.947788391240164),
             T(1.597682635152605),
@@ -137,7 +147,7 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.020637025120890),
             T(3.889724897869782)};
 
-  if (n == 13u)
+  case 13:
     return {T(0),
             T(0.605763879171060),
             T(1.220055036590748),
@@ -146,7 +156,7 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.246608978372410),
             T(4.101337596178640)};
 
-  if (n == 14u)
+  case 14:
     return {T(0.29174551067256),
             T(0.87871378732940),
             T(1.47668273114114),
@@ -155,7 +165,7 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.46265693360227),
             T(4.30444857047363)};
 
-  if (n == 15u)
+  case 15:
     return {T(0.00000000000000),
             T(0.56506958325558),
             T(1.13611558521092),
@@ -165,7 +175,7 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.66995037340445),
             T(4.49999070730939)};
 
-  if (n == 16u)
+  case 16:
     return {T(0.27348104613815),
             T(0.82295144914466),
             T(1.38025853919888),
@@ -175,7 +185,7 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.86944790486012),
             T(4.68873893930582)};
 
-  if (n == 17u)
+  case 17:
     return {T(0),
             T(0.5316330013427),
             T(1.0676487257435),
@@ -185,7 +195,8 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.3789320911415),
             T(4.0619466758755),
             T(4.8713451936744)};
-  if (n == 18u)
+
+  case 18:
     return {T(0.2582677505191),
             T(0.7766829192674),
             T(1.3009208583896),
@@ -195,7 +206,8 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.5737690684863),
             T(4.2481178735681),
             T(5.0483640088745)};
-  if (n == 19u)
+
+  case 19:
     return {T(0),
             T(0.5035201634239),
             T(1.0103683871343),
@@ -206,7 +218,8 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(3.7621873519640),
             T(4.4285328066038),
             T(5.2202716905375)};
-  if (n == 20u)
+
+  case 20:
     return {T(0.2453407083009),
             T(0.7374737285454),
             T(1.2340762153953),
@@ -218,83 +231,80 @@ std::vector<T> getHermiteRoots(unsigned n) {
             T(4.6036824495507),
             T(5.3874808900112)};
 
-  return {};
+  default:
+    throw "Roots of Hermite polynomial of order " + std::to_string(n) + " not implemented!\n";
+  }
 }
 
 /// \param [in] Tolerance of the root. This value must be smaller than
 /// the smallest difference between adjacent roots in the given range
 /// with n <= 20.
 template <class T>
-void testHermiteRoots(T Tolerance) {
+void test_roots(T Tolerance) {
+  const auto is_sign_change = [Tolerance](unsigned n, T x) -> bool {
+    return std::hermite(n, x - Tolerance) * std::hermite(n, x + Tolerance) < 0;
+  };
+
   for (unsigned n = 0; n <= 20u; ++n) {
-    const auto Roots = getHermiteRoots<T>(n);
-    for (T x : Roots) {
+    for (T x : get_roots<T>(n)) {
       // the roots are symmetric: if x is a root, so is -x
-      if (x > T(0))
-        assert(std::signbit(std::hermite(n, -x + Tolerance)) != std::signbit(std::hermite(n, -x - Tolerance)));
-      assert(std::signbit(std::hermite(n, x + Tolerance)) != std::signbit(std::hermite(n, x - Tolerance)));
+      if (x > 0)
+        assert(is_sign_change(n, -x));
+      assert(is_sign_change(n, x));
     }
   }
 }
 
 template <class T>
-void testHermite(const T AbsTolerance, const T RelTolerance) {
-  testHermiteNaNPropagation<T>();
-  const T Samples[] = {T(-1.0), T(-0.5), T(-0.1), T(0.0), T(0.1), T(0.5), T(1.0)};
+void test_hermite(T abs_tol, T rel_tol) {
+  test_NaN_propagation<T>();
 
-  for (T x : Samples) {
-    testHermiteNotNaN(x);
-    testHermiteAnalytic(x, AbsTolerance, RelTolerance);
+  for (T x : sample_points<T>()) {
+    test_not_NaN(x);
+    test_analytic_solution(x, abs_tol, rel_tol);
   }
 }
 
 template <class Integer>
-void testHermiteByInteger() {
-  const unsigned nMax = 128;
-  for (unsigned n = 0; n < nMax; ++n)
+void test_integers() {
+  for (unsigned n = 0; n < MAX_N; ++n)
     for (Integer x : {-1, 0, 1})
       assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
 }
 
-void testHermiteF() {
-  const unsigned nMax = 128;
-  const std::array samples{-1.0f, -0.5f, -0.1f, 0.0f, 0.1f, 0.5f, 1.0f};
-
-  for (unsigned n = 0; n < nMax; ++n)
-    for (float x : samples)
+void test_hermitef() {
+  for (unsigned n = 0; n < MAX_N; ++n)
+    for (float x : sample_points<float>())
       assert(std::hermite(n, x) == std::hermitef(n, x));
 }
 
-void testHermiteL() {
-  const unsigned nMax = 128;
-  const std::array samples{-1.0l, -0.5l, -0.1l, 0.0l, 0.1l, 0.5l, 1.0l};
-
-  for (unsigned n = 0; n < nMax; ++n)
-    for (long double x : samples)
+void test_hermitel() {
+  for (unsigned n = 0; n < MAX_N; ++n)
+    for (long double x : sample_points<long double>())
       assert(std::hermite(n, x) == std::hermitel(n, x));
 }
 } // namespace
 
 int main(int, char**) {
-  testHermite<float>(1e-5f, 1e-5f);
-  testHermite<double>(1e-11, 1e-11);
-  testHermite<long double>(1e-12l, 1e-12l);
+  test_hermite<float>(1e-5f, 1e-5f);
+  test_hermite<double>(1e-11, 1e-11);
+  test_hermite<long double>(1e-12l, 1e-12l);
 
-  testHermiteF();
-  testHermiteL();
+  test_hermitef();
+  test_hermitel();
 
-  testRecurrenceRelation<float>(1e-5f, 1e-5f);
-  testRecurrenceRelation<double>(1e-11, 1e-11);
-  testRecurrenceRelation<long double>(1e-12l, 1e-12l);
+  test_recurrence_relation<float>(1e-5f, 1e-5f);
+  test_recurrence_relation<double>(1e-11, 1e-11);
+  test_recurrence_relation<long double>(1e-12l, 1e-12l);
 
-  testHermiteRoots<float>(1e-5f);
-  testHermiteRoots<double>(1e-9);
-  testHermiteRoots<long double>(1e-10l);
+  test_roots<float>(1e-5f);
+  test_roots<double>(1e-9);
+  test_roots<long double>(1e-10l);
 
-  testHermiteByInteger<short>();
-  testHermiteByInteger<int>();
-  testHermiteByInteger<long>();
-  testHermiteByInteger<long long>();
+  test_integers<short>();
+  test_integers<int>();
+  test_integers<long>();
+  test_integers<long long>();
 
   return 0;
 }
