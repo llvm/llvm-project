@@ -434,6 +434,11 @@ def umin       : SDNode<"ISD::UMIN"      , SDTIntBinOp,
 def umax       : SDNode<"ISD::UMAX"      , SDTIntBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
 
+def scmp       : SDNode<"ISD::SCMP"      , SDTIntBinOp,
+                                  []>;
+def ucmp       : SDNode<"ISD::UCMP"      , SDTIntBinOp,
+                                  []>;
+
 def saddsat    : SDNode<"ISD::SADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def uaddsat    : SDNode<"ISD::UADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def ssubsat    : SDNode<"ISD::SSUBSAT"   , SDTIntBinOp>;
@@ -509,6 +514,7 @@ def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;
 def fsqrt      : SDNode<"ISD::FSQRT"      , SDTFPUnaryOp>;
 def fsin       : SDNode<"ISD::FSIN"       , SDTFPUnaryOp>;
 def fcos       : SDNode<"ISD::FCOS"       , SDTFPUnaryOp>;
+def ftan       : SDNode<"ISD::FTAN"       , SDTFPUnaryOp>;
 def fexp2      : SDNode<"ISD::FEXP2"      , SDTFPUnaryOp>;
 def fexp10     : SDNode<"ISD::FEXP10"     , SDTFPUnaryOp>;
 def fpow       : SDNode<"ISD::FPOW"       , SDTFPBinOp>;
@@ -561,6 +567,8 @@ def strict_fsqrt      : SDNode<"ISD::STRICT_FSQRT",
 def strict_fsin       : SDNode<"ISD::STRICT_FSIN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fcos       : SDNode<"ISD::STRICT_FCOS",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_ftan       : SDNode<"ISD::STRICT_FTAN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fexp2      : SDNode<"ISD::STRICT_FEXP2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
@@ -1517,6 +1525,9 @@ def any_fsin       : PatFrags<(ops node:$src),
 def any_fcos       : PatFrags<(ops node:$src),
                               [(strict_fcos node:$src),
                                (fcos node:$src)]>;
+def any_ftan       : PatFrags<(ops node:$src),
+                              [(strict_ftan node:$src),
+                               (ftan node:$src)]>;
 def any_fexp2      : PatFrags<(ops node:$src),
                               [(strict_fexp2 node:$src),
                                (fexp2 node:$src)]>;
@@ -1674,60 +1685,38 @@ multiclass ternary_atomic_op_ord {
   }
 }
 
-multiclass binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
-  def _8 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op  node:$ptr, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = !if(IsInt, i8, ?);
-  }
-  def _16 : PatFrag<(ops node:$ptr, node:$val),
-                    (atomic_op node:$ptr, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = !if(IsInt, i16, f16);
-  }
-  def _32 : PatFrag<(ops node:$ptr, node:$val),
-                    (atomic_op node:$ptr, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = !if(IsInt, i32, f32);
-  }
-  def _64 : PatFrag<(ops node:$ptr, node:$val),
-                    (atomic_op node:$ptr, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = !if(IsInt, i64, f64);
-  }
+multiclass binary_atomic_op<SDNode atomic_op> {
+  foreach vt = [ i8, i16, i32, i64 ] in {
+    def _#vt : PatFrag<(ops node:$ptr, node:$val),
+                       (atomic_op  node:$ptr, node:$val)> {
+      let IsAtomic = true;
+      let MemoryVT = vt;
+    }
 
-  defm NAME#_8  : binary_atomic_op_ord;
-  defm NAME#_16 : binary_atomic_op_ord;
-  defm NAME#_32 : binary_atomic_op_ord;
-  defm NAME#_64 : binary_atomic_op_ord;
+    defm NAME#_#vt  : binary_atomic_op_ord;
+  }
+}
+
+multiclass binary_atomic_op_fp<SDNode atomic_op> {
+  foreach vt = [ f16, bf16, v2f16, v2bf16, f32, f64 ] in {
+    def _#vt : PatFrag<(ops node:$ptr, node:$val),
+                       (atomic_op node:$ptr, node:$val)> {
+      let IsAtomic = true;
+      let MemoryVT = vt;
+    }
+  }
 }
 
 multiclass ternary_atomic_op<SDNode atomic_op> {
-  def _8 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                   (atomic_op  node:$ptr, node:$cmp, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = i8;
-  }
-  def _16 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = i16;
-  }
-  def _32 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = i32;
-  }
-  def _64 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
-    let IsAtomic = true;
-    let MemoryVT = i64;
-  }
+  foreach vt = [ i8, i16, i32, i64 ] in {
+    def _#vt : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                       (atomic_op node:$ptr, node:$cmp, node:$val)> {
+      let IsAtomic = true;
+      let MemoryVT = vt;
+    }
 
-  defm NAME#_8  : ternary_atomic_op_ord;
-  defm NAME#_16 : ternary_atomic_op_ord;
-  defm NAME#_32 : ternary_atomic_op_ord;
-  defm NAME#_64 : ternary_atomic_op_ord;
+    defm NAME#_#vt  : ternary_atomic_op_ord;
+  }
 }
 
 defm atomic_load_add  : binary_atomic_op<atomic_load_add>;

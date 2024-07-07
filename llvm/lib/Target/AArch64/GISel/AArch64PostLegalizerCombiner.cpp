@@ -309,6 +309,8 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (!Store.isSimple())
     return false;
   LLT ValTy = MRI.getType(Store.getValueReg());
+  if (ValTy.isScalableVector())
+    return false;
   if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
     return false;
   if (Store.getMemSizeInBits() != ValTy.getSizeInBits())
@@ -378,6 +380,61 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
   B.buildInstr(
       AArch64::G_BSP, {MI.getOperand(0).getReg()},
       {std::get<2>(MatchInfo), std::get<0>(MatchInfo), std::get<1>(MatchInfo)});
+  MI.eraseFromParent();
+}
+
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         Register &SrcReg) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  if (DstTy != LLT::fixed_vector(2, 64) && DstTy != LLT::fixed_vector(2, 32) &&
+      DstTy != LLT::fixed_vector(4, 32) && DstTy != LLT::fixed_vector(4, 16) &&
+      DstTy != LLT::fixed_vector(8, 16))
+    return false;
+
+  auto AndMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  if (AndMI->getOpcode() != TargetOpcode::G_AND)
+    return false;
+  auto LShrMI = getDefIgnoringCopies(AndMI->getOperand(1).getReg(), MRI);
+  if (LShrMI->getOpcode() != TargetOpcode::G_LSHR)
+    return false;
+
+  // Check the constant splat values
+  auto V1 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(MI.getOperand(2).getReg()), MRI);
+  auto V2 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(AndMI->getOperand(2).getReg()), MRI);
+  auto V3 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(LShrMI->getOperand(2).getReg()), MRI);
+  if (!V1.has_value() || !V2.has_value() || !V3.has_value())
+    return false;
+  unsigned HalfSize = DstTy.getScalarSizeInBits() / 2;
+  if (!V1.value().isMask(HalfSize) || V2.value() != (1ULL | 1ULL << HalfSize) ||
+      V3 != (HalfSize - 1))
+    return false;
+
+  SrcReg = LShrMI->getOperand(1).getReg();
+
+  return true;
+}
+
+void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, Register &SrcReg) {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT HalfTy =
+      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
+          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+
+  Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
+  Register CastReg =
+      B.buildInstr(TargetOpcode::G_BITCAST, {HalfTy}, {SrcReg}).getReg(0);
+  Register CMLTReg =
+      B.buildICmp(CmpInst::Predicate::ICMP_SLT, HalfTy, CastReg, ZeroVec)
+          .getReg(0);
+
+  B.buildInstr(TargetOpcode::G_BITCAST, {DstReg}, {CMLTReg}).getReg(0);
   MI.eraseFromParent();
 }
 
@@ -467,8 +524,8 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   }
@@ -500,7 +557,8 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
@@ -653,6 +711,11 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
     // should only be in a single block.
     resetState();
     for (auto &MI : MBB) {
+      // Skip for scalable vectors
+      if (auto *LdSt = dyn_cast<GLoadStore>(&MI);
+          LdSt && MRI.getType(LdSt->getOperand(0).getReg()).isScalableVector())
+        continue;
+
       if (auto *St = dyn_cast<GStore>(&MI)) {
         Register PtrBaseReg;
         APInt Offset;

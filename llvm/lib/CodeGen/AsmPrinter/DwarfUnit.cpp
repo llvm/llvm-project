@@ -578,28 +578,33 @@ DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
   // Create new type.
   DIE &TyDIE = createAndAddDIE(Ty->getTag(), ContextDIE, Ty);
 
-  updateAcceleratorTables(Context, Ty, TyDIE);
+  auto construct = [&](const auto *Ty) {
+    updateAcceleratorTables(Context, Ty, TyDIE);
+    constructTypeDIE(TyDIE, Ty);
+  };
 
-  if (auto *BT = dyn_cast<DIBasicType>(Ty))
-    constructTypeDIE(TyDIE, BT);
-  else if (auto *ST = dyn_cast<DIStringType>(Ty))
-    constructTypeDIE(TyDIE, ST);
-  else if (auto *STy = dyn_cast<DISubroutineType>(Ty))
-    constructTypeDIE(TyDIE, STy);
-  else if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
+  if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
     if (DD->generateTypeUnits() && !Ty->isForwardDecl() &&
         (Ty->getRawName() || CTy->getRawIdentifier())) {
       // Skip updating the accelerator tables since this is not the full type.
-      if (MDString *TypeId = CTy->getRawIdentifier())
+      if (MDString *TypeId = CTy->getRawIdentifier()) {
+        addGlobalType(Ty, TyDIE, Context);
         DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);
-      else
+      } else {
+        updateAcceleratorTables(Context, Ty, TyDIE);
         finishNonUnitTypeDIE(TyDIE, CTy);
+      }
       return &TyDIE;
     }
-    constructTypeDIE(TyDIE, CTy);
-  } else {
-    constructTypeDIE(TyDIE, cast<DIDerivedType>(Ty));
-  }
+    construct(CTy);
+  } else if (auto *BT = dyn_cast<DIBasicType>(Ty))
+    construct(BT);
+  else if (auto *ST = dyn_cast<DIStringType>(Ty))
+    construct(ST);
+  else if (auto *STy = dyn_cast<DISubroutineType>(Ty))
+    construct(STy);
+  else
+    construct(cast<DIDerivedType>(Ty));
 
   return &TyDIE;
 }
@@ -633,21 +638,31 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
 
 void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
                                         const DIType *Ty, const DIE &TyDIE) {
-  if (!Ty->getName().empty() && !Ty->isForwardDecl()) {
-    bool IsImplementation = false;
-    if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
-      // A runtime language of 0 actually means C/C++ and that any
-      // non-negative value is some version of Objective-C/C++.
-      IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
-    }
-    unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
-    DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
-                     Flags);
+  if (Ty->getName().empty())
+    return;
+  if (Ty->isForwardDecl())
+    return;
 
-    if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
-        isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
-      addGlobalType(Ty, TyDIE, Context);
+  // add temporary record for this type to be added later
+
+  bool IsImplementation = false;
+  if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
+    // A runtime language of 0 actually means C/C++ and that any
+    // non-negative value is some version of Objective-C/C++.
+    IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
   }
+  unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
+  DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
+                   Flags);
+
+  addGlobalType(Ty, TyDIE, Context);
+}
+
+void DwarfUnit::addGlobalType(const DIType *Ty, const DIE &TyDIE,
+                              const DIScope *Context) {
+  if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
+      isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
+    addGlobalTypeImpl(Ty, TyDIE, Context);
 }
 
 void DwarfUnit::addType(DIE &Entity, const DIType *Ty,
@@ -1844,8 +1859,8 @@ void DwarfTypeUnit::addGlobalName(StringRef Name, const DIE &Die,
   getCU().addGlobalNameForTypeUnit(Name, Context);
 }
 
-void DwarfTypeUnit::addGlobalType(const DIType *Ty, const DIE &Die,
-                                  const DIScope *Context) {
+void DwarfTypeUnit::addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                                      const DIScope *Context) {
   getCU().addGlobalTypeUnitType(Ty, Context);
 }
 

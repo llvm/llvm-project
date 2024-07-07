@@ -51,6 +51,10 @@ uint32_t FrontendResource::getSpace() {
       ->getLimitedValue();
 }
 
+FrontendResource::FrontendResource(MDNode *E) : Entry(E) {
+  assert(Entry->getNumOperands() == 6 && "Unexpected metadata shape");
+}
+
 FrontendResource::FrontendResource(GlobalVariable *GV, ResourceKind RK,
                                    ElementType ElTy, bool IsROV,
                                    uint32_t ResIndex, uint32_t Space) {

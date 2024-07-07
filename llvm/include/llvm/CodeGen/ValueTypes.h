@@ -488,8 +488,10 @@ namespace llvm {
     Type *getTypeForEVT(LLVMContext &Context) const;
 
     /// Return the value type corresponding to the specified type.
-    /// This returns all pointers as iPTR.  If HandleUnknown is true, unknown
-    /// types are returned as Other, otherwise they are invalid.
+    /// If HandleUnknown is true, unknown types are returned as Other,
+    /// otherwise they are invalid.
+    /// NB: This includes pointer types, which require a DataLayout to convert
+    /// to a concrete value type.
     static EVT getEVT(Type *Ty, bool HandleUnknown = false);
 
     intptr_t getRawBits() const {

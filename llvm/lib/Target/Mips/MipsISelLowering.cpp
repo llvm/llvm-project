@@ -55,6 +55,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
@@ -360,11 +361,15 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
 
   // Lower fmin and fmax operations for MIPS R6.
   // Instructions are defined but never used.
-  if (Subtarget.hasMips32r6() || Subtarget.hasMips64r6()) {
-    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+  if (Subtarget.hasMips32r6()) {
+    setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Expand);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Expand);
+    setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Expand);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Expand);
   }
 
   if (Subtarget.isGP64bit()) {

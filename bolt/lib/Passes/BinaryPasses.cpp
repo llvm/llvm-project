@@ -44,7 +44,6 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
 
-extern cl::opt<bolt::MacroFusionType> AlignMacroOpFusion;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<unsigned> ExecutionCountThreshold;
@@ -636,7 +635,9 @@ Error LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 Error CleanMCState::runOnFunctions(BinaryContext &BC) {
   MCContext &Ctx = *BC.Ctx;
   for (const auto &SymMapEntry : Ctx.getSymbols()) {
-    const MCSymbol *S = SymMapEntry.second;
+    const MCSymbol *S = SymMapEntry.getValue().Symbol;
+    if (!S)
+      continue;
     if (S->isDefined()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
                         << "\" is already defined\n");
@@ -1563,23 +1564,28 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     const bool Ascending =
         opts::DynoStatsSortOrderOpt == opts::DynoStatsSortOrder::Ascending;
 
-    if (SortAll) {
-      llvm::stable_sort(Functions,
-                        [Ascending, &Stats](const BinaryFunction *A,
-                                            const BinaryFunction *B) {
-                          return Ascending ? Stats.at(A) < Stats.at(B)
-                                           : Stats.at(B) < Stats.at(A);
-                        });
-    } else {
-      llvm::stable_sort(
-          Functions, [Ascending, &Stats](const BinaryFunction *A,
-                                         const BinaryFunction *B) {
-            const DynoStats &StatsA = Stats.at(A);
-            const DynoStats &StatsB = Stats.at(B);
-            return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
-                             : StatsB.lessThan(StatsA, opts::PrintSortedBy);
-          });
-    }
+    std::function<bool(const DynoStats &, const DynoStats &)>
+        DynoStatsComparator =
+            SortAll ? [](const DynoStats &StatsA,
+                         const DynoStats &StatsB) { return StatsA < StatsB; }
+                    : [](const DynoStats &StatsA, const DynoStats &StatsB) {
+                        return StatsA.lessThan(StatsB, opts::PrintSortedBy);
+                      };
+
+    llvm::stable_sort(Functions,
+                      [Ascending, &Stats, DynoStatsComparator](
+                          const BinaryFunction *A, const BinaryFunction *B) {
+                        auto StatsItr = Stats.find(A);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsA = StatsItr->second;
+
+                        StatsItr = Stats.find(B);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsB = StatsItr->second;
+
+                        return Ascending ? DynoStatsComparator(StatsA, StatsB)
+                                         : DynoStatsComparator(StatsB, StatsA);
+                      });
 
     BC.outs() << "BOLT-INFO: top functions sorted by ";
     if (SortAll) {
@@ -1627,25 +1633,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         BC.errs() << "  " << *Function << '\n';
     } else {
       BC.errs() << " Use -v=1 to see the list.\n";
-    }
-  }
-
-  // Print information on missed macro-fusion opportunities seen on input.
-  if (BC.Stats.MissedMacroFusionPairs) {
-    BC.outs() << format(
-        "BOLT-INFO: the input contains %zu (dynamic count : %zu)"
-        " opportunities for macro-fusion optimization",
-        BC.Stats.MissedMacroFusionPairs, BC.Stats.MissedMacroFusionExecCount);
-    switch (opts::AlignMacroOpFusion) {
-    case MFT_NONE:
-      BC.outs() << ". Use -align-macro-fusion to fix.\n";
-      break;
-    case MFT_HOT:
-      BC.outs() << ". Will fix instances on a hot path.\n";
-      break;
-    case MFT_ALL:
-      BC.outs() << " that are going to be fixed\n";
-      break;
     }
   }
 

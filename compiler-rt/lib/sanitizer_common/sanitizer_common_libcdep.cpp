@@ -87,8 +87,8 @@ void MaybeStartBackgroudThread() {
   if (!common_flags()->hard_rss_limit_mb &&
       !common_flags()->soft_rss_limit_mb &&
       !common_flags()->heap_profile) return;
-  if (!&real_pthread_create) {
-    VPrintf(1, "%s: real_pthread_create undefined\n", SanitizerToolName);
+  if (!&internal_pthread_create) {
+    VPrintf(1, "%s: internal_pthread_create undefined\n", SanitizerToolName);
     return;  // Can't spawn the thread anyway.
   }
 

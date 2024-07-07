@@ -338,6 +338,21 @@ define half @cos_f16(half %x) #0 {
   ret half %val
 }
 
+define half @tan_f16(half %x) #0 {
+; CHECK-LABEL: tan_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.tan.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
 define half @pow_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: pow_f16:
 ; CHECK:       // %bb.0:
@@ -1147,6 +1162,7 @@ declare half @llvm.experimental.constrained.sqrt.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.powi.f16(half, i32, metadata, metadata)
 declare half @llvm.experimental.constrained.sin.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.cos.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.tan.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.pow.f16(half, half, metadata, metadata)
 declare half @llvm.experimental.constrained.log.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.log10.f16(half, metadata, metadata)

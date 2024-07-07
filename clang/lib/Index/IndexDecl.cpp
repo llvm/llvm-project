@@ -711,7 +711,8 @@ public:
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
         IndexCtx.indexTypeSourceInfo(NTTP->getTypeSourceInfo(), Parent);
         if (NTTP->hasDefaultArgument())
-          IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
+          handleTemplateArgumentLoc(NTTP->getDefaultArgument(), Parent,
+                                    TP->getLexicalDeclContext());
       } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
         if (TTPD->hasDefaultArgument())
           handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,

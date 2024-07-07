@@ -2414,8 +2414,7 @@ llvm::Expected<lldb::TypeSystemSP>
 Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                         bool create_on_demand) {
   if (!m_valid)
-    return llvm::make_error<llvm::StringError>("Invalid Target",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Invalid Target");
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
@@ -2428,9 +2427,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                  // target language.
     } else {
       if (languages_for_expressions.Empty())
-        return llvm::make_error<llvm::StringError>(
-            "No expression support for any languages",
-            llvm::inconvertibleErrorCode());
+        return llvm::createStringError(
+            "No expression support for any languages");
       language = (LanguageType)languages_for_expressions.bitvector.find_first();
     }
   }
@@ -2574,23 +2572,20 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
     return type_system_or_err.takeError();
   auto ts = *type_system_or_err;
   if (!ts)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         llvm::StringRef("Type system for language ") +
-            Language::GetNameForLanguageType(language) +
-            llvm::StringRef(" is no longer live"),
-        llvm::inconvertibleErrorCode());
+        Language::GetNameForLanguageType(language) +
+        llvm::StringRef(" is no longer live"));
   std::unique_ptr<UtilityFunction> utility_fn =
       ts->CreateUtilityFunction(std::move(expression), std::move(name));
   if (!utility_fn)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         llvm::StringRef("Could not create an expression for language") +
-            Language::GetNameForLanguageType(language),
-        llvm::inconvertibleErrorCode());
+        Language::GetNameForLanguageType(language));
 
   DiagnosticManager diagnostics;
   if (!utility_fn->Install(diagnostics, exe_ctx))
-    return llvm::make_error<llvm::StringError>(diagnostics.GetString(),
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(diagnostics.GetString());
 
   return std::move(utility_fn);
 }
@@ -2621,8 +2616,7 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
 llvm::Error Target::SetLabel(llvm::StringRef label) {
   size_t n = LLDB_INVALID_INDEX32;
   if (llvm::to_integer(label, n))
-    return llvm::make_error<llvm::StringError>(
-        "Cannot use integer as target label.", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Cannot use integer as target label.");
   TargetList &targets = GetDebugger().GetTargetList();
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
@@ -2790,15 +2784,13 @@ llvm::Expected<lldb_private::Address> Target::GetEntryPointAddress() {
 
   // We haven't found the entry point address. Return an appropriate error.
   if (!has_primary_executable)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         "No primary executable found and could not find entry point address in "
-        "any executable module",
-        llvm::inconvertibleErrorCode());
+        "any executable module");
 
-  return llvm::make_error<llvm::StringError>(
+  return llvm::createStringError(
       "Could not find entry point address for primary executable module \"" +
-          exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"",
-      llvm::inconvertibleErrorCode());
+      exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"");
 }
 
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,

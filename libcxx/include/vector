@@ -316,7 +316,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__algorithm/rotate.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__assert>
-#include <__availability>
 #include <__bit_reference>
 #include <__concepts/same_as.h>
 #include <__config>
@@ -407,12 +406,18 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  static_assert((is_same<typename allocator_type::value_type, value_type>::value),
-                "Allocator::value_type must be same type as value_type");
+  // A vector containers the following members which may be trivially relocatable:
+  // - pointer: may be trivially relocatable, so it's checked
+  // - allocator_type: may be trivially relocatable, so it's checked
+  // vector doesn't contain any self-references, so it's trivially relocatable if its members are.
+  using __trivially_relocatable = __conditional_t<
+      __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
+      vector,
+      void>;
 
-  static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
+  static_assert(__check_valid_allocator<allocator_type>::value, "");
+  static_assert(is_same<typename allocator_type::value_type, value_type>::value,
+                "Allocator::value_type must be same type as value_type");
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value) {}
@@ -668,11 +673,11 @@ public:
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
 #if _LIBCPP_STD_VER >= 17
-      reference
-      emplace_back(_Args&&... __args);
+  reference
+  emplace_back(_Args&&... __args);
 #else
-      void
-      emplace_back(_Args&&... __args);
+  void
+  emplace_back(_Args&&... __args);
 #endif
 
 #if _LIBCPP_STD_VER >= 23
@@ -744,7 +749,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const;
@@ -897,6 +902,7 @@ private:
       __v_.__annotate_increase(__n);
 #endif
     }
+
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
       __v_.__end_ = __pos_;
 #ifndef _LIBCPP_HAS_NO_ASAN
@@ -910,7 +916,6 @@ private:
     pointer __pos_;
     const_pointer const __new_end_;
 
-  private:
     _ConstructTransaction(_ConstructTransaction const&)            = delete;
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };
@@ -1768,7 +1773,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
@@ -2109,7 +2114,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void swap(reference __x, reference __y) _NOEXCEPT {
     std::swap(__x, __y);
@@ -2771,7 +2776,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::swap(vector& __x)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
   std::swap(this->__begin_, __x.__begin_);
@@ -2975,7 +2980,9 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <cstdlib>
 #  include <iosfwd>
-#  include <locale>
+#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    include <locale>
+#  endif
 #  include <tuple>
 #  include <type_traits>
 #  include <typeinfo>

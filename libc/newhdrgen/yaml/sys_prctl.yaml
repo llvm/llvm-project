@@ -1,0 +1,7 @@
+header: sys-prctl.h
+standards: Linux
+macros: []
+types: []
+enums: []
+objects: []
+functions: []

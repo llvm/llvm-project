@@ -366,8 +366,8 @@ void DbgVariableRecord::setKillLocation() {
 }
 
 bool DbgVariableRecord::isKillLocation() const {
-  return (getNumVariableLocationOps() == 0 &&
-          !getExpression()->isComplex()) ||
+  return (!hasArgList() && isa<MDNode>(getRawLocation())) ||
+         (getNumVariableLocationOps() == 0 && !getExpression()->isComplex()) ||
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
@@ -399,7 +399,7 @@ DbgVariableIntrinsic *
 DbgVariableRecord::createDebugIntrinsic(Module *M,
                                         Instruction *InsertBefore) const {
   [[maybe_unused]] DICompileUnit *Unit =
-      getDebugLoc().get()->getScope()->getSubprogram()->getUnit();
+      getDebugLoc()->getScope()->getSubprogram()->getUnit();
   assert(M && Unit &&
          "Cannot clone from BasicBlock that is not part of a Module or "
          "DICompileUnit!");

@@ -11,7 +11,7 @@
 # RUN: cat %tmain.txt | FileCheck --check-prefix=PRECHECK %s
 # RUN: cat %tmainbolt.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# Test checks that DW_AT_call_pc address points to a correct address for jmp instruction.
+## Test checks that DW_AT_call_pc address points to a correct address for jmp instruction.
 
 # PRECHECK: DW_TAG_call_site [6]
 # PRECHECK-NEXT: DW_AT_call_origin [DW_FORM_ref4]
