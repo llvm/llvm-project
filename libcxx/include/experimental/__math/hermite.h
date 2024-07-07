@@ -27,7 +27,7 @@
 /// Press, William H., et al. Numerical recipes 3rd edition: The art of
 /// scientific computing. Cambridge university press, 2007, p. 183.
 template <class _Real>
-_Real __libcpp_hermite_recurrence(unsigned __n, _Real __x) {
+_Real __libcpp_hermite_recurrence(const unsigned __n, const _Real __x) {
   if (0 == __n)
     return 1;
 
@@ -41,7 +41,7 @@ _Real __libcpp_hermite_recurrence(unsigned __n, _Real __x) {
   return __H_n;
 }
 
-template <class _Real> _Real __libcpp_hermite(unsigned __n, _Real __x) {
+template <class _Real> _Real __libcpp_hermite(const unsigned __n, const _Real __x) {
   if (std::isnan(__x))
     return std::numeric_limits<_Real>::quiet_NaN();
 
