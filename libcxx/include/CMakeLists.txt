@@ -575,6 +575,7 @@ set(files
   __numeric/transform_reduce.h
   __ostream/basic_ostream.h
   __ostream/print.h
+  __ostream/syncbuf_base.h
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h

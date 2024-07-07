@@ -116,6 +116,7 @@ namespace std {
 */
 
 #include <__config>
+#include <__ostream/syncbuf_base.h>
 #include <__utility/move.h>
 #include <ios>
 #include <iosfwd> // required for declaration of default arguments
@@ -240,7 +241,7 @@ private:
 // Therefore the allocator used in the constructor is passed to the
 // basic_string. The class does not keep a copy of this allocator.
 template <class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_syncbuf : public basic_streambuf<_CharT, _Traits> {
+class _LIBCPP_TEMPLATE_VIS basic_syncbuf : public __syncbuf_base<_CharT, _Traits> {
 public:
   using char_type      = _CharT;
   using traits_type    = _Traits;
@@ -262,7 +263,9 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI basic_syncbuf(basic_syncbuf&& __other)
-      : __wrapped_(__other.get_wrapped()), __str_(std::move(__other.__str_)), __emit_on_sync_(__other.__emit_on_sync_) {
+      : __syncbuf_base<_CharT, _Traits>(__other.__emit_on_sync_),
+        __wrapped_(__other.get_wrapped()),
+        __str_(std::move(__other.__str_)) {
     __move_common(__other);
   }
 
@@ -286,9 +289,9 @@ public:
     emit();
     __dec_reference();
 
-    __wrapped_      = __other.get_wrapped();
-    __str_          = std::move(__other.__str_);
-    __emit_on_sync_ = __other.__emit_on_sync_;
+    __wrapped_            = __other.get_wrapped();
+    __str_                = std::move(__other.__str_);
+    this->__emit_on_sync_ = __other.__emit_on_sync_;
 
     __move_common(__other);
 
@@ -313,14 +316,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __str_.get_allocator(); }
 
-  _LIBCPP_HIDE_FROM_ABI void set_emit_on_sync(bool __b) noexcept { __emit_on_sync_ = __b; }
+  _LIBCPP_HIDE_FROM_ABI void set_emit_on_sync(bool __b) noexcept { this->__emit_on_sync_ = __b; }
 
 protected:
   // [syncstream.syncbuf.virtuals], overridden virtual functions
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   int sync() override {
-    if (__emit_on_sync_ && !emit(true))
+    if (this->__emit_on_sync_ && !emit(true))
       return -1;
     return 0;
   }
@@ -361,7 +364,6 @@ private:
   // the now deprecated get_temporary_buffer
 
   basic_string<_CharT, _Traits, _Allocator> __str_;
-  bool __emit_on_sync_{false};
 
   _LIBCPP_HIDE_FROM_ABI bool emit(bool __flush) {
     if (!__wrapped_)
@@ -388,6 +390,8 @@ private:
 
     return __result;
   }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool __emit() override { return emit(); }
 
   _LIBCPP_HIDE_FROM_ABI void __move_common(basic_syncbuf& __other) {
     // Adjust the put area pointers to our buffer.

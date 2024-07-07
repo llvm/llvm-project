@@ -1631,6 +1631,10 @@ module std_private_ostream_print         [system] {
   export std_print
 }
 
+module std_private_ostream_syncbuf_base  [system] {
+  header "__ostream/syncbuf_base.h"
+}
+
 module std_private_random_bernoulli_distribution          [system] { header "__random/bernoulli_distribution.h" }
 module std_private_random_binomial_distribution           [system] { header "__random/binomial_distribution.h" }
 module std_private_random_cauchy_distribution             [system] { header "__random/cauchy_distribution.h" }
