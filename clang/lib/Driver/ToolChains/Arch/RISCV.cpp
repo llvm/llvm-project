@@ -88,8 +88,7 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       llvm::StringMap<bool> HostFeatures;
       if (llvm::sys::getHostCPUFeatures(HostFeatures))
         for (auto &F : HostFeatures)
-          Features.push_back(
-              Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+          Features.push_back(((F.second ? "+" : "-") + F.first()).str());
     }
 
     getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
