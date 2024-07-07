@@ -1136,21 +1136,21 @@ void test_hypot()
     assert(std::hypot(3,4) == 5);
 
 #if TEST_STD_VER > 14
-    static_assert((std::is_same<decltype(std::hypot((float)0, (float)0, (float)0)), float>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (bool)0, (float)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (unsigned short)0, (double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (double)0, (long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (long double)0, (unsigned long)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (long long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (unsigned long long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (double)0, (double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (long double)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (float)0, (double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (float)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (double)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((int)0, (int)0, (int)0)), double>::value), "");
-    static_assert((std::is_same<decltype(hypot(Ambiguous(), Ambiguous(), Ambiguous())), Ambiguous>::value), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (float)0, (float)0)), float>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (bool)0, (float)0)), double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (unsigned short)0, (double)0)), double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (int)0, (long double)0)), long double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (double)0, (long)0)), double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (long double)0, (unsigned long)0)), long double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (int)0, (long long)0)), double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (int)0, (unsigned long long)0)), double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (double)0, (double)0)), double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (long double)0, (long double)0)), long double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (float)0, (double)0)), double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (float)0, (long double)0)), long double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((float)0, (double)0, (long double)0)), long double>), "");
+    static_assert((std::is_same_v<decltype(std::hypot((int)0, (int)0, (int)0)), double>), "");
+    static_assert((std::is_same_v<decltype(hypot(Ambiguous(), Ambiguous(), Ambiguous())), Ambiguous>), "");
 
     assert(std::hypot(2,3,6) == 7);
     assert(std::hypot(1,4,8) == 9);
