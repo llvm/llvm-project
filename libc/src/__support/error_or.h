@@ -11,7 +11,7 @@
 
 #include "src/__support/CPP/expected.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <class T> using ErrorOr = cpp::expected<T, int>;
 
@@ -34,6 +34,6 @@ using Error = cpp::unexpected<int>;
 //   constexpr operator T() { return value; }
 // };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_ERROR_OR_H

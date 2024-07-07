@@ -22,7 +22,8 @@
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 LIBC_INLINE float exp10f(float x) {
   using FPBits = typename fputil::FPBits<float>;
@@ -135,6 +136,7 @@ LIBC_INLINE float exp10f(float x) {
   return static_cast<float>(multiply_add(p, lo2 * rr.mh, c0 * rr.mh));
 }
 
-} // namespace LIBC_NAMESPACE::generic
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXP10F_IMPL_H

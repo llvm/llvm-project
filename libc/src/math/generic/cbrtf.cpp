@@ -14,7 +14,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -154,4 +154,4 @@ LLVM_LIBC_FUNCTION(float, cbrtf, (float x)) {
   return static_cast<float>(DoubleBits(r_bits).get_val());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -10,10 +10,10 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, totalorderf16, (const float16 *x, const float16 *y)) {
   return static_cast<int>(fputil::totalorder(*x, *y));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

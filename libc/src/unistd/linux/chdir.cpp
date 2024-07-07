@@ -14,7 +14,7 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, chdir, (const char *path)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_chdir, path);
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, chdir, (const char *path)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

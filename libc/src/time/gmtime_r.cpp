@@ -10,11 +10,11 @@
 #include "src/__support/common.h"
 #include "src/time/time_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(struct tm *, gmtime_r,
                    (const time_t *timer, struct tm *result)) {
   return time_utils::gmtime_internal(timer, result);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

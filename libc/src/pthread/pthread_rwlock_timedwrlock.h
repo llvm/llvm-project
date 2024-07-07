@@ -11,11 +11,11 @@
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_rwlock_timedwrlock(pthread_rwlock_t *__restrict rwlock,
                                const struct timespec *__restrict abs_timeout);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCK_TIMEDWRLOCK_H

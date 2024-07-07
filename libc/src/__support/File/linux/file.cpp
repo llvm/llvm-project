@@ -21,7 +21,7 @@
 #include <sys/stat.h>    // For S_IS*, S_IF*, and S_IR* flags.
 #include <sys/syscall.h> // For syscall numbers
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 FileIOResult linux_file_write(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
@@ -179,4 +179,4 @@ int get_fileno(File *f) {
   return lf->get_fd();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

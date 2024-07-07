@@ -37,7 +37,7 @@ extern uintptr_t __fini_array_end[];
   gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
 }
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 AppProperties app;
 
 using InitCallback = void(int, char **, char **);
@@ -150,4 +150,4 @@ static ThreadAttributes main_thread_attrib;
   exit(retval);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

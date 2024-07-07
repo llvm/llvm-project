@@ -1,6 +1,6 @@
 #include "str_to_fp_test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using LlvmLibcStrToFltTest = LlvmLibcStrToFloatTest<float>;
 
@@ -56,4 +56,4 @@ TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
   EXPECT_EQ(float_result.error, 0);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

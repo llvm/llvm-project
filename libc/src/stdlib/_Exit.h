@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB__EXIT_H
 #define LLVM_LIBC_SRC_STDLIB__EXIT_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[noreturn]] void _Exit(int status);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB__EXIT_H

@@ -14,7 +14,7 @@
 #include <stddef.h> // size_t
 #include <stdlib.h> // malloc, realloc, free
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This is very simple alternate of the std::string class. There is no
 // bounds check performed in any of the methods. The callers are expected to
@@ -73,6 +73,6 @@ public:
   LIBC_INLINE size_t length() { return index; }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H

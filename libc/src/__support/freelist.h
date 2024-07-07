@@ -15,7 +15,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/fixedvector.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using cpp::span;
 
@@ -203,6 +203,6 @@ FreeList<NUM_BUCKETS>::find_chunk_ptr_for_size(size_t size,
   return chunk_ptr;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_H

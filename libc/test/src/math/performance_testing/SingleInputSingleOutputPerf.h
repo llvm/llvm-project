@@ -11,7 +11,7 @@
 
 #include <fstream>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 template <typename T> class SingleInputSingleOutputPerf {
@@ -80,7 +80,7 @@ public:
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define SINGLE_INPUT_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)        \
   int main() {                                                                 \

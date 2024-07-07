@@ -11,7 +11,7 @@
 #include "src/__support/common.h"
 #include "src/string/string_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static char *strtok_str = nullptr;
 
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(char *, strtok,
   return internal::string_token(src, delimiter_string, &strtok_str);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

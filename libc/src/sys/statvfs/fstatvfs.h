@@ -11,10 +11,10 @@
 
 #include "llvm-libc-types/struct_statvfs.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fstatvfs(int fd, struct statvfs *buf);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STATVFS_FSTATVFS_H

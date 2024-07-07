@@ -16,7 +16,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -303,4 +303,4 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
                               const_term);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

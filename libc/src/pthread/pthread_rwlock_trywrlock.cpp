@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(
     sizeof(RwLock) == sizeof(pthread_rwlock_t) &&
@@ -29,4 +29,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_trywrlock, (pthread_rwlock_t * rwlock)) {
   return static_cast<int>(rw->try_write_lock());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

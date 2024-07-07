@@ -11,10 +11,10 @@
 
 #include <sys/mman.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int munlock(const void *addr, size_t len);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MUNLOCK_H

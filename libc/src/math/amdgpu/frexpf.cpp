@@ -11,10 +11,10 @@
 
 #include "declarations.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, frexpf, (float x, int *p)) {
   return __builtin_frexpf(x, p);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

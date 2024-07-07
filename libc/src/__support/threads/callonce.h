@@ -21,7 +21,7 @@
 #error "callonce is not supported on this platform"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Common definitions
 using CallOnceCallback = void(void);
@@ -35,6 +35,6 @@ LIBC_INLINE int callonce(CallOnceFlag *flag, CallOnceCallback *callback) {
 
   return callonce_impl::callonce_slowpath(flag, callback);
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H

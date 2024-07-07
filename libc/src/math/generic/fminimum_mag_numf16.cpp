@@ -10,10 +10,10 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, fminimum_mag_numf16, (float16 x, float16 y)) {
   return fputil::fminimum_mag_num(x, y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

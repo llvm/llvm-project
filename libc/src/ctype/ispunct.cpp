@@ -11,7 +11,7 @@
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
@@ -20,4 +20,4 @@ LLVM_LIBC_FUNCTION(int, ispunct, (int c)) {
   return static_cast<int>(!internal::isalnum(ch) && internal::isgraph(ch));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

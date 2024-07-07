@@ -20,7 +20,7 @@
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Exceptional cases for tanf.
 constexpr size_t N_EXCEPTS = 6;
@@ -139,4 +139,4 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
       multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

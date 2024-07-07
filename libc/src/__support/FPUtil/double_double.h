@@ -14,7 +14,8 @@
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/__support/number_pair.h"
 
-namespace LIBC_NAMESPACE::fputil {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 
 using DoubleDouble = LIBC_NAMESPACE::NumberPair<double>;
 
@@ -165,6 +166,7 @@ LIBC_INLINE DoubleDouble div(const DoubleDouble &a, const DoubleDouble &b) {
   return r;
 }
 
-} // namespace LIBC_NAMESPACE::fputil
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DOUBLE_DOUBLE_H

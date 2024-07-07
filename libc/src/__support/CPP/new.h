@@ -23,7 +23,7 @@ enum class align_val_t : size_t {};
 
 } // namespace std
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 class AllocChecker {
   bool success = false;
@@ -52,7 +52,7 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 LIBC_INLINE void *operator new(size_t size,
                                LIBC_NAMESPACE::AllocChecker &ac) noexcept {

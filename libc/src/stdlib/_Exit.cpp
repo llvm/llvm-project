@@ -11,10 +11,10 @@
 
 #include "src/stdlib/_Exit.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[noreturn]] LLVM_LIBC_FUNCTION(void, _Exit, (int status)) {
   internal::exit(status);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

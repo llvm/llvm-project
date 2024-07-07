@@ -12,10 +12,10 @@
 #include "hdr/types/FILE.h"
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int vprintf(const char *__restrict format, va_list vlist);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_VPRINTF_H

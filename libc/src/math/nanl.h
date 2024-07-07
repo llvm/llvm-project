@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_NANL_H
 #define LLVM_LIBC_SRC_MATH_NANL_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 long double nanl(const char *arg);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_NANL_H

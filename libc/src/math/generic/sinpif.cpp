@@ -15,7 +15,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -108,4 +108,4 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

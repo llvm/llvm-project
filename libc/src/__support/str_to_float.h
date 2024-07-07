@@ -26,7 +26,7 @@
 #include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <class T> struct ExpandedFloat {
@@ -1226,6 +1226,6 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H

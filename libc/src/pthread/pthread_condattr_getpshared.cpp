@@ -12,7 +12,7 @@
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_condattr_getpshared,
                    (const pthread_condattr_t *__restrict attr,
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, pthread_condattr_getpshared,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

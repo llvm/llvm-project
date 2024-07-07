@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -63,4 +63,4 @@ LLVM_LIBC_FUNCTION(char *, getcwd, (char *buf, size_t size)) {
   return buf;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

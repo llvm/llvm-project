@@ -10,7 +10,7 @@
 
 #include "src/string/string_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strsep,
                    (char **__restrict stringp, const char *__restrict delim)) {
@@ -19,4 +19,4 @@ LLVM_LIBC_FUNCTION(char *, strsep,
   return internal::string_token<false>(*stringp, delim, stringp);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -11,10 +11,10 @@
 
 #include "hdr/types/fexcept_t.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fetestexceptflag(const fexcept_t *, int excepts);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_FENV_FETESTEXCEPTFLAG_H

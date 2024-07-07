@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // cpp::string_view specialization
@@ -86,4 +86,4 @@ template TestLogger &TestLogger::operator<< <UInt<320>>(UInt<320>);
 TestLogger tlog;
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

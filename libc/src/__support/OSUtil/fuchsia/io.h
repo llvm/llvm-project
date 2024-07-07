@@ -14,7 +14,7 @@
 #include <iostream>
 #include <zircon/sanitizer.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
 #if defined(LIBC_COPT_TEST_USE_ZXTEST)
@@ -28,6 +28,6 @@ LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_FUCHSIA_IO_H

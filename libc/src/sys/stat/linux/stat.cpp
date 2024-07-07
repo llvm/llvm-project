@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, stat,
                    (const char *__restrict path,
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, stat,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

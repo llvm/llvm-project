@@ -18,7 +18,7 @@
 #include <stddef.h>      // For size_t
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct pselect6_sigset_t {
   sigset_t *ss;
@@ -69,4 +69,4 @@ LLVM_LIBC_FUNCTION(int, select,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

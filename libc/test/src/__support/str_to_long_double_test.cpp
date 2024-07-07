@@ -2,7 +2,7 @@
 
 #include "src/__support/integer_literals.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using LlvmLibcStrToLongDblTest = LlvmLibcStrToFloatTest<long double>;
 using LIBC_NAMESPACE::operator""_u128;
@@ -81,4 +81,4 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Fallback) {
 #error "Unknown long double type"
 #endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

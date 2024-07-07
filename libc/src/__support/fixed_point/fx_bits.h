@@ -20,7 +20,8 @@
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
-namespace LIBC_NAMESPACE::fixed_point {
+namespace LIBC_NAMESPACE_DECL {
+namespace fixed_point {
 
 template <typename T> struct FXBits {
 private:
@@ -161,7 +162,8 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
   return bit_and((x + round_bit), rounding_mask);
 }
 
-} // namespace LIBC_NAMESPACE::fixed_point
+} // namespace fixed_point
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 

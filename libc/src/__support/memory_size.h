@@ -16,7 +16,7 @@
 #include "src/__support/macros/optimization.h"
 #include "src/string/memory_utils/utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 template <class T> LIBC_INLINE bool mul_overflow(T a, T b, T *res) {
 #if __has_builtin(__builtin_mul_overflow)
@@ -85,6 +85,6 @@ public:
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H

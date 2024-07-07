@@ -11,10 +11,10 @@
 
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 float16 fmaximum_mag_numf16(float16 x, float16 y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_FMAXIMUM_MAG_NUMF16_H

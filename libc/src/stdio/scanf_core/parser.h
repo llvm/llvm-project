@@ -17,7 +17,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 #ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
@@ -279,6 +279,6 @@ private:
 };
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H

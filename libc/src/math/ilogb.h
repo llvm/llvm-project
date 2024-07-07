@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_ILOGB_H
 #define LLVM_LIBC_SRC_MATH_ILOGB_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int ilogb(double x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_ILOGB_H

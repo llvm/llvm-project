@@ -16,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
@@ -58,6 +58,6 @@ LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H

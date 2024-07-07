@@ -11,10 +11,10 @@
 
 #include "declarations.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, fdim, (double x, double y)) {
   return __ocml_fdim_f64(x, y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

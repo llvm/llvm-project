@@ -10,10 +10,10 @@
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: This is a temporary workaround for issue #85335.
 
 LLVM_LIBC_FUNCTION(int, remove, (const char *)) { return -1; }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

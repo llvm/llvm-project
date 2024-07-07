@@ -13,7 +13,7 @@
 #include <pthread.h>   // pthread_condattr_t
 #include <sys/types.h> // clockid_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_condattr_getclock,
                    (const pthread_condattr_t *__restrict attr,
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, pthread_condattr_getclock,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

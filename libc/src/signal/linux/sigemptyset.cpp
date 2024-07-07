@@ -14,7 +14,7 @@
 
 #include <signal.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sigemptyset, (sigset_t * set)) {
   if (!set) {
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, sigemptyset, (sigset_t * set)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -17,7 +17,8 @@
 #error "Invalid include"
 #endif
 
-namespace LIBC_NAMESPACE::fputil {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 
 template <bool IsDown>
 LIBC_INLINE constexpr long double nextupdown(long double x) {
@@ -55,6 +56,7 @@ LIBC_INLINE constexpr long double nextupdown(long double x) {
   return xbits.get_val();
 }
 
-} // namespace LIBC_NAMESPACE::fputil
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_NEXTUPDOWNLONGDOUBLE_H

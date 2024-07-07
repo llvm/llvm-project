@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_key_create,
                    (pthread_key_t * key, __pthread_tss_dtor_t dtor)) {
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, pthread_key_create,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

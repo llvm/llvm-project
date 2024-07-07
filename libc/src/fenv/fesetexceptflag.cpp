@@ -11,7 +11,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fesetexceptflag,
                    (const fexcept_t *flagp, int excepts)) {
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, fesetexceptflag,
   return fputil::set_except(excepts_to_set);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

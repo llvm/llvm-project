@@ -12,7 +12,7 @@
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(::FILE *, fopen,
                    (const char *__restrict path, const char *__restrict mode)) {
@@ -29,4 +29,4 @@ LLVM_LIBC_FUNCTION(::FILE *, fopen,
   return reinterpret_cast<FILE *>(file);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -11,11 +11,11 @@
 
 #include <spawn.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int posix_spawn_file_actions_addclose(
     posix_spawn_file_actions_t *__restrict actions, int fd);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_ADDCLOSE_H

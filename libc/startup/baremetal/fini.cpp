@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
 extern uintptr_t __fini_array_start[];
@@ -24,4 +24,4 @@ extern "C" void __libc_fini_array(void) {
     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

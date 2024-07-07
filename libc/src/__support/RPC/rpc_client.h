@@ -13,13 +13,13 @@
 
 #include "include/llvm-libc-types/rpc_opcodes_t.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
 /// The libc client instance used to communicate with the server.
 extern Client client;
 
 } // namespace rpc
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif

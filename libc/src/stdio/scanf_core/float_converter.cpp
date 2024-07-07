@@ -17,7 +17,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 // All of the floating point conversions are the same for scanf, every name will
@@ -223,4 +223,4 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
 }
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

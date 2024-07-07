@@ -9,7 +9,7 @@
 #include "src/math/roundf.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, roundf, (float x)) {
   float y;
@@ -17,4 +17,4 @@ LLVM_LIBC_FUNCTION(float, roundf, (float x)) {
   return y;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -10,8 +10,8 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fegetround, ()) { return fputil::get_round(); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

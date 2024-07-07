@@ -11,7 +11,7 @@
 #include "src/__support/HashTable/table.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 TEST(LlvmLibcTableTest, AllocationAndDeallocation) {
   size_t caps[] = {0, 1, 2, 3, 4, 7, 11, 37, 1024, 5261, 19999};
@@ -128,4 +128,4 @@ TEST(LlvmLibcTableTest, Insertion) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

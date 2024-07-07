@@ -11,7 +11,7 @@
 #include "src/__support/str_to_integer.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long long, atoll, (const char *str)) {
   auto result = internal::strtointeger<long long>(str, 10);
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(long long, atoll, (const char *str)) {
   return result;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

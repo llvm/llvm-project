@@ -22,7 +22,7 @@
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -170,4 +170,4 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   return static_cast<float>(fputil::multiply_add(exp_hi_mid, exp_lo, -1.0));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -28,7 +28,7 @@ using LIBC_NAMESPACE::generic::large_range_reduction;
 using LIBC_NAMESPACE::generic::small_range_reduction;
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follow:
@@ -119,6 +119,6 @@ LIBC_INLINE void sincospif_eval(double xd, double &sin_k, double &cos_k,
   sincosf_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF_UTILS_H

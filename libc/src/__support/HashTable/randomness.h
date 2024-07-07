@@ -17,7 +17,7 @@
 #include "src/sys/random/getrandom.h"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 namespace randomness {
 // We need an initial state for the hash function. More entropy are to be added
@@ -58,5 +58,5 @@ LIBC_INLINE uint64_t next_random_seed() {
 
 } // namespace randomness
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_HASHTABLE_RANDOMNESS_H

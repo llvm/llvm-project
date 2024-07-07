@@ -2,7 +2,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <cstddef>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern void *memcpy(void *__restrict, const void *__restrict, size_t);
 extern void *memmove(void *, const void *, size_t);
@@ -11,7 +11,7 @@ extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 // List of implementations to test.
 

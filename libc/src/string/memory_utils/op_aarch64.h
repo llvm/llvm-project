@@ -25,7 +25,8 @@
 #include <arm_neon.h>
 #endif //__ARM_NEON
 
-namespace LIBC_NAMESPACE::aarch64 {
+namespace LIBC_NAMESPACE_DECL {
+namespace aarch64 {
 
 LIBC_INLINE_VAR constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
 
@@ -170,9 +171,11 @@ template <size_t Size> struct Bcmp {
   }
 };
 
-} // namespace LIBC_NAMESPACE::aarch64
+} // namespace aarch64
+} // namespace LIBC_NAMESPACE_DECL
 
-namespace LIBC_NAMESPACE::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
@@ -264,7 +267,8 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16x2_t>(CPtr p1, CPtr p2,
   }
   return MemcmpReturnType::zero();
 }
-} // namespace LIBC_NAMESPACE::generic
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TARGET_ARCH_IS_AARCH64
 

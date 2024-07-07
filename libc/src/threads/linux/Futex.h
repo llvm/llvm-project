@@ -11,7 +11,7 @@
 
 #include "src/__support/macros/properties/architectures.h" // Architecture macros
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
      defined(LIBC_TARGET_ARCH_IS_X86_64))
@@ -27,6 +27,6 @@ static_assert(sizeof(FutexWordType) == 4,
 #error "Futex word base type not defined for the target architecture."
 #endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_LINUX_FUTEX_H

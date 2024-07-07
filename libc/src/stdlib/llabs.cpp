@@ -10,8 +10,8 @@
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long long, llabs, (long long n)) { return integer_abs(n); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

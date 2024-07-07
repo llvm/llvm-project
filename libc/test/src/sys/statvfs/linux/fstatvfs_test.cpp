@@ -8,7 +8,7 @@
 #include <linux/magic.h>
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 static int fstatfs(int fd, struct statfs *buf) {
   using namespace statfs_utils;
   if (cpp::optional<LinuxStatFs> result = linux_fstatfs(fd)) {
@@ -17,7 +17,7 @@ static int fstatfs(int fd, struct statfs *buf) {
   }
   return -1;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 struct PathFD {
   int fd;

@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_NEXTTOWARDL_H
 #define LLVM_LIBC_SRC_MATH_NEXTTOWARDL_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 long double nexttowardl(long double x, long double y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_NEXTTOWARDL_H

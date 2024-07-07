@@ -11,10 +11,10 @@
 
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 float16 nanf16(const char *arg);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_NANF16_H

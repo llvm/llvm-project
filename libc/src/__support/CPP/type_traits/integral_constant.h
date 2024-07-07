@@ -10,7 +10,8 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE_VAR
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // integral_constant
 template <typename T, T v> struct integral_constant {
@@ -18,6 +19,7 @@ template <typename T, T v> struct integral_constant {
   LIBC_INLINE_VAR static constexpr T value = v;
 };
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_INTEGRAL_CONSTANT_H

@@ -11,7 +11,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fstatvfs, (int fd, struct statvfs *buf)) {
   using namespace statfs_utils;
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, fstatvfs, (int fd, struct statvfs *buf)) {
   return result ? 0 : -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

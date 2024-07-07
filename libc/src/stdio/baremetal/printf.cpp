@@ -16,7 +16,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -49,4 +49,4 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   return retval;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -24,7 +24,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 using StorageType = fputil::FPBits<long double>::StorageType;
@@ -1170,6 +1170,6 @@ LIBC_INLINE int convert_float_dec_auto(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_DEC_CONVERTER_H

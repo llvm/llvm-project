@@ -37,7 +37,8 @@
 #define _mm_movemask_epi8(A) 0
 #endif
 
-namespace LIBC_NAMESPACE::x86 {
+namespace LIBC_NAMESPACE_DECL {
+namespace x86 {
 
 // A set of constants to check compile time features.
 LIBC_INLINE_VAR constexpr bool K_SSE2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
@@ -55,9 +56,11 @@ struct Memcpy {
   }
 };
 
-} // namespace LIBC_NAMESPACE::x86
+} // namespace x86
+} // namespace LIBC_NAMESPACE_DECL
 
-namespace LIBC_NAMESPACE::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
@@ -314,7 +317,8 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 
 #pragma GCC diagnostic pop
 
-} // namespace LIBC_NAMESPACE::generic
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TARGET_ARCH_IS_X86
 

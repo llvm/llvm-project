@@ -14,7 +14,7 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This function is currently linux only. It has to be refactored suitably if
 // mprotect is to be supported on non-linux operating systems also.
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, mprotect, (void *addr, size_t size, int prot)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -16,7 +16,7 @@
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, tcdrain, (int fd)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, TCSBRK, 1);
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, tcdrain, (int fd)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

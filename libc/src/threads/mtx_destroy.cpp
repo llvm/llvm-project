@@ -12,8 +12,8 @@
 
 #include <threads.h> // For mtx_t definition.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, mtx_destroy, (mtx_t *)) {}
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

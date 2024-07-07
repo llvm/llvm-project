@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_DLFCN_DLERROR_H
 #define LLVM_LIBC_SRC_DLFCN_DLERROR_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 char *dlerror();
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_DLFCN_DLERROR_H

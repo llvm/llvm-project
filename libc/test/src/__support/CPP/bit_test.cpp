@@ -13,7 +13,8 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 using UnsignedTypes = testing::TypeList<
 #if defined(LIBC_TYPES_HAS_INT128)
@@ -228,4 +229,5 @@ TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
               cpp::numeric_limits<T>::digits - i);
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL

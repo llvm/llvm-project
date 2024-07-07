@@ -24,7 +24,8 @@
 
 #include "explogxf.h"
 
-namespace LIBC_NAMESPACE::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 LIBC_INLINE float exp2f(float x) {
   constexpr uint32_t EXVAL1 = 0x3b42'9d37U;
@@ -160,6 +161,7 @@ LIBC_INLINE float exp2f(float x) {
   return static_cast<float>(fputil::multiply_add(p, dx_sq * mh, c1 * mh));
 }
 
-} // namespace LIBC_NAMESPACE::generic
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXP2F_IMPL_H

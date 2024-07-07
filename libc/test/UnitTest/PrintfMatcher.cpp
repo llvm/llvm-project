@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 using printf_core::FormatFlags;
@@ -100,4 +100,4 @@ void FormatSectionMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -20,7 +20,7 @@
 
 #include "explogxf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static constexpr size_t N_EXCEPTS_LO = 8;
 
@@ -180,4 +180,4 @@ LLVM_LIBC_FUNCTION(float, exp2m1f, (float x)) {
   return static_cast<float>(fputil::multiply_add(exp2_lo, mh, -1.0));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

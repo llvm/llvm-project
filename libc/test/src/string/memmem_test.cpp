@@ -11,7 +11,7 @@
 
 #include "src/string/string_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcMemmemTest, EmptyHaystackEmptyNeedleReturnsHaystck) {
   char *h = nullptr;
@@ -126,4 +126,4 @@ TEST(LlvmLibcMemmemTest, ReturnNullIfInadequateHaystackLength) {
     ASSERT_EQ(result, static_cast<void *>(nullptr));
   }
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -11,10 +11,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_CALLOC_H
 #define LLVM_LIBC_SRC_STDLIB_CALLOC_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 void *calloc(size_t num, size_t size);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_CALLOC_H

@@ -20,7 +20,7 @@
 #include "common_constants.h"
 #include "log_range_reduction.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -837,4 +837,4 @@ LLVM_LIBC_FUNCTION(double, log, (double x)) {
   return log_accurate(x_e, index, u);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

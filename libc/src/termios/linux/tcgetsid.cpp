@@ -16,7 +16,7 @@
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, tcgetsid, (int fd)) {
   pid_t sid;
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(pid_t, tcgetsid, (int fd)) {
   return sid;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
 #ifdef SYS_dup2
@@ -52,4 +52,4 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

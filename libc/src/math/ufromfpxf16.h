@@ -11,10 +11,10 @@
 
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 float16 ufromfpxf16(float16 x, int rnd, unsigned int width);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_UFROMFPXF16_H

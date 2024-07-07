@@ -15,7 +15,7 @@
 #include "src/__support/macros/attributes.h"       // LIBC_INLINE
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 namespace internal {
@@ -86,6 +86,6 @@ struct numeric_limits<__uint128_t>
 #endif
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H

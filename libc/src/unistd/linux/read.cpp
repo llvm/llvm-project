@@ -14,7 +14,7 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, read, (int fd, void *buf, size_t count)) {
   ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_read, fd, buf, count);
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(ssize_t, read, (int fd, void *buf, size_t count)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

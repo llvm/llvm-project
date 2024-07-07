@@ -13,7 +13,7 @@
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_init, (pthread_attr_t * attr)) {
   *attr = pthread_attr_t{
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_init, (pthread_attr_t * attr)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

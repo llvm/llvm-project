@@ -15,7 +15,7 @@
 // TODO: Get PATH_MAX via https://github.com/llvm/llvm-project/issues/85121
 #include <linux/limits.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace shm_common {
 
@@ -50,4 +50,4 @@ LIBC_INLINE cpp::optional<SHMPath> translate_name(cpp::string_view name) {
 }
 } // namespace shm_common
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

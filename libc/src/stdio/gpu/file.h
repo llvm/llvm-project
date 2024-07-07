@@ -13,7 +13,7 @@
 
 #include <stdio.h> //needed for stdin/out/err
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace file {
 
 enum Stream {
@@ -96,4 +96,4 @@ LIBC_INLINE uint64_t read(::FILE *f, void *data, size_t size) {
 }
 
 } // namespace file
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

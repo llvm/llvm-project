@@ -11,10 +11,10 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 long accum roundlk(long accum x, int n);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDFIX_ROUNDLK_H

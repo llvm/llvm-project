@@ -16,7 +16,7 @@
 
 #include <stdio.h> //needed for stdout
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   cpp::string_view str_view(str);
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

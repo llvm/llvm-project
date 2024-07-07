@@ -42,7 +42,7 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE constexpr bool inline_memmove_no_small_size(void *, const void *,
                                                         size_t) {
@@ -67,6 +67,6 @@ LIBC_INLINE void inline_memmove(void *dst, const void *src, size_t count) {
   inline_memmove_follow_up(dst, src, count);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif /* LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H */

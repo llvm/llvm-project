@@ -13,7 +13,7 @@
 
 #include <threads.h> // cnd_t, mtx_t, thrd_error, thrd_success
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(CndVar) == sizeof(cnd_t));
 
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, cnd_wait, (cnd_t * cond, mtx_t *mtx)) {
   return cndvar->wait(mutex) ? thrd_error : thrd_success;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

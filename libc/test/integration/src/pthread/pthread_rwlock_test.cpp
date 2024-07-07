@@ -41,14 +41,16 @@
 #include <pthread.h>
 #include <time.h>
 
-namespace LIBC_NAMESPACE::rwlock {
+namespace LIBC_NAMESPACE_DECL {
+namespace rwlock {
 class RwLockTester {
 public:
   static constexpr int full_reader_state() {
     return (~0) & (~RwState::PENDING_MASK) & (~RwState::ACTIVE_WRITER_BIT);
   }
 };
-} // namespace LIBC_NAMESPACE::rwlock
+} // namespace rwlock
+} // namespace LIBC_NAMESPACE_DECL
 
 static void smoke_test() {
   pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;

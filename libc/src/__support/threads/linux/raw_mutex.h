@@ -32,7 +32,7 @@
     "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT is not defined, defaulting to 100"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // Lock is a simple timable lock for internal usage.
 // This is separated from Mutex because this one does not need to consider
 // robustness and reentrancy. Also, this one has spin optimization for shorter
@@ -125,6 +125,6 @@ public:
   LIBC_INLINE Futex &get_raw_futex() { return futex; }
   LIBC_INLINE void reset() { futex = UNLOCKED; }
 };
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H

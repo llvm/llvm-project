@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 class Timer {
@@ -28,6 +28,6 @@ public:
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_PERFORMANCE_TESTING_TIMER_H

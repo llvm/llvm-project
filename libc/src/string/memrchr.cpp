@@ -10,7 +10,7 @@
 #include "src/__support/common.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memrchr, (const void *src, int c, size_t n)) {
   const unsigned char *str = reinterpret_cast<const unsigned char *>(src);
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(void *, memrchr, (const void *src, int c, size_t n)) {
   return nullptr;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

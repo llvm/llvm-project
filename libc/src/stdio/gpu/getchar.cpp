@@ -14,7 +14,7 @@
 
 #include <stdio.h> //needed for stdin
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getchar, ()) {
   unsigned char c;
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, getchar, ()) {
   return c;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

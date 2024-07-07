@@ -19,7 +19,7 @@
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Returns the number of bytes to substract from ptr to get to the previous
 // multiple of alignment. If ptr is already aligned returns 0.
@@ -349,6 +349,6 @@ LIBC_INLINE void prefetch_to_local_cache(CPtr dst) {
   __builtin_prefetch(dst, /*read*/ 0, /*max locality*/ 3);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H

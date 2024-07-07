@@ -18,7 +18,7 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, epoll_wait,
                    (int epfd, struct epoll_event *events, int maxevents,
@@ -45,4 +45,4 @@ LLVM_LIBC_FUNCTION(int, epoll_wait,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

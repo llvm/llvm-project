@@ -15,7 +15,7 @@
 #include "hdr/types/FILE.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, fgets,
                    (char *__restrict str, int count,
@@ -40,4 +40,4 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   return str;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

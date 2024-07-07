@@ -12,7 +12,7 @@
 
 #include "hdr/fenv_macros.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace testing {
 
@@ -48,4 +48,4 @@ ForceRoundingMode::~ForceRoundingMode() {
 
 } // namespace testing
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

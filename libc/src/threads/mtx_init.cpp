@@ -12,7 +12,7 @@
 
 #include <threads.h> // For mtx_t definition.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(Mutex) <= sizeof(mtx_t),
               "The public mtx_t type cannot accommodate the internal mutex "
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, mtx_init, (mtx_t * m, int type)) {
   return err == MutexError::NONE ? thrd_success : thrd_error;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

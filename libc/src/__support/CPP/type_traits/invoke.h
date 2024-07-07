@@ -18,7 +18,8 @@
 #include "src/__support/CPP/utility/forward.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 namespace detail {
 
@@ -59,6 +60,7 @@ decltype(auto) invoke(Function &&fun, Args &&...args) {
       cpp::forward<Function>(fun), cpp::forward<Args>(args)...);
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_INVOKE_H

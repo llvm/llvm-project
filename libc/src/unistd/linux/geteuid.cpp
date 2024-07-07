@@ -13,10 +13,10 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uid_t, geteuid, ()) {
   return LIBC_NAMESPACE::syscall_impl<uid_t>(SYS_geteuid);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -27,7 +27,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
 /// A fixed size channel used to communicate between the RPC client and server.
@@ -597,6 +597,6 @@ LIBC_INLINE Server::Port Server::open(uint32_t lane_size) {
 }
 
 } // namespace rpc
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif

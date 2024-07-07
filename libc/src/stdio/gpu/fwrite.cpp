@@ -11,7 +11,7 @@
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, fwrite,
                    (const void *__restrict buffer, size_t size, size_t nmemb,
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(size_t, fwrite,
   return result / size;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

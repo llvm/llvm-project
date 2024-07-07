@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_FENV_FESETROUND_H
 #define LLVM_LIBC_SRC_FENV_FESETROUND_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fesetround(int);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_FENV_FESETROUND_H

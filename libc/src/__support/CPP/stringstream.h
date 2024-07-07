@@ -15,7 +15,7 @@
 
 #include "src/__support/integer_to_string.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This class is to be used to write simple strings into a user provided buffer
@@ -90,6 +90,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H

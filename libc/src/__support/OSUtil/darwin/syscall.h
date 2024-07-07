@@ -19,7 +19,7 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename R, typename... Ts>
 LIBC_INLINE R syscall_impl(long __number, Ts... ts) {
@@ -27,6 +27,6 @@ LIBC_INLINE R syscall_impl(long __number, Ts... ts) {
   return cpp::bit_or_static_cast<R>(syscall_impl(__number, (long)ts...));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_SYSCALL_H

@@ -27,7 +27,7 @@
 #endif
 #include <linux/magic.h> // For common FS magics
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 long filesizebits(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
@@ -124,4 +124,4 @@ long pathconfig(const statfs_utils::LinuxStatFs &s, int name) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

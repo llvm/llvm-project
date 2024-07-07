@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_LOGBL_H
 #define LLVM_LIBC_SRC_MATH_LOGBL_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 long double logbl(long double x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_LOGBL_H

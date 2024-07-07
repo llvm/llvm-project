@@ -11,8 +11,8 @@
 #include "src/__support/GPU/allocator.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, free, (void *ptr)) { gpu::deallocate(ptr); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

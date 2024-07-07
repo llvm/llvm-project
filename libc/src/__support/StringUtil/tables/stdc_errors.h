@@ -13,7 +13,7 @@
 
 #include <errno.h> // For error macros
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE_VAR constexpr const MsgTable<3> STDC_ERRORS = {
     MsgMapping(0, "Success"),
@@ -21,6 +21,6 @@ LIBC_INLINE_VAR constexpr const MsgTable<3> STDC_ERRORS = {
     MsgMapping(ERANGE, "Numerical result out of range"),
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_ERRORS_H

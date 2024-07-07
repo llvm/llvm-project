@@ -15,7 +15,7 @@
 
 #include <stdint.h> // uint32_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 class CndVar {
   enum CndWaiterStatus : uint32_t {
@@ -49,6 +49,6 @@ public:
   void broadcast();
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CNDVAR_H

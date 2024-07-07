@@ -48,7 +48,7 @@ LIBC_INLINE constexpr bool NO_FMA = true;
 #define LIBC_MATH_COS_SKIP_ACCURATE_PASS
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -194,4 +194,4 @@ LLVM_LIBC_FUNCTION(double, cos, (double x)) {
 #endif // !LIBC_MATH_COS_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

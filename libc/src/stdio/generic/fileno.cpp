@@ -12,10 +12,10 @@
 #include "hdr/types/FILE.h"
 #include "src/__support/File/file.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fileno, (::FILE * stream)) {
   return get_fileno(reinterpret_cast<LIBC_NAMESPACE::File *>(stream));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -11,7 +11,7 @@
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -101,4 +101,4 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
   return (exp_hi * (exp_mid * l2));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

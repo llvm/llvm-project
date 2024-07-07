@@ -11,11 +11,11 @@
 
 #include "hdr/types/struct_sigaction.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int sigaction(int signal, const struct sigaction *__restrict libc_new,
               struct sigaction *__restrict libc_old);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGACTION_H

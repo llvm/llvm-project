@@ -12,11 +12,11 @@
 #include "hdr/types/FILE.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 size_t fread_unlocked(void *__restrict buffer, size_t size, size_t nmemb,
                       ::FILE *stream);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_FREAD_UNLOCKED_H

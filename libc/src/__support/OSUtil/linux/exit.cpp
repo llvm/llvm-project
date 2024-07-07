@@ -10,7 +10,8 @@
 #include "syscall.h"     // For internal syscall function.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 // mark as no_stack_protector for x86 since TLS can be torn down before calling
 // exit so that the stack protector canary cannot be loaded.
@@ -25,4 +26,5 @@ exit(int status) {
   }
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL

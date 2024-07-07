@@ -23,7 +23,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 LIBC_INLINE uint8_t secondary_hash(uint64_t hash) {
@@ -349,6 +349,6 @@ public:
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H

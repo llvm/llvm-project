@@ -14,13 +14,13 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
   LIBC_NAMESPACE::syscall_impl<long>(SYS_write, 2 /* stderr */, msg.data(),
                                      msg.size());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_IO_H

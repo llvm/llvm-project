@@ -11,10 +11,10 @@
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, ferror, (::FILE * stream)) {
   return reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->error();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

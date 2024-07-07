@@ -15,7 +15,7 @@
 #include <signal.h>
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sigaltstack,
                    (const stack_t *__restrict ss, stack_t *__restrict oss)) {
@@ -42,4 +42,4 @@ LLVM_LIBC_FUNCTION(int, sigaltstack,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

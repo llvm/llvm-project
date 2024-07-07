@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_FCHDIR_H
 #define LLVM_LIBC_SRC_UNISTD_FCHDIR_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fchdir(int fd);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_FCHDIR_H

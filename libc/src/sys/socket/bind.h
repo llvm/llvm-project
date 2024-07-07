@@ -11,10 +11,10 @@
 
 #include <sys/socket.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int bind(int domain, const struct sockaddr *address, socklen_t address_len);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_SOCKET_BIND_H

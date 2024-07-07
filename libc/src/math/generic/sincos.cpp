@@ -50,7 +50,7 @@ LIBC_INLINE constexpr bool NO_FMA = true;
 #define LIBC_MATH_SINCOS_SKIP_ACCURATE_PASS
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -244,4 +244,4 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
 #endif // !LIBC_MATH_SINCOS_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

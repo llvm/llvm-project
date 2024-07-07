@@ -10,11 +10,11 @@
 #include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, remainderf16, (float16 x, float16 y)) {
   int quotient;
   return fputil::remquo(x, y, quotient);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

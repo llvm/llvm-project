@@ -11,10 +11,10 @@
 
 #include <threads.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int thrd_equal(thrd_t lhs, thrd_t rhs);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_THRD_EQUAL_H

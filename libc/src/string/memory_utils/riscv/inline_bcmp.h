@@ -15,7 +15,7 @@
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_riscv(CPtr p1, CPtr p2,
                                                               size_t count) {
@@ -28,6 +28,6 @@ namespace LIBC_NAMESPACE {
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_BCMP_H

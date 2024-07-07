@@ -13,7 +13,7 @@
 
 #include <cassert>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
@@ -101,4 +101,4 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

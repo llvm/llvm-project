@@ -26,7 +26,7 @@
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
@@ -390,4 +390,4 @@ LLVM_LIBC_FUNCTION(double, exp2, (double x)) {
   return static_cast<double>(r_f128);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

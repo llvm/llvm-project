@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   if (src == nullptr)
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   return dest;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

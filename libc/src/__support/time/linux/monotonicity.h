@@ -13,7 +13,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/time/linux/abs_timeout.h"
 #include "src/__support/time/linux/clock_conversion.h"
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 // This function is separated from abs_timeout.
 // This function pulls in the dependency to clock_conversion.h,
@@ -38,6 +38,6 @@ LIBC_INLINE void ensure_monotonicity(AbsTimeout &timeout) {
   }
 }
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_MONOTONICITY_H

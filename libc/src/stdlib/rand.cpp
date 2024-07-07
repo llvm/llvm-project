@@ -11,7 +11,7 @@
 #include "src/__support/threads/sleep.h"
 #include "src/stdlib/rand_util.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // An implementation of the xorshift64star pseudo random number generator. This
 // is a good general purpose generator for most non-cryptographics applications.
@@ -29,4 +29,4 @@ LLVM_LIBC_FUNCTION(int, rand, (void)) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

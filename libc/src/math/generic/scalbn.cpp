@@ -15,10 +15,10 @@
 #error "FLT_RADIX != 2 is not supported."
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, scalbn, (double x, int n)) {
   return fputil::ldexp(x, n);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

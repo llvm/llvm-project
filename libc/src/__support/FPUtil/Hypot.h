@@ -18,7 +18,7 @@
 #include "src/__support/common.h"
 #include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 namespace internal {
@@ -263,6 +263,6 @@ LIBC_INLINE T hypot(T x, T y) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_HYPOT_H

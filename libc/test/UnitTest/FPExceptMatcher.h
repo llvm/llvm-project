@@ -14,7 +14,7 @@
 
 #if LIBC_TEST_HAS_MATCHERS()
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // TODO: Make the matcher match specific exceptions instead of just identifying
@@ -51,7 +51,7 @@ public:
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define ASSERT_RAISES_FP_EXCEPT(func)                                          \
   ASSERT_THAT(                                                                 \

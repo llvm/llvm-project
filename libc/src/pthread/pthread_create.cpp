@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <pthread.h> // For pthread_* type definitions.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(pthread_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between pthread_t and internal Thread.");
@@ -84,4 +84,4 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
   return result;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

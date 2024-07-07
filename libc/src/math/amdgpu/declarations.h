@@ -13,7 +13,7 @@
 
 #include "src/__support/GPU/utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
 float __ocml_acos_f32(float);
@@ -83,6 +83,6 @@ double __ocml_tgamma_f64(double);
 float __ocml_tgamma_f32(float);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_AMDGPU_DECLARATIONS_H

@@ -14,7 +14,7 @@
 #include "src/__support/common.h"
 #include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   auto x_bits = fputil::FPBits<double>(x);
@@ -125,4 +125,4 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   return result_bits.get_val();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

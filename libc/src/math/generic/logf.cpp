@@ -49,7 +49,7 @@
 // USA, January 16-22, 2022.
 // https://people.cs.rutgers.edu/~sn349/papers/rlibmall-popl-2022.pdf
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
@@ -170,4 +170,4 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

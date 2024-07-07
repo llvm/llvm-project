@@ -12,11 +12,11 @@
 #include "hdr/types/FILE.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 size_t fwrite(const void *__restrict ptr, size_t size, size_t nmemb,
               ::FILE *__restrict stream);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_FWRITE_H

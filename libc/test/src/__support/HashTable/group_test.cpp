@@ -12,7 +12,7 @@
 #include "test/UnitTest/Test.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 struct ByteArray {
@@ -87,4 +87,4 @@ TEST(LlvmLibcHashTableBitMaskTest, MaskAvailable) {
   }
 }
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

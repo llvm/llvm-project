@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_RINDEX_H
 #define LLVM_LIBC_SRC_STRING_RINDEX_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 char *rindex(const char *src, int c);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_RINDEX_H

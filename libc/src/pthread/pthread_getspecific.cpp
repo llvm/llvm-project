@@ -14,10 +14,10 @@
 #include <pthread.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, pthread_getspecific, (pthread_key_t key)) {
   return get_tss_value(key);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

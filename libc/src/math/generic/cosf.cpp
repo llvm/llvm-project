@@ -19,7 +19,7 @@
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Exceptional cases for cosf.
 static constexpr size_t N_EXCEPTS = 6;
@@ -134,4 +134,4 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
       sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

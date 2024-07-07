@@ -23,7 +23,7 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 struct FEnv {
@@ -284,6 +284,6 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H

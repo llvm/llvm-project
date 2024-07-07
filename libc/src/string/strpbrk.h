@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRPBRK_H
 #define LLVM_LIBC_SRC_STRING_STRPBRK_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 char *strpbrk(const char *src, const char *breakset);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRPBRK_H

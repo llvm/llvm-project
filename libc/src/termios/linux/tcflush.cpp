@@ -16,7 +16,7 @@
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, tcflush, (int fd, int queue_selector)) {
   int ret =
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, tcflush, (int fd, int queue_selector)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

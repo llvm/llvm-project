@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // The difference between BlockStore a traditional vector types is that,
 // when more capacity is desired, a new block is added instead of allocating
@@ -203,6 +203,6 @@ LIBC_INLINE void BlockStore<T, BLOCK_SIZE, REVERSE_ORDER>::destroy(
 template <typename T, size_t BLOCK_SIZE>
 using ReverseOrderBlockStore = BlockStore<T, BLOCK_SIZE, true>;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H

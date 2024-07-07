@@ -30,7 +30,7 @@
 // - Use regular `errno` in the code
 // - Still depend on libc.src.errno.errno
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 struct Errno {
   void operator=(int);
   operator int();
@@ -38,6 +38,6 @@ struct Errno {
 
 extern Errno libc_errno;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H

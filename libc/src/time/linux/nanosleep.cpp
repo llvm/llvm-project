@@ -15,7 +15,7 @@
 #include <stdint.h>      // For int64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {
@@ -38,4 +38,4 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

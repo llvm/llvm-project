@@ -10,7 +10,7 @@
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
@@ -19,4 +19,4 @@ LLVM_LIBC_FUNCTION(int, iscntrl, (int c)) {
   return static_cast<int>(ch < 0x20 || ch == 0x7f);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

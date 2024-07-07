@@ -10,7 +10,7 @@
 #include "src/sys/mman/linux/shm_common.h"
 #include "src/unistd/unlink.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, shm_unlink, (const char *name)) {
   using namespace shm_common;
@@ -19,4 +19,4 @@ LLVM_LIBC_FUNCTION(int, shm_unlink, (const char *name)) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

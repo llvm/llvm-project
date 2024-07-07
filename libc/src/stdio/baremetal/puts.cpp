@@ -10,7 +10,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/io.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   cpp::string_view str_view(str);
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

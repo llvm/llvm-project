@@ -13,7 +13,7 @@
 #error "Invalid file include"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   register __UINT64_TYPE__ rbx __asm__("rbx");
@@ -53,4 +53,4 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

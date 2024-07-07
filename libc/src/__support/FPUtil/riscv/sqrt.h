@@ -18,7 +18,7 @@
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 #ifdef __riscv_flen
@@ -38,6 +38,6 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 #endif // __riscv_flen
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_SQRT_H

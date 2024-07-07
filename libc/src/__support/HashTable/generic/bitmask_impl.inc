@@ -9,7 +9,7 @@
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // GPU architectures are 64-bit but use 32-bit general purpose registers.
@@ -121,4 +121,4 @@ struct Group {
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

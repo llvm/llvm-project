@@ -17,7 +17,7 @@
 #include <signal.h>      // For SIGCHLD
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // The implementation of fork here is very minimal. We will add more
 // functionality and standard compliance in future.
@@ -51,4 +51,4 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

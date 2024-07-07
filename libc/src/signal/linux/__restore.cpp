@@ -14,7 +14,7 @@
 
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" void __restore_rt()
     __attribute__((no_sanitize("all"),
@@ -24,4 +24,4 @@ extern "C" void __restore_rt() {
   LIBC_NAMESPACE::syscall_impl<long>(SYS_rt_sigreturn);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

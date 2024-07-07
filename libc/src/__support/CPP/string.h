@@ -18,7 +18,7 @@
 #include <stddef.h> // size_t
 #include <stdlib.h> // malloc, free
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This class mimics std::string but does not intend to be a full fledged
@@ -225,6 +225,6 @@ LIBC_INLINE string to_string(unsigned long long value) {
 // LIBC_INLINE string to_string(long double value);
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H

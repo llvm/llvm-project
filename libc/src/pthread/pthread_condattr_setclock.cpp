@@ -15,7 +15,7 @@
 #include <sys/types.h> // clockid_t
 #include <time.h>      // CLOCK_MONOTONIC, CLOCK_REALTIME
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_condattr_setclock,
                    (pthread_condattr_t * attr, clockid_t clock)) {
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, pthread_condattr_setclock,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

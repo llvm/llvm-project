@@ -12,11 +12,11 @@
 #include "hdr/types/FILE.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int setvbuf(::FILE *__restrict stream, char *__restrict buf, int type,
             size_t size);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SETVBUF_H

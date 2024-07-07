@@ -35,7 +35,7 @@
 extern "C" [[gnu::weak]] int __cxa_atexit(void (*callback)(void *),
                                           void *payload, void *);
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 constexpr static size_t MAX_AUXV_ENTRIES = 64;
 
@@ -214,4 +214,4 @@ LLVM_LIBC_FUNCTION(unsigned long, getauxval, (unsigned long id)) {
   errno_guard.mark_failure();
   return AT_NULL;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -12,7 +12,7 @@
 #include "src/string/memory_utils/inline_memset.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 int Writer::pad(char new_char, size_t length) {
@@ -42,4 +42,4 @@ int Writer::pad(char new_char, size_t length) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

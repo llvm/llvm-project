@@ -13,11 +13,11 @@
 
 #include <dirent.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, dirfd, (::DIR * dir)) {
   auto *d = reinterpret_cast<LIBC_NAMESPACE::Dir *>(dir);
   return d->getfd();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

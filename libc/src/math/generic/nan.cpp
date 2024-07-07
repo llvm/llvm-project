@@ -11,7 +11,7 @@
 #include "src/__support/str_to_float.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, nan, (const char *arg)) {
   auto result = internal::strtonan<double>(arg);
@@ -20,4 +20,4 @@ LLVM_LIBC_FUNCTION(double, nan, (const char *arg)) {
   return result.value;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -21,7 +21,7 @@
 #define PRINTF_STDOUT ::stdout
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, vprintf,
                    (const char *__restrict format, va_list vlist)) {
@@ -33,4 +33,4 @@ LLVM_LIBC_FUNCTION(int, vprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

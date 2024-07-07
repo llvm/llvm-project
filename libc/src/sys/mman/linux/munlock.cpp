@@ -13,7 +13,7 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, munlock, (const void *addr, size_t len)) {
   long ret = syscall_impl(SYS_munlock, cpp::bit_cast<long>(addr), len);
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, munlock, (const void *addr, size_t len)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

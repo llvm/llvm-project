@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
 extern uintptr_t __preinit_array_start[];
@@ -29,4 +29,4 @@ extern "C" void __libc_init_array(void) {
     reinterpret_cast<InitCallback *>(__init_array_start[i])();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

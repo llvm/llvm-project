@@ -16,7 +16,7 @@
 #include "src/errno/libc_errno.h"
 #include <asm/statfs.h>
 #include <sys/syscall.h>
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace statfs_utils {
 #ifdef SYS_statfs64
@@ -91,6 +91,6 @@ LIBC_INLINE struct statvfs statfs_to_statvfs(const LinuxStatFs &in) {
   return out;
 }
 } // namespace statfs_utils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H

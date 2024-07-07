@@ -22,7 +22,7 @@
 
 #include "hdr/fenv_macros.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace generic {
 
@@ -272,6 +272,6 @@ fma(InType x, InType y, InType z) {
 
 } // namespace generic
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H

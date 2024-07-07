@@ -13,7 +13,7 @@
 
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
   using StorageType = typename fputil::FPBits<T>::StorageType;
@@ -79,4 +79,4 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -17,7 +17,7 @@
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
   LIBC_NAMESPACE::kernel_termios kt;
@@ -43,4 +43,4 @@ LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

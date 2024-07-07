@@ -12,7 +12,7 @@
 
 #include <threads.h> // cnd_t, thrd_error, thrd_success
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(CndVar) == sizeof(cnd_t));
 
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, cnd_signal, (cnd_t * cond)) {
   return thrd_success;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

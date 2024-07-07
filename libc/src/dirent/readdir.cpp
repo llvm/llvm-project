@@ -14,7 +14,7 @@
 
 #include <dirent.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(struct ::dirent *, readdir, (::DIR * dir)) {
   auto *d = reinterpret_cast<LIBC_NAMESPACE::Dir *>(dir);
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(struct ::dirent *, readdir, (::DIR * dir)) {
   return dirent_val.value();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

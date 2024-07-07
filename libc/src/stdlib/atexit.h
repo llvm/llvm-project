@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC_STDLIB_ATEXIT_H
 
 #include "hdr/types/atexithandler_t.h"
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int atexit(__atexithandler_t);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_ATEXIT_H

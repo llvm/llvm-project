@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_EXPM1_H
 #define LLVM_LIBC_SRC_MATH_EXPM1_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 double expm1(double x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_EXPM1_H

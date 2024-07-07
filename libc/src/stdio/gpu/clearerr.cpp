@@ -11,7 +11,7 @@
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
   rpc::Client::Port port = rpc::client.open<RPC_CLEARERR>();
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
   port.close();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

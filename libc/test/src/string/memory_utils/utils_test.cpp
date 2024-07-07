@@ -10,7 +10,7 @@
 #include "src/string/memory_utils/utils.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using UINT = uintptr_t;
 
@@ -137,4 +137,4 @@ TEST(LlvmLibcUtilsTest, LoadStoreAligned) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

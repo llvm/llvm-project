@@ -11,7 +11,7 @@
 #include "src/__support/time/linux/clock_gettime.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, clock_gettime,
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, clock_gettime,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

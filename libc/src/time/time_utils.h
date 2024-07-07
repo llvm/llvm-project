@@ -17,7 +17,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 enum Month : int {
@@ -151,6 +151,6 @@ LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
 }
 
 } // namespace time_utils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_TIME_UTILS_H

@@ -12,7 +12,7 @@
 #include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/unistd/linux/pathconf_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
   if (cpp::optional<statfs_utils::LinuxStatFs> result =
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

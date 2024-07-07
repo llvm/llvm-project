@@ -11,10 +11,10 @@
 
 #include "hdr/types/struct_epoll_event.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int epoll_wait(int epfd, epoll_event *events, int maxevents, int timeout);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H

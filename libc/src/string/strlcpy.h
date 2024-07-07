@@ -11,10 +11,10 @@
 
 #include <string.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 size_t strlcpy(char *__restrict dst, const char *__restrict src, size_t size);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRLCPY_H

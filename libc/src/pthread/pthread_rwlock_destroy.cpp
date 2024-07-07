@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlock_destroy, (pthread_rwlock_t * rwlock)) {
   if (!rwlock)
@@ -30,4 +30,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_destroy, (pthread_rwlock_t * rwlock)) {
   return static_cast<int>(res);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

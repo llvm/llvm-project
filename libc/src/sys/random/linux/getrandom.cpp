@@ -14,7 +14,7 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, getrandom,
                    (void *buf, size_t buflen, unsigned int flags)) {
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(ssize_t, getrandom,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

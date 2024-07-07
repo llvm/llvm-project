@@ -32,7 +32,7 @@
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // Only the following conditions are supported. Notice that we do not have
@@ -312,7 +312,7 @@ template <typename... Types> using TypeList = internal::TypeList<Types...>;
 CString libc_make_test_file_path_func(const char *file_name);
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 // For TYPED_TEST and TYPED_TEST_F below we need to display which type was used
 // to run the test. The default will return the fully qualified canonical type

@@ -16,7 +16,7 @@
 #include <pthread.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setstack,
                    (pthread_attr_t *__restrict attr, void *stack,
@@ -35,4 +35,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_setstack,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -13,7 +13,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TOOD: Some architectures will have their signal trampoline functions in the
 // vdso, use those when available.
@@ -46,4 +46,4 @@ LLVM_LIBC_FUNCTION(int, sigaction,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

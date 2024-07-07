@@ -13,7 +13,7 @@
 #include "src/errno/libc_errno.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fgetc, (::FILE * stream)) {
   unsigned char c;
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, fgetc, (::FILE * stream)) {
   return c;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

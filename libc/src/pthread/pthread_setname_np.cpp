@@ -14,7 +14,7 @@
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(pthread_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between pthread_t and internal Thread.");
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, pthread_setname_np, (pthread_t th, const char *name)) {
   return thread->set_name(cpp::string_view(name));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

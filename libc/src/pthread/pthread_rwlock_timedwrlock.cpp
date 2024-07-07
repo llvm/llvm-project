@@ -17,7 +17,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlock_timedwrlock,
                    (pthread_rwlock_t *__restrict rwlock,
@@ -40,4 +40,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_timedwrlock,
   __builtin_unreachable();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

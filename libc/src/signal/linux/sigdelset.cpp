@@ -13,7 +13,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sigdelset, (sigset_t * set, int signum)) {
   if (set != nullptr && delete_signal(*set, signum))
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, sigdelset, (sigset_t * set, int signum)) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

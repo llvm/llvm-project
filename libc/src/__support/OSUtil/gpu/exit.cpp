@@ -11,7 +11,8 @@
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/macros/properties/architectures.h"
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 [[noreturn]] void exit(int status) {
   // We want to first make sure the server is listening before we exit.
@@ -25,4 +26,5 @@ namespace LIBC_NAMESPACE::internal {
   gpu::end_program();
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL

@@ -14,7 +14,7 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sched_yield, ()) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_sched_yield);
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, sched_yield, ()) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

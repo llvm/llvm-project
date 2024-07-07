@@ -29,7 +29,7 @@
 #include <sys/mman.h>    // For PROT_* and MAP_* definitions.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -517,4 +517,4 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   __builtin_unreachable();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

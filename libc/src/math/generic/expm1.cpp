@@ -36,7 +36,7 @@
 #include <iostream>
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
@@ -507,4 +507,4 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 #endif // LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

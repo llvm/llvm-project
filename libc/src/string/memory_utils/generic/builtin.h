@@ -14,7 +14,7 @@
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #if !__has_builtin(__builtin_memcpy) || !__has_builtin(__builtin_memset) ||    \
     !__has_builtin(__builtin_memmove)
@@ -36,6 +36,6 @@ inline_memset_builtin(Ptr dst, uint8_t value, size_t count, size_t offset = 0) {
   __builtin_memset(dst + offset, value, count);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H

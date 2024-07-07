@@ -15,7 +15,7 @@
 #include <sys/resource.h> // For struct rlimit
 #include <sys/syscall.h>  // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setrlimit, (int res, const struct rlimit *limits)) {
   int ret =
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, setrlimit, (int res, const struct rlimit *limits)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

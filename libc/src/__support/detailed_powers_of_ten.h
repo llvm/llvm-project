@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // TODO(michaelrj): write a script that will generate this table.
@@ -734,6 +734,6 @@ static constexpr uint64_t DETAILED_POWERS_OF_TEN[696][2] = {
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H

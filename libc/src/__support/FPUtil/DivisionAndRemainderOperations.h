@@ -16,7 +16,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 static constexpr int QUOTIENT_LSB_BITS = 3;
@@ -115,6 +115,6 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DIVISIONANDREMAINDEROPERATIONS_H

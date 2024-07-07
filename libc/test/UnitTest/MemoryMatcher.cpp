@@ -14,7 +14,7 @@
 
 using LIBC_NAMESPACE::testing::tlog;
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 template <typename T>
@@ -77,6 +77,6 @@ void MemoryMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TEST_HAS_MATCHERS()

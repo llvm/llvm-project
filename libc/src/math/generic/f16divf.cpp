@@ -10,10 +10,10 @@
 #include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, f16divf, (float x, float y)) {
   return fputil::generic::div<float16>(x, y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

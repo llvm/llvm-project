@@ -11,10 +11,10 @@
 
 #include <sched.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int sched_rr_get_interval(pid_t tid, struct timespec *tp);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_RR_GET_INTERVAL_H

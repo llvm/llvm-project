@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace benchmarks {
 
 // cpp::string_view specialization
@@ -94,4 +94,4 @@ template BenchmarkLogger &BenchmarkLogger::operator<< <UInt<320>>(UInt<320>);
 BenchmarkLogger log;
 
 } // namespace benchmarks
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

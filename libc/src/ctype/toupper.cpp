@@ -11,7 +11,7 @@
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, toupper, (int c)) {
   return c;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

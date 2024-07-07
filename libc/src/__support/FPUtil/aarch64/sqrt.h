@@ -18,7 +18,7 @@
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <> LIBC_INLINE float sqrt<float>(float x) {
@@ -34,6 +34,6 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_SQRT_H

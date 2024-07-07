@@ -10,10 +10,10 @@
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, roundevenf16, (float16 x)) {
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

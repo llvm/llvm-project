@@ -15,7 +15,7 @@
 #include "src/__support/uint128.h"           // UInt128
 #include <stdint.h>                          // For uint64_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // Folded multiplication.
@@ -160,6 +160,6 @@ public:
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_HASH_H

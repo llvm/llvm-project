@@ -12,7 +12,8 @@
 #include "src/__support/macros/attributes.h"
 #include <stddef.h> // For size_t.
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 template <size_t NumberOfBits> struct bitset {
   static_assert(NumberOfBits != 0,
@@ -86,6 +87,7 @@ private:
   size_t Data[NUMBER_OF_UNITS] = {0};
 };
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BITSET_H

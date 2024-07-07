@@ -18,7 +18,7 @@
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
@@ -84,6 +84,6 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_VFPRINTF_INTERNAL_H

@@ -13,7 +13,7 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, epoll_create, ([[maybe_unused]] int size)) {
 #ifdef SYS_epoll_create
@@ -35,4 +35,4 @@ LLVM_LIBC_FUNCTION(int, epoll_create, ([[maybe_unused]] int size)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

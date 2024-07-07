@@ -12,7 +12,7 @@
 #include "hdr/types/FILE.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   int result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->close();
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

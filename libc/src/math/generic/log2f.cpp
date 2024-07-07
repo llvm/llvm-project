@@ -51,7 +51,7 @@
 // Dept. of Comp. Sci., Rutgets U., Technical Report DCS-TR-758, Nov. 2021.
 // https://arxiv.org/pdf/2111.12852.pdf.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -120,4 +120,4 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

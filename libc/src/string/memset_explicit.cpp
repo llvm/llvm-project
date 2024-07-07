@@ -10,7 +10,7 @@
 #include "src/__support/common.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[gnu::noinline]] LLVM_LIBC_FUNCTION(void *, memset_explicit,
                                      (void *dst, int value, size_t count)) {
@@ -22,4 +22,4 @@ namespace LIBC_NAMESPACE {
   return dst;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

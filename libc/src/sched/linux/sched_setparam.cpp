@@ -14,7 +14,7 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sched_setparam,
                    (pid_t tid, const struct sched_param *param)) {
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, sched_setparam,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

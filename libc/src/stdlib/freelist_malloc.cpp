@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 #ifdef LIBC_FREELIST_MALLOC_SIZE
@@ -47,4 +47,4 @@ LLVM_LIBC_FUNCTION(void *, aligned_alloc, (size_t alignment, size_t size)) {
   return freelist_heap->aligned_allocate(alignment, size);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -12,7 +12,7 @@
 
 #include <threads.h> // For once_flag and __call_once_func_t definitions.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, call_once,
                    (once_flag * flag, __call_once_func_t func)) {
@@ -20,4 +20,4 @@ LLVM_LIBC_FUNCTION(void, call_once,
            reinterpret_cast<CallOnceCallback *>(func));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

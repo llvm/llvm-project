@@ -14,7 +14,7 @@
 #include "hdr/math_macros.h" // HUGE_VALF, HUGE_VALF
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 enum Value { ZERO, ONE, TWO, MIN, MAX };
 
@@ -921,4 +921,4 @@ TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
   ASSERT_EQ(static_cast<int>(a >> 64), 1);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

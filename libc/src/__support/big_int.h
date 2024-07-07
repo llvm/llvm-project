@@ -24,7 +24,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace multiword {
 
@@ -1293,6 +1293,6 @@ first_trailing_one(T value) {
                                                 : cpp::countr_zero(value) + 1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

@@ -11,8 +11,8 @@
 
 #include <search.h> // ENTRY, ACTION
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 ENTRY *hsearch(ENTRY item, ACTION action);
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SEARCH_HSEARCH_H

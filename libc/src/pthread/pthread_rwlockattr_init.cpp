@@ -12,7 +12,7 @@
 
 #include <pthread.h> // pthread_rwlockattr_t, PTHREAD_PROCESS_PRIVATE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_init,
                    (pthread_rwlockattr_t * attr)) {
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_init,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

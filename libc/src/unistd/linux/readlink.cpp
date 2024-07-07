@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, readlink,
                    (const char *__restrict path, char *__restrict buf,
@@ -36,4 +36,4 @@ LLVM_LIBC_FUNCTION(ssize_t, readlink,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -11,9 +11,9 @@
 
 #include <search.h> // ENTRY, ACTION
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 int hsearch_r(ENTRY item, ACTION action, ENTRY **retval,
               struct hsearch_data *htab);
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SEARCH_HSEARCH_R_H

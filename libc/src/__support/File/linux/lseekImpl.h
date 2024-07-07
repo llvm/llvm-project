@@ -18,7 +18,7 @@
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 LIBC_INLINE ErrorOr<off_t> lseekimpl(int fd, off_t offset, int whence) {
@@ -45,6 +45,6 @@ LIBC_INLINE ErrorOr<off_t> lseekimpl(int fd, off_t offset, int whence) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H

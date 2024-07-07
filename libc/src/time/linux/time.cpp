@@ -12,7 +12,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/time/time_func.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(time_t, time, (time_t * tp)) {
   // TODO: Use the Linux VDSO to fetch the time and avoid the syscall.
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(time_t, time, (time_t * tp)) {
   return time_t(ts.tv_sec);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

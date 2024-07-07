@@ -25,7 +25,8 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 template <typename T>
 using storage_type = typename fputil::FPBits<T>::StorageType;
@@ -133,6 +134,7 @@ int strfromfloat_convert(printf_core::Writer *writer,
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H

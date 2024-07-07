@@ -16,7 +16,7 @@
 // TODO: Add a comment here explaining the printf format string.
 
 // #include <stdio.h>
-// namespace LIBC_NAMESPACE {
+// namespace LIBC_NAMESPACE_DECL {
 // using ::sprintf;
 // }
 

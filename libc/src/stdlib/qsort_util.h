@@ -13,7 +13,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 // A simple quicksort implementation using the Hoare partition scheme.
 
@@ -147,6 +148,7 @@ LIBC_INLINE void quicksort(const Array &array) {
   quicksort(array.make_array(split_index, array.size() - split_index));
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_QSORT_UTIL_H

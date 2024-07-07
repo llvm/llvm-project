@@ -12,7 +12,7 @@
 
 #include "hdr/stdio_macros.h" // for EOF.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, wctob, (wint_t c)) {
   auto result = internal::wctob(c);
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, wctob, (wint_t c)) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

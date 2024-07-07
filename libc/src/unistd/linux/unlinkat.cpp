@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, unlinkat, (int dfd, const char *path, int flags)) {
 #ifdef SYS_unlinkat
@@ -31,4 +31,4 @@ LLVM_LIBC_FUNCTION(int, unlinkat, (int dfd, const char *path, int flags)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

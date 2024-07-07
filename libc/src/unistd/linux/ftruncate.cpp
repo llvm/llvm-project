@@ -16,7 +16,7 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, ftruncate, (int fd, off_t len)) {
 #ifdef SYS_ftruncate
@@ -37,4 +37,4 @@ LLVM_LIBC_FUNCTION(int, ftruncate, (int fd, off_t len)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

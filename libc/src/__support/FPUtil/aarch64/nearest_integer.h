@@ -16,7 +16,7 @@
 #error "Invalid include"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 LIBC_INLINE float nearest_integer(float x) {
@@ -32,6 +32,6 @@ LIBC_INLINE double nearest_integer(double x) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_NEAREST_INTEGER_H

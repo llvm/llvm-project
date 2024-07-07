@@ -10,7 +10,7 @@
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(lldiv_t, lldiv, (long long x, long long y)) {
   lldiv_t res;
@@ -18,4 +18,4 @@ LLVM_LIBC_FUNCTION(lldiv_t, lldiv, (long long x, long long y)) {
   return res;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

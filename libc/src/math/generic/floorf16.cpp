@@ -10,8 +10,8 @@
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, floorf16, (float16 x)) { return fputil::floor(x); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

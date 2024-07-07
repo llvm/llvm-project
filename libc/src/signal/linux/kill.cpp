@@ -16,7 +16,7 @@
 #include <signal.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, kill, (pid_t pid, int sig)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_kill, pid, sig);
@@ -31,4 +31,4 @@ LLVM_LIBC_FUNCTION(int, kill, (pid_t pid, int sig)) {
   return ret; // always 0
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

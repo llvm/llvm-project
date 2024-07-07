@@ -12,7 +12,7 @@
 #include "src/stdlib/exit_handler.h"
 
 // extern "C" void __cxa_finalize(void *);
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern ExitCallbackList at_quick_exit_callbacks;
 
@@ -21,4 +21,4 @@ extern ExitCallbackList at_quick_exit_callbacks;
   internal::exit(status);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

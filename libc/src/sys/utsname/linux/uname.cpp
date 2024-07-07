@@ -15,7 +15,7 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/utsname.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, uname, (struct utsname * name)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_uname, name);
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, uname, (struct utsname * name)) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

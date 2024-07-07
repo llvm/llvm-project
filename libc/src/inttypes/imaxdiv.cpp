@@ -10,7 +10,7 @@
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(imaxdiv_t, imaxdiv, (intmax_t x, intmax_t y)) {
   imaxdiv_t res;
@@ -18,4 +18,4 @@ LLVM_LIBC_FUNCTION(imaxdiv_t, imaxdiv, (intmax_t x, intmax_t y)) {
   return res;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -15,7 +15,7 @@
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int CndVar::wait(Mutex *m) {
   // The goal is to perform "unlock |m| and wait" in an
@@ -102,4 +102,4 @@ void CndVar::broadcast() {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

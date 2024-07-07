@@ -11,10 +11,10 @@
 
 #include "hdr/types/sigset_t.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int sigaddset(sigset_t *set, int signum);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGADDSET_H

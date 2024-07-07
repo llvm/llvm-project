@@ -46,7 +46,7 @@ LIBC_NAMESPACE::Errno::operator int() { return errno; }
 
 #endif // LIBC_FULL_BUILD
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // Define the global `libc_errno` instance.
 Errno libc_errno;
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

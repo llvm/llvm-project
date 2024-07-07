@@ -19,7 +19,7 @@
 // just the re-ordering of argv elements such that unknown arguments can be
 // easily iterated over.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct RefWrapper {
   RefWrapper() = delete;
@@ -202,4 +202,4 @@ LLVM_LIBC_FUNCTION(int, getopt,
   return getopt_r(argc, argv, optstring, impl::ctx);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

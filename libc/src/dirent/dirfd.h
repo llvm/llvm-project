@@ -11,10 +11,10 @@
 
 #include <dirent.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int dirfd(::DIR *dir);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_DIRENT_DIRFD_H

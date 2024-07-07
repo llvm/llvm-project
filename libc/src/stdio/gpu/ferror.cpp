@@ -11,7 +11,7 @@
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, ferror, (::FILE * stream)) {
   int ret;
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, ferror, (::FILE * stream)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

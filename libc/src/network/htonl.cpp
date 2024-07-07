@@ -10,10 +10,10 @@
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uint32_t, htonl, (uint32_t hostlong)) {
   return Endian::to_big_endian(hostlong);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

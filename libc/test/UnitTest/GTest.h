@@ -11,12 +11,14 @@
 
 #include <gtest/gtest.h>
 
-namespace LIBC_NAMESPACE::testing {
+namespace LIBC_NAMESPACE_DECL {
+namespace testing {
 
 using ::testing::Matcher;
 using ::testing::Test;
 
-} // namespace LIBC_NAMESPACE::testing
+} // namespace testing
+} // namespace LIBC_NAMESPACE_DECL
 
 #define LIBC_TEST_HAS_MATCHERS() (1)
 

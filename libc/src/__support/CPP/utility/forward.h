@@ -12,7 +12,8 @@
 #include "src/__support/CPP/type_traits/remove_reference.h"
 #include "src/__support/macros/attributes.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // forward
 template <typename T>
@@ -27,6 +28,7 @@ LIBC_INLINE constexpr T &&forward(remove_reference_t<T> &&value) {
   return static_cast<T &&>(value);
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_FORWARD_H

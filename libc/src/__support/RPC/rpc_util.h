@@ -17,7 +17,7 @@
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
 /// Conditional to indicate if this process is running on the GPU.
@@ -67,6 +67,6 @@ LIBC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
 }
 
 } // namespace rpc
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H

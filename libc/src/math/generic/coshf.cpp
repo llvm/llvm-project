@@ -13,7 +13,7 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/explogxf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -52,4 +52,4 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   return static_cast<float>(exp_pm_eval</*is_sinh*/ false>(x));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

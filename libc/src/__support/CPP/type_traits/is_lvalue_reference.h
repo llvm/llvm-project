@@ -13,7 +13,8 @@
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/macros/attributes.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_lvalue_reference
 #if __has_builtin(__is_lvalue_reference)
@@ -27,6 +28,7 @@ template <class T>
 LIBC_INLINE_VAR constexpr bool is_lvalue_reference_v =
     is_lvalue_reference<T>::value;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_LVALUE_REFERENCE_H

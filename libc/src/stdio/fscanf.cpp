@@ -15,7 +15,7 @@
 #include "hdr/types/FILE.h"
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fscanf,
                    (::FILE *__restrict stream, const char *__restrict format,
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, fscanf,
   return (ret_val == -1) ? EOF : ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

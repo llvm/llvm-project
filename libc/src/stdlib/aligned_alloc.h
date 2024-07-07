@@ -11,10 +11,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ALIGNED_ALLOC_H
 #define LLVM_LIBC_SRC_STDLIB_ALIGNED_ALLOC_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 void *aligned_alloc(size_t alignment, size_t size);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_ALIGNED_ALLOC_H

@@ -11,7 +11,7 @@
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This just checks against the C spec, almost all implementations will surpass
 // this.
@@ -42,4 +42,4 @@ TEST(LlvmLibcLimitsTest, UInt128Limits) {
 #endif // LIBC_TYPES_HAS_INT128
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

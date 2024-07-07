@@ -23,7 +23,7 @@
 #include "src/__support/fixed_point/fx_rep.h"
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 template <typename T> struct int_type_of {
@@ -668,6 +668,6 @@ private:
 };
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H

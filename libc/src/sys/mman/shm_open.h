@@ -11,10 +11,10 @@
 
 #include <llvm-libc-types/mode_t.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int shm_open(const char *name, int oflag, mode_t mode);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_SHM_OPEN_H

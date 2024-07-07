@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
 
@@ -372,7 +372,7 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 // GET_MPFR_DUMMY_ARG is going to be added to the end of GET_MPFR_MACRO as a
 // simple way to avoid the compiler warning `gnu-zero-variadic-macro-arguments`.

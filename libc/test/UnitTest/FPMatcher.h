@@ -20,7 +20,7 @@
 
 #include "hdr/math_macros.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
@@ -87,7 +87,7 @@ template <typename T> struct FPTest : public Test {
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \

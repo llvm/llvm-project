@@ -10,7 +10,7 @@
 #include "src/__support/HashTable/table.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void, hdestroy_r, (struct hsearch_data * htab)) {
   if (htab == nullptr) {
     libc_errno = EINVAL;
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(void, hdestroy_r, (struct hsearch_data * htab)) {
   htab->__opaque = nullptr;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

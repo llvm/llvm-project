@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_FROMFPF_H
 #define LLVM_LIBC_SRC_MATH_FROMFPF_H
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 float fromfpf(float x, int rnd, unsigned int width);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_FROMFPF_H

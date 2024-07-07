@@ -11,7 +11,7 @@
 #include "src/__support/common.h"
 #include <stddef.h> // For size_t.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strncpy,
                    (char *__restrict dest, const char *__restrict src,
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(char *, strncpy,
   return dest;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

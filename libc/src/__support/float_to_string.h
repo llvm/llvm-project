@@ -105,7 +105,7 @@ constexpr size_t MID_INT_SIZE = 192;
 // Any block that is all 9s adds one to the max block counter and doesn't clear
 // the buffer because they can cause the block above them to be rounded up.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using BlockInt = uint32_t;
 constexpr uint32_t BLOCK_SIZE = 9;
@@ -839,6 +839,6 @@ public:
 #endif // !LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 &&
        // !LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H

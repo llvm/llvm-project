@@ -14,7 +14,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -71,4 +71,4 @@ bool set_thread_ptr(uintptr_t val) {
   LIBC_INLINE_ASM("mv tp, %0\n\t" : : "r"(val));
   return true;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

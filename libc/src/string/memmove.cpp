@@ -11,7 +11,7 @@
 #include "src/string/memory_utils/inline_memmove.h"
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memmove,
                    (void *dst, const void *src, size_t count)) {
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(void *, memmove,
   return dst;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -16,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 int scanf_main(Reader *reader, const char *__restrict str,
@@ -42,4 +42,4 @@ int scanf_main(Reader *reader, const char *__restrict str,
 }
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

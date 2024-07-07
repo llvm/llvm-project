@@ -14,7 +14,7 @@
 #include "src/errno/libc_errno.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -54,4 +54,4 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

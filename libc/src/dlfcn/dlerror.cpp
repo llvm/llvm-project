@@ -10,11 +10,11 @@
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO(@izaakschroeder): https://github.com/llvm/llvm-project/issues/97918
 LLVM_LIBC_FUNCTION(char *, dlerror, ()) {
   return const_cast<char *>("unsupported");
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

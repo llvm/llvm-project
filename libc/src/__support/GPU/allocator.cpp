@@ -11,7 +11,7 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace {
 
 void *rpc_allocate(uint64_t size) {
@@ -42,4 +42,4 @@ void *allocate(uint64_t size) { return rpc_allocate(size); }
 void deallocate(void *ptr) { rpc_free(ptr); }
 
 } // namespace gpu
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

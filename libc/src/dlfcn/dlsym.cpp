@@ -10,9 +10,9 @@
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO(@izaakschroeder): https://github.com/llvm/llvm-project/issues/97920
 LLVM_LIBC_FUNCTION(void *, dlsym, (void *, const char *)) { return nullptr; }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

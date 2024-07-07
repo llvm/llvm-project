@@ -14,7 +14,7 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/macros/attributes.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 template <typename T> struct iterator_traits;
@@ -93,6 +93,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_ITERATOR_H

@@ -12,7 +12,7 @@
 
 #include <pthread.h> // pthread_rwlockattr_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_getkind_np,
                    (const pthread_rwlockattr_t *__restrict attr,
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_getkind_np,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

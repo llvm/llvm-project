@@ -14,7 +14,7 @@
 
 #include <dirent.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, closedir, (::DIR * dir)) {
   auto *d = reinterpret_cast<LIBC_NAMESPACE::Dir *>(dir);
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, closedir, (::DIR * dir)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace benchmarks {
 
@@ -99,7 +99,7 @@ private:
   const cpp::string_view get_name() const { return name; }
 };
 } // namespace benchmarks
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define BENCHMARK(SuiteName, TestName, Func)                                   \
   LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
