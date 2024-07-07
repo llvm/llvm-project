@@ -14,7 +14,7 @@
 #include <limits>
 #include <vector>
 
-#if _LIBCPP_STD_VER > 14
+// UNSUPPORTED: c++03, c++11, c++14
 
 template <class T>
 void testHermiteNaNPropagation() {
@@ -248,10 +248,7 @@ void testHermite(const T AbsTolerance, const T RelTolerance) {
   }
 }
 
-#endif
-
 int main(int, char**) {
-#if _LIBCPP_STD_VER > 14
   testHermite<float>(1e-6f, 1e-6f);
   testHermite<double>(1e-9, 1e-9);
   testHermite<long double>(1e-12l, 1e-12l);
@@ -263,6 +260,6 @@ int main(int, char**) {
   testHermiteRoots<float>(1e-6f);
   testHermiteRoots<double>(1e-9);
   testHermiteRoots<long double>(1e-10l);
-#endif
+
   return 0;
 }
