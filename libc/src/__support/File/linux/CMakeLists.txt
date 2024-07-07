@@ -1,3 +1,4 @@
+# TODO: migrate to proxy headers
 add_object_library(
   file
   SRCS
@@ -8,6 +9,7 @@ add_object_library(
     libc.include.fcntl
     libc.include.stdio
     libc.include.sys_syscall
+    libc.include.sys_stat
     libc.src.__support.CPP.new
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
