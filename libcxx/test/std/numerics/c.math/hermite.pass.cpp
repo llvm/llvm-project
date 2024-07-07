@@ -297,15 +297,22 @@ void test() {
   }
 
   { // check: if overflow occurs that it is mapped to the correct infinity
-    Real inf = std::numeric_limits<Real>::infinity();
-    for (unsigned n = 0; n < g_max_n; ++n) {
-      // Q: why x=140?
-      // A: H_127(140) overflows even 8-byte double
-      if (Real y = std::hermite(n, Real{140}); !std::isfinite(y))
-        assert(y == inf);
-
-      if (Real y = std::hermite(n, Real{-140}); !std::isfinite(y))
-        assert(y == ((n & 1) ? -inf : inf));
+    if constexpr (std::is_same_v<Real, double>) {
+      // Q: Why only double?
+      // A: The numeric values (e.g. overflow threshold `n`) below are different for other types.
+      static_assert(sizeof(double) == 8);
+      for (unsigned n = 0; n < g_max_n; ++n) {
+        // Q: Why n=111 and x=300?
+        // A: Both are chosen s.t. the first overlow occurs for some `n<g_max_n`.
+        if (n < 111) {
+          assert(std::isfinite(std::hermite(n, +300.0)));
+          assert(std::isfinite(std::hermite(n, -300.0)));
+        } else {
+          double inf = std::numeric_limits<double>::infinity();
+          assert(std::hermite(n, +300.0) == inf);
+          assert(std::hermite(n, -300.0) == ((n & 1) ? -inf : inf));
+        }
+      }
     }
   }
 }
