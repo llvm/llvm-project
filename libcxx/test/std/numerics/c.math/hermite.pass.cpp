@@ -31,81 +31,37 @@ std::array<T, 7> sample_points() {
   return {-1.0, -0.5, -0.1, 0.0, 0.1, 0.5, 1.0};
 }
 
-template <class T>
-void test_NaN_propagation() {
-  T NaN = std::numeric_limits<T>::quiet_NaN();
-  for (unsigned n = 0; n < MAX_N; ++n)
-    assert(std::isnan(std::hermite(n, NaN)));
-}
+template <class Real>
+class CompareFloatingValues {
+private:
+  Real abs_tol;
+  Real rel_tol;
 
-template <class T>
-void test_not_NaN(T x) {
-  assert(!std::isnan(x));
-  for (unsigned n = 0; n < MAX_N; ++n)
-    assert(!std::isnan(std::hermite(n, x)));
-}
+public:
+  CompareFloatingValues() {
+    abs_tol = []() -> Real {
+      if (std::is_same_v<Real, float>)
+        return 1e-5f;
+      else if (std::is_same_v<Real, double>)
+        return 1e-11;
+      else
+        return 1e-12l;
+    }();
 
-template <class T>
-struct CompareFloatingValues {
-  T abs_tol;
-  T rel_tol;
+    rel_tol = abs_tol;
+  }
 
-  bool operator()(T result, T expected) const {
+  bool operator()(Real result, Real expected) const {
     if (std::isinf(expected) && std::isinf(result))
-      return true;
+      return result == expected;
 
     if (std::isnan(expected) || std::isnan(result))
       return false;
 
-    T tol = abs_tol + std::abs(expected) * rel_tol;
+    Real tol = abs_tol + std::abs(expected) * rel_tol;
     return std::abs(result - expected) < tol;
   }
 };
-
-template <class T>
-void test_analytic_solution(T x, T abs_tol, T rel_tol) {
-  assert(!std::isnan(x));
-
-  const auto h0 = [](T) -> T { return 1; };
-  const auto h1 = [](T y) -> T { return 2 * y; };
-  const auto h2 = [](T y) -> T { return 4 * y * y - 2; };
-  const auto h3 = [](T y) -> T { return y * (8 * y * y - 12); };
-  const auto h4 = [](T y) -> T { return (16 * std::pow(y, 4) - 48 * y * y + 12); };
-  const auto h5 = [](T y) -> T { return y * (32 * std::pow(y, 4) - 160 * y * y + 120); };
-
-  const CompareFloatingValues<T> compare{.abs_tol = abs_tol, .rel_tol = rel_tol};
-  assert(compare(std::hermite(0, x), h0(x)));
-  assert(compare(std::hermite(1, x), h1(x)));
-  assert(compare(std::hermite(2, x), h2(x)));
-  assert(compare(std::hermite(3, x), h3(x)));
-  assert(compare(std::hermite(4, x), h4(x)));
-  assert(compare(std::hermite(5, x), h5(x)));
-}
-
-/// \details This method checks if the following recurrence relation holds:
-/// \f[
-///   H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}(x)
-/// \f]
-template <class T>
-void test_recurrence_relation(T x, T abs_tol, T rel_tol) {
-  assert(!std::isnan(x));
-
-  const CompareFloatingValues<T> compare{.abs_tol = abs_tol, .rel_tol = rel_tol};
-  for (unsigned n = 1; n < MAX_N - 1; ++n) {
-    T H_next            = std::hermite(n + 1, x);
-    T H_next_recurrence = 2 * (x * std::hermite(n, x) - n * std::hermite(n - 1, x));
-
-    if (std::isinf(H_next))
-      break;
-    assert(compare(H_next, H_next_recurrence));
-  }
-}
-
-template <class T>
-void test_recurrence_relation(T abs_tol, T rel_tol) {
-  for (T x : sample_points<T>())
-    test_recurrence_relation(x, abs_tol, rel_tol);
-}
 
 /// \note Roots are taken from
 /// Salzer, Herbert E., Ruth Zucker, and Ruth Capuano.
@@ -242,74 +198,110 @@ std::vector<T> get_roots(unsigned n) {
   }
 }
 
-/// \param [in] Tolerance of the root. This value must be smaller than
-/// the smallest difference between adjacent roots in the given range
-/// with n <= 20.
-template <class T>
-void test_roots(T Tolerance) {
-  const auto is_sign_change = [Tolerance](unsigned n, T x) -> bool {
-    return std::hermite(n, x - Tolerance) * std::hermite(n, x + Tolerance) < 0;
-  };
+template <class Real>
+void test() {
+  { // checks if NaNs are reported correctly (i.e. output == input for input == NaN)
+    using nl = std::numeric_limits<Real>;
+    for (Real NaN : {nl::quiet_NaN(), nl::signaling_NaN()})
+      for (unsigned n = 0; n < MAX_N; ++n)
+        assert(std::isnan(std::hermite(n, NaN)));
+  }
 
-  for (unsigned n = 0; n <= 20u; ++n) {
-    for (T x : get_roots<T>(n)) {
-      // the roots are symmetric: if x is a root, so is -x
-      if (x > 0)
-        assert(is_sign_change(n, -x));
-      assert(is_sign_change(n, x));
+  { // simple sample points for n=0..127 should not produce NaNs.
+    for (Real x : sample_points<Real>())
+      for (unsigned n = 0; n < MAX_N; ++n)
+        assert(!std::isnan(std::hermite(n, x)));
+  }
+
+  { // checks std::hermite(n, x) for n=0..5 against analytic polynoms
+    const auto h0 = [](Real) -> Real { return 1; };
+    const auto h1 = [](Real y) -> Real { return 2 * y; };
+    const auto h2 = [](Real y) -> Real { return 4 * y * y - 2; };
+    const auto h3 = [](Real y) -> Real { return y * (8 * y * y - 12); };
+    const auto h4 = [](Real y) -> Real { return (16 * std::pow(y, 4) - 48 * y * y + 12); };
+    const auto h5 = [](Real y) -> Real { return y * (32 * std::pow(y, 4) - 160 * y * y + 120); };
+
+    for (Real x : sample_points<Real>()) {
+      const CompareFloatingValues<Real> compare;
+      assert(compare(std::hermite(0, x), h0(x)));
+      assert(compare(std::hermite(1, x), h1(x)));
+      assert(compare(std::hermite(2, x), h2(x)));
+      assert(compare(std::hermite(3, x), h3(x)));
+      assert(compare(std::hermite(4, x), h4(x)));
+      assert(compare(std::hermite(5, x), h5(x)));
     }
   }
-}
 
-template <class T>
-void test_hermite(T abs_tol, T rel_tol) {
-  test_NaN_propagation<T>();
+  { // checks std::hermitef for bitwise equality with std::hermite(unsigned, float)
+    if constexpr (std::is_same_v<Real, float>)
+      for (unsigned n = 0; n < MAX_N; ++n)
+        for (float x : sample_points<float>())
+          assert(std::hermite(n, x) == std::hermitef(n, x));
+  }
 
-  for (T x : sample_points<T>()) {
-    test_not_NaN(x);
-    test_analytic_solution(x, abs_tol, rel_tol);
+  { // checks std::hermitel for bitwise equality with std::hermite(unsigned, long double)
+    if constexpr (std::is_same_v<Real, long double>)
+      for (unsigned n = 0; n < MAX_N; ++n)
+        for (long double x : sample_points<long double>())
+          assert(std::hermite(n, x) == std::hermitel(n, x));
+  }
+
+  { // Checks if the characteristic recurrence relation holds:    H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}(x)
+    for (Real x : sample_points<Real>()) {
+      for (unsigned n = 1; n < MAX_N - 1; ++n) {
+        Real H_next            = std::hermite(n + 1, x);
+        Real H_next_recurrence = 2 * (x * std::hermite(n, x) - n * std::hermite(n - 1, x));
+
+        if (std::isinf(H_next))
+          break;
+        const CompareFloatingValues<Real> compare;
+        assert(compare(H_next, H_next_recurrence));
+      }
+    }
+  }
+
+  { // sanity checks: hermite polynoms need to change signs at (simple) roots. checked upto order n<=20.
+
+    // root tolerance: must be smaller than the smallest difference between adjacent roots
+    Real tol = []() -> Real {
+      if (std::is_same_v<Real, float>)
+        return 1e-5f;
+      else if (std::is_same_v<Real, double>)
+        return 1e-9;
+      else
+        return 1e-10l;
+    }();
+
+    const auto is_sign_change = [tol](unsigned n, Real x) -> bool {
+      return std::hermite(n, x - tol) * std::hermite(n, x + tol) < 0;
+    };
+
+    for (unsigned n = 0; n <= 20u; ++n) {
+      for (Real x : get_roots<Real>(n)) {
+        // the roots are symmetric: if x is a root, so is -x
+        if (x > 0)
+          assert(is_sign_change(n, -x));
+        assert(is_sign_change(n, x));
+      }
+    }
   }
 }
 
 template <class Integer>
 void test_integers() {
+  // checks that std::hermite(unsigned, Integer) actually wraps std::hermite(unsigned, double)
   for (unsigned n = 0; n < MAX_N; ++n)
     for (Integer x : {-1, 0, 1})
       assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
 }
 
-void test_hermitef() {
-  for (unsigned n = 0; n < MAX_N; ++n)
-    for (float x : sample_points<float>())
-      assert(std::hermite(n, x) == std::hermitef(n, x));
-}
-
-void test_hermitel() {
-  for (unsigned n = 0; n < MAX_N; ++n)
-    for (long double x : sample_points<long double>())
-      assert(std::hermite(n, x) == std::hermitel(n, x));
-}
-
-int main(int, char**) {
-  test_hermite<float>(1e-5f, 1e-5f);
-  test_hermite<double>(1e-11, 1e-11);
-  test_hermite<long double>(1e-12l, 1e-12l);
-
-  test_hermitef();
-  test_hermitel();
-
-  test_recurrence_relation<float>(1e-5f, 1e-5f);
-  test_recurrence_relation<double>(1e-11, 1e-11);
-  test_recurrence_relation<long double>(1e-12l, 1e-12l);
-
-  test_roots<float>(1e-5f);
-  test_roots<double>(1e-9);
-  test_roots<long double>(1e-10l);
+int main() {
+  test<float>();
+  test<double>();
+  test<long double>();
 
   test_integers<short>();
   test_integers<int>();
   test_integers<long>();
   test_integers<long long>();
-
-  return 0;
 }
