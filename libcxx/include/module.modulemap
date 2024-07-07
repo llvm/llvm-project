@@ -522,6 +522,8 @@ module std_experimental [system] {
     export *
   }
   module math {
+    module hermite { private header "experimental/__math/hermite.h" }
+
     header "experimental/math"
     export *
   }
