@@ -12350,8 +12350,8 @@ def err_hlsl_conflicting_register_annotations: Error<"conflicting register annot
 def warn_hlsl_deprecated_register_type_b: Warning<"deprecated legacy bool constant register binding 'b' used. 'b' is only used for constant buffer resource binding">, InGroup<DisallowLegacyBindingRules>, DefaultError;
 def warn_hlsl_deprecated_register_type_i: Warning<"deprecated legacy int constant register binding 'i' used">, InGroup<DisallowLegacyBindingRules>, DefaultError;
 def warn_hlsl_register_type_c_not_in_global_scope: Warning<"register binding 'c' ignored inside cbuffer/tbuffer declarations; use pack_offset instead">, InGroup<DisallowLegacyBindingRules>, DefaultError;
-def warn_hlsl_UDT_missing_resource_type_member: Warning<"variable of type '%0' bound to register type '%1' does not contain a matching '%select{srv|uav|cbv|sampler}2' resource">;
-def warn_hlsl_UDT_missing_basic_type: Warning<"register 'c' used on type with no contents to allocate in a constant buffer">;
+def warn_hlsl_UDT_missing_resource_type_member: Warning<"variable of type '%0' bound to register type '%1' does not contain a matching '%select{srv|uav|cbv|sampler}2' resource">, InGroup<DisallowLegacyBindingRules>;
+def warn_hlsl_UDT_missing_basic_type: Warning<"register 'c' used on type with no contents to allocate in a constant buffer">, InGroup<DisallowLegacyBindingRules>;
 def err_hlsl_mismatching_register_resource_type_and_name: Error<"invalid register name prefix '%0' for register resource type '%1' (expected %select{'t'|'u'|'b'|'s'}2)">;
 def err_hlsl_mismatching_register_builtin_type_and_name: Error<"invalid register name prefix '%0' for '%1' (expected %2)">;
 def err_hlsl_unsupported_register_resource_type : Error<"invalid resource '%0' used">;

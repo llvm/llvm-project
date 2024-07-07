@@ -46,7 +46,7 @@ void foo2() {
   extern RWBuffer<float> U2 : register(u5);
 }
 
-// FIXME: emit a diagnostic because float doesn't match the 'u' register type
+// expected-error@+1 {{unsupported resource register binding 'u' on variable of type 'float'}}
 float b : register(u0, space1);
 
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}

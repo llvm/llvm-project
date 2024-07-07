@@ -825,7 +825,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
           << 3 << typestr;
       // any other register type should emit
       // err_hlsl_unsupported_register_type_and_variable_type
-    } else if (!f.default_globals){
+    } else if (!f.default_globals) {
       S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
           << registerType << typestr;
     }
