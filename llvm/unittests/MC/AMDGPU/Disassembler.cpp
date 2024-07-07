@@ -98,7 +98,7 @@ TEST(AMDGPUDisassembler, MultiDisassembler) {
   char StrBuffer[128];
 
   uint8_t Bytes[] = {0x04, 0x00, 0x80, 0xb0};
-  size_t InstSize = 0U;
+  uint64_t InstSize = 0U;
   MCInst Inst1, Inst2;
   MCDisassembler::DecodeStatus Status;
 
@@ -184,7 +184,7 @@ TEST(AMDGPUDisassembler, UCVersionOverride) {
   uint8_t Versions[] = {UC_VERSION_GFX10_DEFAULT, UC_VERSION_GFX10_NEW};
   for (uint8_t Version : Versions) {
     uint8_t Bytes[] = {Version, 0x00, 0x80, 0xb0};
-    size_t InstSize = 0U;
+    uint64_t InstSize = 0U;
     MCInst Inst;
 
     AnnoStr.clear();
