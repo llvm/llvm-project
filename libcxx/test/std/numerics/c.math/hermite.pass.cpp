@@ -24,6 +24,8 @@
 #include <limits>
 #include <vector>
 
+#include "type_algorithms.h"
+
 inline constexpr unsigned MAX_N = 128;
 
 template <class T>
@@ -287,21 +289,24 @@ void test() {
   }
 }
 
-template <class Integer>
-void test_integers() {
-  // checks that std::hermite(unsigned, Integer) actually wraps std::hermite(unsigned, double)
-  for (unsigned n = 0; n < MAX_N; ++n)
-    for (Integer x : {-1, 0, 1})
-      assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
-}
+struct TestFloat {
+  template <class Real>
+  void operator()() {
+    test<Real>();
+  }
+};
+
+struct TestInt {
+  template <class Integer>
+  void operator()() {
+    // checks that std::hermite(unsigned, Integer) actually wraps std::hermite(unsigned, double)
+    for (unsigned n = 0; n < MAX_N; ++n)
+      for (Integer x : {-1, 0, 1})
+        assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
+  }
+};
 
 int main() {
-  test<float>();
-  test<double>();
-  test<long double>();
-
-  test_integers<short>();
-  test_integers<int>();
-  test_integers<long>();
-  test_integers<long long>();
+  types::for_each(types::floating_point_types(), TestFloat());
+  types::for_each(types::type_list<short, int, long, long long>(), TestInt());
 }
