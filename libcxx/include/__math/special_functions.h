@@ -51,8 +51,8 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
     // Overflow occured. Two possible cases:
     //    n is odd:  return infinity of the same sign as x.
     //    n is even: return +Inf
-    _Real inf = std::numeric_limits<_Real>::infinity();
-    return (__n & 1) ? __math::copysign(inf, __x) : inf;
+    _Real __inf = std::numeric_limits<_Real>::infinity();
+    return (__n & 1) ? __math::copysign(__inf, __x) : __inf;
   }
   return __H_n;
 }
