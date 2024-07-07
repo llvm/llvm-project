@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-dump -fblocks %s | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -ast-dump=json %s | FileCheck -strict-whitespace %s
 
 struct ExplicitBase {
   explicit ExplicitBase(const char *) { }
@@ -12,14 +12,85 @@ struct ExplicitBase {
 struct Derived1 : ExplicitBase {};
 
 Derived1 makeDerived1() {
-  // CHECK:      FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:{{[^:]*}}:1> line:[[@LINE-1]]:10 makeDerived1 'Derived1 ()'
-  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:{{[^ ^,]+}}, line:{{[^:]*}}:1
-  // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <line:[[@LINE+6]]:3, col:{{[0-9]+}}>
-  // CHECK-DAG:  MaterializeTemporaryExpr 0x{{[^ ]*}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'ExplicitBase' xvalue
-  // CHECK-NEXT: CXXBindTemporaryExpr 0x[[TEMP:[^ ]*]] <col:{{[0-9]+}}, col:{{[0-9]+}}> 'ExplicitBase' (CXXTemporary 0x[[TEMP]])
-  // CHECK-NEXT: CXXTemporaryObjectExpr 0x{{[^ ]*}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'ExplicitBase' 'void (const char *)' list
-  // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:{{[0-9]+}}> 'const char *' <ArrayToPointerDecay>
-  // CHECK-NEXT: StringLiteral 0x{{[^ ]*}} <col:{{[0-9]+}}> 'const char[10]' lvalue "Move Ctor"
+// CHECK:  "kind": "FunctionDecl",
+// CHECK:  "name": "makeDerived1",
+
+// CHECK:    "kind": "CompoundStmt",
+
+// CHECK:      "kind": "ReturnStmt",
+// CHECK:        "kind": "ExprWithCleanups",
+// CHECK:        "type": {
+// CHECK-NEXT:     "qualType": "Derived1"
+// CHECK-NEXT:   },
+
+// CHECK:          "kind": "CXXFunctionalCastExpr",
+// CHECK:          "type": {
+// CHECK-NEXT:       "qualType": "Derived1"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "valueCategory": "prvalue",
+// CHECK-NEXT:     "castKind": "NoOp",
+
+// CHECK:            "kind": "CXXBindTemporaryExpr",
+// CHECK:            "type": {
+// CHECK-NEXT:         "qualType": "Derived1"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "valueCategory": "prvalue",
+
+// CHECK:              "kind": "InitListExpr",
+// CHECK:              "type": {
+// CHECK-NEXT:           "qualType": "Derived1"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "valueCategory": "prvalue",
+
+// CHECK:                "kind": "CXXConstructExpr",
+// CHECK:                "type": {
+// CHECK-NEXT:             "qualType": "ExplicitBase"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "valueCategory": "prvalue",
+// CHECK-NEXT:           "ctorType": {
+// CHECK-NEXT:             "qualType": "void (ExplicitBase &&)"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "hadMultipleCandidates": true,
+// CHECK-NEXT:           "constructionKind": "non-virtual base",
+
+// CHECK:                  "kind": "MaterializeTemporaryExpr",
+// CHECK:                  "type": {
+// CHECK-NEXT:               "qualType": "ExplicitBase"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "valueCategory": "xvalue",
+// CHECK-NEXT:             "storageDuration": "full expression",
+
+// CHECK:                    "kind": "CXXBindTemporaryExpr",
+// CHECK:                    "type": {
+// CHECK-NEXT:                 "qualType": "ExplicitBase"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "valueCategory": "prvalue",
+
+// CHECK:                      "kind": "CXXTemporaryObjectExpr",
+// CHECK:                      "type": {
+// CHECK-NEXT:                   "qualType": "ExplicitBase"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "valueCategory": "prvalue",
+// CHECK-NEXT:                 "ctorType": {
+// CHECK-NEXT:                   "qualType": "void (const char *)"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "list": true,
+// CHECK-NEXT:                 "hadMultipleCandidates": true,
+// CHECK-NEXT:                 "constructionKind": "complete",
+
+// CHECK:                        "kind": "ImplicitCastExpr",
+// CHECK:                        "type": {
+// CHECK-NEXT:                     "qualType": "const char *"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "valueCategory": "prvalue",
+// CHECK-NEXT:                   "castKind": "ArrayToPointerDecay",
+
+// CHECK:                          "kind": "StringLiteral",
+// CHECK:                          "type": {
+// CHECK-NEXT:                       "qualType": "const char[10]"
+// CHECK-NEXT:                     },
+// CHECK-NEXT:                     "valueCategory": "lvalue",
+// CHECK-NEXT:                     "value": "\"Move Ctor\""
   return Derived1{ExplicitBase{"Move Ctor"}};
 }
 
@@ -35,9 +106,66 @@ struct ImplicitBase {
 struct Derived2 : ImplicitBase {};
 
 Derived2 makeDerived2() {
-  // CHECK:      FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:{{[^:]*}}:1> line:[[@LINE-1]]:10 makeDerived2 'Derived2 ()'
-  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:{{[^ ^,]+}}, line:{{[^:]*}}:1
-  // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <line:[[@LINE+2]]:3, col:{{[0-9]+}}>
-  // CHECK-NOT:  MaterializeTemporaryExpr 0x{{[^ ]*}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'ImplicitBase' xvalue
+// CHECK:  "kind": "FunctionDecl",
+// CHECK:  "name": "makeDerived2",
+
+// CHECK:    "kind": "CompoundStmt",
+
+// CHECK:      "kind": "ReturnStmt",
+
+// CHECK:        "kind": "ExprWithCleanups",
+// CHECK:        "type": {
+// CHECK-NEXT:     "qualType": "Derived2"
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "valueCategory": "prvalue",
+// CHECK-NEXT:   "cleanupsHaveSideEffects": true,
+
+// CHECK:          "kind": "CXXFunctionalCastExpr",
+// CHECK:          "type": {
+// CHECK-NEXT:       "qualType": "Derived2"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "valueCategory": "prvalue",
+// CHECK-NEXT:     "castKind": "NoOp",
+
+// CHECK:            "kind": "CXXBindTemporaryExpr",
+// CHECK:            "type": {
+// CHECK-NEXT:         "qualType": "Derived2"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "valueCategory": "prvalue",
+
+// CHECK:              "kind": "InitListExpr",
+// CHECK:              "type": {
+// CHECK-NEXT:           "qualType": "Derived2"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "valueCategory": "prvalue",
+
+// CHECK:                "kind": "CXXConstructExpr",
+// CHECK:                "type": {
+// CHECK-NEXT:             "qualType": "ImplicitBase"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "valueCategory": "prvalue",
+// CHECK-NEXT:           "ctorType": {
+// CHECK-NEXT:             "qualType": "void (const char *)"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "list": true,
+// CHECK-NEXT:           "hadMultipleCandidates": true,
+// CHECK-NEXT:           "constructionKind": "non-virtual base",
+
+// CHECK:                  "kind": "ImplicitCastExpr",
+// CHECK:                  "type": {
+// CHECK-NEXT:               "qualType": "const char *"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "valueCategory": "prvalue",
+// CHECK-NEXT:             "castKind": "ArrayToPointerDecay",
+
+// CHECK:                    "kind": "StringLiteral",
+// CHECK:                    "type": {
+// CHECK-NEXT:                 "qualType": "const char[8]"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "valueCategory": "lvalue",
+// CHECK-NEXT:               "value": "\"No Ctor\""
   return Derived2{{"No Ctor"}};
 }
+
+// NOTE: CHECK lines have been autogenerated by gen_ast_dump_json_test.py
+// using --filters=FunctionDecl,CompoundStmt,ReturnStmt,MaterializeTemporaryExpr,CXXBindTemporaryExpr,CXXTemporaryObjectExpr,ImplicitCastExpr,StringLiteralStringLiteral
