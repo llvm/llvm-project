@@ -780,7 +780,7 @@ _LIBCPP_HIDE_FROM_ABI _Real __libcpp_hermite(unsigned __n, _Real __x) {
   if (isnan(__x))
     return numeric_limits<_Real>::quiet_NaN();
 
-  if (0 == __n)
+  if (__n == 0)
     return 1;
 
   _Real __H_nPrev{1};
