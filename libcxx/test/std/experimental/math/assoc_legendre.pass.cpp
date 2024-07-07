@@ -87,42 +87,42 @@ void testAssocLegendreAnalytic(const T x, const T AbsTolerance,
 
   const auto l00 = [](T) { return T(1); };
 
-  const auto l10 = [](T x) { return x; };
-  const auto l11 = [](T x) { return std::sqrt((T(1) - x) * (T(1) + x)); };
+  const auto l10 = [](T y) { return y; };
+  const auto l11 = [](T y) { return std::sqrt((T(1) - y) * (T(1) + y)); };
 
-  const auto l20 = [](T x) { return (T(3) * x * x - T(1)) / T(2); };
-  const auto l21 = [](T x) {
-    return T(3) * x * std::sqrt((T(1) - x) * (T(1) + x));
+  const auto l20 = [](T y) { return (T(3) * y * y - T(1)) / T(2); };
+  const auto l21 = [](T y) {
+    return T(3) * y * std::sqrt((T(1) - y) * (T(1) + y));
   };
-  const auto l22 = [](T x) { return T(3) * (T(1) - x) * (T(1) + x); };
+  const auto l22 = [](T y) { return T(3) * (T(1) - y) * (T(1) + y); };
 
-  const auto l30 = [](T x) { return (T(5) * x * x - T(3)) * x / T(2); };
-  const auto l31 = [](T x) {
-    return T(3) / T(2) * (T(5) * x * x - T(1)) *
-           std::sqrt((T(1) - x) * (T(1) + x));
+  const auto l30 = [](T y) { return (T(5) * y * y - T(3)) * y / T(2); };
+  const auto l31 = [](T y) {
+    return T(3) / T(2) * (T(5) * y * y - T(1)) *
+           std::sqrt((T(1) - y) * (T(1) + y));
   };
-  const auto l32 = [](T x) { return T(15) * x * (T(1) - x) * (T(1) + x); };
-  const auto l33 = [](T x) {
-    const T temp = (T(1) - x) * (T(1) + x);
+  const auto l32 = [](T y) { return T(15) * y * (T(1) - y) * (T(1) + y); };
+  const auto l33 = [](T y) {
+    const T temp = (T(1) - y) * (T(1) + y);
     return T(15) * temp * std::sqrt(temp);
   };
 
-  const auto l40 = [](T x) {
-    return (T(35) * x * x * x * x - T(30) * x * x + T(3)) / T(8);
+  const auto l40 = [](T y) {
+    return (T(35) * y * y * y * y - T(30) * y * y + T(3)) / T(8);
   };
-  const auto l41 = [](T x) {
-    return T(5) / T(2) * x * (T(7) * x * x - T(3)) *
-           std::sqrt((T(1) - x) * (T(1) + x));
+  const auto l41 = [](T y) {
+    return T(5) / T(2) * y * (T(7) * y * y - T(3)) *
+           std::sqrt((T(1) - y) * (T(1) + y));
   };
-  const auto l42 = [](T x) {
-    return T(15) / T(2) * (T(7) * x * x - 1) * (T(1) - x) * (T(1) + x);
+  const auto l42 = [](T y) {
+    return T(15) / T(2) * (T(7) * y * y - 1) * (T(1) - y) * (T(1) + y);
   };
-  const auto l43 = [](T x) {
-    const T temp = (T(1) - x) * (T(1) + x);
-    return T(105) * x * temp * std::sqrt(temp);
+  const auto l43 = [](T y) {
+    const T temp = (T(1) - y) * (T(1) + y);
+    return T(105) * y * temp * std::sqrt(temp);
   };
-  const auto l44 = [](T x) {
-    const T temp = (T(1) - x) * (T(1) + x);
+  const auto l44 = [](T y) {
+    const T temp = (T(1) - y) * (T(1) + y);
     return T(105) * temp * temp;
   };
 
