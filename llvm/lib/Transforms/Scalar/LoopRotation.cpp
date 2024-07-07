@@ -68,7 +68,7 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
                           hasVectorizeTransformation(&L) == TM_ForcedByUser
                       ? DefaultRotationThreshold
                       : 0;
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   const SimplifyQuery SQ = getBestSimplifyQuery(AR, DL);
 
   std::optional<MemorySSAUpdater> MSSAU;

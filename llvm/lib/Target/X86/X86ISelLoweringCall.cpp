@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "x86-isel"
 

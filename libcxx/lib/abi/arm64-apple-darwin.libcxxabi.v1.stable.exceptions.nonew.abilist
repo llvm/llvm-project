@@ -327,6 +327,7 @@
 {'is_defined': False, 'name': '___cxa_bad_cast', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_bad_typeid', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_begin_catch', 'type': 'U'}
+{'is_defined': False, 'name': '___cxa_call_terminate', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_call_unexpected', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_current_exception_type', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_current_primary_exception', 'type': 'U'}
@@ -2593,6 +2594,7 @@
 {'is_defined': True, 'name': '___cxa_bad_cast', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_bad_typeid', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_begin_catch', 'type': 'I'}
+{'is_defined': True, 'name': '___cxa_call_terminate', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_call_unexpected', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_current_exception_type', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_current_primary_exception', 'type': 'I'}

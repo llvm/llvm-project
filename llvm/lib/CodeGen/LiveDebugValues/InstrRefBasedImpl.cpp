@@ -3907,7 +3907,7 @@ public:
   DenseMap<BlockValueNum, LDVSSAPhi *> PHIs;
   /// Map of which blocks generate Undef values -- blocks that are not
   /// dominated by any Def.
-  DenseMap<MachineBasicBlock *, BlockValueNum> UndefMap;
+  DenseMap<MachineBasicBlock *, BlockValueNum> PoisonMap;
   /// Map of machine blocks to our own records of them.
   DenseMap<MachineBasicBlock *, LDVSSABlock *> BlockMap;
   /// Machine location where any PHI must occur.
@@ -3923,7 +3923,7 @@ public:
       delete Block.second;
 
     PHIs.clear();
-    UndefMap.clear();
+    PoisonMap.clear();
     BlockMap.clear();
   }
 
@@ -4017,15 +4017,15 @@ public:
       Preds->push_back(BB->Updater.getSSALDVBlock(Pred));
   }
 
-  /// GetUndefVal - Normally creates an IMPLICIT_DEF instruction with a new
+  /// GetPoisonVal - Normally creates an IMPLICIT_DEF instruction with a new
   /// register. For LiveDebugValues, represents a block identified as not having
   /// any DBG_PHI predecessors.
-  static BlockValueNum GetUndefVal(LDVSSABlock *BB, LDVSSAUpdater *Updater) {
+  static BlockValueNum GetPoisonVal(LDVSSABlock *BB, LDVSSAUpdater *Updater) {
     // Create a value number for this block -- it needs to be unique and in the
-    // "undef" collection, so that we know it's not real. Use a number
+    // "poison" collection, so that we know it's not real. Use a number
     // representing a PHI into this block.
     BlockValueNum Num = ValueIDNum(BB->BB.getNumber(), 0, Updater->Loc).asU64();
-    Updater->UndefMap[&BB->BB] = Num;
+    Updater->PoisonMap[&BB->BB] = Num;
     return Num;
   }
 
@@ -4188,7 +4188,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
     // Are all these things actually defined?
     for (auto &PHIIt : PHI->IncomingValues) {
       // Any undef input means DBG_PHIs didn't dominate the use point.
-      if (Updater.UndefMap.contains(&PHIIt.first->BB))
+      if (Updater.PoisonMap.contains(&PHIIt.first->BB))
         return std::nullopt;
 
       ValueIDNum ValueToCheck;

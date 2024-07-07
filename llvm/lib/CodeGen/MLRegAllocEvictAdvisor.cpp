@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -963,9 +964,9 @@ void extractInstructionFeatures(
   // frequency vector, mapping each instruction to its associated MBB.
 
   // Start off by sorting the segments based on the beginning slot index.
-  llvm::sort(LRPosInfo, [](LRStartEndInfo A, LRStartEndInfo B) {
-    return A.Begin < B.Begin;
-  });
+  std::sort(
+      LRPosInfo.begin(), LRPosInfo.end(),
+      [](LRStartEndInfo A, LRStartEndInfo B) { return A.Begin < B.Begin; });
   size_t InstructionIndex = 0;
   size_t CurrentSegmentIndex = 0;
   SlotIndex CurrentIndex = LRPosInfo[0].Begin;

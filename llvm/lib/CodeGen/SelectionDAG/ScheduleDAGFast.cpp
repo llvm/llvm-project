@@ -748,8 +748,7 @@ void ScheduleDAGLinearize::Schedule() {
       ++DAGSize;
   }
 
-  for (unsigned i = 0, e = Glues.size(); i != e; ++i) {
-    SDNode *Glue = Glues[i];
+  for (SDNode *Glue : Glues) {
     SDNode *GUser = GluedMap[Glue];
     unsigned Degree = Glue->getNodeId();
     unsigned UDegree = GUser->getNodeId();
