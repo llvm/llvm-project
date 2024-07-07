@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This header must go before limits_macros.h otherwise libc header may choose
+// to undefine LINK_MAX.
+#include <linux/limits.h> // For LINK_MAX and other limits
+
 #include "hdr/limits_macros.h"
 #include "hdr/unistd_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
+
+// other linux specific includes
 #include <linux/bfs_fs.h>
 #if __has_include(<linux/ufs_fs.h>)
 #include <linux/ufs_fs.h>
@@ -19,8 +25,7 @@
 // from https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/
 #define UFS_MAGIC 0x00011954
 #endif
-#include <linux/limits.h> // For LINK_MAX and other limits
-#include <linux/magic.h>  // For common FS magics
+#include <linux/magic.h> // For common FS magics
 
 namespace LIBC_NAMESPACE {
 
