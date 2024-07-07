@@ -767,11 +767,9 @@ struct FunCloner {
         int NumIdx = LLVMGetNumIndices(Src);
         for (int i = 1; i <= NumIdx; i++)
           Idx.push_back(CloneValue(LLVMGetOperand(Src, i)));
-        if (LLVMIsInBounds(Src))
-          Dst = LLVMBuildInBoundsGEP2(Builder, ElemTy, Ptr, Idx.data(), NumIdx,
-                                      Name);
-        else
-          Dst = LLVMBuildGEP2(Builder, ElemTy, Ptr, Idx.data(), NumIdx, Name);
+
+        Dst = LLVMBuildGEP2(Builder, ElemTy, Ptr, Idx.data(), NumIdx, Name);
+        LLVMGEPSetNoWrapFlags(Dst, LLVMGEPGetNoWrapFlags(Src));
         break;
       }
       case LLVMAtomicRMW: {

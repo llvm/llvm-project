@@ -3090,6 +3090,30 @@ LLVMTypeRef LLVMGetAllocatedType(LLVMValueRef Alloca) {
 
 /*--.. Operations on gep instructions (only) ...............................--*/
 
+static GEPNoWrapFlags mapFromLLVMGEPNoWrapFlags(LLVMGEPNoWrapFlags GEPFlags) {
+  GEPNoWrapFlags NewGEPFlags;
+  if ((GEPFlags & LLVMGEPFlagInBounds) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::inBounds();
+  if ((GEPFlags & LLVMGEPFlagNUSW) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  if ((GEPFlags & LLVMGEPFlagNUW) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
+
+  return NewGEPFlags;
+}
+
+static LLVMGEPNoWrapFlags mapToLLVMGEPNoWrapFlags(GEPNoWrapFlags GEPFlags) {
+  LLVMGEPNoWrapFlags NewGEPFlags = 0;
+  if (GEPFlags.isInBounds())
+    NewGEPFlags |= LLVMGEPFlagInBounds;
+  if (GEPFlags.hasNoUnsignedSignedWrap())
+    NewGEPFlags |= LLVMGEPFlagNUSW;
+  if (GEPFlags.hasNoUnsignedWrap())
+    NewGEPFlags |= LLVMGEPFlagNUW;
+
+  return NewGEPFlags;
+}
+
 LLVMBool LLVMIsInBounds(LLVMValueRef GEP) {
   return unwrap<GEPOperator>(GEP)->isInBounds();
 }
@@ -3100,6 +3124,16 @@ void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds) {
 
 LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP) {
   return wrap(unwrap<GEPOperator>(GEP)->getSourceElementType());
+}
+
+LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP) {
+  GEPOperator *GEPOp = unwrap<GEPOperator>(GEP);
+  return mapToLLVMGEPNoWrapFlags(GEPOp->getNoWrapFlags());
+}
+
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags WrapFlags) {
+  GetElementPtrInst *GEPInst = unwrap<GetElementPtrInst>(GEP);
+  GEPInst->setNoWrapFlags(mapFromLLVMGEPNoWrapFlags(WrapFlags));
 }
 
 /*--.. Operations on phi nodes .............................................--*/

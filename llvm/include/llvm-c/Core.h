@@ -510,6 +510,20 @@ enum {
  */
 typedef unsigned LLVMFastMathFlags;
 
+enum {
+  LLVMGEPFlagInBounds = (1 << 0),
+  LLVMGEPFlagNUSW = (1 << 1),
+  LLVMGEPFlagNUW = (1 << 2),
+};
+
+/**
+ * Flags that constrain the allowed wrap semantics of a getelementptr
+ * instruction.
+ *
+ * See https://llvm.org/docs/LangRef.html#getelementptr-instruction
+ */
+typedef unsigned LLVMGEPNoWrapFlags;
+
 /**
  * @}
  */
@@ -3903,6 +3917,20 @@ void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
  * Get the source element type of the given GEP operator.
  */
 LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
+
+/**
+ * Get the no-wrap related flags for the given GEP instruction.
+ *
+ * @see llvm::GetElementPtrInst::getNoWrapFlags
+ */
+LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP);
+
+/**
+ * Get the no-wrap related flags for the given GEP instruction.
+ *
+ * @see llvm::GetElementPtrInst::setNoWrapFlags
+ */
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags WrapFlags);
 
 /**
  * @}

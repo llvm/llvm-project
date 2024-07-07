@@ -391,6 +391,15 @@ bb_03:
   ret void
 }
 
+define ptr @test_gep_no_wrap_flags(ptr %0) {
+  %gep.1 = getelementptr i8, ptr %0, i32 4
+  %gep.inbounds = getelementptr inbounds i8, ptr %0, i32 4
+  %gep.nuw = getelementptr nuw i8, ptr %0, i32 4
+  %gep.nuw.inbounds = getelementptr inbounds nuw i8, ptr %0, i32 4
+  %gep.nusw = getelementptr nusw i8, ptr %0, i32 4
+  ret ptr %gep.nusw
+}
+
 !llvm.dbg.cu = !{!0, !2}
 !llvm.module.flags = !{!3}
 
