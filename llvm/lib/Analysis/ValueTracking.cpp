@@ -3600,7 +3600,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     switch (Operator::getOpcode(V)) {
     default: break;
 
-    case Intruction::BIT_CAST: {
+    case Instruction::BIT_CAST: {
       Value *Src = U->getOperand(0);
       unsigned NumSrcEltBits = Src->getType()->getScalarSizeInBits();
       if ((NumSrcEltBits % TyBits) != 0)
