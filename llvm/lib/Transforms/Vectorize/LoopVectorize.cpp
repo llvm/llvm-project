@@ -4790,15 +4790,15 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
   assert(VF.isVector() && "Checking a scalar VF?");
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
                           Plan.getCanonicalIV()->getScalarType()->getContext());
-  DenseMap<Type *, bool> GeneratesVector;
+  // Set of types known to not generate vector values.
+  DenseSet<Type *> WillNotWiden;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       // Continue early if the recipe is considered to not produce a vector
-      // result. Note that this includes VPInstruction, where some opcodes may
-      // produce a vector to preserve existing behavior originally as
-      // VPInstructions model aspects not directly mapped to existing IR
-      // instructions.
+      //  result. Note that this includes VPInstruction where some opcodes may
+      // produce a vector, to preserve existing behavior as VPInstructions model
+      // aspects not directly mapped to existing IR instructions.
       switch (R.getVPDefID()) {
       case VPDef::VPDerivedIVSC:
       case VPDef::VPScalarIVStepsSC:
@@ -4836,41 +4836,40 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
         llvm_unreachable("unhandled recipe");
       }
 
-      auto WillWiden = [&TypeInfo, &TTI, &GeneratesVector, VF](VPValue *VPV) {
-        Type *ScalarTy = TypeInfo.inferScalarType(VPV);
-        const auto &[Iter, Ins] = GeneratesVector.insert({ScalarTy, false});
-        if (Ins) {
-          Type *VectorTy = ToVectorTy(ScalarTy, VF);
-          unsigned NumLegalParts = TTI.getNumberOfParts(VectorTy);
-          if (!NumLegalParts)
-            return false;
-          if (VF.isScalable()) {
-            // <vscale x 1 x iN> is assumed to be profitable over iN because
-            // scalable registers are a distinct register class from scalar
-            // ones. If we ever find a target which wants to lower scalable
-            // vectors back to scalars, we'll need to update this code to
-            // explicitly ask TTI about the register class uses for each part.
-            Iter->second = NumLegalParts <= VF.getKnownMinValue();
-          } else {
-            // Two or more parts that share a register - are vectorized.
-            Iter->second = NumLegalParts < VF.getKnownMinValue();
-          }
+      auto WillWiden = [&TTI, VF](Type *ScalarTy) {
+        Type *VectorTy = ToVectorTy(ScalarTy, VF);
+        unsigned NumLegalParts = TTI.getNumberOfParts(VectorTy);
+        if (!NumLegalParts)
+          return false;
+        if (VF.isScalable()) {
+          // <vscale x 1 x iN> is assumed to be profitable over iN because
+          // scalable registers are a distinct register class from scalar
+          // ones. If we ever find a target which wants to lower scalable
+          // vectors back to scalars, we'll need to update this code to
+          // explicitly ask TTI about the register class uses for each part.
+          return NumLegalParts <= VF.getKnownMinValue();
         }
-        return Iter->second;
+        // Two or more parts that share a register - are vectorized.
+        return NumLegalParts < VF.getKnownMinValue();
       };
-      if (R.getNumDefinedValues() >= 1) {
-        // For multi-def recipes, currently only interleaved loads, suffice to
-        // check first def only.
-        if (WillWiden(R.getVPValue(0)))
-          return true;
-      } else if (isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe,
-                     VPInterleaveRecipe>(&R) &&
-                 WillWiden(R.getOperand(1))) {
-        // For stores check their stored value; for interleaved stores, suffice
-        // the check first stored value only. In all cases this is the second
-        // operand.
+
+      // If no def nor is a store, e.g., branches, continue - no value to check.
+      if (R.getNumDefinedValues() == 0 &&
+          !isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveRecipe>(
+              &R))
+        continue;
+      // For multi-def recipes, currently only interleaved loads, suffice to
+      // check first def only.
+      // For stores check their stored value; for interleaved stores suffice
+      // the check first stored value only. In all cases this is the second
+      // operand.
+      VPValue *ToCheck =
+          R.getNumDefinedValues() >= 1 ? R.getVPValue(0) : R.getOperand(1);
+      Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
+      if (!WillNotWiden.insert({ScalarTy}).second)
+        continue;
+      if (WillWiden(ScalarTy))
         return true;
-      }
     }
   }
 
