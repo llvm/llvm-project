@@ -207,6 +207,8 @@ long double    fminl(long double x, long double y);
 double         hermite(unsigned n, double x);                    // C++17
 float          hermite(unsigned n, float x);                     // C++17
 long double    hermite(unsigned n, long double x);               // C++17
+float          hermitef(unsigned n, float x);                    // C++17
+long double    hermitel(unsigned n, long double x);              // C++17
 template <class Integer>
 double         hermite(unsigned n, Integer x);                   // C++17
 
