@@ -776,8 +776,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp __constexpr_scalbn(_Tp _
 /// scientific computing. Cambridge university press, 2007, p. 183.
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __libcpp_hermite(unsigned __n, _Real __x) {
-  if (std::isnan(__x))
-    return std::numeric_limits<_Real>::quiet_NaN();
+  if (isnan(__x))
+    return numeric_limits<_Real>::quiet_NaN();
 
   if (0 == __n)
     return 1;
@@ -806,7 +806,7 @@ inline _LIBCPP_HIDE_FROM_ABI float hermitef(unsigned __n, float __x) { return he
 inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x) { return hermite(__n, __x); }
 
 template < class _Integer >
-_LIBCPP_HIDE_FROM_ABI std::enable_if_t<std::is_integral_v<_Integer>, double> hermite(unsigned int __n, _Integer __x) {
+_LIBCPP_HIDE_FROM_ABI enable_if_t<is_integral_v<_Integer>, double> hermite(unsigned int __n, _Integer __x) {
   // use double internally -- see C++17 standard - 29.9.1.2.2
   return hermite(__n, static_cast<double>(__x));
 }
