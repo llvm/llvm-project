@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <experimental/cmath>
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include <cassert>
 #include <cmath>
@@ -17,7 +17,6 @@
 
 #include <assert_macros.h>
 
-// UNSUPPORTED: c++03, c++11, c++14
 
 namespace {
 template <class T>
