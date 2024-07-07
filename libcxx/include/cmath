@@ -809,7 +809,6 @@ inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x)
 
 template <class _Integer>
 _LIBCPP_HIDE_FROM_ABI std::enable_if_t<std::is_integral_v<_Integer>, double> hermite(unsigned int __n, _Integer __x) {
-  // use double internally -- see C++17 standard - 29.9.1.2.2
   return std::hermite(__n, static_cast<double>(__x));
 }
 #endif // _LIBCPP_STD_VER >= 17
