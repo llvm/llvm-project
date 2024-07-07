@@ -15,8 +15,8 @@
 #ifndef _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
 #define _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
 
-#include <experimental/__config>
 #include <cmath>
+#include <experimental/__config>
 #include <limits>
 
 /// \return the hermite polynomial \f$ H_{n}(x) \f$
@@ -35,16 +35,15 @@ _Real __libcpp_hermite_recurrence(const unsigned __n, const _Real __x) {
   _Real __H_n = 2 * __x;
   for (unsigned __i = 1; __i < __n; ++__i) {
     const _Real __H_nNext = 2 * (__x * __H_n - __i * __H_nPrev);
-    __H_nPrev = __H_n;
-    __H_n = __H_nNext;
+    __H_nPrev             = __H_n;
+    __H_n                 = __H_nNext;
   }
   return __H_n;
 }
 
-template <class _Real> _Real __libcpp_hermite(const unsigned __n, const _Real __x) {
-  return std::isnan(__x)
-    ? std::numeric_limits<_Real>::quiet_NaN()
-    :  __libcpp_hermite_recurrence(__n, __x);
+template <class _Real>
+_Real __libcpp_hermite(const unsigned __n, const _Real __x) {
+  return std::isnan(__x) ? std::numeric_limits<_Real>::quiet_NaN() : __libcpp_hermite_recurrence(__n, __x);
 }
 
 #endif // _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
