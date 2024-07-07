@@ -521,6 +521,10 @@ module std_experimental [system] {
     header "experimental/iterator"
     export *
   }
+  module math {
+    header "experimental/math"
+    export *
+  }
   module memory {
     header "experimental/memory"
     export *
