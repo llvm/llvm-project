@@ -1,4 +1,5 @@
-//===------------------------ __hermite -------------------------*- C++ -*-===//
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___HERMITE
-#define _LIBCPP_EXPERIMENTAL___HERMITE
+#ifndef _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
+#define _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
 
 #include <experimental/__config>
 #include <cmath>
@@ -47,4 +48,4 @@ template <class _Real> _Real __libcpp_hermite(unsigned __n, _Real __x) {
   return __libcpp_hermite_recurrence(__n, __x);
 }
 
-#endif // _LIBCPP_EXPERIMENTAL___HERMITE
+#endif // _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H

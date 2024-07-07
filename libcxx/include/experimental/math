@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===---------------------------- cmath ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_CMATH
-#define _LIBCPP_EXPERIMENTAL_CMATH
+#ifndef _LIBCPP_EXPERIMENTAL_MATH
+#define _LIBCPP_EXPERIMENTAL_MATH
 
 // The following macro name shall be conditionally defined by the implementation
 // to indicate conformance to the International Standard ISO/IEC JTC 1/SC 22/WG 21 N3060
@@ -19,9 +19,9 @@
 
 #if _LIBCPP_STD_VER > 14
 
-#include <experimental/__hermite>
-#include <experimental/__laguerre>
-#include <experimental/__legendre>
+#include <experimental/__math/hermite.h>
+#include <experimental/__math/laguerre.h>
+#include <experimental/__math/legendre.h>
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
 
@@ -100,4 +100,4 @@ _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER > 14
 
-#endif // _LIBCPP_EXPERIMENTAL_CMATH
+#endif // _LIBCPP_EXPERIMENTAL_MATH

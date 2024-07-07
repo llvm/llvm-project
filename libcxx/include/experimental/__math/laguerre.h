@@ -1,4 +1,5 @@
-//===------------------------ __laguerre ------------------------*- C++ -*-===//
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef _LIBCPP_EXPERIMENTAL___LAGUERRE
-#define _LIBCPP_EXPERIMENTAL___LAGUERRE
+#ifndef _LIBCPP_EXPERIMENTAL___MATH_LAGUERRE_H
+#define _LIBCPP_EXPERIMENTAL___MATH_LAGUERRE_H
 
 #include <experimental/__config>
 #include <cmath>
@@ -68,4 +69,4 @@ template <class _Real> _Real __libcpp_laguerre(unsigned __n, _Real __x) {
   return __libcpp_generalized_laguerre_recurrence(__n, _Real(0), __x);
 }
 
-#endif // _LIBCPP_EXPERIMENTAL___LAGUERRE
+#endif // _LIBCPP_EXPERIMENTAL___MATH_LAGUERRE_H

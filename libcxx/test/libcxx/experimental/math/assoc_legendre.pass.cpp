@@ -9,7 +9,7 @@
 // <experimental/cmath>
 
 #include <cassert>
-#include <experimental/cmath>
+#include <experimental/math>
 #include <limits>
 
 #if _LIBCPP_STD_VER > 14

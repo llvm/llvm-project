@@ -1,4 +1,5 @@
-//===------------------------ __legendre ------------------------*- C++ -*-===//
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef _LIBCPP_EXPERIMENTAL___LEGENDRE
-#define _LIBCPP_EXPERIMENTAL___LEGENDRE
+#ifndef _LIBCPP_EXPERIMENTAL___MATH_LEGENDRE_H
+#define _LIBCPP_EXPERIMENTAL___MATH_LEGENDRE_H
 
 #include <experimental/__config>
 #include <cmath>
@@ -120,4 +121,4 @@ _Real __libcpp_assoc_legendre(unsigned __n, unsigned __m, _Real __x) {
   return __libcpp_assoc_legendre_recurrence(__n, __m, __x);
 }
 
-#endif // _LIBCPP_EXPERIMENTAL___LEGENDRE
+#endif // _LIBCPP_EXPERIMENTAL___MATH_LEGENDRE_H
