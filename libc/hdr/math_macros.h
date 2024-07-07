@@ -15,6 +15,9 @@
 
 #else // Overlay mode
 
+// GCC will include CXX headers when __cplusplus is defined. This behavior
+// can be suppressed by defining _GLIBCXX_INCLUDE_NEXT_C_HEADERS.
+#define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
 #include <math.h>
 
 // Some older math.h header does not have FP_INT_* constants yet.
