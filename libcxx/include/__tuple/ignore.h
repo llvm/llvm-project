@@ -26,7 +26,10 @@ struct __ignore_type {
   }
 };
 
-inline constexpr __ignore_type ignore;
+#  if _LIBCPP_STD_VER >= 17
+inline
+#  endif
+    _LIBCPP_CONSTEXPR_SINCE_CXX14 __ignore_type ignore;
 
 _LIBCPP_END_NAMESPACE_STD
 
