@@ -1360,6 +1360,8 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
       addBodyWithPayloadOp(parser, result, payloadOpName.value(),
                            payloadOpAttrs,
                            ArrayRef(result.operands).drop_back());
+    else
+      result.addRegion();
   } else {
     SmallVector<OpAsmParser::Argument> regionArgs;
     if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,

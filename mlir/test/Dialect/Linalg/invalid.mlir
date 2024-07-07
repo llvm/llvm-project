@@ -456,15 +456,17 @@ func.func @map_input_output_shape_mismatch(
 // -----
 
 func.func @map_no_operands1() {
-  // expected-error @+1 {{'linalg.map' op requires one region}}
+  // expected-error @+1 {{'linalg.map' op expected 1 or more operands, but found 0}}
   linalg.map { arith.addf }
 }
 
 // -----
 
 func.func @map_no_operands2() {
-  // expected-error @+1 {{'linalg.map' op requires one region}}
-  "linalg.map"() : () -> ()
+  // expected-error @+1 {{'linalg.map' op expected 1 or more operands, but found 0}}
+  "linalg.map"() ({
+    ^bb0:
+  }) : () -> ()
 }
 
 // -----
