@@ -482,8 +482,8 @@ static RTL_OSVERSIONINFOEXW GetWindowsVer() {
     HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
     assert(hMod);
 
-    auto getVer = llvm::sys::windows::funcFromModule<RtlGetVersionPtr>(
-        hMod, "RtlGetVersion");
+    auto getVer =
+        (RtlGetVersionPtr)(void *)::GetProcAddress(hMod, "RtlGetVersion");
     assert(getVer);
 
     RTL_OSVERSIONINFOEXW info{};

@@ -245,12 +245,6 @@ std::error_code GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
 std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
                           size_t MaxPathLen = MAX_PATH);
 
-/// Dynamically retrieve an exported function from a DLL, while casting it to a
-/// known type. This avoids -Wcast-function-type-mismatch.
-template <typename T> T funcFromModule(HMODULE Mod, StringRef Name) {
-  return (T)(void *)::GetProcAddress(Mod, Name.data());
-}
-
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm.
