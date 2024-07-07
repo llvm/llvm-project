@@ -89,22 +89,6 @@ add_header(thrd_t HDR thrd_t.h DEPENDS .__thread_type)
 add_header(tss_t HDR tss_t.h)
 add_header(tss_dtor_t HDR tss_dtor_t.h)
 add_header(__atexithandler_t HDR __atexithandler_t.h)
-add_header(Dl_info HDR Dl_info.h)
-add_header(
-  __dl_iterate_phdr_callback_t 
-  HDR __dl_iterate_phdr_callback_t.h
-  DEPENDS
-    .size_t
-)
-add_header(
-  struct_dl_phdr_info 
-  HDR struct_dl_phdr_info.h
-  DEPENDS
-    .__dl_iterate_phdr_callback_t
-    .size_t
-    libc.include.llvm-libc-macros.link_macros
-)
-
 add_header(speed_t HDR speed_t.h)
 add_header(tcflag_t HDR tcflag_t.h)
 add_header(struct_termios HDR struct_termios.h DEPENDS .cc_t .speed_t .tcflag_t)
