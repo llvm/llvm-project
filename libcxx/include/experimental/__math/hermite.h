@@ -15,9 +15,9 @@
 #ifndef _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
 #define _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
 
-#include <cmath>
+#include <cmath> // std::isnan
 #include <experimental/__config>
-#include <limits>
+#include <limits> // std::numeric_limits
 
 /// \return the hermite polynomial \f$ H_{n}(x) \f$
 /// \note The implementation is based on the recurrence formula

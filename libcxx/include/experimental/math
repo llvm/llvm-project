@@ -14,10 +14,9 @@
 // to indicate conformance to the International Standard ISO/IEC JTC 1/SC 22/WG 21 N3060
 // #define __STDCPP_MATH_SPEC_FUNCS__ 201003L
 
-#include <cmath>
 #include <experimental/__config>
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 #  include <experimental/__math/hermite.h>
 
@@ -34,6 +33,6 @@ inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x)
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP_EXPERIMENTAL_MATH
