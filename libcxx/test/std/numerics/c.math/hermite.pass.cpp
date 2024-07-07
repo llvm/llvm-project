@@ -26,7 +26,7 @@
 
 #include "type_algorithms.h"
 
-inline constexpr unsigned MAX_N = 128;
+inline constexpr unsigned g_max_n = 128;
 
 template <class T>
 std::array<T, 11> sample_points() {
@@ -205,13 +205,13 @@ void test() {
   { // checks if NaNs are reported correctly (i.e. output == input for input == NaN)
     using nl = std::numeric_limits<Real>;
     for (Real NaN : {nl::quiet_NaN(), nl::signaling_NaN()})
-      for (unsigned n = 0; n < MAX_N; ++n)
+      for (unsigned n = 0; n < g_max_n; ++n)
         assert(std::isnan(std::hermite(n, NaN)));
   }
 
   { // simple sample points for n=0..127 should not produce NaNs.
     for (Real x : sample_points<Real>())
-      for (unsigned n = 0; n < MAX_N; ++n)
+      for (unsigned n = 0; n < g_max_n; ++n)
         assert(!std::isnan(std::hermite(n, x)));
   }
 
@@ -236,21 +236,21 @@ void test() {
 
   { // checks std::hermitef for bitwise equality with std::hermite(unsigned, float)
     if constexpr (std::is_same_v<Real, float>)
-      for (unsigned n = 0; n < MAX_N; ++n)
+      for (unsigned n = 0; n < g_max_n; ++n)
         for (float x : sample_points<float>())
           assert(std::hermite(n, x) == std::hermitef(n, x));
   }
 
   { // checks std::hermitel for bitwise equality with std::hermite(unsigned, long double)
     if constexpr (std::is_same_v<Real, long double>)
-      for (unsigned n = 0; n < MAX_N; ++n)
+      for (unsigned n = 0; n < g_max_n; ++n)
         for (long double x : sample_points<long double>())
           assert(std::hermite(n, x) == std::hermitel(n, x));
   }
 
   { // Checks if the characteristic recurrence relation holds:    H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}(x)
     for (Real x : sample_points<Real>()) {
-      for (unsigned n = 1; n < MAX_N - 1; ++n) {
+      for (unsigned n = 1; n < g_max_n - 1; ++n) {
         Real H_next            = std::hermite(n + 1, x);
         Real H_next_recurrence = 2 * (x * std::hermite(n, x) - n * std::hermite(n - 1, x));
 
@@ -290,7 +290,7 @@ void test() {
 
   { // check input infinity is handled correctly
     Real inf = std::numeric_limits<Real>::infinity();
-    for (unsigned n = 1; n < MAX_N; ++n) {
+    for (unsigned n = 1; n < g_max_n; ++n) {
       assert(std::hermite(n, +inf) == inf);
       assert(std::hermite(n, -inf) == ((n & 1) ? -inf : inf));
     }
@@ -298,7 +298,7 @@ void test() {
 
   { // check: if overflow occurs that it is mapped to the correct infinity
     Real inf = std::numeric_limits<Real>::infinity();
-    for (unsigned n = 0; n < MAX_N; ++n) {
+    for (unsigned n = 0; n < g_max_n; ++n) {
       // Q: why x=140?
       // A: H_127(140) overflows even 8-byte double
       if (Real y = std::hermite(n, Real{140}); !std::isfinite(y))
@@ -321,7 +321,7 @@ struct TestInt {
   template <class Integer>
   void operator()() {
     // checks that std::hermite(unsigned, Integer) actually wraps std::hermite(unsigned, double)
-    for (unsigned n = 0; n < MAX_N; ++n)
+    for (unsigned n = 0; n < g_max_n; ++n)
       for (Integer x : {-1, 0, 1})
         assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
   }
