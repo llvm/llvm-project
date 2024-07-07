@@ -148,6 +148,9 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
       msg->Attach(std::move(*whyNot));
     }
     return false;
+  } else if (evaluate::IsAssumedRank(lhs)) {
+    Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
+    return false;
   } else {
     return true;
   }
@@ -333,8 +336,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 
       } else if (!isBoundsRemapping_ &&
           !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
-        int lhsRank{evaluate::GetRank(lhsType_->shape())};
-        int rhsRank{evaluate::GetRank(rhsType->shape())};
+        int lhsRank{lhsType_->Rank()};
+        int rhsRank{rhsType->Rank()};
         if (lhsRank != rhsRank) {
           msg = MessageFormattedText{
               "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,

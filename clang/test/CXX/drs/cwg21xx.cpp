@@ -19,6 +19,8 @@ namespace std {
     initializer_list(const E *p, size_t n);
     initializer_list();
   };
+
+  struct type_info;
 }
 
 namespace cwg2100 { // cwg2100: 12
@@ -275,6 +277,15 @@ static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy &&), "");
 
 #endif
 } // namespace cwg2171
+
+namespace cwg2191 { // cwg2191: 19
+#if __cplusplus >= 201103L
+struct B { virtual void f() { } };
+struct D : B { } d;
+static_assert(noexcept(typeid(d)), "");
+static_assert(!noexcept(typeid(*static_cast<D*>(nullptr))), "");
+#endif
+} // namespace cwg2191
 
 namespace cwg2180 { // cwg2180: yes
   class A {

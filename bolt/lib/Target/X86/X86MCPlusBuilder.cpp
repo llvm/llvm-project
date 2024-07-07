@@ -328,19 +328,19 @@ public:
     return false;
   }
 
-  bool isReversibleBranch(const MCInst &Inst) const override {
-    if (isDynamicBranch(Inst))
-      return false;
-
+  bool isUnsupportedInstruction(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     default:
-      return true;
+      return false;
+
     case X86::LOOP:
     case X86::LOOPE:
     case X86::LOOPNE:
     case X86::JECXZ:
     case X86::JRCXZ:
-      return false;
+      // These have a short displacement, and therefore (often) break after
+      // basic block relayout.
+      return true;
     }
   }
 
@@ -659,40 +659,6 @@ public:
   bool hasEVEXEncoding(const MCInst &Inst) const override {
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
     return (Desc.TSFlags & X86II::EncodingMask) == X86II::EVEX;
-  }
-
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    const auto *I = Insts.begin();
-    while (I != Insts.end() && isPrefix(*I))
-      ++I;
-    if (I == Insts.end())
-      return false;
-
-    const MCInst &FirstInst = *I;
-    ++I;
-    while (I != Insts.end() && isPrefix(*I))
-      ++I;
-    if (I == Insts.end())
-      return false;
-    const MCInst &SecondInst = *I;
-
-    if (!isConditionalBranch(SecondInst))
-      return false;
-    // Cannot fuse if the first instruction uses RIP-relative memory.
-    if (hasPCRelOperand(FirstInst))
-      return false;
-
-    const X86::FirstMacroFusionInstKind CmpKind =
-        X86::classifyFirstOpcodeInMacroFusion(FirstInst.getOpcode());
-    if (CmpKind == X86::FirstMacroFusionInstKind::Invalid)
-      return false;
-
-    X86::CondCode CC = static_cast<X86::CondCode>(getCondCode(SecondInst));
-    X86::SecondMacroFusionInstKind BranchKind =
-        X86::classifySecondCondCodeInMacroFusion(CC);
-    if (BranchKind == X86::SecondMacroFusionInstKind::Invalid)
-      return false;
-    return X86::isMacroFused(CmpKind, BranchKind);
   }
 
   std::optional<X86MemOperand>
@@ -1639,11 +1605,16 @@ public:
     return true;
   }
 
-  bool convertCallToIndirectCall(MCInst &Inst, const MCSymbol *TargetLocation,
-                                 MCContext *Ctx) override {
-    assert((Inst.getOpcode() == X86::CALL64pcrel32 ||
-            (Inst.getOpcode() == X86::JMP_4 && isTailCall(Inst))) &&
+  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    assert((DirectCall.getOpcode() == X86::CALL64pcrel32 ||
+            (DirectCall.getOpcode() == X86::JMP_4 && isTailCall(DirectCall))) &&
            "64-bit direct (tail) call instruction expected");
+
+    InstructionListType Code;
+    // Create a new indirect call by converting the previous direct call.
+    MCInst Inst = DirectCall;
     const auto NewOpcode =
         (Inst.getOpcode() == X86::CALL64pcrel32) ? X86::CALL64m : X86::JMP32m;
     Inst.setOpcode(NewOpcode);
@@ -1664,7 +1635,8 @@ public:
     Inst.insert(Inst.begin(),
                 MCOperand::createReg(X86::RIP));        // BaseReg
 
-    return true;
+    Code.emplace_back(Inst);
+    return Code;
   }
 
   void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
@@ -1873,11 +1845,9 @@ public:
         continue;
       }
 
-      // Handle conditional branches and ignore indirect branches
-      if (isReversibleBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
-        // Indirect branch
+      // Ignore indirect branches
+      if (getCondCode(*I) == X86::COND_INVALID)
         return false;
-      }
 
       if (CondBranch == nullptr) {
         const MCSymbol *TargetBB = getTargetSymbol(*I);
@@ -2794,14 +2764,13 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
     Inst.getOperand(0) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB, MCContext *Ctx,
@@ -2844,13 +2813,12 @@ public:
     }
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
     Inst.getOperand(0) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   MCPhysReg getX86R11() const override { return X86::R11; }

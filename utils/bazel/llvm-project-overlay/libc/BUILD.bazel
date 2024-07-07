@@ -72,6 +72,7 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_macros_float16_macros",
     hdrs = ["include/llvm-libc-macros/float16-macros.h"],
+    deps = [":llvm_libc_types_float128"],
 )
 
 libc_support_library(
@@ -319,6 +320,7 @@ libc_support_library(
     name = "__support_cpp_expected",
     hdrs = ["src/__support/CPP/expected.h"],
     deps = [
+        ":__support_macros_attributes",
     ],
 )
 
@@ -881,6 +883,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
@@ -899,6 +902,8 @@ libc_support_library(
     deps = [
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
@@ -916,7 +921,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_common",
-        ":__support_fputil_fma",
+        ":__support_cpp_type_traits",
     ],
 )
 
@@ -979,6 +984,8 @@ libc_support_library(
     deps = [
         ":__support_big_int",
         ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
@@ -1098,6 +1105,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_sleep",
     hdrs = ["src/__support/threads/sleep.h"],
+    deps = [
+        ":__support_macros_attributes",
+    ],
 )
 
 libc_support_library(
@@ -1107,7 +1117,7 @@ libc_support_library(
     ],
     defines = [
         "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY",
-        "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT"
+        "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -1115,9 +1125,9 @@ libc_support_library(
     }),
     deps = [
         ":__support_cpp_optional",
-        ":__support_time_linux",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
+        ":__support_time_linux",
         ":types_pid_t",
     ],
 )
@@ -1181,6 +1191,7 @@ libc_function(
     hdrs = ["src/errno/libc_errno.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_atomic",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
         ":hdr_errno_macros",
@@ -3395,7 +3406,7 @@ libc_function(
 
 libc_function(
     name = "printf",
-    srcs = ["src/stdio/printf.cpp"],
+    srcs = ["src/stdio/generic/printf.cpp"],
     hdrs = ["src/stdio/printf.h"],
     deps = [
         ":__support_arg_list",
@@ -3444,7 +3455,7 @@ libc_function(
 
 libc_function(
     name = "vprintf",
-    srcs = ["src/stdio/vprintf.cpp"],
+    srcs = ["src/stdio/generic/vprintf.cpp"],
     hdrs = ["src/stdio/vprintf.h"],
     deps = [
         ":__support_arg_list",
@@ -3576,6 +3587,7 @@ libc_function(
     }),
     weak = True,
     deps = [
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_signal_macros",
@@ -3595,6 +3607,7 @@ libc_function(
     }),
     weak = True,
     deps = [
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_signal_macros",
@@ -3616,6 +3629,7 @@ libc_function(
 #     }),
 #     weak = True,
 #     deps = [
+#         ":__support_macros_sanitizer",
 #         ":__support_osutil_syscall",
 #         ":errno",
 #         ":hdr_signal_macros",

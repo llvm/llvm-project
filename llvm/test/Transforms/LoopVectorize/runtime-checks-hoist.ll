@@ -17,7 +17,8 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; NOTE: The strides of the starting address values in the inner loop differ, i.e.
 ; '(i * (n + 1))' vs '(i * n)'.
 
-; DEBUG-LABEL: LAA: Found a loop in diff_checks:
+; DEBUG-LABEL: 'diff_checks'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Not creating diff runtime check, since these  cannot be hoisted out of the outer loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -149,7 +150,8 @@ outer.exit:
 ; We decide to do full runtime checks here (as opposed to diff checks) due to
 ; the additional load of 'dst[(i * n) + j]' in the loop.
 
-; DEBUG-LABEL: LAA: Found a loop in full_checks:
+; DEBUG-LABEL: 'full_checks'
+; DEBUG: LAA: Found an analyzable loop: inner.loop
 ; DEBUG-NOT: LAA: Creating diff runtime check for:
 ; DEBUG: LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -272,7 +274,8 @@ outer.exit:
 ; is accessed with a higher stride compared src, and therefore the inner loop
 ; runtime checks will vary for each outer loop iteration.
 
-; DEBUG-LABEL: LAA: Found a loop in full_checks_diff_strides:
+; DEBUG-LABEL: 'full_checks_diff_strides'
+; DEBUG: LAA: Found an analyzable loop: inner.loop
 ; DEBUG-NOT: LAA: Creating diff runtime check for:
 ; DEBUG: LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -402,7 +405,8 @@ outer.exit:
 ;   }
 ; }
 
-; DEBUG-LABEL: LAA: Found a loop in diff_checks_src_start_invariant:
+; DEBUG-LABEL: 'diff_checks_src_start_invariant'
+; DEBUG: LAA: Found an analyzable loop: inner.loop
 ; DEBUG-NOT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 
 define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) {
@@ -508,7 +512,8 @@ outer.loop.exit:
 ;   }
 ; }
 
-; DEBUG-LABEL: LAA: Found a loop in full_checks_src_start_invariant:
+; DEBUG-LABEL: 'full_checks_src_start_invariant'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: Start: %dst End: ((4 * (zext i32 %m to i64) * (zext i32 %n to i64)) + %dst)
@@ -629,7 +634,8 @@ outer.loop.exit:
 ; The 'src' access varies with the outermost loop, rather than the parent of the
 ; innermost loop. Hence we don't expand `src`, although in theory we could do.
 
-; DEBUG-LABEL: LAA: Found a loop in triple_nested_loop_mixed_access:
+; DEBUG-LABEL: 'triple_nested_loop_mixed_access'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG-NOT:  LAA: Creating diff runtime check for:
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -795,7 +801,8 @@ exit:
 ; }
 ; Outer loop trip count is uncomputable so we shouldn't expand the ranges.
 
-; DEBUG-LABEL: LAA: Found a loop in uncomputable_outer_tc:
+; DEBUG-LABEL: 'uncomputable_outer_tc'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: Start: {%dst,+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%outer.loop> End: {((4 * (zext i32 %n to i64))<nuw><nsw> + %dst),+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%outer.loop>
 ; DEBUG-NEXT: LAA: Adding RT check for range:
@@ -945,7 +952,8 @@ while.end:
 ; Inner IV is decreasing, but this isn't a problem and we can still expand the
 ; runtime checks correctly to cover the whole loop.
 
-; DEBUG-LABEL: LAA: Found a loop in decreasing_inner_iv:
+; DEBUG-LABEL: 'decreasing_inner_iv'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: LAA: ... but need to check stride is positive: (4 * (sext i32 %stride1 to i64))<nsw>
@@ -1111,7 +1119,8 @@ exit:
 ; Outer IV is decreasing, but the direction of memory accesses also depends
 ; upon the signedness of stride1.
 
-; DEBUG-LABEL: LAA: Found a loop in decreasing_outer_iv:
+; DEBUG-LABEL: 'decreasing_outer_iv'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: LAA: ... but need to check stride is positive: (-4 * (sext i32 %stride1 to i64))<nsw>
@@ -1271,7 +1280,8 @@ exit:
 ; }
 
 
-; DEBUG-LABEL: LAA: Found a loop in unknown_inner_stride:
+; DEBUG-LABEL: 'unknown_inner_stride'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: Start: %dst End: ((4 * (zext i32 %n to i64))<nuw><nsw> + (4 * (zext i32 (1 + %n) to i64) * (-1 + (zext i32 %m to i64))<nsw>) + %dst)
@@ -1509,7 +1519,8 @@ outer.exit:
   ret void
 }
 
-; TODO: STRIDE_CHECK can be eliminated via loop guards.
+; The stride for the access in the inner loop is known to be non-negative via
+; loop guards.
 define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK-LABEL: define void @stride_check_known_via_loop_guard
 ; CHECK-SAME: (ptr [[C:%.*]], ptr [[A:%.*]], i32 [[ACOLS:%.*]]) {
@@ -1518,8 +1529,6 @@ define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK-NEXT:    br i1 [[PRE_C]], label [[EXIT:%.*]], label [[OUTER_HEADER_PREHEADER:%.*]]
 ; CHECK:       outer.header.preheader:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ACOLS]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[C]], i64 34359738368
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
@@ -1533,23 +1542,21 @@ define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[STRIDE_CHECK:%.*]] = icmp slt i64 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[FOUND_CONFLICT]], [[STRIDE_CHECK]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[C]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8, !alias.scope [[META69:![0-9]+]], !noalias [[META72:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[C]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8, !alias.scope [[META69:![0-9]+]], !noalias [[META72:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    store <4 x double> [[BROADCAST_SPLAT]], ptr [[TMP6]], align 8, !alias.scope [[META72]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    store <4 x double> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8, !alias.scope [[META72]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP74:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP74:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

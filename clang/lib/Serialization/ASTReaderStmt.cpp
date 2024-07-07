@@ -1323,6 +1323,16 @@ void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
   E->SourceLocExprBits.Kind = Record.readInt();
 }
 
+void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {
+  VisitExpr(E);
+  E->EmbedKeywordLoc = readSourceLocation();
+  EmbedDataStorage *Data = new (Record.getContext()) EmbedDataStorage;
+  Data->BinaryData = cast<StringLiteral>(Record.readSubStmt());
+  E->Data = Data;
+  E->Begin = Record.readInt();
+  E->NumOfElements = Record.readInt();
+}
+
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
   VisitExpr(E);
   E->setAmpAmpLoc(readSourceLocation());
@@ -2810,6 +2820,12 @@ void ASTStmtReader::VisitOpenACCAssociatedStmtConstruct(
 void ASTStmtReader::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
+  S->findAndSetChildLoops();
+}
+
+void ASTStmtReader::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3225,6 +3241,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_SOURCE_LOC:
       S = new (Context) SourceLocExpr(Empty);
+      break;
+
+    case EXPR_BUILTIN_PP_EMBED:
+      S = new (Context) EmbedExpr(Empty);
       break;
 
     case EXPR_ADDR_LABEL:
@@ -4233,6 +4253,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OPENACC_COMPUTE_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCComputeConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_LOOP_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCLoopConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
     case EXPR_REQUIRES:

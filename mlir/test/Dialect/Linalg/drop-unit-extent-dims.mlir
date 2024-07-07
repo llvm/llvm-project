@@ -881,7 +881,7 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1
 // CHECK:     func @input_stays_same(
 // CHECK-SAME:  %[[ARG0:.*]]: memref<?x1x?xf32, strided<[?, 1, 1]>>,
 // CHECK-SAME:  %[[ARG1:.*]]: f32, %[[ARG2:.*]]: memref<?x1x?x1x?xf32>)
-// CHECK-SAME   -> memref<?x1x?x1x?xf32> {
+// CHECK-SAME:  -> memref<?x1x?x1x?xf32> {
 // CHECK:      %[[OUT:.*]] = memref.collapse_shape %[[ARG2]] {{\[}}[0, 1], [2, 3], [4]]
 // CHECK-SAME:   : memref<?x1x?x1x?xf32> into memref<?x?x?xf32>
 // CHECK:      linalg.generic

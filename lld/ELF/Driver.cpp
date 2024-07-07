@@ -324,7 +324,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   }
   case file_magic::elf_shared_object: {
-    if (config->isStatic || config->relocatable) {
+    if (config->isStatic) {
       error("attempted static link of dynamic object " + path);
       return;
     }
@@ -1269,7 +1269,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->dynamicLinker = getDynamicLinker(args);
   config->ehFrameHdr =
       args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
-  config->emitLLVM = args.hasArg(OPT_plugin_opt_emit_llvm, false);
+  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
@@ -1384,6 +1384,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
+  config->resolveGroups =
+      !args.hasArg(OPT_relocatable) || args.hasArg(OPT_force_group_allocation);
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
@@ -1890,6 +1892,9 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   // For --{push,pop}-state.
   std::vector<std::tuple<bool, bool, bool>> stack;
 
+  // -r implies -Bstatic and has precedence over -Bdynamic.
+  config->isStatic = config->relocatable;
+
   // Iterate over argv to process input files and positional arguments.
   std::optional<MemoryBufferRef> defaultScript;
   InputFile::isInGroup = false;
@@ -1944,7 +1949,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       config->isStatic = true;
       break;
     case OPT_Bdynamic:
-      config->isStatic = false;
+      if (!config->relocatable)
+        config->isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
@@ -2015,16 +2021,22 @@ void LinkerDriver::inferMachineType() {
   if (config->ekind != ELFNoneKind)
     return;
 
+  bool inferred = false;
   for (InputFile *f : files) {
     if (f->ekind == ELFNoneKind)
       continue;
-    config->ekind = f->ekind;
-    config->emachine = f->emachine;
+    if (!inferred) {
+      inferred = true;
+      config->ekind = f->ekind;
+      config->emachine = f->emachine;
+      config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
+    }
     config->osabi = f->osabi;
-    config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
-    return;
+    if (f->osabi != ELFOSABI_NONE)
+      return;
   }
-  error("target emulation unknown: -m or at least one .o file required");
+  if (!inferred)
+    error("target emulation unknown: -m or at least one .o file required");
 }
 
 // Parse -z max-page-size=<value>. The default value is defined by

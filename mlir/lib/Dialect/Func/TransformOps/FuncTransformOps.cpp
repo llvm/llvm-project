@@ -216,14 +216,14 @@ LogicalResult transform::CastAndCallOp::verify() {
 
 void transform::CastAndCallOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getInsertionPoint(), effects);
+  transform::onlyReadsHandle(getInsertionPointMutable(), effects);
   if (getInputs())
-    transform::onlyReadsHandle(getInputs(), effects);
+    transform::onlyReadsHandle(getInputsMutable(), effects);
   if (getOutputs())
-    transform::onlyReadsHandle(getOutputs(), effects);
+    transform::onlyReadsHandle(getOutputsMutable(), effects);
   if (getFunction())
-    transform::onlyReadsHandle(getFunction(), effects);
-  transform::producesHandle(getResult(), effects);
+    transform::onlyReadsHandle(getFunctionMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }
 

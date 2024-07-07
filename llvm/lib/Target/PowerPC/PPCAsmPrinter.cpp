@@ -1079,13 +1079,13 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(IsAIX && TM.getCodeModel() == CodeModel::Small &&
            "PseudoOp only valid for small code model AIX");
 
-    // Transform %rN = ADDItoc/8 @op1, %r2.
+    // Transform %rN = ADDItoc/8 %r2, @op1.
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to load address.
     TmpInst.setOpcode((!IsPPC64) ? (PPC::LA) : (PPC::LA8));
 
-    const MachineOperand &MO = MI->getOperand(1);
+    const MachineOperand &MO = MI->getOperand(2);
     assert(MO.isGlobal() && "Invalid operand for ADDItoc[8].");
 
     // Map the operand to its corresponding MCSymbol.
@@ -1094,7 +1094,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCExpr *Exp =
         MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_None, OutContext);
 
-    TmpInst.getOperand(1) = TmpInst.getOperand(2);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1614,7 +1613,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     const MachineOperand &MO = MI->getOperand(OpNum);
     if (MO.isGlobal()) {
-      const DataLayout &DL = MO.getGlobal()->getParent()->getDataLayout();
+      const DataLayout &DL = MO.getGlobal()->getDataLayout();
       if (MO.getGlobal()->getPointerAlignment(DL) < 4)
         llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
     }
@@ -2733,7 +2732,7 @@ static void tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) {
   Type *GVType = GV->getValueType();
   assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
                               "supported by the toc data transformation.");
-  if (GV->getParent()->getDataLayout().getTypeSizeInBits(GVType) >
+  if (GV->getDataLayout().getTypeSizeInBits(GVType) >
       PointerSize * 8)
     report_fatal_error(
         "A GlobalVariable with size larger than a TOC entry is not currently "
@@ -2751,7 +2750,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // If the Global Variable has the toc-data attribute, it needs to be emitted
   // when we emit the .toc section.
   if (GV->hasAttribute("toc-data")) {
-    unsigned PointerSize = GV->getParent()->getDataLayout().getPointerSize();
+    unsigned PointerSize = GV->getDataLayout().getPointerSize();
     tocDataChecks(PointerSize, GV);
     TOCDataGlobalVars.push_back(GV);
     return;
@@ -2795,7 +2794,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Switch to the containing csect.
   OutStreamer->switchSection(Csect);
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
 
   // Handle common and zero-initialized local symbols.
   if (GV->hasCommonLinkage() || GVKind.isBSSLocal() ||
@@ -2838,7 +2837,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
 
   // No alias to emit.
   if (!GOAliasMap[GV].size()) {
-    emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
+    emitGlobalConstant(GV->getDataLayout(), GV->getInitializer());
     return;
   }
 
@@ -2849,7 +2848,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     AliasList[getAliasOffset(GA->getAliasee())].push_back(GA);
 
   // Emit alias label and element value for global variable.
-  emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer(),
+  emitGlobalConstant(GV->getDataLayout(), GV->getInitializer(),
                      &AliasList);
 }
 
@@ -3008,7 +3007,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
         getObjFileLowering().SectionForGlobal(GO, GOKind, TM));
 
-    Align GOAlign = getGVAlignment(GO, GO->getParent()->getDataLayout());
+    Align GOAlign = getGVAlignment(GO, GO->getDataLayout());
     Csect->ensureMinAlignment(GOAlign);
   };
 

@@ -17,7 +17,6 @@
 #ifndef LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSCANNER_H
 #define LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSCANNER_H
 
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -118,7 +117,7 @@ struct Directive {
 bool scanSourceForDependencyDirectives(
     StringRef Input, SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
     SmallVectorImpl<dependency_directives_scan::Directive> &Directives,
-    const LangOptions &LangOpts, DiagnosticsEngine *Diags = nullptr,
+    DiagnosticsEngine *Diags = nullptr,
     SourceLocation InputSourceLoc = SourceLocation());
 
 /// Print the previously scanned dependency directives as minimized source text.

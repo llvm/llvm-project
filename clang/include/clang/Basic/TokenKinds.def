@@ -126,6 +126,9 @@ PPKEYWORD(error)
 // C99 6.10.6 - Pragma Directive.
 PPKEYWORD(pragma)
 
+// C23 & C++26 #embed
+PPKEYWORD(embed)
+
 // GNU Extensions.
 PPKEYWORD(import)
 PPKEYWORD(include_next)
@@ -541,6 +544,8 @@ TYPE_TRAIT_2(__reference_converts_from_temporary, ReferenceConvertsFromTemporary
 // IsDeducible is only used internally by clang for CTAD implementation and
 // is not exposed to users.
 TYPE_TRAIT_2(/*EmptySpellingName*/, IsDeducible, KEYCXX)
+
+TYPE_TRAIT_1(__is_bitwise_cloneable, IsBitwiseCloneable, KEYALL)
 
 // Embarcadero Expression Traits
 EXPRESSION_TRAIT(__is_lvalue_expr, IsLValueExpr, KEYCXX)
@@ -996,6 +1001,9 @@ ANNOTATION(header_unit)
 
 // Annotation for end of input in clang-repl.
 ANNOTATION(repl_input_end)
+
+// Annotation for #embed
+ANNOTATION(embed)
 
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION

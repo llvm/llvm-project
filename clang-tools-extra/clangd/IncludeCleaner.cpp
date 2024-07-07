@@ -303,7 +303,7 @@ collectMacroReferences(ParsedAST &AST) {
   for (const auto &[_, Refs] : AST.getMacros().MacroRefs) {
     for (const auto &Ref : Refs) {
       auto Loc = SM.getComposedLoc(SM.getMainFileID(), Ref.StartOffset);
-      const auto *Tok = AST.getTokens().spelledTokenAt(Loc);
+      const auto *Tok = AST.getTokens().spelledTokenContaining(Loc);
       if (!Tok)
         continue;
       auto Macro = locateMacroAt(*Tok, PP);

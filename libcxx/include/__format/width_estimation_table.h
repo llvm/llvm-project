@@ -237,7 +237,7 @@ inline constexpr uint32_t __table_upper_bound = 0x0003fffd;
 
 /// Returns the estimated width of a Unicode code point.
 ///
-/// \pre The code point is a valid Unicode code point.
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int __estimated_width(const char32_t __code_point) noexcept {
   // Since __table_upper_bound contains the unshifted range do the
   // comparison without shifting.

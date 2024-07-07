@@ -124,6 +124,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1103"},   {"gfx1103"}, GK_GFX1103, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1152"},   {"gfx1152"}, GK_GFX1152, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 
@@ -275,6 +276,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1103: return {11, 0, 3};
   case GK_GFX1150: return {11, 5, 0};
   case GK_GFX1151: return {11, 5, 1};
+  case GK_GFX1152: return {11, 5, 2};
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
 
@@ -313,7 +315,47 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
 void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
                                   StringMap<bool> &Features) {
   // XXX - What does the member GPU mean if device name string passed here?
-  if (T.isAMDGCN()) {
+  if (T.isSPIRV() && T.getOS() == Triple::OSType::AMDHSA) {
+    // AMDGCN SPIRV must support the union of all AMDGCN features.
+    Features["atomic-ds-pk-add-16-insts"] = true;
+    Features["atomic-flat-pk-add-16-insts"] = true;
+    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+    Features["atomic-global-pk-add-bf16-inst"] = true;
+    Features["atomic-fadd-rtn-insts"] = true;
+    Features["ci-insts"] = true;
+    Features["dot1-insts"] = true;
+    Features["dot2-insts"] = true;
+    Features["dot3-insts"] = true;
+    Features["dot4-insts"] = true;
+    Features["dot5-insts"] = true;
+    Features["dot7-insts"] = true;
+    Features["dot8-insts"] = true;
+    Features["dot9-insts"] = true;
+    Features["dot10-insts"] = true;
+    Features["dot11-insts"] = true;
+    Features["dl-insts"] = true;
+    Features["16-bit-insts"] = true;
+    Features["dpp"] = true;
+    Features["gfx8-insts"] = true;
+    Features["gfx9-insts"] = true;
+    Features["gfx90a-insts"] = true;
+    Features["gfx940-insts"] = true;
+    Features["gfx10-insts"] = true;
+    Features["gfx10-3-insts"] = true;
+    Features["gfx11-insts"] = true;
+    Features["gfx12-insts"] = true;
+    Features["image-insts"] = true;
+    Features["fp8-conversion-insts"] = true;
+    Features["s-memrealtime"] = true;
+    Features["s-memtime-inst"] = true;
+    Features["gws"] = true;
+    Features["fp8-insts"] = true;
+    Features["fp8-conversion-insts"] = true;
+    Features["atomic-ds-pk-add-16-insts"] = true;
+    Features["mai-insts"] = true;
+    Features["wavefrontsize32"] = true;
+    Features["wavefrontsize64"] = true;
+  } else if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
     case GK_GFX1201:
     case GK_GFX1200:
@@ -341,6 +383,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["fp8-conversion-insts"] = true;
       break;
+    case GK_GFX1152:
     case GK_GFX1151:
     case GK_GFX1150:
     case GK_GFX1103:
@@ -542,6 +585,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     switch (parseArchAMDGCN(GPU)) {
     case GK_GFX1201:
     case GK_GFX1200:
+    case GK_GFX1152:
     case GK_GFX1151:
     case GK_GFX1150:
     case GK_GFX1103:

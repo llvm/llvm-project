@@ -21,6 +21,7 @@
 #ifndef LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
@@ -740,6 +741,10 @@ public:
   /// When successful, makes the primary IV dead.
   bool shouldFoldTerminatingConditionAfterLSR() const;
 
+  /// Return true if LSR should drop a found solution if it's calculated to be
+  /// less profitable than the baseline.
+  bool shouldDropLSRSolutionIfLessProfitable() const;
+
   /// \returns true if LSR should not optimize a chain that includes \p I.
   bool isProfitableLSRChainElement(Instruction *I) const;
 
@@ -1108,6 +1113,10 @@ public:
 
   /// \return the number of registers in the target-provided register class.
   unsigned getNumberOfRegisters(unsigned ClassID) const;
+
+  /// \return true if the target supports load/store that enables fault
+  /// suppression of memory operands when the source condition is false.
+  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
 
   /// \return the target-provided register class ID for the provided type,
   /// accounting for type promotion and other type-legalization techniques that
@@ -1864,6 +1873,7 @@ public:
                              const TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isNumRegsMajorCostOfLSR() = 0;
   virtual bool shouldFoldTerminatingConditionAfterLSR() const = 0;
+  virtual bool shouldDropLSRSolutionIfLessProfitable() const = 0;
   virtual bool isProfitableLSRChainElement(Instruction *I) = 0;
   virtual bool canMacroFuseCmp() = 0;
   virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
@@ -1951,6 +1961,7 @@ public:
   virtual bool preferToKeepConstantsAttached(const Instruction &Inst,
                                              const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
+  virtual bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
   virtual const char *getRegisterClassName(unsigned ClassID) const = 0;
@@ -2337,6 +2348,9 @@ public:
   bool shouldFoldTerminatingConditionAfterLSR() const override {
     return Impl.shouldFoldTerminatingConditionAfterLSR();
   }
+  bool shouldDropLSRSolutionIfLessProfitable() const override {
+    return Impl.shouldDropLSRSolutionIfLessProfitable();
+  }
   bool isProfitableLSRChainElement(Instruction *I) override {
     return Impl.isProfitableLSRChainElement(I);
   }
@@ -2534,6 +2548,9 @@ public:
   }
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);
+  }
+  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const override {
+    return Impl.hasConditionalLoadStoreForType(Ty);
   }
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override {

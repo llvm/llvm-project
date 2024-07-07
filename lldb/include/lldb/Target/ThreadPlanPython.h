@@ -13,6 +13,7 @@
 #include <string>
 
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Interpreter/Interfaces/ScriptedThreadPlanInterface.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -70,6 +71,7 @@ private:
   StreamString m_stop_description; // Cache the stop description here
   bool m_did_push;
   bool m_stop_others;
+  lldb::ScriptedThreadPlanInterfaceSP m_interface;
 
   ThreadPlanPython(const ThreadPlanPython &) = delete;
   const ThreadPlanPython &operator=(const ThreadPlanPython &) = delete;

@@ -206,9 +206,8 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    call void @_ZN1SIdEC1ERKS0_d(ptr noundef nonnull align 8 dereferenceable(8) [[TEST]], ptr noundef nonnull align 8 dereferenceable(8) [[TTT]], double noundef 0.000000e+00)
 // CHECK-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
-// CHECK-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
-// CHECK-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_BEGIN]], double noundef 1.000000e+00)
-// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[S_ARR]], double noundef 1.000000e+00)
+// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i64 1
 // CHECK-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT]], double noundef 2.000000e+00)
 // CHECK-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[VAR]], double noundef 3.000000e+00)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[T_VAR]], align 4
@@ -569,9 +568,8 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    call void @_ZN1SIiEC1ERKS0_i(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]], ptr noundef nonnull align 4 dereferenceable(4) [[TTT]], i32 noundef 0)
 // CHECK-NEXT:    store i32 0, ptr [[T_VAR]], align 128
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
-// CHECK-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
-// CHECK-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
-// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef 1)
+// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i64 1
 // CHECK-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]], i32 noundef 3)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[T_VAR]], align 128
@@ -1519,9 +1517,8 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    call void @_ZN1SIdEC1ERKS0_d(ptr noundef nonnull align 8 dereferenceable(8) [[TEST]], ptr noundef nonnull align 8 dereferenceable(8) [[TTT]], double noundef 0.000000e+00)
 // SIMD-ONLY0-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // SIMD-ONLY0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
-// SIMD-ONLY0-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
-// SIMD-ONLY0-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_BEGIN]], double noundef 1.000000e+00)
-// SIMD-ONLY0-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// SIMD-ONLY0-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[S_ARR]], double noundef 1.000000e+00)
+// SIMD-ONLY0-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i64 1
 // SIMD-ONLY0-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT]], double noundef 2.000000e+00)
 // SIMD-ONLY0-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[VAR]], double noundef 3.000000e+00)
 // SIMD-ONLY0-NEXT:    store i32 0, ptr [[I]], align 4
@@ -1617,9 +1614,8 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    call void @_ZN1SIiEC1ERKS0_i(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]], ptr noundef nonnull align 4 dereferenceable(4) [[TTT]], i32 noundef 0)
 // SIMD-ONLY0-NEXT:    store i32 0, ptr [[T_VAR]], align 128
 // SIMD-ONLY0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
-// SIMD-ONLY0-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
-// SIMD-ONLY0-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
-// SIMD-ONLY0-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// SIMD-ONLY0-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef 1)
+// SIMD-ONLY0-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i64 1
 // SIMD-ONLY0-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // SIMD-ONLY0-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]], i32 noundef 3)
 // SIMD-ONLY0-NEXT:    store i32 0, ptr [[I]], align 4
@@ -1842,9 +1838,8 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    call void @_ZN1SIdEC1ERKS0_d(ptr noundef nonnull align 8 dereferenceable(8) [[TEST]], ptr noundef nonnull align 8 dereferenceable(8) [[TTT]], double noundef 0.000000e+00)
 // SIMD-ONLY1-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // SIMD-ONLY1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
-// SIMD-ONLY1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
-// SIMD-ONLY1-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_BEGIN]], double noundef 1.000000e+00)
-// SIMD-ONLY1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// SIMD-ONLY1-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[S_ARR]], double noundef 1.000000e+00)
+// SIMD-ONLY1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i64 1
 // SIMD-ONLY1-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT]], double noundef 2.000000e+00)
 // SIMD-ONLY1-NEXT:    call void @_ZN1SIdEC1Ed(ptr noundef nonnull align 8 dereferenceable(8) [[VAR]], double noundef 3.000000e+00)
 // SIMD-ONLY1-NEXT:    store i32 0, ptr [[I]], align 4
@@ -1940,9 +1935,8 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    call void @_ZN1SIiEC1ERKS0_i(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]], ptr noundef nonnull align 4 dereferenceable(4) [[TTT]], i32 noundef 0)
 // SIMD-ONLY1-NEXT:    store i32 0, ptr [[T_VAR]], align 128
 // SIMD-ONLY1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
-// SIMD-ONLY1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
-// SIMD-ONLY1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
-// SIMD-ONLY1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// SIMD-ONLY1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef 1)
+// SIMD-ONLY1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i64 1
 // SIMD-ONLY1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // SIMD-ONLY1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]], i32 noundef 3)
 // SIMD-ONLY1-NEXT:    store i32 0, ptr [[I]], align 4

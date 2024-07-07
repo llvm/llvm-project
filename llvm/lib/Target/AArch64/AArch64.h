@@ -40,7 +40,6 @@ FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
 FunctionPass *createAArch64StorePairSuppressPass();
 FunctionPass *createAArch64ExpandPseudoPass();
 FunctionPass *createAArch64SLSHardeningPass();
-FunctionPass *createAArch64IndirectThunks();
 FunctionPass *createAArch64SpeculationHardeningPass();
 FunctionPass *createAArch64LoadStoreOptimizationPass();
 ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
@@ -90,7 +89,6 @@ void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry &);
 void initializeAArch64GlobalsTaggingPass(PassRegistry &);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
-void initializeAArch64LoopIdiomTransformLegacyPassPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);

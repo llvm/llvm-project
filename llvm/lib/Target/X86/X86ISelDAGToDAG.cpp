@@ -26,6 +26,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2744,7 +2745,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         Src = Src.getOperand(0);
       }
 
-    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse()) {
+    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse() && N->hasOneUse()) {
       // Give up if the shift is not a valid scale factor [1,2,3].
       SDValue ShlSrc = Src.getOperand(0);
       SDValue ShlAmt = Src.getOperand(1);
@@ -5120,6 +5121,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tileloaddt164_internal: {
       if (!Subtarget->hasAMXTILE())
         break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
       unsigned Opc = IntNo == Intrinsic::x86_tileloadd64_internal
                          ? X86::PTILELOADDV
                          : X86::PTILELOADDT1V;
@@ -5201,6 +5205,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       break;
     }
     case Intrinsic::x86_tilestored64_internal: {
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
       unsigned Opc = X86::PTILESTOREDV;
       // _tile_stored_internal(row, col, buf, STRIDE, c)
       SDValue Base = Node->getOperand(4);
@@ -5228,6 +5235,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tilestored64: {
       if (!Subtarget->hasAMXTILE())
         break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
       unsigned Opc;
       switch (IntNo) {
       default: llvm_unreachable("Unexpected intrinsic!");

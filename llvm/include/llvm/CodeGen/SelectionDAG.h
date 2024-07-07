@@ -680,10 +680,8 @@ public:
                       bool isTarget = false, bool isOpaque = false);
   SDValue getIntPtrConstant(uint64_t Val, const SDLoc &DL,
                             bool isTarget = false);
-  SDValue getShiftAmountConstant(uint64_t Val, EVT VT, const SDLoc &DL,
-                                 bool LegalTypes = true);
-  SDValue getShiftAmountConstant(const APInt &Val, EVT VT, const SDLoc &DL,
-                                 bool LegalTypes = true);
+  SDValue getShiftAmountConstant(uint64_t Val, EVT VT, const SDLoc &DL);
+  SDValue getShiftAmountConstant(const APInt &Val, EVT VT, const SDLoc &DL);
   SDValue getVectorIdxConstant(uint64_t Val, const SDLoc &DL,
                                bool isTarget = false);
 
@@ -1893,7 +1891,8 @@ public:
                            const SDNode *N2);
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                 ArrayRef<SDValue> Ops);
+                                 ArrayRef<SDValue> Ops,
+                                 SDNodeFlags Flags = SDNodeFlags());
 
   /// Fold floating-point operations when all operands are constants and/or
   /// undefined.
