@@ -58,7 +58,7 @@ struct __hypot_factors {
 // Computes `__hypot_factors` needed to determine if over-/underflow might happen for `std::hypot(x,y,z)`.
 // Returns: [underflow_factors, overflow_factors]
 template <class _Real>
-_LIBCPP_HIDE_FROM_ABI std::array<__math::__hypot_factors<_Real>, 2> __create_factors() {
+_LIBCPP_HIDE_FROM_ABI array<__math::__hypot_factors<_Real>, 2> __create_factors() {
   static_assert(std::numeric_limits<_Real>::is_iec559);
 
   __math::__hypot_factors<_Real> __underflow, __overflow;
