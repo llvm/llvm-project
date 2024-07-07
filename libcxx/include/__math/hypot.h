@@ -72,10 +72,14 @@ std::array<__hypot_factors<_Real>, 2> __create_factors() {
     __overflow  = __hypot_factors<_Real>{0x1.0p510, 0x1.0p-600, 0x1.0p+600};
   } else { // long double
     static_assert(std::is_same_v<_Real, long double>);
-    static_assert(-16'381 == std::numeric_limits<_Real>::min_exponent);
-    static_assert(+16'384 == std::numeric_limits<_Real>::max_exponent);
-    __underflow = __hypot_factors<_Real>{0x1.0p-8'190l, 0x1.0p9'000l, 0x1.0p-9'000l};
-    __overflow  = __hypot_factors<_Real>{0x1.0p8'190l, 0x1.0p-9'000l, 0x1.0p+9'000l};
+    if constexpr (sizeof(_Real) == sizeof(double))
+      return static_cast<std::array<__hypot_factors<_Real>, 2>>(__create_factors<double>());
+    else {
+      static_assert(-16'381 == std::numeric_limits<_Real>::min_exponent);
+      static_assert(+16'384 == std::numeric_limits<_Real>::max_exponent);
+      __underflow = __hypot_factors<_Real>{0x1.0p-8'190l, 0x1.0p9'000l, 0x1.0p-9'000l};
+      __overflow  = __hypot_factors<_Real>{0x1.0p8'190l, 0x1.0p-9'000l, 0x1.0p+9'000l};
+    }
   }
   return {__underflow, __overflow};
 }
