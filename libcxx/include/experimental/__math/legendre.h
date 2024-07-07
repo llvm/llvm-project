@@ -51,7 +51,7 @@ template <class _Real> _Real __libcpp_legendre(unsigned __n, _Real __x) {
     return std::numeric_limits<_Real>::quiet_NaN();
 
   if (std::abs(__x) > _Real(1))
-    _VSTD::__throw_domain_error(
+    std::__throw_domain_error(
         "Argument of legendre function is out of range");
 
   return __libcpp_legendre_recurrence(__n, __x);
@@ -115,7 +115,7 @@ _Real __libcpp_assoc_legendre(unsigned __n, unsigned __m, _Real __x) {
     return std::numeric_limits<_Real>::quiet_NaN();
 
   if (std::abs(__x) > _Real(1))
-    _VSTD::__throw_domain_error(
+    std::__throw_domain_error(
         "Argument of assoc_legendre function is out of range");
 
   return __libcpp_assoc_legendre_recurrence(__n, __m, __x);

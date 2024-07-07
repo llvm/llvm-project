@@ -52,7 +52,7 @@ _Real __libcpp_assoc_laguerre(unsigned __n, unsigned __m, _Real __x) {
     return std::numeric_limits<_Real>::quiet_NaN();
 
   if (__x < _Real(0))
-    _VSTD::__throw_domain_error(
+    std::__throw_domain_error(
         "Argument of assoc_laguerre function is out of range");
 
   return __libcpp_generalized_laguerre_recurrence(__n, _Real(__m), __x);
@@ -63,7 +63,7 @@ template <class _Real> _Real __libcpp_laguerre(unsigned __n, _Real __x) {
     return std::numeric_limits<_Real>::quiet_NaN();
 
   if (__x < _Real(0))
-    _VSTD::__throw_domain_error(
+    std::__throw_domain_error(
         "Argument of laguerre function is out of range");
 
   return __libcpp_generalized_laguerre_recurrence(__n, _Real(0), __x);
