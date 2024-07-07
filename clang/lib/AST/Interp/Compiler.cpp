@@ -25,10 +25,10 @@ namespace clang {
 namespace interp {
 
 /// Scope used to handle temporaries in toplevel variable declarations.
-template <class Emitter> class DeclScope final : public VariableScope<Emitter> {
+template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : VariableScope<Emitter>(Ctx, nullptr), Scope(Ctx->P, VD),
+      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P, VD),
         OldGlobalDecl(Ctx->GlobalDecl),
         OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
@@ -3462,40 +3462,52 @@ template <class Emitter> bool Compiler<Emitter>::visitExpr(const Expr *E) {
   return false;
 }
 
-/// Toplevel visitDecl().
+template <class Emitter>
+VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
+
+  auto R = this->visitVarDecl(VD, /*Toplevel=*/true);
+
+  if (R.notCreated())
+    return R;
+
+  if (R)
+    return true;
+
+  if (!R && Context::shouldBeGloballyIndexed(VD)) {
+    if (auto GlobalIndex = P.getGlobal(VD)) {
+      Block *GlobalBlock = P.getGlobal(*GlobalIndex);
+      GlobalInlineDescriptor &GD =
+          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+
+      GD.InitState = GlobalInitState::InitializerFailed;
+      GlobalBlock->invokeDtor();
+    }
+  }
+
+  return R;
+}
+
+/// Toplevel visitDeclAndReturn().
 /// We get here from evaluateAsInitializer().
 /// We need to evaluate the initializer and return its value.
 template <class Emitter>
-bool Compiler<Emitter>::visitDecl(const VarDecl *VD, bool ConstantContext) {
-  assert(!VD->isInvalidDecl() && "Trying to constant evaluate an invalid decl");
-
+bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
+                                           bool ConstantContext) {
   std::optional<PrimType> VarT = classify(VD->getType());
 
   // We only create variables if we're evaluating in a constant context.
   // Otherwise, just evaluate the initializer and return it.
   if (!ConstantContext) {
-    DeclScope<Emitter> LocalScope(this, VD);
+    DeclScope<Emitter> LS(this, VD);
     if (!this->visit(VD->getAnyInitializer()))
       return false;
-    return this->emitRet(VarT.value_or(PT_Ptr), VD);
+    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals();
   }
 
-  // If we've seen the global variable already and the initializer failed,
-  // just return false immediately.
-  if (std::optional<unsigned> Index = P.getGlobal(VD)) {
-    const Pointer &Ptr = P.getPtrGlobal(*Index);
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(
-            Ptr.block()->rawData());
-    if (GD.InitState == GlobalInitState::InitializerFailed)
-      return false;
-  }
-
-  // Create and initialize the variable.
+  LocalScope<Emitter> VDScope(this, VD);
   if (!this->visitVarDecl(VD, /*Toplevel=*/true))
     return false;
 
-  // Get a pointer to the variable
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
@@ -3535,7 +3547,7 @@ bool Compiler<Emitter>::visitDecl(const VarDecl *VD, bool ConstantContext) {
     return false;
   }
 
-  return true;
+  return VDScope.destroyLocals();
 }
 
 template <class Emitter>
@@ -3589,26 +3601,34 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
 
     return !Init || (checkDecl() && initGlobal(*GlobalIndex));
   } else {
-    VariableScope<Emitter> LocalScope(this, VD);
     InitLinkScope<Emitter> ILS(this, InitLink::Decl(VD));
 
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
           VD, *VarT, VD->getType().isConstQualified());
       if (Init) {
-        // Compile the initializer in its own scope.
-        ExprScope<Emitter> Scope(this);
-        if (!this->visit(Init))
-          return false;
-
-        return this->emitSetLocal(*VarT, Offset, VD);
+        // If this is a toplevel declaration, create a scope for the
+        // initializer.
+        if (Toplevel) {
+          ExprScope<Emitter> Scope(this);
+          if (!this->visit(Init))
+            return false;
+          return this->emitSetLocal(*VarT, Offset, VD);
+        } else {
+          if (!this->visit(Init))
+            return false;
+          return this->emitSetLocal(*VarT, Offset, VD);
+        }
       }
     } else {
-      if (std::optional<unsigned> Offset = this->allocateLocal(VD))
-        return !Init || this->visitLocalInitializer(Init, *Offset);
+      if (std::optional<unsigned> Offset = this->allocateLocal(VD)) {
+        if (!Init)
+          return true;
+
+        return this->visitLocalInitializer(Init, *Offset);
+      }
       return false;
     }
-
     return true;
   }
 
@@ -4074,7 +4094,7 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
   for (const auto *InnerStmt : S->body())
     if (!visitStmt(InnerStmt))
       return false;
-  return true;
+  return Scope.destroyLocals();
 }
 
 template <class Emitter>
@@ -5010,6 +5030,18 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
   }
 
+  // In case we need to re-visit a declaration.
+  auto revisit = [&](const VarDecl *VD) -> bool {
+    auto VarState = this->visitDecl(VD);
+
+    if (VarState.notCreated())
+      return true;
+    if (!VarState)
+      return false;
+    // Retry.
+    return this->visitDeclRef(D, E);
+  };
+
   // Handle lambda captures.
   if (auto It = this->LambdaCaptures.find(D);
       It != this->LambdaCaptures.end()) {
@@ -5020,12 +5052,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     return this->emitGetPtrThisField(Offset, E);
   } else if (const auto *DRE = dyn_cast<DeclRefExpr>(E);
              DRE && DRE->refersToEnclosingVariableOrCapture()) {
-    if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isInitCapture()) {
-      if (!this->visitVarDecl(cast<VarDecl>(D)))
-        return false;
-      // Retry.
-      return this->visitDeclRef(D, E);
-    }
+    if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isInitCapture())
+      return revisit(VD);
   }
 
   if (D != InitializingDecl) {
@@ -5044,28 +5072,14 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         // Visit local const variables like normal.
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
              VD->isStaticDataMember()) &&
-            typeShouldBeVisited(VD->getType())) {
-          auto VarState = this->visitVarDecl(VD, true);
-          if (VarState.notCreated())
-            return true;
-          if (!VarState)
-            return false;
-          // Retry.
-          return this->visitDeclRef(VD, E);
-        }
+            typeShouldBeVisited(VD->getType()))
+          return revisit(VD);
       }
     } else {
       if (const auto *VD = dyn_cast<VarDecl>(D);
           VD && VD->getAnyInitializer() &&
-          VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
-        auto VarState = this->visitVarDecl(VD, true);
-        if (VarState.notCreated())
-          return true;
-        if (!VarState)
-          return false;
-        // Retry.
-        return this->visitDeclRef(VD, E);
-      }
+          VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak())
+        return revisit(VD);
     }
   }
 
