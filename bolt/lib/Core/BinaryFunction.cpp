@@ -899,9 +899,17 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
     TargetAddress = ArrayStart + *Value;
 
+    // Remove spurious JumpTable at EntryAddress caused by PIC reference from
+    // the load instruction.
+    JumpTable *JT = BC.getJumpTableContainingAddress(EntryAddress);
+    assert(JT && "Must have a jump table at fixed entry address");
+    BC.deregisterJumpTable(EntryAddress);
+    JumpTables.erase(EntryAddress);
+    delete JT;
+
     // Replace FixedEntryDispExpr used in target address calculation with outer
     // jump table reference.
-    JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart);
+    JT = BC.getJumpTableContainingAddress(ArrayStart);
     assert(JT && "Must have a containing jump table for PIC fixed branch");
     BC.MIB->replaceMemOperandDisp(*FixedEntryLoadInstr, JT->getFirstLabel(),
                                   EntryAddress - ArrayStart, &*BC.Ctx);
@@ -1158,10 +1166,10 @@ void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
   }
   case IndirectBranchType::POSSIBLE_JUMP_TABLE:
   case IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE:
+  case IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH:
     if (opts::JumpTables == JTS_NONE)
       IsSimple = false;
     break;
-  case IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH:
   case IndirectBranchType::POSSIBLE_FIXED_BRANCH: {
     if (containsAddress(IndirectTarget)) {
       const MCSymbol *TargetSymbol = getOrCreateLocalLabel(IndirectTarget);
