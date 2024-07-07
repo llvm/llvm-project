@@ -1118,7 +1118,7 @@ void test_fmin()
 
 struct TestHypot3 {
     template <class Real>
-    static void operator()() {
+    void operator()() const {
         const auto check = [](Real elem, Real abs_tol) {
             assert(std::isfinite(std::hypot(elem, Real(0), Real(0))));
             assert(fptest_close(std::hypot(elem, Real(0), Real(0)), elem, abs_tol));
