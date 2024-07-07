@@ -56,29 +56,29 @@ struct __hypot_factors {
 
 // returns [underflow_factors, overflow_factors]
 template <class _Real>
-_LIBCPP_HIDE_FROM_ABI std::array<__hypot_factors<_Real>, 2> __create_factors() {
+_LIBCPP_HIDE_FROM_ABI std::array<__math::__hypot_factors<_Real>, 2> __create_factors() {
   static_assert(std::numeric_limits<_Real>::is_iec559);
 
-  __hypot_factors<_Real> __underflow, __overflow;
+  __math::__hypot_factors<_Real> __underflow, __overflow;
   if constexpr (std::is_same_v<_Real, float>) {
     static_assert(-125 == std::numeric_limits<_Real>::min_exponent);
     static_assert(+128 == std::numeric_limits<_Real>::max_exponent);
-    __underflow = __hypot_factors<_Real>{0x1.0p-62f, 0x1.0p70f, 0x1.0p-70f};
-    __overflow  = __hypot_factors<_Real>{0x1.0p62f, 0x1.0p-70f, 0x1.0p+70f};
+    __underflow = __math::__hypot_factors<_Real>{0x1.0p-62f, 0x1.0p70f, 0x1.0p-70f};
+    __overflow  = __math::__hypot_factors<_Real>{0x1.0p62f, 0x1.0p-70f, 0x1.0p+70f};
   } else if constexpr (std::is_same_v<_Real, double>) {
     static_assert(-1021 == std::numeric_limits<_Real>::min_exponent);
     static_assert(+1024 == std::numeric_limits<_Real>::max_exponent);
-    __underflow = __hypot_factors<_Real>{0x1.0p-510, 0x1.0p600, 0x1.0p-600};
-    __overflow  = __hypot_factors<_Real>{0x1.0p510, 0x1.0p-600, 0x1.0p+600};
+    __underflow = __math::__hypot_factors<_Real>{0x1.0p-510, 0x1.0p600, 0x1.0p-600};
+    __overflow  = __math::__hypot_factors<_Real>{0x1.0p510, 0x1.0p-600, 0x1.0p+600};
   } else { // long double
     static_assert(std::is_same_v<_Real, long double>);
     if constexpr (sizeof(_Real) == sizeof(double))
-      return static_cast<std::array<__hypot_factors<_Real>, 2>>(__create_factors<double>());
+      return static_cast<std::array<__math::__hypot_factors<_Real>, 2>>(__math::__create_factors<double>());
     else {
       static_assert(-16'381 == std::numeric_limits<_Real>::min_exponent);
       static_assert(+16'384 == std::numeric_limits<_Real>::max_exponent);
-      __underflow = __hypot_factors<_Real>{0x1.0p-8'190l, 0x1.0p9'000l, 0x1.0p-9'000l};
-      __overflow  = __hypot_factors<_Real>{0x1.0p8'190l, 0x1.0p-9'000l, 0x1.0p+9'000l};
+      __underflow = __math::__hypot_factors<_Real>{0x1.0p-8'190l, 0x1.0p9'000l, 0x1.0p-9'000l};
+      __overflow  = __math::__hypot_factors<_Real>{0x1.0p8'190l, 0x1.0p-9'000l, 0x1.0p+9'000l};
     }
   }
   return {__underflow, __overflow};
@@ -86,7 +86,7 @@ _LIBCPP_HIDE_FROM_ABI std::array<__hypot_factors<_Real>, 2> __create_factors() {
 
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
-  const auto [__underflow, __overflow] = __create_factors<_Real>();
+  const auto [__underflow, __overflow] = __math::__create_factors<_Real>();
   _Real __M                            = std::max({__math::fabs(__x), __math::fabs(__y), __math::fabs(__z)});
   if (__M > __overflow.__threshold) { // x*x + y*y + z*z might overflow
     __x *= __overflow.__scale_xyz;
@@ -103,12 +103,12 @@ _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
   return __M * __math::sqrt(__x * __x + __y * __y + __z * __z);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI float hypot(float __x, float __y, float __z) { return __hypot(__x, __y, __z); }
+inline _LIBCPP_HIDE_FROM_ABI float hypot(float __x, float __y, float __z) { return __math::__hypot(__x, __y, __z); }
 
-inline _LIBCPP_HIDE_FROM_ABI double hypot(double __x, double __y, double __z) { return __hypot(__x, __y, __z); }
+inline _LIBCPP_HIDE_FROM_ABI double hypot(double __x, double __y, double __z) { return __math::__hypot(__x, __y, __z); }
 
 inline _LIBCPP_HIDE_FROM_ABI long double hypot(long double __x, long double __y, long double __z) {
-  return __hypot(__x, __y, __z);
+  return __math::__hypot(__x, __y, __z);
 }
 
 template <class _A1,
@@ -119,7 +119,7 @@ _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2, _A3>::type hypot(_A1 __x, _A2
   using __result_type = typename __promote<_A1, _A2, _A3>::type;
   static_assert(!(
       std::is_same_v<_A1, __result_type> && std::is_same_v<_A2, __result_type> && std::is_same_v<_A3, __result_type>));
-  return __hypot(static_cast<__result_type>(__x), static_cast<__result_type>(__y), static_cast<__result_type>(__z));
+  return __math::__hypot(static_cast<__result_type>(__x), static_cast<__result_type>(__y), static_cast<__result_type>(__z));
 }
 #endif
 
