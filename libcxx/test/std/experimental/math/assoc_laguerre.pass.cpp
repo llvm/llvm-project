@@ -86,13 +86,13 @@ void testAssocLaguerreAnalytic(const T x, const T AbsTolerance,
       };
 
   const auto l0 = [](T, unsigned) { return T(1); };
-  const auto l1 = [](T x, unsigned m) { return -x + T(m + 1); };
-  const auto l2 = [](T x, unsigned m) {
-    return x * x / T(2) - T(m + 2) * x + T(m + 1) * T(m + 2) / T(2);
+  const auto l1 = [](T y, unsigned m) { return -y + T(m + 1); };
+  const auto l2 = [](T y, unsigned m) {
+    return y * y / T(2) - T(m + 2) * y + T(m + 1) * T(m + 2) / T(2);
   };
-  const auto l3 = [](T x, unsigned m) {
-    return -x * x * x / T(6) + T(m + 3) * x * x / T(2) -
-           T(m + 2) * T(m + 3) * x / T(2) +
+  const auto l3 = [](T y, unsigned m) {
+    return -y * y * y / T(6) + T(m + 3) * y * y / T(2) -
+           T(m + 2) * T(m + 3) * y / T(2) +
            T(m + 1) * T(m + 2) * T(m + 3) / T(6);
   };
 
