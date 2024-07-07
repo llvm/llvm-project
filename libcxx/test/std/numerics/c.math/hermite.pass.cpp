@@ -16,8 +16,6 @@
 
 #include <assert_macros.h>
 
-namespace {
-
 inline constexpr unsigned MAX_N = 128;
 
 template <class T>
@@ -283,7 +281,6 @@ void test_hermitel() {
     for (long double x : sample_points<long double>())
       assert(std::hermite(n, x) == std::hermitel(n, x));
 }
-} // namespace
 
 int main(int, char**) {
   test_hermite<float>(1e-5f, 1e-5f);
