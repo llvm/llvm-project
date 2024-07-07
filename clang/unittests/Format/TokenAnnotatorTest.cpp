@@ -567,6 +567,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsGreaterAfterTemplateCloser) {
   EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsTernaryInTemplate) {
+  // IsExpression = false
+  auto Tokens = annotate("foo<true ? 1 : 2>();");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[3], tok::question, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+
+  // IsExpression = true
+  Tokens = annotate("return foo<true ? 1 : 2>();");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[4], tok::question, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_TemplateCloser);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   auto Tokens = annotate("return a < b && c > d;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
@@ -582,6 +600,23 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[20], tok::greater, TT_BinaryOperator);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsTemplateTemplateParameters) {
+  auto Tokens = annotate("template <template <typename...> typename X,\n"
+                         "          template <typename...> class Y,\n"
+                         "          typename... T>\n"
+                         "class A {};");
+  ASSERT_EQ(Tokens.size(), 28u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[3], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
+  EXPECT_FALSE(Tokens[6]->ClosesTemplateDeclaration);
+  EXPECT_TOKEN(Tokens[11], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[14], tok::greater, TT_TemplateCloser);
+  EXPECT_FALSE(Tokens[14]->ClosesTemplateDeclaration);
+  EXPECT_TOKEN(Tokens[21], tok::greater, TT_TemplateCloser);
+  EXPECT_TRUE(Tokens[21]->ClosesTemplateDeclaration);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsWhitespaceSensitiveMacros) {
@@ -661,6 +696,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("return (struct foo){};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_CastRParen);
 
   Tokens = annotate("#define FOO(bar) foo((uint64_t)&bar)");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
@@ -3162,6 +3201,34 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   Tokens = annotate("int xor = foo;");
   ASSERT_EQ(Tokens.size(), 6u);
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+}
+
+TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
+  auto Tokens =
+      annotate("Foo::Foo(int x, int y) try\n"
+               "    : foo{[] -> std::string { return {}; }(), x}, bar{y} {\n"
+               "} catch (...) {\n"
+               "}");
+  ASSERT_EQ(Tokens.size(), 45u);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_CtorDtorDeclName);
+  EXPECT_TOKEN(Tokens[11], tok::colon, TT_CtorInitializerColon);
+  EXPECT_TOKEN(Tokens[14], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[16], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
+  EXPECT_TOKEN(Tokens[31], tok::comma, TT_CtorInitializerComma);
+  EXPECT_TOKEN(Tokens[36], tok::l_brace, TT_FunctionLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, TypenameMacro) {
+  auto Style = getLLVMStyle();
+  Style.TypenameMacros.push_back("STRUCT");
+
+  auto Tokens = annotate("STRUCT(T, B) { int i; };", Style);
+  ASSERT_EQ(Tokens.size(), 13u);
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TypenameMacro);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_Unknown);
 }
 
 } // namespace

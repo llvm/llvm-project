@@ -36,6 +36,11 @@ struct AArch64FunctionInfo;
 class AArch64Subtarget;
 class MachineInstr;
 
+struct TPIDR2Object {
+  int FrameIndex = std::numeric_limits<int>::max();
+  unsigned Uses = 0;
+};
+
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
@@ -196,7 +201,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool IsSVECC = false;
 
   /// The frame-index for the TPIDR2 object used for lazy saves.
-  Register LazySaveTPIDR2Obj = 0;
+  TPIDR2Object TPIDR2;
 
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
@@ -248,8 +253,7 @@ public:
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
 
-  unsigned getLazySaveTPIDR2Obj() const { return LazySaveTPIDR2Obj; }
-  void setLazySaveTPIDR2Obj(unsigned Reg) { LazySaveTPIDR2Obj = Reg; }
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 

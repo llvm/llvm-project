@@ -34,7 +34,7 @@ void LocationSize::print(raw_ostream &OS) const {
 }
 
 MemoryLocation MemoryLocation::get(const LoadInst *LI) {
-  const auto &DL = LI->getModule()->getDataLayout();
+  const auto &DL = LI->getDataLayout();
 
   return MemoryLocation(
       LI->getPointerOperand(),
@@ -43,7 +43,7 @@ MemoryLocation MemoryLocation::get(const LoadInst *LI) {
 }
 
 MemoryLocation MemoryLocation::get(const StoreInst *SI) {
-  const auto &DL = SI->getModule()->getDataLayout();
+  const auto &DL = SI->getDataLayout();
 
   return MemoryLocation(SI->getPointerOperand(),
                         LocationSize::precise(DL.getTypeStoreSize(
@@ -57,7 +57,7 @@ MemoryLocation MemoryLocation::get(const VAArgInst *VI) {
 }
 
 MemoryLocation MemoryLocation::get(const AtomicCmpXchgInst *CXI) {
-  const auto &DL = CXI->getModule()->getDataLayout();
+  const auto &DL = CXI->getDataLayout();
 
   return MemoryLocation(CXI->getPointerOperand(),
                         LocationSize::precise(DL.getTypeStoreSize(
@@ -66,7 +66,7 @@ MemoryLocation MemoryLocation::get(const AtomicCmpXchgInst *CXI) {
 }
 
 MemoryLocation MemoryLocation::get(const AtomicRMWInst *RMWI) {
-  const auto &DL = RMWI->getModule()->getDataLayout();
+  const auto &DL = RMWI->getDataLayout();
 
   return MemoryLocation(RMWI->getPointerOperand(),
                         LocationSize::precise(DL.getTypeStoreSize(
@@ -165,7 +165,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
 
   // We may be able to produce an exact size for known intrinsics.
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call)) {
-    const DataLayout &DL = II->getModule()->getDataLayout();
+    const DataLayout &DL = II->getDataLayout();
 
     switch (II->getIntrinsicID()) {
     default:

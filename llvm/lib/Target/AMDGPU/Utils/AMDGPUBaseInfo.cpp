@@ -159,6 +159,12 @@ namespace llvm {
 
 namespace AMDGPU {
 
+/// \returns true if the target supports signed immediate offset for SMRD
+/// instructions.
+bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
+  return isGFX9Plus(ST);
+}
+
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI) {
   return STI.getTargetTriple().getOS() == Triple::AMDHSA;
@@ -590,9 +596,7 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
 }
 
 bool isGenericAtomic(unsigned Opc) {
-  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
-         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
-         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+  return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
@@ -2821,10 +2825,6 @@ static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
   return isGCN3Encoding(ST) || isGFX10Plus(ST);
 }
 
-static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
-  return isGFX9Plus(ST);
-}
-
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
   if (isGFX12Plus(ST))
@@ -2859,7 +2859,14 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 }
 
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer) {
+                                            int64_t ByteOffset, bool IsBuffer,
+                                            bool HasSOffset) {
+  // For unbuffered smem loads, it is illegal for the Immediate Offset to be
+  // negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
+  // Handle case where SOffset is not present.
+  if (!IsBuffer && !HasSOffset && ByteOffset < 0 && hasSMRDSignedImmOffset(ST))
+    return std::nullopt;
+
   if (isGFX12Plus(ST)) // 24 bit signed offsets
     return isInt<24>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
                                  : std::nullopt;

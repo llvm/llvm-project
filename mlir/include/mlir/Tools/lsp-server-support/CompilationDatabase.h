@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace mlir {
 namespace lsp {

@@ -1425,6 +1425,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     UnitAttr:$dso_local,
     DefaultValuedAttr<CConv, "CConv::C">:$CConv,
     OptionalAttr<SymbolRefAttr>:$comdat,
+    OptionalAttr<UnitAttr>:$convergent,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     OptionalAttr<StrAttr>:$garbageCollector,
     OptionalAttr<ArrayAttr>:$passthrough,
