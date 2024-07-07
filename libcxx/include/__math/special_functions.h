@@ -11,9 +11,11 @@
 #define _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
 
 #include <__config>
+#include <__math/copysign.h>
 #include <__math/traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_integral.h>
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,6 +47,14 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
     _Real __H_n_next = 2 * (__x * __H_n - __i * __H_n_prev);
     __H_n_prev       = __H_n;
     __H_n            = __H_n_next;
+  }
+
+  if (!__math::isfinite(__H_n)) {
+    // Overflow occured. Two possible cases:
+    //    n is odd:  return infinity of the same sign as x.
+    //    n is even: return +Inf
+    _Real inf = std::numeric_limits<_Real>::infinity();
+    return (__n & 1) ? __math::copysign(inf, __x) : inf;
   }
   return __H_n;
 }
