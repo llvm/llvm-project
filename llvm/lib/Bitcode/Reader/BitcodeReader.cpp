@@ -1988,8 +1988,8 @@ Error BitcodeReader::parseAttributeBlock() {
       Attrs.clear();
       break;
     case bitc::PARAMATTR_CODE_ENTRY: // ENTRY: [attrgrp0, attrgrp1, ...]
-      for (unsigned i = 0, e = Record.size(); i != e; ++i)
-        Attrs.push_back(MAttributeGroups[Record[i]]);
+      for (uint64_t Val : Record)
+        Attrs.push_back(MAttributeGroups[Val]);
 
       MAttributes.push_back(AttributeList::get(Context, Attrs));
       Attrs.clear();
