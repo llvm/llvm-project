@@ -18,11 +18,11 @@
 //    template <class Integer>
 //    double      hermite( unsigned n, Integer     x);
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <limits>
 #include <vector>
-#include <array>
 
 inline constexpr unsigned MAX_N = 128;
 
