@@ -212,8 +212,9 @@ public:
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E) override;
-  bool visitDecl(const VarDecl *VD, bool ConstantContext) override;
   bool visitFunc(const FunctionDecl *F) override;
+
+  bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -267,6 +268,7 @@ protected:
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
   VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false);
+  VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);
@@ -496,6 +498,8 @@ protected:
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
   LocalScope(Compiler<Emitter> *Ctx) : VariableScope<Emitter>(Ctx, nullptr) {}
+  LocalScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
+      : VariableScope<Emitter>(Ctx, VD) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {

@@ -68,7 +68,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
 
   EvalResult.setSource(VD);
 
-  if (!this->visitDecl(VD, S.inConstantContext()) && EvalResult.empty())
+  if (!this->visitDeclAndReturn(VD, S.inConstantContext()))
     EvalResult.setInvalid();
 
   S.EvaluatingDecl = nullptr;
