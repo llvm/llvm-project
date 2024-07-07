@@ -132,11 +132,11 @@ tuple(allocator_arg_t, Alloc, pair<T1, T2>) -> tuple<T1, T2>;       // since C++
 template <class Alloc, class ...T>
 tuple(allocator_arg_t, Alloc, tuple<T...>) -> tuple<T...>;          // since C++17
 
-+struct ignore-type { // exposition only
-+  constexpr const ignore-type&
-+    operator=(const auto &) const noexcept
-+      { return *this; }
-+};
+struct ignore-type { // exposition only                             // Since C++26
+  constexpr const ignore-type&
+    operator=(const auto &) const noexcept
+      { return *this; }
+};
 inline constexpr ignore-type ignore;
 
 template <class... T> tuple<V...>  make_tuple(T&&...); // constexpr in C++14
