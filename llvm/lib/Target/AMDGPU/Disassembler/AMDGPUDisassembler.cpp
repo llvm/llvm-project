@@ -2366,8 +2366,16 @@ const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
                                                            int64_t Val) {
   MCContext &Ctx = getContext();
   MCSymbol *Sym = Ctx.getOrCreateSymbol(Id);
-  assert(!Sym->isVariable());
-  Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  // Note: only set value to Val on a new symbol in case an dissassembler
+  // has already been initialized in this context.
+  if (!Sym->isVariable()) {
+    Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  } else {
+    int64_t Res = ~Val;
+    bool Valid = Sym->getVariableValue()->evaluateAsAbsolute(Res);
+    if (!Valid || Res != Val)
+      Ctx.reportWarning(SMLoc(), "unsupported redefinition of " + Id);
+  }
   return MCSymbolRefExpr::create(Sym, Ctx);
 }
 
