@@ -142,6 +142,8 @@ public:
           return PyAffineMapAttribute(affineMap.getContext(), attr);
         },
         py::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
+    c.def_property_readonly("value", mlirAffineMapAttrGetValue,
+                            "Returns the value of the AffineMap attribute");
   }
 };
 

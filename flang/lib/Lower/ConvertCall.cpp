@@ -920,9 +920,11 @@ namespace {
 struct CallCleanUp {
   struct CopyIn {
     void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-      builder.create<hlfir::CopyOutOp>(loc, copiedIn, wasCopied, copyBackVar);
+      builder.create<hlfir::CopyOutOp>(loc, tempBox, wasCopied, copyBackVar);
     }
-    mlir::Value copiedIn;
+    // address of the descriptor holding the temp if a temp was created.
+    mlir::Value tempBox;
+    // Boolean indicating if a copy was made or not.
     mlir::Value wasCopied;
     // copyBackVar may be null if copy back is not needed.
     mlir::Value copyBackVar;
@@ -935,7 +937,8 @@ struct CallCleanUp {
     mlir::Value mustFree;
   };
   void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-    std::visit([&](auto &c) { c.genCleanUp(loc, builder); }, cleanUp);
+    Fortran::common::visit([&](auto &c) { c.genCleanUp(loc, builder); },
+                           cleanUp);
   }
   std::variant<CopyIn, ExprAssociate> cleanUp;
 };
@@ -944,10 +947,10 @@ struct CallCleanUp {
 /// It holds the value to be passed in the call and any related
 /// clean-ups to be done after the call.
 struct PreparedDummyArgument {
-  void pushCopyInCleanUp(mlir::Value copiedIn, mlir::Value wasCopied,
+  void pushCopyInCleanUp(mlir::Value tempBox, mlir::Value wasCopied,
                          mlir::Value copyBackVar) {
     cleanups.emplace_back(
-        CallCleanUp{CallCleanUp::CopyIn{copiedIn, wasCopied, copyBackVar}});
+        CallCleanUp{CallCleanUp::CopyIn{tempBox, wasCopied, copyBackVar}});
   }
   void pushExprAssociateCleanUp(mlir::Value tempVar, mlir::Value wasCopied) {
     cleanups.emplace_back(
@@ -986,7 +989,6 @@ struct ConditionallyPreparedDummy {
     for (const CallCleanUp &c : preparedDummy.cleanups) {
       if (const auto *copyInCleanUp =
               std::get_if<CallCleanUp::CopyIn>(&c.cleanUp)) {
-        thenResultValues.push_back(copyInCleanUp->copiedIn);
         thenResultValues.push_back(copyInCleanUp->wasCopied);
         if (copyInCleanUp->copyBackVar)
           thenResultValues.push_back(copyInCleanUp->copyBackVar);
@@ -1041,8 +1043,10 @@ struct ConditionallyPreparedDummy {
         mlir::Value copyBackVar;
         if (copyInCleanUp->copyBackVar)
           copyBackVar = ifOp.getResults().back();
-        preparedDummy.pushCopyInCleanUp(ifOp.getResults()[1],
-                                        ifOp.getResults()[2], copyBackVar);
+        // tempBox is an hlfir.copy_in argument created outside of the
+        // fir.if region. It needs not to be threaded as a fir.if result.
+        preparedDummy.pushCopyInCleanUp(copyInCleanUp->tempBox,
+                                        ifOp.getResults()[1], copyBackVar);
       } else {
         preparedDummy.pushExprAssociateCleanUp(ifOp.getResults()[1],
                                                ifOp.getResults()[2]);
@@ -1203,10 +1207,29 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         dummyTypeWithActualRank, actual.getFortranElementType(),
         actual.isPolymorphic());
 
+  PreparedDummyArgument preparedDummy;
+
+  // Helpers to generate hlfir.copy_in operation and register the related
+  // hlfir.copy_out creation.
+  auto genCopyIn = [&](hlfir::Entity var, bool doCopyOut) -> hlfir::Entity {
+    auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType());
+    assert(baseBoxTy && "expect non simply contiguous variables to be boxes");
+    // Create allocatable descriptor for the potential temporary.
+    mlir::Type tempBoxType = baseBoxTy.getBoxTypeWithNewAttr(
+        fir::BaseBoxType::Attribute::Allocatable);
+    mlir::Value tempBox = builder.createTemporary(loc, tempBoxType);
+    auto copyIn = builder.create<hlfir::CopyInOp>(
+        loc, var, tempBox, /*var_is_present=*/mlir::Value{});
+    // Register the copy-out after the call.
+    preparedDummy.pushCopyInCleanUp(copyIn.getTempBox(), copyIn.getWasCopied(),
+                                    doCopyOut ? copyIn.getVar()
+                                              : mlir::Value{});
+    return hlfir::Entity{copyIn.getCopiedIn()};
+  };
+
   // Step 2: prepare the storage for the dummy arguments, ensuring that it
   // matches the dummy requirements (e.g., must be contiguous or must be
   // a temporary).
-  PreparedDummyArgument preparedDummy;
   hlfir::Entity entity =
       hlfir::derefPointersAndAllocatables(loc, builder, actual);
   if (entity.isVariable()) {
@@ -1242,10 +1265,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
-      assert(mlir::isa<fir::BaseBoxType>(entity.getType()) &&
-             "expect non simply contiguous variables to be boxes");
-      if (actualIsAssumedRank)
-        TODO(loc, "copy-in and copy-out of assumed-rank arguments");
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
@@ -1253,13 +1272,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // allocation for the temp in this case. We can communicate
       // this to the codegen via some CopyInOp flag.
       // This is a performance concern.
-      auto copyIn = builder.create<hlfir::CopyInOp>(
-          loc, entity, /*var_is_present=*/mlir::Value{});
-      entity = hlfir::Entity{copyIn.getCopiedIn()};
-      // Register the copy-out after the call.
-      preparedDummy.pushCopyInCleanUp(
-          copyIn.getCopiedIn(), copyIn.getWasCopied(),
-          arg.mayBeModifiedByCall() ? copyIn.getVar() : mlir::Value{});
+      entity = genCopyIn(entity, arg.mayBeModifiedByCall());
     }
   } else {
     const Fortran::lower::SomeExpr *expr = arg.entity->UnwrapExpr();
@@ -1286,14 +1299,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{builder.create<fir::ReboxOp>(
           loc, boxType, entity, /*shape=*/mlir::Value{},
           /*slice=*/mlir::Value{})};
-      auto copyIn = builder.create<hlfir::CopyInOp>(
-          loc, entity, /*var_is_present=*/mlir::Value{});
-      entity = hlfir::Entity{copyIn.getCopiedIn()};
-      // Note that the copy-out is not required, but the copy-in
-      // temporary must be deallocated if created.
-      preparedDummy.pushCopyInCleanUp(copyIn.getCopiedIn(),
-                                      copyIn.getWasCopied(),
-                                      /*copyBackVar=*/mlir::Value{});
+      entity = genCopyIn(entity, /*doCopyOut=*/false);
     }
   }
 
@@ -1591,9 +1597,6 @@ void prepareUserCallArguments(
         if (dataTy.isAssumedRank()) {
           dataTy =
               dataTy.getBoxTypeWithNewShape(fir::getBase(actualExv).getType());
-          if (dataTy.isAssumedRank())
-            TODO(loc, "associating assumed-rank target to pointer assumed-rank "
-                      "argument");
         }
         mlir::Value irBox = builder.createTemporary(loc, dataTy);
         fir::MutableBoxValue ptrBox(irBox,

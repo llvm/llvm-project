@@ -568,7 +568,7 @@ let EmitPriority = 0 in {
   // or imm, reg, rd -> or reg, imm, rd
   def : InstAlias<"or $simm13, $rs1, $rd", (ORri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
 
-  // addc/addx imm, reg, rd -> or reg, imm, rd
+  // addc/addx imm, reg, rd -> addc/addx reg, imm, rd
   def : InstAlias<"addx $simm13, $rs1, $rd", (ADDCri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
 }
 
