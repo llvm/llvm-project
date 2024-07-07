@@ -14,6 +14,8 @@
 
 #include <tuple>
 
+#include "test_macros.h"
+
 int main(int, char**) {
   { [[maybe_unused]] TEST_CONSTEXPR_CXX14 auto& ignore_v = std::ignore; }
 }
