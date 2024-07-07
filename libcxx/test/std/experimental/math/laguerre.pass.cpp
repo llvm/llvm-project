@@ -63,25 +63,25 @@ void testLaguerreAnalytic(const T x, const T AbsTolerance,
       };
 
   const auto l0 = [](T) { return T(1); };
-  const auto l1 = [](T x) { return -x + 1; };
-  const auto l2 = [](T x) { return (x * x - T(4) * x + T(2)) / T(2); };
-  const auto l3 = [](T x) {
-    return (-x * x * x + T(9) * x * x - T(18) * x + T(6)) / T(6);
+  const auto l1 = [](T y) { return -y + 1; };
+  const auto l2 = [](T y) { return (y * y - T(4) * y + T(2)) / T(2); };
+  const auto l3 = [](T y) {
+    return (-y * y * y + T(9) * y * y - T(18) * y + T(6)) / T(6);
   };
-  const auto l4 = [](T x) {
-    return (x * x * x * x - T(16) * x * x * x + T(72) * x * x - T(96) * x +
+  const auto l4 = [](T y) {
+    return (y * y * y * y - T(16) * y * y * y + T(72) * y * y - T(96) * y +
             T(24)) /
            T(24);
   };
-  const auto l5 = [](T x) {
-    return (-x * x * x * x * x + T(25) * x * x * x * x - T(200) * x * x * x +
-            T(600) * x * x - T(600) * x + T(120)) /
+  const auto l5 = [](T y) {
+    return (-y * y * y * y * y + T(25) * y * y * y * y - T(200) * y * y * y +
+            T(600) * y * y - T(600) * y + T(120)) /
            T(120);
   };
-  const auto l6 = [](T x) {
-    return (x * x * x * x * x * x - T(36) * x * x * x * x * x +
-            T(450) * x * x * x * x - T(2400) * x * x * x + T(5400) * x * x -
-            T(4320) * x + T(720)) /
+  const auto l6 = [](T y) {
+    return (y * y * y * y * y * y - T(36) * y * y * y * y * y +
+            T(450) * y * y * y * y - T(2400) * y * y * y + T(5400) * y * y -
+            T(4320) * y + T(720)) /
            T(720);
   };
 
