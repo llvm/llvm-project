@@ -63,18 +63,18 @@ void testLegendreAnalytic(const T x, const T AbsTolerance,
       };
 
   const auto l0 = [](T) { return T(1); };
-  const auto l1 = [](T x) { return x; };
-  const auto l2 = [](T x) { return (T(3) * x * x - T(1)) / T(2); };
-  const auto l3 = [](T x) { return (T(5) * x * x - T(3)) * x / T(2); };
-  const auto l4 = [](T x) {
-    return (T(35) * x * x * x * x - T(30) * x * x + T(3)) / T(8);
+  const auto l1 = [](T y) { return y; };
+  const auto l2 = [](T y) { return (T(3) * y * y - T(1)) / T(2); };
+  const auto l3 = [](T y) { return (T(5) * y * y - T(3)) * y / T(2); };
+  const auto l4 = [](T y) {
+    return (T(35) * y * y * y * y - T(30) * y * y + T(3)) / T(8);
   };
-  const auto l5 = [](T x) {
-    return (T(63) * x * x * x * x - T(70) * x * x + T(15)) * x / T(8);
+  const auto l5 = [](T y) {
+    return (T(63) * y * y * y * y - T(70) * y * y + T(15)) * y / T(8);
   };
-  const auto l6 = [](T x) {
-    const T x2 = x * x;
-    return (T(231) * x2 * x2 * x2 - T(315) * x2 * x2 + T(105) * x2 - T(5)) /
+  const auto l6 = [](T y) {
+    const T y2 = y * y;
+    return (T(231) * y2 * y2 * y2 - T(315) * y2 * y2 + T(105) * y2 - T(5)) /
            T(16);
   };
 
