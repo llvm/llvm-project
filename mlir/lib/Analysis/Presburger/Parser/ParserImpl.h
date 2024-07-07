@@ -152,7 +152,7 @@ private:
 
   const SourceMgr &sourceMgr;
   ParserState state;
-  ParseInfo info;
+  PresburgerSpace space;
   SmallVector<std::pair<StringRef, DimOrSymbolExpr>, 4> dimsAndSymbols;
 };
 } // namespace mlir::presburger

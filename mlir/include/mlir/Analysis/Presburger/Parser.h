@@ -21,10 +21,21 @@
 namespace mlir::presburger {
 using llvm::StringRef;
 
-/// Parses an IntegerPolyhedron from a StringRef.
+/// Parse an IntegerPolyhedron from a StringRef.
+///
+///  integer-set ::= dim-and-symbol-id-lists `:`
+///                  '(' affine-constraint-conjunction? ')'
+///  affine-constraint-conjunction ::= affine-constraint (`,`
+///                                       affine-constraint)*
+///
 IntegerPolyhedron parseIntegerPolyhedron(StringRef str);
 
-/// Parses a MultiAffineFunction from a StringRef.
+/// Parse a MultiAffineFunction from a StringRef.
+///
+///  affine-map ::= dim-and-symbol-id-lists `->` multi-dim-affine-expr
+///
+///  multi-dim-affine-expr ::= `(` `)`
+///  multi-dim-affine-expr ::= `(` affine-expr (`,` affine-expr)* `)`
 MultiAffineFunction parseMultiAffineFunction(StringRef str);
 
 /// Parse a list of StringRefs to IntegerRelation and combine them into a

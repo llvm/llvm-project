@@ -173,6 +173,7 @@ public:
     return PresburgerSpace(/*numDomain=*/0, /*numRange=*/numDims, numSymbols,
                            numLocals);
   }
+  PresburgerSpace() = default;
 
   /// Get the domain/range space of this space. The returned space is a set
   /// space.
@@ -182,18 +183,43 @@ public:
   /// Get the space without local variables.
   PresburgerSpace getSpaceWithoutLocals() const;
 
-  unsigned getNumDomainVars() const { return numDomain; }
-  unsigned getNumRangeVars() const { return numRange; }
-  unsigned getNumSetDimVars() const { return numRange; }
-  unsigned getNumSymbolVars() const { return numSymbols; }
-  unsigned getNumLocalVars() const { return numLocals; }
-
-  unsigned getNumDimVars() const { return numDomain + numRange; }
-  unsigned getNumDimAndSymbolVars() const {
-    return numDomain + numRange + numSymbols;
+  constexpr unsigned getNumDomainVars() const { return numDomain; }
+  constexpr unsigned &numDomainVars() { return numDomain; }
+  constexpr unsigned getNumRangeVars() const { return numRange; }
+  constexpr unsigned &numRangeVars() { return numRange; }
+  constexpr unsigned getNumSetDimVars() const { return numRange; }
+  constexpr unsigned &numSetDimVars() { return numRange; }
+  constexpr unsigned getNumSymbolVars() const { return numSymbols; }
+  constexpr unsigned &numSymbolVars() { return numSymbols; }
+  constexpr unsigned getNumLocalVars() const { return numLocals; }
+  constexpr unsigned &numLocalVars() { return numLocals; }
+  constexpr unsigned getNumDimVars() const { return numDomain + numRange; }
+  constexpr unsigned getNumDimAndSymbolVars() const {
+    return getNumDimVars() + getNumSymbolVars();
   }
-  unsigned getNumVars() const {
-    return numDomain + numRange + numSymbols + numLocals;
+  constexpr unsigned getNumVars() const {
+    return getNumDimAndSymbolVars() + getNumLocalVars();
+  }
+  constexpr unsigned getNumCols() const { return getNumVars() + 1; }
+
+  constexpr unsigned getSetDimStartIdx() const { return 0; }
+  constexpr unsigned getSymbolStartIdx() const { return getNumDimVars(); }
+  constexpr unsigned getLocalVarStartIdx() const {
+    return getNumDimAndSymbolVars();
+  }
+  constexpr unsigned getConstantIdx() const { return getNumCols() - 1; }
+
+  constexpr bool isSetDimIdx(unsigned i) const {
+    return i < getSymbolStartIdx();
+  }
+  constexpr bool isSymbolIdx(unsigned i) const {
+    return i >= getSymbolStartIdx() && i < getLocalVarStartIdx();
+  }
+  constexpr bool isLocalVarIdx(unsigned i) const {
+    return i >= getLocalVarStartIdx() && i < getConstantIdx();
+  }
+  constexpr bool isConstantIdx(unsigned i) const {
+    return i == getConstantIdx();
   }
 
   /// Get the number of vars of the specified kind.
@@ -321,18 +347,18 @@ protected:
 
 private:
   // Number of variables corresponding to domain variables.
-  unsigned numDomain;
+  unsigned numDomain = 0;
 
   // Number of variables corresponding to range variables.
-  unsigned numRange;
+  unsigned numRange = 0;
 
   /// Number of variables corresponding to symbols (unknown but constant for
   /// analysis).
-  unsigned numSymbols;
+  unsigned numSymbols = 0;
 
   /// Number of variables corresponding to locals (variables corresponding
   /// to existentially quantified variables).
-  unsigned numLocals;
+  unsigned numLocals = 0;
 
   /// Stores whether or not identifiers are being used in this space.
   bool usingIds = false;

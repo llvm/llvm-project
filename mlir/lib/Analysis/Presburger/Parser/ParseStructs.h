@@ -21,60 +21,31 @@ using llvm::ArrayRef;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
 
-/// This structure is central to the parser and flattener, and holds the number
-/// of dimensions, symbols, locals, and the constant term.
-struct ParseInfo {
-  unsigned numDims = 0;
-  unsigned numSymbols = 0;
-  unsigned numExprs = 0;
-  unsigned numDivs = 0;
-
-  constexpr unsigned getDimStartIdx() const { return 0; }
-  constexpr unsigned getSymbolStartIdx() const { return numDims; }
-  constexpr unsigned getLocalVarStartIdx() const {
-    return numDims + numSymbols;
-  }
-  constexpr unsigned getNumCols() const {
-    return numDims + numSymbols + numDivs + 1;
-  }
-  constexpr unsigned getConstantIdx() const { return getNumCols() - 1; }
-
-  constexpr bool isDimIdx(unsigned i) const { return i < getSymbolStartIdx(); }
-  constexpr bool isSymbolIdx(unsigned i) const {
-    return i >= getSymbolStartIdx() && i < getLocalVarStartIdx();
-  }
-  constexpr bool isLocalVarIdx(unsigned i) const {
-    return i >= getLocalVarStartIdx() && i < getConstantIdx();
-  }
-  constexpr bool isConstantIdx(unsigned i) const {
-    return i == getConstantIdx();
-  }
-};
-
 /// Helper for storing coefficients in canonical form: dims followed by symbols,
 /// followed by locals, and finally the constant term.
 ///
 /// (x, y)[a, b]: y * 91 + x + 3 * a + 7
 /// coefficients: [1, 91, 3, 0, 7]
 struct CoefficientVector {
-  ParseInfo info;
+  PresburgerSpace space;
   SmallVector<int64_t, 8> coefficients;
 
-  CoefficientVector(const ParseInfo &info, int64_t c = 0) : info(info) {
-    coefficients.resize(info.getNumCols());
-    coefficients[info.getConstantIdx()] = c;
+  CoefficientVector(const PresburgerSpace &space, int64_t c = 0)
+      : space(space) {
+    coefficients.resize(space.getNumCols());
+    coefficients[space.getConstantIdx()] = c;
   }
 
   // Copyable and movable
   CoefficientVector(const CoefficientVector &o) = default;
   CoefficientVector &operator=(const CoefficientVector &o) = default;
   CoefficientVector(CoefficientVector &&o)
-      : info(o.info), coefficients(std::move(o.coefficients)) {
+      : space(o.space), coefficients(std::move(o.coefficients)) {
     o.coefficients.clear();
   }
 
   ArrayRef<int64_t> getCoefficients() const { return coefficients; }
-  int64_t getConstant() const { return coefficients[info.getConstantIdx()]; }
+  int64_t getConstant() const { return coefficients[space.getConstantIdx()]; }
   size_t size() const { return coefficients.size(); }
   operator ArrayRef<int64_t>() const { return coefficients; }
   void resize(size_t size) { coefficients.resize(size); }
@@ -126,7 +97,7 @@ struct CoefficientVector {
   CoefficientVector getPadded(size_t newSize) const {
     assert(newSize >= size() &&
            "Padding size should be greater than expr size");
-    CoefficientVector ret(info);
+    CoefficientVector ret(space);
     ret.resize(newSize);
 
     // Start constructing the result by taking the dims and symbols of the
@@ -176,7 +147,7 @@ enum class DivKind { FloorDiv, Mod };
 ///
 /// Where div = floordiv|mod; ceildiv is pre-reduced
 struct PureAffineExprImpl {
-  ParseInfo info;
+  PresburgerSpace space;
   DivKind kind = DivKind::FloorDiv;
   using PureAffineExpr = std::unique_ptr<PureAffineExprImpl>;
 
@@ -185,29 +156,30 @@ struct PureAffineExprImpl {
   int64_t divisor = 1;
   SmallVector<PureAffineExpr, 4> nestedDivTerms;
 
-  PureAffineExprImpl(const ParseInfo &info, int64_t c = 0)
-      : info(info), linearDividend(info, c) {}
-  PureAffineExprImpl(const ParseInfo &info, DimOrSymbolExpr idExpr)
-      : PureAffineExprImpl(info) {
+  PureAffineExprImpl(const PresburgerSpace &space, int64_t c = 0)
+      : space(space), linearDividend(space, c) {}
+  PureAffineExprImpl(const PresburgerSpace &space, DimOrSymbolExpr idExpr)
+      : PureAffineExprImpl(space) {
     auto [kind, pos] = idExpr;
     unsigned startIdx = kind == DimOrSymbolKind::Symbol
-                            ? info.getSymbolStartIdx()
-                            : info.getDimStartIdx();
+                            ? space.getSymbolStartIdx()
+                            : space.getSetDimStartIdx();
     linearDividend.coefficients[startIdx + pos] = 1;
   }
   PureAffineExprImpl(const CoefficientVector &linearDividend,
                      int64_t divisor = 1, DivKind kind = DivKind::FloorDiv)
-      : info(linearDividend.info), kind(kind), linearDividend(linearDividend),
+      : space(linearDividend.space), kind(kind), linearDividend(linearDividend),
         divisor(divisor) {}
   PureAffineExprImpl(PureAffineExprImpl &&div, int64_t divisor, DivKind kind)
-      : info(div.info), kind(kind), linearDividend(div.info), divisor(divisor) {
+      : space(div.space), kind(kind), linearDividend(div.space),
+        divisor(divisor) {
     addDivTerm(std::move(div));
   }
 
   // Non-copyable, only movable
   PureAffineExprImpl(const PureAffineExprImpl &) = delete;
   PureAffineExprImpl(PureAffineExprImpl &&o)
-      : info(o.info), kind(o.kind), mulFactor(o.mulFactor),
+      : space(o.space), kind(o.kind), mulFactor(o.mulFactor),
         linearDividend(std::move(o.linearDividend)), divisor(o.divisor),
         nestedDivTerms(std::move(o.nestedDivTerms)) {
     o.nestedDivTerms.clear();
@@ -277,23 +249,23 @@ using PureAffineExpr = std::unique_ptr<PureAffineExprImpl>;
 /// compute the total number of columns, and construct the IntMatrix in the
 /// Flattener.
 struct FinalParseResult {
-  ParseInfo info;
+  PresburgerSpace space;
   SmallVector<PureAffineExpr, 8> exprs;
   SmallVector<bool, 8> eqFlags;
   IntegerPolyhedron cst;
 
-  FinalParseResult(const ParseInfo &parseInfo,
+  FinalParseResult(const PresburgerSpace &space,
                    SmallVectorImpl<PureAffineExpr> &&exprStack,
                    ArrayRef<bool> eqFlagStack)
-      : info(parseInfo), exprs(std::move(exprStack)), eqFlags(eqFlagStack),
-        cst(0, 0, info.numDims + info.numSymbols + 1,
-            PresburgerSpace::getSetSpace(info.numDims, info.numSymbols, 0)) {
-    auto &i = this->info;
-    i.numExprs = exprs.size();
-    i.numDivs = std::accumulate(exprs.begin(), exprs.end(), 0,
-                                [](unsigned acc, const PureAffineExpr &expr) {
-                                  return acc + expr->countNestedDivs();
-                                });
+      : space(space), exprs(std::move(exprStack)), eqFlags(eqFlagStack),
+        cst(0, 0, space.getNumSetDimVars() + space.getNumSymbolVars() + 1,
+            PresburgerSpace::getSetSpace(space.getNumSetDimVars(),
+                                         space.getNumSymbolVars(), 0)) {
+    this->space.numLocalVars() =
+        std::accumulate(exprs.begin(), exprs.end(), 0,
+                        [](unsigned acc, const PureAffineExpr &expr) {
+                          return acc + expr->countNestedDivs();
+                        });
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -337,7 +309,7 @@ inline PureAffineExpr ceildiv(PureAffineExpr &&expr, int64_t c) {
 // of 1.
 inline PureAffineExpr canonicalize(PureAffineExpr &&expr) {
   if (expr->hasDivisor())
-    expr->addLinearTerm(CoefficientVector(expr->info));
+    expr->addLinearTerm(CoefficientVector(expr->space));
   return expr;
 }
 } // namespace mlir::presburger

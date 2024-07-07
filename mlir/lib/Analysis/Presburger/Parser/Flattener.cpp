@@ -22,7 +22,7 @@ void Flattener::visitDiv(const PureAffineExprImpl &div) {
 
   // First construct the linear part of the divisor.
   auto dividend = div.collectLinearTerms().getPadded(
-      info.getLocalVarStartIdx() + localExprs.size() + 1);
+      space.getLocalVarStartIdx() + localExprs.size() + 1);
 
   // Next, insert the non-linear coefficients.
   for (const auto &[hash, adjustedMulFactor, adjustedLinearTerm] :
@@ -38,7 +38,7 @@ void Flattener::visitDiv(const PureAffineExprImpl &div) {
     CoefficientVector expansion =
         lookupModExpansion(hash)
             .value_or(adjustedLinearTerm)
-            .getPadded(info.getLocalVarStartIdx() + localExprs.size() + 1);
+            .getPadded(space.getLocalVarStartIdx() + localExprs.size() + 1);
     dividend += expansion;
 
     // If this is a mod, insert the new computed expansion, which is the

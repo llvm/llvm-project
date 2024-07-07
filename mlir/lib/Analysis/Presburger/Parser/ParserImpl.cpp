@@ -132,7 +132,7 @@ PureAffineExpr ParserImpl::parseBareIdExpr() {
   for (const auto &entry : dimsAndSymbols) {
     if (entry.first == sRef) {
       consumeToken();
-      return std::make_unique<PureAffineExprImpl>(info, entry.second);
+      return std::make_unique<PureAffineExprImpl>(space, entry.second);
     }
   }
 
@@ -187,7 +187,7 @@ PureAffineExpr ParserImpl::parseIntegerExpr() {
     return emitError("constant too large"), nullptr;
 
   consumeToken(Token::integer);
-  return std::make_unique<PureAffineExprImpl>(info, ret);
+  return std::make_unique<PureAffineExprImpl>(space, ret);
 }
 
 /// Parses an expression that can be a valid operand of an affine expression.
@@ -466,7 +466,8 @@ bool ParserImpl::parseIdentifierDefinition(DimOrSymbolExpr idExpr) {
 /// Parse the list of dimensional identifiers to an affine map.
 bool ParserImpl::parseDimIdList() {
   auto parseElt = [&]() -> bool {
-    return parseIdentifierDefinition({DimOrSymbolKind::DimId, info.numDims++});
+    return parseIdentifierDefinition(
+        {DimOrSymbolKind::DimId, space.numSetDimVars()++});
   };
   return parseCommaSepeatedList(Delimiter::Paren, parseElt,
                                 " in dimensional identifier list");
@@ -476,7 +477,7 @@ bool ParserImpl::parseDimIdList() {
 bool ParserImpl::parseSymbolIdList() {
   auto parseElt = [&]() -> bool {
     return parseIdentifierDefinition(
-        {DimOrSymbolKind::Symbol, info.numSymbols++});
+        {DimOrSymbolKind::Symbol, space.numSymbolVars()++});
   };
   return parseCommaSepeatedList(Delimiter::Square, parseElt, " in symbol list");
 }
@@ -486,7 +487,7 @@ bool ParserImpl::parseDimAndOptionalSymbolIdList() {
   if (!parseDimIdList())
     return false;
   if (getToken().isNot(Token::l_square)) {
-    info.numSymbols = 0;
+    space.numSymbolVars() = 0;
     return true;
   }
   return parseSymbolIdList();
@@ -574,16 +575,16 @@ FinalParseResult ParserImpl::parseAffineMapOrIntegerSet() {
                                 " in affine map range"))
       llvm_unreachable("expected affine map range");
 
-    return {info, std::move(exprs), eqFlags};
+    return {space, std::move(exprs), eqFlags};
   }
 
   if (!parseToken(Token::colon, "expected '->' or ':'"))
     llvm_unreachable("Unexpected token");
 
   /// Parse the constraints that are part of an integer set definition.
-  ///  integer-set-inline
-  ///                ::= dim-and-symbol-id-lists `:`
-  ///                '(' affine-constraint-conjunction? ')'
+  ///
+  ///  integer-set ::= dim-and-symbol-id-lists `:`
+  ///                  '(' affine-constraint-conjunction? ')'
   ///  affine-constraint-conjunction ::= affine-constraint (`,`
   ///                                       affine-constraint)*
   ///
@@ -591,21 +592,21 @@ FinalParseResult ParserImpl::parseAffineMapOrIntegerSet() {
                               " in integer set constraint list"))
     llvm_unreachable("expected integer set");
 
-  return {info, std::move(exprs), eqFlags};
+  return {space, std::move(exprs), eqFlags};
 }
 
 static MultiAffineFunction getMAF(FinalParseResult &&parseResult) {
-  auto info = parseResult.info;
+  auto space = parseResult.space;
+  space.numDomainVars() = space.getNumSetDimVars();
+  space.numRangeVars() = parseResult.exprs.size();
+
   auto [flatMatrix, cst] = Flattener(std::move(parseResult)).flatten();
 
   DivisionRepr divs = cst.getLocalReprs();
   assert(divs.hasAllReprs() &&
          "AffineMap cannot produce divs without local representation");
 
-  return MultiAffineFunction(
-      PresburgerSpace::getRelationSpace(info.numDims, info.numExprs,
-                                        info.numSymbols, divs.getNumDivs()),
-      flatMatrix, divs);
+  return MultiAffineFunction(space, flatMatrix, divs);
 }
 
 static IntegerPolyhedron getPoly(FinalParseResult &&parseResult) {

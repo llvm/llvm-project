@@ -34,7 +34,7 @@ public:
 
   Flattener(FinalParseResult &&parseResult)
       : FinalParseResult(std::move(parseResult)),
-        flatMatrix(info.numExprs, info.getNumCols()) {}
+        flatMatrix(exprs.size(), space.getNumCols()) {}
 
   std::pair<IntMatrix, IntegerPolyhedron> flatten();
 
@@ -44,17 +44,17 @@ private:
 
   void addToRow(unsigned row, const CoefficientVector &l) {
     flatMatrix.addToRow(row,
-                        getDynamicAPIntVec(l.getPadded(info.getNumCols())));
+                        getDynamicAPIntVec(l.getPadded(space.getNumCols())));
   }
   void setRow(unsigned row, const CoefficientVector &l) {
-    flatMatrix.setRow(row, getDynamicAPIntVec(l.getPadded(info.getNumCols())));
+    flatMatrix.setRow(row, getDynamicAPIntVec(l.getPadded(space.getNumCols())));
   }
 
   unsigned lookupLocal(size_t hash) {
     const auto *it = find(localExprs, hash);
     assert(it != localExprs.end() &&
            "Local expression not found; walking from inner to outer?");
-    return info.getLocalVarStartIdx() + it - localExprs.begin();
+    return space.getLocalVarStartIdx() + it - localExprs.begin();
   }
   std::optional<CoefficientVector> lookupModExpansion(size_t hash) {
     return localModExpansion.contains(hash)

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ParseStructs.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -24,7 +25,7 @@ using llvm::mod;
 
 CoefficientVector PureAffineExprImpl::collectLinearTerms() const {
   CoefficientVector nestedLinear = std::accumulate(
-      nestedDivTerms.begin(), nestedDivTerms.end(), CoefficientVector(info),
+      nestedDivTerms.begin(), nestedDivTerms.end(), CoefficientVector(space),
       [](const CoefficientVector &acc, const PureAffineExpr &div) {
         return acc + div->getLinearDividend();
       });
@@ -46,7 +47,7 @@ PureAffineExprImpl::getNonLinearCoeffs() const {
   };
   auto adjustedLinearTerm = [](PureAffineExprImpl &div) {
     return div.kind == DivKind::Mod ? div.linearDividend *= div.mulFactor
-                                    : CoefficientVector(div.info);
+                                    : CoefficientVector(div.space);
   };
   if (hasDivisor())
     for (const auto &toplevel : nestedDivTerms)
@@ -81,7 +82,7 @@ PureAffineExpr mlir::presburger::operator+(PureAffineExpr &&lhs,
         std::move(lhs->addLinearTerm(rhs->getLinearDividend())));
 
   if (!(lhs->hasDivisor() ^ rhs->hasDivisor())) {
-    auto ret = PureAffineExprImpl(lhs->info);
+    auto ret = PureAffineExprImpl(lhs->space);
     ret.addDivTerm(std::move(*lhs));
     ret.addDivTerm(std::move(*rhs));
     return std::make_unique<PureAffineExprImpl>(std::move(ret));
@@ -104,7 +105,7 @@ PureAffineExpr mlir::presburger::operator*(PureAffineExpr &&expr, int64_t c) {
 }
 
 PureAffineExpr mlir::presburger::operator+(PureAffineExpr &&expr, int64_t c) {
-  return std::move(expr) + std::make_unique<PureAffineExprImpl>(expr->info, c);
+  return std::move(expr) + std::make_unique<PureAffineExprImpl>(expr->space, c);
 }
 
 PureAffineExpr mlir::presburger::div(PureAffineExpr &&dividend, int64_t divisor,
@@ -116,7 +117,7 @@ PureAffineExpr mlir::presburger::div(PureAffineExpr &&dividend, int64_t divisor,
     int64_t c = kind == DivKind::FloorDiv
                     ? divideFloorSigned(dividend->getConstant(), divisor)
                     : mod(dividend->getConstant(), divisor);
-    return std::make_unique<PureAffineExprImpl>(dividend->info, c);
+    return std::make_unique<PureAffineExprImpl>(dividend->space, c);
   }
 
   // Factor out mul, using gcd internally.
@@ -152,7 +153,7 @@ PureAffineExpr mlir::presburger::div(PureAffineExpr &&dividend, int64_t divisor,
   // x floordiv 1 <=> x, x % 1 <=> 0
   return divisor == 1
              ? (dividend->isMod()
-                    ? std::make_unique<PureAffineExprImpl>(dividend->info)
+                    ? std::make_unique<PureAffineExprImpl>(dividend->space)
                     : std::move(dividend))
              : std::make_unique<PureAffineExprImpl>(std::move(*dividend),
                                                     divisor, kind);
@@ -166,9 +167,9 @@ enum class BindingStrength {
 };
 
 static void printCoefficient(int64_t c, bool &isExprBegin,
-                             const ParseInfo &info, int idx = -1) {
-  bool isConstant = idx != -1 && info.isConstantIdx(idx);
-  bool isDimOrSymbol = idx != -1 && !info.isConstantIdx(idx);
+                             const PresburgerSpace &space, int idx = -1) {
+  bool isConstant = idx != -1 && space.isConstantIdx(idx);
+  bool isDimOrSymbol = idx != -1 && !space.isConstantIdx(idx);
   if (!c)
     return;
   if (!isExprBegin)
@@ -188,7 +189,7 @@ static void printCoefficient(int64_t c, bool &isExprBegin,
   if (isDimOrSymbol) {
     if (std::abs(c) != 1)
       dbgs() << " * ";
-    dbgs() << (info.isDimIdx(idx) ? 'd' : 's') << idx;
+    dbgs() << (space.isSetDimIdx(idx) ? 'd' : 's') << idx;
     isExprBegin = false;
   }
 }
@@ -202,7 +203,7 @@ static bool printCoefficientVec(
     isExprBegin = true;
   }
   for (auto [idx, c] : enumerate(linear.getCoefficients()))
-    printCoefficient(c, isExprBegin, linear.info, idx);
+    printCoefficient(c, isExprBegin, linear.space, idx);
 
   if (enclosingTightness == BindingStrength::Strong &&
       linear.hasMultipleCoefficients())
@@ -223,7 +224,7 @@ printAffineExpr(const PureAffineExprImpl &expr, bool isExprBegin = true,
   const auto &mulFactor = div.getMulFactor();
   const auto &nestedDivs = div.getNestedDivTerms();
 
-  printCoefficient(mulFactor, isExprBegin, expr.info);
+  printCoefficient(mulFactor, isExprBegin, expr.space);
   if (std::abs(mulFactor) != 1)
     dbgs() << " * ";
 

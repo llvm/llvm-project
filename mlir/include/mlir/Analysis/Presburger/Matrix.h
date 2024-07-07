@@ -103,7 +103,7 @@ public:
   /// Set the specified row to `elems`.
   void setRow(unsigned row, ArrayRef<T> elems);
 
-  /// Add the specified row to `elems`.
+  /// Add `elems` to the specified row.
   void addToRow(unsigned row, ArrayRef<T> elems);
 
   /// Insert columns having positions pos, pos + 1, ... pos + count - 1.
