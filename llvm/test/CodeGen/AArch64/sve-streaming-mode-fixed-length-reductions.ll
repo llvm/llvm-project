@@ -41,7 +41,7 @@ define i32 @reduce_uadd_v16i8(<32 x i8> %a) #0 {
 ; SVE_MIN_256-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE_MIN_256-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE_MIN_256-NEXT:    splice z0.b, p0, z0.b, z1.b
-; SVE_MIN_256-NEXT:    ptrue p0.b
+; SVE_MIN_256-NEXT:    ptrue p0.b, vl32
 ; SVE_MIN_256-NEXT:    uaddv d0, p0, z0.b
 ; SVE_MIN_256-NEXT:    fmov x0, d0
 ; SVE_MIN_256-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -71,57 +71,24 @@ define i32 @reduce_sadd_v16i8(<32 x i8> %a) #0 {
 ;
 ; SVE_128-LABEL: reduce_sadd_v16i8:
 ; SVE_128:       // %bb.0:
+; SVE_128-NEXT:    ptrue p0.b
 ; SVE_128-NEXT:    // kill: def $q1 killed $q1 def $z1
-; SVE_128-NEXT:    sunpklo z2.h, z1.b
 ; SVE_128-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE_128-NEXT:    sunpklo z3.h, z0.b
-; SVE_128-NEXT:    ptrue p0.s
-; SVE_128-NEXT:    ext z1.b, z1.b, z1.b, #8
-; SVE_128-NEXT:    ext z0.b, z0.b, z0.b, #8
-; SVE_128-NEXT:    sunpklo z1.h, z1.b
-; SVE_128-NEXT:    sunpklo z0.h, z0.b
-; SVE_128-NEXT:    sunpklo z4.s, z2.h
-; SVE_128-NEXT:    ext z2.b, z2.b, z2.b, #8
-; SVE_128-NEXT:    sunpklo z6.s, z3.h
-; SVE_128-NEXT:    ext z3.b, z3.b, z3.b, #8
-; SVE_128-NEXT:    mov z5.d, z1.d
-; SVE_128-NEXT:    sunpklo z7.s, z0.h
-; SVE_128-NEXT:    ext z0.b, z0.b, z0.b, #8
-; SVE_128-NEXT:    sunpklo z2.s, z2.h
-; SVE_128-NEXT:    sunpklo z3.s, z3.h
-; SVE_128-NEXT:    add z4.s, z6.s, z4.s
-; SVE_128-NEXT:    ext z5.b, z5.b, z1.b, #8
-; SVE_128-NEXT:    sunpklo z1.s, z1.h
-; SVE_128-NEXT:    sunpklo z0.s, z0.h
-; SVE_128-NEXT:    add z2.s, z3.s, z2.s
-; SVE_128-NEXT:    sunpklo z5.s, z5.h
-; SVE_128-NEXT:    add z1.s, z7.s, z1.s
-; SVE_128-NEXT:    add z0.s, z0.s, z5.s
-; SVE_128-NEXT:    add z1.s, z4.s, z1.s
-; SVE_128-NEXT:    add z0.s, z2.s, z0.s
-; SVE_128-NEXT:    add z0.s, z1.s, z0.s
-; SVE_128-NEXT:    uaddv d0, p0, z0.s
-; SVE_128-NEXT:    fmov x0, d0
-; SVE_128-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; SVE_128-NEXT:    saddv d1, p0, z1.b
+; SVE_128-NEXT:    saddv d0, p0, z0.b
+; SVE_128-NEXT:    fmov x8, d1
+; SVE_128-NEXT:    fmov x9, d0
+; SVE_128-NEXT:    add w0, w9, w8
 ; SVE_128-NEXT:    ret
 ;
 ; SVE_MIN_256-LABEL: reduce_sadd_v16i8:
 ; SVE_MIN_256:       // %bb.0:
-; SVE_MIN_256-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE_MIN_256-NEXT:    ptrue p0.b, vl16
 ; SVE_MIN_256-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE_MIN_256-NEXT:    sunpklo z2.h, z1.b
-; SVE_MIN_256-NEXT:    sunpklo z3.h, z0.b
-; SVE_MIN_256-NEXT:    ptrue p0.s, vl8
-; SVE_MIN_256-NEXT:    ext z1.b, z1.b, z1.b, #8
-; SVE_MIN_256-NEXT:    ext z0.b, z0.b, z0.b, #8
-; SVE_MIN_256-NEXT:    sunpklo z1.h, z1.b
-; SVE_MIN_256-NEXT:    sunpklo z0.h, z0.b
-; SVE_MIN_256-NEXT:    add z2.h, z3.h, z2.h
-; SVE_MIN_256-NEXT:    add z0.h, z0.h, z1.h
-; SVE_MIN_256-NEXT:    sunpklo z1.s, z2.h
-; SVE_MIN_256-NEXT:    sunpklo z0.s, z0.h
-; SVE_MIN_256-NEXT:    add z0.s, z1.s, z0.s
-; SVE_MIN_256-NEXT:    uaddv d0, p0, z0.s
+; SVE_MIN_256-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE_MIN_256-NEXT:    splice z0.b, p0, z0.b, z1.b
+; SVE_MIN_256-NEXT:    ptrue p0.b, vl32
+; SVE_MIN_256-NEXT:    saddv d0, p0, z0.b
 ; SVE_MIN_256-NEXT:    fmov x0, d0
 ; SVE_MIN_256-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SVE_MIN_256-NEXT:    ret

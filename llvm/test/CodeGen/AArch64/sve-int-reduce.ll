@@ -240,17 +240,8 @@ define i32 @uaddv_nxv16i16_nxv16i32(<vscale x 32 x i16> %a) {
 define i32 @saddv_nxv16i8_nxv16i32(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: saddv_nxv16i8_nxv16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpkhi z1.h, z0.b
-; CHECK-NEXT:    sunpklo z0.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sunpklo z2.s, z1.h
-; CHECK-NEXT:    sunpklo z3.s, z0.h
-; CHECK-NEXT:    sunpkhi z1.s, z1.h
-; CHECK-NEXT:    sunpkhi z0.s, z0.h
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    add z1.s, z3.s, z2.s
-; CHECK-NEXT:    add z0.s, z1.s, z0.s
-; CHECK-NEXT:    uaddv d0, p0, z0.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    saddv d0, p0, z0.b
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret

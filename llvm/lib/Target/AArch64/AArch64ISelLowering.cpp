@@ -17504,10 +17504,12 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 }
 
 static SDValue
-performVecReduceAddZextCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                               const AArch64TargetLowering &TLI) {
-  if (N->getOperand(0).getOpcode() != ISD::ZERO_EXTEND)
+performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              const AArch64TargetLowering &TLI) {
+  if (N->getOperand(0).getOpcode() != ISD::ZERO_EXTEND &&
+      N->getOperand(0).getOpcode() != ISD::SIGN_EXTEND)
     return SDValue();
+  bool IsSigned = N->getOperand(0).getOpcode() == ISD::SIGN_EXTEND;
 
   SelectionDAG &DAG = DCI.DAG;
   auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
@@ -17564,9 +17566,12 @@ performVecReduceAddZextCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       EVT ContainerVT = getContainerForFixedLengthVector(DAG, RdxVT);
       Reg = convertToScalableVector(DAG, ContainerVT, Reg);
     }
-    SDValue Res = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-        DAG.getConstant(Intrinsic::aarch64_sve_uaddv, DL, MVT::i64), Pg, Reg);
+    SDValue Res =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+                    DAG.getConstant(IsSigned ? Intrinsic::aarch64_sve_saddv
+                                             : Intrinsic::aarch64_sve_uaddv,
+                                    DL, MVT::i64),
+                    Pg, Reg);
     if (ElemType != MVT::i64)
       Res = DAG.getAnyExtOrTrunc(Res, DL, ElemType);
     Results.push_back(Res);
@@ -25265,7 +25270,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::VECREDUCE_ADD: {
     if (SDValue Val = performVecReduceAddCombine(N, DCI.DAG, Subtarget))
       return Val;
-    return performVecReduceAddZextCombine(N, DCI, *this);
+    return performVecReduceAddExtCombine(N, DCI, *this);
   }
   case AArch64ISD::UADDV:
     return performUADDVCombine(N, DAG);
