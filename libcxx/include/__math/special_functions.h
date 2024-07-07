@@ -32,6 +32,7 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
   // Press, William H., et al. Numerical recipes 3rd edition: The art of scientific computing.
   // Cambridge university press, 2007, p. 183.
 
+  // NOLINTBEGIN(readability-identifier-naming)
   if (__math::isnan(__x))
     return __x;
 
@@ -55,6 +56,7 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
     return (__n & 1) ? __math::copysign(__inf, __x) : __inf;
   }
   return __H_n;
+  // NOLINTEND(readability-identifier-naming)
 }
 
 inline _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, double __x) { return std::__hermite(__n, __x); }
