@@ -17,6 +17,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # dlfcn.h entrypoints
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -346,6 +352,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.cospif
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
