@@ -15,4 +15,5 @@ add_mlir_library(MLIRArmSMETestPasses
   MLIRTransforms
   MLIRVectorToArmSME
   MLIRVectorToSCF
+  MLIRSCFToControlFlow
   )

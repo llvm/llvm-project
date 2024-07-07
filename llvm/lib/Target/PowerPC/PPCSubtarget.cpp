@@ -23,7 +23,9 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
@@ -36,11 +38,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
-
-static cl::opt<bool>
-    UseSubRegLiveness("ppc-track-subreg-liveness",
-                      cl::desc("Enable subregister liveness tracking for PPC"),
-                      cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",
@@ -186,9 +183,7 @@ bool PPCSubtarget::useAA() const {
   return true;
 }
 
-bool PPCSubtarget::enableSubRegLiveness() const {
-  return UseSubRegLiveness;
-}
+bool PPCSubtarget::enableSubRegLiveness() const { return true; }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   if (isAIXABI()) {

@@ -266,6 +266,8 @@ struct APIRecord {
 
   AccessControl Access;
 
+  RecordKind KindForDisplay;
+
 private:
   const RecordKind Kind;
   friend class RecordContext;
@@ -277,6 +279,7 @@ public:
   APIRecord *getNextInContext() const { return NextInContext; }
 
   RecordKind getKind() const { return Kind; }
+  RecordKind getKindForDisplay() const { return KindForDisplay; }
 
   static APIRecord *castFromRecordContext(const RecordContext *Ctx);
   static RecordContext *castToRecordContext(const APIRecord *Record);
@@ -293,10 +296,10 @@ public:
         Availability(std::move(Availability)), Linkage(Linkage),
         Comment(Comment), Declaration(Declaration), SubHeading(SubHeading),
         IsFromSystemHeader(IsFromSystemHeader), Access(std::move(Access)),
-        Kind(Kind) {}
+        KindForDisplay(Kind), Kind(Kind) {}
 
   APIRecord(RecordKind Kind, StringRef USR, StringRef Name)
-      : USR(USR), Name(Name), Kind(Kind) {}
+      : USR(USR), Name(Name), KindForDisplay(Kind), Kind(Kind) {}
 
   // Pure virtual destructor to make APIRecord abstract
   virtual ~APIRecord() = 0;

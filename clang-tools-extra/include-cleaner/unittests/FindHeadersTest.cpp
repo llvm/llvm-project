@@ -619,11 +619,19 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbolsUsingShadow) {
 
 
 TEST_F(HeadersForSymbolTest, StandardHeaders) {
-  Inputs.Code = "void assert();";
+  Inputs.Code = R"cpp(
+    #include "stdlib_internal.h"
+    void assert();
+    void foo() { assert(); }
+  )cpp";
+  Inputs.ExtraFiles["stdlib_internal.h"] = "void assert();";
   buildAST();
   EXPECT_THAT(
       headersFor("assert"),
       // Respect the ordering from the stdlib mapping.
+      // FIXME: Report physical locations too, stdlib_internal.h and main-file
+      // should also be candidates. But they should be down-ranked compared to
+      // stdlib providers.
       UnorderedElementsAre(tooling::stdlib::Header::named("<cassert>"),
                            tooling::stdlib::Header::named("<assert.h>")));
 }

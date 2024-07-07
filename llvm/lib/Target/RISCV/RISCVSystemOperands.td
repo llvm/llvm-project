@@ -311,6 +311,11 @@ foreach i = 3...31 in {
 }
 
 //===----------------------------------------------------------------------===//
+// Supervisor Counter Setup
+//===----------------------------------------------------------------------===//
+def : SysReg<"scountinhibit", 0x120>;
+
+//===----------------------------------------------------------------------===//
 // Debug/ Trace Registers (shared with Debug Mode)
 //===----------------------------------------------------------------------===//
 def : SysReg<"tselect", 0x7A0>;
@@ -377,6 +382,12 @@ def SEED : SysReg<"seed", 0x015>;
 // Machine-level CSRs
 def : SysReg<"miselect", 0x350>;
 def : SysReg<"mireg", 0x351>;
+foreach i = 2...3 in {
+  def : SysReg<"mireg"#i, !add(0x350, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"mireg"#i, !add(0x351, i)>;
+}
 def : SysReg<"mtopei", 0x35C>;
 def : SysReg<"mtopi", 0xFB0>;
 def : SysReg<"mvien", 0x308>;
@@ -392,6 +403,12 @@ def : SysReg<"miph", 0x354>;
 // Supervisor-level CSRs
 def : SysReg<"siselect", 0x150>;
 def : SysReg<"sireg", 0x151>;
+foreach i = 2...3 in {
+  def : SysReg<"sireg"#i, !add(0x150, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"sireg"#i, !add(0x151, i)>;
+}
 def : SysReg<"stopei", 0x15C>;
 def : SysReg<"stopi", 0xDB0>;
 let isRV32Only = 1 in {
@@ -406,6 +423,12 @@ def : SysReg<"hviprio1", 0x646>;
 def : SysReg<"hviprio2", 0x647>;
 def : SysReg<"vsiselect", 0x250>;
 def : SysReg<"vsireg", 0x251>;
+foreach i = 2...3 in {
+  def : SysReg<"vsireg"#i, !add(0x250, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"vsireg"#i, !add(0x251, i)>;
+}
 def : SysReg<"vstopei", 0x25C>;
 def : SysReg<"vstopi", 0xEB0>;
 let isRV32Only = 1 in {

@@ -20,7 +20,7 @@
 ;; mistake.
 
 ; CHECK: for.end:
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 undef,{{.+}}, metadata !DIExpression({{.+}}), metadata ![[ID:[0-9]+]], metadata ptr %Counter, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 undef,{{.+}}, !DIExpression({{.+}}), ![[ID:[0-9]+]], ptr %Counter, !DIExpression(),
 ; CHECK-NEXT: store i32 2, ptr %Counter, align 4,{{.*}}!DIAssignID ![[ID]]
 
 define dso_local void @_Z3funv() local_unnamed_addr #0 !dbg !7 {

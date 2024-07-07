@@ -17,8 +17,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK: Loop 'k_loop' has cost = 10200000000000000
 ; CHECK-NEXT: Loop 'j_loop' has cost = 102000000000000
 ; CHECK-NEXT: Loop 'i_loop' has cost = 1020000000000
-; CHECK-NEXT: Loop 'm_loop' has cost = 10700000000
-; CHECK-NEXT: Loop 'l_loop' has cost = 1300000000
+; CHECK-NEXT: Loop 'm_loop' has cost = 10800000000
+; CHECK-NEXT: Loop 'l_loop' has cost = 1500000000
 
 %_elem_type_of_double = type <{ double }>
 

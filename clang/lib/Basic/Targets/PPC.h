@@ -305,9 +305,11 @@ public:
               // asm statements)
       Info.setAllowsMemory();
       break;
-    case 'R': // AIX TOC entry
     case 'a': // Address operand that is an indexed or indirect from a
               // register (`p' is preferable for asm statements)
+              // TODO: Add full support for this constraint
+      return false;
+    case 'R': // AIX TOC entry
     case 'S': // Constant suitable as a 64-bit mask operand
     case 'T': // Constant suitable as a 32-bit mask operand
     case 'U': // System V Release 4 small data area reference
@@ -360,7 +362,7 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("r1") || RegName.equals("x1");
+    return RegName == "r1" || RegName == "x1";
   }
 
   // We support __builtin_cpu_supports/__builtin_cpu_is on targets that

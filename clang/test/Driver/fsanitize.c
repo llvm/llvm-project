@@ -459,6 +459,21 @@
 // CHECK-TSAN-MSAN-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 // CHECK-TSAN-MSAN-MSAN-DARWIN-NOT: unsupported option
 
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-X86-64-LINUX
+// CHECK-NSAN-X86-64-LINUX: "-fsanitize=numerical"
+
+// RUN: not %clang --target=aarch64-unknown-linux-gnu -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-AARCH64-LINUX
+// CHECK-NSAN-AARCH64-LINUX: error: unsupported option '-fsanitize=numerical' for target 'aarch64-unknown-linux-gnu'
+
+// RUN: not %clang --target=mips-unknown-linux -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-MIPS-LINUX
+// CHECK-NSAN-MIPS-LINUX: error: unsupported option '-fsanitize=numerical' for target 'mips-unknown-linux'
+
+// RUN: %clang --target=x86_64-apple-macos -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-X86-64-MACOS
+// CHECK-NSAN-X86-64-MACOS: "-fsanitize=numerical"
+
+// RUN: not %clang --target=arm64-apple-macos -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-ARM64-MACOS
+// CHECK-NSAN-ARM64-MACOS: error: unsupported option '-fsanitize=numerical' for target 'arm64-apple-macos'
+
 // RUN: %clang --target=x86_64-apple-darwin -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-DARWIN
 // CHECK-TSAN-X86-64-DARWIN-NOT: unsupported option
 // RUN: %clang --target=x86_64-apple-macos -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-MACOS
@@ -530,7 +545,7 @@
 // RUN: %clang --target=riscv64-pc-freebsd -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
 // CHECK-FUNCTION: -cc1{{.*}}"-fsanitize=function" "-fsanitize-recover=function"
 
-// RUN: not %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
+// RUN: not %clang --target=x86_64-apple-darwin10 -mmacos-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
 // CHECK-VPTR-DARWIN-OLD: unsupported option '-fsanitize=vptr' for target 'x86_64-apple-darwin10'
 
 // RUN: not %clang --target=arm-apple-ios4 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-IOS-OLD
@@ -542,7 +557,7 @@
 // RUN: %clang --target=x86_64-apple-darwin15.0.0-simulator -fsanitize=vptr %s -### 2>&1
 // OK
 
-// RUN: %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.9 -fsanitize=alignment,vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-NEW
+// RUN: %clang --target=x86_64-apple-darwin10 -mmacos-version-min=10.9 -fsanitize=alignment,vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-NEW
 // CHECK-VPTR-DARWIN-NEW: -fsanitize=alignment,vptr
 
 // RUN: %clang --target=armv7-apple-ios7 -miphoneos-version-min=7.0 -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-IOS
@@ -628,7 +643,7 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-trap=hwaddress -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-TRAP
 // CHECK-HWASAN-TRAP: error: unsupported argument 'hwaddress' to option '-fsanitize-trap='
 
-// RUN: not %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
+// RUN: not %clang --target=x86_64-apple-darwin10 -mmacos-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
 // CHECK-CFI-NOTRAP-OLD-MACOS: error: unsupported option '-fno-sanitize-trap=cfi-vcall' for target 'x86_64-apple-darwin10'
 
 // RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-WIN

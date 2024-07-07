@@ -277,9 +277,9 @@ void test21(const int *ptr) {
 }
 
 void test_ei_i42i(_BitInt(42) *ptr, int value) {
-  __sync_fetch_and_add(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+  __sync_fetch_and_add(ptr, value); // expected-error {{atomic memory operand must have a power-of-two size}}
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
-  __sync_nand_and_fetch(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+  __sync_nand_and_fetch(ptr, value); // expected-error {{atomic memory operand must have a power-of-two size}}
 
   __atomic_fetch_add(ptr, 1, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
 }
@@ -305,9 +305,9 @@ void test_ei_ii64(int *ptr, _BitInt(64) value) {
 }
 
 void test_ei_i42i42(_BitInt(42) *ptr, _BitInt(42) value) {
-  __sync_fetch_and_add(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+  __sync_fetch_and_add(ptr, value); // expected-error {{atomic memory operand must have a power-of-two size}}
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
-  __sync_nand_and_fetch(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+  __sync_nand_and_fetch(ptr, value); // expected-error {{atomic memory operand must have a power-of-two size}}
 }
 
 void test_ei_i64i64(_BitInt(64) *ptr, _BitInt(64) value) {

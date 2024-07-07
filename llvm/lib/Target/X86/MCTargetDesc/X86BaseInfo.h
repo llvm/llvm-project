@@ -56,12 +56,14 @@ enum IPREFIXES {
   IP_HAS_REPEAT = 1U << 3,
   IP_HAS_LOCK = 1U << 4,
   IP_HAS_NOTRACK = 1U << 5,
-  IP_USE_VEX = 1U << 6,
-  IP_USE_VEX2 = 1U << 7,
-  IP_USE_VEX3 = 1U << 8,
-  IP_USE_EVEX = 1U << 9,
-  IP_USE_DISP8 = 1U << 10,
-  IP_USE_DISP32 = 1U << 11,
+  IP_USE_REX = 1U << 6,
+  IP_USE_REX2 = 1U << 7,
+  IP_USE_VEX = 1U << 8,
+  IP_USE_VEX2 = 1U << 9,
+  IP_USE_VEX3 = 1U << 10,
+  IP_USE_EVEX = 1U << 11,
+  IP_USE_DISP8 = 1U << 12,
+  IP_USE_DISP32 = 1U << 13,
 };
 
 enum OperandType : unsigned {

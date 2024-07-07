@@ -24,7 +24,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MD5.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -33,6 +32,7 @@ namespace llvm {
 
 class Comdat;
 class ConstantRange;
+class DataLayout;
 class Error;
 class GlobalObject;
 class Module;
@@ -588,7 +588,7 @@ public:
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  static GUID getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
+  static GUID getGUID(StringRef GlobalName);
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
@@ -655,6 +655,11 @@ public:
   /// Get the module that this global value is contained inside of...
   Module *getParent() { return Parent; }
   const Module *getParent() const { return Parent; }
+
+  /// Get the data layout of the module this global belongs to.
+  ///
+  /// Requires the global to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
