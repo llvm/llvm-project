@@ -126,6 +126,15 @@ template <class charT, class traits>
 template <class charT, class traits>
   basic_ostream<charT,traits>& flush(basic_ostream<charT,traits>& os);
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>& emit_on_flush(basic_ostream<charT, traits>& os);                       // since C++20
+  
+template<class charT, class traits>
+  basic_ostream<charT, traits>& noemit_on_flush(basic_ostream<charT, traits>& os);                     // since C++20
+  
+template<class charT, class traits>
+  basic_ostream<charT, traits>& flush_emit(basic_ostream<charT, traits>& os);                          // since C++20
+
 // rvalue stream insertion
 template <class Stream, class T>
   Stream&& operator<<(Stream&& os, const T& x);
@@ -180,6 +189,10 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__ostream/basic_ostream.h>
+
+#    if _LIBCPP_STD_VER >= 20
+#      include <__ostream/syncbuf_base.h>
+#    endif
 
 #    if _LIBCPP_STD_VER >= 23
 #      include <__ostream/print.h>
