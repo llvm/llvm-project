@@ -1317,6 +1317,15 @@ private:
                  sourceLocToPosition(SM, Spelled->back().endLocation())};
   }
 
+  std::vector<InlayHintLabelPart> buildTypeHint(QualType T,
+                                                llvm::StringRef Prefix) {
+    std::vector<InlayHintLabelPart> Chunks;
+    TypeHintBuilder Builder(T, AST, MainFilePath, TypeHintPolicy, Prefix,
+                            Chunks);
+    Builder.Visit(T.getTypePtr());
+    return Chunks;
+  }
+
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
     if (!Cfg.InlayHints.DeducedTypes || T.isNull())
       return;
@@ -1324,17 +1333,18 @@ private:
     // The sugared type is more useful in some cases, and the canonical
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
-    std::vector<InlayHintLabelPart> Chunks;
-    TypeHintBuilder Builder(Desugared, AST, MainFilePath, TypeHintPolicy,
-                            Prefix, Chunks);
-    Builder.Visit(Desugared.getTypePtr());
-    if (T != Desugared && !shouldPrintTypeHint(Chunks)) {
+    auto Chunks = buildTypeHint(Desugared, Prefix);
+    if (T != Desugared) {
+      if (shouldPrintTypeHint(Chunks)) {
+        addInlayHint(R, HintSide::Right, InlayHintKind::Type,
+                     /*Prefix=*/"", // We have handled prefixes in the builder.
+                     std::move(Chunks),
+                     /*Suffix=*/"");
+        return;
+      }
       // If the desugared type is too long to display, fallback to the sugared
       // type.
-      Chunks.clear();
-      TypeHintBuilder Builder(T, AST, MainFilePath, TypeHintPolicy, Prefix,
-                              Chunks);
-      Builder.Visit(T.getTypePtr());
+      Chunks = buildTypeHint(T, Prefix);
     }
     if (shouldPrintTypeHint(Chunks))
       addInlayHint(R, HintSide::Right, InlayHintKind::Type,
