@@ -920,8 +920,6 @@ set(files
   expected
   experimental/__config
   experimental/__math/hermite.h
-  experimental/__math/laguerre.h
-  experimental/__math/legendre.h
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h
