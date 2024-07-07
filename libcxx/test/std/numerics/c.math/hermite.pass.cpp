@@ -195,8 +195,9 @@ std::vector<T> get_roots(unsigned n) {
             T(4.6036824495507),
             T(5.3874808900112)};
 
-  default:
+  default: // polynom degree n>20 is unsupported
     assert(false);
+    return {T(-42)};
   }
 }
 
