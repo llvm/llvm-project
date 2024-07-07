@@ -25,7 +25,6 @@ static_assert(std::is_trivial<decltype(std::ignore)>::value, "");
 [[nodiscard]] constexpr int test_nodiscard() { return 8294; }
 #endif
 
-
 TEST_CONSTEXPR_CXX14 bool test() {
   { [[maybe_unused]] auto& ignore_v = std::ignore; }
 

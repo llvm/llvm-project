@@ -15,5 +15,5 @@
 #include <tuple>
 
 int main(int, char**) {
-  { [[maybe_unused]] constexpr auto& ignore_v = std::ignore; }
+  { [[maybe_unused]] TEST_CONSTEXPR_CXX14 auto& ignore_v = std::ignore; }
 }
