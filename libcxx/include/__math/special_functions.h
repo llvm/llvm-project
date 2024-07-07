@@ -25,15 +25,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 
-/// \return the Hermite polynomial \f$ H_n(x) \f$
-/// \note The implementation is based on the recurrence formula
-/// \f[
-///   H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}
-/// \f]
-/// Press, William H., et al. Numerical recipes 3rd edition: The art of
-/// scientific computing. Cambridge university press, 2007, p. 183.
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
+  // The Hermite polynomial H_n(x).
+  // The implementation is based on the recurrence formula: H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}.
+  // Press, William H., et al. Numerical recipes 3rd edition: The art of scientific computing.
+  // Cambridge university press, 2007, p. 183.
+
   if (__math::isnan(__x))
     return __x;
 
@@ -76,6 +74,7 @@ template <class _Integer, std::enable_if_t<std::is_integral_v<_Integer>, int> = 
 _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
   return std::hermite(__n, static_cast<double>(__x));
 }
+
 #endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD

@@ -65,10 +65,10 @@ public:
   }
 };
 
-/// \note Roots are taken from
-/// Salzer, Herbert E., Ruth Zucker, and Ruth Capuano.
-/// Table of the zeros and weight factors of the first twenty Hermite
-/// polynomials. US Government Printing Office, 1952.
+// Roots are taken from
+// Salzer, Herbert E., Ruth Zucker, and Ruth Capuano.
+// Table of the zeros and weight factors of the first twenty Hermite
+// polynomials. US Government Printing Office, 1952.
 template <class T>
 std::vector<T> get_roots(unsigned n) {
   switch (n) {
