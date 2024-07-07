@@ -14,7 +14,6 @@
 #include <__math/traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_integral.h>
-#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -34,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
   if (__math::isnan(__x))
-    return std::numeric_limits<_Real>::quiet_NaN();
+    return __x;
 
   _Real __H_0{1};
   if (__n == 0)
