@@ -1311,8 +1311,7 @@ TEST(TypeHints, NoQualifiers) {
       }
     }
   )cpp",
-                  ExpectedHint{": S1", "x"},
-                  ExpectedHint{": Inner<int>", "y"});
+                  ExpectedHint{": S1", "x"}, ExpectedHint{": Inner<int>", "y"});
 }
 
 TEST(TypeHints, Lambda) {
