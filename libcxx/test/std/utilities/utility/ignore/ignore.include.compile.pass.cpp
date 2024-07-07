@@ -12,10 +12,9 @@
 
 // inline constexpr ignore-type ignore;
 
+// std::ignore should be provided by the headers <tuple> and <utility>.
+// This tests validates its presence in <utility>.
+
 #include <utility>
 
-#include "test_macros.h"
-
-int main(int, char**) {
-  { [[maybe_unused]] TEST_CONSTEXPR_CXX14 auto& ignore_v = std::ignore; }
-}
+[[maybe_unused]] auto& ignore_v = std::ignore;
