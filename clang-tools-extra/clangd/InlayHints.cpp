@@ -464,7 +464,7 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
 
   void handleTemplateSpecialization(
       TemplateName TN, llvm::ArrayRef<TemplateArgument> Args,
-      SourceLocation TemplateNameLocation = SourceLocation()) {
+      SourceLocation LocationForOverride = SourceLocation()) {
     SourceLocation Location;
     TemplateDecl *TD = nullptr;
     auto PrintType = TemplateName::Qualified::AsWritten;
@@ -492,12 +492,11 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
       break;
     }
 
+    if (LocationForOverride.isValid())
+      Location = LocationForOverride;
+
     addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP, PrintType); },
-             [&] {
-               if (TemplateNameLocation.isValid())
-                 return TemplateNameLocation;
-               return Location;
-             }());
+             Location);
 
     addLabel("<");
     printTemplateArgumentList(Args);
@@ -544,14 +543,14 @@ public:
         RD && !RD->getTemplateInstantiationPattern())
       return addLabel(
           [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
-          [&] { return nameLocation(*RD, SM); }());
+          nameLocation(*RD, SM));
     return VisitType(TT);
   }
 
   void VisitEnumType(const EnumType *ET) {
     return addLabel(
         [&](llvm::raw_ostream &OS) { return ET->getDecl()->printName(OS, PP); },
-        [&] { return nameLocation(*ET->getDecl(), SM); }());
+        nameLocation(*ET->getDecl(), SM));
   }
 
   void VisitAutoType(const AutoType *AT) {
@@ -630,7 +629,7 @@ public:
 
   void VisitTypedefType(const TypedefType *TT) {
     addLabel([&](llvm::raw_ostream &OS) { TT->getDecl()->printName(OS); },
-             [&] { return nameLocation(*TT->getDecl(), SM); }());
+             nameLocation(*TT->getDecl(), SM));
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
