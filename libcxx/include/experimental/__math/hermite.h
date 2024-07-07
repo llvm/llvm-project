@@ -28,17 +28,17 @@
 /// scientific computing. Cambridge university press, 2007, p. 183.
 template <class _Real>
 _Real __libcpp_hermite_recurrence(unsigned __n, _Real __x) {
-  if (__n == 0u)
-    return _Real(1);
+  if (0u == __n)
+    return _Real{1};
 
-  _Real __t2(1);
-  _Real __t1 = _Real(2) * __x;
+  _Real __H_nPrev{1};
+  _Real __H_n = _Real{2} * __x;
   for (unsigned __i = 1; __i < __n; ++__i) {
-    const _Real __t0 = _Real(2) * (__x * __t1 - _Real(__i) * __t2);
-    __t2 = __t1;
-    __t1 = __t0;
+    const _Real __H_nNext = _Real{2} * (__x * __H_n - _Real{__i} * __H_nPrev);
+    __H_nPrev = __H_n;
+    __H_n = __H_nNext;
   }
-  return __t1;
+  return __H_n;
 }
 
 template <class _Real> _Real __libcpp_hermite(unsigned __n, _Real __x) {
