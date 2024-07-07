@@ -196,7 +196,7 @@ std::vector<T> get_roots(unsigned n) {
             T(5.3874808900112)};
 
   default:
-    assert(0);
+    assert(false);
   }
 }
 
