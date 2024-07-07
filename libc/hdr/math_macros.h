@@ -17,8 +17,7 @@
 
 // GCC will include CXX headers when __cplusplus is defined. This behavior
 // can be suppressed by defining _GLIBCXX_INCLUDE_NEXT_C_HEADERS.
-#include "src/__support/macros/properties/compiler.h"
-#ifdef LIBC_COMPILER_IS_GCC
+#if defined(__GNUC__) && !defined(__clang__)
 #define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
 #endif
 #include <math.h>
