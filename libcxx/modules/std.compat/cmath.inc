@@ -265,4 +265,7 @@ export {
   using ::signbit _LIBCPP_USING_IF_EXISTS;
 
   // [sf.cmath], mathematical special functions
+  using ::hermite;
+  using ::hermitef;
+  using ::hermitel;
 } // export
