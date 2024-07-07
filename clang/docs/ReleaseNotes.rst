@@ -973,6 +973,8 @@ Bug Fixes to C++ Support
   of the address of operator. (#GH97483).
 - Fixed an assertion failure about a constant expression which is a known integer but is not
   evaluated to an integer. (#GH96670).
+- Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
+  instantiated. (#GH95735).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
