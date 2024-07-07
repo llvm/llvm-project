@@ -56,6 +56,7 @@ lit_header_restrictions = {
     "cwchar": "// UNSUPPORTED: no-wide-characters",
     "cwctype": "// UNSUPPORTED: no-wide-characters",
     "experimental/iterator": "// UNSUPPORTED: c++03",
+    "experimental/math": "// UNSUPPORTED: c++03, c++11, c++14",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
     "experimental/type_traits": "// UNSUPPORTED: c++03",
