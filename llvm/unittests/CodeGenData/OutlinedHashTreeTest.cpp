@@ -18,19 +18,19 @@ TEST(OutlinedHashTreeTest, Empty) {
   OutlinedHashTree HashTree;
   EXPECT_TRUE(HashTree.empty());
   // The header node is always present.
-  EXPECT_EQ(HashTree.size(), 1);
-  EXPECT_EQ(HashTree.depth(), 0);
+  EXPECT_EQ(HashTree.size(), 1u);
+  EXPECT_EQ(HashTree.depth(), 0u);
 }
 
 TEST(OutlinedHashTreeTest, Insert) {
   OutlinedHashTree HashTree;
   HashTree.insert({{1, 2, 3}, 1});
   // The node count is 4 (including the root node).
-  EXPECT_EQ(HashTree.size(), 4);
+  EXPECT_EQ(HashTree.size(), 4u);
   // The terminal count is 1.
-  EXPECT_EQ(HashTree.size(/*GetTerminalCountOnly=*/true), 1);
+  EXPECT_EQ(HashTree.size(/*GetTerminalCountOnly=*/true), 1u);
   // The depth is 3.
-  EXPECT_EQ(HashTree.depth(), 3);
+  EXPECT_EQ(HashTree.depth(), 3u);
 
   HashTree.clear();
   EXPECT_TRUE(HashTree.empty());
@@ -39,7 +39,7 @@ TEST(OutlinedHashTreeTest, Insert) {
   HashTree.insert({{1, 2, 4}, 2});
   // The nodes of 1 and 2 are shared with the same prefix.
   // The nodes are root, 1, 2, 3 and 4, whose counts are 5.
-  EXPECT_EQ(HashTree.size(), 5);
+  EXPECT_EQ(HashTree.size(), 5u);
 }
 
 TEST(OutlinedHashTreeTest, Find) {
@@ -48,10 +48,10 @@ TEST(OutlinedHashTreeTest, Find) {
   HashTree.insert({{1, 2, 3}, 2});
 
   // The node count does not change as the same sequences are added.
-  EXPECT_EQ(HashTree.size(), 4);
+  EXPECT_EQ(HashTree.size(), 4u);
   // The terminal counts are accumulated from two same sequences.
   EXPECT_TRUE(HashTree.find({1, 2, 3}));
-  EXPECT_EQ(HashTree.find({1, 2, 3}).value(), 3);
+  EXPECT_EQ(HashTree.find({1, 2, 3}).value(), 3u);
   EXPECT_FALSE(HashTree.find({1, 2}));
 }
 
