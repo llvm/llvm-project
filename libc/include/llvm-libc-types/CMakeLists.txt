@@ -102,7 +102,7 @@ add_header(
   DEPENDS
     .__dl_iterate_phdr_callback_t
     .size_t
-    libc.include.llvm-libc-macros.link-macros
+    libc.include.llvm-libc-macros.link_macros
 )
 
 add_header(speed_t HDR speed_t.h)
