@@ -196,7 +196,7 @@ std::vector<T> get_roots(unsigned n) {
             T(5.3874808900112)};
 
   default:
-    throw "Roots of Hermite polynomial of order " + std::to_string(n) + " not implemented!\n";
+    assert(0);
   }
 }
 
