@@ -175,8 +175,6 @@ SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM) {
   return SM.getExpansionLoc(L);
 }
 
-// Expects Loc to be a SpellingLocation, will bail out otherwise as it can't
-// figure out a filename.
 std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
                                      llvm::StringRef TUPath) {
   const auto &SM = AST.getSourceManager();

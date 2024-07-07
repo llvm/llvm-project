@@ -374,8 +374,7 @@ maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   return Params;
 }
 
-class TypeInlayHintLabelPartBuilder
-    : public TypeVisitor<TypeInlayHintLabelPartBuilder> {
+class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   QualType CurrentType;
   NestedNameSpecifier *CurrentNestedNameSpecifier;
   ASTContext &Context;
@@ -385,10 +384,10 @@ class TypeInlayHintLabelPartBuilder
   std::vector<InlayHintLabelPart> &LabelChunks;
 
   struct CurrentTypeRAII {
-    TypeInlayHintLabelPartBuilder &Builder;
+    TypeHintBuilder &Builder;
     QualType PreviousType;
     NestedNameSpecifier *PreviousNestedNameSpecifier;
-    CurrentTypeRAII(TypeInlayHintLabelPartBuilder &Builder, QualType New,
+    CurrentTypeRAII(TypeHintBuilder &Builder, QualType New,
                     NestedNameSpecifier *NNS = nullptr)
         : Builder(Builder), PreviousType(Builder.CurrentType),
           PreviousNestedNameSpecifier(Builder.CurrentNestedNameSpecifier) {
@@ -522,11 +521,9 @@ class TypeInlayHintLabelPartBuilder
   }
 
 public:
-  TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
-                                StringRef MainFilePath,
-                                const PrintingPolicy &PP,
-                                llvm::StringRef Prefix,
-                                std::vector<InlayHintLabelPart> &LabelChunks)
+  TypeHintBuilder(QualType Current, ASTContext &Context, StringRef MainFilePath,
+                  const PrintingPolicy &PP, llvm::StringRef Prefix,
+                  std::vector<InlayHintLabelPart> &LabelChunks)
       : CurrentType(Current), CurrentNestedNameSpecifier(nullptr),
         Context(Context), MainFilePath(MainFilePath), PP(PP),
         SM(Context.getSourceManager()), LabelChunks(LabelChunks) {
@@ -578,7 +575,8 @@ public:
         llvm::raw_string_ostream OS(Label);
         NNS->print(OS, PP);
         addLabel(std::move(Label));
-      } break;
+        break;
+      }
       case NestedNameSpecifier::TypeSpec:
       case NestedNameSpecifier::TypeSpecWithTemplate:
         CurrentTypeRAII Guard(
@@ -653,7 +651,7 @@ public:
   }
 };
 
-unsigned lengthOfInlayHintLabelPart(llvm::ArrayRef<InlayHintLabelPart> Labels) {
+unsigned lengthOfInlayHintLabel(llvm::ArrayRef<InlayHintLabelPart> Labels) {
   unsigned Size = 0;
   for (auto &P : Labels)
     Size += P.value.size();
@@ -1286,12 +1284,6 @@ private:
       return;
     bool PadLeft = Prefix.consume_front(" ");
     bool PadRight = Suffix.consume_back(" ");
-    if (Prefix.empty() && Suffix.empty()) {
-      Results.push_back(InlayHint{LSPPos,
-                                  /*label=*/Labels, Kind, PadLeft, PadRight,
-                                  LSPRange});
-      return;
-    }
     if (!Prefix.empty()) {
       if (auto &Label = Labels.front(); !Label.location)
         Label.value = Prefix.str() + Label.value;
@@ -1333,15 +1325,15 @@ private:
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
     std::vector<InlayHintLabelPart> Chunks;
-    TypeInlayHintLabelPartBuilder Builder(Desugared, AST, MainFilePath,
-                                          TypeHintPolicy, Prefix, Chunks);
+    TypeHintBuilder Builder(Desugared, AST, MainFilePath, TypeHintPolicy,
+                            Prefix, Chunks);
     Builder.Visit(Desugared.getTypePtr());
     if (T != Desugared && !shouldPrintTypeHint(Chunks)) {
       // If the desugared type is too long to display, fallback to the sugared
       // type.
       Chunks.clear();
-      TypeInlayHintLabelPartBuilder Builder(T, AST, MainFilePath,
-                                            TypeHintPolicy, Prefix, Chunks);
+      TypeHintBuilder Builder(T, AST, MainFilePath, TypeHintPolicy, Prefix,
+                              Chunks);
       Builder.Visit(T.getTypePtr());
     }
     if (shouldPrintTypeHint(Chunks))
@@ -1359,8 +1351,7 @@ private:
   bool shouldPrintTypeHint(
       llvm::ArrayRef<InlayHintLabelPart> TypeLabels) const noexcept {
     return Cfg.InlayHints.TypeNameLimit == 0 ||
-           lengthOfInlayHintLabelPart(TypeLabels) <
-               Cfg.InlayHints.TypeNameLimit;
+           lengthOfInlayHintLabel(TypeLabels) < Cfg.InlayHints.TypeNameLimit;
   }
 
   void addBlockEndHint(SourceRange BraceRange, StringRef DeclPrefix,
