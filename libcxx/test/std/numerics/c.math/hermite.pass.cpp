@@ -7,6 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// <cmath>
+
+// Tests std::hermite and its related functions:
+//    double      hermite( unsigned n, double      x);
+//    float       hermite( unsigned n, float       x);
+//    long double hermite( unsigned n, long double x);
+//    float       hermitef(unsigned n, float       x);
+//    long double hermitel(unsigned n, long double x);
+//    template <class Integer>
+//    double      hermite( unsigned n, Integer     x);
 
 #include <cassert>
 #include <cmath>
