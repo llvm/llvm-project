@@ -173,7 +173,7 @@ static bool load64BitDebugHelp(void) {
   if (hLib) {
     fMiniDumpWriteDump = (fpMiniDumpWriteDump)(void *)::GetProcAddress(
         hLib, "MiniDumpWriteDump");
-    fStackWalk64 = (fpStackWalk64)::GetProcAddress(hLib, "StackWalk64");
+    fStackWalk64 = (fpStackWalk64)(void *)::GetProcAddress(hLib, "StackWalk64");
     fSymGetModuleBase64 = (fpSymGetModuleBase64)(void *)::GetProcAddress(
         hLib, "SymGetModuleBase64");
     fSymGetSymFromAddr64 = (fpSymGetSymFromAddr64)(void *)::GetProcAddress(
