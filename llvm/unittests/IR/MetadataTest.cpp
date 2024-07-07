@@ -3946,6 +3946,7 @@ TEST_F(DIExpressionTest, extractLeadingOffset) {
   EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_extract_bits_sext, 4, 4));
   EXPECT_EQ(Remaining, OPS(DW_OP_LLVM_extract_bits_sext, 4, 4));
 #undef EXTRACT_FROM
+#undef OPS
 }
 
 TEST_F(DIExpressionTest, convertToUndefExpression) {
