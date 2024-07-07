@@ -9,7 +9,7 @@
 // <experimental/cmath>
 
 #include <cassert>
-#include <experimental/math>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -20,14 +20,12 @@
 // UNSUPPORTED: c++03, c++11, c++14
 
 namespace {
-namespace ex = std::experimental;
-
 template <class T>
 void testHermiteNaNPropagation() {
   const unsigned MaxN = 127;
   const T x           = std::numeric_limits<T>::quiet_NaN();
   for (unsigned n = 0; n <= MaxN; ++n) {
-    assert(std::isnan(ex::hermite(n, x)));
+    assert(std::isnan(std::hermite(n, x)));
   }
 }
 
@@ -36,7 +34,7 @@ void testHermiteNotNaN(const T x) {
   assert(!std::isnan(x));
   const unsigned MaxN = 127;
   for (unsigned n = 0; n <= MaxN; ++n) {
-    assert(!std::isnan(ex::hermite(n, x)));
+    assert(!std::isnan(std::hermite(n, x)));
   }
 }
 
@@ -61,12 +59,12 @@ void testHermiteAnalytic(const T x, const T AbsTolerance, const T RelTolerance) 
   const auto h4 = [](T y) { return (T(16) * y * y * y * y - T(48) * y * y + T(12)); };
   const auto h5 = [](T y) { return y * (T(32) * y * y * y * y - T(160) * y * y + T(120)); };
 
-  assert(compareFloatingPoint(ex::hermite(0, x), h0(x)));
-  assert(compareFloatingPoint(ex::hermite(1, x), h1(x)));
-  assert(compareFloatingPoint(ex::hermite(2, x), h2(x)));
-  assert(compareFloatingPoint(ex::hermite(3, x), h3(x)));
-  assert(compareFloatingPoint(ex::hermite(4, x), h4(x)));
-  assert(compareFloatingPoint(ex::hermite(5, x), h5(x)));
+  assert(compareFloatingPoint(std::hermite(0, x), h0(x)));
+  assert(compareFloatingPoint(std::hermite(1, x), h1(x)));
+  assert(compareFloatingPoint(std::hermite(2, x), h2(x)));
+  assert(compareFloatingPoint(std::hermite(3, x), h3(x)));
+  assert(compareFloatingPoint(std::hermite(4, x), h4(x)));
+  assert(compareFloatingPoint(std::hermite(5, x), h5(x)));
 }
 
 /// \details This method checks if the following recurrence relation holds:
@@ -77,8 +75,8 @@ template <class T>
 void testRecurrenceRelation(T x, T AbsTolerance, T RelTolerance) {
   const unsigned MaxN = 127;
   for (unsigned n = 1; n < MaxN; ++n) {
-    const T HermiteNext           = ex::hermite(n + 1, x);
-    const T HermiteNextRecurrence = T(2) * (x * ex::hermite(n, x) - T(n) * ex::hermite(n - 1, x));
+    const T HermiteNext           = std::hermite(n + 1, x);
+    const T HermiteNextRecurrence = T(2) * (x * std::hermite(n, x) - T(n) * std::hermite(n - 1, x));
     const T Tolerance             = AbsTolerance + std::abs(HermiteNext) * RelTolerance;
     const T Error                 = std::abs(HermiteNextRecurrence - HermiteNext);
 
@@ -234,8 +232,8 @@ void testHermiteRoots(T Tolerance) {
     for (T x : Roots) {
       // the roots are symmetric: if x is a root, so is -x
       if (x > T(0))
-        assert(std::signbit(ex::hermite(n, -x + Tolerance)) != std::signbit(ex::hermite(n, -x - Tolerance)));
-      assert(std::signbit(ex::hermite(n, x + Tolerance)) != std::signbit(ex::hermite(n, x - Tolerance)));
+        assert(std::signbit(std::hermite(n, -x + Tolerance)) != std::signbit(std::hermite(n, -x - Tolerance)));
+      assert(std::signbit(std::hermite(n, x + Tolerance)) != std::signbit(std::hermite(n, x - Tolerance)));
     }
   }
 }
@@ -256,7 +254,7 @@ void testHermiteByInteger() {
   const unsigned nMax = 128;
   for (unsigned n = 0; n < nMax; ++n)
     for (Integer x : {-1, 0, 1})
-      assert(ex::hermite(n, x) == ex::hermite(n, static_cast<double>(x)));
+      assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
 }
 
 void testHermiteF() {
@@ -265,7 +263,7 @@ void testHermiteF() {
 
   for (unsigned n = 0; n < nMax; ++n)
     for (float x : samples)
-      assert(ex::hermite(n, x) == ex::hermitef(n, x));
+      assert(std::hermite(n, x) == std::hermitef(n, x));
 }
 
 void testHermiteL() {
@@ -274,7 +272,7 @@ void testHermiteL() {
 
   for (unsigned n = 0; n < nMax; ++n)
     for (long double x : samples)
-      assert(ex::hermite(n, x) == ex::hermitel(n, x));
+      assert(std::hermite(n, x) == std::hermitel(n, x));
 }
 } // namespace
 
