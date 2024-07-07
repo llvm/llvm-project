@@ -6,11 +6,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file contains the internal implementations of std::hermite.
-///
-//===----------------------------------------------------------------------===//
 
 #ifndef _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
 #define _LIBCPP_EXPERIMENTAL___MATH_HERMITE_H
