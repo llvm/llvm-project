@@ -3599,6 +3599,21 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
   if (auto *U = dyn_cast<Operator>(V)) {
     switch (Operator::getOpcode(V)) {
     default: break;
+
+    case Intruction::BIT_CAST: {
+      Value *Src = U->getOperand(0);
+      unsigned NumSrcEltBits = Src->getType()->getScalarSizeInBits();
+      if ((NumSrcEltBits % TyBits) != 0)
+        break;
+
+      // fast handling
+      unsigned NumSrcSignBits = ComputeNumSignBits(Src, Depth + 1, Q);
+      if (NumSrcEltBits == NumSrcSignBits)
+        return TyBits;
+
+      break;
+    }
+
     case Instruction::SExt:
       Tmp = TyBits - U->getOperand(0)->getType()->getScalarSizeInBits();
       return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q) + Tmp;
