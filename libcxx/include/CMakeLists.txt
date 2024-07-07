@@ -919,6 +919,9 @@ set(files
   execution
   expected
   experimental/__config
+  experimental/__math/hermite.h
+  experimental/__math/laguerre.h
+  experimental/__math/legendre.h
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h
@@ -929,6 +932,7 @@ set(files
   experimental/__simd/utility.h
   experimental/__simd/vec_ext.h
   experimental/iterator
+  experimental/math
   experimental/memory
   experimental/propagate_const
   experimental/simd
