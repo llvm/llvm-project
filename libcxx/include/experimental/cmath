@@ -1,0 +1,103 @@
+// -*- C++ -*-
+//===---------------------------- cmath ----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_EXPERIMENTAL_CMATH
+#define _LIBCPP_EXPERIMENTAL_CMATH
+
+// The following macro name shall be conditionally defined by the implementation
+// to indicate conformance to the International Standard ISO/IEC JTC 1/SC 22/WG 21 N3060
+//#define __STDCPP_MATH_SPEC_FUNCS__ 201003L
+
+#include <experimental/__config>
+#include <cmath>
+
+#if _LIBCPP_STD_VER > 14
+
+#include <experimental/__hermite>
+#include <experimental/__laguerre>
+#include <experimental/__legendre>
+
+_LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
+
+inline _LIBCPP_INLINE_VISIBILITY double assoc_laguerre(unsigned __lcpp_n, unsigned __lcpp_m, double __lcpp_x)
+{
+    return __libcpp_assoc_laguerre<double>(__lcpp_n , __lcpp_m, __lcpp_x);
+}
+inline _LIBCPP_INLINE_VISIBILITY float assoc_laguerref(unsigned __lcpp_n, unsigned __lcpp_m, float __lcpp_x)
+{
+    return static_cast<float>(__libcpp_assoc_laguerre<double>(__lcpp_n , __lcpp_m, static_cast<double>(__lcpp_x)));
+}
+inline _LIBCPP_INLINE_VISIBILITY long double assoc_laguerrel(unsigned __lcpp_n, unsigned __lcpp_m, long double __lcpp_x)
+{
+    return __libcpp_assoc_laguerre<long double>(__lcpp_n , __lcpp_m, __lcpp_x);
+}
+
+
+inline _LIBCPP_INLINE_VISIBILITY double assoc_legendre(unsigned __lcpp_n, unsigned __lcpp_m, double __lcpp_x)
+{
+    return __libcpp_assoc_legendre<double>(__lcpp_n , __lcpp_m, __lcpp_x);
+}
+inline _LIBCPP_INLINE_VISIBILITY float assoc_legendref(unsigned __lcpp_n, unsigned __lcpp_m, float __lcpp_x)
+{
+    // use double internally -- float is too prone to overflow!
+    return static_cast<float>(__libcpp_assoc_legendre<double>(__lcpp_n , __lcpp_m, static_cast<double>(__lcpp_x)));
+}
+inline _LIBCPP_INLINE_VISIBILITY long double assoc_legendrel(unsigned __lcpp_n, unsigned __lcpp_m, long double __lcpp_x)
+{
+    return __libcpp_assoc_legendre<long double>(__lcpp_n , __lcpp_m, __lcpp_x);
+}
+
+
+inline _LIBCPP_INLINE_VISIBILITY double laguerre(unsigned __lcpp_n, double __lcpp_x)
+{
+    return __libcpp_laguerre<double>(__lcpp_n ,__lcpp_x);
+}
+inline _LIBCPP_INLINE_VISIBILITY float laguerref(unsigned __lcpp_n, float __lcpp_x)
+{
+    return static_cast<float>(__libcpp_laguerre<double>(__lcpp_n, static_cast<double>(__lcpp_x)));
+}
+inline _LIBCPP_INLINE_VISIBILITY long double laguerrel(unsigned __lcpp_n, long double __lcpp_x)
+{
+    return __libcpp_laguerre<long double>(__lcpp_n ,__lcpp_x);
+}
+
+
+inline _LIBCPP_INLINE_VISIBILITY double legendre(unsigned __lcpp_n, double __lcpp_x)
+{
+    return __libcpp_legendre<double>(__lcpp_n ,__lcpp_x);
+}
+inline _LIBCPP_INLINE_VISIBILITY float legendref(unsigned __lcpp_n, float __lcpp_x)
+{
+    return static_cast<float>(__libcpp_legendre<double>(__lcpp_n, static_cast<double>(__lcpp_x)));
+}
+inline _LIBCPP_INLINE_VISIBILITY long double legendrel(unsigned __lcpp_n, long double __lcpp_x)
+{
+    return __libcpp_legendre<long double>(__lcpp_n ,__lcpp_x);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY double hermite(unsigned __lcpp_n, double __lcpp_x)
+{
+    return __libcpp_hermite<double>(__lcpp_n ,__lcpp_x);
+}
+inline _LIBCPP_INLINE_VISIBILITY float hermitef(unsigned __lcpp_n, float __lcpp_x)
+{
+    // use double internally -- float is too prone to overflow!
+    return static_cast<float>(__libcpp_hermite(__lcpp_n , static_cast<double>(__lcpp_x)));
+}
+inline _LIBCPP_INLINE_VISIBILITY long double hermitel(unsigned __lcpp_n, long double __lcpp_x)
+{
+    return __libcpp_hermite<long double>(__lcpp_n ,__lcpp_x);
+}
+
+
+_LIBCPP_END_NAMESPACE_EXPERIMENTAL
+
+#endif // _LIBCPP_STD_VER > 14
+
+#endif // _LIBCPP_EXPERIMENTAL_CMATH

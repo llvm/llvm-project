@@ -1,0 +1,71 @@
+//===------------------------ __laguerre ------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the internal implementations of std::laguerre
+/// and std::assoc_laguerre.
+///
+//===----------------------------------------------------------------------===//
+
+
+#ifndef _LIBCPP_EXPERIMENTAL___LAGUERRE
+#define _LIBCPP_EXPERIMENTAL___LAGUERRE
+
+#include <experimental/__config>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+
+/// \return the generalized laguerre polynomial \f$ L_{n}^{(\alpha)}(x) \f$
+/// \note The implementation is based on the recurrence formula
+/// \f[
+/// nL_{n}^{(\alpha)}(x) = (-x + 2n + \alpha - 1) L_{n-1}^{(\alpha)}(x) -
+/// (n + \alpha - 1) L_{n-2}^{(\alpha)}(x)
+/// \f]
+/// Press, William H., et al. Numerical recipes 3rd edition: The art of
+/// scientific computing. Cambridge university press, 2007, p. 182.
+template <class _Real>
+_Real __libcpp_generalized_laguerre_recurrence(unsigned __n, _Real __alpha,
+                                               _Real __x) {
+  if (__n == 0u)
+    return _Real(1);
+
+  _Real __delta = __alpha - __x;
+  _Real __li = _Real(1) + __delta;
+  const _Real __alpham1 = __alpha - _Real(1);
+  for (unsigned __i = 2; __i <= __n; ++__i) {
+    __delta = (__delta * (_Real(__i) + __alpham1) - __x * __li) / _Real(__i);
+    __li += __delta;
+  }
+  return __li;
+}
+
+template <class _Real>
+_Real __libcpp_assoc_laguerre(unsigned __n, unsigned __m, _Real __x) {
+  if (std::isnan(__x))
+    return std::numeric_limits<_Real>::quiet_NaN();
+
+  if (__x < _Real(0))
+    _VSTD::__throw_domain_error(
+        "Argument of assoc_laguerre function is out of range");
+
+  return __libcpp_generalized_laguerre_recurrence(__n, _Real(__m), __x);
+}
+
+template <class _Real> _Real __libcpp_laguerre(unsigned __n, _Real __x) {
+  if (std::isnan(__x))
+    return std::numeric_limits<_Real>::quiet_NaN();
+
+  if (__x < _Real(0))
+    _VSTD::__throw_domain_error(
+        "Argument of laguerre function is out of range");
+
+  return __libcpp_generalized_laguerre_recurrence(__n, _Real(0), __x);
+}
+
+#endif // _LIBCPP_EXPERIMENTAL___LAGUERRE
