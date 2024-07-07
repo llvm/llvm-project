@@ -287,6 +287,27 @@ void test() {
       }
     }
   }
+
+  { // check input infinity is handled correctly
+    Real inf = std::numeric_limits<Real>::infinity();
+    for (unsigned n = 1; n < MAX_N; ++n) {
+      assert(std::hermite(n, +inf) == inf);
+      assert(std::hermite(n, -inf) == ((n & 1) ? -inf : inf));
+    }
+  }
+
+  { // check: if overflow occurs that it is mapped to the correct infinity
+    Real inf = std::numeric_limits<Real>::infinity();
+    for (unsigned n = 0; n < MAX_N; ++n) {
+      // Q: why x=140?
+      // A: H_127(140) overflows even 8-byte double
+      if (Real y = std::hermite(n, Real{140}); !std::isfinite(y))
+        assert(y == inf);
+
+      if (Real y = std::hermite(n, Real{-140}); !std::isfinite(y))
+        assert(y == ((n & 1) ? -inf : inf));
+    }
+  }
 }
 
 struct TestFloat {
