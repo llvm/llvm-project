@@ -17,6 +17,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/raw_ostream.h"
@@ -53,6 +54,18 @@ template <>
 void SSAContext::appendBlockTerms(SmallVectorImpl<const Instruction *> &terms,
                                   const BasicBlock &block) {
   terms.push_back(block.getTerminator());
+}
+
+template <>
+void SSAContext::appendConvergenceTokenUses(std::vector<BasicBlock *> &Worklist,
+                                            BasicBlock &BB) {
+  for (Instruction &I : BB) {
+    if (!isa<ConvergenceControlInst>(I))
+      continue;
+    for (User *U : I.users()) {
+      Worklist.push_back(cast<Instruction>(U)->getParent());
+    }
+  }
 }
 
 template <>
