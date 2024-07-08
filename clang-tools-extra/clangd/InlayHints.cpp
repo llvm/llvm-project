@@ -441,10 +441,8 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     switch (TA.getKind()) {
     case TemplateArgument::Pack:
       return printTemplateArgumentList(TA.pack_elements());
-    case TemplateArgument::Type: {
-      CurrentTypeRAII Guard(*this, TA.getAsType());
-      return Visit(TA.getAsType().getTypePtr());
-    }
+    case TemplateArgument::Type:
+      return VisitQualType(TA.getAsType());
     // TODO: Add support for NTTP arguments.
     case TemplateArgument::Expression:
     case TemplateArgument::StructuralValue:
@@ -568,17 +566,28 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   }
 
 public:
-  TypeHintBuilder(QualType Current, ASTContext &Context, StringRef MainFilePath,
+  TypeHintBuilder(ASTContext &Context, StringRef MainFilePath,
                   const PrintingPolicy &PP, llvm::StringRef Prefix)
-      : CurrentType(Current), CurrentNestedNameSpecifier(nullptr),
-        Context(Context), MainFilePath(MainFilePath), PP(PP),
-        SM(Context.getSourceManager()) {
+      : CurrentNestedNameSpecifier(nullptr), Context(Context),
+        MainFilePath(MainFilePath), PP(PP), SM(Context.getSourceManager()) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
   }
 
   void VisitType(const Type *) { addLabel(CurrentType.getAsString(PP)); }
+
+  void VisitQualType(QualType Q, NestedNameSpecifier *NNS = nullptr) {
+    QualType PreviousType = CurrentType;
+    NestedNameSpecifier *PreviousNNS = CurrentNestedNameSpecifier;
+    CurrentType = Q;
+    CurrentNestedNameSpecifier = NNS;
+
+    TypeVisitor::Visit(Q.getTypePtr());
+
+    CurrentType = PreviousType;
+    CurrentNestedNameSpecifier = PreviousNNS;
+  }
 
   void VisitTagType(const TagType *TT) {
     // Note that we have cases where the type of a template specialization is
@@ -620,10 +629,9 @@ public:
 
   void VisitAutoType(const AutoType *AT) {
     if (!AT->isDeduced() || AT->getDeducedType()->isDecltypeType())
-      return;
+      return VisitType(AT);
     maybeAddQualifiers();
-    CurrentTypeRAII Guard(*this, AT->getDeducedType());
-    return Visit(AT->getDeducedType().getTypePtr());
+    return VisitQualType(AT->getDeducedType());
   }
 
   void VisitElaboratedType(const ElaboratedType *ET) {
@@ -647,26 +655,19 @@ public:
       case NestedNameSpecifier::TypeSpecWithTemplate:
         if (PP.SuppressScope)
           break;
-        CurrentTypeRAII Guard(
-            *this,
-            QualType(
-                NNS->getAsType(),
-                /*Quals=*/0) // Do we need cv-qualifiers on type specifiers?
-        );
-        Visit(NNS->getAsType());
+        // Do we need cv-qualifiers on type specifiers?
+        VisitQualType(QualType(NNS->getAsType(), /*Quals=*/0));
         addLabel("::");
         break;
       }
     }
-    CurrentTypeRAII Guard(*this, ET->getNamedType(), ET->getQualifier());
-    return Visit(ET->getNamedType().getTypePtr());
+    return VisitQualType(ET->getNamedType(), ET->getQualifier());
   }
 
   void VisitReferenceType(const ReferenceType *RT) {
     maybeAddQualifiers();
     QualType Next = skipTopLevelReferences(RT->getPointeeTypeAsWritten());
-    CurrentTypeRAII Guard(*this, Next);
-    Visit(Next.getTypePtr());
+    VisitQualType(Next);
     if (Next->getPointeeType().isNull())
       addLabel(" ");
     if (RT->isLValueReferenceType())
@@ -677,23 +678,16 @@ public:
 
   void VisitPointerType(const PointerType *PT) {
     QualType Next = PT->getPointeeType();
-    std::optional<CurrentTypeRAII> Guard(std::in_place, *this, Next);
-    Visit(Next.getTypePtr());
+    VisitQualType(Next);
     if (Next->getPointeeType().isNull())
       addLabel(" ");
     addLabel("*");
-    Guard.reset();
     maybeAddQualifiers();
   }
 
   void VisitUsingType(const UsingType *UT) {
     addLabel([&](llvm::raw_ostream &OS) { UT->getFoundDecl()->printName(OS); },
-             [&] {
-               BaseUsingDecl *Introducer = UT->getFoundDecl()->getIntroducer();
-               if (auto *UD = dyn_cast<UsingDecl>(Introducer))
-                 return nameLocation(UD, SM);
-               return nameLocation(Introducer, SM);
-             }());
+             nameLocation(UT->getFoundDecl()->getIntroducer(), SM));
   }
 
   void VisitTypedefType(const TypedefType *TT) {
@@ -719,8 +713,7 @@ public:
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
     maybeAddQualifiers();
-    CurrentTypeRAII Guard(*this, ST->getReplacementType());
-    return Visit(ST->getReplacementType().getTypePtr());
+    return VisitQualType(ST->getReplacementType());
   }
 
   std::vector<InlayHintLabelPart> take() { return std::move(LabelChunks); }
@@ -1394,8 +1387,8 @@ private:
 
   std::vector<InlayHintLabelPart> buildTypeHint(QualType T,
                                                 llvm::StringRef Prefix) {
-    TypeHintBuilder Builder(T, AST, MainFilePath, TypeHintPolicy, Prefix);
-    Builder.Visit(T.getTypePtr());
+    TypeHintBuilder Builder(AST, MainFilePath, TypeHintPolicy, Prefix);
+    Builder.VisitQualType(T);
     return Builder.take();
   }
 
