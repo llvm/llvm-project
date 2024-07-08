@@ -93,6 +93,9 @@ private:
     ProfiledFunctions.emplace(&BF);
   }
 
+  /// Matches functions with similarly named profiled functions.
+  uint64_t matchWithNameSimilarity(BinaryContext &BC);
+
   /// Check if the profile uses an event with a given \p Name.
   bool usesEvent(StringRef Name) const;
 };

@@ -1342,51 +1342,6 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
   return MD;
 }
 
-static bool getValueProfDataFromInstImpl(const MDNode *const MD,
-                                         const uint32_t MaxNumDataWant,
-                                         InstrProfValueData ValueData[],
-                                         uint32_t &ActualNumValueData,
-                                         uint64_t &TotalC, bool GetNoICPValue) {
-  const unsigned NOps = MD->getNumOperands();
-  // Get total count
-  ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
-  if (!TotalCInt)
-    return false;
-  TotalC = TotalCInt->getZExtValue();
-  ActualNumValueData = 0;
-
-  for (unsigned I = 3; I < NOps; I += 2) {
-    if (ActualNumValueData >= MaxNumDataWant)
-      break;
-    ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
-    ConstantInt *Count =
-        mdconst::dyn_extract<ConstantInt>(MD->getOperand(I + 1));
-    if (!Value || !Count)
-      return false;
-    uint64_t CntValue = Count->getZExtValue();
-    if (!GetNoICPValue && (CntValue == NOMORE_ICP_MAGICNUM))
-      continue;
-    ValueData[ActualNumValueData].Value = Value->getZExtValue();
-    ValueData[ActualNumValueData].Count = CntValue;
-    ActualNumValueData++;
-  }
-  return true;
-}
-
-std::unique_ptr<InstrProfValueData[]>
-getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
-                         uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
-                         uint64_t &TotalC, bool GetNoICPValue) {
-  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
-  if (!MD)
-    return nullptr;
-  auto ValueDataArray = std::make_unique<InstrProfValueData[]>(MaxNumValueData);
-  if (!getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueDataArray.get(),
-                                    ActualNumValueData, TotalC, GetNoICPValue))
-    return nullptr;
-  return ValueDataArray;
-}
-
 SmallVector<InstrProfValueData, 4>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint64_t &TotalC,

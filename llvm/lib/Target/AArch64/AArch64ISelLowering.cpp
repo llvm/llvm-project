@@ -9972,6 +9972,26 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   Val = DAG.getBitcast(VT8Bit, Val);
   Val = DAG.getNode(ISD::CTPOP, DL, VT8Bit, Val);
 
+  if (Subtarget->hasDotProd() && VT.getScalarSizeInBits() != 16 &&
+      VT.getVectorNumElements() >= 2) {
+    EVT DT = VT == MVT::v2i64 ? MVT::v4i32 : VT;
+    SDValue Zeros = DAG.getConstant(0, DL, DT);
+    SDValue Ones = DAG.getConstant(1, DL, VT8Bit);
+
+    if (VT == MVT::v2i64) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+      Val = DAG.getNode(AArch64ISD::UADDLP, DL, VT, Val);
+    } else if (VT == MVT::v2i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else if (VT == MVT::v4i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else {
+      llvm_unreachable("Unexpected type for custom ctpop lowering");
+    }
+
+    return Val;
+  }
+
   // Widen v8i8/v16i8 CTPOP result to VT by repeatedly widening pairwise adds.
   unsigned EltSize = 8;
   unsigned NumElts = VT.is64BitVector() ? 8 : 16;

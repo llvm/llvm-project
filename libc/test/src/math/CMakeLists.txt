@@ -45,6 +45,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpif_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinpif_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinpif
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   sin_test
   NEED_MPFR
   SUITE
@@ -1808,6 +1824,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmul_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fmul_test.cpp
+  HDRS
+    FMulTest.h
+  DEPENDS
+    libc.src.math.fmul
+)
+add_fp_unittest(
   asinhf_test
   NEED_MPFR
   SUITE
@@ -1966,6 +1994,84 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.atan2f
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  f16add_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16add_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.f16add
+)
+
+add_fp_unittest(
+  f16addf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16addf_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.f16addf
+)
+
+add_fp_unittest(
+  f16addl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16addl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.f16addl
+)
+
+add_fp_unittest(
+  f16sub_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16sub_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.f16sub
+)
+
+add_fp_unittest(
+  f16subf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16subf_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.f16subf
+)
+
+add_fp_unittest(
+  f16subl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16subl_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.f16subl
 )
 
 add_fp_unittest(
