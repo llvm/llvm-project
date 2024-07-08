@@ -1962,37 +1962,45 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
   Value *Real, *Imag;
 
   if (CI->arg_size() == 1) {
+
+    if (!CI->isFast())
+      return nullptr;
+
     Value *Op = CI->getArgOperand(0);
     assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
+
     Real = B.CreateExtractValue(Op, 0, "real");
     Imag = B.CreateExtractValue(Op, 1, "imag");
 
   } else {
     assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
+
     Real = CI->getArgOperand(0);
     Imag = CI->getArgOperand(1);
-  }
 
-  // if real or imaginary part is zero, simplify to abs(cimag(z))
-  // or abs(creal(z))
-  if (ConstantFP *ConstReal = dyn_cast<ConstantFP>(Real)) {
-    if (ConstReal->isZeroValue()) {
+    // if real or imaginary part is zero, simplify to abs(cimag(z))
+    // or abs(creal(z))
+    Value *AbsOp = nullptr;
+    if (ConstantFP *ConstReal = dyn_cast<ConstantFP>(Real)) {
+      if (ConstReal->isZero())
+        AbsOp = Imag;
+
+    } else if (ConstantFP *ConstImag = dyn_cast<ConstantFP>(Imag)) {
+      if (ConstImag->isZero())
+        AbsOp = Real;
+    }
+
+    if (AbsOp) {
       IRBuilderBase::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
-      return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, Imag, nullptr, "cabs"));
-    }
-  } else if (ConstantFP *ConstReal = dyn_cast<ConstantFP>(Imag)) {
-    if (ConstReal->isZeroValue()) {
-      IRBuilderBase::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-      return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, Real, nullptr, "cabs"));
-    }
-  }
 
-  if (!CI->isFast())
-    return nullptr;
+      return copyFlags(
+          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, nullptr, "cabs"));
+    }
+
+    if (!CI->isFast())
+      return nullptr;
+  }
 
   // Propagate fast-math flags from the existing call to new instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);

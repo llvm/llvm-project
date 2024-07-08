@@ -49,6 +49,15 @@ define double @fast_cabs_zero_real(double %imag) {
   ret double %call
 }
 
+define double @fast_cabs_neg_zero_real(double %imag) {
+; CHECK-LABEL: @fast_cabs_neg_zero_real(
+; CHECK-NEXT:    [[CABS:%.*]] = tail call double @llvm.fabs.f64(double [[IMAG:%.*]])
+; CHECK-NEXT:    ret double [[CABS]]
+;
+  %call = tail call double @cabs(double -0.0, double %imag)
+  ret double %call
+}
+
 define double @fast_cabs_zero_imag(double %real) {
 ; CHECK-LABEL: @fast_cabs_zero_imag(
 ; CHECK-NEXT:    [[CABS:%.*]] = tail call double @llvm.fabs.f64(double [[REAL:%.*]])
@@ -79,9 +88,18 @@ define float @fast_cabsf_zero_real(float %imag) {
   ret float %call
 }
 
+define float @fast_cabsf_neg_zero_real(float %imag) {
+; CHECK-LABEL: @fast_cabsf_neg_zero_real(
+; CHECK-NEXT:    [[CABS:%.*]] = tail call float @llvm.fabs.f32(float [[IMAG:%.*]])
+; CHECK-NEXT:    ret float [[CABS]]
+;
+  %call = tail call float @cabsf(float -0.0, float %imag)
+  ret float %call
+}
+
 define float @fast_cabsf_zero_imag(float %real) {
 ; CHECK-LABEL: @fast_cabsf_zero_imag(
-; CHECK-NEXT:    [[CABS:%.*]] = tail call float @llvm.fabs.f64(float [[REAL:%.*]])
+; CHECK-NEXT:    [[CABS:%.*]] = tail call float @llvm.fabs.f32(float [[REAL:%.*]])
 ; CHECK-NEXT:    ret float [[CABS]]
 ;
   %call = tail call float @cabsf(float %real, float 0.0)
@@ -102,10 +120,10 @@ define fp128 @fast_cabsl(fp128 %real, fp128 %imag) {
 
 define fp128 @fast_cabsl_zero_real(fp128 %imag) {
 ; CHECK-LABEL: @fast_cabsl_zero_real(
-; CHECK-NEXT:    [[CABS:%.*]] = tail call fp128 @llvm.fabsl.f128(fp128 [[IMAG:%.*]])
+; CHECK-NEXT:    [[CABS:%.*]] = tail call fp128 @llvm.fabs.f128(fp128 [[IMAG:%.*]])
 ; CHECK-NEXT:    ret fp128 [[CABS]]
 ;
-  %call = tail call fp128 @cabsl(double 0.0, fp128 %imag)
+  %call = tail call fp128 @cabsl(fp128 0xL00000000000000000000000000000000, fp128 %imag)
   ret fp128 %call
 }
 
@@ -114,7 +132,16 @@ define fp128 @fast_cabsl_zero_imag(fp128 %real) {
 ; CHECK-NEXT:    [[CABS:%.*]] = tail call fp128 @llvm.fabs.f128(fp128 [[REAL:%.*]])
 ; CHECK-NEXT:    ret fp128 [[CABS]]
 ;
-  %call = tail call fp128 @cabsl(fp128 %real, fp128 0.0)
+  %call = tail call fp128 @cabsl(fp128 %real, fp128 0xL00000000000000000000000000000000)
+  ret fp128 %call
+}
+
+define fp128 @fast_cabsl_neg_zero_imag(fp128 %real) {
+; CHECK-LABEL: @fast_cabsl_neg_zero_imag(
+; CHECK-NEXT:    [[CABS:%.*]] = tail call fp128 @llvm.fabs.f128(fp128 [[REAL:%.*]])
+; CHECK-NEXT:    ret fp128 [[CABS]]
+;
+  %call = tail call fp128 @cabsl(fp128 %real, fp128 0xL80000000000000000000000000000000)
   ret fp128 %call
 }
 
