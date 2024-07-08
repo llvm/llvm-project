@@ -10,7 +10,7 @@ config.substitutions.append(('%{compile_flags}',
     '-I %{libcxx}/test/support -I %{libcxx}/src'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++ -lc++abi'
+    '-nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib} -- '
