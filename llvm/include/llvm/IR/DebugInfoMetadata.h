@@ -2982,6 +2982,16 @@ public:
   /// return true with an offset of zero.
   bool extractIfOffset(int64_t &Offset) const;
 
+  /// Assuming that the expression operates on an address, extract a constant
+  /// offset and the successive ops. Return false if the expression contains
+  /// any incompatible ops (including non-zero DW_OP_LLVM_args - only a single
+  /// address operand to the expression is permitted).
+  ///
+  /// We don't try very hard to interpret the expression because we assume that
+  /// foldConstantMath has canonicalized the expression.
+  bool extractLeadingOffset(int64_t &OffsetInBytes,
+                            SmallVectorImpl<uint64_t> &RemainingOps) const;
+
   /// Returns true iff this DIExpression contains at least one instance of
   /// `DW_OP_LLVM_arg, n` for all n in [0, N).
   bool hasAllLocationOps(unsigned N) const;
