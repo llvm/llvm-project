@@ -1161,6 +1161,8 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
     // Only support sub-object calculation.
     return nullptr;
 
+  E = E->IgnoreParenImpCasts();
+
   // BaseObj is the object we want the size of.
   ASTContext &Ctx = getContext();
   const Expr *BaseObj = BaseObjectVisitor(Ctx).Visit(E);
@@ -1174,7 +1176,7 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
            ? cast<ArraySubscriptExpr>(BaseObj)->getBase()
            : BaseObj)
           ->IgnoreParenImpCasts());
-  if (!ArrayBase || !ArrayBase->getType()->isArrayType())
+  if (!ArrayBase)
     return nullptr;
 
   // Check to see if the underlying object's base is a flexible array member.
