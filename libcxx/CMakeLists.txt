@@ -99,6 +99,14 @@ option(LIBCXX_ENABLE_WIDE_CHARACTERS
    support the C functionality for wide characters. When wide characters are
    not supported, several parts of the library will be disabled, notably the
    wide character specializations of std::basic_string." ON)
+option(LIBCXX_FORMAT_OPTIMIZE_SIZE
+  "Whether to optimize <format> for code size over performance. Optimizing
+   for size can be useful when porting to platforms that have limited memory
+   resources. When optimizing for size, libc++ may take codepaths that eliminate 
+   expensive lookup tables or allow the compiler to agressively remove unused 
+   functions and data. When optimizing for size, formatting and <charconv> may 
+   become significantly slower. Disabling localization, unicode and wide character
+   support can further minimize code size." OFF)
 
 # To use time zone support in libc++ the platform needs to have the IANA
 # database installed. Libc++ will fail to build if this is enabled on a
@@ -783,6 +791,7 @@ config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+config_define_if(LIBCXX_FORMAT_OPTIMIZE_SIZE _LIBCPP_FORMAT_OPTIMIZE_SIZE)
 
 # TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
