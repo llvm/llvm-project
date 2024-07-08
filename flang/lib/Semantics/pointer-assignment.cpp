@@ -148,6 +148,9 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
       msg->Attach(std::move(*whyNot));
     }
     return false;
+  } else if (evaluate::IsAssumedRank(lhs)) {
+    Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
+    return false;
   } else {
     return true;
   }

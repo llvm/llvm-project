@@ -37,36 +37,38 @@
 
 ; BOLT: .debug_ranges
 ; BOLT-NEXT: 00000000 <End of list>
-; BOLT-NEXT: 00000010 [[#%.16x,ADDR:]] [[#%.16x,ADDRB:]]
+; BOLT-NEXT: 00000010 [[#%.16x,ADDR1:]] [[#%.16x,ADDRB1:]]
+; BOLT-NEXT: 00000010 [[#%.16x,ADDR2:]] [[#%.16x,ADDRB2:]]
 ; BOLT-NEXT: 00000010 <End of list>
-; BOLT-NEXT: 00000030 [[#%.16x,ADDR1:]] [[#%.16x,ADDR1B:]]
-; BOLT-NEXT: 00000030 <End of list>
-; BOLT-NEXT: 00000050 [[#%.16x,ADDR2:]] [[#%.16x,ADDR2B:]]
-; BOLT-NEXT: 00000050 [[#%.16x,ADDR3:]] [[#%.16x,ADDR3B:]]
+; BOLT-NEXT: 00000040 <End of list>
+; BOLT-NEXT: 00000050 [[#%.16x,ADDR1:]] [[#%.16x,ADDRB1:]]
 ; BOLT-NEXT: 00000050 <End of list>
-; BOLT-NEXT: 00000080 [[#%.16x,ADDR4:]] [[#%.16x,ADDR4B:]]
-; BOLT-NEXT: 00000080 <End of list>
-; BOLT-NEXT: 000000a0 [[#%.16x,ADDR5:]] [[#%.16x,ADDR5B:]]
-; BOLT-NEXT: 000000a0 <End of list>
+; BOLT-NEXT: 00000070 [[#%.16x,ADDR2:]] [[#%.16x,ADDRB2:]]
+; BOLT-NEXT: 00000070 <End of list>
+; BOLT-NEXT: 00000090 [[#%.16x,ADDR3:]] [[#%.16x,ADDRB3:]]
+; BOLT-NEXT: 00000090 <End of list>
+; BOLT-NEXT: 000000b0 <End of list>
+; BOLT-NEXT: 000000c0 [[#%.16x,ADDR3:]] [[#%.16x,ADDRB3:]]
+; BOLT-NEXT: 000000c0 <End of list>
 
 ; BOLT: DW_TAG_compile_unit
 ; BOLT: DW_AT_GNU_dwo_name [DW_FORM_strp] ( .debug_str[0x00000016] = "main.dwo.dwo")
 ; BOLT-NEXT: DW_AT_GNU_dwo_id
 ; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
-; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000050
-; BOLT-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2B]])
-; BOLT-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3B]]))
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000010
+; BOLT-NEXT: [0x[[#ADDR1]], 0x[[#ADDRB1]])
+; BOLT-NEXT: [0x[[#ADDR2]], 0x[[#ADDRB2]]))
 ; BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000000)
-; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x00000010)
+; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x00000040)
 ; BOLT-NEXT: Compile
 ; BOLT: DW_TAG_compile_unit
 ; BOLT: DW_AT_GNU_dwo_name [DW_FORM_strp] ( .debug_str[0x00000023] = "helper.dwo.dwo")
 ; BOLT-NEXT: DW_AT_GNU_dwo_id
 ; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
-; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x000000a0
-; BOLT-NEXT: [0x[[#ADDR5]], 0x[[#ADDR5B]])
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000090
+; BOLT-NEXT: [0x[[#ADDR3]], 0x[[#ADDRB3]])
 ; BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000010)
-; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x00000080)
+; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x000000b0)
 
 ; PRE-BOLT-DWO-MAIN: version = 0x0004
 ; PRE-BOLT-DWO-MAIN: DW_TAG_compile_unit
@@ -113,13 +115,13 @@
 ; BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
 ; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x1)
 ; BOLT-DWO-MAIN: DW_TAG_subprogram [4]
-; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000000
+; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000010
 ; BOLT-DWO-MAIN-NEXT: )
 ; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
 ; BOLT-DWO-MAIN-NEXT: DW_AT_linkage_name [DW_FORM_GNU_str_index]	(indexed (00000003) string = "_Z3usePiS_")
 ; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000004) string = "use")
 ; BOLT-DWO-MAIN: DW_TAG_subprogram [6]
-; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000020
+; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000030
 ; BOLT-DWO-MAIN-NEXT: )
 ; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base [DW_FORM_exprloc]	(DW_OP_reg6 RBP)
 ; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000005) string = "main")
@@ -160,4 +162,4 @@
 ; BOLT-DWO-HELPER-NEXT: DW_AT_decl_line
 ; BOLT-DWO-HELPER-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x1)
 ; BOLT-DWO-HELPER: DW_TAG_subprogram [4]
-; BOLT-DWO-HELPER-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000000
+; BOLT-DWO-HELPER-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000010

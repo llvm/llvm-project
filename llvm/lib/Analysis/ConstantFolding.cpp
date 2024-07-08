@@ -644,7 +644,7 @@ Constant *llvm::ReadByteArrayFromGlobal(const GlobalVariable *GV,
   if (!GV->isConstant() || !GV->hasDefinitiveInitializer())
     return nullptr;
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   Constant *Init = const_cast<Constant *>(GV->getInitializer());
   TypeSize InitSize = DL.getTypeAllocSize(Init->getType());
   if (InitSize < Offset)
@@ -3485,15 +3485,15 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
   StringRef Name = F->getName();
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
     return ConstantFoldFixedVectorCall(
-        Name, IID, FVTy, Operands, F->getParent()->getDataLayout(), TLI, Call);
+        Name, IID, FVTy, Operands, F->getDataLayout(), TLI, Call);
 
   if (auto *SVTy = dyn_cast<ScalableVectorType>(Ty))
     return ConstantFoldScalableVectorCall(
-        Name, IID, SVTy, Operands, F->getParent()->getDataLayout(), TLI, Call);
+        Name, IID, SVTy, Operands, F->getDataLayout(), TLI, Call);
 
   if (auto *StTy = dyn_cast<StructType>(Ty))
     return ConstantFoldStructCall(Name, IID, StTy, Operands,
-                                  F->getParent()->getDataLayout(), TLI, Call);
+                                  F->getDataLayout(), TLI, Call);
 
   // TODO: If this is a library function, we already discovered that above,
   //       so we should pass the LibFunc, not the name (and it might be better

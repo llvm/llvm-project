@@ -4818,10 +4818,9 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
 
   // Check consistency of !prof branch_weights metadata.
   if (ProfName == "branch_weights") {
-    unsigned int Offset = getBranchWeightOffset(MD);
+    unsigned NumBranchWeights = getNumBranchWeights(*MD);
     if (isa<InvokeInst>(&I)) {
-      Check(MD->getNumOperands() == (1 + Offset) ||
-                MD->getNumOperands() == (2 + Offset),
+      Check(NumBranchWeights == 1 || NumBranchWeights == 2,
             "Wrong number of InvokeInst branch_weights operands", MD);
     } else {
       unsigned ExpectedNumOperands = 0;
@@ -4841,10 +4840,11 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);
 
-      Check(MD->getNumOperands() == Offset + ExpectedNumOperands,
-            "Wrong number of operands", MD);
+      Check(NumBranchWeights == ExpectedNumOperands, "Wrong number of operands",
+            MD);
     }
-    for (unsigned i = Offset; i < MD->getNumOperands(); ++i) {
+    for (unsigned i = getBranchWeightOffset(MD); i < MD->getNumOperands();
+         ++i) {
       auto &MDO = MD->getOperand(i);
       Check(MDO, "second operand should not be null", MD);
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
@@ -6141,6 +6141,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                 IdxN + ResultEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
             "vector_extract would overrun.");
     }
+    break;
+  }
+  case Intrinsic::experimental_vector_partial_reduce_add: {
+    VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
+    VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+
+    unsigned VecWidth = VecTy->getElementCount().getKnownMinValue();
+    unsigned AccWidth = AccTy->getElementCount().getKnownMinValue();
+
+    Check((VecWidth % AccWidth) == 0,
+          "Invalid vector widths for partial "
+          "reduction. The width of the input vector "
+          "must be a positive integer multiple of "
+          "the width of the accumulator vector.");
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {

@@ -30,6 +30,8 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
 * **"malloc" options**
     - ``LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE``: Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB).
+* **"math" options**
+    - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
 * **"printf" options**
     - ``LIBC_CONF_PRINTF_DISABLE_FIXED_POINT``: Disable printing fixed point values in printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_FLOAT``: Disable printing floating point values in printf and friends.

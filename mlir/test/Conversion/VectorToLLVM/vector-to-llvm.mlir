@@ -2621,3 +2621,14 @@ func.func @vector_from_elements_0d(%a: f32) -> vector<f32> {
   %0 = vector.from_elements %a : vector<f32>
   return %0 : vector<f32>
 }
+
+// -----
+
+// CHECK-LABEL: @vector_step_scalable
+// CHECK: %[[STEPVECTOR:.*]] = llvm.intr.experimental.stepvector : vector<[4]xi64>
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[STEPVECTOR]] : vector<[4]xi64> to vector<[4]xindex>
+// CHECK: return %[[CAST]] : vector<[4]xindex>
+func.func @vector_step_scalable() -> vector<[4]xindex> {
+  %0 = vector.step : vector<[4]xindex>
+  return %0 : vector<[4]xindex>
+}

@@ -160,7 +160,8 @@ template <typename T> struct FModDivisionInvMultHelper {
 template <typename T, typename U = typename FPBits<T>::StorageType,
           typename DivisionHelper = FModDivisionSimpleHelper<U>>
 class FMod {
-  static_assert(cpp::is_floating_point_v<T> && cpp::is_unsigned_v<U> &&
+  static_assert(cpp::is_floating_point_v<T> &&
+                    is_unsigned_integral_or_big_int_v<U> &&
                     (sizeof(U) * CHAR_BIT > FPBits<T>::FRACTION_LEN),
                 "FMod instantiated with invalid type.");
 

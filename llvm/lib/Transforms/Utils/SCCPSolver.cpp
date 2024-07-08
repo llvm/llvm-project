@@ -1295,24 +1295,16 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
       return (void)markConstant(&I, C);
   }
 
-  if (I.getDestTy()->isIntegerTy() && I.getSrcTy()->isIntOrIntVectorTy()) {
+  // Ignore bitcasts, as they may change the number of vector elements.
+  if (I.getDestTy()->isIntegerTy() && I.getSrcTy()->isIntOrIntVectorTy() &&
+      I.getOpcode() != Instruction::BitCast) {
     auto &LV = getValueState(&I);
     ConstantRange OpRange =
         getConstantRange(OpSt, I.getSrcTy(), /*UndefAllowed=*/false);
 
     Type *DestTy = I.getDestTy();
-    // Vectors where all elements have the same known constant range are treated
-    // as a single constant range in the lattice. When bitcasting such vectors,
-    // there is a mis-match between the width of the lattice value (single
-    // constant range) and the original operands (vector). Go to overdefined in
-    // that case.
-    if (I.getOpcode() == Instruction::BitCast &&
-        I.getOperand(0)->getType()->isVectorTy() &&
-        OpRange.getBitWidth() < DL.getTypeSizeInBits(DestTy))
-      return (void)markOverdefined(&I);
-
     ConstantRange Res =
-        OpRange.castOp(I.getOpcode(), DL.getTypeSizeInBits(DestTy));
+        OpRange.castOp(I.getOpcode(), DestTy->getScalarSizeInBits());
     mergeInValue(LV, &I, ValueLatticeElement::getRange(Res));
   } else
     markOverdefined(&I);
