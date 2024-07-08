@@ -3085,6 +3085,8 @@ LogicalResult LLVM::masked_gather::verify() {
   Type expectedPtrsVectorType =
       LLVM::getVectorType(extractVectorElementType(ptrsVectorType),
                           LLVM::getVectorNumElements(getRes().getType()));
+  // Vector of pointers type should match result vector type, other than the
+  // element type.
   if (ptrsVectorType != expectedPtrsVectorType)
     return emitOpError("expected operand #1 type to be ")
            << expectedPtrsVectorType;
@@ -3100,6 +3102,8 @@ LogicalResult LLVM::masked_scatter::verify() {
   Type expectedPtrsVectorType =
       LLVM::getVectorType(extractVectorElementType(ptrsVectorType),
                           LLVM::getVectorNumElements(getValue().getType()));
+  // Vector of pointers type should match value vector type, other than the
+  // element type.
   if (ptrsVectorType != expectedPtrsVectorType)
     return emitOpError("expected operand #2 type to be ")
            << expectedPtrsVectorType;

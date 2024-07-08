@@ -105,6 +105,7 @@ static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
                             Value index, VectorType vectorType) {
   assert(succeeded(isMemRefTypeSupported(memRefType, typeConverter)) &&
          "unsupported memref type");
+  assert(vectorType.getRank() == 1 && "expected a 1-d vector type");
   auto pType = MemRefDescriptor(llvmMemref).getElementPtrType();
   auto ptrsType =
       LLVM::getVectorType(pType, vectorType.getDimSize(0),
