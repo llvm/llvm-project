@@ -11506,6 +11506,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
 
+  if (BuiltinID == AArch64::BI__hlt) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hlt);
+    Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
+
+    // Return 0 for convenience, even though MSVC returns some other undefined
+    // value.
+    return ConstantInt::get(Builder.getInt32Ty(), 0);
+  }
+
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (std::optional<MSVCIntrin> MsvcIntId =
