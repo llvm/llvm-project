@@ -518,7 +518,8 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   if (!iter_pointer_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  // Cast the __tree_iterator to a __node_pointer (which stores our key/value pair)
+  // Cast the __tree_iterator to a __node_pointer (which stores our key/value
+  // pair)
   auto node_pointer_sp = iter_pointer_sp->Cast(node_pointer_type);
   if (!node_pointer_sp)
     return lldb::ChildCacheState::eRefetch;
@@ -528,10 +529,12 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   // Create the synthetic child, which is a pair where the key and value can be
-  // retrieved by querying the synthetic frontend for GetIndexOfChildWithName("first")
-  // and GetIndexOfChildWithName("second") respectively.
+  // retrieved by querying the synthetic frontend for
+  // GetIndexOfChildWithName("first") and GetIndexOfChildWithName("second")
+  // respectively.
   //
-  // std::map stores the actual key/value pair in value_type::__cc_ (or previously __cc).
+  // std::map stores the actual key/value pair in value_type::__cc_ (or
+  // previously __cc).
   key_value_sp = key_value_sp->Clone(ConstString("pair"));
   if (key_value_sp->GetNumChildrenIgnoringErrors() == 1) {
     auto child0_sp = key_value_sp->GetChildAtIndex(0);
