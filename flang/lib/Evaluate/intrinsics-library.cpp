@@ -807,7 +807,7 @@ static bool VerifyAtan2LikeArguments(
 template <ArgumentVerifierFunc... F>
 static bool CombineVerifiers(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  return (... & F(args, context));
+  return (... && F(args, context));
 }
 
 /// Define argument names to be used error messages when the intrinsic have
