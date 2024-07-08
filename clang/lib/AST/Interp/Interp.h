@@ -922,6 +922,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
+  // Reject comparisons to weak pointers.
   for (const auto &P : {LHS, RHS}) {
     if (P.isZero())
       continue;
@@ -934,6 +935,20 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (!Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
+        RHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << LHS.toDiagnosticString(S.getCtx());
+      return false;
+    } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+               LHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << RHS.toDiagnosticString(S.getCtx());
+      return false;
+    }
+
     S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
     return true;
   } else {
@@ -1294,7 +1309,8 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   S.SeenGlobalTemporaries.push_back(
       std::make_pair(P.getDeclDesc()->asExpr(), Temp));
 
-  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+  if (std::optional<APValue> APV =
+          P.toRValue(S.getCtx(), Temp->getTemporaryExpr()->getType())) {
     *Cached = *APV;
     return true;
   }
@@ -2618,6 +2634,13 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool Unsupported(InterpState &S, CodePtr OpPC) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
+      << S.Current->getRange(OpPC);
+  return false;
+}
+
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 
@@ -2686,6 +2709,25 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
 
   const FromT &OldPtr = S.Stk.pop<FromT>();
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
+  return true;
+}
+
+inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
+  // An expression E is a core constant expression unless the evaluation of E
+  // would evaluate one of the following: [C++23] - a control flow that passes
+  // through a declaration of a variable with static or thread storage duration
+  // unless that variable is usable in constant expressions.
+  assert(VD->isLocalVarDecl() &&
+         VD->isStaticLocal()); // Checked before emitting this.
+
+  if (VD == S.EvaluatingDecl)
+    return true;
+
+  if (!VD->isUsableInConstantExpressions(S.getCtx())) {
+    S.CCEDiag(VD->getLocation(), diag::note_constexpr_static_local)
+        << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
+    return false;
+  }
   return true;
 }
 

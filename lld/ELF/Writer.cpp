@@ -2064,33 +2064,21 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
 // The linker is expected to define SECNAME_start and SECNAME_end
 // symbols for a few sections. This function defines them.
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
-  // If a section does not exist, there's ambiguity as to how we
-  // define _start and _end symbols for an init/fini section. Since
-  // the loader assume that the symbols are always defined, we need to
-  // always define them. But what value? The loader iterates over all
-  // pointers between _start and _end to run global ctors/dtors, so if
-  // the section is empty, their symbol values don't actually matter
-  // as long as _start and _end point to the same location.
-  //
-  // That said, we don't want to set the symbols to 0 (which is
-  // probably the simplest value) because that could cause some
-  // program to fail to link due to relocation overflow, if their
-  // program text is above 2 GiB. We use the address of the .text
-  // section instead to prevent that failure.
-  //
-  // In rare situations, the .text section may not exist. If that's the
-  // case, use the image base address as a last resort.
-  OutputSection *Default = findSection(".text");
-  if (!Default)
-    Default = Out::elfHeader;
-
+  // If the associated output section does not exist, there is ambiguity as to
+  // how we define _start and _end symbols for an init/fini section. Users
+  // expect no "undefined symbol" linker errors and loaders expect equal
+  // st_value but do not particularly care whether the symbols are defined or
+  // not. We retain the output section so that the section indexes will be
+  // correct.
   auto define = [=](StringRef start, StringRef end, OutputSection *os) {
-    if (os && !script->isDiscarded(os)) {
-      addOptionalRegular(start, os, 0);
-      addOptionalRegular(end, os, -1);
+    if (os) {
+      Defined *startSym = addOptionalRegular(start, os, 0);
+      Defined *stopSym = addOptionalRegular(end, os, -1);
+      if (startSym || stopSym)
+        os->usedInExpression = true;
     } else {
-      addOptionalRegular(start, Default, 0);
-      addOptionalRegular(end, Default, 0);
+      addOptionalRegular(start, Out::elfHeader, 0);
+      addOptionalRegular(end, Out::elfHeader, 0);
     }
   };
 
@@ -2098,6 +2086,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   define("__init_array_start", "__init_array_end", Out::initArray);
   define("__fini_array_start", "__fini_array_end", Out::finiArray);
 
+  // As a special case, don't unnecessarily retain .ARM.exidx, which would
+  // create an empty PT_ARM_EXIDX.
   if (OutputSection *sec = findSection(".ARM.exidx"))
     define("__exidx_start", "__exidx_end", sec);
 }
@@ -2112,10 +2102,12 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  addOptionalRegular(saver().save("__start_" + s), &osec, 0,
-                     config->zStartStopVisibility);
-  addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
-                     config->zStartStopVisibility);
+  Defined *startSym = addOptionalRegular(saver().save("__start_" + s), &osec, 0,
+                                         config->zStartStopVisibility);
+  Defined *stopSym = addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
+                                        config->zStartStopVisibility);
+  if (startSym || stopSym)
+    osec.usedInExpression = true;
 }
 
 static bool needsPtLoad(OutputSection *sec) {

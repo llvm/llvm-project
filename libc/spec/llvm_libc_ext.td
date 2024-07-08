@@ -57,9 +57,21 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
       [], // Types
       [], // Enumerations
       [
+          GuardedFunctionSpec<"f16add", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16addf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16addl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"f16sub", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16subf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16subl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
           GuardedFunctionSpec<"f16div", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16divf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16divl", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"f16fma", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16fmaf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16fmal", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
 
           GuardedFunctionSpec<"f16sqrt", RetValSpec<Float16Type>, [ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16sqrtf", RetValSpec<Float16Type>, [ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,

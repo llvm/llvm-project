@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/RISCVISAInfo.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
@@ -171,11 +169,6 @@ findDefaultVersion(StringRef ExtName) {
   return std::nullopt;
 }
 
-bool RISCVISAInfo::addExtension(StringRef ExtName,
-                                RISCVISAUtils::ExtensionVersion Version) {
-  return Exts.emplace(ExtName, Version).second;
-}
-
 static StringRef getExtensionTypeDesc(StringRef Ext) {
   if (Ext.starts_with('s'))
     return "standard supervisor-level extension";
@@ -287,15 +280,17 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
   return Features;
 }
 
-static Error getStringErrorForInvalidExt(StringRef ExtName) {
+static Error getError(const Twine &Message) {
+  return createStringError(errc::invalid_argument, Message);
+}
+
+static Error getErrorForInvalidExt(StringRef ExtName) {
   if (ExtName.size() == 1) {
-    return createStringError(errc::invalid_argument,
-                             "unsupported standard user-level extension '" +
-                                 ExtName + "'");
+    return getError("unsupported standard user-level extension '" + ExtName +
+                    "'");
   }
-  return createStringError(errc::invalid_argument,
-                           "unsupported " + getExtensionTypeDesc(ExtName) +
-                               " '" + ExtName + "'");
+  return getError("unsupported " + getExtensionTypeDesc(ExtName) + " '" +
+                  ExtName + "'");
 }
 
 // Extensions may have a version number, and may be separated by
@@ -320,21 +315,18 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
 
     // Expected 'p' to be followed by minor version number.
     if (MinorStr.empty()) {
-      return createStringError(
-          errc::invalid_argument,
-          "minor version number missing after 'p' for extension '" + Ext + "'");
+      return getError("minor version number missing after 'p' for extension '" +
+                      Ext + "'");
     }
   }
 
   if (!MajorStr.empty() && MajorStr.getAsInteger(10, Major))
-    return createStringError(
-        errc::invalid_argument,
-        "Failed to parse major version number for extension '" + Ext + "'");
+    return getError("Failed to parse major version number for extension '" +
+                    Ext + "'");
 
   if (!MinorStr.empty() && MinorStr.getAsInteger(10, Minor))
-    return createStringError(
-        errc::invalid_argument,
-        "Failed to parse minor version number for extension '" + Ext + "'");
+    return getError("Failed to parse minor version number for extension '" +
+                    Ext + "'");
 
   ConsumeLength = MajorStr.size();
 
@@ -345,24 +337,21 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
   // subsequent characters (i.e. must either end string or be followed by
   // an underscore).
   if (Ext.size() > 1 && In.size())
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "multi-character extensions must be separated by underscores");
 
   // If experimental extension, require use of current version number
   if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
     if (!EnableExperimentalExtension)
-      return createStringError(errc::invalid_argument,
-                               "requires '-menable-experimental-extensions' "
-                               "for experimental extension '" +
-                                   Ext + "'");
+      return getError("requires '-menable-experimental-extensions' "
+                      "for experimental extension '" +
+                      Ext + "'");
 
     if (ExperimentalExtensionVersionCheck &&
         (MajorStr.empty() && MinorStr.empty()))
-      return createStringError(
-          errc::invalid_argument,
+      return getError(
           "experimental extension requires explicit version number `" + Ext +
-              "`");
+          "`");
 
     auto SupportedVers = *ExperimentalExtension;
     if (ExperimentalExtensionVersionCheck &&
@@ -373,7 +362,7 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
       Error += " for experimental extension '" + Ext.str() +
                "' (this compiler supports " + utostr(SupportedVers.Major) +
                "." + utostr(SupportedVers.Minor) + ")";
-      return createStringError(errc::invalid_argument, Error);
+      return getError(Error);
     }
     return Error::success();
   }
@@ -397,13 +386,13 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
     return Error::success();
 
   if (!RISCVISAInfo::isSupportedExtension(Ext))
-    return getStringErrorForInvalidExt(Ext);
+    return getErrorForInvalidExt(Ext);
 
-  std::string Error = "unsupported version number " + std::string(MajorStr);
+  std::string Error = "unsupported version number " + MajorStr.str();
   if (!MinorStr.empty())
     Error += "." + MinorStr.str();
   Error += " for extension '" + Ext.str() + "'";
-  return createStringError(errc::invalid_argument, Error);
+  return getError(Error);
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
@@ -431,7 +420,7 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
       continue;
 
     if (Add)
-      ISAInfo->addExtension(ExtName, ExtensionInfoIterator->Version);
+      ISAInfo->Exts[ExtName.str()] = ExtensionInfoIterator->Version;
     else
       ISAInfo->Exts.erase(ExtName.str());
   }
@@ -444,8 +433,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   // RISC-V ISA strings must be [a-z0-9_]
   if (!llvm::all_of(
           Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
-    return createStringError(errc::invalid_argument,
-                             "string may only contain [a-z0-9_]");
+    return getError("string may only contain [a-z0-9_]");
 
   // Must start with a valid base ISA name.
   unsigned XLen = 0;
@@ -455,8 +443,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
     XLen = 64;
 
   if (XLen == 0 || Arch.empty() || (Arch[0] != 'i' && Arch[0] != 'e'))
-    return createStringError(errc::invalid_argument,
-                             "arch string must begin with valid base ISA");
+    return getError("arch string must begin with valid base ISA");
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
 
@@ -466,8 +453,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   while (!Arch.empty()) {
     if (Arch[0] == '_') {
       if (Arch.size() == 1 || Arch[1] == '_')
-        return createStringError(errc::invalid_argument,
-                                 "extension name missing after separator '_'");
+        return getError("extension name missing after separator '_'");
       Arch = Arch.drop_front();
     }
 
@@ -478,12 +464,10 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
     StringRef Prefix, MinorVersionStr;
     std::tie(Prefix, MinorVersionStr) = Ext.rsplit('p');
     if (MinorVersionStr.empty())
-      return createStringError(errc::invalid_argument,
-                               "extension lacks version in expected format");
+      return getError("extension lacks version in expected format");
     unsigned MajorVersion, MinorVersion;
     if (MinorVersionStr.getAsInteger(10, MinorVersion))
-      return createStringError(errc::invalid_argument,
-                               "failed to parse minor version number");
+      return getError("failed to parse minor version number");
 
     // Split Prefix into the extension name and the major version number
     // (the trailing digits of Prefix).
@@ -494,28 +478,27 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
       --VersionStart;
     }
     if (VersionStart == Prefix.size())
-      return createStringError(errc::invalid_argument,
-                               "extension lacks version in expected format");
+      return getError("extension lacks version in expected format");
 
     if (VersionStart == 0)
-      return createStringError(errc::invalid_argument,
-                               "missing extension name");
+      return getError("missing extension name");
 
     StringRef ExtName = Prefix.slice(0, VersionStart);
     StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
-      return createStringError(errc::invalid_argument,
-                               "failed to parse major version number");
+      return getError("failed to parse major version number");
 
     if ((ExtName[0] == 'z' || ExtName[0] == 's' || ExtName[0] == 'x') &&
         (ExtName.size() == 1 || isDigit(ExtName[1])))
-      return createStringError(errc::invalid_argument,
-                               "'" + Twine(ExtName[0]) +
-                                   "' must be followed by a letter");
+      return getError("'" + Twine(ExtName[0]) +
+                      "' must be followed by a letter");
 
-    if (!ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion}))
-      return createStringError(errc::invalid_argument,
-                               "duplicate extension '" + ExtName + "'");
+    if (!ISAInfo->Exts
+             .emplace(
+                 ExtName.str(),
+                 RISCVISAUtils::ExtensionVersion{MajorVersion, MinorVersion})
+             .second)
+      return getError("duplicate extension '" + ExtName + "'");
   }
   ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);
@@ -523,13 +506,11 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
-                              bool ExperimentalExtensionVersionCheck,
-                              bool IgnoreUnknown) {
+                              bool ExperimentalExtensionVersionCheck) {
   // RISC-V ISA strings must be [a-z0-9_]
   if (!llvm::all_of(
           Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
-    return createStringError(errc::invalid_argument,
-                             "string may only contain [a-z0-9_]");
+    return getError("string may only contain [a-z0-9_]");
 
   // ISA string must begin with rv32, rv64, or a profile.
   unsigned XLen = 0;
@@ -550,10 +531,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       FoundProfile = (I != std::begin(SupportedExperimentalProfiles) &&
                       Arch.starts_with(std::prev(I)->Name));
       if (FoundProfile && !EnableExperimentalExtension) {
-        return createStringError(errc::invalid_argument,
-                                 "requires '-menable-experimental-extensions' "
-                                 "for profile '" +
-                                     std::prev(I)->Name + "'");
+        return getError("requires '-menable-experimental-extensions' "
+                        "for profile '" +
+                        std::prev(I)->Name + "'");
       }
     }
     if (FoundProfile) {
@@ -562,99 +542,78 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
       if (!ArchWithoutProfile.empty()) {
         if (ArchWithoutProfile.front() != '_')
-          return createStringError(
-              errc::invalid_argument,
-              "additional extensions must be after separator '_'");
+          return getError("additional extensions must be after separator '_'");
         NewArch += ArchWithoutProfile.str();
       }
       return parseArchString(NewArch, EnableExperimentalExtension,
-                             ExperimentalExtensionVersionCheck, IgnoreUnknown);
+                             ExperimentalExtensionVersionCheck);
     }
   }
 
   if (XLen == 0 || Arch.empty())
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
         "profile name");
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
-  MapVector<std::string, RISCVISAUtils::ExtensionVersion,
-            std::map<std::string, unsigned>>
-      SeenExtMap;
 
   // The canonical order specified in ISA manual.
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
   char Baseline = Arch.front();
+  // Skip the baseline.
+  Arch = Arch.drop_front();
+
+  unsigned Major, Minor, ConsumeLength;
 
   // First letter should be 'e', 'i' or 'g'.
   switch (Baseline) {
   default:
-    return createStringError(errc::invalid_argument,
-                             "first letter after \'rv" + Twine(XLen) +
-                                 "\' should be 'e', 'i' or 'g'");
+    return getError("first letter after \'rv" + Twine(XLen) +
+                    "\' should be 'e', 'i' or 'g'");
   case 'e':
   case 'i':
+    // Baseline is `i` or `e`
+    if (auto E = getExtensionVersion(
+            StringRef(&Baseline, 1), Arch, Major, Minor, ConsumeLength,
+            EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
+      return std::move(E);
+
+    ISAInfo->Exts[std::string(1, Baseline)] = {Major, Minor};
     break;
   case 'g':
     // g expands to extensions in RISCVGImplications.
-    if (Arch.size() > 1 && isDigit(Arch[1]))
-      return createStringError(errc::invalid_argument,
-                               "version not supported for 'g'");
-    break;
-  }
+    if (!Arch.empty() && isDigit(Arch.front()))
+      return getError("version not supported for 'g'");
 
-  // Skip baseline.
-  StringRef Exts = Arch.drop_front(1);
-
-  unsigned Major, Minor, ConsumeLength;
-  if (Baseline == 'g') {
     // Versions for g are disallowed, and this was checked for previously.
     ConsumeLength = 0;
 
     // No matter which version is given to `g`, we always set imafd to default
     // version since the we don't have clear version scheme for that on
     // ISA spec.
-    for (const auto *Ext : RISCVGImplications) {
+    for (const char *Ext : RISCVGImplications) {
       auto Version = findDefaultVersion(Ext);
       assert(Version && "Default extension version not found?");
       // Postpone AddExtension until end of this function
-      SeenExtMap[Ext] = {Version->Major, Version->Minor};
+      ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
     }
-  } else {
-    // Baseline is `i` or `e`
-    if (auto E = getExtensionVersion(
-            StringRef(&Baseline, 1), Exts, Major, Minor, ConsumeLength,
-            EnableExperimentalExtension, ExperimentalExtensionVersionCheck)) {
-      if (!IgnoreUnknown)
-        return std::move(E);
-      // If IgnoreUnknown, then ignore an unrecognised version of the baseline
-      // ISA and just use the default supported version.
-      consumeError(std::move(E));
-      auto Version = findDefaultVersion(StringRef(&Baseline, 1));
-      Major = Version->Major;
-      Minor = Version->Minor;
-    }
-
-    // Postpone AddExtension until end of this function
-    SeenExtMap[StringRef(&Baseline, 1).str()] = {Major, Minor};
+    break;
   }
 
   // Consume the base ISA version number and any '_' between rvxxx and the
   // first extension
-  Exts = Exts.drop_front(ConsumeLength);
+  Arch = Arch.drop_front(ConsumeLength);
 
-  while (!Exts.empty()) {
-    if (Exts.front() == '_') {
-      if (Exts.size() == 1 || Exts[1] == '_')
-        return createStringError(errc::invalid_argument,
-                                 "extension name missing after separator '_'");
-      Exts = Exts.drop_front();
+  while (!Arch.empty()) {
+    if (Arch.front() == '_') {
+      if (Arch.size() == 1 || Arch[1] == '_')
+        return getError("extension name missing after separator '_'");
+      Arch = Arch.drop_front();
     }
 
-    size_t Idx = Exts.find('_');
-    StringRef Ext = Exts.slice(0, Idx);
-    Exts = Exts.slice(Idx, StringRef::npos);
+    size_t Idx = Arch.find('_');
+    StringRef Ext = Arch.slice(0, Idx);
+    Arch = Arch.slice(Idx, StringRef::npos);
 
     do {
       StringRef Name, Vers, Desc;
@@ -681,52 +640,33 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         Ext = StringRef();
 
         assert(!Type.empty() && "Empty type?");
-        if (!IgnoreUnknown && Name.size() == Type.size())
-          return createStringError(errc::invalid_argument,
-                                   Desc + " name missing after '" + Type + "'");
+        if (Name.size() == Type.size())
+          return getError(Desc + " name missing after '" + Type + "'");
       } else {
-        // FIXME: Could it be ignored by IgnoreUnknown?
-        return createStringError(errc::invalid_argument,
-                                 "invalid standard user-level extension '" +
-                                     Twine(Ext.front()) + "'");
+        return getError("invalid standard user-level extension '" +
+                        Twine(Ext.front()) + "'");
       }
 
       unsigned Major, Minor, ConsumeLength;
       if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
                                        EnableExperimentalExtension,
-                                       ExperimentalExtensionVersionCheck)) {
-        if (IgnoreUnknown) {
-          consumeError(std::move(E));
-          if (Name.size() == 1)
-            Ext = Ext.substr(ConsumeLength);
-          continue;
-        }
+                                       ExperimentalExtensionVersionCheck))
         return E;
-      }
 
       if (Name.size() == 1)
         Ext = Ext.substr(ConsumeLength);
 
-      // Check if duplicated extension.
-      if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
-        return createStringError(errc::invalid_argument,
-                                 "duplicated " + Desc + " '" + Name + "'");
+      if (!RISCVISAInfo::isSupportedExtension(Name))
+        return getErrorForInvalidExt(Name);
 
-      if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
-        continue;
+      // Insert and error for duplicates.
+      if (!ISAInfo->Exts
+               .emplace(Name.str(),
+                        RISCVISAUtils::ExtensionVersion{Major, Minor})
+               .second)
+        return getError("duplicated " + Desc + " '" + Name + "'");
 
-      SeenExtMap[Name.str()] = {Major, Minor};
     } while (!Ext.empty());
-  }
-
-  // Check all Extensions are supported.
-  for (auto &SeenExtAndVers : SeenExtMap) {
-    const std::string &ExtName = SeenExtAndVers.first;
-    RISCVISAUtils::ExtensionVersion ExtVers = SeenExtAndVers.second;
-
-    if (!RISCVISAInfo::isSupportedExtension(ExtName))
-      return getStringErrorForInvalidExt(ExtName);
-    ISAInfo->addExtension(ExtName, ExtVers);
   }
 
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
@@ -743,60 +683,49 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZcmt = Exts.count("zcmt") != 0;
 
   if (HasI && HasE)
-    return createStringError(errc::invalid_argument,
-                             "'I' and 'E' extensions are incompatible");
+    return getError("'I' and 'E' extensions are incompatible");
 
   if (HasF && HasZfinx)
-    return createStringError(errc::invalid_argument,
-                             "'f' and 'zfinx' extensions are incompatible");
+    return getError("'f' and 'zfinx' extensions are incompatible");
 
   if (HasZvl && !HasVector)
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
 
   if (Exts.count("zvbb") && !HasVector)
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "'zvbb' requires 'v' or 'zve*' extension to also be specified");
 
   if (Exts.count("zvbc") && !Exts.count("zve64x"))
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
 
   if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkned") ||
        Exts.count("zvknha") || Exts.count("zvksed") || Exts.count("zvksh")) &&
       !HasVector)
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "'zvk*' requires 'v' or 'zve*' extension to also be specified");
 
   if (Exts.count("zvknhb") && !Exts.count("zve64x"))
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "'zvknhb' requires 'v' or 'zve64*' extension to also be specified");
 
   if ((HasZcmt || Exts.count("zcmp")) && Exts.count("d") &&
       (HasC || Exts.count("zcd")))
-    return createStringError(
-        errc::invalid_argument,
-        Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
-        "' extension is incompatible with '" + (HasC ? "c" : "zcd") +
-        "' extension when 'd' extension is enabled");
+    return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
+                    "' extension is incompatible with '" +
+                    (HasC ? "c" : "zcd") +
+                    "' extension when 'd' extension is enabled");
 
   if (XLen != 32 && Exts.count("zcf"))
-    return createStringError(errc::invalid_argument,
-                             "'zcf' is only supported for 'rv32'");
+    return getError("'zcf' is only supported for 'rv32'");
 
   if (Exts.count("zacas") && !(Exts.count("a") || Exts.count("zaamo")))
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "'zacas' requires 'a' or 'zaamo' extension to also be specified");
 
   if (Exts.count("zabha") && !(Exts.count("a") || Exts.count("zaamo")))
-    return createStringError(
-        errc::invalid_argument,
+    return getError(
         "'zabha' requires 'a' or 'zaamo' extension to also be specified");
 
   return Error::success();
@@ -830,7 +759,7 @@ void RISCVISAInfo::updateImplication() {
   // implied
   if (!HasE && !HasI) {
     auto Version = findDefaultVersion("i");
-    addExtension("i", *Version);
+    Exts["i"] = *Version;
   }
 
   if (HasE && HasI)
@@ -854,7 +783,7 @@ void RISCVISAInfo::updateImplication() {
                     if (Exts.count(ImpliedExt))
                       return;
                     auto Version = findDefaultVersion(ImpliedExt);
-                    addExtension(ImpliedExt, *Version);
+                    Exts[ImpliedExt] = *Version;
                     WorkList.push_back(ImpliedExt);
                   });
   }
@@ -863,7 +792,7 @@ void RISCVISAInfo::updateImplication() {
   if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
       !Exts.count("zcf")) {
     auto Version = findDefaultVersion("zcf");
-    addExtension("zcf", *Version);
+    Exts["zcf"] = *Version;
   }
 }
 
@@ -890,7 +819,7 @@ void RISCVISAInfo::updateCombination() {
           });
       if (HasAllRequiredFeatures) {
         auto Version = findDefaultVersion(CombineExt);
-        addExtension(CombineExt, *Version);
+        Exts[CombineExt.str()] = *Version;
         MadeChange = true;
       }
     }

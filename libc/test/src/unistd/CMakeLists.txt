@@ -446,6 +446,36 @@ add_libc_unittest(
     libc.src.unistd.sysconf
 )
 
+add_libc_unittest(
+  fpathconf_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fpathconf_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.unistd_macros
+    libc.hdr.sys_stat_macros
+    libc.src.unistd.fpathconf
+    libc.src.fcntl.open
+    libc.src.unistd.close
+)
+
+add_libc_unittest(
+  pathconf_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    pathconf_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.unistd_macros
+    libc.hdr.sys_stat_macros
+    libc.src.unistd.pathconf
+    libc.src.fcntl.open
+    libc.src.unistd.close
+)
+
 add_libc_test(
   getopt_test
   HERMETIC_TEST_ONLY # Uses libc's own stderr

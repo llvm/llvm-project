@@ -137,6 +137,11 @@ New checks
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
 
+- New :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check.
+
+  Finds pointer arithmetic performed on classes that contain a virtual function.
+
 - New :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
 
@@ -199,6 +204,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-ctr56-cpp <clang-tidy/checks/cert/ctr56-cpp>` to
+  :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>`
+  was added.
+
 - New alias :doc:`cert-int09-c <clang-tidy/checks/cert/int09-c>` to
   :doc:`readability-enum-initial-value <clang-tidy/checks/readability/enum-initial-value>`
   was added.
@@ -241,10 +251,10 @@ Changes in existing checks
   false positives resulting from use of optionals in unevaluated context.
 
 - Improved :doc:`bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
-  false positives and adding a new (off-by-default) option
-  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
-  (except for a few that are idiomatic).
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by clarifying the
+  diagnostics, eliminating some false positives and adding a new
+  (off-by-default) option `WarnOnSizeOfPointer` that reports all
+  ``sizeof(pointer)`` expressions (except for a few that are idiomatic).
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
@@ -268,6 +278,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
+
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  with a new option `AllowInternalLinkage` to disable the warning for variables
+  with internal linkage.
 
 - Improved :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
