@@ -685,7 +685,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   Type *const Ty = I.getType();
   Type *Int32Ty = B.getInt32Ty();
   bool isAtomicFloatingPointTy = Ty->isFloatingPointTy();
-  const unsigned TyBitWidth = DL->getTypeSizeInBits(Ty);
+  [[maybe_unused]] const unsigned TyBitWidth = DL->getTypeSizeInBits(Ty);
 
   // This is the value in the atomic operation we need to combine in order to
   // reduce the number of atomic operations.
