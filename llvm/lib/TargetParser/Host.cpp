@@ -705,10 +705,11 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 
 #define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
 
-static StringRef
-getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                const unsigned *Features,
-                                unsigned *Type, unsigned *Subtype) {
+static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
+                                                 unsigned Model,
+                                                 const unsigned *Features,
+                                                 unsigned *Type,
+                                                 unsigned *Subtype) {
   StringRef CPU;
 
   switch (Family) {
