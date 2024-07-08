@@ -3216,15 +3216,15 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           FunctionType->getTypeLoc().castAs<FunctionProtoTypeLoc>();
 
       // Clone the parameters.
-      unsigned ProcessedParamIndex = 0;
-      for (auto *P : DG->parameters()) {
+      for (unsigned I = 0, N = DG->getNumParams(); I != N; ++I) {
+        const auto *P = DG->getParamDecl(I);
         auto *TSI = SemaRef.Context.getTrivialTypeSourceInfo(P->getType());
         ParmVarDecl *NewParam = ParmVarDecl::Create(
-            SemaRef.Context, G->getDeclContext(), P->getBeginLoc(),
-            P->getLocation(), nullptr, TSI->getType(), TSI, SC_None, nullptr);
-        NewParam->setScopeInfo(0, ProcessedParamIndex);
-        FPTL.setParam(ProcessedParamIndex, NewParam);
-        ProcessedParamIndex++;
+            SemaRef.Context, G->getDeclContext(),
+            DG->getParamDecl(I)->getBeginLoc(), P->getLocation(), nullptr,
+            TSI->getType(), TSI, SC_None, nullptr);
+        NewParam->setScopeInfo(0, I);
+        FPTL.setParam(I, NewParam);
       }
       auto *Transformed = cast<FunctionDecl>(buildDeductionGuide(
           SemaRef, AliasTemplate, /*TemplateParams=*/nullptr,
@@ -3232,9 +3232,9 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           AliasTemplate->getBeginLoc(), AliasTemplate->getLocation(),
           AliasTemplate->getEndLoc(), DG->isImplicit()));
 
-      // FIXME: Here the synthesized deduction guide is not a templated function.
-      // Per [dcl.decl]p4, the requires-clause shall be present only if the
-      // declarator declares a templated function, a bug in standard?
+      // FIXME: Here the synthesized deduction guide is not a templated
+      // function. Per [dcl.decl]p4, the requires-clause shall be present only
+      // if the declarator declares a templated function, a bug in standard?
       auto *Constraint = buildIsDeducibleConstraint(
           SemaRef, AliasTemplate, Transformed->getReturnType(), {});
       if (auto *RC = DG->getTrailingRequiresClause()) {
