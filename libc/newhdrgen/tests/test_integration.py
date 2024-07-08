@@ -23,7 +23,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
         )
 
         self.maxDiff = None
-        
+
         self.source_dir = Path(__file__).resolve().parent.parent.parent.parent
 
     def run_script(self, yaml_file, h_def_file, output_dir):
