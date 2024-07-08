@@ -66,6 +66,8 @@ public:
   ///   A span with a size of 0.
   cpp::span<cpp::byte> find_chunk(size_t size) const;
 
+  template <typename Cond> cpp::span<cpp::byte> find_chunk_if(Cond op) const;
+
   /// Removes a chunk from this freelist.
   bool remove_chunk(cpp::span<cpp::byte> chunk);
 
@@ -109,6 +111,22 @@ bool FreeList<NUM_BUCKETS>::add_chunk(span<cpp::byte> chunk) {
   set_freelist_node(*node, chunk);
 
   return true;
+}
+
+template <size_t NUM_BUCKETS>
+template <typename Cond>
+span<cpp::byte> FreeList<NUM_BUCKETS>::find_chunk_if(Cond op) const {
+  for (FreeListNode *node : chunks_) {
+    while (node != nullptr) {
+      span<cpp::byte> chunk(reinterpret_cast<cpp::byte *>(node), node->size);
+      if (op(chunk))
+        return chunk;
+
+      node = node->next;
+    }
+  }
+
+  return {};
 }
 
 template <size_t NUM_BUCKETS>

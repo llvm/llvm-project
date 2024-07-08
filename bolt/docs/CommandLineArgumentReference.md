@@ -259,6 +259,10 @@
 
   Always use long jumps/nops for Linux kernel static keys
 
+- `--match-profile-with-function-hash`
+
+  Match profile with function hash
+
 - `--max-data-relocations=<uint>`
 
   Maximum number of data relocations to process
@@ -683,6 +687,10 @@
 - `--min-branch-clusters`
 
   Use a modified clustering algorithm geared towards minimizing branches
+
+- `--name-similarity-function-matching-threshold=<uint>`
+
+  Match functions using namespace and edit distance.
 
 - `--no-inline`
 

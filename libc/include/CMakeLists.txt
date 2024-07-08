@@ -52,6 +52,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  dlfcn
+  DEF_FILE dlfcn.h.def
+  GEN_HDR dlfcn.h
+  DEPENDS
+    .llvm-libc-macros.dlfcn_macros
+    .llvm_libc_common_h
+)
+
+add_gen_header(
   features
   DEF_FILE features.h.def
   GEN_HDR features.h
@@ -223,6 +232,7 @@ add_gen_header(
   GEN_HDR errno.h
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
+    .llvm-libc-macros.error_number_macros
 )
 
 add_gen_header(

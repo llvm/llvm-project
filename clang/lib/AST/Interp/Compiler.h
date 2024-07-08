@@ -39,6 +39,7 @@ template <class Emitter> class SourceLocScope;
 template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
+template <class Emitter> class StmtExprScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -46,12 +47,18 @@ public:
   enum {
     K_This = 0,
     K_Field = 1,
-    K_Decl = 2,
+    K_Temp = 2,
+    K_Decl = 3,
   };
 
   static InitLink This() { return InitLink{K_This}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
+    IL.Offset = Offset;
+    return IL;
+  }
+  static InitLink Temp(unsigned Offset) {
+    InitLink IL{K_Temp};
     IL.Offset = Offset;
     return IL;
   }
@@ -65,7 +72,6 @@ public:
   template <class Emitter>
   bool emit(Compiler<Emitter> *Ctx, const Expr *E) const;
 
-private:
   uint32_t Kind;
   union {
     unsigned Offset;
@@ -183,6 +189,7 @@ public:
   bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
+  bool VisitStmtExpr(const StmtExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -259,7 +266,7 @@ protected:
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD);
+  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);
@@ -333,6 +340,7 @@ private:
   friend class LoopScope<Emitter>;
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
+  friend class StmtExprScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -396,6 +404,8 @@ protected:
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
+
+  bool InStmtExpr = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
