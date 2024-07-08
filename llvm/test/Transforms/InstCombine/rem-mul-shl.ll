@@ -20,9 +20,9 @@ define i8 @srem_non_matching(i8 %X, i8 %Y) {
 define i8 @urem_1_shl(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @urem_1_shl(
 ; CHECK-NEXT:    [[BO0:%.*]] = shl nuw nsw i8 1, [[X:%.*]]
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[NOTMASK]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[BO0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 -1, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[BO0]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = shl nsw nuw i8 1, %X
