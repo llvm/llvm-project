@@ -447,11 +447,12 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-size_t matchWeightsByHashes(
-    BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
-    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
-    HashFunction HashFunction,
-    const DenseMap<uint32_t, StringRef> &IdToFunctionName) {
+size_t
+matchWeightsByHashes(BinaryContext &BC,
+                     const BinaryFunction::BasicBlockOrderType &BlockOrder,
+                     const yaml::bolt::BinaryFunctionProfile &YamlBF,
+                     FlowFunction &Func, HashFunction HashFunction,
+                     const DenseMap<uint32_t, StringRef> &IdToFunctionName) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
