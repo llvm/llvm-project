@@ -81,6 +81,10 @@ struct DoacrossClauseOps {
   IntegerAttr doacrossNumLoopsAttr;
 };
 
+struct FilterClauseOps {
+  Value filteredThreadIdVar;
+};
+
 struct FinalClauseOps {
   Value finalVar;
 };
@@ -254,8 +258,7 @@ using DistributeClauseOps =
 
 using LoopNestClauseOps = detail::Clauses<CollapseClauseOps, LoopRelatedOps>;
 
-// TODO `filter` clause.
-using MaskedClauseOps = detail::Clauses<>;
+using MaskedClauseOps = detail::Clauses<FilterClauseOps>;
 
 using OrderedOpClauseOps = detail::Clauses<DoacrossClauseOps>;
 

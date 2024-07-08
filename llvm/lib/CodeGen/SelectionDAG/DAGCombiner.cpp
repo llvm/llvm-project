@@ -843,11 +843,9 @@ namespace {
 
     SelectionDAG &getDAG() const { return DAG; }
 
-    /// Returns a type large enough to hold any valid shift amount - before type
-    /// legalization these can be huge.
+    /// Convenience wrapper around TargetLowering::getShiftAmountTy.
     EVT getShiftAmountTy(EVT LHSTy) {
-      assert(LHSTy.isInteger() && "Shift amount is not an integer type!");
-      return TLI.getShiftAmountTy(LHSTy, DAG.getDataLayout(), LegalTypes);
+      return TLI.getShiftAmountTy(LHSTy, DAG.getDataLayout());
     }
 
     /// This method returns true if we are running before type legalization or
@@ -9293,11 +9291,10 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     return NewLoad;
 
   SDValue ShiftedLoad =
-      NeedsZext
-          ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
-                        DAG.getShiftAmountConstant(ZeroExtendedBytes * 8, VT,
-                                                   SDLoc(N), LegalOperations))
-          : NewLoad;
+      NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
+                              DAG.getShiftAmountConstant(ZeroExtendedBytes * 8,
+                                                         VT, SDLoc(N)))
+                : NewLoad;
   return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
 }
 
