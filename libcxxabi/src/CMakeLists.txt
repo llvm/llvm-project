@@ -25,6 +25,12 @@ if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
   )
 endif()
 
+if (LIBCXXABI_ENABLE_TYPED_NEW_DELETE_DEFINITIONS)
+  list(APPEND LIBCXXABI_SOURCES
+    vendor/apple/shims.cpp
+  )
+endif()
+
 if (LIBCXXABI_ENABLE_EXCEPTIONS)
   list(APPEND LIBCXXABI_SOURCES
     cxa_exception.cpp
@@ -229,6 +235,10 @@ if (LIBCXXABI_ENABLE_SHARED)
 
   if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
     reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+  endif()
+
+  if (LIBCXXABI_ENABLE_TYPED_NEW_DELETE_DEFINITIONS)
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/typed-operator-new.exp")
   endif()
 
   # Note that std:: exception types are always defined by the library regardless of

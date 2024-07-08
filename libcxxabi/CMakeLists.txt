@@ -70,6 +70,10 @@ option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
   "Build libc++abi with definitions for operator new/delete. These are normally
    defined in libc++abi, but it is also possible to define them in libc++, in
    which case the definition in libc++abi should be turned off." ON)
+
+option(LIBCXXABI_ENABLE_TYPED_NEW_DELETE_DEFINITIONS
+  "Build libc++abi with definitions for typed operator new/delete." OFF)
+
 option(LIBCXXABI_BUILD_32_BITS "Build 32 bit multilib libc++abi. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
 if (LIBCXXABI_BUILD_32_BITS)
   message(FATAL_ERROR "LIBCXXABI_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
