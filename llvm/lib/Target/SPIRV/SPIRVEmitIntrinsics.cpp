@@ -389,15 +389,13 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited,
                                    UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
-    Type *RefTy = deduceElementTypeHelper(Ref->getNewValOperand(), Visited,
-                                          UnknownElemTypeI8);
-    if (UnknownElemTypeI8 || !isUntypedPointerTy(RefTy))
-      Ty = RefTy;
+    Value *Op = Ref->getNewValOperand();
+    if (isPointerTy(Op->getType()))
+      Ty = deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<AtomicRMWInst>(I)) {
-    Type *RefTy = deduceElementTypeHelper(Ref->getValOperand(), Visited,
-                                          UnknownElemTypeI8);
-    if (UnknownElemTypeI8 || !isUntypedPointerTy(RefTy))
-      Ty = RefTy;
+    Value *Op = Ref->getValOperand();
+    if (isPointerTy(Op->getType()))
+      Ty = deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<PHINode>(I)) {
     for (unsigned i = 0; i < Ref->getNumIncomingValues(); i++) {
       Ty = deduceElementTypeByUsersDeep(Ref->getIncomingValue(i), Visited,
@@ -539,6 +537,19 @@ Type *SPIRVEmitIntrinsics::deduceElementType(Value *I, bool UnknownElemTypeI8) {
   return UnknownElemTypeI8 ? IntegerType::getInt8Ty(I->getContext()) : nullptr;
 }
 
+static inline Type *getAtomicElemTy(SPIRVGlobalRegistry *GR, Instruction *I,
+                                    Value *PointerOperand) {
+  Type *PointeeTy = GR->findDeducedElementType(PointerOperand);
+  if (PointeeTy && !isUntypedPointerTy(PointeeTy))
+    return nullptr;
+  auto *PtrTy = dyn_cast<PointerType>(I->getType());
+  if (!PtrTy)
+    return I->getType();
+  if (Type *NestedTy = GR->findDeducedElementType(I))
+    return getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+  return nullptr;
+}
+
 // If the Instruction has Pointer operands with unresolved types, this function
 // tries to deduce them. If the Instruction has Pointer operands with known
 // types which differ from expected, this function tries to insert a bitcast to
@@ -561,14 +572,36 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     if (!KnownElemTy)
       return;
     Ops.push_back(std::make_pair(Ref->getPointerOperand(), 0));
+  } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
+    KnownElemTy = I->getType();
+    if (isUntypedPointerTy(KnownElemTy))
+      return;
+    Type *PointeeTy = GR->findDeducedElementType(Ref->getPointerOperand());
+    if (PointeeTy && !isUntypedPointerTy(PointeeTy))
+      return;
+    Ops.push_back(std::make_pair(Ref->getPointerOperand(),
+                                 LoadInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<StoreInst>(I)) {
     KnownElemTy = Ref->getValueOperand()->getType();
     if (isUntypedPointerTy(KnownElemTy))
       return;
-    if (GR->findDeducedElementType(Ref->getPointerOperand()))
+    Type *PointeeTy = GR->findDeducedElementType(Ref->getPointerOperand());
+    if (PointeeTy && !isUntypedPointerTy(PointeeTy))
       return;
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  StoreInst::getPointerOperandIndex()));
+  } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
+    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    if (!KnownElemTy)
+      return;
+    Ops.push_back(std::make_pair(Ref->getPointerOperand(),
+                                 AtomicCmpXchgInst::getPointerOperandIndex()));
+  } else if (auto *Ref = dyn_cast<AtomicRMWInst>(I)) {
+    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    if (!KnownElemTy)
+      return;
+    Ops.push_back(std::make_pair(Ref->getPointerOperand(),
+                                 AtomicRMWInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     if (!isPointerTy(I->getType()) ||
         !(KnownElemTy = GR->findDeducedElementType(I)))
@@ -1512,6 +1545,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : instructions(Func))
     Worklist.push_back(&I);
 
+  // SmallVector<Instruction *> Postponed;
   for (auto &I : Worklist) {
     // Don't emit intrinsincs for convergence intrinsics.
     if (isConvergenceIntrinsic(I))
@@ -1526,10 +1560,16 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     // already, and force it to be i8 if not
     if (Postpone && !GR->findAssignPtrTypeInstr(I))
       insertAssignPtrTypeIntrs(I, B, true);
+    // Postponed.push_back(I);
   }
 
   for (auto &I : instructions(Func))
     deduceOperandElementType(&I);
+
+  //  for (auto &I : Postponed)
+  //      insertAssignPtrTypeIntrs(I, B, true);
+  //  for (auto IB = Postponed.rbegin(), IE = Postponed.rend(); IB != IE; ++IB)
+  //    insertAssignPtrTypeIntrs(*IB, B, true);
 
   for (auto *I : Worklist) {
     TrackConstants = true;
