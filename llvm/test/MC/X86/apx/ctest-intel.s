@@ -24,6 +24,18 @@
 # CHECK: ctestb {dfv=of} qword ptr [r8 + 4*rax + 123], r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x02,0x85,0x4c,0x80,0x7b]
          ctestb {dfv=of} qword ptr [r8 + 4*rax + 123], r9
+# CHECK: ctestb {dfv=of} byte ptr [r8 + 4*rax + 123], bl
+# CHECK: encoding: [0x62,0xd4,0x44,0x02,0x84,0x5c,0x80,0x7b]
+         ctestb {dfv=of} bl, byte ptr [r8 + 4*rax + 123]
+# CHECK: ctestb {dfv=of} word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x45,0x02,0x85,0x54,0x80,0x7b]
+         ctestb {dfv=of} dx, word ptr [r8 + 4*rax + 123]
+# CHECK: ctestb {dfv=of} dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x44,0x02,0x85,0x4c,0x80,0x7b]
+         ctestb {dfv=of} ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: ctestb {dfv=of} qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xc4,0x02,0x85,0x4c,0x80,0x7b]
+         ctestb {dfv=of} r9, qword ptr [r8 + 4*rax + 123]
 # CHECK: ctestb {dfv=of} bl, 123
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0xf6,0xc3,0x7b]
          ctestb {dfv=of} bl, 123
