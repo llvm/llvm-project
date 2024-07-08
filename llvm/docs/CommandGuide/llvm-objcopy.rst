@@ -301,7 +301,7 @@ them.
 
 .. option:: --change-section-lma \*{+-}<val>
 
- Shift LMA of non-zero-sized segments by ``<val>``
+ Shift LMA of non-zero-sized segments by ``<val>``.
 
 .. option:: --change-start <incr>, --adjust-start
 
