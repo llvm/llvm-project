@@ -21,6 +21,16 @@
       "doc": "Disable printing fixed point values in printf and friends."
     }
   },
+  "scanf": {
+    "LIBC_CONF_SCANF_DISABLE_FLOAT": {
+      "value": false,
+      "doc": "Disable parsing floating point values in scanf and friends."
+    },
+    "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
+      "value": false,
+      "doc": "Disable index mode in the scanf format string."
+    }
+  },
   "string": {
     "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
       "value": false,
