@@ -18,9 +18,9 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *FILENAME = "readlink_test_value";
+  constexpr const char *FILENAME = "readlink_test_file";
   auto LINK_VAL = libc_make_test_file_path(FILENAME);
-  constexpr const char *FILENAME2 = "readlink.test.link";
+  constexpr const char *FILENAME2 = "readlink_test_file.link";
   auto LINK = libc_make_test_file_path(FILENAME2);
   LIBC_NAMESPACE::libc_errno = 0;
 

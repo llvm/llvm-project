@@ -1675,6 +1675,7 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("alwaysinline"),
     StringLiteral("approx-func-fp-math"),
+    StringLiteral("convergent"),
     StringLiteral("frame-pointer"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
@@ -1754,6 +1755,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setAlwaysInline(true);
   if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
     funcOp.setOptimizeNone(true);
+  if (func->hasFnAttribute(llvm::Attribute::Convergent))
+    funcOp.setConvergent(true);
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);

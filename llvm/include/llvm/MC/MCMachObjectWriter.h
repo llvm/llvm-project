@@ -81,6 +81,14 @@ public:
 };
 
 class MachObjectWriter : public MCObjectWriter {
+public:
+  struct DataRegionData {
+    MachO::DataRegionType Kind;
+    MCSymbol *Start;
+    MCSymbol *End;
+  };
+
+private:
   /// Helper struct for containing some precomputed information on symbols.
   struct MachSymbolData {
     const MCSymbol *Symbol;
@@ -89,6 +97,11 @@ class MachObjectWriter : public MCObjectWriter {
 
     // Support lexicographic sorting.
     bool operator<(const MachSymbolData &RHS) const;
+  };
+
+  struct IndirectSymbolData {
+    MCSymbol *Symbol;
+    MCSection *Section;
   };
 
   /// The target specific Mach-O writer instance.
@@ -105,9 +118,16 @@ class MachObjectWriter : public MCObjectWriter {
   };
 
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
+  std::vector<IndirectSymbolData> IndirectSymbols;
   DenseMap<const MCSection *, unsigned> IndirectSymBase;
 
+  std::vector<DataRegionData> DataRegions;
+
   SectionAddrMap SectionAddress;
+
+  // List of sections in layout order. Virtual sections are after non-virtual
+  // sections.
+  SmallVector<MCSection *, 0> SectionOrder;
 
   /// @}
   /// \name Symbol Table Data
@@ -149,12 +169,19 @@ public:
 
   bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
+  std::vector<IndirectSymbolData> &getIndirectSymbols() {
+    return IndirectSymbols;
+  }
+  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
+  const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
+    return SectionOrder;
+  }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
   }
-  uint64_t getSymbolAddress(const MCSymbol &S, const MCAsmLayout &Layout) const;
+  uint64_t getSymbolAddress(const MCSymbol &S, const MCAssembler &Asm) const;
 
   uint64_t getFragmentAddress(const MCAssembler &Asm,
                               const MCFragment *Fragment) const;
@@ -205,7 +232,7 @@ public:
       uint32_t FirstUndefinedSymbol, uint32_t NumUndefinedSymbols,
       uint32_t IndirectSymbolOffset, uint32_t NumIndirectSymbols);
 
-  void writeNlist(MachSymbolData &MSD, const MCAsmLayout &Layout);
+  void writeNlist(MachSymbolData &MSD, const MCAssembler &Asm);
 
   void writeLinkeditLoadCommand(uint32_t Type, uint32_t DataOffset,
                                 uint32_t DataSize);

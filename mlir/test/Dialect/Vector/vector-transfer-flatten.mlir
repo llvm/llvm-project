@@ -604,42 +604,6 @@ func.func @fold_unit_dims_entirely(%arg0 : vector<8xi32>,
 
 // -----
 
-func.func @fold_inner_unit_dim(%arg0 : vector<8x1x3xf128>,
-                              %arg1 : vector<1x8x3xf128>) -> vector<8x3xf128> {
-   %sc_arg1 = vector.shape_cast %arg1 : vector<1x8x3xf128> to vector<8x1x3xf128>
-   %mul = arith.mulf %arg0, %sc_arg1 : vector<8x1x3xf128>
-   %res = vector.shape_cast %mul : vector<8x1x3xf128> to vector<8x3xf128>
-   return %res : vector<8x3xf128>
-}
-
-// CHECK-LABEL: func.func @fold_inner_unit_dim(
-// CHECK-SAME:    %[[VAL_0:.*]]: vector<8x1x3xf128>,
-// CHECK-SAME:    %[[VAL_1:.*]]: vector<1x8x3xf128>) -> vector<8x3xf128> {
-// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<8x1x3xf128> to vector<8x3xf128>
-// CHECK:         %[[VAL_3:.*]] = vector.shape_cast %[[VAL_1]] : vector<1x8x3xf128> to vector<8x3xf128>
-// CHECK:         %[[VAL_4:.*]] = arith.mulf %[[VAL_2]], %[[VAL_3]] : vector<8x3xf128>
-// CHECK:         return %[[VAL_4]] : vector<8x3xf128>
-
-// -----
-
-func.func @fold_inner_unit_dim_scalable(%arg0 : vector<8x1x[1]x3xf128>,
-                              %arg1 : vector<1x8x[1]x3xf128>) -> vector<8x[1]x3xf128> {
-   %sc_arg1 = vector.shape_cast %arg1 : vector<1x8x[1]x3xf128> to vector<8x1x[1]x3xf128>
-   %mul = arith.mulf %arg0, %sc_arg1 : vector<8x1x[1]x3xf128>
-   %res = vector.shape_cast %mul : vector<8x1x[1]x3xf128> to vector<8x[1]x3xf128>
-   return %res : vector<8x[1]x3xf128>
-}
-
-// CHECK-LABEL: func.func @fold_inner_unit_dim_scalable(
-// CHECK-SAME:    %[[VAL_0:.*]]: vector<8x1x[1]x3xf128>,
-// CHECK-SAME:    %[[VAL_1:.*]]: vector<1x8x[1]x3xf128>) -> vector<8x[1]x3xf128> {
-// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<8x1x[1]x3xf128> to vector<8x[1]x3xf128>
-// CHECK:         %[[VAL_3:.*]] = vector.shape_cast %[[VAL_1]] : vector<1x8x[1]x3xf128> to vector<8x[1]x3xf128>
-// CHECK:         %[[VAL_4:.*]] = arith.mulf %[[VAL_2]], %[[VAL_3]] : vector<8x[1]x3xf128>
-// CHECK:         return %[[VAL_4]] : vector<8x[1]x3xf128>
-
-// -----
-
 func.func @negative_out_of_bound_transfer_read(
     %arg : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
   %c0 = arith.constant 0 : index

@@ -22,8 +22,10 @@ LIBC_INLINE void sleep_briefly() {
   __builtin_amdgcn_s_sleep(2);
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
   __builtin_ia32_pause();
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && __has_builtin(__builtin_arm_isb)
   __builtin_arm_isb(0xf);
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+  asm volatile("isb\n" ::: "memory");
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif

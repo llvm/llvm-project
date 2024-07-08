@@ -922,6 +922,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
+  // Reject comparisons to weak pointers.
   for (const auto &P : {LHS, RHS}) {
     if (P.isZero())
       continue;
@@ -934,6 +935,20 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (!Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
+        RHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << LHS.toDiagnosticString(S.getCtx());
+      return false;
+    } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+               LHS.getOffset() == 0) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
+          << RHS.toDiagnosticString(S.getCtx());
+      return false;
+    }
+
     S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
     return true;
   } else {
@@ -1294,7 +1309,8 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   S.SeenGlobalTemporaries.push_back(
       std::make_pair(P.getDeclDesc()->asExpr(), Temp));
 
-  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+  if (std::optional<APValue> APV =
+          P.toRValue(S.getCtx(), Temp->getTemporaryExpr()->getType())) {
     *Cached = *APV;
     return true;
   }
@@ -2614,6 +2630,13 @@ inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
   S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
+      << S.Current->getRange(OpPC);
+  return false;
+}
+
+inline bool Unsupported(InterpState &S, CodePtr OpPC) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
       << S.Current->getRange(OpPC);
   return false;
 }

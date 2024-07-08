@@ -632,7 +632,13 @@ class RegisterCommandsTestCase(TestBase):
         self.expect("register read fpsr", substrs=["= (QC = 0, IDC = 0, IXC = 0"])
         # AHP/DN/FZ/RMode always present, others may vary.
         self.expect(
-            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = 0"]
+            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = RN"]
+        )
+
+        # Should get enumerator descriptions for RMode.
+        self.expect(
+            "register info fpcr",
+            substrs=["RMode: 0 = RN, 1 = RP, 2 = RM, 3 = RZ"],
         )
 
     @skipUnlessPlatform(["linux"])

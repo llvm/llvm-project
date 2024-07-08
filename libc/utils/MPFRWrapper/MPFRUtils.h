@@ -31,9 +31,11 @@ enum class Operation : int {
   Asinh,
   Atan,
   Atanh,
+  Cbrt,
   Ceil,
   Cos,
   Cosh,
+  Cospi,
   Erf,
   Exp,
   Exp2,
@@ -51,6 +53,7 @@ enum class Operation : int {
   Round,
   RoundEven,
   Sin,
+  Sinpi,
   Sinh,
   Sqrt,
   Tan,
@@ -70,11 +73,14 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
+  Add,
   Atan2,
   Div,
   Fmod,
   Hypot,
   Pow,
+  Sub,
+  Fmul,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
@@ -236,7 +242,8 @@ public:
   bool is_silent() const override { return silent; }
 
 private:
-  template <typename T, typename U> bool match(T in, U out) {
+  template <typename InType, typename OutType>
+  bool match(InType in, OutType out) {
     return compare_unary_operation_single_output(op, in, out, ulp_tolerance,
                                                  rounding);
   }
@@ -258,13 +265,14 @@ private:
                                                 rounding);
   }
 
-  template <typename T, typename U>
-  bool match(const TernaryInput<T> &in, U out) {
+  template <typename InType, typename OutType>
+  bool match(const TernaryInput<InType> &in, OutType out) {
     return compare_ternary_operation_one_output(op, in, out, ulp_tolerance,
                                                 rounding);
   }
 
-  template <typename T, typename U> void explain_error(T in, U out) {
+  template <typename InType, typename OutType>
+  void explain_error(InType in, OutType out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
                                                 rounding);
   }
@@ -286,8 +294,8 @@ private:
                                               rounding);
   }
 
-  template <typename T, typename U>
-  void explain_error(const TernaryInput<T> &in, U out) {
+  template <typename InType, typename OutType>
+  void explain_error(const TernaryInput<InType> &in, OutType out) {
     explain_ternary_operation_one_output_error(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -303,7 +311,9 @@ constexpr bool is_valid_operation() {
       (op == Operation::Sqrt && cpp::is_floating_point_v<InputType> &&
        cpp::is_floating_point_v<OutputType> &&
        sizeof(OutputType) <= sizeof(InputType)) ||
-      (op == Operation::Div && internal::IsBinaryInput<InputType>::VALUE &&
+      (Operation::BeginBinaryOperationsSingleOutput < op &&
+       op < Operation::EndBinaryOperationsSingleOutput &&
+       internal::IsBinaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
        cpp::is_floating_point_v<OutputType>) ||
