@@ -1,6 +1,7 @@
-// RUNAA: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fclangir -emit-cir -o %t.cir
 // RUN: FileCheck --input-file=%t.cir -check-prefix=CIR %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fclangir -emit-llvm -o %t.ll
+// RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
 
 char buffer[32] = "This is a largely unused buffer";
 
@@ -17,6 +18,9 @@ char buffer[32] = "This is a largely unused buffer";
 // CIR:  %[[VAL_7:.*]] = cir.ptr_stride(%[[VAL_5]] : !cir.ptr<!s8i>, %[[VAL_6]] : !s32i), !cir.ptr<!s8i>
 // CIR:  %[[VAL_8:.*]] = cir.cast(bitcast, %[[VAL_7]] : !cir.ptr<!s8i>), !cir.ptr<!void>
 // CIR:  cir.clear_cache %[[VAL_3]] : !cir.ptr<!void>, %[[VAL_8]],
+
+// LLVM-LABEL: main
+// LLVM:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr (i8, ptr @buffer, i64 32)),
 
 int main(void) {
   __builtin___clear_cache(buffer, buffer+32);
