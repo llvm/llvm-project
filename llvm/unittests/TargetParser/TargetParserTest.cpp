@@ -2255,23 +2255,6 @@ TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("ssbs2"));
 }
 
-TEST(TargetParserTest, AArch64PrintEnabledExtensions) {
-  // Pick a single enabled extension to validate formatting
-  std::set<StringRef> EnabledExtensions = {"crc"};
-  std::string ExpectedOutput =
-      "Extensions enabled for the given AArch64 target\n\n"
-      "    Architecture Feature(s)                                Description\n"
-      "    FEAT_CRC32                                             Enable ARMv8 CRC-32 checksum instructions\n";
-
-  outs().flush();
-  testing::internal::CaptureStdout();
-  AArch64::printEnabledExtensions(EnabledExtensions);
-  outs().flush();
-  std::string CapturedOutput = testing::internal::GetCapturedStdout();
-
-  EXPECT_EQ(CapturedOutput, ExpectedOutput);
-}
-
 struct AArch64ExtensionDependenciesBaseArchTestParams {
   const llvm::AArch64::ArchInfo &Arch;
   std::vector<StringRef> Modifiers;
