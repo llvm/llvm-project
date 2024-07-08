@@ -164,8 +164,8 @@
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
     !defined(__STRICT_ANSI__)
    /* C23 5.2.5.3.3p29-30 */
-#  define INFINITY (__builtin_inf())
-#  define NAN (__builtin_nan(""))
+#  define INFINITY (__builtin_inff())
+#  define NAN (__builtin_nanf(""))
 #endif
 
 #ifdef __STDC_WANT_IEC_60559_TYPES_EXT__
