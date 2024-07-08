@@ -88,18 +88,16 @@ static bool hasELFSignedGOTHelper(const Function &F,
   if (!Triple(STI->getTargetTriple()).isOSBinFormatELF())
     return false;
   const Module *M = F.getParent();
-  uint64_t PAuthABIPlatform = -1;
-  if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
-          M->getModuleFlag("aarch64-elf-pauthabi-platform")))
-    PAuthABIPlatform = PAP->getZExtValue();
-  if (PAuthABIPlatform != ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX)
+  const auto *PAP = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("aarch64-elf-pauthabi-platform"));
+  if (!PAP || PAP->getZExtValue() != ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX)
     return false;
-  uint64_t PAuthABIVersion = -1;
-  if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
-          M->getModuleFlag("aarch64-elf-pauthabi-version")))
-    PAuthABIVersion = PAV->getZExtValue();
-  return (PAuthABIVersion &
-          (1 << ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT)) != 0;
+  const auto *PAV = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("aarch64-elf-pauthabi-version"));
+  if (!PAV)
+    return false;
+  return PAV->getZExtValue() &
+         (1 << ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT);
 }
 
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
