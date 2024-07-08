@@ -14,6 +14,7 @@
 #ifndef LLVM_MCA_INSTRBUILDER_H
 #define LLVM_MCA_INSTRBUILDER_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -71,9 +72,9 @@ class InstrBuilder {
            std::unique_ptr<const InstrDesc>>
       Descriptors;
 
-  // Key is the MCIInst and SchedClassID the describe the value InstrDesc
-  DenseMap<std::pair<const MCInst *, unsigned>,
-           std::unique_ptr<const InstrDesc>>
+  // Key is a hash of the MCInstruction and a SchedClassID that describe the
+  // value InstrDesc
+  DenseMap<std::pair<hash_code, unsigned>, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
   bool FirstCallInst;
@@ -83,6 +84,7 @@ class InstrBuilder {
   using InstRecycleCallback = std::function<Instruction *(const InstrDesc &)>;
   InstRecycleCallback InstRecycleCB;
 
+  Expected<unsigned> getVariantSchedClassID(const MCInst &MCI, unsigned SchedClassID);
   Expected<const InstrDesc &>
   createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
   Expected<const InstrDesc &>

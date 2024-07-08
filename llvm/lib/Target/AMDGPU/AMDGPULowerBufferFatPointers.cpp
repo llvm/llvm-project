@@ -969,7 +969,7 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
     findDbgValues(Dbgs, I);
     for (auto *Dbg : Dbgs) {
       IRB.SetInsertPoint(Dbg);
-      auto &DL = I->getModule()->getDataLayout();
+      auto &DL = I->getDataLayout();
       assert(isSplitFatPtr(I->getType()) &&
              "We should've RAUW'd away loads, stores, etc. at this point");
       auto *OffDbg = cast<DbgValueInst>(Dbg->clone());
@@ -1251,7 +1251,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   IRB.SetInsertPoint(&GEP);
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
-  const DataLayout &DL = GEP.getModule()->getDataLayout();
+  const DataLayout &DL = GEP.getDataLayout();
   bool InBounds = GEP.isInBounds();
 
   // In order to call emitGEPOffset() and thus not have to reimplement it,
@@ -1295,7 +1295,7 @@ PtrParts SplitPtrStructs::visitPtrToIntInst(PtrToIntInst &PI) {
   unsigned Width = ResTy->getScalarSizeInBits();
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
-  const DataLayout &DL = PI.getModule()->getDataLayout();
+  const DataLayout &DL = PI.getDataLayout();
   unsigned FatPtrWidth = DL.getPointerSizeInBits(AMDGPUAS::BUFFER_FAT_POINTER);
 
   Value *Res;
@@ -1324,7 +1324,7 @@ PtrParts SplitPtrStructs::visitIntToPtrInst(IntToPtrInst &IP) {
   if (!isSplitFatPtr(IP.getType()))
     return {nullptr, nullptr};
   IRB.SetInsertPoint(&IP);
-  const DataLayout &DL = IP.getModule()->getDataLayout();
+  const DataLayout &DL = IP.getDataLayout();
   unsigned RsrcPtrWidth = DL.getPointerSizeInBits(AMDGPUAS::BUFFER_RESOURCE);
   Value *Int = IP.getOperand(0);
   Type *IntTy = Int->getType();

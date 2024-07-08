@@ -360,8 +360,7 @@ public:
 
   SymbolFileDWARFDebugMap *GetDebugMapSymfile();
 
-  virtual lldb::TypeSP
-  FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die);
+  virtual DWARFDIE FindDefinitionDIE(const DWARFDIE &die);
 
   virtual lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, ConstString type_name, bool must_be_implementation);

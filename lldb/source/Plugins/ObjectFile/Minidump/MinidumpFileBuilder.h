@@ -146,7 +146,7 @@ private:
   lldb_private::DataBufferHeap m_data;
   lldb::ProcessSP m_process_sp;
 
-  uint m_expected_directories = 0;
+  size_t m_expected_directories = 0;
   uint64_t m_saved_data_size = 0;
   lldb::offset_t m_thread_list_start = 0;
   // We set the max write amount to 128 mb, this is arbitrary

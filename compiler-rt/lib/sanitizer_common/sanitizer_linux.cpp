@@ -1845,18 +1845,18 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 
 #  if !SANITIZER_GO
 void *internal_start_thread(void *(*func)(void *arg), void *arg) {
-  if (&real_pthread_create == 0)
+  if (&internal_pthread_create == 0)
     return nullptr;
   // Start the thread with signals blocked, otherwise it can steal user signals.
   ScopedBlockSignals block(nullptr);
   void *th;
-  real_pthread_create(&th, nullptr, func, arg);
+  internal_pthread_create(&th, nullptr, func, arg);
   return th;
 }
 
 void internal_join_thread(void *th) {
-  if (&real_pthread_join)
-    real_pthread_join(th, nullptr);
+  if (&internal_pthread_join)
+    internal_pthread_join(th, nullptr);
 }
 #  else
 void *internal_start_thread(void *(*func)(void *), void *arg) { return 0; }

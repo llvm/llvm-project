@@ -69,8 +69,8 @@ static ThreadAttributes main_thread_attrib;
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
   // value. We step over it (the "+ 1" below) to get to the env values.
-  ArgVEntryType *env_ptr = app.args->argv + app.args->argc + 1;
-  ArgVEntryType *env_end_marker = env_ptr;
+  uintptr_t *env_ptr = app.args->argv + app.args->argc + 1;
+  uintptr_t *env_end_marker = env_ptr;
   app.env_ptr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;

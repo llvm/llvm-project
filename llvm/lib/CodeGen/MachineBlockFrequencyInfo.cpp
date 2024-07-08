@@ -163,7 +163,7 @@ struct DOTGraphTraits<MachineBlockFrequencyInfo *>
 
 INITIALIZE_PASS_BEGIN(MachineBlockFrequencyInfo, DEBUG_TYPE,
                       "Machine Block Frequency Analysis", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(MachineBlockFrequencyInfo, DEBUG_TYPE,
                     "Machine Block Frequency Analysis", true, true)
@@ -185,7 +185,7 @@ MachineBlockFrequencyInfo::MachineBlockFrequencyInfo(
 MachineBlockFrequencyInfo::~MachineBlockFrequencyInfo() = default;
 
 void MachineBlockFrequencyInfo::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -209,7 +209,7 @@ void MachineBlockFrequencyInfo::calculate(
 
 bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
   MachineBranchProbabilityInfo &MBPI =
-      getAnalysis<MachineBranchProbabilityInfo>();
+      getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
   calculate(F, MBPI, MLI);
   return false;
