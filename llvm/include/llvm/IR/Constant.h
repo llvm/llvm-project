@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+class ConstantRange;
 class APInt;
 
 /// This is an important base class in LLVM. It provides the common facilities
@@ -153,6 +154,10 @@ public:
   /// If C is a constant integer then return its value, otherwise C must be a
   /// vector of constant integers, all equal, and the common value is returned.
   const APInt &getUniqueInteger() const;
+
+  /// Convert constant to an approximate constant range. For vectors, the
+  /// range is the union over the element ranges. Poison elements are ignored.
+  ConstantRange toConstantRange() const;
 
   /// Called if some element of this constant is no longer valid.
   /// At this point only other constants may be on the use_list for this

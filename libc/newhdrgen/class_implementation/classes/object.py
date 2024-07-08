@@ -15,4 +15,4 @@ class Object:
         self.type = type
 
     def __str__(self):
-        return f"extern {self.type} {self.name}"
+        return f"extern {self.type} {self.name};"

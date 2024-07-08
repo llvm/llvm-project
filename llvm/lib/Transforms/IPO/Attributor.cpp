@@ -2385,8 +2385,7 @@ void Attributor::identifyDeadInternalFunctions() {
   bool FoundLiveInternal = true;
   while (FoundLiveInternal) {
     FoundLiveInternal = false;
-    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
-      Function *F = InternalFns[u];
+    for (Function *&F : InternalFns) {
       if (!F)
         continue;
 
@@ -2403,13 +2402,13 @@ void Attributor::identifyDeadInternalFunctions() {
       }
 
       LiveInternalFns.insert(F);
-      InternalFns[u] = nullptr;
+      F = nullptr;
       FoundLiveInternal = true;
     }
   }
 
-  for (unsigned u = 0, e = InternalFns.size(); u < e; ++u)
-    if (Function *F = InternalFns[u])
+  for (Function *F : InternalFns)
+    if (F)
       ToBeDeletedFunctions.insert(F);
 }
 

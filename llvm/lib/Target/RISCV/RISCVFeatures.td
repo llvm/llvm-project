@@ -1262,6 +1262,10 @@ def FeatureUnalignedVectorMem
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
+def FeaturePredictableSelectIsExpensive
+    : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
+                       "Prefer likely predicted branches over selects">;
+
 def TuneNoOptimizedZeroStrideLoad
    : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "false", "Hasn't optimized (perform fewer memory operations)"
