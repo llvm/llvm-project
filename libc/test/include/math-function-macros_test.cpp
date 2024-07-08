@@ -12,7 +12,7 @@
  * The intent of this test is validate that the generic math macros operate as
  * intended
  */
-#include "include/llvm-libc-macros/generic-math-macros.h"
+#include "include/llvm-libc-macros/math-function-macros.h"
 
 // INF can be defined as a number with zeroed out mantissa and 1s in the 
 // exponent
@@ -40,7 +40,7 @@ static const float neg_nan = *(float *)&neg_nan_bits;
  * (trailing significand field ≠ 0)
  */
 
-TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsfinite) {
+TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroIsfinite) {
   EXPECT_EQ(isfinite(pos_inf), 0);
   EXPECT_EQ(isfinite(neg_inf), 0);
   EXPECT_EQ(isfinite(pos_nan), 0);
@@ -49,7 +49,7 @@ TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsfinite) {
   EXPECT_EQ(isfinite(PI), 1);
 }
 
-TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsinf) {
+TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroIsinf) {
   EXPECT_EQ(isinf(PI), 0);
   EXPECT_EQ(isinf(CASE_DIV_BY_POS_INF), 0);
   EXPECT_EQ(isinf(CASE_DIV_BY_NEG_INF), 0);
@@ -60,7 +60,7 @@ TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsinf) {
   EXPECT_EQ(isinf(CASE_DIV_BY_ZERO), 1);
 }
 
-TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsnan) {
+TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroIsnan) {
   EXPECT_EQ(isnan(PI), 0);
   EXPECT_EQ(isnan(CASE_DIV_BY_ZERO), 0);
   EXPECT_EQ(isnan(CASE_DIV_BY_POS_INF), 0);
@@ -72,7 +72,7 @@ TEST(LlvmLibcGenericMath, TypeGenericMacroMathIsnan) {
   EXPECT_EQ(isnan(pos_inf / neg_inf), 1);
 }
 
-TEST(LlvmLibcGenericMath, TypeGenericMacroMathSignbit) {
+TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroSignbit) {
   EXPECT_EQ(signbit(static_cast<float>(PI)), 0);
   EXPECT_EQ(signbit(static_cast<double>(PI)), 0);
   EXPECT_EQ(signbit(static_cast<long double>(PI)), 0);

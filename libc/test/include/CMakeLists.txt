@@ -81,11 +81,11 @@ add_libc_test(
 )
 
 add_libc_test(
-  generic_math_macros_test
+  math_function_macros_test
   SUITE
     libc_include_tests
   SRCS
-    generic-math-macros_test.cpp
+    math-function-macros_test.cpp
   DEPENDS
-    libc.include.llvm-libc-macros.generic_math_macros
+    libc.include.llvm-libc-macros.math_function_macros
 )

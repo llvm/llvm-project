@@ -285,7 +285,7 @@ add_macro_header(
 )
 
 add_macro_header(
-  generic_math_macros
+  math_function_macros
   HDR 
-    generic-math-macros.h
+    math-function-macros.h
 )
