@@ -12352,9 +12352,6 @@ def warn_hlsl_deprecated_register_type_i: Warning<"deprecated legacy int constan
 def warn_hlsl_register_type_c_not_in_global_scope: Warning<"register binding 'c' ignored inside cbuffer/tbuffer declarations; use pack_offset instead">, InGroup<DisallowLegacyBindingRules>, DefaultError;
 def warn_hlsl_UDT_missing_resource_type_member: Warning<"variable of type '%0' bound to register type '%1' does not contain a matching '%select{srv|uav|cbv|sampler}2' resource">, InGroup<DisallowLegacyBindingRules>;
 def warn_hlsl_UDT_missing_basic_type: Warning<"register 'c' used on type with no contents to allocate in a constant buffer">, InGroup<DisallowLegacyBindingRules>;
-def err_hlsl_mismatching_register_resource_type_and_name: Error<"invalid register name prefix '%0' for register resource type '%1' (expected %select{'t'|'u'|'b'|'s'}2)">;
-def err_hlsl_mismatching_register_builtin_type_and_name: Error<"invalid register name prefix '%0' for '%1' (expected %2)">;
-def err_hlsl_unsupported_register_resource_type : Error<"invalid resource '%0' used">;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,

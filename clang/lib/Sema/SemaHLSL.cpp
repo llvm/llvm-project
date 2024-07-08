@@ -519,13 +519,6 @@ const CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *SamplerUAVOrSRV) {
     llvm_unreachable("Resource class must have an element type.");
 
   if (const BuiltinType *BTy = dyn_cast<BuiltinType>(Ty)) {
-    /* QualType QT = SamplerUAVOrSRV->getType();
-    PrintingPolicy PP = S.getPrintingPolicy();
-    std::string typestr = QualType::getAsString(QT.split(), PP);
-
-    S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_resource_type)
-        << typestr;
-    return; */
     return nullptr;
   }
 
