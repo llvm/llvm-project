@@ -1186,6 +1186,12 @@ public:
     return VectorizableTree.front()->Scalars;
   }
 
+  /// Checks if the root graph node can be emitted with narrower bitwidth at
+  /// codegen and returns it signedness, if so.
+  bool isSignedMinBitwidthRootNode() const {
+    return MinBWs.at(VectorizableTree.front().get()).second;
+  }
+
   /// Builds external uses of the vectorized scalars, i.e. the list of
   /// vectorized scalars to be extracted, their lanes and their scalar users. \p
   /// ExternallyUsedValues contains additional list of external uses to handle
@@ -2451,6 +2457,90 @@ public:
   /// is delayed until BoUpSLP is destructed.
   void eraseInstruction(Instruction *I) {
     DeletedInstructions.insert(I);
+  }
+
+  /// Remove instructions from the parent function and clear the operands of \p
+  /// DeadVals instructions, marking for deletion trivially dead operands.
+  template <typename T>
+  void removeInstructionsAndOperands(ArrayRef<T *> DeadVals) {
+    SmallVector<WeakTrackingVH> DeadInsts;
+    for (T *V : DeadVals) {
+      auto *I = cast<Instruction>(V);
+      DeletedInstructions.insert(I);
+    }
+    for (T *V : DeadVals) {
+      if (!V)
+        continue;
+      auto *I = cast<Instruction>(V);
+      salvageDebugInfo(*I);
+      SmallVector<const TreeEntry *> Entries;
+      if (const TreeEntry *Entry = getTreeEntry(I)) {
+        Entries.push_back(Entry);
+        auto It = MultiNodeScalars.find(I);
+        if (It != MultiNodeScalars.end())
+          Entries.append(It->second.begin(), It->second.end());
+      }
+      for (Use &U : I->operands()) {
+        if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
+            OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
+            wouldInstructionBeTriviallyDead(OpI, TLI) &&
+            (Entries.empty() || none_of(Entries, [&](const TreeEntry *Entry) {
+               return Entry->VectorizedValue == OpI;
+             })))
+          DeadInsts.push_back(OpI);
+      }
+      I->dropAllReferences();
+    }
+    for (T *V : DeadVals) {
+      auto *I = cast<Instruction>(V);
+      if (!I->getParent())
+        continue;
+      assert((I->use_empty() || all_of(I->uses(),
+                                       [&](Use &U) {
+                                         return isDeleted(
+                                             cast<Instruction>(U.getUser()));
+                                       })) &&
+             "trying to erase instruction with users.");
+      I->removeFromParent();
+      SE->forgetValue(I);
+    }
+    // Process the dead instruction list until empty.
+    while (!DeadInsts.empty()) {
+      Value *V = DeadInsts.pop_back_val();
+      Instruction *VI = cast_or_null<Instruction>(V);
+      if (!VI || !VI->getParent())
+        continue;
+      assert(isInstructionTriviallyDead(VI, TLI) &&
+             "Live instruction found in dead worklist!");
+      assert(VI->use_empty() && "Instructions with uses are not dead.");
+
+      // Don't lose the debug info while deleting the instructions.
+      salvageDebugInfo(*VI);
+
+      // Null out all of the instruction's operands to see if any operand
+      // becomes dead as we go.
+      for (Use &OpU : VI->operands()) {
+        Value *OpV = OpU.get();
+        if (!OpV)
+          continue;
+        OpU.set(nullptr);
+
+        if (!OpV->use_empty())
+          continue;
+
+        // If the operand is an instruction that became dead as we nulled out
+        // the operand, and if it is 'trivially' dead, delete it in a future
+        // loop iteration.
+        if (auto *OpI = dyn_cast<Instruction>(OpV))
+          if (!DeletedInstructions.contains(OpI) &&
+              isInstructionTriviallyDead(OpI, TLI))
+            DeadInsts.push_back(OpI);
+      }
+
+      VI->removeFromParent();
+      DeletedInstructions.insert(VI);
+      SE->forgetValue(VI);
+    }
   }
 
   /// Checks if the instruction was already analyzed for being possible
@@ -3987,6 +4077,10 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
 BoUpSLP::~BoUpSLP() {
   SmallVector<WeakTrackingVH> DeadInsts;
   for (auto *I : DeletedInstructions) {
+    if (!I->getParent()) {
+      I->insertBefore(F->getEntryBlock().getTerminator());
+      continue;
+    }
     for (Use &U : I->operands()) {
       auto *Op = dyn_cast<Instruction>(U.get());
       if (Op && !DeletedInstructions.count(Op) && Op->hasOneUser() &&
@@ -14075,11 +14169,8 @@ Value *BoUpSLP::vectorizeTree(
       }
 #endif
       LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *Scalar << ".\n");
-      eraseInstruction(cast<Instruction>(Scalar));
-      // Retain to-be-deleted instructions for some debug-info
-      // bookkeeping. NOTE: eraseInstruction only marks the instruction for
-      // deletion - instructions are not deleted until later.
-      RemovedInsts.push_back(cast<Instruction>(Scalar));
+      auto *I = cast<Instruction>(Scalar);
+      RemovedInsts.push_back(I);
     }
   }
 
@@ -14087,6 +14178,22 @@ Value *BoUpSLP::vectorizeTree(
   // new vector instruction.
   if (auto *V = dyn_cast<Instruction>(VectorizableTree[0]->VectorizedValue))
     V->mergeDIAssignID(RemovedInsts);
+
+  // Clear up reduction references, if any.
+  if (UserIgnoreList) {
+    for (Instruction *I : RemovedInsts) {
+      if (getTreeEntry(I)->Idx != 0)
+        continue;
+      I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
+        return UserIgnoreList->contains(U.getUser());
+      });
+    }
+  }
+  // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
+  // cache correctness.
+  // NOTE: removeInstructionAndOperands only marks the instruction for deletion
+  // - instructions are not deleted until later.
+  removeInstructionsAndOperands(ArrayRef(RemovedInsts));
 
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
@@ -16137,15 +16244,18 @@ bool SLPVectorizerPass::vectorizeStores(
     Res.first = Idx;
     Res.second.emplace(Idx, 0);
   };
-  StoreInst *PrevStore = Stores.front();
+  Type *PrevValTy = nullptr;
   for (auto [I, SI] : enumerate(Stores)) {
+    if (R.isDeleted(SI))
+      continue;
+    if (!PrevValTy)
+      PrevValTy = SI->getValueOperand()->getType();
     // Check that we do not try to vectorize stores of different types.
-    if (PrevStore->getValueOperand()->getType() !=
-        SI->getValueOperand()->getType()) {
+    if (PrevValTy != SI->getValueOperand()->getType()) {
       for (auto &Set : SortedStores)
         TryToVectorize(Set.second);
       SortedStores.clear();
-      PrevStore = SI;
+      PrevValTy = SI->getValueOperand()->getType();
     }
     FillStoresSet(I, SI);
   }
@@ -17028,9 +17138,12 @@ public:
     Value *VectorizedTree = nullptr;
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
+    SmallVector<InstructionsState> States;
+    for (ArrayRef<Value *> RV : ReducedVals)
+      States.push_back(getSameOpcode(RV, TLI));
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
-      InstructionsState S = getSameOpcode(OrigReducedVals, TLI);
+      InstructionsState S = States[I];
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       DenseMap<Value *, Value *> TrackedToOrig(2 * OrigReducedVals.size());
@@ -17355,14 +17468,11 @@ public:
         Value *ReducedSubTree =
             emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
         if (ReducedSubTree->getType() != VL.front()->getType()) {
-          ReducedSubTree = Builder.CreateIntCast(
-              ReducedSubTree, VL.front()->getType(), any_of(VL, [&](Value *R) {
-                KnownBits Known = computeKnownBits(
-                    R, cast<Instruction>(ReductionOps.front().front())
-                           ->getModule()
-                           ->getDataLayout());
-                return !Known.isNonNegative();
-              }));
+          assert(ReducedSubTree->getType() != VL.front()->getType() &&
+                 "Expected different reduction type.");
+          ReducedSubTree =
+              Builder.CreateIntCast(ReducedSubTree, VL.front()->getType(),
+                                    V.isSignedMinBitwidthRootNode());
         }
 
         // Improved analysis for add/fadd/xor reductions with same scale factor
@@ -17524,11 +17634,11 @@ public:
           }
 #endif
           if (!Ignore->use_empty()) {
-            Value *Undef = UndefValue::get(Ignore->getType());
-            Ignore->replaceAllUsesWith(Undef);
+            Value *P = PoisonValue::get(Ignore->getType());
+            Ignore->replaceAllUsesWith(P);
           }
-          V.eraseInstruction(cast<Instruction>(Ignore));
         }
+        V.removeInstructionsAndOperands(RdxOps);
       }
     } else if (!CheckForReusedReductionOps) {
       for (ReductionOpsType &RdxOps : ReductionOps)
@@ -18076,6 +18186,8 @@ bool SLPVectorizerPass::vectorizeHorReduction(
         Stack.emplace(I, Level);
         continue;
       }
+      if (R.isDeleted(Inst))
+        continue;
     } else {
       // We could not vectorize `Inst` so try to use it as a future seed.
       if (!TryAppendToPostponedInsts(Inst)) {
@@ -18161,15 +18273,28 @@ static bool tryToVectorizeSequence(
 
   // Try to vectorize elements base on their type.
   SmallVector<T *> Candidates;
-  for (auto *IncIt = Incoming.begin(), *E = Incoming.end(); IncIt != E;) {
+  SmallVector<T *> VL;
+  for (auto *IncIt = Incoming.begin(), *E = Incoming.end(); IncIt != E;
+       VL.clear()) {
     // Look for the next elements with the same type, parent and operand
     // kinds.
+    auto *I = dyn_cast<Instruction>(*IncIt);
+    if (!I || R.isDeleted(I)) {
+      ++IncIt;
+      continue;
+    }
     auto *SameTypeIt = IncIt;
-    while (SameTypeIt != E && AreCompatible(*SameTypeIt, *IncIt))
+    while (SameTypeIt != E && (!isa<Instruction>(*SameTypeIt) ||
+                               R.isDeleted(cast<Instruction>(*SameTypeIt)) ||
+                               AreCompatible(*SameTypeIt, *IncIt))) {
+      auto *I = dyn_cast<Instruction>(*SameTypeIt);
       ++SameTypeIt;
+      if (I && !R.isDeleted(I))
+        VL.push_back(cast<T>(I));
+    }
 
     // Try to vectorize them.
-    unsigned NumElts = (SameTypeIt - IncIt);
+    unsigned NumElts = VL.size();
     LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize starting at nodes ("
                       << NumElts << ")\n");
     // The vectorization is a 3-state attempt:
@@ -18181,10 +18306,15 @@ static bool tryToVectorizeSequence(
     // 3. Final attempt to try to vectorize all instructions with the
     // same/alternate ops only, this may result in some extra final
     // vectorization.
-    if (NumElts > 1 &&
-        TryToVectorizeHelper(ArrayRef(IncIt, NumElts), MaxVFOnly)) {
+    if (NumElts > 1 && TryToVectorizeHelper(ArrayRef(VL), MaxVFOnly)) {
       // Success start over because instructions might have been changed.
       Changed = true;
+      VL.swap(Candidates);
+      Candidates.clear();
+      for (T *V : VL) {
+        if (auto *I = dyn_cast<Instruction>(V); I && !R.isDeleted(I))
+          Candidates.push_back(V);
+      }
     } else {
       /// \Returns the minimum number of elements that we will attempt to
       /// vectorize.
@@ -18195,7 +18325,10 @@ static bool tryToVectorizeSequence(
       if (NumElts < GetMinNumElements(*IncIt) &&
           (Candidates.empty() ||
            Candidates.front()->getType() == (*IncIt)->getType())) {
-        Candidates.append(IncIt, std::next(IncIt, NumElts));
+        for (T *V : VL) {
+          if (auto *I = dyn_cast<Instruction>(V); I && !R.isDeleted(I))
+            Candidates.push_back(V);
+        }
       }
     }
     // Final attempt to vectorize instructions with the same types.
@@ -18206,13 +18339,26 @@ static bool tryToVectorizeSequence(
         Changed = true;
       } else if (MaxVFOnly) {
         // Try to vectorize using small vectors.
-        for (auto *It = Candidates.begin(), *End = Candidates.end();
-             It != End;) {
+        SmallVector<T *> VL;
+        for (auto *It = Candidates.begin(), *End = Candidates.end(); It != End;
+             VL.clear()) {
+          auto *I = dyn_cast<Instruction>(*It);
+          if (!I || R.isDeleted(I)) {
+            ++It;
+            continue;
+          }
           auto *SameTypeIt = It;
-          while (SameTypeIt != End && AreCompatible(*SameTypeIt, *It))
+          while (SameTypeIt != End &&
+                 (!isa<Instruction>(*SameTypeIt) ||
+                  R.isDeleted(cast<Instruction>(*SameTypeIt)) ||
+                  AreCompatible(*SameTypeIt, *It))) {
+            auto *I = dyn_cast<Instruction>(*SameTypeIt);
             ++SameTypeIt;
-          unsigned NumElts = (SameTypeIt - It);
-          if (NumElts > 1 && TryToVectorizeHelper(ArrayRef(It, NumElts),
+            if (I && !R.isDeleted(I))
+              VL.push_back(cast<T>(I));
+          }
+          unsigned NumElts = VL.size();
+          if (NumElts > 1 && TryToVectorizeHelper(ArrayRef(VL),
                                                   /*MaxVFOnly=*/false))
             Changed = true;
           It = SameTypeIt;
@@ -18486,7 +18632,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
     return false;
   };
-  auto AreCompatiblePHIs = [&PHIToOpcodes, this](Value *V1, Value *V2) {
+  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](Value *V1, Value *V2) {
     if (V1 == V2)
       return true;
     if (V1->getType() != V2->getType())
@@ -18501,6 +18647,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         continue;
       if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
         if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
+          if (R.isDeleted(I1) || R.isDeleted(I2))
+            return false;
           if (I1->getParent() != I2->getParent())
             return false;
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
@@ -18721,8 +18869,13 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
     // are trying to vectorize the index computations, so the maximum number of
     // elements is based on the size of the index expression, rather than the
     // size of the GEP itself (the target's pointer size).
+    auto *It = find_if(Entry.second, [&](GetElementPtrInst *GEP) {
+      return !R.isDeleted(GEP);
+    });
+    if (It == Entry.second.end())
+      continue;
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
-    unsigned EltSize = R.getVectorElementSize(*Entry.second[0]->idx_begin());
+    unsigned EltSize = R.getVectorElementSize(*(*It)->idx_begin());
     if (MaxVecRegSize < EltSize)
       continue;
 
