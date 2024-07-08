@@ -3884,11 +3884,11 @@ TEST_F(DIExpressionTest, extractLeadingOffset) {
   // Single location expressions are permitted.
   EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 2));
   EXPECT_EQ(Offset, 2);
-  EXPECT_EQ(Remaining.size(), 0);
+  EXPECT_EQ(Remaining.size(), 0u);
   // This is also a single-location.
   EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 2));
   EXPECT_EQ(Offset, 2);
-  EXPECT_EQ(Remaining.size(), 0);
+  EXPECT_EQ(Remaining.size(), 0u);
   // Variadic locations are not permitted. A non-zero arg is assumed to
   // indicate multiple inputs.
   EXPECT_FALSE(EXTRACT_FROM(DW_OP_LLVM_arg, 1));
