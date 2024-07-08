@@ -269,11 +269,6 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   deref = m_root_node->Dereference(error);
   if (!deref || error.Fail())
     return false;
-  deref = deref->GetChildMemberWithName("__value_");
-  if (deref) {
-    m_element_type = deref->GetCompilerType();
-    return true;
-  }
   deref = m_backend.GetChildAtNamePath({"__tree_", "__pair3_"});
   if (!deref)
     return false;
@@ -301,40 +296,35 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
     return;
   if (!node)
     return;
+
   CompilerType node_type(node->GetCompilerType());
-  uint64_t bit_offset;
-  if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) !=
-      UINT32_MAX) {
-    // Old layout (pre d05b10ab4fc65)
-    m_skip_size = bit_offset / 8u;
-  } else {
-    auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
-    if (!ast_ctx)
-      return;
-    CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
-        llvm::StringRef(),
-        {{"ptr0", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-         {"ptr1", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-         {"ptr2", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-         {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
-         {"payload", (m_element_type.GetCompleteType(), m_element_type)}});
-    std::string child_name;
-    uint32_t child_byte_size;
-    int32_t child_byte_offset = 0;
-    uint32_t child_bitfield_bit_size;
-    uint32_t child_bitfield_bit_offset;
-    bool child_is_base_class;
-    bool child_is_deref_of_parent;
-    uint64_t language_flags;
-    auto child_type =
-        llvm::expectedToStdOptional(tree_node_type.GetChildCompilerTypeAtIndex(
-            nullptr, 4, true, true, true, child_name, child_byte_size,
-            child_byte_offset, child_bitfield_bit_size,
-            child_bitfield_bit_offset, child_is_base_class,
-            child_is_deref_of_parent, nullptr, language_flags));
-    if (child_type && child_type->IsValid())
-      m_skip_size = (uint32_t)child_byte_offset;
-  }
+  auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  if (!ast_ctx)
+    return;
+
+  CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
+      llvm::StringRef(),
+      {{"ptr0", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+       {"ptr1", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+       {"ptr2", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+       {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
+       {"payload", (m_element_type.GetCompleteType(), m_element_type)}});
+  std::string child_name;
+  uint32_t child_byte_size;
+  int32_t child_byte_offset = 0;
+  uint32_t child_bitfield_bit_size;
+  uint32_t child_bitfield_bit_offset;
+  bool child_is_base_class;
+  bool child_is_deref_of_parent;
+  uint64_t language_flags;
+  auto child_type =
+      llvm::expectedToStdOptional(tree_node_type.GetChildCompilerTypeAtIndex(
+          nullptr, 4, true, true, true, child_name, child_byte_size,
+          child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, child_is_deref_of_parent, nullptr,
+          language_flags));
+  if (child_type && child_type->IsValid())
+    m_skip_size = (uint32_t)child_byte_offset;
 }
 
 ValueObjectSP
@@ -369,14 +359,8 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetKeyValuePair(
       return nullptr;
 
     GetValueOffset(iterated_sp);
-    auto child_sp = iterated_sp->GetChildMemberWithName("__value_");
-    if (child_sp) {
-      // Old layout (pre 089a7cc5dea)
-      iterated_sp = child_sp;
-    } else {
-      iterated_sp = iterated_sp->GetSyntheticChildAtOffset(
-          m_skip_size, m_element_type, true);
-    }
+    iterated_sp = iterated_sp->GetSyntheticChildAtOffset(m_skip_size,
+                                                         m_element_type, true);
 
     if (!iterated_sp)
       return nullptr;
