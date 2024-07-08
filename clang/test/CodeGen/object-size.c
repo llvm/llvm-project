@@ -425,7 +425,8 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
             struct DynStruct1 *d1, struct StaticStruct *ss) {
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(dv->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(dv->snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(dv->snd, 2);
@@ -434,7 +435,8 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
 
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(d0->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(d0->snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(d0->snd, 2);
@@ -443,7 +445,8 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
 
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(d1->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(d1->snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(d1->snd, 2);
@@ -452,7 +455,8 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
 
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(ss->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(ss->snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(ss->snd, 2);
@@ -475,7 +479,8 @@ void test30(void) {
 
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(nested->snd.snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(nested->snd.snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(nested->snd.snd, 2);
@@ -485,7 +490,8 @@ void test30(void) {
   union { struct DynStruct1 d1; char c[1]; } *u;
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(u->c, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(u->c, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(u->c, 2);
@@ -494,7 +500,8 @@ void test30(void) {
 
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(u->d1.snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(u->d1.snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(u->d1.snd, 2);
@@ -510,7 +517,8 @@ void test31(void) {
   struct DynStruct1 *ds1;
   struct StaticStruct *ss;
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(ds1[9].snd, 1);
 
   // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
@@ -587,7 +595,8 @@ void PR30346(void) {
   struct sockaddr *sa;
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(sa->sa_data, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // NON-DYNAMIC: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
+  // DYNAMIC:     store i32 -1
   gi = OBJECT_SIZE_BUILTIN(sa->sa_data, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(sa->sa_data, 2);
