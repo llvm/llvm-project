@@ -655,8 +655,7 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
         return {ArgumentAccessInfo::AccessType::Read,
                 /*IsClobber=*/false,
                 {*TypeAccessRange}};
-      else
-        return {ArgumentAccessInfo::AccessType::Read, /*IsClobber=*/true, {}};
+      return {ArgumentAccessInfo::AccessType::Read, /*IsClobber=*/true, {}};
     }
   } else if (auto *MemSet = dyn_cast<MemSetInst>(I)) {
     if (!MemSet->isVolatile()) {
@@ -682,11 +681,7 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
           return {ArgumentAccessInfo::AccessType::Read,
                   /*IsClobber=*/false,
                   {*AccessRange}};
-        else
-          return {ArgumentAccessInfo::AccessType::Read, /*IsClobber=*/true, {}};
-      } else {
-        return {
-            ArgumentAccessInfo::AccessType::Unknown, /*IsClobber=*/true, {}};
+        return {ArgumentAccessInfo::AccessType::Read, /*IsClobber=*/true, {}};
       }
     }
   } else if (auto *CB = dyn_cast<CallBase>(I)) {
