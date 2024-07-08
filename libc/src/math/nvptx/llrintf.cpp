@@ -13,8 +13,6 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(long long, llrintf, (float x)) {
-  return static_cast<long long>(__builtin_rintf(x));
-}
+LLVM_LIBC_FUNCTION(long long, llrintf, (float x)) { return __nv_llrintf(x); }
 
 } // namespace LIBC_NAMESPACE
