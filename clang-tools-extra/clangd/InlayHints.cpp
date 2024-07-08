@@ -383,24 +383,6 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   SourceManager &SM;
   std::vector<InlayHintLabelPart> LabelChunks;
 
-  struct CurrentTypeRAII {
-    TypeHintBuilder &Builder;
-    QualType PreviousType;
-    NestedNameSpecifier *PreviousNestedNameSpecifier;
-    CurrentTypeRAII(TypeHintBuilder &Builder, QualType New,
-                    NestedNameSpecifier *NNS = nullptr)
-        : Builder(Builder), PreviousType(Builder.CurrentType),
-          PreviousNestedNameSpecifier(Builder.CurrentNestedNameSpecifier) {
-      Builder.CurrentType = New;
-      if (NNS)
-        Builder.CurrentNestedNameSpecifier = NNS;
-    }
-    ~CurrentTypeRAII() {
-      Builder.CurrentType = PreviousType;
-      Builder.CurrentNestedNameSpecifier = PreviousNestedNameSpecifier;
-    }
-  };
-
   void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
                 SourceLocation Location) {
     std::string Label;
