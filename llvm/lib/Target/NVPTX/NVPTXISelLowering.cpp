@@ -5264,7 +5264,7 @@ static SDValue PerformREMCombine(SDNode *N,
 }
 
 // truncate (logic_op x, y) --> logic_op (truncate x), (truncate y)
-// This will reduce register pressure. 
+// This will reduce register pressure.
 static SDValue PerformTruncCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI) {
   if (!DCI.isBeforeLegalizeOps())
@@ -5272,7 +5272,7 @@ static SDValue PerformTruncCombine(SDNode *N,
 
   SDValue LogicalOp = N->getOperand(0);
   switch (LogicalOp.getOpcode()) {
-  default: 
+  default:
     break;
   case ISD::ADD:
   case ISD::SUB:
@@ -5287,19 +5287,19 @@ static SDValue PerformTruncCombine(SDNode *N,
       if (VT.isScalarInteger() ||
           TLI.isOperationLegal(LogicalOp.getOpcode(), VT)) {
         if (all_of(LogicalOp.getNode()->uses(), [](SDNode *U) {
-              return U->isMachineOpcode() ? 
-                      U->getMachineOpcode() == NVPTX::CVT_u32_u64 : 
-                      U->getOpcode() == ISD::TRUNCATE;
-            })) {          
+              return U->isMachineOpcode()
+                         ? U->getMachineOpcode() == NVPTX::CVT_u32_u64
+                         : U->getOpcode() == ISD::TRUNCATE;
+            })) {
           SDLoc DL(N);
-          SDValue None = DCI.DAG.getTargetConstant(NVPTX::PTXCvtMode::NONE, 
-                                                    DL, MVT::i32);
+          SDValue None =
+              DCI.DAG.getTargetConstant(NVPTX::PTXCvtMode::NONE, DL, MVT::i32);
           SDNode *NarrowL = DCI.DAG.getMachineNode(
               NVPTX::CVT_u32_u64, DL, VT, LogicalOp.getOperand(0), None);
           SDNode *NarrowR = DCI.DAG.getMachineNode(
               NVPTX::CVT_u32_u64, DL, VT, LogicalOp.getOperand(1), None);
           return DCI.DAG.getNode(LogicalOp.getOpcode(), DL, VT,
-                                  SDValue(NarrowL, 0), SDValue(NarrowR, 0));
+                                 SDValue(NarrowL, 0), SDValue(NarrowR, 0));
         }
       }
     }
