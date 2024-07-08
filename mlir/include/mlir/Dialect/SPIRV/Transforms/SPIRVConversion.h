@@ -138,6 +138,8 @@ void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
 void populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns);
 
+void populateReturnOpVectorRewritePatterns(RewritePatternSet &patterns);
+
 namespace spirv {
 class AccessChainOp;
 

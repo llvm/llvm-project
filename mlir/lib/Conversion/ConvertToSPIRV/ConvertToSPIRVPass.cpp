@@ -121,6 +121,18 @@ struct ConvertToSPIRVPass final
       llvm::errs() << "Finish unrolling function inputs\n";
     }
 
+    // Unroll vectors in function outputs to native vector size.
+    {
+      llvm::errs() << "Start unrolling function outputs\n";
+      RewritePatternSet patterns(context);
+      populateReturnOpVectorRewritePatterns(patterns);
+      GreedyRewriteConfig config;
+      config.strictMode = GreedyRewriteStrictness::ExistingOps;
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+        return signalPassFailure();
+      llvm::errs() << "Finish unrolling function inputs\n";
+    }
+
     SPIRVTypeConverter typeConverter(targetAttr);
 
     // Unroll vectors to native vector size.
