@@ -5204,7 +5204,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _ReflowComments:
 
-**ReflowComments** (``ReflowCommentsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <ReflowComments>`
+**ReflowComments** (``ReflowCommentsStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <ReflowComments>`
   Comment reformatting style.
 
   Possible values:
