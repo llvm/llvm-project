@@ -439,6 +439,12 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   ASSERT_TRUE(Expr);
   ASSERT_EQ(Expr->getNumElements(), 3u);
 
+  Expr = parseDIExpressionBodyAtBeginning(
+      "(DW_OP_LLVM_fragment, 0, 1)  trailing source", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+  ASSERT_EQ(Read, StringRef("(DW_OP_LLVM_fragment, 0, 1)  ").size());
+
   Error = {};
   Expr = parseDIExpressionBodyAtBeginning("i32", Read, Error, M, &Mapping);
   ASSERT_FALSE(Expr);
