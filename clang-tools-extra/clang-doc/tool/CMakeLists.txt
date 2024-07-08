@@ -33,7 +33,11 @@ function(copy_files_to_dst src_dir dst_dir file)
   if (NOT EXISTS ${dst_dir})
     file(MAKE_DIRECTORY ${dst_dir})
   endif()
-  configure_file(${src} ${dst} COPYONLY)
+  add_custom_command(OUTPUT ${dst}
+    DEPENDS ${src}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+    COMMENT "Copying ${file} to ${dst_dir}"
+  )
   list(APPEND out_files ${dst})
   set(out_files ${out_files} PARENT_SCOPE)
 endfunction(copy_files_to_dst)
