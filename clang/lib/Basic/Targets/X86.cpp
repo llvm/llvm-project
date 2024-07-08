@@ -457,6 +457,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCF = true;
     } else if (Feature == "+zu") {
       HasZU = true;
+    } else if (Feature == "+branch-hint") {
+      HasBranchHint = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -1292,6 +1294,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("nf", HasNF)
       .Case("cf", HasCF)
       .Case("zu", HasZU)
+      .Case("branch-hint", HasBranchHint)
       .Default(false);
 }
 

@@ -95,7 +95,7 @@ LIBC_INLINE DoubleDouble tan_eval(const DoubleDouble &u) {
 }
 
 // Accurate evaluation of tan for small u.
-Float128 tan_eval(const Float128 &u) {
+[[maybe_unused]] Float128 tan_eval(const Float128 &u) {
   Float128 u_sq = fputil::quick_mul(u, u);
 
   // tan(x) ~ x + x^3/3 + x^5 * 2/15 + x^7 * 17/315 + x^9 * 62/2835 +
@@ -127,7 +127,7 @@ Float128 tan_eval(const Float128 &u) {
 // Calculation a / b = a * (1/b) for Float128.
 // Using the initial approximation of q ~ (1/b), then apply 2 Newton-Raphson
 // iterations, before multiplying by a.
-Float128 newton_raphson_div(const Float128 &a, Float128 b, double q) {
+[[maybe_unused]] Float128 newton_raphson_div(const Float128 &a, Float128 b, double q) {
   Float128 q0(q);
   constexpr Float128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;
