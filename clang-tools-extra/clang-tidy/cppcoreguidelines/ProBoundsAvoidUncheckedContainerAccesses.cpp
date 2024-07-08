@@ -103,8 +103,6 @@ findAlternative(const CXXMethodDecl *MatchedOperator) {
 
 void ProBoundsAvoidUncheckedContainerAccesses::registerMatchers(
     MatchFinder *Finder) {
-  // Need a callExpr here to match CXXOperatorCallExpr ``(&a)->operator[](0)``
-  // and CXXMemberCallExpr ``a[0]``.
   Finder->addMatcher(
       mapAnyOf(cxxOperatorCallExpr, cxxMemberCallExpr)
           .with(callee(cxxMethodDecl(hasOverloadedOperatorName("[]"),
