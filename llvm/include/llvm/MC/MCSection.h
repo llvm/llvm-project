@@ -115,15 +115,6 @@ private:
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
 
-  /// State for tracking labels that don't yet have Fragments
-  struct PendingLabel {
-    MCSymbol* Sym;
-    unsigned Subsection;
-    PendingLabel(MCSymbol* Sym, unsigned Subsection = 0)
-      : Sym(Sym), Subsection(Subsection) {}
-  };
-  SmallVector<PendingLabel, 2> PendingLabels;
-
 protected:
   // TODO Make Name private when possible.
   StringRef Name;
@@ -208,10 +199,6 @@ public:
   bool isVirtualSection() const { return IsVirtual; }
 
   virtual StringRef getVirtualSectionKind() const;
-
-  /// Add a pending label for the requested subsection. This label will be
-  /// associated with a fragment in flushPendingLabels()
-  void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);
 };
 
 } // end namespace llvm

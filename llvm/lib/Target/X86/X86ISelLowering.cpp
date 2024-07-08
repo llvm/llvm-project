@@ -41339,24 +41339,24 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     SDValue V1 = peekThroughBitcasts(N.getOperand(0));
     SDValue V2 = peekThroughBitcasts(N.getOperand(2));
     MVT SVT = V1.getSimpleValueType();
-    MVT NVT = VT.getDoubleNumVectorElementsVT();
-    if ((NVT.is256BitVector() ||
-         (NVT.is512BitVector() && Subtarget.hasEVEX512())) &&
-        V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+    if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         V1.getConstantOperandVal(1) == 0 &&
         V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         V2.getConstantOperandVal(1) == SVT.getVectorNumElements() &&
         V1.getOperand(0) == V2.getOperand(0)) {
-      SDValue Mask =
-          DAG.getNode(ISD::INSERT_SUBVECTOR, DL, NVT, DAG.getUNDEF(NVT),
-                      N.getOperand(1), DAG.getIntPtrConstant(0, DL));
-      return DAG.getNode(
-          ISD::EXTRACT_SUBVECTOR, DL, VT,
-          DAG.getNode(X86ISD::VPERMV, DL, NVT, Mask,
-                      DAG.getBitcast(NVT, V1.getOperand(0))),
-          DAG.getIntPtrConstant(0, DL));
+      EVT NVT = V1.getOperand(0).getValueType();
+      if (NVT.is256BitVector() ||
+          (NVT.is512BitVector() && Subtarget.hasEVEX512())) {
+        MVT WideVT = MVT::getVectorVT(
+            VT.getScalarType(), NVT.getSizeInBits() / VT.getScalarSizeInBits());
+        SDValue Mask = widenSubVector(N.getOperand(1), false, Subtarget, DAG,
+                                      DL, WideVT.getSizeInBits());
+        SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask,
+                                   DAG.getBitcast(WideVT, V1.getOperand(0)));
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
+                           DAG.getIntPtrConstant(0, DL));
+      }
     }
-
     return SDValue();
   }
   default:
@@ -56041,18 +56041,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     };
     auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
       bool AllConstants = true;
-      bool AllSubVectors = true;
+      bool AllSubs = true;
+      unsigned VecSize = VT.getSizeInBits();
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
-        SDValue Sub = SubOps[I].getOperand(Op);
-        unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
-        SDValue BC = peekThroughBitcasts(Sub);
+        SDValue BC = peekThroughBitcasts(SubOps[I].getOperand(Op));
+        unsigned SubSize = BC.getValueSizeInBits();
+        unsigned EltSize = BC.getScalarValueSizeInBits();
         AllConstants &= ISD::isBuildVectorOfConstantSDNodes(BC.getNode()) ||
                         ISD::isBuildVectorOfConstantFPSDNodes(BC.getNode());
-        AllSubVectors &= Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-                         Sub.getOperand(0).getValueType() == VT &&
-                         Sub.getConstantOperandAPInt(1) == (I * NumSubElts);
+        AllSubs &= BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+                   BC.getOperand(0).getValueSizeInBits() == VecSize &&
+                   (BC.getConstantOperandVal(1) * EltSize) == (I * SubSize);
       }
-      return AllConstants || AllSubVectors;
+      return AllConstants || AllSubs;
     };
 
     switch (Op0.getOpcode()) {

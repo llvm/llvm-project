@@ -53,5 +53,6 @@ libc_support_library(
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_impl",
+        "@gmp//:gmp_",
     ],
 )
