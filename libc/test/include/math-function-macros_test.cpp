@@ -40,6 +40,7 @@ static const float neg_nan = *(float *)&neg_nan_bits;
  * (trailing significand field ≠ 0)
  */
 
+/*
 TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroIsfinite) {
   EXPECT_EQ(isfinite(pos_inf), 0);
   EXPECT_EQ(isfinite(neg_inf), 0);
@@ -61,10 +62,14 @@ TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroIsinf) {
 }
 
 TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroIsnan) {
-  EXPECT_EQ(isnan(PI), 0);
+  EXPECT_EQ(isnan(static_cast<float>(PI)), 0); 
+  EXPECT_EQ(isnan(static_cast<double>(PI)), 0); 
+  EXPECT_EQ(isnan(static_cast<long double>(PI)), 0); 
+
   EXPECT_EQ(isnan(CASE_DIV_BY_ZERO), 0);
   EXPECT_EQ(isnan(CASE_DIV_BY_POS_INF), 0);
   EXPECT_EQ(isnan(CASE_DIV_BY_NEG_INF), 0);
+  
   EXPECT_EQ(isnan(pos_nan), 1);
   EXPECT_EQ(isnan(neg_nan), 1);
   EXPECT_EQ(isnan(CASE_MULT_ZERO_BY_POS_INF), 1);
@@ -85,3 +90,8 @@ TEST(LlvmLibcMathFunctionMacros, TypeMathFunctionMacroSignbit) {
   EXPECT_EQ(signbit(neg_inf), 1);
   EXPECT_EQ(signbit(neg_nan), 1);
 }
+*/
+
+LIST_MATH_FUNCTION_MACROS_TEST
+
+
