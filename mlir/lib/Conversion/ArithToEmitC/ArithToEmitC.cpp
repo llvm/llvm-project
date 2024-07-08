@@ -432,8 +432,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type type = this->getTypeConverter()->convertType(op.getType());
-    if (!type || !(isa<IntegerType>(type) ||
-                   emitc::isPointerWideType(type))) {
+    if (!type || !(isa<IntegerType>(type) || emitc::isPointerWideType(type))) {
       return rewriter.notifyMatchFailure(
           op, "expected integer or size_t/ssize_t/ptrdiff_t type");
     }
@@ -516,8 +515,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type type = this->getTypeConverter()->convertType(op.getType());
-    if (!type || !(isa<IntegerType>(type) ||
-                   emitc::isPointerWideType(type))) {
+    if (!type || !(isa<IntegerType>(type) || emitc::isPointerWideType(type))) {
       return rewriter.notifyMatchFailure(
           op, "expected integer or size_t/ssize_t/ptrdiff_t type");
     }
