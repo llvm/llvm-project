@@ -40,7 +40,7 @@ class SignbitTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
 #define LIST_SIGNBIT_TESTS(T, func)                                            \
   using LlvmLibcSignbitTest = SignbitTest<T>;                                  \
-  TEST_F(LlvmLibcSignbitTest, SecialNumbers) { testSpecialNumbers(&func); }
+  TEST_F(LlvmLibcSignbitTest, SpecialNumbers) { testSpecialNumbers(&func); }
 
 
 #endif // LLVM_LIBC_TEST_INCLUDE_MATH_SIGNBIT_H

@@ -81,21 +81,39 @@ add_libc_test(
 )
 
 add_libc_test(
-  #math_function_macros_test
   signbit_test
-  NEED_MPFR
   SUITE
     libc_include_tests
   SRCS
     signbit_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-    #libc.test.UnitTest.LibcFPTestHelpers
-    #libc.src.__support.FPUtil.basic_operations
-    #libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     LibcFPTestHelpers
+)
 
+add_libc_test(
+  signbitf_test
+  SUITE
+    libc_include_tests
+  SRCS
+    signbitf_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  signbitl_test
+  SUITE
+    libc_include_tests
+  SRCS
+    signbitl_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 #add_libc_test(
