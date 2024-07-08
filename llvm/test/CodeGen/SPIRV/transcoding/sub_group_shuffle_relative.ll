@@ -102,13 +102,17 @@
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleUp %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleUp %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleDown %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleDown %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
 define dso_local spir_kernel void @testShuffleRelativeChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z20sub_group_shuffle_upcj(i8 signext 0, i32 0)
+  %w2 = tail call spir_func i8 @__spirv_GroupNonUniformShuffleUp(i32 3, i8 signext 0, i32 0)
   store i8 %2, i8 addrspace(1)* %0, align 1
   %3 = tail call spir_func signext i8 @_Z22sub_group_shuffle_downcj(i8 signext 0, i32 0)
+  %w3 = tail call spir_func i8 @__spirv_GroupNonUniformShuffleDown(i32 3, i8 signext 0, i32 0)
   %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
   store i8 %3, i8 addrspace(1)* %4, align 1
   ret void
@@ -117,6 +121,10 @@ define dso_local spir_kernel void @testShuffleRelativeChar(i8 addrspace(1)* noca
 declare dso_local spir_func signext i8 @_Z20sub_group_shuffle_upcj(i8 signext, i32) local_unnamed_addr
 
 declare dso_local spir_func signext i8 @_Z22sub_group_shuffle_downcj(i8 signext, i32) local_unnamed_addr
+
+declare dso_local spir_func i8 @__spirv_GroupNonUniformShuffleUp(i32, i8, i32)
+
+declare dso_local spir_func i8 @__spirv_GroupNonUniformShuffleDown(i32, i8, i32)
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleUp %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]

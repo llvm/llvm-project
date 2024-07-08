@@ -426,53 +426,45 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
       Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
   assert(ArrayType && "std::initializer_list constructed from non-array");
 
-  // FIXME: Perform the checks on the field types in SemaInit.
   RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
-  if (Field == Record->field_end()) {
-    CGF.ErrorUnsupported(E, "weird std::initializer_list");
-    return;
-  }
+  assert(Field != Record->field_end() &&
+         Ctx.hasSameType(Field->getType()->getPointeeType(),
+                         ArrayType->getElementType()) &&
+         "Expected std::initializer_list first field to be const E *");
 
   // Start pointer.
-  if (!Field->getType()->isPointerType() ||
-      !Ctx.hasSameType(Field->getType()->getPointeeType(),
-                       ArrayType->getElementType())) {
-    CGF.ErrorUnsupported(E, "weird std::initializer_list");
-    return;
-  }
-
   AggValueSlot Dest = EnsureSlot(E->getType());
   LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), E->getType());
   LValue Start = CGF.EmitLValueForFieldInitialization(DestLV, *Field);
   llvm::Value *ArrayStart = ArrayPtr.emitRawPointer(CGF);
   CGF.EmitStoreThroughLValue(RValue::get(ArrayStart), Start);
   ++Field;
-
-  if (Field == Record->field_end()) {
-    CGF.ErrorUnsupported(E, "weird std::initializer_list");
-    return;
-  }
+  assert(Field != Record->field_end() &&
+         "Expected std::initializer_list to have two fields");
 
   llvm::Value *Size = Builder.getInt(ArrayType->getSize());
   LValue EndOrLength = CGF.EmitLValueForFieldInitialization(DestLV, *Field);
-  if (Field->getType()->isPointerType() &&
-      Ctx.hasSameType(Field->getType()->getPointeeType(),
-                      ArrayType->getElementType())) {
+  if (Ctx.hasSameType(Field->getType(), Ctx.getSizeType())) {
+    // Length.
+    CGF.EmitStoreThroughLValue(RValue::get(Size), EndOrLength);
+
+  } else {
     // End pointer.
+    assert(Field->getType()->isPointerType() &&
+           Ctx.hasSameType(Field->getType()->getPointeeType(),
+                           ArrayType->getElementType()) &&
+           "Expected std::initializer_list second field to be const E *");
     llvm::Value *Zero = llvm::ConstantInt::get(CGF.PtrDiffTy, 0);
     llvm::Value *IdxEnd[] = { Zero, Size };
     llvm::Value *ArrayEnd = Builder.CreateInBoundsGEP(
         ArrayPtr.getElementType(), ArrayPtr.emitRawPointer(CGF), IdxEnd,
         "arrayend");
     CGF.EmitStoreThroughLValue(RValue::get(ArrayEnd), EndOrLength);
-  } else if (Ctx.hasSameType(Field->getType(), Ctx.getSizeType())) {
-    // Length.
-    CGF.EmitStoreThroughLValue(RValue::get(Size), EndOrLength);
-  } else {
-    CGF.ErrorUnsupported(E, "weird std::initializer_list");
-    return;
   }
+
+  assert(++Field == Record->field_end() &&
+         "Expected std::initializer_list to only have two fields");
 }
 
 /// Determine if E is a trivial array filler, that is, one that is
@@ -506,6 +498,16 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   uint64_t NumInitElements = Args.size();
 
   uint64_t NumArrayElements = AType->getNumElements();
+  for (const auto *Init : Args) {
+    if (const auto *Embed = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+      NumInitElements += Embed->getDataElementCount() - 1;
+      if (NumInitElements > NumArrayElements) {
+        NumInitElements = NumArrayElements;
+        break;
+      }
+    }
+  }
+
   assert(NumInitElements <= NumArrayElements);
 
   QualType elementType =
@@ -574,23 +576,37 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 
   llvm::Value *one = llvm::ConstantInt::get(CGF.SizeTy, 1);
 
-  // Emit the explicit initializers.
-  for (uint64_t i = 0; i != NumInitElements; ++i) {
+  auto Emit = [&](Expr *Init, uint64_t ArrayIndex) {
     llvm::Value *element = begin;
-    if (i > 0) {
-      element = Builder.CreateInBoundsGEP(llvmElementType, begin,
-                                          llvm::ConstantInt::get(CGF.SizeTy, i),
-                                          "arrayinit.element");
+    if (ArrayIndex > 0) {
+      element = Builder.CreateInBoundsGEP(
+          llvmElementType, begin,
+          llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex), "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
-      if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
+      if (endOfInit.isValid())
+        Builder.CreateStore(element, endOfInit);
     }
 
     LValue elementLV = CGF.MakeAddrLValue(
         Address(element, llvmElementType, elementAlign), elementType);
-    EmitInitializationToLValue(Args[i], elementLV);
+    EmitInitializationToLValue(Init, elementLV);
+    return true;
+  };
+
+  unsigned ArrayIndex = 0;
+  // Emit the explicit initializers.
+  for (uint64_t i = 0; i != NumInitElements; ++i) {
+    if (ArrayIndex >= NumInitElements)
+      break;
+    if (auto *EmbedS = dyn_cast<EmbedExpr>(Args[i]->IgnoreParenImpCasts())) {
+      EmbedS->doForEachDataElement(Emit, ArrayIndex);
+    } else {
+      Emit(Args[i], ArrayIndex);
+      ArrayIndex++;
+    }
   }
 
   // Check whether there's a non-trivial array-fill expression.

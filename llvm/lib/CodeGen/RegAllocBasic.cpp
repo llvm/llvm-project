@@ -74,7 +74,7 @@ class RABasic : public MachineFunctionPass,
   void LRE_WillShrinkVirtReg(Register) override;
 
 public:
-  RABasic(const RegClassFilterFunc F = allocateAllRegClasses);
+  RABasic(const RegClassFilterFunc F = nullptr);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Basic Register Allocator"; }
@@ -226,19 +226,17 @@ bool RABasic::spillInterferences(const LiveInterval &VirtReg,
   assert(!Intfs.empty() && "expected interference");
 
   // Spill each interfering vreg allocated to PhysReg or an alias.
-  for (unsigned i = 0, e = Intfs.size(); i != e; ++i) {
-    const LiveInterval &Spill = *Intfs[i];
-
+  for (const LiveInterval *Spill : Intfs) {
     // Skip duplicates.
-    if (!VRM->hasPhys(Spill.reg()))
+    if (!VRM->hasPhys(Spill->reg()))
       continue;
 
     // Deallocate the interfering vreg by removing it from the union.
     // A LiveInterval instance may not be in a union during modification!
-    Matrix->unassign(Spill);
+    Matrix->unassign(*Spill);
 
     // Spill the extracted interval.
-    LiveRangeEdit LRE(&Spill, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+    LiveRangeEdit LRE(Spill, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
     spiller().spill(LRE);
   }
   return true;
