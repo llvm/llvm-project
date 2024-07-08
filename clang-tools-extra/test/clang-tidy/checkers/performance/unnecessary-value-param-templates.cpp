@@ -33,7 +33,7 @@ template <> void instantiatedTemplateSpecialization<int>(int SpecSInt) {}
 template <>
 void instantiatedTemplateSpecialization<ExpensiveToCopyType>(
     ExpensiveToCopyType SpecSExpensiveToCopy) {
-  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: the parameter 'SpecS'
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: the parameter 'SpecSExpensiveToCopy'
   // Updating template specialization would also require to update the main
   // template and other specializations. Such specializations may be
   // spreaded across across different translation units.
