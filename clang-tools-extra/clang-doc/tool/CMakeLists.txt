@@ -42,10 +42,15 @@ foreach(f ${assets})
   install(FILES ${asset_dir}/${f}
     DESTINATION "${CMAKE_INSTALL_DATADIR}/clang-doc"
     COMPONENT clang-doc)
-   foreach(config ${CMAKE_CONFIGURATION_TYPES})
-     set(resource_dir "${CMAKE_BINARY_DIR}/${config}/share/clang-doc")
-     copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
-   endforeach(config)
+  if ("${CMAKE_CONFIGURATION_TYPES}" STREQUAL "")
+	set(resource_dir "${CMAKE_BINARY_DIR}/share/clang-doc")
+	copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
+  else()
+    foreach(config ${CMAKE_CONFIGURATION_TYPES})
+        set(resource_dir "${CMAKE_BINARY_DIR}/${config}/share/clang-doc")
+        copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
+    endforeach(config)
+   endif()
 endforeach(f)
 
 add_custom_target(copy-clang-doc-assets
