@@ -653,19 +653,16 @@ GotSection::GotSection()
 
 void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
   symAux.back().gotIdx = numEntries++;
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
   symAux.back().tlsDescIdx = numEntries;
   numEntries += 2;
   return true;
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
   symAux.back().tlsGdIdx = numEntries;
   // Global Dynamic TLS entries take two GOT slots.
   numEntries += 2;
