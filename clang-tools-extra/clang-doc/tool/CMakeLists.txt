@@ -46,7 +46,6 @@ foreach(f ${assets})
      set(resource_dir "${CMAKE_BINARY_DIR}/${config}/share/clang-doc")
      copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
    endforeach(config)
-   copy_files_to_dst(${asset_dir} "${CMAKE_BINARY_DIR}/share/clang-doc" ${f})
 endforeach(f)
 
 add_custom_target(copy-clang-doc-assets
