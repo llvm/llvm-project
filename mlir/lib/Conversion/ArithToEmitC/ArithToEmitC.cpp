@@ -18,7 +18,6 @@
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Region.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -359,7 +358,7 @@ public:
                           ? rewriter.getIndexType()
                           : operandType;
       auto constOne = rewriter.create<emitc::ConstantOp>(
-          op.getLoc(), operandType, rewriter.getIntegerAttr(attrType, 1));
+          op.getLoc(), operandType, rewriter.getOneAttr(attrType));
       auto oneAndOperand = rewriter.create<emitc::BitwiseAndOp>(
           op.getLoc(), operandType, adaptor.getIn(), constOne);
       rewriter.replaceOpWithNewOp<emitc::CastOp>(op, opReturnType,
@@ -433,7 +432,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type type = this->getTypeConverter()->convertType(op.getType());
-    if (!type || !(isa_and_nonnull<IntegerType>(type) ||
+    if (!type || !(isa<IntegerType>(type) ||
                    emitc::isPointerWideType(type))) {
       return rewriter.notifyMatchFailure(
           op, "expected integer or size_t/ssize_t/ptrdiff_t type");
@@ -517,7 +516,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type type = this->getTypeConverter()->convertType(op.getType());
-    if (!type || !(isa_and_nonnull<IntegerType>(type) ||
+    if (!type || !(isa<IntegerType>(type) ||
                    emitc::isPointerWideType(type))) {
       return rewriter.notifyMatchFailure(
           op, "expected integer or size_t/ssize_t/ptrdiff_t type");
@@ -541,7 +540,7 @@ public:
       Value eight = rewriter.create<emitc::ConstantOp>(
           op.getLoc(), rhsType, rewriter.getIndexAttr(8));
       emitc::CallOpaqueOp sizeOfCall = rewriter.create<emitc::CallOpaqueOp>(
-          op.getLoc(), rhsType, "sizeof", SmallVector<Value, 1>({eight}));
+          op.getLoc(), rhsType, "sizeof", ArrayRef<Value>{eight});
       width = rewriter.create<emitc::MulOp>(op.getLoc(), rhsType, eight,
                                             sizeOfCall.getResult(0));
     } else {
