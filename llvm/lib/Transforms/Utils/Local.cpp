@@ -2401,6 +2401,18 @@ getNewSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
   case Instruction::AShr:
     Ops.emplace_back(DIOp::AShr());
     break;
+  case Instruction::And:
+    Ops.emplace_back(DIOp::And());
+    break;
+  case Instruction::Or:
+    Ops.emplace_back(DIOp::Or());
+    break;
+  case Instruction::Xor:
+    Ops.emplace_back(DIOp::Xor());
+    break;
+  case Instruction::SRem:
+    Ops.emplace_back(DIOp::Mod());
+    break;
   }
 
   return BI->getOperand(0);

@@ -64,9 +64,8 @@ define void @test_or(i64 %A) {
 ; CHECK-LABEL: @test_or(
 ; CHECK-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DW_OP_constu, 256, DW_OP_or, DW_OP_stack_value),
 
-; FIXME: No way to represent bitwise or in DIOp-DIExpressions.
 ; DIOP-DBGINFO-LABEL: @test_or(
-; DIOP-DBGINFO-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(DIOpArg(0, i64)),
+; DIOP-DBGINFO-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DIOpArg(0, i64), DIOpConstant(i64 256), DIOpOr()),
   %1 = or i64 %A, 256
   ret void
 }
@@ -75,9 +74,8 @@ define void @test_xor(i32 %A) {
 ; CHECK-LABEL: @test_xor(
 ; CHECK-NEXT:  #dbg_value(i32 %A, {{.*}}, !DIExpression(DW_OP_constu, 1, DW_OP_xor, DW_OP_stack_value),
 
-; FIXME: No way to represent bitwise xor in DIOp-DIExpressions.
 ; DIOP-DBGINFO-LABEL: @test_xor(
-; DIOP-DBGINFO-NEXT:  #dbg_value(i32 poison, {{.*}}, !DIExpression(DIOpArg(0, i32)),
+; DIOP-DBGINFO-NEXT:  #dbg_value(i32 %A, {{.*}}, !DIExpression(DIOpArg(0, i32), DIOpConstant(i32 1), DIOpXor()),
   %1 = xor i32 %A, 1
   ret void
 }
@@ -156,9 +154,8 @@ define void @test_srem(i64 %A) {
 ; CHECK-LABEL: @test_srem(
 ; CHECK-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DW_OP_constu, 7, DW_OP_mod, DW_OP_stack_value),
 
-; FIXME: No way to represent srem in DIOp-DIExpressions.
 ; DIOP-DBGINFO-LABEL: @test_srem(
-; DIOP-DBGINFO-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(DIOpArg(0, i64)),
+; DIOP-DBGINFO-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DIOpArg(0, i64), DIOpConstant(i64 7), DIOpMod()),
   %1 = srem i64 %A, 7
   ret void
 }
@@ -177,9 +174,8 @@ define void @test_and(i64 %A) {
 ; CHECK-LABEL: @test_and(
 ; CHECK-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DW_OP_constu, 256, DW_OP_and, DW_OP_stack_value),
 
-; FIXME: No way to represent bitwise and in DIOp-DIExpressions.
 ; DIOP-DBGINFO-LABEL: @test_and(
-; DIOP-DBGINFO-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(DIOpArg(0, i64)),
+; DIOP-DBGINFO-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DIOpArg(0, i64), DIOpConstant(i64 256), DIOpAnd()),
   %1 = and i64 %A, 256
   ret void
 }

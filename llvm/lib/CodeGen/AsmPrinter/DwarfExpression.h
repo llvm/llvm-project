@@ -434,6 +434,18 @@ public:
   std::optional<OpResult> traverse(DIOp::Sub Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_minus, Children);
   }
+  std::optional<OpResult> traverse(DIOp::And Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_and, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Or Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_or, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Xor Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_xor, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Mod Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_mod, Children);
+  }
 
   std::optional<OpResult> traverse(DIOp::BitOffset BitOffset,
                                    ChildrenT Children);
@@ -662,6 +674,18 @@ public:
   }
   std::optional<OpResult> traverse(DIOp::Sub Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_minus, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::And Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_and, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Or Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_or, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Xor Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_xor, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Mod Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_mod, Children);
   }
 
   std::optional<OpResult> traverse(DIOp::BitOffset BitOffset,

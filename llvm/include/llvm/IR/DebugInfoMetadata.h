@@ -2878,6 +2878,10 @@ DEFINE_BC_ID(Fragment, 22u)
 DEFINE_BC_ID(ZExt, 23u)
 DEFINE_BC_ID(SExt, 24u)
 DEFINE_BC_ID(AShr, 25u)
+DEFINE_BC_ID(And, 26u)
+DEFINE_BC_ID(Or, 27u)
+DEFINE_BC_ID(Xor, 28u)
+DEFINE_BC_ID(Mod, 29u)
 #undef DEFINE_BC_ID
 
 unsigned getBitcodeID(const Variant &V);
@@ -3114,6 +3118,10 @@ protected:
     return getTypeBinOp(Op, Ins);
   }
 
+  std::optional<Type *> getType(DIOp::Mod Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
   std::optional<Type *> getType(DIOp::LShr, ArrayRef<StackEntry> Ins) {
     if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
       return getTypeError("DIOpLShr requires all integer inputs");
@@ -3129,6 +3137,24 @@ protected:
   std::optional<Type *> getType(DIOp::Shl, ArrayRef<StackEntry> Ins) {
     if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
       return getTypeError("DIOpShl requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::And, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpAnd requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Or, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpOr requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Xor, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpXor requires all integer inputs");
     return Ins[0].ResultType;
   }
 

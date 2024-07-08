@@ -1173,6 +1173,18 @@ implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
 implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
 / read(V1, T)`` and size ``bitsizeof(T)``.
 
+``DIOpMod``
+^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpMod()
+   { (L1:T) (L2:T) -> (L:T) }
+
+``L`` comprises one implicit location description ``IL``. ``IL`` specifies
+implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
+% read(V1, T)`` and size ``bitsizeof(T)``.
+
 ``DIOpLShr``
 ^^^^^^^^^^^^
 
@@ -1214,6 +1226,48 @@ If ``T`` is not an integral type, then the expression is not well-formed.
 ``L`` comprises one implicit location description ``IL``. ``IL`` specifies
 implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
 << read(V1, T)`` and size ``bitsizeof(T)``. The result is filled with 0 bits.
+
+If ``T`` is not an integral type, then the expression is not well-formed.
+
+``DIOpAnd``
+^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpAnd()
+   { (L1:T) (L2:T) -> (L:T) }
+
+``L`` comprises one implicit location description ``IL``. ``IL`` specifies
+implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
+& read(V1, T)`` and size ``bitsizeof(T)``.
+
+If ``T`` is not an integral type, then the expression is not well-formed.
+
+``DIOpOr``
+^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpOr()
+   { (L1:T) (L2:T) -> (L:T) }
+
+``L`` comprises one implicit location description ``IL``. ``IL`` specifies
+implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
+| read(V1, T)`` and size ``bitsizeof(T)``.
+
+If ``T`` is not an integral type, then the expression is not well-formed.
+
+``DIOpXor``
+^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpXor()
+   { (L1:T) (L2:T) -> (L:T) }
+
+``L`` comprises one implicit location description ``IL``. ``IL`` specifies
+implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
+^ read(V1, T)`` and size ``bitsizeof(T)``.
 
 If ``T`` is not an integral type, then the expression is not well-formed.
 

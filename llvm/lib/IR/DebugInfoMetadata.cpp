@@ -2300,7 +2300,8 @@ static bool canFragmentNewDIExpression(RIter &It, RIter Last) {
     return true;
 
   if (isDIOpVariantOneOf<DIOp::Add, DIOp::Sub, DIOp::Mul, DIOp::Div, DIOp::Shl,
-                         DIOp::LShr, DIOp::AShr>(Op))
+                         DIOp::LShr, DIOp::AShr, DIOp::And, DIOp::Or, DIOp::Xor,
+                         DIOp::Mod>(Op))
     return false;
 
   if (isDIOpVariantOneOf<DIOp::BitOffset, DIOp::ByteOffset>(Op)) {
@@ -2659,6 +2660,10 @@ unsigned DIOp::getNumInputs(Variant V) {
       [](DIOp::Shl) -> R { return 2; },
       [](DIOp::LShr) -> R { return 2; },
       [](DIOp::AShr) -> R { return 2; },
+      [](DIOp::And) -> R { return 2; },
+      [](DIOp::Or) -> R { return 2; },
+      [](DIOp::Xor) -> R { return 2; },
+      [](DIOp::Mod) -> R { return 2; },
       [](DIOp::Sub) -> R { return 2; },
       [](DIOp::Select) -> R { return 3; },
       [](DIOp::Composite C) -> R { return C.getCount(); },
