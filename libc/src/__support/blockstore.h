@@ -189,9 +189,9 @@ public:
       return Iterator(current, fill_count);
   }
 
-  // Removes and the element at pos, then moves all the objects after back by
-  // one to fill the hole. It's assumed that pos is a valid iterator to
-  // somewhere in this block_store.
+  // Removes the element at pos, then moves all the objects after back by one to
+  // fill the hole. It's assumed that pos is a valid iterator to somewhere in
+  // this block_store.
   LIBC_INLINE void erase(Iterator pos) {
     const Iterator last_item = Iterator(current, fill_count);
     if (pos == last_item) {
