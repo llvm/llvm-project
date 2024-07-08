@@ -68,11 +68,6 @@ std::string FormatExtensionFlags(int64_t Flags) {
 
 std::string FormatExtensionFlags(AArch64::ExtensionBitset Flags) {
   std::vector<StringRef> Features;
-
-  // AEK_NONE is not meant to be shown to the user so the target parser
-  // does not recognise it. It is relevant here though.
-  if (Flags.test(AArch64::AEK_NONE))
-    Features.push_back("none");
   AArch64::getExtensionFeatures(Flags, Features);
 
   // The target parser also includes every extension you don't have.
@@ -2009,10 +2004,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   for (auto Ext : Extensions)
     ExtVal.set(Ext);
 
-  // NONE has no feature names.
-  // We return True here because NONE is a valid choice.
-  EXPECT_TRUE(AArch64::getExtensionFeatures({AArch64::AEK_NONE}, Features));
-  EXPECT_TRUE(!Features.size());
+  // Test an empty set of features.
+  EXPECT_TRUE(AArch64::getExtensionFeatures({}, Features));
+  EXPECT_TRUE(Features.size() == 0);
 
   AArch64::getExtensionFeatures(ExtVal, Features);
   EXPECT_EQ(Extensions.size(), Features.size());
@@ -2092,8 +2086,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+complxnum"));
 
   // Assuming we listed every extension above, this should produce the same
-  // result. (note that AEK_NONE doesn't have a name so it won't be in the
-  // result despite its bit being set)
+  // result.
   std::vector<StringRef> AllFeatures;
   EXPECT_TRUE(AArch64::getExtensionFeatures(ExtVal, AllFeatures));
   EXPECT_THAT(Features, ::testing::ContainerEq(AllFeatures));
