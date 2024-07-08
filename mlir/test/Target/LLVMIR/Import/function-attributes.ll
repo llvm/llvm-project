@@ -361,3 +361,9 @@ declare void @alwaysinline_attribute() alwaysinline
 ; CHECK-LABEL: @optnone_attribute
 ; CHECK-SAME: attributes {no_inline, optimize_none}
 declare void @optnone_attribute() noinline optnone
+
+// -----
+
+; CHECK-LABEL: @convergent_attribute
+; CHECK-SAME: attributes {convergent}
+declare void @convergent_attribute() convergent

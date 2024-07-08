@@ -22142,6 +22142,10 @@ static SDValue performVectorShiftCombine(SDNode *N,
     if (DCI.DAG.ComputeNumSignBits(Op.getOperand(0)) > ShiftImm)
       return Op.getOperand(0);
 
+  // If the shift is exact, the shifted out bits matter.
+  if (N->getFlags().hasExact())
+    return SDValue();
+
   APInt ShiftedOutBits = APInt::getLowBitsSet(OpScalarSize, ShiftImm);
   APInt DemandedMask = ~ShiftedOutBits;
 
@@ -24829,7 +24833,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   } else if (isEssentiallyExtractHighSubvector(RHS) &&
              LHS.getOpcode() == ISD::TRUNCATE) {
     TruncHigh = LHS;
-    if (LHS.getOpcode() == ISD::BITCAST)
+    if (RHS.getOpcode() == ISD::BITCAST)
       ExtractHigh = RHS.getOperand(0);
     else
       ExtractHigh = RHS;
@@ -24858,6 +24862,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   // This dagcombine assumes the two extract_high uses same source vector in
   // order to detect the pair of the mull. If they have different source vector,
   // this code will not work.
+  // TODO: Should also try to look through a bitcast.
   bool HasFoundMULLow = true;
   SDValue ExtractHighSrcVec = ExtractHigh.getOperand(0);
   if (ExtractHighSrcVec->use_size() != 2)
