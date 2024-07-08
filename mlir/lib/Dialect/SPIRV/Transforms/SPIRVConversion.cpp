@@ -838,11 +838,20 @@ public:
 };
 } // namespace
 
+static int getComputeVectorSize(int64_t size) {
+  for (int i : {4, 3, 2}) {
+    if (size % i == 0)
+      return i;
+  }
+  return 1;
+}
+
 static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
   llvm::errs() << "Get target shape\n";
   SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
   // TODO: This is hardcoded to unroll with size 1. Change this later
-  std::optional<SmallVector<int64_t>> targetShape = SmallVector<int64_t>(1, 1);
+  std::optional<SmallVector<int64_t>> targetShape =
+      SmallVector<int64_t>(1, getComputeVectorSize(vecType.getShape().back()));
   if (!targetShape) {
     llvm::errs() << "--no unrolling target shape defined\n";
     return std::nullopt;
@@ -870,12 +879,14 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
       rewriter.create<func::FuncOp>(funcOp.getLoc(), funcOp.getName(), fnType);
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
+  rewriter.eraseOp(funcOp);
   llvm::errs() << "After creating new func op and copying the function body\n";
   newFuncOp.dump();
 
   Location loc = newFuncOp.getBody().getLoc();
   Block &entryBlock = newFuncOp.getBlocks().front();
   rewriter.setInsertionPointToStart(&entryBlock);
+
   OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
   SmallVector<size_t> unrolledInputNums;
   size_t newInputNo = 0;
@@ -891,8 +902,6 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
       continue;
     }
     llvm::errs() << "Try vector unrolling\n";
-    SmallVector<int64_t> nativeShape(1, 1);
-    auto options = vector::UnrollVectorOptions().setNativeShape(nativeShape);
     auto targetShape = getTargetShape(origVecType);
     if (!targetShape) {
       llvm::errs() << "No target shape\n";
@@ -966,7 +975,6 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
     }
   }
 
-  rewriter.eraseOp(funcOp);
   return success();
 }
 
@@ -1013,8 +1021,6 @@ LogicalResult ReturnOpVectorTypesConversion::matchAndRewrite(
       continue;
     }
     llvm::errs() << "Try vector unrolling\n";
-    SmallVector<int64_t> nativeShape(1, 1);
-    auto options = vector::UnrollVectorOptions().setNativeShape(nativeShape);
     auto targetShape = getTargetShape(origVecType);
     if (!targetShape) {
       llvm::errs() << "No target shape\n";
