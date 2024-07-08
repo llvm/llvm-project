@@ -116,6 +116,115 @@ add_libc_test(
     LibcFPTestHelpers
 )
 
+add_libc_test(
+  isnan_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isnan_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isnanf_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isnanf_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isnanl_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isnanl_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isinf_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isinf_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isinff_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isinff_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isinfl_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isinfl_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isfinite_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isfinite_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isfinitef_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isfinitef_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  isfinitel_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isfinitel_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+
 #add_libc_test(
 #  math_function_macros_c_test
 #  C_TEST

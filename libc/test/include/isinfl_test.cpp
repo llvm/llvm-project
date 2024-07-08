@@ -1,4 +1,4 @@
-//===-- Unittests for signbit [f] macro -----------------------------------===//
+//===-- Unittest for isinf[l] macro ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SignbitTest.h"
+#include "IsInfTest.h"
 #include "include/llvm-libc-macros/math-function-macros.h"
 
-LIST_SIGNBIT_TESTS(float, signbit)
+LIST_ISINF_TESTS(long double, isinf)

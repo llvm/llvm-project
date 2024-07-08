@@ -1,4 +1,4 @@
-//===-- Utility class to test math function macros --------------*- C++ -*-===//
+//===-- Utility class to test the signbit macro [f|l] -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,11 +36,25 @@ class SignbitTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
       EXPECT_EQ(signbit(neg_inf), 1); 
       EXPECT_EQ(signbit(neg_aNaN), 1);
     }
+
+    void testSpecialCases(SignbitFunc func) {
+      EXPECT_EQ(signbit(PI / zero), 0);       // division by zero
+      EXPECT_EQ(signbit(PI / inf), 0);        // division by +inf
+      EXPECT_EQ(signbit(PI / neg_inf), 1);    // division by -inf
+      EXPECT_EQ(signbit(inf / neg_inf), 1);   // +inf divided by -inf
+
+      EXPECT_EQ(signbit(inf * neg_inf), 1);   // multiply +inf by -inf
+      EXPECT_EQ(signbit(inf * zero), 1);      // multiply by +inf
+      EXPECT_EQ(signbit(neg_inf * zero), 1);  // multiply by -inf
+
+      EXPECT_EQ(signbit(inf + neg_inf), 1);   // +inf + -inf
+    }   
 };
 
 #define LIST_SIGNBIT_TESTS(T, func)                                            \
   using LlvmLibcSignbitTest = SignbitTest<T>;                                  \
-  TEST_F(LlvmLibcSignbitTest, SpecialNumbers) { testSpecialNumbers(&func); }
+  TEST_F(LlvmLibcSignbitTest, SpecialNumbers) { testSpecialNumbers(&func); }   \
+  TEST_F(LlvmLibcSignbitTest, SpecialCases) { testSpecialCases(&func); }
 
 
 #endif // LLVM_LIBC_TEST_INCLUDE_MATH_SIGNBIT_H
