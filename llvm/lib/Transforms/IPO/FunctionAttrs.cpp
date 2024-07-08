@@ -583,7 +583,8 @@ struct ArgumentUsesTracker : public CaptureTracker {
 };
 
 // A struct of argument use: a Use and the offset it accesses. This struct
-// is to track uses inside function via GEP.
+// is to track uses inside function via GEP. If GEP has a non-constant index,
+// the Offset field is nullopt.
 struct ArgumentUse {
   Use *U;
   std::optional<int64_t> Offset;
