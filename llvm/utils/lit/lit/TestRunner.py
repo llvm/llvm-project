@@ -90,8 +90,8 @@ class ShellEnvironment(object):
     def __init__(self, cwd, env, umask=-1):
         self.cwd = cwd
         self.env = dict(env)
-        self.dirStack = []
         self.umask = umask
+        self.dirStack = []
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
