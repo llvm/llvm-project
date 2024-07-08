@@ -253,8 +253,8 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
   let assemblyFormat = [{
     $mesh `,` $split_axes
     (`partial` `=` $partial_type $partial_axes^)?
-    oilist(`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes) |
-           `sharded_dims_sizes` `=` custom<DynamicIndexList>($dynamic_sharded_dims_sizes, $static_sharded_dims_sizes))
+    (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
+    (`sharded_dims_sizes` `=` custom<DynamicIndexList>($dynamic_sharded_dims_sizes, $static_sharded_dims_sizes)^)?
     attr-dict `:` type($result)
   }];
   let builders = [

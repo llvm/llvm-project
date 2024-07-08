@@ -285,7 +285,7 @@ static FailureOr<ShardingOption> selectShardingOption(
 // a `mesh.shard` operation for all remaining operands and results that do not
 // have sharding annotations.
 static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
-  if (op->hasTrait<OpTrait::IsTerminator>() || llvm::isa<mesh::ShardOp>(op))
+  if (op->hasTrait<OpTrait::IsTerminator>() || llvm::isa<mesh::ShardOp, mesh::ShardingOp>(op))
     return success();
 
   ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);

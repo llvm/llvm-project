@@ -230,7 +230,7 @@ Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   return type;
 }
 
-void mlir::mesh::maybeInsertTargetShardingAnnotation(Value sharding,
+void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpOperand &operand,
                                                      OpBuilder &builder) {
   OpBuilder::InsertionGuard insertionGuard(builder);
@@ -244,8 +244,9 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(Value sharding,
     return;
   }
 
+  auto shardingOp = builder.create<ShardingOp>(operandValue.getLoc(), sharding);
   auto newShardOp =
-      builder.create<ShardOp>(operandValue.getLoc(), operandValue, sharding,
+      builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
                               /*annotate_for_users*/ false);
   IRRewriter rewriter(builder);
   rewriter.replaceUsesWithIf(
@@ -258,11 +259,11 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(Value sharding,
   }
 
   auto newShardOp2 = builder.create<ShardOp>(
-      operandValue.getLoc(), newShardOp, sharding, /*annotate_for_users*/ true);
+      operandValue.getLoc(), newShardOp, shardingOp, /*annotate_for_users*/ true);
   rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
 }
 
-void mlir::mesh::maybeInsertTargetShardingAnnotation(Value sharding,
+void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpResult result,
                                                      OpBuilder &builder) {
   for (auto &use : llvm::make_early_inc_range(result.getUses())) {
@@ -270,7 +271,7 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(Value sharding,
   }
 }
 
-void mlir::mesh::maybeInsertSourceShardingAnnotation(Value sharding,
+void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
                                                      OpOperand &operand,
                                                      OpBuilder &builder) {
   OpBuilder::InsertionGuard insertionGuard(builder);
@@ -287,8 +288,9 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(Value sharding,
   }
 
   builder.setInsertionPoint(operandOp);
+  auto shardingOp = builder.create<ShardingOp>(operand.get().getLoc(), sharding);
   auto newShardOp =
-      builder.create<ShardOp>(operandValue.getLoc(), operandValue, sharding,
+      builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
                               /*annotate_for_users*/ true);
   IRRewriter rewriter(builder);
   rewriter.replaceUsesWithIf(
@@ -303,7 +305,7 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(Value sharding,
 
   builder.setInsertionPoint(newShardOp);
   auto newPreceedingShardOp =
-      builder.create<ShardOp>(operandValue.getLoc(), operandValue, sharding,
+      builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
                               /*annotate_for_users*/ false);
   rewriter.replaceUsesWithIf(
       newShardOp.getSrc(), newPreceedingShardOp, [&newShardOp](OpOperand &use) {
@@ -413,41 +415,104 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState, F
 
 
 void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState, mlir::mesh::MeshSharding from) {
+
   build(b, odsState,
-        b.getIndexType(),
+        ShardingType::get(b.getContext()),
         from.getMeshAttr(),
         MeshAxesArrayAttr::get(b.getContext(), from.getSplitAxes()),
-        b.getDenseI16ArrayAttr(from.getPartialAxes()),
+        from.getPartialAxes().empty() ? DenseI16ArrayAttr() : b.getDenseI16ArrayAttr(from.getPartialAxes()),
         ::mlir::mesh::ReductionKindAttr::get(b.getContext(), from.getPartialType()),
-        b.getDenseI64ArrayAttr(from.getStaticShardedDimsSizes()),
+        from.getStaticShardedDimsSizes().empty() ? DenseI64ArrayAttr() : b.getDenseI64ArrayAttr(from.getStaticShardedDimsSizes()),
         from.getDynamicShardedDimsSizes(),
-        b.getDenseI64ArrayAttr(from.getStaticHaloSizes()),
+        from.getStaticHaloSizes().empty() ? DenseI64ArrayAttr() : b.getDenseI64ArrayAttr(from.getStaticHaloSizes()),
         from.getDynamicHaloSizes());
 }
 
+//===----------------------------------------------------------------------===//
+// MeshSharding
+//===----------------------------------------------------------------------===//
+
+    // ::mlir::FlatSymbolRefAttr MeshSharding::getMeshAttr() const { return mesh; }
+    // ::llvm::StringRef MeshSharding::getMesh() const { return mesh.getValue(); }
+    // ArrayRef<MeshAxesAttr> MeshSharding::getSplitAxes() const {return split_axes; }
+    // ArrayRef<MeshAxis> MeshSharding::getPartialAxes() const { if (partial_axes.empty()) return {}; return partial_axes; }
+    // ReductionKind MeshSharding::getPartialType() const { return partial_type; }
+    // ArrayRef<int64_t> MeshSharding::getStaticHaloSizes() const { if(static_halo_sizes.empty()) return {}; return static_halo_sizes; }
+    // ArrayRef<int64_t> MeshSharding::getStaticShardedDimsSizes() const { if(static_sharded_dims_sizes.empty()) return {}; return static_sharded_dims_sizes; }
+    // ArrayRef<Value> MeshSharding::getDynamicHaloSizes() const { if(dynamic_halo_sizes.empty()) return {}; return dynamic_halo_sizes; }
+    // ArrayRef<Value> MeshSharding::getDynamicShardedDimsSizes() const { if(dynamic_sharded_dims_sizes.empty()) return {}; return dynamic_sharded_dims_sizes; }
+    // operator MeshSharding::bool() const { return (!mesh) == false; }
+
+bool MeshSharding::sameExceptConstraint(const MeshSharding &rhs) const {
+  if (getMesh() != rhs.getMesh()) {
+    return false;
+  }
+
+  if (!getPartialAxes().empty() && getPartialType() != rhs.getPartialType()) {
+    return false;
+  }
+
+  auto minSize = std::min(getSplitAxes().size(), rhs.getSplitAxes().size());
+  if (!llvm::equal(llvm::make_range(getSplitAxes().begin(),
+                                    getSplitAxes().begin() + minSize),
+                   llvm::make_range(rhs.getSplitAxes().begin(),
+                                    rhs.getSplitAxes().begin() + minSize))) {
+    return false;
+  }
+
+  return llvm::all_of(llvm::make_range(getSplitAxes().begin() + minSize,
+                                       getSplitAxes().end()),
+                      std::mem_fn(&MeshAxesAttr::empty)) &&
+         llvm::all_of(llvm::make_range(rhs.getSplitAxes().begin() + minSize,
+                                       rhs.getSplitAxes().end()),
+                      std::mem_fn(&MeshAxesAttr::empty));
+}
+
+bool MeshSharding::sameConstraint(const MeshSharding &rhs) const {
+    if (rhs.getStaticHaloSizes().size() != getStaticHaloSizes().size() 
+        || !llvm::equal(llvm::make_range(getStaticHaloSizes().begin(), getStaticHaloSizes().end()),
+                        llvm::make_range(rhs.getStaticHaloSizes().begin(), rhs.getStaticHaloSizes().end()))) {
+      return false;
+    }
+    if (rhs.getStaticShardedDimsSizes().size() != getDynamicHaloSizes().size()
+        || !llvm::equal(llvm::make_range(getStaticShardedDimsSizes().begin(), getStaticShardedDimsSizes().end()),
+                        llvm::make_range(rhs.getStaticShardedDimsSizes().begin(), rhs.getStaticShardedDimsSizes().end()))) {
+      return false;
+    }
+    if (rhs.getDynamicHaloSizes().size() != getStaticShardedDimsSizes().size()
+        || !llvm::equal(llvm::make_range(getDynamicHaloSizes().begin(), getDynamicHaloSizes().end()),
+                        llvm::make_range(rhs.getDynamicHaloSizes().begin(), rhs.getDynamicHaloSizes().end()))) {
+      return false;
+    }
+    if (rhs.getDynamicShardedDimsSizes().size() != getDynamicShardedDimsSizes().size()
+        || !llvm::equal(llvm::make_range(getDynamicShardedDimsSizes().begin(), getDynamicShardedDimsSizes().end()),
+                        llvm::make_range(rhs.getDynamicShardedDimsSizes().begin(), rhs.getDynamicShardedDimsSizes().end()))) {
+      return false;
+    }
+    return true;
+}
+
 bool MeshSharding::operator==(Value rhs) const {
-  auto shardingOp =
-      mlir::dyn_cast<ShardingOp>(rhs.getDefiningOp());
-  return shardingOp && sameExceptConstraint(shardingOp)
-         && sameConstraint(shardingOp);
+  return sameExceptConstraint(rhs)
+         && sameConstraint(rhs);
 }
 
 bool MeshSharding::operator!=(Value rhs) const {
   return !(*this == rhs);
 }
 
-bool MeshSharding::operator==(MeshSharding rhs) const {
+bool MeshSharding::operator==(const MeshSharding &rhs) const {
   return sameExceptConstraint(rhs) && sameConstraint(rhs);
 }
 
-bool MeshSharding::operator!=(MeshSharding rhs) const {
+bool MeshSharding::operator!=(const MeshSharding &rhs) const {
   return !(*this == rhs);
 }
 
 MeshSharding::MeshSharding(Value rhs) {
   auto shardingOp = mlir::dyn_cast<ShardingOp>(rhs.getDefiningOp());
   assert(shardingOp && "expected sharding op");
-  get(shardingOp.getMeshAttr(),
+  *this = get(shardingOp.getMeshAttr(),
       shardingOp.getSplitAxes().getAxes(),
       shardingOp.getPartialAxes().value_or(ArrayRef<MeshAxis>()),
       shardingOp.getPartialType().value_or(ReductionKind::Sum),
@@ -472,7 +537,7 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
     res.split_axes[i] = MeshAxesAttr::get(mesh_.getContext(), axis.asArrayRef());
   }
 
-  auto do_copy = [&](auto src, auto dst) {
+  auto do_copy = [&](auto src, auto &dst) {
     dst.resize(src.size());
     for (auto [i, v] : llvm::enumerate(src)) {
       dst[i] = v;
@@ -526,7 +591,7 @@ LogicalResult ShardingOp::verify() {
       }
     }
     if (getStaticHaloSizes().size() != numSplitAxes * 2) {
-      return emitError() << "Halo sizes must be specified for all split axes.";
+      return emitError() << "halo sizes must be specified for all split axes.";
     }
   }
 
