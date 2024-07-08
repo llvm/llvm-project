@@ -46,6 +46,10 @@
 using namespace llvm;
 
 namespace llvm {
+namespace SPIRV {
+#define GET_BuiltinGroup_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SPIRV
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 } // namespace llvm
 
@@ -660,6 +664,32 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
             if (Type *ElemTy = GR->findDeducedElementType(Op))
               KnownElemTy = ElemTy; // src will rewrite dest if both are defined
             Ops.push_back(std::make_pair(Op, i));
+          }
+        } else if (Grp == SPIRV::Atomic || Grp == SPIRV::AtomicFloating) {
+          if (CI->arg_size() < 2)
+            return;
+          Value *Op = CI->getArgOperand(0);
+          if (!isPointerTy(Op->getType()))
+            return;
+          switch (Opcode) {
+          case SPIRV::OpAtomicLoad:
+          case SPIRV::OpAtomicCompareExchangeWeak:
+          case SPIRV::OpAtomicCompareExchange:
+          case SPIRV::OpAtomicExchange:
+          case SPIRV::OpAtomicIAdd:
+          case SPIRV::OpAtomicISub:
+          case SPIRV::OpAtomicOr:
+          case SPIRV::OpAtomicXor:
+          case SPIRV::OpAtomicAnd:
+          case SPIRV::OpAtomicUMin:
+          case SPIRV::OpAtomicUMax:
+          case SPIRV::OpAtomicSMin:
+          case SPIRV::OpAtomicSMax: {
+            KnownElemTy = getAtomicElemTy(GR, I, Op);
+            if (!KnownElemTy)
+              return;
+            Ops.push_back(std::make_pair(Op, 0));
+          } break;
           }
         }
       }
