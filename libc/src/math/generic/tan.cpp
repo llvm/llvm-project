@@ -127,7 +127,8 @@ LIBC_INLINE DoubleDouble tan_eval(const DoubleDouble &u) {
 // Calculation a / b = a * (1/b) for Float128.
 // Using the initial approximation of q ~ (1/b), then apply 2 Newton-Raphson
 // iterations, before multiplying by a.
-[[maybe_unused]] Float128 newton_raphson_div(const Float128 &a, Float128 b, double q) {
+[[maybe_unused]] Float128 newton_raphson_div(const Float128 &a, Float128 b,
+                                             double q) {
   Float128 q0(q);
   constexpr Float128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;
@@ -158,7 +159,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
       if (LIBC_UNLIKELY(x == 0.0))
         return x;
 
-        // For |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
+      // For |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
 #ifdef LIBC_TARGET_CPU_HAS_FMA
       return fputil::multiply_add(x, 0x1.0p-54, x);
 #else
