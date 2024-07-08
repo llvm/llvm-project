@@ -529,11 +529,17 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
-  auto *EI0 = cast<ExtractElementInst>(*It);
-  if (isa<ScalableVectorType>(EI0->getVectorOperandType()))
-    return std::nullopt;
   unsigned Size =
-      cast<FixedVectorType>(EI0->getVectorOperandType())->getNumElements();
+      std::accumulate(VL.begin(), VL.end(), 0u, [](unsigned S, Value *V) {
+        auto *EI = dyn_cast<ExtractElementInst>(V);
+        if (!EI)
+          return S;
+        auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
+        if (!VTy)
+          return S;
+        return std::max(S, VTy->getNumElements());
+      });
+
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
   bool HasNonUndefVec = any_of(VL, [](Value *V) {
@@ -563,8 +569,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
     if (isa<UndefValue>(Vec)) {
       Mask[I] = I;
     } else {
-      if (cast<FixedVectorType>(Vec->getType())->getNumElements() != Size)
-        return std::nullopt;
       if (isa<UndefValue>(EI->getIndexOperand()))
         continue;
       auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
@@ -10657,36 +10661,20 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
     VectorOpToIdx[EI->getVectorOperand()].push_back(I);
   }
   // Sort the vector operands by the maximum number of uses in extractelements.
-  MapVector<unsigned, SmallVector<Value *>> VFToVector;
-  for (const auto &Data : VectorOpToIdx)
-    VFToVector[cast<FixedVectorType>(Data.first->getType())->getNumElements()]
-        .push_back(Data.first);
-  for (auto &Data : VFToVector) {
-    stable_sort(Data.second, [&VectorOpToIdx](Value *V1, Value *V2) {
-      return VectorOpToIdx.find(V1)->second.size() >
-             VectorOpToIdx.find(V2)->second.size();
-    });
-  }
-  // Find the best pair of the vectors with the same number of elements or a
-  // single vector.
+  SmallVector<std::pair<Value *, SmallVector<int>>> Vectors =
+      VectorOpToIdx.takeVector();
+  stable_sort(Vectors, [](const auto &P1, const auto &P2) {
+    return P1.second.size() > P2.second.size();
+  });
+  // Find the best pair of the vectors or a single vector.
   const int UndefSz = UndefVectorExtracts.size();
   unsigned SingleMax = 0;
-  Value *SingleVec = nullptr;
   unsigned PairMax = 0;
-  std::pair<Value *, Value *> PairVec(nullptr, nullptr);
-  for (auto &Data : VFToVector) {
-    Value *V1 = Data.second.front();
-    if (SingleMax < VectorOpToIdx[V1].size() + UndefSz) {
-      SingleMax = VectorOpToIdx[V1].size() + UndefSz;
-      SingleVec = V1;
-    }
-    Value *V2 = nullptr;
-    if (Data.second.size() > 1)
-      V2 = *std::next(Data.second.begin());
-    if (V2 && PairMax < VectorOpToIdx[V1].size() + VectorOpToIdx[V2].size() +
-                            UndefSz) {
-      PairMax = VectorOpToIdx[V1].size() + VectorOpToIdx[V2].size() + UndefSz;
-      PairVec = std::make_pair(V1, V2);
+  if (!Vectors.empty()) {
+    SingleMax = Vectors.front().second.size() + UndefSz;
+    if (Vectors.size() > 1) {
+      auto *ItNext = std::next(Vectors.begin());
+      PairMax = SingleMax + ItNext->second.size();
     }
   }
   if (SingleMax == 0 && PairMax == 0 && UndefSz == 0)
@@ -10697,11 +10685,11 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   SmallVector<Value *> GatheredExtracts(
       VL.size(), PoisonValue::get(VL.front()->getType()));
   if (SingleMax >= PairMax && SingleMax) {
-    for (int Idx : VectorOpToIdx[SingleVec])
+    for (int Idx : Vectors.front().second)
       std::swap(GatheredExtracts[Idx], VL[Idx]);
-  } else {
-    for (Value *V : {PairVec.first, PairVec.second})
-      for (int Idx : VectorOpToIdx[V])
+  } else if (!Vectors.empty()) {
+    for (unsigned Idx : {0, 1})
+      for (int Idx : Vectors[Idx].second)
         std::swap(GatheredExtracts[Idx], VL[Idx]);
   }
   // Add extracts from undefs too.
@@ -11770,25 +11758,29 @@ public:
       MutableArrayRef<int> SubMask = Mask.slice(Part * SliceSize, Limit);
       constexpr int MaxBases = 2;
       SmallVector<Value *, MaxBases> Bases(MaxBases);
-#ifndef NDEBUG
-      int PrevSize = 0;
-#endif // NDEBUG
-      for (const auto [I, V]: enumerate(VL)) {
-        if (SubMask[I] == PoisonMaskElem)
+      auto VLMask = zip(VL, SubMask);
+      const unsigned VF = std::accumulate(
+          VLMask.begin(), VLMask.end(), 0U, [&](unsigned S, const auto &D) {
+            if (std::get<1>(D) == PoisonMaskElem)
+              return S;
+            Value *VecOp =
+                cast<ExtractElementInst>(std::get<0>(D))->getVectorOperand();
+            if (const TreeEntry *TE = R.getTreeEntry(VecOp))
+              VecOp = TE->VectorizedValue;
+            assert(VecOp && "Expected vectorized value.");
+            const unsigned Size =
+                cast<FixedVectorType>(VecOp->getType())->getNumElements();
+            return std::max(S, Size);
+          });
+      for (const auto [V, I] : VLMask) {
+        if (I == PoisonMaskElem)
           continue;
         Value *VecOp = cast<ExtractElementInst>(V)->getVectorOperand();
         if (const TreeEntry *TE = R.getTreeEntry(VecOp))
           VecOp = TE->VectorizedValue;
         assert(VecOp && "Expected vectorized value.");
-        const int Size =
-            cast<FixedVectorType>(VecOp->getType())->getNumElements();
-#ifndef NDEBUG
-        assert((PrevSize == Size || PrevSize == 0) &&
-               "Expected vectors of the same size.");
-        PrevSize = Size;
-#endif // NDEBUG
         VecOp = castToScalarTyElem(VecOp);
-        Bases[SubMask[I] < Size ? 0 : 1] = VecOp;
+        Bases[I / VF] = VecOp;
       }
       if (!Bases.front())
         continue;
@@ -11814,16 +11806,17 @@ public:
                "Expected first part or all previous parts masked.");
         copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
       } else {
-        unsigned VF = cast<FixedVectorType>(Vec->getType())->getNumElements();
+        unsigned NewVF =
+            cast<FixedVectorType>(Vec->getType())->getNumElements();
         if (Vec->getType() != SubVec->getType()) {
           unsigned SubVecVF =
               cast<FixedVectorType>(SubVec->getType())->getNumElements();
-          VF = std::max(VF, SubVecVF);
+          NewVF = std::max(NewVF, SubVecVF);
         }
         // Adjust SubMask.
         for (int &Idx : SubMask)
           if (Idx != PoisonMaskElem)
-            Idx += VF;
+            Idx += NewVF;
         copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
         Vec = createShuffle(Vec, SubVec, VecMask);
         TransformToIdentity(VecMask);
