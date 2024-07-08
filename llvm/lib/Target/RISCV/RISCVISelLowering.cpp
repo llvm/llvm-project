@@ -20789,39 +20789,6 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
   TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
-Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
-                                                   Instruction *Inst,
-                                                   AtomicOrdering Ord) const {
-  if (Subtarget.hasStdExtZtso()) {
-    if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
-      return Builder.CreateFence(Ord);
-    return nullptr;
-  }
-
-  if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
-    return Builder.CreateFence(Ord);
-  if (isa<StoreInst>(Inst) && isReleaseOrStronger(Ord))
-    return Builder.CreateFence(AtomicOrdering::Release);
-  return nullptr;
-}
-
-Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
-                                                    Instruction *Inst,
-                                                    AtomicOrdering Ord) const {
-  if (Subtarget.hasStdExtZtso()) {
-    if (isa<StoreInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
-      return Builder.CreateFence(Ord);
-    return nullptr;
-  }
-
-  if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
-    return Builder.CreateFence(AtomicOrdering::Acquire);
-  if (Subtarget.enableSeqCstTrailingFence() && isa<StoreInst>(Inst) &&
-      Ord == AtomicOrdering::SequentiallyConsistent)
-    return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent);
-  return nullptr;
-}
-
 TargetLowering::AtomicExpansionKind
 RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating

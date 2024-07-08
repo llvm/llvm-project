@@ -1463,11 +1463,45 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.isMetaInstruction())
     return 0;
 
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const auto &ST = MF.getSubtarget<RISCVSubtarget>();
+
   unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  default:
+    break;
+  case RISCV::PseudoAtomicLB:
+  case RISCV::PseudoAtomicLH:
+  case RISCV::PseudoAtomicLW:
+  case RISCV::PseudoAtomicLD: {
+    auto Ordering = static_cast<AtomicOrdering>(MI.getOperand(3).getImm());
+    switch (Ordering) {
+    default:
+      return 4;
+    case AtomicOrdering::Acquire:
+      return 8;
+    case AtomicOrdering::SequentiallyConsistent:
+      return ST.hasStdExtZtso() ? 8 : 12;
+    }
+  }
+  case RISCV::PseudoAtomicSB:
+  case RISCV::PseudoAtomicSH:
+  case RISCV::PseudoAtomicSW:
+  case RISCV::PseudoAtomicSD: {
+    auto Ordering = static_cast<AtomicOrdering>(MI.getOperand(3).getImm());
+    switch (Ordering) {
+    default:
+      return 4;
+    case AtomicOrdering::Release:
+      return 8;
+    case AtomicOrdering::SequentiallyConsistent:
+      return ST.hasStdExtZtso() ? 8 : ST.enableSeqCstTrailingFence() ? 12 : 8;
+    }
+  }
+  }
 
   if (Opcode == TargetOpcode::INLINEASM ||
       Opcode == TargetOpcode::INLINEASM_BR) {
-    const MachineFunction &MF = *MI.getParent()->getParent();
     const auto &TM = static_cast<const RISCVTargetMachine &>(MF.getTarget());
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
                               *TM.getMCAsmInfo());
@@ -1475,8 +1509,6 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (!MI.memoperands_empty()) {
     MachineMemOperand *MMO = *(MI.memoperands_begin());
-    const MachineFunction &MF = *MI.getParent()->getParent();
-    const auto &ST = MF.getSubtarget<RISCVSubtarget>();
     if (ST.hasStdExtZihintntl() && MMO->isNonTemporal()) {
       if (ST.hasStdExtCOrZca() && ST.enableRVCHintInstrs()) {
         if (isCompressibleInst(MI, STI))

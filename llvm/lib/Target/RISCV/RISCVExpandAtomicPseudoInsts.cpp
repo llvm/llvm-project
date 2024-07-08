@@ -48,6 +48,9 @@ private:
   bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI);
+  bool expandAtomicLoadStore(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI,
+                             unsigned int Opcode, bool IsLoad);
   bool expandAtomicBinOp(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, AtomicRMWInst::BinOp,
                          bool IsMasked, int Width,
@@ -111,6 +114,22 @@ bool RISCVExpandAtomicPseudo::expandMI(MachineBasicBlock &MBB,
   // expanded instructions for each pseudo is correct in the Size field of the
   // tablegen definition for the pseudo.
   switch (MBBI->getOpcode()) {
+  case RISCV::PseudoAtomicLB:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::LB, true);
+  case RISCV::PseudoAtomicLH:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::LH, true);
+  case RISCV::PseudoAtomicLW:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::LW, true);
+  case RISCV::PseudoAtomicLD:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::LD, true);
+  case RISCV::PseudoAtomicSB:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::SB, false);
+  case RISCV::PseudoAtomicSH:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::SH, false);
+  case RISCV::PseudoAtomicSW:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::SW, false);
+  case RISCV::PseudoAtomicSD:
+    return expandAtomicLoadStore(MBB, MBBI, RISCV::SD, false);
   case RISCV::PseudoAtomicLoadNand32:
     return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, false, 32,
                              NextMBBI);
@@ -383,6 +402,91 @@ static void doMaskedAtomicBinOpExpansion(const RISCVInstrInfo *TII,
       .addReg(ScratchReg)
       .addReg(RISCV::X0)
       .addMBB(LoopMBB);
+}
+
+static void insertFence(const RISCVInstrInfo *TII, MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                        AtomicOrdering Ordering) {
+  // fence acq_rel -> fence.tso
+  if (Ordering == AtomicOrdering::AcquireRelease) {
+    BuildMI(MBB, MBBI, DL, TII->get(RISCV::FENCE_TSO));
+  } else {
+    int Pred, Succ;
+    switch (Ordering) {
+    default:
+      llvm_unreachable("Unsupported AtomicOrdering");
+    case AtomicOrdering::Acquire:
+      // fence acquire -> fence r, rw
+      Pred = 0b10;
+      Succ = 0b11;
+      break;
+    case AtomicOrdering::Release:
+      // fence release -> fence rw, w
+      Pred = 0b11;
+      Succ = 0b01;
+      break;
+    case AtomicOrdering::SequentiallyConsistent:
+      // fence seq_cst -> fence rw, rw
+      Pred = 0b11;
+      Succ = 0b11;
+      break;
+    }
+    BuildMI(MBB, MBBI, DL, TII->get(RISCV::FENCE)).addImm(Pred).addImm(Succ);
+  }
+}
+
+static void emitLeadingFence(const RISCVSubtarget *Subtarget,
+                             const RISCVInstrInfo *TII, MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                             AtomicOrdering Ordering, bool IsLoad) {
+  if (Subtarget->hasStdExtZtso()) {
+    if (IsLoad && Ordering == AtomicOrdering::SequentiallyConsistent)
+      insertFence(TII, MBB, MBBI, DL, Ordering);
+    return;
+  }
+
+  if (IsLoad && Ordering == AtomicOrdering::SequentiallyConsistent) {
+    insertFence(TII, MBB, MBBI, DL, Ordering);
+    return;
+  }
+
+  if (!IsLoad && isReleaseOrStronger(Ordering))
+    insertFence(TII, MBB, MBBI, DL, AtomicOrdering::Release);
+}
+
+static void emitTrailingFence(const RISCVSubtarget *Subtarget,
+                              const RISCVInstrInfo *TII, MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                              AtomicOrdering Ordering, bool IsLoad) {
+  if (Subtarget->hasStdExtZtso()) {
+    if (!IsLoad && Ordering == AtomicOrdering::SequentiallyConsistent)
+      insertFence(TII, MBB, MBBI, DL, Ordering);
+    return;
+  }
+
+  if (IsLoad && isAcquireOrStronger(Ordering)) {
+    insertFence(TII, MBB, MBBI, DL, AtomicOrdering::Acquire);
+    return;
+  }
+
+  if (Subtarget->enableSeqCstTrailingFence() && !IsLoad &&
+      Ordering == AtomicOrdering::SequentiallyConsistent)
+    insertFence(TII, MBB, MBBI, DL, AtomicOrdering::SequentiallyConsistent);
+}
+
+bool RISCVExpandAtomicPseudo::expandAtomicLoadStore(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    unsigned int Opcode, bool IsLoad) {
+  auto Ordering = static_cast<AtomicOrdering>(MBBI->getOperand(3).getImm());
+  DebugLoc DL = MBBI->getDebugLoc();
+  emitLeadingFence(STI, TII, MBB, MBBI, DL, Ordering, IsLoad);
+  BuildMI(MBB, MBBI, DL, TII->get(Opcode))
+      .add(MBBI->getOperand(0))
+      .add(MBBI->getOperand(1))
+      .add(MBBI->getOperand(2));
+  emitTrailingFence(STI, TII, MBB, MBBI, DL, Ordering, IsLoad);
+  MBBI->eraseFromParent();
+  return true;
 }
 
 bool RISCVExpandAtomicPseudo::expandAtomicBinOp(
