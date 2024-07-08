@@ -42,6 +42,9 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention (default to 100).
     - ``LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a rwlock is in contention (default to 100).
     - ``LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY``: Automatically adjust timeout to CLOCK_MONOTONIC (default to true). POSIX API may require CLOCK_REALTIME, which can be unstable and leading to unexpected behavior. This option will convert the real-time timestamp to monotonic timestamp relative to the time of call.
+* **"scanf" options**
+    - ``LIBC_CONF_SCANF_DISABLE_FLOAT``: Disable parsing floating point values in scanf and friends.
+    - ``LIBC_CONF_SCANF_DISABLE_INDEX_MODE``: Disable index mode in the scanf format string.
 * **"string" options**
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
     - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.

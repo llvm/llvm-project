@@ -1219,7 +1219,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   return CPU;
 }
 
-#undef testFeature;
+#undef testFeature
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
