@@ -34,7 +34,7 @@ int main()
     }
   }
 
-
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_sync_region'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_sync_region_wait'
@@ -42,17 +42,18 @@ int main()
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // master thread implicit barrier at parallel end
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_barrier_begin: parallel_id=0, task_id=[[TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_begin: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
 
 
   // worker thread implicit barrier at parallel end
-  // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_barrier_begin: parallel_id=0, task_id=[[TASK_ID:[0-9]+]], codeptr_ra=[[NULL]]
-  // CHECK: {{^}}[[THREAD_ID]]: ompt_event_wait_barrier_begin: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra=[[NULL]]
-  // CHECK: {{^}}[[THREAD_ID]]: ompt_event_wait_barrier_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra=[[NULL]]
-  // CHECK: {{^}}[[THREAD_ID]]: ompt_event_barrier_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra=[[NULL]]
+  // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID:[0-9]+]], codeptr_ra=[[NULL]]
+  // CHECK: {{^}}[[THREAD_ID]]: ompt_event_wait_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra=[[NULL]]
+  // CHECK: {{^}}[[THREAD_ID]]: ompt_event_wait_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra=[[NULL]]
+  // CHECK: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra=[[NULL]]
+  // clang-format on
 
   return 0;
 }
@@ -76,33 +77,26 @@ on_ompt_callback_sync_region(
   ompt_data_t *task_data,
   const void *codeptr_ra)
 {
+  // We only expect implicit parallel barrier in this code.
+  if (kind != ompt_sync_region_barrier_implicit_parallel) {
+    printf("unexpected ompt_sync_region_t passed to %s\n", __func__);
+    exit(-1);
+  }
   const char *event_name = NULL;
   if (endpoint == ompt_scope_begin) {
-    event_name = "ompt_event_barrier_begin";
+    event_name = "ompt_event_barrier_implicit_parallel_begin";
     task_data->value = ompt_get_unique_id();
   } else if (endpoint == ompt_scope_end) {
-    event_name = "ompt_event_barrier_end";
+    event_name = "ompt_event_barrier_implicit_parallel_end";
   } else {
     printf("ompt_scope_beginend should never be passed to %s\n", __func__);
     exit(-1);
   }
-
-  switch (kind) {
-  case ompt_sync_region_barrier:
-  case ompt_sync_region_barrier_implicit:
-  case ompt_sync_region_barrier_explicit:
-  case ompt_sync_region_barrier_implicit_workshare:
-  case ompt_sync_region_barrier_implicit_parallel:
-  case ompt_sync_region_barrier_teams:
-  case ompt_sync_region_barrier_implementation:
-    printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
-           ", codeptr_ra=%p\n",
-           ompt_get_thread_data()->value, event_name,
-           parallel_data ? parallel_data->value : 0, task_data->value,
-           codeptr_ra);
-    break;
-  default:; // do nothing
-  }
+  printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
+         ", codeptr_ra=%p\n",
+         ompt_get_thread_data()->value, event_name,
+         parallel_data ? parallel_data->value : 0, task_data->value,
+         codeptr_ra);
 }
 
 static void
@@ -113,32 +107,24 @@ on_ompt_callback_sync_region_wait(
   ompt_data_t *task_data,
   const void *codeptr_ra)
 {
+  if (kind != ompt_sync_region_barrier_implicit_parallel) {
+    printf("unexpected ompt_sync_region_t passed to %s\n", __func__);
+    exit(-1);
+  }
   const char *event_name = NULL;
   if (endpoint == ompt_scope_begin) {
-    event_name = "ompt_event_wait_barrier_begin";
+    event_name = "ompt_event_wait_barrier_implicit_parallel_begin";
   } else if (endpoint == ompt_scope_end) {
-    event_name = "ompt_event_wait_barrier_end";
+    event_name = "ompt_event_wait_barrier_implicit_parallel_end";
   } else {
     printf("ompt_scope_beginend should never be passed to %s\n", __func__);
     exit(-1);
   }
-
-  switch (kind) {
-  case ompt_sync_region_barrier:
-  case ompt_sync_region_barrier_implicit:
-  case ompt_sync_region_barrier_explicit:
-  case ompt_sync_region_barrier_implicit_workshare:
-  case ompt_sync_region_barrier_implicit_parallel:
-  case ompt_sync_region_barrier_teams:
-  case ompt_sync_region_barrier_implementation:
-    printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
-           ", codeptr_ra=%p\n",
-           ompt_get_thread_data()->value, event_name,
-           parallel_data ? parallel_data->value : 0, task_data->value,
-           codeptr_ra);
-    break;
-  default:; // do nothing
-  }
+  printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
+         ", codeptr_ra=%p\n",
+         ompt_get_thread_data()->value, event_name,
+         parallel_data ? parallel_data->value : 0, task_data->value,
+         codeptr_ra);
 }
 
 #define register_ompt_callback_t(name, type)                       \
