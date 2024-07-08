@@ -5083,7 +5083,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
@@ -5106,13 +5105,32 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
     // already the correct result.
     Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
-    if (NewOpc == ISD::CTLZ || NewOpc == ISD::CTLZ_ZERO_UNDEF) {
+    if (NewOpc == ISD::CTLZ) {
       // Tmp1 = Tmp1 - (sizeinbits(NVT) - sizeinbits(Old VT))
       Tmp1 = DAG.getNode(ISD::SUB, dl, NVT, Tmp1,
                           DAG.getConstant(NVT.getSizeInBits() -
                                           OVT.getSizeInBits(), dl, NVT));
     }
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    break;
+  }
+  case ISD::CTLZ_ZERO_UNDEF: {
+    // We know that the argument is unlikely to be zero, hence we can take a
+    // different approach as compared to ISD::CTLZ
+
+    // Any Extend the argument
+    auto AnyExtendedNode =
+        DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+
+    // Tmp1 = Tmp1 << (sizeinbits(NVT) - sizeinbits(Old VT))
+    auto ShiftConstant = DAG.getShiftAmountConstant(
+        NVT.getSizeInBits() - OVT.getSizeInBits(), NVT, dl);
+    auto LeftShiftResult =
+        DAG.getNode(ISD::SHL, dl, NVT, AnyExtendedNode, ShiftConstant);
+
+    // Perform the larger operation
+    auto CTLZResult = DAG.getNode(Node->getOpcode(), dl, NVT, LeftShiftResult);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, CTLZResult));
     break;
   }
   case ISD::BITREVERSE:
