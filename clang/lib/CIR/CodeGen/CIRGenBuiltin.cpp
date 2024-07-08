@@ -788,6 +788,17 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BI__builtin___clear_cache: {
+    mlir::Type voidTy = mlir::cir::VoidType::get(builder.getContext());
+    mlir::Value begin =
+        builder.createPtrBitcast(buildScalarExpr(E->getArg(0)), voidTy);
+    mlir::Value end =
+        builder.createPtrBitcast(buildScalarExpr(E->getArg(1)), voidTy);
+    builder.create<mlir::cir::ClearCacheOp>(getLoc(E->getSourceRange()), begin,
+                                            end);
+    return RValue::get(nullptr);
+  }
+
   // C++ std:: builtins.
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
