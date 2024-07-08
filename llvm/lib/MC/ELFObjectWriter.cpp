@@ -23,6 +23,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFExtras.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
@@ -903,44 +904,14 @@ void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
   WriteWord(EntrySize); // sh_entsize
 }
 
-template <class uint>
+template <bool Is64>
 static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &OS) {
-  uint OffsetMask = 8, Offset = 0, Addend = 0;
-  uint32_t SymIdx = 0, Type = 0;
-  // hdr & 4 indicates 3 flag bits in delta offset and flags members.
-  for (const ELFRelocationEntry &Entry : Relocs)
-    OffsetMask |= Entry.Offset;
-  const int Shift = llvm::countr_zero(OffsetMask);
-  encodeULEB128(Relocs.size() * 8 + ELF::CREL_HDR_ADDEND + Shift, OS);
-  for (const ELFRelocationEntry &Entry : Relocs) {
-    // The delta offset and flags member may be larger than uint64_t. Special
-    // case the first byte (3 flag bits and 4 offset bits). Other ULEB128 bytes
-    // encode the remaining delta offset bits.
-    auto DeltaOffset = static_cast<uint>((Entry.Offset - Offset) >> Shift);
-    Offset = Entry.Offset;
-    uint32_t CurSymIdx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
-    uint8_t B = (DeltaOffset << 3) + (SymIdx != CurSymIdx) +
-                (Type != Entry.Type ? 2 : 0) + (Addend != Entry.Addend ? 4 : 0);
-    if (DeltaOffset < 0x10) {
-      OS << char(B);
-    } else {
-      OS << char(B | 0x80);
-      encodeULEB128(DeltaOffset >> 4, OS);
-    }
-    // Delta symidx/type/addend members (SLEB128).
-    if (B & 1) {
-      encodeSLEB128(static_cast<int32_t>(CurSymIdx - SymIdx), OS);
-      SymIdx = CurSymIdx;
-    }
-    if (B & 2) {
-      encodeSLEB128(static_cast<int32_t>(Entry.Type - Type), OS);
-      Type = Entry.Type;
-    }
-    if (B & 4) {
-      encodeSLEB128(std::make_signed_t<uint>(Entry.Addend - Addend), OS);
-      Addend = Entry.Addend;
-    }
-  }
+  using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
+  ELF::encodeCrel<Is64>(OS, Relocs, [&](const ELFRelocationEntry &R) {
+    uint32_t SymIdx = R.Symbol ? R.Symbol->getIndex() : 0;
+    return ELF::Elf_Crel<Is64>{static_cast<uint>(R.Offset), SymIdx, R.Type,
+                               std::make_signed_t<uint>(R.Addend)};
+  });
 }
 
 void ELFWriter::writeRelocations(const MCAssembler &Asm,
@@ -989,9 +960,9 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
     }
   } else if (TO && TO->Crel) {
     if (is64Bit())
-      encodeCrel<uint64_t>(Relocs, W.OS);
+      encodeCrel<true>(Relocs, W.OS);
     else
-      encodeCrel<uint32_t>(Relocs, W.OS);
+      encodeCrel<false>(Relocs, W.OS);
   } else {
     for (const ELFRelocationEntry &Entry : Relocs) {
       uint32_t Symidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
