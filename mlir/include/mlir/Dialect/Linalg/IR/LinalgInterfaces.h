@@ -36,6 +36,7 @@ class GenericOp;
 /// - `decomposedValues` contains the values corresponding to the result of the
 /// aggregate operation.
 struct DecompositionResult {
+  /// TODO: can be further constrained to LinalgOp.
   SmallVector<Operation *> decomposedOps;
   SmallVector<Value> decomposedValues;
 };
