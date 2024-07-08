@@ -110,14 +110,14 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
     if (ExpectedFlags == GotFlags)
       return testing::AssertionSuccess();
 
-    return testing::AssertionFailure() << llvm::formatv(
-               "CPU: {4}\n"
-               "Expected extension flags: {0} ({1:x})\n"
-               "     Got extension flags: {2} ({3:x})\n"
-               "                    Diff: {5} ({6:x})\n",
-               FormatExtensionFlags(ExpectedFlags), ExpectedFlags,
-               FormatExtensionFlags(GotFlags), GotFlags, CPUName,
-               FormatExtensionFlags(ExpectedFlags ^ GotFlags));
+    return testing::AssertionFailure()
+           << llvm::formatv("CPU: {4}\n"
+                            "Expected extension flags: {0} ({1:x})\n"
+                            "     Got extension flags: {2} ({3:x})\n"
+                            "                    Diff: {5} ({6:x})\n",
+                            FormatExtensionFlags(ExpectedFlags), ExpectedFlags,
+                            FormatExtensionFlags(GotFlags), GotFlags, CPUName,
+                            FormatExtensionFlags(ExpectedFlags ^ GotFlags));
   }
 
   testing::AssertionResult operator()(const char *m_expr, const char *n_expr,
