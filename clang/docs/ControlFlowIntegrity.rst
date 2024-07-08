@@ -351,9 +351,9 @@ The compiler will only emit a full CFI check if the member function pointer's
 base type is complete. This is because the complete definition of the base
 type contains information that is necessary to correctly compile the CFI
 check. To ensure that the compiler always emits a full CFI check, it is
-recommended to also pass the flag ``-fcomplete-member-pointers``, which
-enables a non-conforming language extension that requires member pointer
-base types to be complete if they may be used for a call.
+recommended to enable the ``-Wincomplete-member-pointer`` warning, which
+warns if a member pointer does not have a complete base types when the
+member pointer type is specified.
 
 For this scheme to work, all translation units containing the definition
 of a virtual member function (whether inline or not), other than members

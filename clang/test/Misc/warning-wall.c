@@ -93,6 +93,7 @@ CHECK-NEXT:    -Wprivate-extern
 CHECK-NEXT:    -Wcast-of-sel-type
 CHECK-NEXT:    -Wextern-c-compat
 CHECK-NEXT:    -Wuser-defined-warnings
+CHECK-NEXT:  -Wmicrosoft-incomplete-member-pointer
 CHECK-NEXT:  -Wparentheses
 CHECK-NEXT:    -Wlogical-op-parentheses
 CHECK-NEXT:    -Wlogical-not-parentheses

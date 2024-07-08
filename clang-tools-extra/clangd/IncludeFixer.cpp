@@ -122,7 +122,8 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_lambda_incomplete_result:
   //case diag::err_matrix_incomplete_index:
   //case diag::err_matrix_separate_incomplete_index:
-  case diag::err_memptr_incomplete:
+  case diag::warn_memptr_incomplete:
+  case diag::warn_memptr_incomplete_ms:
   case diag::err_new_incomplete_or_sizeless_type:
   case diag::err_objc_incomplete_boxed_expression_type:
   case diag::err_objc_index_incomplete_class_type:
