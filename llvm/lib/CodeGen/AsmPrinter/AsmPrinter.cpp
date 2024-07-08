@@ -2328,8 +2328,10 @@ bool AsmPrinter::doFinalization(Module &M) {
     // Emit linkage for the function entry point.
     emitLinkage(&F, FnEntryPointSym);
 
-    // Emit linkage for the function descriptor.
-    emitLinkage(&F, Name);
+    // If a function's address is taken, which means it may be called via a
+    // function pointer, we need the function descriptor for it.
+    if (F.hasAddressTaken())
+      emitLinkage(&F, Name);
   }
 
   // Emit the remarks section contents.
