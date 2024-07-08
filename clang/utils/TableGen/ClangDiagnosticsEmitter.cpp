@@ -1232,6 +1232,7 @@ static bool isExemptAtStart(StringRef Text) {
   // Otherwise, there are a few other exemptions.
   return StringSwitch<bool>(Text)
       .Case("AddressSanitizer", true)
+      .Case("Arm", true)
       .Case("CFString", true)
       .Case("Clang", true)
       .Case("Fuchsia", true)
