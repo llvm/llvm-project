@@ -604,7 +604,7 @@ struct ArgumentAccessInfo {
 };
 
 struct UsesPerBlockInfo {
-  DenseMap<Instruction *, ArgumentAccessInfo> Insts;
+  SmallDenseMap<Instruction *, ArgumentAccessInfo, 2> Insts;
   bool HasWrites = false;
   bool HasClobber = false;
 };
