@@ -71,17 +71,23 @@ class SPIRVEmitIntrinsics
 
   // deduce element type of untyped pointers
   Type *deduceElementType(Value *I, bool UnknownElemTypeI8);
-  Type *deduceElementTypeHelper(Value *I);
-  Type *deduceElementTypeHelper(Value *I, std::unordered_set<Value *> &Visited);
+  Type *deduceElementTypeHelper(Value *I, bool UnknownElemTypeI8);
+  Type *deduceElementTypeHelper(Value *I, std::unordered_set<Value *> &Visited,
+                                bool UnknownElemTypeI8);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
-                                     std::unordered_set<Value *> &Visited);
+                                     bool UnknownElemTypeI8);
+  Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
+                                     std::unordered_set<Value *> &Visited,
+                                     bool UnknownElemTypeI8);
   Type *deduceElementTypeByUsersDeep(Value *Op,
-                                     std::unordered_set<Value *> &Visited);
+                                     std::unordered_set<Value *> &Visited,
+                                     bool UnknownElemTypeI8);
 
   // deduce nested types of composites
-  Type *deduceNestedTypeHelper(User *U);
+  Type *deduceNestedTypeHelper(User *U, bool UnknownElemTypeI8);
   Type *deduceNestedTypeHelper(User *U, Type *Ty,
-                               std::unordered_set<Value *> &Visited);
+                               std::unordered_set<Value *> &Visited,
+                               bool UnknownElemTypeI8);
 
   // deduce Types of operands of the Instruction if possible
   void deduceOperandElementType(Instruction *I);
@@ -223,6 +229,18 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
                        false);
 }
 
+// maybe restore original function return type
+static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
+                                       Type *Ty) {
+  CallInst *CI = dyn_cast<CallInst>(I);
+  if (!CI || CI->isIndirectCall() || CI->isInlineAsm() ||
+      !CI->getCalledFunction() || CI->getCalledFunction()->isIntrinsic())
+    return Ty;
+  if (Type *OriginalTy = GR->findMutated(CI->getCalledFunction()))
+    return OriginalTy;
+  return Ty;
+}
+
 void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
                                           Value *Arg) {
   Value *OfType = PoisonValue::get(Ty);
@@ -263,15 +281,26 @@ void SPIRVEmitIntrinsics::updateAssignType(CallInst *AssignCI, Value *Arg,
 
 // Set element pointer type to the given value of ValueTy and tries to
 // specify this type further (recursively) by Operand value, if needed.
+Type *
+SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
+                                                  bool UnknownElemTypeI8) {
+  std::unordered_set<Value *> Visited;
+  return deduceElementTypeByValueDeep(ValueTy, Operand, Visited,
+                                      UnknownElemTypeI8);
+}
+
 Type *SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(
-    Type *ValueTy, Value *Operand, std::unordered_set<Value *> &Visited) {
+    Type *ValueTy, Value *Operand, std::unordered_set<Value *> &Visited,
+    bool UnknownElemTypeI8) {
   Type *Ty = ValueTy;
   if (Operand) {
     if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
-      if (Type *NestedTy = deduceElementTypeHelper(Operand, Visited))
-        Ty = TypedPointerType::get(NestedTy, PtrTy->getAddressSpace());
+      if (Type *NestedTy =
+              deduceElementTypeHelper(Operand, Visited, UnknownElemTypeI8))
+        Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
     } else {
-      Ty = deduceNestedTypeHelper(dyn_cast<User>(Operand), Ty, Visited);
+      Ty = deduceNestedTypeHelper(dyn_cast<User>(Operand), Ty, Visited,
+                                  UnknownElemTypeI8);
     }
   }
   return Ty;
@@ -279,12 +308,12 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(
 
 // Traverse User instructions to deduce an element pointer type of the operand.
 Type *SPIRVEmitIntrinsics::deduceElementTypeByUsersDeep(
-    Value *Op, std::unordered_set<Value *> &Visited) {
+    Value *Op, std::unordered_set<Value *> &Visited, bool UnknownElemTypeI8) {
   if (!Op || !isPointerTy(Op->getType()))
     return nullptr;
 
-  if (auto PType = dyn_cast<TypedPointerType>(Op->getType()))
-    return PType->getElementType();
+  if (auto ElemTy = getPointeeType(Op->getType()))
+    return ElemTy;
 
   // maybe we already know operand's element type
   if (Type *KnownTy = GR->findDeducedElementType(Op))
@@ -292,7 +321,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeByUsersDeep(
 
   for (User *OpU : Op->users()) {
     if (Instruction *Inst = dyn_cast<Instruction>(OpU)) {
-      if (Type *Ty = deduceElementTypeHelper(Inst, Visited))
+      if (Type *Ty = deduceElementTypeHelper(Inst, Visited, UnknownElemTypeI8))
         return Ty;
     }
   }
@@ -314,13 +343,14 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
 
 // Deduce and return a successfully deduced Type of the Instruction,
 // or nullptr otherwise.
-Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(Value *I) {
+Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(Value *I,
+                                                   bool UnknownElemTypeI8) {
   std::unordered_set<Value *> Visited;
-  return deduceElementTypeHelper(I, Visited);
+  return deduceElementTypeHelper(I, Visited, UnknownElemTypeI8);
 }
 
 Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
-    Value *I, std::unordered_set<Value *> &Visited) {
+    Value *I, std::unordered_set<Value *> &Visited, bool UnknownElemTypeI8) {
   // allow to pass nullptr as an argument
   if (!I)
     return nullptr;
@@ -338,34 +368,46 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
   Type *Ty = nullptr;
   // look for known basic patterns of type inference
   if (auto *Ref = dyn_cast<AllocaInst>(I)) {
-    Ty = Ref->getAllocatedType();
+    Type *RefTy = Ref->getAllocatedType();
+    if (UnknownElemTypeI8 || !isUntypedPointerTy(RefTy))
+      Ty = RefTy;
   } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
     Ty = Ref->getResultElementType();
   } else if (auto *Ref = dyn_cast<GlobalValue>(I)) {
     Ty = deduceElementTypeByValueDeep(
         Ref->getValueType(),
-        Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited);
+        Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
+        UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
-    Ty = deduceElementTypeHelper(Ref->getPointerOperand(), Visited);
+    Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
+                                          UnknownElemTypeI8);
+    if (UnknownElemTypeI8 || !isUntypedPointerTy(RefTy))
+      Ty = RefTy;
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (Type *Src = Ref->getSrcTy(), *Dest = Ref->getDestTy();
         isPointerTy(Src) && isPointerTy(Dest))
-      Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited);
+      Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited,
+                                   UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
-    Value *Op = Ref->getNewValOperand();
-    Ty = deduceElementTypeByValueDeep(Op->getType(), Op, Visited);
+    Type *RefTy = deduceElementTypeHelper(Ref->getNewValOperand(), Visited,
+                                          UnknownElemTypeI8);
+    if (UnknownElemTypeI8 || !isUntypedPointerTy(RefTy))
+      Ty = RefTy;
   } else if (auto *Ref = dyn_cast<AtomicRMWInst>(I)) {
-    Value *Op = Ref->getValOperand();
-    Ty = deduceElementTypeByValueDeep(Op->getType(), Op, Visited);
+    Type *RefTy = deduceElementTypeHelper(Ref->getValOperand(), Visited,
+                                          UnknownElemTypeI8);
+    if (UnknownElemTypeI8 || !isUntypedPointerTy(RefTy))
+      Ty = RefTy;
   } else if (auto *Ref = dyn_cast<PHINode>(I)) {
     for (unsigned i = 0; i < Ref->getNumIncomingValues(); i++) {
-      Ty = deduceElementTypeByUsersDeep(Ref->getIncomingValue(i), Visited);
+      Ty = deduceElementTypeByUsersDeep(Ref->getIncomingValue(i), Visited,
+                                        UnknownElemTypeI8);
       if (Ty)
         break;
     }
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     for (Value *Op : {Ref->getTrueValue(), Ref->getFalseValue()}) {
-      Ty = deduceElementTypeByUsersDeep(Op, Visited);
+      Ty = deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
       if (Ty)
         break;
     }
@@ -387,7 +429,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       auto AsArgIt = ResTypeByArg.find(DemangledName);
       if (AsArgIt != ResTypeByArg.end()) {
         Ty = deduceElementTypeHelper(CI->getArgOperand(AsArgIt->second),
-                                     Visited);
+                                     Visited, UnknownElemTypeI8);
       }
     }
   }
@@ -404,13 +446,15 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
 // Re-create a type of the value if it has untyped pointer fields, also nested.
 // Return the original value type if no corrections of untyped pointer
 // information is found or needed.
-Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(User *U) {
+Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(User *U,
+                                                  bool UnknownElemTypeI8) {
   std::unordered_set<Value *> Visited;
-  return deduceNestedTypeHelper(U, U->getType(), Visited);
+  return deduceNestedTypeHelper(U, U->getType(), Visited, UnknownElemTypeI8);
 }
 
 Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
-    User *U, Type *OrigTy, std::unordered_set<Value *> &Visited) {
+    User *U, Type *OrigTy, std::unordered_set<Value *> &Visited,
+    bool UnknownElemTypeI8) {
   if (!U)
     return OrigTy;
 
@@ -432,10 +476,12 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
       Type *Ty = OpTy;
       if (Op) {
         if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-          if (Type *NestedTy = deduceElementTypeHelper(Op, Visited))
+          if (Type *NestedTy =
+                  deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
             Ty = TypedPointerType::get(NestedTy, PtrTy->getAddressSpace());
         } else {
-          Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited);
+          Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
+                                      UnknownElemTypeI8);
         }
       }
       Tys.push_back(Ty);
@@ -451,10 +497,12 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
       Type *OpTy = ArrTy->getElementType();
       Type *Ty = OpTy;
       if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy = deduceElementTypeHelper(Op, Visited))
+        if (Type *NestedTy =
+                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
           Ty = TypedPointerType::get(NestedTy, PtrTy->getAddressSpace());
       } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited);
+        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
+                                    UnknownElemTypeI8);
       }
       if (Ty != OpTy) {
         Type *NewTy = ArrayType::get(Ty, ArrTy->getNumElements());
@@ -467,10 +515,12 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
       Type *OpTy = VecTy->getElementType();
       Type *Ty = OpTy;
       if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy = deduceElementTypeHelper(Op, Visited))
-          Ty = TypedPointerType::get(NestedTy, PtrTy->getAddressSpace());
+        if (Type *NestedTy =
+                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
+          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
       } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited);
+        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
+                                    UnknownElemTypeI8);
       }
       if (Ty != OpTy) {
         Type *NewTy = VectorType::get(Ty, VecTy->getElementCount());
@@ -484,7 +534,7 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
 }
 
 Type *SPIRVEmitIntrinsics::deduceElementType(Value *I, bool UnknownElemTypeI8) {
-  if (Type *Ty = deduceElementTypeHelper(I))
+  if (Type *Ty = deduceElementTypeHelper(I, UnknownElemTypeI8))
     return Ty;
   return UnknownElemTypeI8 ? IntegerType::getInt8Ty(I->getContext()) : nullptr;
 }
@@ -506,6 +556,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
       if (isPointerTy(Op->getType()))
         Ops.push_back(std::make_pair(Op, i));
     }
+  } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
+    KnownElemTy = GR->findDeducedElementType(I);
+    if (!KnownElemTy)
+      return;
+    Ops.push_back(std::make_pair(Ref->getPointerOperand(), 0));
+  } else if (auto *Ref = dyn_cast<StoreInst>(I)) {
+    KnownElemTy = Ref->getValueOperand()->getType();
+    if (isUntypedPointerTy(KnownElemTy))
+      return;
+    if (GR->findDeducedElementType(Ref->getPointerOperand()))
+      return;
+    Ops.push_back(std::make_pair(Ref->getPointerOperand(),
+                                 StoreInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     if (!isPointerTy(I->getType()) ||
         !(KnownElemTy = GR->findDeducedElementType(I)))
@@ -719,7 +782,7 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
         I->replaceUsesOfWith(Op, CI);
         KeepInst = true;
         AggrConsts[CI] = AggrConst;
-        AggrConstTypes[CI] = deduceNestedTypeHelper(AggrConst);
+        AggrConstTypes[CI] = deduceNestedTypeHelper(AggrConst, false);
       }
     }
     if (!KeepInst)
@@ -864,8 +927,9 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
     Pointer = BC->getOperand(0);
 
   // Do not emit spv_ptrcast if Pointer's element type is ExpectedElementType
-  Type *PointerElemTy = deduceElementTypeHelper(Pointer);
-  if (PointerElemTy == ExpectedElementType)
+  Type *PointerElemTy = deduceElementTypeHelper(Pointer, false);
+  if (PointerElemTy == ExpectedElementType ||
+      isEquivalentTypes(PointerElemTy, ExpectedElementType))
     return;
 
   setInsertPointSkippingPhis(B, I);
@@ -937,8 +1001,14 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
         I, SI->getValueOperand(), IntegerType::getInt8Ty(F->getContext()), 0,
         B);
   } else if (SI) {
-    return replacePointerOperandWithPtrCast(
-        I, SI->getPointerOperand(), SI->getValueOperand()->getType(), 1, B);
+    Value *Op = SI->getValueOperand();
+    Type *OpTy = Op->getType();
+    if (auto *OpI = dyn_cast<Instruction>(Op))
+      OpTy = restoreMutatedType(GR, OpI, OpTy);
+    if (OpTy == Op->getType())
+      OpTy = deduceElementTypeByValueDeep(OpTy, Op, false);
+    return replacePointerOperandWithPtrCast(I, SI->getPointerOperand(), OpTy, 1,
+                                            B);
   } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     return replacePointerOperandWithPtrCast(I, LI->getPointerOperand(),
                                             LI->getType(), 0, B);
@@ -978,7 +1048,7 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
         } else {
           for (User *U : CalledArg->users()) {
             if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-              if ((ElemTy = deduceElementTypeHelper(Inst)) != nullptr)
+              if ((ElemTy = deduceElementTypeHelper(Inst, false)) != nullptr)
                 break;
             }
           }
@@ -1182,7 +1252,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     // Deduce element type and store results in Global Registry.
     // Result is ignored, because TypedPointerType is not supported
     // by llvm IR general logic.
-    deduceElementTypeHelper(&GV);
+    deduceElementTypeHelper(&GV, false);
     Constant *Init = GV.getInitializer();
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
@@ -1230,6 +1300,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
         TypeToAssign = It->second;
       }
     }
+    TypeToAssign = restoreMutatedType(GR, I, TypeToAssign);
     buildAssignType(B, TypeToAssign, I);
   }
   for (const auto &Op : I->operands()) {
@@ -1343,7 +1414,7 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
       return KnownTy;
     // try to deduce from the operand itself
     Visited.clear();
-    if (Type *Ty = deduceElementTypeHelper(OpArg, Visited))
+    if (Type *Ty = deduceElementTypeHelper(OpArg, Visited, false))
       return Ty;
     // search in actual parameter's users
     for (User *OpU : OpArg->users()) {
@@ -1351,7 +1422,7 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
       if (!Inst || Inst == CI)
         continue;
       Visited.clear();
-      if (Type *Ty = deduceElementTypeHelper(Inst, Visited))
+      if (Type *Ty = deduceElementTypeHelper(Inst, Visited, false))
         return Ty;
     }
     // check if it's a formal parameter of the outer function

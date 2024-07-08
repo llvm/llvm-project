@@ -15,10 +15,10 @@
 ; CHECK-SPIRV-DAG: %[[#FunPtrEventTy:]] = OpTypePointer Function %[[#EventTy]]
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#Var:]] = OpVariable %[[#]] Function
+; CHECK-SPIRV: %[[#VarPtrEvent2:]] = OpBitcast %[[#FunPtrEventTy]] %[[#Var]]
 ; CHECK-SPIRV: %[[#ResEvent:]] = OpGroupAsyncCopy %[[#EventTy]] %[[#Scope]] %[[#Null]] %[[#Null]] %[[#Num]] %[[#Stride]] %[[#Null]]
 ; CHECK-SPIRV: %[[#VarPtrEvent:]] = OpBitcast %[[#FunPtrEventTy]] %[[#Var]]
 ; CHECK-SPIRV: OpStore %[[#VarPtrEvent]] %[[#ResEvent]]
-; CHECK-SPIRV: %[[#VarPtrEvent2:]] = OpBitcast %[[#FunPtrEventTy]] %[[#Var]]
 ; CHECK-SPIRV: %[[#PtrEventGen:]] = OpPtrCastToGeneric %[[#]] %[[#VarPtrEvent2]]
 ; CHECK-SPIRV: OpGroupWaitEvents %[[#Scope]] %[[#Num]] %[[#PtrEventGen]]
 ; CHECK-SPIRV: OpFunctionEnd
