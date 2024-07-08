@@ -32,9 +32,12 @@ namespace clangd {
 namespace {
 
 std::optional<std::string> toURI(OptionalFileEntryRef File) {
-  if (auto URI = clang::clangd::toURI(File))
-    return URI->toString();
-  return std::nullopt;
+  if (!File)
+    return std::nullopt;
+  auto AbsolutePath = File->getFileEntry().tryGetRealPathName();
+  if (AbsolutePath.empty())
+    return std::nullopt;
+  return URI::create(AbsolutePath).toString();
 }
 
 // Collects the nodes and edges of include graph during indexing action.
