@@ -16,7 +16,7 @@ will generate a warning but
 
 .. code-block:: c++
 
-  std::unique_ptr<int> a;
+  std::unique_ptr<vector> a;
   int b = a[0];
 
 will not.
