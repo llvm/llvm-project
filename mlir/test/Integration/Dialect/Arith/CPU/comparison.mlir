@@ -74,8 +74,8 @@ func.func @cmpi_signed() {
   // CHECK-NEXT:  1
   func.call @cmpi_sge_i1(%false, %true) : (i1, i1) -> ()
 
-  // check that addui_extended overflow bit is treated as -1 in comparison operations
-  //  in the case of an overflow
+  // Check that addui_extended overflow bit is treated as -1 in comparison operations
+  // in the case of an overflow.
   // addui_extended -1 -1 = (..., overflow_bit) 
   // assert(overflow_bit <= 0)
   %n1_i64 = arith.constant -1 : i64
