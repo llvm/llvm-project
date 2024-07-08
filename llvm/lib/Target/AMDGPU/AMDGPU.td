@@ -2017,6 +2017,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureMinimum3Maximum3PKF16,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureFmaMixBF16Insts,
 ]>;
 
 //===----------------------------------------------------------------------===//

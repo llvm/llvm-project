@@ -2112,6 +2112,9 @@ multiclass VOP3P_Real_with_name_gfx12_gfx13<bits<7> op,
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>,
   VOP3P_Real_with_name<GFX13Gen, op, backing_ps_name, asmName>;
 
+multiclass VOP3P_Realtriple_gfx1210_gfx13<bits<7> op> :
+  VOP3P_Realtriple<GFX1210Gen, op>, VOP3P_Realtriple<GFX13Gen, op>;
+
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
@@ -2145,9 +2148,9 @@ defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1210_gfx13<0x37>;
 defm V_PK_MIN3_NUM_F16 : VOP3P_Real_gfx1210<0x38>;
 defm V_PK_MAX3_NUM_F16 : VOP3P_Real_gfx1210<0x39>;
 
-defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX1210Gen, 0x3d>;
-defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX1210Gen, 0x3e>;
-defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1210Gen, 0x3f>;
+defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple_gfx1210_gfx13<0x3d>;
+defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple_gfx1210_gfx13<0x3e>;
+defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple_gfx1210_gfx13<0x3f>;
 
 defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3P_Real_gfx1210<0x35>;
 
