@@ -819,8 +819,8 @@ public:
     // Ensure that if FiniteMathOnly is enabled, NoHonorNaNs and NoHonorInfs are
     // also enabled. This is because FiniteMathOnly mode assumes no NaNs or Infs
     // are present in computations.
-    if (!LO.NoHonorInfs || !LO.NoHonorInfs)
-      assert(!LO.FiniteMathOnly && "FiniteMathOnly implies NoHonorInfs");
+    assert((LO.FiniteMathOnly == (LO.NoHonorInfs && LO.NoHonorNaNs)) &&
+           "inf/nan inconsistent internal state");
     setNoSignedZero(LO.NoSignedZero);
     setAllowReciprocal(LO.AllowRecip);
     setAllowApproxFunc(LO.ApproxFunc);
