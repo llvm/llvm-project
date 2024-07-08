@@ -498,7 +498,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   // m_backend is a std::map::iterator
-  // ...which is a __map_iterator<__tree_iterator<value_type, __node_pointer, ...>>
+  // ...which is a __map_iterator<__tree_iterator<..., __node_pointer, ...>>
   //
   // Then, __map_iterator::__i_ is a __tree_iterator
   auto tree_iter_sp = valobj_sp->GetChildMemberWithName("__i_");
