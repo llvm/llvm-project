@@ -31,11 +31,11 @@
 # CHECK-DWO-DWO: 00000010
 # CHECK-DWO-DWO: 00000050
 # CHECK-DWO-DWO: DW_TAG_subprogram
-# CHECK-DWO-DWO-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
+# CHECK-DWO-DWO-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000010
 # CHECK-DWO-DWO: DW_TAG_subprogram
-# CHECK-DWO-DWO-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000020
+# CHECK-DWO-DWO-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000030
 # CHECK-DWO-DWO: DW_TAG_subprogram
-# CHECK-DWO-DWO-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000040
+# CHECK-DWO-DWO-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000050
 
 # CHECK-ADDR-SEC: .debug_addr contents:
 # CHECK-ADDR-SEC: 0x00000000: Addrs: [

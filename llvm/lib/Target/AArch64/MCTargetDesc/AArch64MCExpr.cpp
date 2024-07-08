@@ -106,9 +106,9 @@ MCFragment *AArch64MCExpr::findAssociatedFragment() const {
 }
 
 bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                              const MCAsmLayout *Layout,
+                                              const MCAssembler *Asm,
                                               const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
     return false;
 
   Res =
@@ -192,9 +192,9 @@ MCFragment *AArch64AuthMCExpr::findAssociatedFragment() const {
 }
 
 bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                  const MCAsmLayout *Layout,
+                                                  const MCAssembler *Asm,
                                                   const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
     return false;
 
   if (Res.getSymB())

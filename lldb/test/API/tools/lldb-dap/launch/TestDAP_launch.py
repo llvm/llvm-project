@@ -447,7 +447,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Verify all "launchCommands" were founc in console output
         # The launch should fail due to the invalid command.
         self.verify_commands("launchCommands", output, launchCommands)
-        self.assertRegex(output, r"unable to find executable for '/bad/path/")
+        self.assertRegex(output, r"bad/path/.*does not exist")
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well

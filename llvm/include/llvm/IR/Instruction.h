@@ -29,6 +29,7 @@
 namespace llvm {
 
 class BasicBlock;
+class DataLayout;
 class DbgMarker;
 class FastMathFlags;
 class MDNode;
@@ -43,6 +44,23 @@ template <> struct ilist_alloc_traits<Instruction> {
 
 iterator_range<simple_ilist<DbgRecord>::iterator>
 getDbgRecordRange(DbgMarker *);
+
+class InsertPosition {
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+  InstListType::iterator InsertAt;
+
+public:
+  InsertPosition(std::nullptr_t) : InsertAt() {}
+  // LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
+  // "BasicBlock::iterator")
+  InsertPosition(Instruction *InsertBefore);
+  InsertPosition(BasicBlock *InsertAtEnd);
+  InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
+  operator InstListType::iterator() const { return InsertAt; }
+  bool isValid() const { return InsertAt.isValid(); }
+  BasicBlock *getBasicBlock() { return InsertAt.getNodeParent(); }
+};
 
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
@@ -171,6 +189,11 @@ public:
     return const_cast<Function *>(
                          static_cast<const Instruction *>(this)->getFunction());
   }
+
+  /// Get the data layout of the module this instruction belongs to.
+  ///
+  /// Requires the instruction to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -1018,11 +1041,7 @@ protected:
   }
 
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              InstListType::iterator InsertBefore);
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              Instruction *InsertBefore = nullptr);
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              BasicBlock *InsertAtEnd);
+              InsertPosition InsertBefore = nullptr);
 
 private:
   /// Create a copy of this instruction.
