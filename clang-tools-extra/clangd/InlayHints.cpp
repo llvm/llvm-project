@@ -381,7 +381,7 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   StringRef MainFilePath;
   const PrintingPolicy &PP;
   SourceManager &SM;
-  std::vector<InlayHintLabelPart> &LabelChunks;
+  std::vector<InlayHintLabelPart> LabelChunks;
 
   struct CurrentTypeRAII {
     TypeHintBuilder &Builder;
@@ -495,6 +495,8 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     if (LocationForOverride.isValid())
       Location = LocationForOverride;
 
+    assert(Location.isValid() || LocationForOverride.isValid());
+
     addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP, PrintType); },
              Location);
 
@@ -548,13 +550,29 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     return ::clang::clangd::nameLocation(*D, SM);
   }
 
+  SourceLocation getPreferredLocationFromSpecialization(
+      ClassTemplateSpecializationDecl *Specialization) const {
+    SourceLocation Location;
+    // Quirk as it is, the Specialization might have no associated forward
+    // declarations. So we have to find them through the Pattern.
+    if (!Specialization->isExplicitInstantiationOrSpecialization()) {
+      auto Pattern = Specialization->getSpecializedTemplateOrPartial();
+      if (auto *Template = Pattern.dyn_cast<ClassTemplateDecl *>())
+        Location = nameLocation(Template, SM);
+      if (auto *Template =
+              Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+        Location = nameLocation(Template, SM);
+    } else
+      Location = nameLocation(Specialization, SM);
+    return Location;
+  }
+
 public:
   TypeHintBuilder(QualType Current, ASTContext &Context, StringRef MainFilePath,
-                  const PrintingPolicy &PP, llvm::StringRef Prefix,
-                  std::vector<InlayHintLabelPart> &LabelChunks)
+                  const PrintingPolicy &PP, llvm::StringRef Prefix)
       : CurrentType(Current), CurrentNestedNameSpecifier(nullptr),
         Context(Context), MainFilePath(MainFilePath), PP(PP),
-        SM(Context.getSourceManager()), LabelChunks(LabelChunks) {
+        SM(Context.getSourceManager()) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
@@ -563,12 +581,34 @@ public:
   void VisitType(const Type *) { addLabel(CurrentType.getAsString(PP)); }
 
   void VisitTagType(const TagType *TT) {
-    auto *D = TT->getDecl();
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D);
-        RD && !RD->getTemplateInstantiationPattern())
+    // Note that we have cases where the type of a template specialization is
+    // modeled as a RecordType rather than a TemplateSpecializationType. (Type
+    // sugars are not preserved?)
+    // Example:
+    //
+    // template <typename, typename = int>
+    // struct A {};
+    // A<float> bar[1];
+    //
+    // auto [value] = bar;
+    //
+    // The type of value is modeled as a RecordType here.
+    auto *CXXRD = dyn_cast<CXXRecordDecl>(TT->getDecl());
+    if (!CXXRD)
+      return VisitType(TT);
+    CXXRecordDecl *Pattern = CXXRD->getTemplateInstantiationPattern();
+    if (!Pattern)
       return addLabel(
-          [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
-          nameLocation(RD, SM));
+          [&](llvm::raw_ostream &OS) { return CXXRD->printName(OS, PP); },
+          nameLocation(CXXRD, SM));
+
+    // FIXME: Do we have other kind of specializations?
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD))
+      return handleTemplateSpecialization(
+          TemplateName(Pattern->getDescribedClassTemplate()),
+          CTSD->getTemplateArgs().asArray(),
+          getPreferredLocationFromSpecialization(CTSD));
+
     return VisitType(TT);
   }
 
@@ -668,22 +708,11 @@ public:
     // we want the location of an explicit specialization, if present.
     // FIXME: In practice, populating the location with that of the
     // specialization would still take us to the primary template because we're
-    // actually sending a go-to-def request there.
+    // actually sending a go-to-def request from the explicit specialization.
     if (auto *Specialization =
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-                TST->desugar().getCanonicalType()->getAsCXXRecordDecl())) {
-      // Quirk as it is, the Specialization might have no associated forward
-      // declarations. So we have to find them through the Pattern.
-      if (!Specialization->isExplicitInstantiationOrSpecialization()) {
-        auto Pattern = Specialization->getSpecializedTemplateOrPartial();
-        if (auto *Template = Pattern.dyn_cast<ClassTemplateDecl *>())
-          Location = nameLocation(Template, SM);
-        if (auto *Template =
-                Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
-          Location = nameLocation(Template, SM);
-      } else
-        Location = nameLocation(Specialization, SM);
-    }
+                TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
+      Location = getPreferredLocationFromSpecialization(Specialization);
     return handleTemplateSpecialization(TST->getTemplateName(),
                                         TST->template_arguments(), Location);
   }
@@ -693,6 +722,8 @@ public:
     CurrentTypeRAII Guard(*this, ST->getReplacementType());
     return Visit(ST->getReplacementType().getTypePtr());
   }
+
+  std::vector<InlayHintLabelPart> take() { return std::move(LabelChunks); }
 };
 
 unsigned lengthOfInlayHintLabel(llvm::ArrayRef<InlayHintLabelPart> Labels) {
@@ -1363,11 +1394,9 @@ private:
 
   std::vector<InlayHintLabelPart> buildTypeHint(QualType T,
                                                 llvm::StringRef Prefix) {
-    std::vector<InlayHintLabelPart> Chunks;
-    TypeHintBuilder Builder(T, AST, MainFilePath, TypeHintPolicy, Prefix,
-                            Chunks);
+    TypeHintBuilder Builder(T, AST, MainFilePath, TypeHintPolicy, Prefix);
     Builder.Visit(T.getTypePtr());
-    return Chunks;
+    return Builder.take();
   }
 
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {

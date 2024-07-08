@@ -1868,6 +1868,20 @@ TEST(TypeHints, LinksForForwardDeclarations) {
       ExpectedHintLabelPiece{">"});
 }
 
+TEST(TypeHints, LinksForStructureBindings) {
+  StringRef Source(R"cpp(
+  template <typename>
+  struct $A[[A]] {};
+  A<float> bar[1];
+
+  auto [$1[[value]]] = bar;
+  )cpp");
+
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"A", "A"},
+                      ExpectedHintLabelPiece{"<float>"});
+}
+
 TEST(DesignatorHints, Basic) {
   assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };
