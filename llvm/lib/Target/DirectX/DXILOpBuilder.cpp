@@ -225,17 +225,24 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode,
 
   OverloadKind Kind = getOverloadKind(OverloadTy);
   if ((ValidTyMask & (uint16_t)Kind) == 0) {
-    report_fatal_error("Invalid Overload Type", /* gen_crash_diag=*/false);
+    report_fatal_error(
+        StringRef(std::string("Invalid Overload Type for DXIL operation - ")
+                      .append(getOpCodeName((OpCode)))),
+        /* gen_crash_diag=*/false);
   }
 
-  // Ensure Opcode is valid in the targetted shader kind
+  // Perform necessary checks to ensure Opcode is valid in the targeted shader
+  // kind
   uint16_t ValidShaderKindMask = Prop->SMConstraints[Index].ValidShaderKinds;
   ShaderKind ModuleStagekind = getShaderkKindEnum(StageKind);
 
   // Ensure valid shader stage constraints are specified
   if (ValidShaderKindMask == ShaderKind::Unknown) {
     report_fatal_error(
-        StringRef(SMVer.getAsString().append(": Unhandled Target Shader Stage")),
+        StringRef(
+            SMVer.getAsString()
+                .append(": Unknown Target Shader Stage for DXIL operation - ")
+                .append(getOpCodeName((OpCode)))),
         /*gen_crash_diag*/ false);
   }
 
@@ -252,7 +259,9 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode,
     report_fatal_error(
         StringRef(std::string(StageKind)
                       .append(" : Invalid Shader Stage for DXIL operation - ")
-                      .append(getOpCodeName((OpCode)))),
+                      .append(getOpCodeName(OpCode))
+                      .append(" for Shader Model ")
+                      .append(SMVer.getAsString())),
         /*gen_crash_diag*/ false);
   }
 
