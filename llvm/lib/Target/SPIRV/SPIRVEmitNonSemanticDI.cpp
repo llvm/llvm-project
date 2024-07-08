@@ -105,7 +105,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                 ->getSExtValue();
     }
   }
-  // NonSemantic.Shader.DebugInfo.100 global DI intruction emitting
+  // NonSemantic.Shader.DebugInfo.100 global DI instruction emitting
   {
     // Required LLVM variables for emitting logic
     const SPIRVInstrInfo *TII = TM->getSubtargetImpl()->getInstrInfo();
