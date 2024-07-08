@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Quant/QuantOps.h"
 #include "QuantDialectBytecode.h"
 #include "TypeDetail.h"
 
-#include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
@@ -24,14 +24,14 @@ using namespace mlir;
 using namespace mlir::quant;
 using namespace mlir::quant::detail;
 
-#include "mlir/Dialect/Quant/QuantOpsDialect.cpp.inc"
+#include "mlir/Dialect/Quant/IR/QuantOpsDialect.cpp.inc"
 
 void QuantizationDialect::initialize() {
   addTypes<AnyQuantizedType, CalibratedQuantizedType, UniformQuantizedType,
            UniformQuantizedPerAxisType>();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/Quant/QuantOps.cpp.inc"
+#include "mlir/Dialect/Quant/IR/QuantOps.cpp.inc"
       >();
   addBytecodeInterface(this);
 }
@@ -46,4 +46,4 @@ OpFoldResult StorageCastOp::fold(FoldAdaptor adaptor) {
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Quant/QuantOps.cpp.inc"
+#include "mlir/Dialect/Quant/IR/QuantOps.cpp.inc"

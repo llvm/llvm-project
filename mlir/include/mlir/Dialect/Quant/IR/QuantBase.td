@@ -1,4 +1,4 @@
-//===- QuantOpsBase.td - Quantization dialect base ---------*- tablegen -*-===//
+//===- QuantBase.td - Quantization dialect base ------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_QUANT_QUANT_OPS_BASE_
-#define DIALECT_QUANT_QUANT_OPS_BASE_
+#ifndef QUANT_BASE
+#define QUANT_BASE
 
 include "mlir/IR/OpBase.td"
 
@@ -71,4 +71,4 @@ def quant_UniformQuantizedType :
 def quant_UniformQuantizedValueType :
     quant_TypedPrimitiveOrContainer<quant_UniformQuantizedType>;
 
-#endif // DIALECT_QUANT_QUANT_OPS_BASE_
+#endif // QUANT_BASE

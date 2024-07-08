@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_QUANT_QUANT_OPS_
-#define DIALECT_QUANT_QUANT_OPS_
+#ifndef QUANT_OPS
+#define QUANT_OPS
 
-include "mlir/Dialect/Quant/QuantOpsBase.td"
+include "mlir/Dialect/Quant/IR/QuantBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -100,4 +100,4 @@ def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
   let hasFolder = 1;
 }
 
-#endif // DIALECT_QUANT_QUANT_OPS_
+#endif // QUANT_OPS

@@ -8,8 +8,8 @@
 
 #include "mlir-c/Dialect/Quant.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/Quant/QuantOps.h"
-#include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 
 using namespace mlir;
 
