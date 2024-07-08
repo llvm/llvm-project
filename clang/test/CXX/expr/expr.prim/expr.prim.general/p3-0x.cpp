@@ -113,8 +113,9 @@ namespace Static {
     static auto g() -> decltype(this->m); // expected-error{{'this' cannot be used in a static member function declaration}}
 
     static int h();
-    
-    static int i() noexcept(noexcept(m + 2)); // expected-error{{'this' cannot be implicitly used in a static member function declaration}}
+
+    // The use of 'm' doesn't constitute an ODR use, so we don't have a reason to reject it.
+    static int i() noexcept(noexcept(m + 2));
   };
 
   auto X1::h() -> decltype(m) { return 0; } // expected-error{{'this' cannot be implicitly used in a static member function declaration}}

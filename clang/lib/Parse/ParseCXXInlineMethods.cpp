@@ -511,11 +511,13 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     //   and the end of the function-definition, member-declarator, or
     //   declarator.
     CXXMethodDecl *Method;
+    FunctionDecl *FunctionToPush;
     if (FunctionTemplateDecl *FunTmpl
           = dyn_cast<FunctionTemplateDecl>(LM.Method))
-      Method = dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
+      FunctionToPush = FunTmpl->getTemplatedDecl();
     else
-      Method = dyn_cast<CXXMethodDecl>(LM.Method);
+      FunctionToPush = cast<FunctionDecl>(LM.Method);
+    Method = dyn_cast<CXXMethodDecl>(FunctionToPush);
 
     Sema::CXXThisScopeRAII ThisScope(
         Actions, Method ? Method->getParent() : nullptr,
@@ -528,6 +530,15 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     SmallVector<SourceRange, 4> DynamicExceptionRanges;
     ExprResult NoexceptExpr;
     CachedTokens *ExceptionSpecTokens;
+
+    // Push a function scope so that tryCaptureVariable() can properly visit
+    // function scopes involving function parameters that are referenced inside
+    // the noexcept specifier e.g. through a lambda expression.
+    // Example:
+    // struct X {
+    //   void ICE(int val) noexcept(noexcept([val]{}));
+    // };
+    Sema::SynthesizedFunctionScope Scope(Actions, FunctionToPush);
 
     ExceptionSpecificationType EST
       = tryParseExceptionSpecification(/*Delayed=*/false, SpecificationRange,

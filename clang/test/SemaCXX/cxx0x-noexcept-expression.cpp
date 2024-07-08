@@ -157,3 +157,11 @@ void f5() {
   // expected-error@-1 {{no member named 'non_existent' in 'typeid_::X<true>'}}
 }
 } // namespace typeid_
+
+namespace GH97453 {
+
+struct X {
+  void ICE(int that) noexcept(noexcept([that]() {}));
+};
+
+} // namespace GH97453

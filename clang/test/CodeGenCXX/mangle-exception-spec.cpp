@@ -47,3 +47,14 @@ template auto i<>(int()) -> int (*)();
 // CHECK-CXX11: define {{.*}} @_Z1iIJfEEPDwiDpT_EFivEPS2_(
 // CHECK-CXX17: define {{.*}} @_Z1iIJfEEPDwiDpT_EFivES3_(
 template auto i<float>(int()) -> int (*)();
+
+template <class T>
+struct X1 {
+  T m;
+  static void j(int (X1::*)() noexcept(noexcept(m + 2)));
+};
+
+void foo() {
+  // CHECK-CXX17: call {{.*}} @_ZN2X1IiE1jEMS0_DoFivE(
+  X1<int>::j(nullptr);
+}
