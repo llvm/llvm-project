@@ -737,6 +737,9 @@ What is considered to be a potential contributory BMIs is currently unspecified.
 However, it is a severe bug for a BMI to remain unchanged following an observable change
 that affects its consumers.
 
+Build systems may utilize this optimization by doing an update-if-changed operation to the BMI
+that is consumed from the BMI that is output by the compiler.
+
 We encourage build systems to add an experimental mode that
 reuses the cached BMI when **direct** dependencies did not change,
 even if **transitive** dependencies did change.
