@@ -782,7 +782,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   float Similarity = 0.0;
 
   const auto *FSFlattened = getFlattenedSamplesFor(ProfFunc);
-  assert(FSFlattened && "Flattened profile sample is null");
+  if (!FSFlattened)
+    return false;
   // The check for similarity or checksum may not be reliable if the function is
   // tiny, we use the number of basic block as a proxy for the function
   // complexity and skip the matching if it's too small.

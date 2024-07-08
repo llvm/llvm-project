@@ -131,9 +131,10 @@ public:
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
+    // Do not clear FlattenedProfiles as it contains function names referenced
+    // by FuncNameToProfNameMap. Clearing this memory could lead to a
+    // use-after-free error.
     freeContainer(FuncCallsiteMatchStates);
-    freeContainer(FlattenedProfiles);
-
     freeContainer(FunctionsWithoutProfile);
     freeContainer(FuncToProfileNameMap);
   }
