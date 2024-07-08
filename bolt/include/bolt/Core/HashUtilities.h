@@ -39,7 +39,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB);
 std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB);
 
 std::string
-hashBlockCalls(const DenseMap<uint32_t, std::string *> &IdToFunctionName,
+hashBlockCalls(const DenseMap<uint32_t, StringRef> &IdToFunctionName,
                const yaml::bolt::BinaryBasicBlockProfile &YamlBB);
 
 } // namespace bolt

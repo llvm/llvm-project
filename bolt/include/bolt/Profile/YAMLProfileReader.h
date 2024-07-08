@@ -58,7 +58,7 @@ private:
 
   /// Maps profiled function id to name, for function matching with calls as
   /// anchors.
-  DenseMap<uint32_t, std::string *> IdToFunctionName;
+  DenseMap<uint32_t, StringRef> IdToFunctionName;
 
   /// For LTO symbol resolution.
   /// Map a common LTO prefix to a list of YAML profiles matching the prefix.

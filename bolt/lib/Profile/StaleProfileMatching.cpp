@@ -451,7 +451,7 @@ size_t matchWeightsByHashes(
     BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
     const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
     HashFunction HashFunction,
-    const DenseMap<uint32_t, std::string *> &IdToFunctionName) {
+    const DenseMap<uint32_t, StringRef> &IdToFunctionName) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
