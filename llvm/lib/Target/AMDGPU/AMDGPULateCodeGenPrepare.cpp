@@ -369,7 +369,7 @@ bool LiveRegOptimizer::optimizeLiveType(
     if (MissingIncVal) {
       DeadInst = cast<Instruction>(ValMap[Phi]);
       // Do not use the dead phi
-      ValMap[Phi] = Phi;
+      ValMap.erase(Phi);
     }
     DeadInsts.emplace_back(DeadInst);
   }
