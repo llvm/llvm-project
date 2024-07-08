@@ -260,10 +260,19 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
     return a;
 
   // Align exponents
-  if (a.exponent > b.exponent)
-    b.shift_right(a.exponent - b.exponent);
-  else if (b.exponent > a.exponent)
-    a.shift_right(b.exponent - a.exponent);
+  if (a.exponent > b.exponent) {
+    size_t shift = static_cast<size_t>(a.exponent - b.exponent);
+    if (shift < Bits)
+      b.shift_right(static_cast<int>(shift));
+    else
+      b = DyadicFloat<Bits>();
+  } else if (b.exponent > a.exponent) {
+    size_t shift = static_cast<size_t>(b.exponent - a.exponent);
+    if (shift < Bits)
+      a.shift_right(static_cast<int>(shift));
+    else
+      a = DyadicFloat<Bits>();
+  }
 
   DyadicFloat<Bits> result;
 
