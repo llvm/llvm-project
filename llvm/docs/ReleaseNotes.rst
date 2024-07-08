@@ -293,9 +293,11 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
   * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
 
-* Added the following functions for accessing/changing the no-wrap flags for a
+* Added the following functions for accessing/setting the no-wrap flags for a
   GetElementPtr instruction
 
+  * ``LLVMBuildGEPWithWrapFlags``
+  * ``LLVMConstGEPWithWrapFlags``
   * ``LLVMGEPGetNoWrapFlags``
   * ``LLVMGEPSetNoWrapFlags``
 

@@ -2409,6 +2409,10 @@ LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                    LLVMValueRef *ConstantIndices,
                                    unsigned NumIndices);
+LLVMValueRef LLVMConstGEPWithWrapFlags(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                       LLVMValueRef *ConstantIndices,
+                                       unsigned NumIndices,
+                                       LLVMGEPNoWrapFlags WrapFlags);
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstPtrToInt(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstIntToPtr(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
@@ -4391,6 +4395,11 @@ LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
 LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                    LLVMValueRef Pointer, LLVMValueRef *Indices,
                                    unsigned NumIndices, const char *Name);
+LLVMValueRef LLVMBuildGEPWithWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                       LLVMValueRef Pointer,
+                                       LLVMValueRef *Indices,
+                                       unsigned NumIndices, const char *Name,
+                                       LLVMGEPNoWrapFlags WrapFlags);
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  LLVMValueRef Pointer, unsigned Idx,
                                  const char *Name);

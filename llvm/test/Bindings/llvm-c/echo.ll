@@ -25,6 +25,9 @@ module asm "classical GAS"
 
 @const_gep = global ptr getelementptr (i32, ptr @var, i64 2)
 @const_inbounds_gep = global ptr getelementptr inbounds (i32, ptr @var, i64 1)
+@const_gep_nuw = global ptr getelementptr nuw (i32, ptr @var, i64 1)
+@const_gep_nusw = global ptr getelementptr nusw (i32, ptr @var, i64 1)
+@const_gep_nuw_inbounds = global ptr getelementptr nuw inbounds (i32, ptr @var, i64 1)
 
 @aliased1 = alias i32, ptr @var
 @aliased2 = internal alias i32, ptr @var
