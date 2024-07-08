@@ -3267,10 +3267,13 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         InsertSEH(MIB, TII, MachineInstr::FrameSetup);
     } else { // The code when the pair of ZReg is not present
       MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
-      if (!MRI.isReserved(Reg1))
+      const AArch64RegisterInfo *RegInfo =
+          static_cast<const AArch64RegisterInfo *>(
+              MF.getSubtarget().getRegisterInfo());
+      if (!RegInfo->isStrictlyReservedReg(MF, Reg1))
         MBB.addLiveIn(Reg1);
       if (RPI.isPaired()) {
-        if (!MRI.isReserved(Reg2))
+        if (!RegInfo->isStrictlyReservedReg(MF, Reg2))
           MBB.addLiveIn(Reg2);
         MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
         MIB.addMemOperand(MF.getMachineMemOperand(

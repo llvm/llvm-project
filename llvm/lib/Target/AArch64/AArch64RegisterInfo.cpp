@@ -501,6 +501,9 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
   }
 
+  if (MF.getSubtarget<AArch64Subtarget>().isLRReservedForRA())
+    markSuperRegs(Reserved, AArch64::LR);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
