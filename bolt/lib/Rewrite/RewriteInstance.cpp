@@ -5265,6 +5265,34 @@ void RewriteInstance::patchELFGOT(ELFObjectFile<ELFT> *File) {
                                                      GOTContents.size());
        ++GOTEntry) {
     if (uint64_t NewAddress = getNewFunctionAddress(*GOTEntry)) {
+      auto *Function = BC->getBinaryFunctionAtAddress(*GOTEntry);
+
+      // WORKAROUND:
+      // Background:
+      // Static binaries generated with GNU linker have GOT entries, which is
+      // wrong. LLD does not suffer from this. See related discussion:
+      // https://github.com/llvm/llvm-project/issues/100096
+      //
+      // The current approach is for BOLT to abort when a static binary contains
+      // such entries. However, this patch may serve as a 'Workaround' in case
+      // someone has encountered such a binary. ATTOW it is unclear if/when GNU
+      // linker will have this fixed.
+      //
+      // The workaround:
+      // On static binaries, avoid patching the "_init" got entry. It also
+      // checks that it does not belong to the original text section and that it
+      // an alias. This function actually aliases '.init', belongs to the
+      // '.init' section, and points to the same address of '_init' in the
+      // original binary.
+      if (BC->IsStaticExecutable && !Function->Aliases.empty() &&
+          Function->getOriginSectionName() != ".bolt.org.text" &&
+          (Function->getOneName() == "_init")) {
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring GOT entry 0x"
+                          << Twine::utohexstr(*GOTEntry) << " for '"
+                          << Function->getOneName() << "'" << '\n');
+        continue;
+      }
+
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: patching GOT entry 0x"
                         << Twine::utohexstr(*GOTEntry) << " with 0x"
                         << Twine::utohexstr(NewAddress) << '\n');
