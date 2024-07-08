@@ -54,8 +54,18 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
         self.expect("frame variable iimI", substrs=["first = 43981", "second = 61681"])
         self.expect("expr iimI", substrs=["first = 43981", "second = 61681"])
 
+        self.expect("frame variable iimI.first", substrs=["first = 43981"])
+        self.expect("frame variable iimI.first", substrs=["second"], matching=False)
+        self.expect("frame variable iimI.second", substrs=["second = 61681"])
+        self.expect("frame variable iimI.second", substrs=["first"], matching=False)
+
         self.expect("frame variable simI", substrs=['first = "world"', "second = 42"])
         self.expect("expr simI", substrs=['first = "world"', "second = 42"])
+
+        self.expect("frame variable simI.first", substrs=['first = "world"'])
+        self.expect("frame variable simI.first", substrs=["second"], matching=False)
+        self.expect("frame variable simI.second", substrs=["second = 42"])
+        self.expect("frame variable simI.second", substrs=["first"], matching=False)
 
         self.expect("frame variable svI", substrs=['item = "hello"'])
         self.expect("expr svI", substrs=['item = "hello"'])
