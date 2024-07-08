@@ -497,34 +497,42 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   if (!target_sp)
     return lldb::ChildCacheState::eRefetch;
 
+  // m_backend is a std::map::iterator
+  // ...which is a __map_iterator<__tree_iterator<value_type, __node_pointer, difference_type>>
+  //
+  // Then, __map_iterator::__i_ is a __tree_iterator
   auto tree_iter_sp = valobj_sp->GetChildMemberWithName("__i_");
   if (!tree_iter_sp)
     return lldb::ChildCacheState::eRefetch;
 
+  // Type is __tree_iterator::__node_pointer
+  // (We could alternatively also get this from the template argument)
   auto node_pointer_type =
       tree_iter_sp->GetCompilerType().GetDirectNestedTypeWithName(
           "__node_pointer");
   if (!node_pointer_type.IsValid())
     return lldb::ChildCacheState::eRefetch;
 
+  // __ptr_ is a __tree_iterator::__iter_pointer
   auto iter_pointer_sp = tree_iter_sp->GetChildMemberWithName("__ptr_");
   if (!iter_pointer_sp)
     return lldb::ChildCacheState::eRefetch;
 
+  // Cast the __tree_iterator to a __node_pointer (which stores our key/value pair)
   auto node_pointer_sp = iter_pointer_sp->Cast(node_pointer_type);
   if (!node_pointer_sp)
-    return lldb::ChildCacheState::eRefetch;
-
-  Status err;
-  node_pointer_sp = node_pointer_sp->Dereference(err);
-  if (!node_pointer_sp || err.Fail())
     return lldb::ChildCacheState::eRefetch;
 
   auto key_value_sp = node_pointer_sp->GetChildMemberWithName("__value_");
   if (!key_value_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  key_value_sp = key_value_sp->Clone(ConstString("name"));
+  // Create the synthetic child, which is a pair where the key and value can be
+  // retrieved by querying the synthetic frontend for GetIndexOfChildWithName("first")
+  // and GetIndexOfChildWithName("second") respectively.
+  //
+  // std::map stores the actual key/value pair in value_type::__cc_ (or previously __cc).
+  key_value_sp = key_value_sp->Clone(ConstString("pair"));
   if (key_value_sp->GetNumChildrenIgnoringErrors() == 1) {
     auto child0_sp = key_value_sp->GetChildAtIndex(0);
     if (child0_sp &&
@@ -558,11 +566,10 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
 
 size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (name == "first")
-    return 0;
-  if (name == "second")
-    return 1;
-  return UINT32_MAX;
+  if (!m_pair_sp)
+    return UINT32_MAX;
+
+  return m_pair_sp->GetIndexOfChildWithName(name);
 }
 
 SyntheticChildrenFrontEnd *
