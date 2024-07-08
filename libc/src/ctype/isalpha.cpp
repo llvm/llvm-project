@@ -10,6 +10,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

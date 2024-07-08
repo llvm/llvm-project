@@ -11,6 +11,7 @@
 
 #include "multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/__support/number_pair.h"
 

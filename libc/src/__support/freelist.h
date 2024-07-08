@@ -14,6 +14,7 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/fixedvector.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

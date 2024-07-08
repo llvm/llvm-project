@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDLIB_AT_QUICK_EXIT_H
 
 #include "hdr/types/atexithandler_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -8,6 +8,7 @@
 
 #include "rpc_client.h"
 #include "rpc.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace rpc {

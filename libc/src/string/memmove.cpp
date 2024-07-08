@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memmove.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memmove.h"
 #include <stddef.h> // size_t

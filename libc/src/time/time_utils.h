@@ -12,6 +12,7 @@
 #include <stddef.h> // For size_t.
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/mktime.h"
 

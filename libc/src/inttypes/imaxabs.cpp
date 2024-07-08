@@ -9,6 +9,7 @@
 #include "src/inttypes/imaxabs.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SIGNAL_SIGACTION_H
 
 #include "hdr/types/struct_sigaction.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -9,6 +9,7 @@
 #include "src/string/strstr.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_strstr.h"
 
 namespace LIBC_NAMESPACE_DECL {

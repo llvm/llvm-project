@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/shm_unlink.h"
+#include "src/__support/macros/config.h"
 #include "src/sys/mman/linux/shm_common.h"
 #include "src/unistd/unlink.h"
 

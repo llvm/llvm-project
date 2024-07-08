@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_ARM_SYSCALL_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #ifdef __thumb__
 #define R7 long r7 = number

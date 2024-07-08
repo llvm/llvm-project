@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_BIT_FLOOR_UC_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_BIT_FLOOR_UC_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned char stdc_bit_floor_uc(unsigned char value);

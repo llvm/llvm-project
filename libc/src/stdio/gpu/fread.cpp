@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fread.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 
 #include "hdr/types/FILE.h"

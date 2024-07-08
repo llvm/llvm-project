@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include <dirent.h>

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_COUNT_ZEROS_US_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_COUNT_ZEROS_US_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_count_zeros_us(unsigned short value);

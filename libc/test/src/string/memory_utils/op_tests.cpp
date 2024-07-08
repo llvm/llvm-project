@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"

@@ -9,6 +9,7 @@
 #include "src/string/strerror.h"
 #include "src/__support/StringUtil/error_to_string.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

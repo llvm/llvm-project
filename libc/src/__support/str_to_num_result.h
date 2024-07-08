@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 

@@ -15,6 +15,7 @@
 #include "src/__support/HashTable/bitmask.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/memory_size.h"
 #include "src/string/memset.h"

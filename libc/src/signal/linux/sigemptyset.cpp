@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/sigemptyset.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 

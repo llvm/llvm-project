@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h> // For size_t
 #include <stdlib.h> // For malloc, free etc.

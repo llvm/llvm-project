@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fclose.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 
 #include "hdr/stdio_macros.h"

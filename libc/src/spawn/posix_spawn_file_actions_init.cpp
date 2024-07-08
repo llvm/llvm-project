@@ -9,6 +9,7 @@
 #include "posix_spawn_file_actions_init.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <spawn.h>
 

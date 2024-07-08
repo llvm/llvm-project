@@ -10,6 +10,7 @@
 
 #include "src/__support/CPP/type_traits/add_rvalue_reference.h"
 #include "src/__support/CPP/type_traits/always_false.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

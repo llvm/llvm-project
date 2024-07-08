@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_H
 #define LLVM_LIBC_SRC_STDLIB_QSORT_H
 
+#include "src/__support/macros/config.h"
 #include <stdlib.h>
 
 namespace LIBC_NAMESPACE_DECL {

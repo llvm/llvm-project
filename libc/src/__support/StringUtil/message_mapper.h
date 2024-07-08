@@ -12,6 +12,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {

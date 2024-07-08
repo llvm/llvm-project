@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strlen.h"
+#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"

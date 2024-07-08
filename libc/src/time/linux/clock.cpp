@@ -10,6 +10,7 @@
 #include "hdr/time_macros.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/time/linux/clock_gettime.h"
 #include "src/__support/time/units.h"
 #include "src/errno/libc_errno.h"

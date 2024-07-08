@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_CEILL_H
 #define LLVM_LIBC_SRC_MATH_CEILL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long double ceill(long double x);

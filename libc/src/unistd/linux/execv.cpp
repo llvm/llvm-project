@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/execv.h"
+#include "src/__support/macros/config.h"
 #include "src/unistd/environ.h"
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.

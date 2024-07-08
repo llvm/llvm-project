@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ENABLE_IF_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

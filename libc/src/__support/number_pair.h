@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H
 
 #include "CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 

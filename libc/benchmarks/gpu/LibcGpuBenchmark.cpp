@@ -5,6 +5,7 @@
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
+#include "src/__support/macros/config.h"
 #include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

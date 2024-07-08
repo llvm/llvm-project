@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 
 #include <setjmp.h>

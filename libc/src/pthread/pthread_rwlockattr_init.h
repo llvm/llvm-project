@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_INIT_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_INIT_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
 namespace LIBC_NAMESPACE_DECL {

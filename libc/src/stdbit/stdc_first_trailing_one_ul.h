@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ONE_UL_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ONE_UL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_first_trailing_one_ul(unsigned long value);

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "config/linux/app.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 // setup the libc runtime and invoke the main routine.

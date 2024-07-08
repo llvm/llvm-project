@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_VSPRINTF_H
 #define LLVM_LIBC_SRC_STDIO_VSPRINTF_H
 
+#include "src/__support/macros/config.h"
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {

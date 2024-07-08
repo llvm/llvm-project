@@ -9,6 +9,7 @@
 #include "src/termios/cfgetospeed.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <termios.h>
 

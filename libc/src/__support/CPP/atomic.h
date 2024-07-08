@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include "type_traits.h"

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Timer.h"
+#include "src/__support/macros/config.h"
 
 #include <chrono>
 #include <fstream>

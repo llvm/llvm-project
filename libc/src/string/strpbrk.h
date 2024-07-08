@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRPBRK_H
 #define LLVM_LIBC_SRC_STRING_STRPBRK_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 char *strpbrk(const char *src, const char *breakset);

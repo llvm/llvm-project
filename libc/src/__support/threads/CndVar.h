@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_CNDVAR_H
 #define LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_CNDVAR_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // Futex
 #include "src/__support/threads/linux/raw_mutex.h"   // RawMutex
 #include "src/__support/threads/mutex.h"             // Mutex

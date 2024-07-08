@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include "src/string/memmove.h"
 
 #include "memory_utils/memory_check_utils.h"

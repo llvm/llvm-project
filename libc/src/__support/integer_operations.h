@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

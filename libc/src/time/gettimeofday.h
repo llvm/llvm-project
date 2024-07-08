@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_TIME_GETTIMEOFDAY_H
 
 #include "hdr/types/struct_timeval.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

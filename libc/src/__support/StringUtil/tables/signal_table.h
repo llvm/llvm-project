@@ -12,6 +12,7 @@
 #include "src/__support/StringUtil/message_mapper.h"
 
 #include "posix_signals.h"
+#include "src/__support/macros/config.h"
 #include "stdc_signals.h"
 
 #if defined(__linux__) || defined(__Fuchsia__)

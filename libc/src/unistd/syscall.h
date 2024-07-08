@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_SYSCALL_H
 #define LLVM_LIBC_SRC_UNISTD_SYSCALL_H
 
+#include "src/__support/macros/config.h"
 #include <stdarg.h>
 #include <unistd.h>
 

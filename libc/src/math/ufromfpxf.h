@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_UFROMFPXF_H
 #define LLVM_LIBC_SRC_MATH_UFROMFPXF_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 float ufromfpxf(float x, int rnd, unsigned int width);

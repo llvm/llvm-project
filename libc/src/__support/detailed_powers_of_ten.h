@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 

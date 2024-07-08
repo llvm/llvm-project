@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_ASSERT___ASSERT_FAIL_H
 #define LLVM_LIBC_SRC_ASSERT___ASSERT_FAIL_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {

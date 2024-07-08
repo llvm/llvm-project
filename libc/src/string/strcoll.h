@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRCOLL_H
 #define LLVM_LIBC_SRC_STRING_STRCOLL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 int strcoll(const char *left, const char *right);

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SEARCH_HSEARCH_GLOBAL_H
 #define LLVM_LIBC_SRC_SEARCH_HSEARCH_GLOBAL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 extern struct HashTable *global_hash_table;

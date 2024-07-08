@@ -14,6 +14,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_LRINTL_H
 #define LLVM_LIBC_SRC_MATH_LRINTL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long lrintl(long double x);

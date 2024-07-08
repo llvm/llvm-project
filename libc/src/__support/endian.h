@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
 
 #include "common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 

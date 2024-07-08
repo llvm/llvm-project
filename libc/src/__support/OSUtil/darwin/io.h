@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_IO_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "syscall.h" // For internal syscall function.
 
 namespace LIBC_NAMESPACE_DECL {

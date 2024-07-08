@@ -9,6 +9,7 @@
 #include "src/sys/statvfs/fstatvfs.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

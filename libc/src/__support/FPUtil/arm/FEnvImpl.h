@@ -13,6 +13,7 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {

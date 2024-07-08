@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include "src/__support/CPP/array.h"

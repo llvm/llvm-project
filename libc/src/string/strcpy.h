@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRCPY_H
 #define LLVM_LIBC_SRC_STRING_STRCPY_H
 
+#include "src/__support/macros/config.h"
 #include <string.h>
 
 namespace LIBC_NAMESPACE_DECL {

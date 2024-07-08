@@ -10,6 +10,7 @@
 
 #include "src/__support/File/dir.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <dirent.h>

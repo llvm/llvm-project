@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_DLFCN_DLSYM_H
 #define LLVM_LIBC_SRC_DLFCN_DLSYM_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 void *dlsym(void *, const char *);

@@ -9,6 +9,7 @@
 #include "src/stdio/scanf_core/converter.h"
 
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 

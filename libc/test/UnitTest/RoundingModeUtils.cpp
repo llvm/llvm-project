@@ -11,6 +11,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 
 #include "hdr/fenv_macros.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {

@@ -8,6 +8,7 @@
 #include "startup/linux/do_start.h"
 #include "include/llvm-libc-macros/link-macros.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"

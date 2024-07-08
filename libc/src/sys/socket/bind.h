@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_BIND_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_BIND_H
 
+#include "src/__support/macros/config.h"
 #include <sys/socket.h>
 
 namespace LIBC_NAMESPACE_DECL {

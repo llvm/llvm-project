@@ -14,6 +14,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include <linux/param.h> // for exec_pagesize.

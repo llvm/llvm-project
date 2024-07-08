@@ -8,6 +8,7 @@
 
 #include "src/stdio/funlockfile.h"
 #include "src/__support/File/file.h"
+#include "src/__support/macros/config.h"
 
 #include "hdr/types/FILE.h"
 

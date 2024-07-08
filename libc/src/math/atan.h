@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_ATAN_H
 #define LLVM_LIBC_SRC_MATH_ATAN_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 double atan(double x);

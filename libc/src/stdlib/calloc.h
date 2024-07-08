@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
 #ifndef LLVM_LIBC_SRC_STDLIB_CALLOC_H

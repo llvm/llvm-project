@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/generic/FMA.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 

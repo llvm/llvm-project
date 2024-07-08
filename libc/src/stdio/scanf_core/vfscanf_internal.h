@@ -11,6 +11,7 @@
 
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 

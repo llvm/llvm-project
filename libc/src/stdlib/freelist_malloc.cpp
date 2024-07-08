@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/freelist_heap.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/aligned_alloc.h"
 #include "src/stdlib/calloc.h"
 #include "src/stdlib/free.h"

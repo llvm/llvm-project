@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H
 #define LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H
 
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "test/UnitTest/Test.h"
 

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITER_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/string/memory_utils/inline_memcpy.h"

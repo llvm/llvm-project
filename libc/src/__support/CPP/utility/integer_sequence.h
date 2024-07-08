@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
 
 #include "src/__support/CPP/type_traits/is_integral.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

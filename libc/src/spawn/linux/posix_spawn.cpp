@@ -11,6 +11,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/spawn/file_actions.h"
 
 #include <fcntl.h>

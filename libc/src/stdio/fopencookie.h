@@ -11,6 +11,7 @@
 
 #include "hdr/types/FILE.h"
 #include "hdr/types/cookie_io_functions_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

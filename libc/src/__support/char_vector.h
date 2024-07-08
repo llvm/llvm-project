@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 
 #include "src/__support/common.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
 #include <stddef.h> // size_t
 #include <stdlib.h> // malloc, realloc, free

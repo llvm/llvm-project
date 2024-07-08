@@ -8,6 +8,7 @@
 
 #include "src/string/memset_explicit.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_CONFIG_LINUX_APP_H
 #define LLVM_LIBC_CONFIG_LINUX_APP_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include <stdint.h>

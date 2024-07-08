@@ -12,6 +12,7 @@
 #include "hdr/types/sigset_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <signal.h> // sigaction
 #include <stddef.h>

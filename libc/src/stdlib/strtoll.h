@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOLL_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOLL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long long strtoll(const char *__restrict str, char **__restrict str_end,

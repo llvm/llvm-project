@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_MATH_AMDGPU_PLATFORM_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 

@@ -8,6 +8,7 @@
 
 #include "libc_errno.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/macros/config.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_GPU
 // LIBC_THREAD_LOCAL on GPU currently does nothing. So essentially this is just

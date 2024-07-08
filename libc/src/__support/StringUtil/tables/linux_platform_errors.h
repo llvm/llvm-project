@@ -11,6 +11,7 @@
 
 #include "linux_extension_errors.h"
 #include "posix_errors.h"
+#include "src/__support/macros/config.h"
 #include "stdc_errors.h"
 
 namespace LIBC_NAMESPACE_DECL {

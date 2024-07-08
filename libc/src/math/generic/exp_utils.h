@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H
 
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
 #define EXP2F_TABLE_BITS 5

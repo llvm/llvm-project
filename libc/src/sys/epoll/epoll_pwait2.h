@@ -12,6 +12,7 @@
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/struct_epoll_event.h"
 #include "hdr/types/struct_timespec.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

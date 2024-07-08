@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_LEADING_ONES_UC_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_LEADING_ONES_UC_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_leading_ones_uc(unsigned char value);

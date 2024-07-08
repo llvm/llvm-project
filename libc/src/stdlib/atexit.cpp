@@ -9,6 +9,7 @@
 #include "src/stdlib/atexit.h"
 #include "hdr/types/atexithandler_t.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/exit_handler.h"
 
 namespace LIBC_NAMESPACE_DECL {

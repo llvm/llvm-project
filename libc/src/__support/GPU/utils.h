@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)

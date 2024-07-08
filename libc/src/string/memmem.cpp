@@ -8,6 +8,7 @@
 
 #include "src/string/memmem.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memmem.h"
 
 namespace LIBC_NAMESPACE_DECL {

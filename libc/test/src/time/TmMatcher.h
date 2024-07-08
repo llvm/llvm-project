@@ -11,6 +11,7 @@
 
 #include <time.h>
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {

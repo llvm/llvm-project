@@ -9,6 +9,7 @@
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/HashTable/randomness.h"
 #include "src/__support/HashTable/table.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMMEM_H
 #define LLVM_LIBC_SRC_STRING_MEMMEM_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t
 
 namespace LIBC_NAMESPACE_DECL {

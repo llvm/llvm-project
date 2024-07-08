@@ -10,6 +10,7 @@
 #include "pthread_attr_setstacksize.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h" // For STACK_ALIGNMENT
 
 #include <errno.h>

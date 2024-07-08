@@ -8,6 +8,7 @@
 
 #include "src/__support/HashTable/bitmask.h"
 
+#include "src/__support/macros/config.h"
 #include "src/stdlib/rand.h"
 #include "test/UnitTest/Test.h"
 #include <stdint.h>

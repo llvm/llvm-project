@@ -12,6 +12,7 @@
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 

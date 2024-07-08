@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #define SYSCALL_CLOBBER_LIST "rcx", "r11", "memory"
 

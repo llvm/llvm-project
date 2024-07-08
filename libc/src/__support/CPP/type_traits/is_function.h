@@ -12,6 +12,7 @@
 #include "src/__support/CPP/type_traits/is_const.h"
 #include "src/__support/CPP/type_traits/is_reference.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

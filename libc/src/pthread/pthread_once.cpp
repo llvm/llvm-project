@@ -8,6 +8,7 @@
 
 #include "pthread_once.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/callonce.h"
 
 #include <pthread.h> // For pthread_once_t and __pthread_once_func_t definitions.

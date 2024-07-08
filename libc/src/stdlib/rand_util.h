@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

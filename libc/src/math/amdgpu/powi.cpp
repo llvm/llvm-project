@@ -8,6 +8,7 @@
 
 #include "src/math/powi.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include "declarations.h"
 

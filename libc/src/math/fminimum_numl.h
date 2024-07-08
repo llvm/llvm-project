@@ -10,6 +10,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMINIMUM_NUML_H
 #define LLVM_LIBC_SRC_MATH_FMINIMUM_NUML_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long double fminimum_numl(long double x, long double y);

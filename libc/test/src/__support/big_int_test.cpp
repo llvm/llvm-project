@@ -9,6 +9,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/big_int.h"
 #include "src/__support/integer_literals.h"        // parse_unsigned_bigint
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #include "hdr/math_macros.h" // HUGE_VALF, HUGE_VALF

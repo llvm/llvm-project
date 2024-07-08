@@ -36,6 +36,7 @@
 // function at the end of the file.
 
 #include "automemcpy/CodeGen.h"
+#include "src/__support/macros/config.h"
 #include <cassert>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringSet.h>

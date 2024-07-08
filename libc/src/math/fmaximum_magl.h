@@ -10,6 +10,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMAXIMUM_MAGL_H
 #define LLVM_LIBC_SRC_MATH_FMAXIMUM_MAGL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long double fmaximum_magl(long double x, long double y);

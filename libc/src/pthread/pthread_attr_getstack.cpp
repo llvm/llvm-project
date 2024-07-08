@@ -10,6 +10,7 @@
 #include "pthread_attr_getstacksize.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
 #include <pthread.h>

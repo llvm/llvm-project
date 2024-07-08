@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SETJMP_LONGJMP_H
 #define LLVM_LIBC_SRC_SETJMP_LONGJMP_H
 
+#include "src/__support/macros/config.h"
 #include <setjmp.h>
 
 namespace LIBC_NAMESPACE_DECL {

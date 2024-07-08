@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <pthread.h>
 

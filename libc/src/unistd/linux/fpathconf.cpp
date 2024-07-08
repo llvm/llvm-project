@@ -9,6 +9,7 @@
 #include "src/unistd/fpathconf.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/unistd/linux/pathconf_utils.h"
 

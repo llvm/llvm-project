@@ -9,6 +9,7 @@
 #include "src/stdlib/quick_exit.h"
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/exit_handler.h"
 
 // extern "C" void __cxa_finalize(void *);

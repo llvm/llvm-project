@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 

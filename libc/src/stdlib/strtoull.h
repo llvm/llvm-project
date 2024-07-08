@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOULL_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOULL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned long long strtoull(const char *__restrict str,

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include "src/string/memmem.h"
 #include "test/UnitTest/Test.h"
 

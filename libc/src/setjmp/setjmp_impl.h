@@ -11,6 +11,7 @@
 
 // This header has the _impl prefix in its name to avoid conflict with the
 // public header setjmp.h which is also included. here.
+#include "src/__support/macros/config.h"
 #include <setjmp.h>
 
 namespace LIBC_NAMESPACE_DECL {

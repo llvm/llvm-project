@@ -11,6 +11,7 @@
 
 #include "hdr/types/FILE.h"
 #include "src/__support/File/file.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_COPYSIGNL_H
 #define LLVM_LIBC_SRC_MATH_COPYSIGNL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long double copysignl(long double x, long double y);

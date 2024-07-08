@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_utils/memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memset_explicit.h"
 #include "test/UnitTest/Test.h"
 

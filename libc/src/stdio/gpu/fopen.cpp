@@ -8,6 +8,7 @@
 
 #include "src/stdio/fopen.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 
 #include "hdr/types/FILE.h"

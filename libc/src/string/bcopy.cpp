@@ -8,6 +8,7 @@
 
 #include "src/string/bcopy.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memmove.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -8,6 +8,7 @@
 
 #include "automemcpy/CodeGen.h"
 #include "automemcpy/RandomFunctionGenerator.h"
+#include "src/__support/macros/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_EXPM1F_H
 #define LLVM_LIBC_SRC_MATH_EXPM1F_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 float expm1f(float x);

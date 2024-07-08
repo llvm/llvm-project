@@ -10,6 +10,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMAXIMUM_NUMF_H
 #define LLVM_LIBC_SRC_MATH_FMAXIMUM_NUMF_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 float fmaximum_numf(float x, float y);

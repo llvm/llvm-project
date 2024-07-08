@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H
 
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 

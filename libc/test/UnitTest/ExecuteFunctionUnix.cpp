@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExecuteFunction.h"
+#include "src/__support/macros/config.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>

@@ -11,6 +11,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/abort.h"
 
 namespace LIBC_NAMESPACE_DECL {

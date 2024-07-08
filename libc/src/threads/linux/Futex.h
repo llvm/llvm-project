@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_FUTEX_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_FUTEX_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h" // Architecture macros
 
 namespace LIBC_NAMESPACE_DECL {

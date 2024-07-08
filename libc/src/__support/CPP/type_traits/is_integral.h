@@ -11,6 +11,7 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 namespace LIBC_NAMESPACE_DECL {

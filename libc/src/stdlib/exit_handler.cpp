@@ -8,6 +8,7 @@
 
 #include "src/stdlib/exit_handler.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

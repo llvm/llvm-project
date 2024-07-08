@@ -9,6 +9,7 @@
 #include "src/math/f16fma.h"
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

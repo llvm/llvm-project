@@ -13,6 +13,7 @@
 #include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"

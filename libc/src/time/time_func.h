@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_TIME_TIME_FUNC_H
 
 #include "hdr/types/time_t.h"
+#include "src/__support/macros/config.h"
 
 // Note this header file is named time_func.h to avoid conflicts with the
 // public header file time.h.

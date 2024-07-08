@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_RAISE_H
 #define LLVM_LIBC_SRC_SIGNAL_RAISE_H
 
+#include "src/__support/macros/config.h"
 #include <signal.h>
 
 namespace LIBC_NAMESPACE_DECL {

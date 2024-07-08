@@ -12,6 +12,7 @@
 // This is defined as a simple macro in test.h so that it exists for platforms
 // that don't use our test infrastructure. It's defined as a proper function
 // below.
+#include "src/__support/macros/config.h"
 #ifdef libc_make_test_file_path
 #undef libc_make_test_file_path
 #endif // libc_make_test_file_path

@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/macros/config.h"
 
 #include <signal.h> // For signal numbers
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/signal/raise.h"
 #include "src/stdlib/_Exit.h"
 

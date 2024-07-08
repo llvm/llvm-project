@@ -11,6 +11,7 @@
 
 #include "hdr/types/fenv_t.h"
 #include "src/__support/CPP/utility.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -14,6 +14,7 @@
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/errno/libc_errno.h"                    // For error macros
 

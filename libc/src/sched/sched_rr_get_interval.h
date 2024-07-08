@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_RR_GET_INTERVAL_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_RR_GET_INTERVAL_H
 
+#include "src/__support/macros/config.h"
 #include <sched.h>
 
 namespace LIBC_NAMESPACE_DECL {

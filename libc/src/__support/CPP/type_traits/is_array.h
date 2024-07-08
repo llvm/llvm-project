@@ -11,6 +11,7 @@
 #include "src/__support/CPP/type_traits/false_type.h"
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h> // For size_t
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_MINIMAL_PLATFORM_SIGNALS_H
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_MINIMAL_PLATFORM_SIGNALS_H
 
+#include "src/__support/macros/config.h"
 #include "stdc_signals.h"
 
 namespace LIBC_NAMESPACE_DECL {

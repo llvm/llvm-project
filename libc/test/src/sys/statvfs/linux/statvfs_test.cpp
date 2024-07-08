@@ -1,3 +1,4 @@
+#include "src/__support/macros/config.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/sys/statvfs/statvfs.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"

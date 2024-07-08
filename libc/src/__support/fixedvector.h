@@ -12,6 +12,7 @@
 #include "src/__support/CPP/array.h"
 
 #include "src/__support/CPP/iterator.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

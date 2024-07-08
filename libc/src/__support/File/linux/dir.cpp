@@ -10,6 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 
 #include <fcntl.h>       // For open flags
 #include <sys/syscall.h> // For syscall numbers

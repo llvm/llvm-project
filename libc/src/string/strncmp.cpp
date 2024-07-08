@@ -9,6 +9,7 @@
 #include "src/string/strncmp.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 
 #include <stddef.h>

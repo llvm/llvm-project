@@ -11,6 +11,7 @@
 // make any stack allocations so we must ensure this.
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 
 #include <sys/syscall.h>
 

@@ -8,6 +8,7 @@
 
 #include "src/stdio/ftell.h"
 #include "file.h"
+#include "src/__support/macros/config.h"
 
 #include "hdr/types/FILE.h"
 

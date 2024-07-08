@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SSCANF_H
 #define LLVM_LIBC_SRC_STDIO_SSCANF_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 int sscanf(const char *__restrict buffer, const char *__restrict format, ...);

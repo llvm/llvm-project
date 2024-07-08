@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_UFROMFPL_H
 #define LLVM_LIBC_SRC_MATH_UFROMFPL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long double ufromfpl(long double x, int rnd, unsigned int width);

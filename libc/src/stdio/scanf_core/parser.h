@@ -11,6 +11,7 @@
 
 #include "src/__support/arg_list.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/scanf_config.h"

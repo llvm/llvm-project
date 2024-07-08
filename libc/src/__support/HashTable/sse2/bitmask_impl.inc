@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <immintrin.h>
+
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 // With SSE2, every bitmask is iteratable as

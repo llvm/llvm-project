@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "syscall.h"     // For internal syscall function.
 #include <sys/syscall.h> // For syscall numbers.
 

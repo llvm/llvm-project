@@ -15,6 +15,7 @@
 
 #include "src/__support/CPP/limits.h"        // CHAR_BIT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"           // UInt128
 #include <stddef.h>                          // size_t
 #include <stdint.h>                          // uintxx_t

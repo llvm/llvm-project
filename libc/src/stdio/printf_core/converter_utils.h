@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_UTILS_H
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include <inttypes.h>

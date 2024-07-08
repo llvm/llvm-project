@@ -22,6 +22,7 @@
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>

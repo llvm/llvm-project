@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_IN_PLACE_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
+#include "src/__support/macros/config.h"
 
 #include <stddef.h> // size_t
 

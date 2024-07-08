@@ -8,6 +8,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 

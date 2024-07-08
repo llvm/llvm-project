@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_FIRST_LEADING_ZERO_US_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_FIRST_LEADING_ZERO_US_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_first_leading_zero_us(unsigned short value);

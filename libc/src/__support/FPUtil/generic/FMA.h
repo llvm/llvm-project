@@ -18,6 +18,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "hdr/fenv_macros.h"

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h> // For error macros
 

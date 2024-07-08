@@ -6,6 +6,7 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/time/clock.h"
 
 #include <stdint.h>

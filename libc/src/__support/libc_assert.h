@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 #define LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 
+#include "src/__support/macros/config.h"
 #ifdef LIBC_COPT_USE_C_ASSERT
 
 // The build is configured to just use the public <assert.h> API

@@ -9,6 +9,7 @@
 #include "src/string/memccpy.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t.
 
 namespace LIBC_NAMESPACE_DECL {

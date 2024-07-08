@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 namespace LIBC_NAMESPACE_DECL {

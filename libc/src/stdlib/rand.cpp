@@ -8,6 +8,7 @@
 
 #include "src/stdlib/rand.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/sleep.h"
 #include "src/stdlib/rand_util.h"
 

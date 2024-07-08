@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_ZXTEST_H
 #define LLVM_LIBC_UTILS_UNITTEST_ZXTEST_H
 
+#include "src/__support/macros/config.h"
 #include <zxtest/zxtest.h>
 
 #define WITH_SIGNAL(X) #X

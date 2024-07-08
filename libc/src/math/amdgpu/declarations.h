@@ -12,6 +12,7 @@
 #include "platform.h"
 
 #include "src/__support/GPU/utils.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_UFROMFP_H
 #define LLVM_LIBC_SRC_MATH_UFROMFP_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 double ufromfp(double x, int rnd, unsigned int width);

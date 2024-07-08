@@ -10,6 +10,7 @@
 #include "pthread_mutexattr.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include <errno.h>

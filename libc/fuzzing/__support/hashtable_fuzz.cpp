@@ -12,6 +12,7 @@
 #include "include/llvm-libc-types/ENTRY.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/HashTable/table.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

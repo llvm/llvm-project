@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRNLEN_H
 #define LLVM_LIBC_SRC_STRING_STRNLEN_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {

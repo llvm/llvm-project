@@ -8,6 +8,7 @@
 
 #include "src/threads/thrd_equal.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <threads.h> // For thrd_* type definitions.

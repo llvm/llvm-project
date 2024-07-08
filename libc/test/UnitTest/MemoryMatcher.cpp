@@ -8,6 +8,7 @@
 
 #include "MemoryMatcher.h"
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 #if LIBC_TEST_HAS_MATCHERS()

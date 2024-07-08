@@ -9,6 +9,7 @@
 #include "src/math/hypot.h"
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

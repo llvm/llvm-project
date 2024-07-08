@@ -14,6 +14,7 @@
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 #include <stdint.h>

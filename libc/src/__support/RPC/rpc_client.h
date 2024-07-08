@@ -12,6 +12,7 @@
 #include "rpc.h"
 
 #include "include/llvm-libc-types/rpc_opcodes_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace rpc {

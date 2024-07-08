@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
 #define __need_wint_t
 #define __need_wchar_t

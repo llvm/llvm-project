@@ -8,6 +8,7 @@
 
 #include "src/string/strsep.h"
 
+#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

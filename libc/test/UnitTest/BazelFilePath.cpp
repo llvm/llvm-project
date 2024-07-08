@@ -12,6 +12,7 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/c_string.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {

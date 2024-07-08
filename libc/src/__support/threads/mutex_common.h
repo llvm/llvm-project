@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_COMMON_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_COMMON_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 enum class MutexError : int {

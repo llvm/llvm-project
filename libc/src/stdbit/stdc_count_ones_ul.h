@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_COUNT_ONES_UL_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_COUNT_ONES_UL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_count_ones_ul(unsigned long value);

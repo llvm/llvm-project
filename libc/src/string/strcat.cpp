@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strcat.h"
+#include "src/__support/macros/config.h"
 #include "src/string/strcpy.h"
 #include "src/string/string_utils.h"
 

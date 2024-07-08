@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h"

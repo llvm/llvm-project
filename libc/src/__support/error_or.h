@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_ERROR_OR_H
 
 #include "src/__support/CPP/expected.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

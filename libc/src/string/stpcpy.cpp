@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/stpcpy.h"
+#include "src/__support/macros/config.h"
 #include "src/string/mempcpy.h"
 #include "src/string/string_utils.h"
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strfromd.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/str_from_util.h"
 
 namespace LIBC_NAMESPACE_DECL {

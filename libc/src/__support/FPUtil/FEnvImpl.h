@@ -13,6 +13,7 @@
 #include "hdr/math_macros.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 

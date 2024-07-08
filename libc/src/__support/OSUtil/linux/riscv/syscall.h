@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV_SYSCALL_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #define REGISTER_DECL_0                                                        \
   register long a7 __asm__("a7") = number;                                     \

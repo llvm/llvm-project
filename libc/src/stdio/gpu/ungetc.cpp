@@ -8,6 +8,7 @@
 
 #include "src/stdio/ungetc.h"
 #include "file.h"
+#include "src/__support/macros/config.h"
 
 #include "hdr/types/FILE.h"
 

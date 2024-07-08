@@ -9,6 +9,7 @@
 #include "src/math/f16addf128.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

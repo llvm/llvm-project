@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_SDCOMP26094_H
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 

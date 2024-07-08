@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_PRCTL_PRCTL_H
 #define LLVM_LIBC_SRC_SYS_PRCTL_PRCTL_H
 
+#include "src/__support/macros/config.h"
 #include <sys/prctl.h>
 
 namespace LIBC_NAMESPACE_DECL {

@@ -9,6 +9,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 
+#include "src/__support/macros/config.h"
 #include "src/sys/wait/wait4Impl.h"
 #include "src/sys/wait/waitpid.h"
 

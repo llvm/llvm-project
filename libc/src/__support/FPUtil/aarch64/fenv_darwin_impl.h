@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_AARCH64) || !defined(__APPLE__)

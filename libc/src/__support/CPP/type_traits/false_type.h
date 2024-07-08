@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_FALSE_TYPE_H
 
 #include "src/__support/CPP/type_traits/bool_constant.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

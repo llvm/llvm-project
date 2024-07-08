@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_TRAILING_ONES_UI_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_TRAILING_ONES_UI_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_trailing_ones_ui(unsigned value);

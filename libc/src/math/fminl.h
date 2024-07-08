@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMINL_H
 #define LLVM_LIBC_SRC_MATH_FMINL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long double fminl(long double x, long double y);

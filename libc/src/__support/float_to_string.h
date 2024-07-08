@@ -19,6 +19,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 // This file has 5 compile-time flags to allow the user to configure the float
 // to string behavior. These were used to explore tradeoffs during the design

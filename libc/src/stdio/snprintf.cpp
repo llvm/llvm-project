@@ -9,6 +9,7 @@
 #include "src/stdio/snprintf.h"
 
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 

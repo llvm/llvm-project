@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_CANONICALIZE_H
 #define LLVM_LIBC_SRC_MATH_CANONICALIZE_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 int canonicalize(double *cx, const double *x);

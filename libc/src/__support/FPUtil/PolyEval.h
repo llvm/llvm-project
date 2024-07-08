@@ -12,6 +12,7 @@
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 // Evaluate polynomial using Horner's Scheme:
 // With polyeval(x, a_0, a_1, ..., a_n) = a_n * x^n + ... + a_1 * x + a_0, we

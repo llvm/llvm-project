@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_ARM_SYSCALL_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #define REGISTER_DECL_0                                                        \
   register long x16 __asm__("x16") = number;                                   \

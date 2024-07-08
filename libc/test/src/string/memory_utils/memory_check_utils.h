@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h" // LIBC_ASSERT
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 #include "src/string/memory_utils/utils.h"
 #include <stddef.h> // size_t

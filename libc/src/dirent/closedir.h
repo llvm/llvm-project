@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_DIRENT_CLOSEDIR_H
 #define LLVM_LIBC_SRC_DIRENT_CLOSEDIR_H
 
+#include "src/__support/macros/config.h"
 #include <dirent.h>
 
 namespace LIBC_NAMESPACE_DECL {

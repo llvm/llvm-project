@@ -12,6 +12,8 @@
 #include "hdr/time_macros.h"
 #include "hdr/types/clock_t.h"
 #include "src/__support/GPU/utils.h"
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)

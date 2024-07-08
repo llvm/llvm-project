@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/utils.h"
 #include "test/UnitTest/Test.h"
 

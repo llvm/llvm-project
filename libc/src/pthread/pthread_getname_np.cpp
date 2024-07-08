@@ -11,6 +11,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <pthread.h>

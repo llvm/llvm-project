@@ -9,6 +9,7 @@
 #include "FEnvSafeTest.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 namespace LIBC_NAMESPACE_DECL {

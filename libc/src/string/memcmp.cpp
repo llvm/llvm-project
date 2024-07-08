@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memcmp.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcmp.h"
 
 #include <stddef.h> // size_t

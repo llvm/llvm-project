@@ -18,6 +18,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {

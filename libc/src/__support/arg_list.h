@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdarg.h>
 #include <stddef.h>

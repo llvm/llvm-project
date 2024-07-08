@@ -12,6 +12,7 @@
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/expected.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/time/units.h"
 
 namespace LIBC_NAMESPACE_DECL {

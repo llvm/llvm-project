@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_FCNTL_OPEN_H
 #define LLVM_LIBC_SRC_FCNTL_OPEN_H
 
+#include "src/__support/macros/config.h"
 #include <fcntl.h>
 
 namespace LIBC_NAMESPACE_DECL {

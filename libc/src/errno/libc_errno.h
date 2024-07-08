@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include "hdr/errno_macros.h"

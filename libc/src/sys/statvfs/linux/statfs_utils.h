@@ -13,6 +13,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <asm/statfs.h>
 #include <sys/syscall.h>

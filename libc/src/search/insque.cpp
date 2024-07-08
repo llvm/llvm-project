@@ -9,6 +9,7 @@
 #include "src/search/insque.h"
 #include "src/__support/common.h"
 #include "src/__support/intrusive_list.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

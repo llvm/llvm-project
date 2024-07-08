@@ -17,6 +17,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 

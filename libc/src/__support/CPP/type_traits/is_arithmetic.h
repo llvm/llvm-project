@@ -12,6 +12,7 @@
 #include "src/__support/CPP/type_traits/is_floating_point.h"
 #include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

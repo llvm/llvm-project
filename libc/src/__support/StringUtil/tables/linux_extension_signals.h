@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_SIGNALS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/macros/config.h"
 
 #include <signal.h> // For signal numbers
 

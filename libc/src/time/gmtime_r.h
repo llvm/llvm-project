@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_GMTIME_R_H
 #define LLVM_LIBC_SRC_TIME_GMTIME_R_H
 
+#include "src/__support/macros/config.h"
 #include <time.h>
 
 namespace LIBC_NAMESPACE_DECL {

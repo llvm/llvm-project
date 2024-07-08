@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include "src/stdio/sprintf.h"
 
 #include "src/__support/FPUtil/FPBits.h"

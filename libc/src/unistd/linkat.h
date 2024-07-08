@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_LINKAT_H
 #define LLVM_LIBC_SRC_UNISTD_LINKAT_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 int linkat(int, const char *, int, const char *, int);

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_HAS_SINGLE_BIT_UC_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_HAS_SINGLE_BIT_UC_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 bool stdc_has_single_bit_uc(unsigned char value);

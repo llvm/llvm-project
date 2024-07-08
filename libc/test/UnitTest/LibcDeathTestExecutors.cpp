@@ -8,6 +8,7 @@
 
 #include "LibcTest.h"
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 

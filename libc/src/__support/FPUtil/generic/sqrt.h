@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
 
 #include "hdr/fenv_macros.h"

@@ -8,6 +8,7 @@
 
 #include "FPExceptMatcher.h"
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/types/fenv_t.h"

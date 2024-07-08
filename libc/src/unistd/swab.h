@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_SWAB_H
 #define LLVM_LIBC_SRC_UNISTD_SWAB_H
 
+#include "src/__support/macros/config.h"
 #include <unistd.h> // For ssize_t
 
 namespace LIBC_NAMESPACE_DECL {

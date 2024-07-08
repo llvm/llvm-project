@@ -9,6 +9,7 @@
 #include "src/sched/sched_getcpucount.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <sched.h>
 #include <stddef.h>

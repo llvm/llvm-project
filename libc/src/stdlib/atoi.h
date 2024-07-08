@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ATOI_H
 #define LLVM_LIBC_SRC_STDLIB_ATOI_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 int atoi(const char *str);

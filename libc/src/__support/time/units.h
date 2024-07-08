@@ -11,6 +11,7 @@
 
 #include "hdr/types/time_t.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_units {

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H
 #define LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 #include <termios.h>
 

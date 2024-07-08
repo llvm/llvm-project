@@ -8,6 +8,7 @@
 
 #include "src/sys/stat/stat.h"
 #include "kernel_statx.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include "src/__support/common.h"

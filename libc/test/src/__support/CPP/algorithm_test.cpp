@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 // TODO(https://github.com/llvm/llvm-project/issues/94066): Add unittests for

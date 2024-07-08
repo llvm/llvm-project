@@ -23,6 +23,7 @@
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)

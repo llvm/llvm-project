@@ -18,6 +18,7 @@
 #define LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/converter_atlas.h"
 #include "src/stdio/printf_core/core_structs.h"

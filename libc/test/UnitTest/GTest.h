@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_GTEST_H
 #define LLVM_LIBC_UTILS_UNITTEST_GTEST_H
 
+#include "src/__support/macros/config.h"
 #include <gtest/gtest.h>
 
 namespace LIBC_NAMESPACE_DECL {

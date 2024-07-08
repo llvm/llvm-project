@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SEARCH_REMQUE_H
 #define LLVM_LIBC_SRC_SEARCH_REMQUE_H
 
+#include "src/__support/macros/config.h"
 #include <search.h>
 
 namespace LIBC_NAMESPACE_DECL {

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_LLABS_H
 #define LLVM_LIBC_SRC_STDLIB_LLABS_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long long llabs(long long n);

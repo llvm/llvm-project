@@ -8,6 +8,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CALLONCE_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CALLONCE_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -13,6 +13,7 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE_DECL {

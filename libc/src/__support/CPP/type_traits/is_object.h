@@ -14,6 +14,7 @@
 #include "src/__support/CPP/type_traits/is_scalar.h"
 #include "src/__support/CPP/type_traits/is_union.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

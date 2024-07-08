@@ -12,6 +12,7 @@
 #include <signal.h> // For signal numbers
 
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

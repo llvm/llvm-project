@@ -9,6 +9,7 @@
 #include "pthread_condattr_setpshared.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h> // EINVAL
 #include <pthread.h> // pthread_condattr_t, PTHREAD_PROCESS_SHARED, PTHREAD_PROCESS_PRIVATE

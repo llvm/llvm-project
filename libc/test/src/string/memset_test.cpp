@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_utils/memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h" // LIBC_TARGET_OS_IS_LINUX
 #include "src/string/memset.h"
 #include "test/UnitTest/Test.h"

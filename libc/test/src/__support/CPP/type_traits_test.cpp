@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 // TODO: Split this file if it becomes too big.

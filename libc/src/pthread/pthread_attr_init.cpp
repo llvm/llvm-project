@@ -9,6 +9,7 @@
 #include "pthread_attr_init.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h" // For thread::DEFAULT_*
 
 #include <pthread.h>

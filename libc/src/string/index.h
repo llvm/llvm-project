@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_INDEX_H
 #define LLVM_LIBC_SRC_STRING_INDEX_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 char *index(const char *src, int c);

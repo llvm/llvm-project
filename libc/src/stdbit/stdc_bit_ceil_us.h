@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_BIT_CEIL_US_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_BIT_CEIL_US_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 unsigned short stdc_bit_ceil_us(unsigned short value);

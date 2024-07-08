@@ -13,6 +13,7 @@
 #include "src/__support/macros/attributes.h"
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_PIPE_H
 #define LLVM_LIBC_SRC_UNISTD_PIPE_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 int pipe(int pipefd[2]);

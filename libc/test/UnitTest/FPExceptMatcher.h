@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPEXCEPTMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPEXCEPTMATCHER_H
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
 

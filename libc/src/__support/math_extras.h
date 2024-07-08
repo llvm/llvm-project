@@ -14,6 +14,7 @@
 #include "src/__support/CPP/limits.h"      // CHAR_BIT, numeric_limits
 #include "src/__support/CPP/type_traits.h" // is_unsigned_v, is_constant_evaluated
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

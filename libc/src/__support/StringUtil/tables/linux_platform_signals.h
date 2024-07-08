@@ -11,6 +11,7 @@
 
 #include "linux_extension_signals.h"
 #include "posix_signals.h"
+#include "src/__support/macros/config.h"
 #include "stdc_signals.h"
 
 namespace LIBC_NAMESPACE_DECL {

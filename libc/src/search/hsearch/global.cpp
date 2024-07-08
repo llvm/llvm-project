@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 struct HashTable *global_hash_table = nullptr;

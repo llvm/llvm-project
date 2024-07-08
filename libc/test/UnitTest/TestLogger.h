@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_TESTLOGGER_H
 #define LLVM_LIBC_TEST_UNITTEST_TESTLOGGER_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 

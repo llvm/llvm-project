@@ -1,4 +1,5 @@
 #include "LibcFunctionPrototypes.h"
+#include "src/__support/macros/config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstddef>
 

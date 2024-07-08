@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_INTTYPES_STRTOUMAX_H
 #define LLVM_LIBC_SRC_INTTYPES_STRTOUMAX_H
 
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {

@@ -10,6 +10,7 @@
 
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

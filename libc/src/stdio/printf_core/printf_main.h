@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_MAIN_H
 
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>

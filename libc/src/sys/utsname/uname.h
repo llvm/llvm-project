@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_UTSNAME_UNAME_H
 #define LLVM_LIBC_SRC_SYS_UTSNAME_UNAME_H
 
+#include "src/__support/macros/config.h"
 #include <sys/utsname.h>
 
 namespace LIBC_NAMESPACE_DECL {

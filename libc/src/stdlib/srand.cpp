@@ -8,6 +8,7 @@
 
 #include "src/stdlib/srand.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/rand_util.h"
 
 namespace LIBC_NAMESPACE_DECL {

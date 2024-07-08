@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 #define LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 
+#include "src/__support/macros/config.h"
 #include <src/__support/CPP/new.h>
 #include <src/__support/libc_assert.h>
 

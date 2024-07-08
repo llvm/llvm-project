@@ -8,6 +8,7 @@
 
 #include "src/math/exp10f.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/math/generic/exp10f_impl.h"
 
 namespace LIBC_NAMESPACE_DECL {

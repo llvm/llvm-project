@@ -8,6 +8,7 @@
 
 #include "src/search/hdestroy.h"
 #include "src/__support/HashTable/table.h"
+#include "src/__support/macros/config.h"
 #include "src/search/hsearch/global.h"
 
 namespace LIBC_NAMESPACE_DECL {

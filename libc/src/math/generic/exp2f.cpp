@@ -8,6 +8,7 @@
 
 #include "src/math/exp2f.h"
 #include "src/__support/common.h" // for LLVM_LIBC_FUNCTION
+#include "src/__support/macros/config.h"
 #include "src/math/generic/exp2f_impl.h"
 
 namespace LIBC_NAMESPACE_DECL {

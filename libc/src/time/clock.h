@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_TIME_CLOCK_H
 
 #include "hdr/types/clock_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

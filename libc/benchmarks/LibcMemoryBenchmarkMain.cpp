@@ -10,6 +10,7 @@
 #include "LibcBenchmark.h"
 #include "LibcMemoryBenchmark.h"
 #include "MemorySizeDistributions.h"
+#include "src/__support/macros/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"

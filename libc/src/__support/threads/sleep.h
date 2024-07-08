@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_SLEEP_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

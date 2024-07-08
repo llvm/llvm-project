@@ -1,3 +1,4 @@
+#include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_PERFORMACE_TESTING_TIMER_H
 #define LLVM_LIBC_TEST_SRC_MATH_PERFORMACE_TESTING_TIMER_H
 
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {

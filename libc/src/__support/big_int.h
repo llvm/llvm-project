@@ -15,6 +15,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"        // LIBC_UNLIKELY
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64

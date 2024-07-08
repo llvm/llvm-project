@@ -11,6 +11,7 @@
 #include <stddef.h> // For size_t
 
 #include "array.h"       // For array
+#include "src/__support/macros/config.h"
 #include "type_traits.h" // For remove_cv_t, enable_if_t, is_same_v, is_const_v
 
 #include "src/__support/macros/attributes.h"

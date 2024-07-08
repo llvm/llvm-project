@@ -9,6 +9,7 @@
 #include "ScanfMatcher.h"
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/core_structs.h"
 
 #include "test/UnitTest/StringUtils.h"

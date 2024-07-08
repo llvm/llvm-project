@@ -9,6 +9,7 @@
 #include "src/signal/signal.h"
 #include "hdr/signal_macros.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/signal/sigaction.h"
 
 namespace LIBC_NAMESPACE_DECL {

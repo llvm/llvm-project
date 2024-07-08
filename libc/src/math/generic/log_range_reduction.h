@@ -11,6 +11,7 @@
 
 #include "common_constants.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {

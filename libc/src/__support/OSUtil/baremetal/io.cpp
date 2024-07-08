@@ -9,6 +9,7 @@
 #include "io.h"
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

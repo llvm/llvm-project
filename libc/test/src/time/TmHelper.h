@@ -11,6 +11,7 @@
 
 #include <time.h>
 
+#include "src/__support/macros/config.h"
 #include "src/time/time_utils.h"
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;

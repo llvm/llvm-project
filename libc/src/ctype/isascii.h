@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_CTYPE_ISASCII_H
 #define LLVM_LIBC_SRC_CTYPE_ISASCII_H
 
+#include "src/__support/macros/config.h"
 #undef isascii
 
 namespace LIBC_NAMESPACE_DECL {

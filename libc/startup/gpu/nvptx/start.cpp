@@ -8,6 +8,7 @@
 
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 

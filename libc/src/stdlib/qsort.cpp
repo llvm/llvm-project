@@ -8,6 +8,7 @@
 
 #include "src/stdlib/qsort.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_util.h"
 
 #include <stdint.h>

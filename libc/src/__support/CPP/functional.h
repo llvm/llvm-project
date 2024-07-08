@@ -17,6 +17,7 @@
 #include "src/__support/CPP/type_traits/remove_reference.h"
 #include "src/__support/CPP/utility/forward.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_SCALBNL_H
 #define LLVM_LIBC_SRC_MATH_SCALBNL_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 long double scalbnl(long double x, int n);

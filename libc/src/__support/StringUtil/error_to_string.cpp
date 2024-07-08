@@ -15,6 +15,7 @@
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 

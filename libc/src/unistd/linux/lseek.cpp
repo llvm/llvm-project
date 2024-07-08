@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/lseek.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include "src/__support/File/linux/lseekImpl.h"

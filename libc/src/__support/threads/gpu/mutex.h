@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_GPU_MUTEX_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex_common.h"
 
 namespace LIBC_NAMESPACE_DECL {

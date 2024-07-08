@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/char_vector.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 #include "include/llvm-libc-macros/sys-queue-macros.h"

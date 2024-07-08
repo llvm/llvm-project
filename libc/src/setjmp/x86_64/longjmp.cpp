@@ -8,6 +8,7 @@
 
 #include "src/setjmp/longjmp.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86_64)
 #error "Invalid file include"

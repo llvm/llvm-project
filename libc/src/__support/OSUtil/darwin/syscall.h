@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_ANY_ARM

@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 
 #include <inttypes.h>
 #include <stddef.h>

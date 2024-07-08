@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_LIKELY
 
 // Plaform specific routines, provides:

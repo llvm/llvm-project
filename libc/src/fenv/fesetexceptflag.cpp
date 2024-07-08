@@ -10,6 +10,7 @@
 #include "hdr/types/fexcept_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

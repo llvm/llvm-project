@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_REMAINDERF_H
 #define LLVM_LIBC_SRC_MATH_REMAINDERF_H
 
+#include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 float remainderf(float x, float y);

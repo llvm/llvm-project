@@ -19,6 +19,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)

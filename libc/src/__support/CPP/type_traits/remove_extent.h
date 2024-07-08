@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_REMOVE_EXTENT_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/macros/config.h"
 #include "stddef.h" // size_t
 
 namespace LIBC_NAMESPACE_DECL {

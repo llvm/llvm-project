@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_ADDOPEN_H
 #define LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_ADDOPEN_H
 
+#include "src/__support/macros/config.h"
 #include <spawn.h>
 
 namespace LIBC_NAMESPACE_DECL {

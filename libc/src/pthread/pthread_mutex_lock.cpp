@@ -9,6 +9,7 @@
 #include "pthread_mutex_lock.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include <pthread.h>

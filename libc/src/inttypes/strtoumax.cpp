@@ -8,6 +8,7 @@
 
 #include "src/inttypes/strtoumax.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/errno/libc_errno.h"
 

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_FENV_FESETEXCEPTFLAG_H
 
 #include "hdr/types/fexcept_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

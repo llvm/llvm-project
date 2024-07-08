@@ -8,6 +8,7 @@
 
 #include "src/threads/cnd_broadcast.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/CndVar.h"
 
 // TODO: https://github.com/llvm/llvm-project/issues/92968

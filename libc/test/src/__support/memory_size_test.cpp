@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include "src/__support/memory_size.h"
 #include "test/UnitTest/Test.h"
 
