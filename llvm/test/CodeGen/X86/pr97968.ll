@@ -4,10 +4,10 @@
 define <2 x i32> @PR97968(<16 x i32> %a0) {
 ; CHECK-LABEL: PR97968:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,7,2,7]
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vpermi2d %xmm2, %xmm0, %xmm1
-; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = [2,7,2,7]
+; CHECK-NEXT:    # xmm1 = mem[0,0]
+; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %sub0 = shufflevector <16 x i32> %a0, <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
