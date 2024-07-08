@@ -336,7 +336,7 @@ lldb::ChildCacheState lldb_private::formatters::
   }
 
   // Create the synthetic child, which is a pair where the key and value can be
-  // retrieved // by querying the synthetic frontend for
+  // retrieved by querying the synthetic frontend for
   // GetIndexOfChildWithName("first") and GetIndexOfChildWithName("second")
   // respectively.
   //
