@@ -2085,11 +2085,14 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genParallelOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_section:
+    llvm_unreachable("genOMPDispatch: OMPD_section");
     // Lowered in the enclosing genSectionsOp.
     break;
   case llvm::omp::Directive::OMPD_sections:
     // Called directly from genOMP([...], OpenMPSectionsConstruct) because it
     // has a different prototype.
+    // This code path is still taken when iterating through the construct queue
+    // in genBodyOfOp
     break;
   case llvm::omp::Directive::OMPD_simd:
     genSimdOp(converter, symTable, semaCtx, eval, loc, queue, item, *loopDsp);
