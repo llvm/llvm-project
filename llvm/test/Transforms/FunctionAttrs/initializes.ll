@@ -288,6 +288,21 @@ define void @negative_offset(ptr %p) {
   ret void
 }
 
+define void @non_const_gep(ptr %p, i64 %i) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @non_const_gep(
+; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    store i64 123, ptr [[G]], align 4
+; CHECK-NEXT:    store i64 123, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %g = getelementptr i8, ptr %p, i64 %i
+  store i64 123, ptr %g
+  store i64 123, ptr %p
+  ret void
+}
+
 define void @call_clobber_in_entry_block(ptr %p, i1 %i) {
 ; CHECK-LABEL: define void @call_clobber_in_entry_block(
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[I:%.*]]) {
@@ -343,8 +358,8 @@ define void @call_initializes_clobber(ptr %p) {
   ret void
 }
 
-define void @call_initializes_no_clobber_writeonly_capture(ptr %p) {
-; CHECK-LABEL: define void @call_initializes_no_clobber_writeonly_capture(
+define void @call_initializes_no_clobber_writeonly_nocapture(ptr %p) {
+; CHECK-LABEL: define void @call_initializes_no_clobber_writeonly_nocapture(
 ; CHECK-SAME: ptr initializes((0, 4), (8, 12)) [[P:%.*]]) {
 ; CHECK-NEXT:    call void @g3(ptr [[P]])
 ; CHECK-NEXT:    call void @g2(ptr [[P]])
@@ -404,6 +419,17 @@ define void @memset_volatile(ptr %p) {
   ret void
 }
 
+define void @memset_non_constant(ptr %p, i64 %i) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @memset_non_constant(
+; CHECK-SAME: ptr nocapture writeonly [[P:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 [[I]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset(ptr %p, i8 2, i64 %i, i1 false)
+  ret void
+}
+
 declare void @llvm.memcpy(ptr, ptr, i64 ,i1)
 
 define void @memcpy(ptr %p, ptr %p2) {
@@ -456,17 +482,76 @@ define void @memcpy_src(ptr %p, ptr %p2) {
   ret void
 }
 
-define void @non_const_gep(ptr %p, i64 %i) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
-; CHECK-LABEL: define void @non_const_gep(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    store i64 123, ptr [[G]], align 4
-; CHECK-NEXT:    store i64 123, ptr [[P]], align 4
+define void @memcpy_non_constant(ptr %p, ptr %p2, i64 %i) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memcpy_non_constant(
+; CHECK-SAME: ptr nocapture writeonly [[P:%.*]], ptr nocapture readonly [[P2:%.*]], i64 [[I:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 [[I]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %g = getelementptr i8, ptr %p, i64 %i
-  store i64 123, ptr %g
-  store i64 123, ptr %p
+  call void @llvm.memcpy(ptr %p, ptr %p2, i64 %i, i1 false)
+  ret void
+}
+
+declare void @llvm.memmove(ptr, ptr, i64 ,i1)
+
+define void @memmove(ptr %p, ptr %p2) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memmove(
+; CHECK-SAME: ptr nocapture writeonly initializes((0, 9)) [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memmove(ptr %p, ptr %p2, i64 9, i1 false)
+  ret void
+}
+
+define void @memmove_volatile(ptr %p, ptr %p2) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memmove_volatile(
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memmove(ptr %p, ptr %p2, i64 9, i1 true)
+  ret void
+}
+
+define void @memmove_offset(ptr %p, ptr %p2) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memmove_offset(
+; CHECK-SAME: ptr nocapture writeonly initializes((3, 12)) [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[G]], ptr [[P2]], i64 9, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %g = getelementptr i8, ptr %p, i64 3
+  call void @llvm.memmove(ptr %g, ptr %p2, i64 9, i1 false)
+  ret void
+}
+
+define void @memmove_src(ptr %p, ptr %p2) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memmove_src(
+; CHECK-SAME: ptr nocapture initializes((96, 128)) [[P:%.*]], ptr nocapture initializes((0, 96)) [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P2]], ptr [[P]], i64 96, i1 false)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 64
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[G]], ptr [[P2]], i64 64, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memmove(ptr %p2, ptr %p, i64 96, i1 false)
+  %g = getelementptr i8, ptr %p, i64 64
+  call void @llvm.memmove(ptr %g, ptr %p2, i64 64, i1 false)
+  ret void
+}
+
+define void @memmove_non_constant(ptr %p, ptr %p2, i64 %i) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memmove_non_constant(
+; CHECK-SAME: ptr nocapture writeonly [[P:%.*]], ptr nocapture readonly [[P2:%.*]], i64 [[I:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 [[I]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memmove(ptr %p, ptr %p2, i64 %i, i1 false)
   ret void
 }
