@@ -20,7 +20,8 @@ extern "C" void __llvm_libc_log_write(const char *msg, size_t len);
 namespace LIBC_NAMESPACE {
 
 ssize_t read_from_stdin(char *buf, size_t size) {
-  return __llvm_libc_stdin_read(static_cast<void*>(&__llvm_libc_stdin), buf, size);
+  return __llvm_libc_stdin_read(static_cast<void *>(&__llvm_libc_stdin), buf,
+                                size);
 }
 
 void write_to_stderr(cpp::string_view msg) {
