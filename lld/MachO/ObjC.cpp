@@ -496,6 +496,7 @@ private:
   Defined *tryGetDefinedAtIsecOffset(const ConcatInputSection *isec,
                                      uint32_t offset);
   Defined *getClassRo(const Defined *classSym, bool getMetaRo);
+  SourceLanguage getClassSymSourceLang(const Defined *classSym);
   void mergeCategoriesIntoBaseClass(const Defined *baseClass,
                                     std::vector<InfoInputCategory> &categories);
   void eraseSymbolAtIsecOffset(ConcatInputSection *isec, uint32_t offset);
@@ -1400,6 +1401,29 @@ void objc::mergeCategories() {
 
 void objc::doCleanup() { ObjcCategoryMerger::doCleanup(); }
 
+ObjcCategoryMerger::SourceLanguage
+ObjcCategoryMerger::getClassSymSourceLang(const Defined *classSym) {
+  if (classSym->getName().starts_with(objc::symbol_names::swift_objc_klass))
+    return SourceLanguage::Swift;
+
+  // If the symbol name matches the ObjC prefix, we don't necessarely know this
+  // comes from ObjC, since Swift creates ObjC-like alias symbols for some Swift
+  // classes. Ex:
+  //  .globl	_OBJC_CLASS_$__TtC11MyTestClass11MyTestClass
+  //  .private_extern _OBJC_CLASS_$__TtC11MyTestClass11MyTestClass
+  //  .set _OBJC_CLASS_$__TtC11MyTestClass11MyTestClass, _$s11MyTestClassAACN
+  //
+  // So we scan for symbols with the same address and check for the Swift class
+  if (classSym->getName().starts_with(objc::symbol_names::klass)) {
+    for (auto &sym : classSym->originalIsec->symbols)
+      if (sym->value == classSym->value)
+        if (sym->getName().starts_with(objc::symbol_names::swift_objc_klass))
+          return SourceLanguage::Swift;
+    return SourceLanguage::ObjC;
+  }
+
+  llvm_unreachable("Unexpected class symbol name during category merging");
+}
 void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
     const Defined *baseClass, std::vector<InfoInputCategory> &categories) {
   assert(categories.size() >= 1 && "Expected at least one category to merge");
@@ -1407,14 +1431,7 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
   // Collect all the info from the categories
   ClassExtensionInfo extInfo(catLayout);
   extInfo.baseClass = baseClass;
-
-  if (baseClass->getName().starts_with(objc::symbol_names::klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::ObjC;
-  else if (baseClass->getName().starts_with(
-               objc::symbol_names::swift_objc_klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::Swift;
-  else
-    llvm_unreachable("Unexpected base class symbol name");
+  extInfo.baseClassSourceLanguage = getClassSymSourceLang(baseClass);
 
   for (auto &catInfo : categories) {
     parseCatInfoToExtInfo(catInfo, extInfo);
