@@ -938,12 +938,26 @@ public:
     if (init.has_value()) {
       if (auto constArr = mlir::dyn_cast<mlir::cir::ZeroAttr>(init.value())) {
         if (memrefType.getShape().size()) {
-          auto rtt = mlir::RankedTensorType::get(memrefType.getShape(),
-                                                 memrefType.getElementType());
-          initialValue = mlir::DenseIntElementsAttr::get(rtt, 0);
+          auto elementType = memrefType.getElementType();
+          auto rtt =
+              mlir::RankedTensorType::get(memrefType.getShape(), elementType);
+          if (mlir::isa<mlir::IntegerType>(elementType))
+            initialValue = mlir::DenseIntElementsAttr::get(rtt, 0);
+          else if (mlir::isa<mlir::FloatType>(elementType)) {
+            auto floatZero = mlir::FloatAttr::get(elementType, 0.0).getValue();
+            initialValue = mlir::DenseFPElementsAttr::get(rtt, floatZero);
+          } else
+            llvm_unreachable("GlobalOp lowering unsuppored element type");
         } else {
           auto rtt = mlir::RankedTensorType::get({}, convertedType);
-          initialValue = mlir::DenseIntElementsAttr::get(rtt, 0);
+          if (mlir::isa<mlir::IntegerType>(convertedType))
+            initialValue = mlir::DenseIntElementsAttr::get(rtt, 0);
+          else if (mlir::isa<mlir::FloatType>(convertedType)) {
+            auto floatZero =
+                mlir::FloatAttr::get(convertedType, 0.0).getValue();
+            initialValue = mlir::DenseFPElementsAttr::get(rtt, floatZero);
+          } else
+            llvm_unreachable("GlobalOp lowering unsuppored type");
         }
       } else if (auto intAttr =
                      mlir::dyn_cast<mlir::cir::IntAttr>(init.value())) {
