@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cctype>
 #include <cstdio>
@@ -646,12 +647,16 @@ AsmToken AsmLexer::LexQuote() {
     return AsmToken(AsmToken::String, StringRef(TokStart, CurPtr - TokStart));
   }
 
-  // TODO: does gas allow multiline string constants?
+  // gas doesn't allow multiline string constants
+  // and emits a warning if a string constant contains newline character
   while (CurChar != '"') {
     if (CurChar == '\\') {
       // Allow \", etc.
       CurChar = getNextChar();
     }
+
+    if (CurChar == '\n')
+      outs() << "Warning: unterminated string; newline inserted\n";
 
     if (CurChar == EOF)
       return ReturnError(TokStart, "unterminated string constant");
