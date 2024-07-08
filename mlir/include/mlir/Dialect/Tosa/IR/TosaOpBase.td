@@ -40,7 +40,7 @@ def Tosa_Dialect : Dialect {
     there will be tools to lower from the ML frameworks into TOSA.
   }];
 
-  let dependentDialects = ["tensor::TensorDialect", "quant::QuantizationDialect"];
+  let dependentDialects = ["tensor::TensorDialect", "quant::QuantDialect"];
 
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;

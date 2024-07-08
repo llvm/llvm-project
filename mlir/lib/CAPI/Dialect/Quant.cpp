@@ -13,7 +13,7 @@
 
 using namespace mlir;
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(quant, quant, quant::QuantizationDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(quant, quant, quant::QuantDialect)
 
 //===---------------------------------------------------------------------===//
 // QuantizedType

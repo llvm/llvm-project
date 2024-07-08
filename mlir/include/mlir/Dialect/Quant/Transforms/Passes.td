@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def QuantLowerQuantOpsPass : Pass<"lower-quant-ops"> {
+def LowerQuantOps : Pass<"lower-quant-ops"> {
   let summary = "Lower 'quant.dcast' and 'quant.qcast' ops.";
   let description = [{
     Lower quantization (`quant.qcast`) and dequantization (`quant.dcast`) ops
@@ -20,7 +20,8 @@ def QuantLowerQuantOpsPass : Pass<"lower-quant-ops"> {
     The lowering process generates storage type casts in the form of
     `quant.scast` ops to convert operands and results from quantized types to
     the corresponding storage type, or vice versa.
-  let dependentDialects = ["quant::QuantDialect"];
+  }];
+  let dependentDialects = ["::mlir::quant::QuantDialect"];
 }
 
 #endif // MLIR_DIALECT_QUANT_TRANSFORMS_PASSES

@@ -15,7 +15,7 @@
 
 include "mlir/IR/OpBase.td"
 
-def Quantization_Dialect : Dialect {
+def Quant_Dialect : Dialect {
   let name = "quant";
   let cppNamespace = "::mlir::quant";
 
@@ -63,7 +63,7 @@ def quant_RealOrStorageValueType :
 
 // An implementation of UniformQuantizedType.
 def quant_UniformQuantizedType :
-    DialectType<Quantization_Dialect,
+    DialectType<Quant_Dialect,
                 CPred<"::llvm::isa<UniformQuantizedType>($_self)">,
                 "UniformQuantizedType">;
 

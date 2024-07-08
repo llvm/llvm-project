@@ -136,7 +136,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   pdl_interp::PDLInterpDialect,
                   polynomial::PolynomialDialect,
                   ptr::PtrDialect,
-                  quant::QuantizationDialect,
+                  quant::QuantDialect,
                   ROCDL::ROCDLDialect,
                   scf::SCFDialect,
                   shape::ShapeDialect,

@@ -22,7 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 class quant_Op<string mnemonic, list<Trait> traits> :
-    Op<Quantization_Dialect, mnemonic, traits>;
+    Op<Quant_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // Quantization casts
